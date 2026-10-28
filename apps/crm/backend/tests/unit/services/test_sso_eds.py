@@ -122,7 +122,8 @@ async def test_two_roles_give_the_union_of_their_codes(
 
     token, _ = await _service(sso_settings, user).issue_token(7, aud="eds")
 
-    assert _decode(token)["permissions"] == ACCOUNTANT
+    # MANAGER (`crm.clients: full`) добавляет свой файл в EDS — письмо директору (D1-2b)
+    assert _decode(token)["permissions"] == sorted([*ACCOUNTANT, "files.upload"])
 
 
 @pytest.mark.asyncio

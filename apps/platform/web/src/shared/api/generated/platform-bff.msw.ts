@@ -24,6 +24,8 @@ import {
   CalcZone,
   CategoryRequestStatus,
   ChecklistCode,
+  ClientContactChannel,
+  ClientSees,
   DocumentKind,
   DocumentTemplateKind,
   DueLabel,
@@ -38,6 +40,7 @@ import {
   KbGapStatus,
   Language,
   LeadOwnerMode,
+  LeadPlatformStatus,
   LetterStatus,
   LetterZone,
   ModuleCode,
@@ -93,6 +96,10 @@ import type {
   ChargeTemplate,
   ChargeTemplateList,
   ChargeTypeList,
+  ClientCard,
+  ClientInvitation,
+  ClientList,
+  ClientShort,
   Colleague,
   CompanyProfile,
   ConversationCard,
@@ -135,6 +142,9 @@ import type {
   KbGapPage,
   KbProductList,
   KbSearchResult,
+  LeadCard,
+  LeadNotice,
+  LeadPage,
   LetterCard,
   LetterClient,
   LetterPage,
@@ -170,6 +180,8 @@ import type {
   ReferenceItem,
   ReferenceItemList,
   ReplyTemplateList,
+  RequestCreatedView,
+  RequestRetriedView,
   ResolutionAssignees,
   Role,
   RoleJournal,
@@ -10705,6 +10717,472 @@ export const getListOverdueSupplierOrdersResponseMock = (
   ...overrideResponse,
 });
 
+export const getListCrmLeadsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListCrmLeadsResponseMock = (
+  overrideResponse: Partial<Extract<LeadPage, object>> = {},
+): LeadPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    assigned: faker.helpers.arrayElement([{ ...getListCrmLeadsResponsePersonRefMock() }, null]),
+    need: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    last_message_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    unread: faker.datatype.boolean(),
+    handoff_open: faker.datatype.boolean(),
+    overdue: faker.datatype.boolean(),
+    client_id: faker.helpers.arrayElement([faker.number.int(), null]),
+  })),
+  total: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponseHandoffInfoMock = (
+  overrideResponse: Partial<HandoffInfo> = {},
+): HandoffInfo => ({
+  ...{
+    priority: faker.helpers.arrayElement(["hot", "warm", "info"] as const),
+    state: faker.helpers.arrayElement(["open", "taken", "snoozed"] as const),
+    reasons: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.helpers.fromRegExp("^[a-z_]{1,32}$"),
+    ),
+    reason_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recommendation: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sla_due_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    snoozed_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    taken_by: faker.helpers.arrayElement([{ ...getGetCrmLeadResponsePersonRefMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponseClientShortMock = (
+  overrideResponse: Partial<ClientShort> = {},
+): ClientShort => ({
+  ...{
+    id: faker.number.int(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponseLeadNoticeMock = (
+  overrideResponse: Partial<LeadNotice> = {},
+): LeadNotice => ({
+  ...{
+    channel: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped"] as const),
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    error_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponseClientInvitationMock = (
+  overrideResponse: Partial<ClientInvitation> = {},
+): ClientInvitation => ({
+  ...{
+    status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped"] as const),
+    channel: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sent_via: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    error_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    available_channels: faker.helpers.arrayElements(["email", "telegram", "both"] as const),
+    suggested_channel: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["email", "telegram", "both"] as const),
+      null,
+    ]),
+    can_resend: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<LeadCard, object>> = {},
+): LeadCard => ({
+  lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
+  channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  assigned: faker.helpers.arrayElement([{ ...getGetCrmLeadResponsePersonRefMock() }, null]),
+  contacts: {
+    telegram: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  consent: {
+    given_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    method: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["phone", "email", "paper"] as const),
+      null,
+    ]),
+  },
+  facts: {
+    interest: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    timeline: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["<1m", "<3m", "<12m", ">12m"] as const),
+      null,
+    ]),
+    decision_role: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["decision_maker", "influencer", "researcher"] as const),
+      null,
+    ]),
+    budget_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company_size: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    region: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  need: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  interest: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  handoff: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseHandoffInfoMock() }, null]),
+  last_messages: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, (_, i) => i + 1).map(
+    () => ({
+      author: faker.helpers.arrayElement(["lead", "bot", "manager", "system"] as const),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  client: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseClientShortMock() }, null]),
+  confirmation: faker.helpers.arrayElement([{ ...getGetCrmLeadResponseLeadNoticeMock() }, null]),
+  first_response: {
+    due_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    overdue: faker.datatype.boolean(),
+  },
+  invitation: faker.helpers.arrayElement([
+    { ...getGetCrmLeadResponseClientInvitationMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getListCrmClientsResponseMock = (
+  overrideResponse: Partial<Extract<ClientList, object>> = {},
+): ClientList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    in_erp: faker.datatype.boolean(),
+    open_requests: faker.number.int({ min: 0 }),
+    last_activity_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    handoff_status: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getGetCrmClientResponseClientInvitationMock = (
+  overrideResponse: Partial<ClientInvitation> = {},
+): ClientInvitation => ({
+  ...{
+    status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped"] as const),
+    channel: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sent_via: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    error_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    available_channels: faker.helpers.arrayElements(["email", "telegram", "both"] as const),
+    suggested_channel: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["email", "telegram", "both"] as const),
+      null,
+    ]),
+    can_resend: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmClientResponseMock = (
+  overrideResponse: Partial<Extract<ClientCard, object>> = {},
+): ClientCard => ({
+  id: faker.number.int(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  segment: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  in_erp: faker.datatype.boolean(),
+  handoff: {
+    status: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      null,
+    ]),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      phone: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      telegram: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      channels: faker.helpers.arrayElements(Object.values(ClientContactChannel)),
+      preferred_channel: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["email", "telegram", "both"] as const),
+        null,
+      ]),
+      is_primary: faker.datatype.boolean(),
+    }),
+  ),
+  leads: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(LeadPlatformStatus)),
+    last_message_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  })),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      deal: faker.number.int(),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      summary: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      step: faker.helpers.arrayElement(Object.values(StepCode)),
+      project: faker.datatype.boolean(),
+      client_sees: faker.helpers.arrayElement(Object.values(ClientSees)),
+      urgency: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["normal", "urgent"] as const),
+        null,
+      ]),
+      transfer: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+        null,
+      ]),
+      transfer_error: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      letter_file_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
+    }),
+  ),
+  documents: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      type: faker.helpers.arrayElement([
+        "contract",
+        "proposal",
+        "letter",
+        "invoice",
+        "act",
+        "other",
+      ] as const),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      visible_to_client: faker.datatype.boolean(),
+    }),
+  ),
+  invitation: faker.helpers.arrayElement([
+    { ...getGetCrmClientResponseClientInvitationMock() },
+    null,
+  ]),
+  sources: {
+    contacts: faker.helpers.arrayElement(Object.values(SourceState)),
+    requests: faker.helpers.arrayElement(Object.values(SourceState)),
+    documents: faker.helpers.arrayElement(Object.values(SourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getResendCrmClientInvitationResponseMock = (
+  overrideResponse: Partial<Extract<ClientInvitation, object>> = {},
+): ClientInvitation => ({
+  status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped"] as const),
+  channel: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  sent_via: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  contact_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  error_text: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  available_channels: faker.helpers.arrayElements(["email", "telegram", "both"] as const),
+  suggested_channel: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["email", "telegram", "both"] as const),
+    null,
+  ]),
+  can_resend: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getCreateCrmRequestResponseMock = (
+  overrideResponse: Partial<Extract<RequestCreatedView, object>> = {},
+): RequestCreatedView =>
+  faker.helpers.arrayElement([
+    {
+      client_id: faker.number.int(),
+      deal: faker.number.int(),
+      lead: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+      created: faker.datatype.boolean(),
+      transfer: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      ...overrideResponse,
+    },
+    {
+      client_id: faker.number.int(),
+      deal: faker.number.int(),
+      lead: faker.helpers.arrayElement([faker.helpers.fromRegExp("^L-\\d{4,}$"), null]),
+      created: faker.datatype.boolean(),
+      transfer: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+      ...overrideResponse,
+    },
+  ]);
+
+export const getRetryCrmRequestResponseMock = (
+  overrideResponse: Partial<Extract<RequestRetriedView, object>> = {},
+): RequestRetriedView => ({
+  deal: faker.number.int(),
+  client_id: faker.number.int(),
+  transfer: faker.helpers.arrayElement(["pending", "done", "failed"] as const),
+  ...overrideResponse,
+});
+
+export const getUploadCrmRequestFileResponseMock = (
+  overrideResponse: Partial<Extract<EdsFile, object>> = {},
+): EdsFile => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  size: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
+export const getCopyCrmMessageAttachmentToRequestResponseMock = (
+  overrideResponse: Partial<Extract<EdsFile, object>> = {},
+): EdsFile => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+  content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  size: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
@@ -16149,6 +16627,210 @@ export const getListOverdueSupplierOrdersMockHandler = (
     options,
   );
 };
+
+export const getListCrmLeadsMockHandler = (
+  overrideResponse?:
+    | LeadPage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<LeadPage> | LeadPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/leads",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmLeadsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmLeadMockHandler = (
+  overrideResponse?:
+    | LeadCard
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<LeadCard> | LeadCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/leads/:lead",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCrmClientsMockHandler = (
+  overrideResponse?:
+    | ClientList
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ClientList> | ClientList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/clients",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmClientsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmClientMockHandler = (
+  overrideResponse?:
+    | ClientCard
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ClientCard> | ClientCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/clients/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmClientResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getResendCrmClientInvitationMockHandler = (
+  overrideResponse?:
+    | ClientInvitation
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ClientInvitation> | ClientInvitation),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/clients/:id/invitation",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResendCrmClientInvitationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCrmRequestMockHandler = (
+  overrideResponse?:
+    | RequestCreatedView
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<RequestCreatedView> | RequestCreatedView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/requests",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCrmRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryCrmRequestMockHandler = (
+  overrideResponse?:
+    | RequestRetriedView
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<RequestRetriedView> | RequestRetriedView),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/requests/:deal/retry",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryCrmRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUploadCrmRequestFileMockHandler = (
+  overrideResponse?:
+    | EdsFile
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EdsFile> | EdsFile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/request-files",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadCrmRequestFileResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCopyCrmMessageAttachmentToRequestMockHandler = (
+  overrideResponse?:
+    | EdsFile
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EdsFile> | EdsFile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/request-files/from-message",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCopyCrmMessageAttachmentToRequestResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getForgotPasswordMockHandler(),
@@ -16389,4 +17071,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListStockShipmentsMockHandler(),
   getShipFromStockMockHandler(),
   getListOverdueSupplierOrdersMockHandler(),
+  getListCrmLeadsMockHandler(),
+  getGetCrmLeadMockHandler(),
+  getListCrmClientsMockHandler(),
+  getGetCrmClientMockHandler(),
+  getResendCrmClientInvitationMockHandler(),
+  getCreateCrmRequestMockHandler(),
+  getRetryCrmRequestMockHandler(),
+  getUploadCrmRequestFileMockHandler(),
+  getCopyCrmMessageAttachmentToRequestMockHandler(),
 ];

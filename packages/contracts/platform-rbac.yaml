@@ -152,6 +152,9 @@ resources:
       # «Создать заявку» — передача в ERP; quote.send — отправить одобренное директором КП клиенту: менеджер заявки и
       # директор (C1-G-4, решение архитектора 2026-10-26, DECISIONS.md).
       erp: { full: [deal.manage, quote.send] }
+      # Письмо на имя директора к «Создать заявку» — свой файл в EDS (`POST /files`) без прав на документы: читать можно
+      # только свои файлы (решение архитектора D1-2b).
+      eds: { full: [files.upload] }
   - key: eds.inbox
     module: eds
     label: { ru: "Документы · Входящие письма · резолюция", uz: "Hujjatlar · Kiruvchi xatlar · rezolyutsiya", en: "Documents · Incoming letters · resolution" }

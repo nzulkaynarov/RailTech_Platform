@@ -3,8 +3,8 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
-// «Мои задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка без экрана — «Где сделать»
-// с мостом, строка с экраном — «Открыть» (primary у всех срочных), пустые состояния по ролям, частичный результат при отказе
+// «Мои задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка с экраном — «Открыть»
+// (primary у всех срочных; строки лидов — «Ждут ответа», D1-6), строка без экрана — «Где сделать», пустые состояния по ролям, частичный результат при отказе
 // CRM или ERP, действия в поиске; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR (`E2E_SCREENSHOT_DIR=<каталог>`).
 const WIDTHS = [1440, 390] as const;
 
@@ -229,17 +229,18 @@ test.describe("Поиск: объект, «Где посмотреть», дей
   }) => {
     await loginAndWait(page, "manager@demo.example");
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
-    await search.fill("L-2041");
-    await page.getByRole("option", { name: /L-2041/ }).click();
+    // «Лиды» — настоящий экран (D1-2b); без экрана — заявки (раздел «Заявки», старый ERP)
+    await search.fill("ЗВ-2026-104");
+    await page.getByRole("option", { name: /ЗВ-2026-104/ }).click();
     const where = page.getByRole("region", { name: "Где посмотреть" });
-    await expect(where.getByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://crm.localhost:8088/leads/2041",
+      "http://erp.localhost:8088/#crm-deals",
     );
     await expect(page).toHaveURL(/\/dashboard\/queue/);
     await shoot(page, "search-where");
     // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
-    await where.getByRole("link", { name: /Открыть в старой CRM/ }).focus();
+    await where.getByRole("link", { name: /Открыть в старом ERP/ }).focus();
     await page.keyboard.press("Escape");
     await expect(where).toHaveCount(0);
     await expect(search).toBeFocused();
@@ -255,8 +256,9 @@ test.describe("Поиск: объект, «Где посмотреть», дей
     await expect(action).toContainText("Действие");
     await expect(page.getByRole("group", { name: "Действия" })).toBeVisible();
     await expectNoViolations(page, "search actions");
+    // «Создать заявку» — настоящий экран (D1-2b): действие ведёт к лидам «Просят КП»
     await action.click();
-    await expect(page.getByRole("region", { name: /Где посмотреть/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/crm\/leads\?status=wants_quote$/);
 
     await search.fill("пригласить");
     await expect(page.getByRole("option", { name: /Пригласить сотрудника/ })).toHaveCount(0);

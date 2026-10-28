@@ -8,6 +8,7 @@ import { PanelPortal } from "../../../app/shell/PanelSlot";
 import type { ConversationCard, MessageInboxItem } from "../../../shared/api/generated/model";
 import { useGetCrmConversation } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { canCreateFromLead } from "../common/access";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
 import { Composer } from "./Composer";
@@ -128,7 +129,7 @@ export function Dialog({
       </header>
       {takeable && !mobile ? <Consequence items={[t("consequence.take")]} /> : null}
       {item ? <HandoffNoteBox note={item.note} handoff={item.handoff} /> : null}
-      <Thread lead={lead} name={card.name} />
+      <Thread lead={lead} name={card.name} canCreate={canCreateFromLead(me, card.assigned)} />
       {canReply ? (
         <Composer card={card} />
       ) : (

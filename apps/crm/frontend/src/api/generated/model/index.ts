@@ -270,6 +270,8 @@ export * from "./requestCreate";
 export * from "./requestCreated";
 export * from "./requestCreatedErpRequestStatus";
 export * from "./requestCreateUrgency";
+export * from "./requestRetried";
+export * from "./requestRetriedErpRequestStatus";
 export * from "./resetPasswordRequest";
 export * from "./resolveGap";
 export * from "./returnToBot";

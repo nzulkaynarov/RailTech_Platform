@@ -1,0 +1,109 @@
+{
+  "subtitle": "Everyone who wrote to the bot, the website or by email, or called. Asking for a quote — straight to “Create request”.",
+  "tabs": {
+    "label": "Lead status",
+    "all": "All",
+    "new": "New",
+    "dialog": "In dialogue",
+    "wants_quote": "Wants a quote",
+    "client": "Became clients"
+  },
+  "scope": {
+    "label": "Whose leads",
+    "all": "All",
+    "mine": "Mine",
+    "overdue": "Overdue"
+  },
+  "search": {
+    "label": "Search by name and request",
+    "placeholder": "Name or request"
+  },
+  "channel": {
+    "label": "Channel",
+    "any": "Any channel"
+  },
+  "columns": {
+    "name": "Who",
+    "status": "Status",
+    "need": "Request",
+    "assigned": "Handled by",
+    "last": "Message",
+    "action": "Action"
+  },
+  "caption": "Leads",
+  "tableScroll": "Leads table",
+  "listLabel": "Leads",
+  "open": "Open the card of {{name}}",
+  "nobody": "Nobody",
+  "overdue": "Reply overdue",
+  "unread": "New message",
+  "actions": {
+    "take": "Take",
+    "reply": "Reply",
+    "create": "Create request",
+    "client": "Client card",
+    "takeLabel": "Take {{name}} into “Awaiting reply”",
+    "replyLabel": "Reply to {{name}} in “Awaiting reply”",
+    "createLabel": "Create a request for {{name}}",
+    "clientLabel": "Client card of {{name}}"
+  },
+  "paging": {
+    "label": "Lead pages",
+    "prev": "Back",
+    "next": "Next",
+    "range": "{{from}}–{{to}} of {{total}}"
+  },
+  "empty": {
+    "title": "No leads yet",
+    "text": "New leads appear when someone writes to the bot or leaves a request on the website.",
+    "filteredTitle": "Nothing found",
+    "filteredText": "Change the tab, filter or search."
+  },
+  "loadError": {
+    "title": "Could not load leads",
+    "text": "The server did not respond. Try again a bit later."
+  },
+  "retry": "Retry",
+  "card": {
+    "label": "Lead card",
+    "close": "Close",
+    "contacts": "Contacts",
+    "about": "About the lead",
+    "facts": "What the bot learned",
+    "need": "Request",
+    "consent": "Data consent",
+    "consentBot": "given in the bot on {{date}}",
+    "consentStaff": "recorded by staff on {{date}} ({{method}})",
+    "consentMissing": "no — a request cannot be created without it",
+    "methods": {
+      "phone": "by phone",
+      "email": "by email",
+      "paper": "on paper"
+    },
+    "assigned": "Handled by",
+    "channel": "Channel",
+    "language": "Language",
+    "messages": "Latest messages",
+    "noMessages": "No messages yet",
+    "authors": {
+      "lead": "Client",
+      "bot": "Bot",
+      "manager": "Manager",
+      "system": "System"
+    },
+    "client": "Client",
+    "confirmation": "Request confirmation to the client",
+    "firstResponse": "First reply to a website request",
+    "firstResponseDue": "by {{date}}",
+    "firstResponseOverdue": "overdue since {{date}}",
+    "invitation": "Invitation to the portal",
+    "notice": {
+      "queued": "queued",
+      "sent": "sent on {{date}}",
+      "failed": "not delivered: {{reason}}",
+      "skipped": "not sent",
+      "channel": "channel: {{channel}}"
+    },
+    "none": "no data"
+  }
+}

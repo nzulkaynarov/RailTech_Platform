@@ -71,6 +71,9 @@ import type {
   ChargeTemplateList,
   ChargeTemplateUpdate,
   ChargeTypeList,
+  ClientCard,
+  ClientInvitation,
+  ClientList,
   Colleague,
   CompanyProfile,
   CompanyProfileUpdate,
@@ -134,6 +137,7 @@ import type {
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
   IntegrationsOverview,
+  InvitationResendIn,
   KbChunkList,
   KbDocument,
   KbDocumentList,
@@ -145,6 +149,8 @@ import type {
   KbProductList,
   KbSearchIn,
   KbSearchResult,
+  LeadCard,
+  LeadPage,
   LetterCard,
   LetterConflictResponse,
   LetterPage,
@@ -155,6 +161,8 @@ import type {
   ListBusInboxParams,
   ListCalcRequestsParams,
   ListCategoryRequestsParams,
+  ListCrmClientsParams,
+  ListCrmLeadsParams,
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
   ListEmployeesParams,
@@ -219,6 +227,11 @@ import type {
   ReplyIn,
   ReplyTemplateIn,
   ReplyTemplateList,
+  RequestConflictResponse,
+  RequestCreatedView,
+  RequestFileFromMessageIn,
+  RequestFormIn,
+  RequestRetriedView,
   ResetPasswordIn,
   ResolutionAssignees,
   ResolutionIn,
@@ -29138,3 +29151,1165 @@ export function useListOverdueSupplierOrders<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListCrmLeadsUrl = (params?: ListCrmLeadsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/crm/leads?${stringifiedParams}`
+    : `/api/v1/crm/leads`;
+};
+
+/**
+ * CRM `GET /leads` (W16-D1-2b). Раздел `crm.leads` от чтения. Вкладки SPEC-v3 §7.2 — статус лида CRM `platform_status` (CRM-02): `new` «Новые», `dialog` «В диалоге», `wants_quote` «Просят КП», `client` «Стали клиентами»; `all` — все, в том числе «Без ответа» и «Отказ». `scope`: `mine` — лиды сотрудника, `overdue` — открытая передача с истёкшим SLA ответа, `all` — все. Поиск — по имени и сути запроса; канал — источник лида. Новые сверху по последнему сообщению.
+ * @summary Клиенты · Лиды: вкладки по статусу Платформы, «мои / все / просроченные», поиск, канал
+ */
+export const listCrmLeads = async (
+  params?: ListCrmLeadsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<LeadPage> => {
+  return http<LeadPage>(getListCrmLeadsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmLeadsQueryKey = (params?: ListCrmLeadsParams) => {
+  return [`/api/v1/crm/leads`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCrmLeadsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmLeadsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmLeads>>> = ({ signal }) =>
+    listCrmLeads(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmLeads>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmLeadsQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmLeads>>>;
+export type ListCrmLeadsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmLeads<
+  TData = Awaited<ReturnType<typeof listCrmLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListCrmLeadsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeads>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeads<
+  TData = Awaited<ReturnType<typeof listCrmLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeads>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeads>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeads>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeads<
+  TData = Awaited<ReturnType<typeof listCrmLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Клиенты · Лиды: вкладки по статусу Платформы, «мои / все / просроченные», поиск, канал
+ */
+
+export function useListCrmLeads<
+  TData = Awaited<ReturnType<typeof listCrmLeads>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmLeadsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeads>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmLeadsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/leads/${lead}`;
+};
+
+/**
+ * CRM `GET /leads/{id}` и последние сообщения `GET /leads/{id}/messages` (W16-D1-2b). Раздел `crm.leads` от чтения. Подтверждение заявки клиенту (`confirmation`), срок первого ответа на запрос с сайта (`first_response`) и приглашение в кабинет (`invitation`) — из D1-9. Номер лида — `L-NNNN`.
+ * @summary Карточка лида в боковом окне: контакты, каналы, согласие, факты квалификации, последние сообщения
+ */
+export const getCrmLead = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LeadCard> => {
+  return http<LeadCard>(getGetCrmLeadUrl(lead), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmLeadQueryKey = (lead: string) => {
+  return [`/api/v1/crm/leads/${lead}`] as const;
+};
+
+export const getGetCrmLeadQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmLead>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmLeadQueryKey(lead);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmLead>>> = ({ signal }) =>
+    getCrmLead(lead, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: lead !== null && lead !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmLeadQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmLead>>>;
+export type GetCrmLeadQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmLead<
+  TData = Awaited<ReturnType<typeof getCrmLead>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmLead>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmLead>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmLead<
+  TData = Awaited<ReturnType<typeof getCrmLead>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmLead>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmLead>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmLead<
+  TData = Awaited<ReturnType<typeof getCrmLead>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Карточка лида в боковом окне: контакты, каналы, согласие, факты квалификации, последние сообщения
+ */
+
+export function useGetCrmLead<
+  TData = Awaited<ReturnType<typeof getCrmLead>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmLead>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmLeadQueryOptions(lead, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListCrmClientsUrl = (params?: ListCrmClientsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/crm/clients?${stringifiedParams}`
+    : `/api/v1/crm/clients`;
+};
+
+/**
+ * CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+ * @summary Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
+ */
+export const listCrmClients = async (
+  params?: ListCrmClientsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientList> => {
+  return http<ClientList>(getListCrmClientsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmClientsQueryKey = (params?: ListCrmClientsParams) => {
+  return [`/api/v1/crm/clients`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCrmClientsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmClients>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmClientsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmClients>>> = ({ signal }) =>
+    listCrmClients(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmClients>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmClientsQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmClients>>>;
+export type ListCrmClientsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmClients<
+  TData = Awaited<ReturnType<typeof listCrmClients>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListCrmClientsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmClients>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmClients>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmClients<
+  TData = Awaited<ReturnType<typeof listCrmClients>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmClients>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmClients>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmClients>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmClients<
+  TData = Awaited<ReturnType<typeof listCrmClients>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
+ */
+
+export function useListCrmClients<
+  TData = Awaited<ReturnType<typeof listCrmClients>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCrmClientsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmClients>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmClientsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCrmClientUrl = (id: number) => {
+  return `/api/v1/crm/clients/${id}`;
+};
+
+/**
+ * CRM `GET /clients/{id}`, `/clients/{id}/contacts`, `GET /deals?client_id=`, `GET /documents?client_id=` (W16-D1-2b). Раздел `crm.clients` от чтения. Контакты — только живые (удалённые CRM не отдаёт; архива контактов в CRM нет, B-030). Заявки и проекты — зеркало CRM: номер ЗВ/ПР из ERP, шаг пути из 7 по стадии ERP, «что видит клиент» — ключ `client-statuses.yaml`, состояние передачи в ERP; заявка, ещё не дошедшая до ERP, — без номера, со статусом передачи. Источник не ответил — `sources` и раздел без данных.
+ * @summary Карточка клиента 360°: компания, контакты с каналами, переписка, заявки и проекты, документы, приглашение
+ */
+export const getCrmClient = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientCard> => {
+  return http<ClientCard>(getGetCrmClientUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmClientQueryKey = (id: number) => {
+  return [`/api/v1/crm/clients/${id}`] as const;
+};
+
+export const getGetCrmClientQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmClientQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmClient>>> = ({ signal }) =>
+    getCrmClient(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmClientQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmClient>>>;
+export type GetCrmClientQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmClient<
+  TData = Awaited<ReturnType<typeof getCrmClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmClient>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmClient<
+  TData = Awaited<ReturnType<typeof getCrmClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmClient>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmClient>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmClient<
+  TData = Awaited<ReturnType<typeof getCrmClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Карточка клиента 360°: компания, контакты с каналами, переписка, заявки и проекты, документы, приглашение
+ */
+
+export function useGetCrmClient<
+  TData = Awaited<ReturnType<typeof getCrmClient>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmClient>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmClientQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getResendCrmClientInvitationUrl = (id: number) => {
+  return `/api/v1/crm/clients/${id}/invitation`;
+};
+
+/**
+ * CRM `POST /clients/{id}/invitation` (D1-9). Раздел `crm.clients` полный. Ответ — итог приглашения; канал недоступен — `status = failed` и `error_text` словами (не ошибка запроса).
+ * @summary Отправить приглашение в кабинет повторно другим каналом
+ */
+export const resendCrmClientInvitation = async (
+  id: number,
+  invitationResendIn: InvitationResendIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ClientInvitation> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ClientInvitation>(getResendCrmClientInvitationUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(invitationResendIn),
+  });
+};
+
+export const getResendCrmClientInvitationMutationKey = () => ["resendCrmClientInvitation"] as const;
+
+export const getResendCrmClientInvitationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resendCrmClientInvitation>>,
+    TError,
+    ResendCrmClientInvitationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resendCrmClientInvitation>>,
+  TError,
+  ResendCrmClientInvitationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResendCrmClientInvitationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resendCrmClientInvitation>>,
+    ResendCrmClientInvitationMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resendCrmClientInvitation(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResendCrmClientInvitationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resendCrmClientInvitation>>
+>;
+export type ResendCrmClientInvitationMutationBody = InvitationResendIn;
+export type ResendCrmClientInvitationMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ResendCrmClientInvitationMutationVariables = { id: number; data: InvitationResendIn };
+
+/**
+ * @summary Отправить приглашение в кабинет повторно другим каналом
+ */
+export const useResendCrmClientInvitation = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resendCrmClientInvitation>>,
+      TError,
+      ResendCrmClientInvitationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resendCrmClientInvitation>>,
+  TError,
+  ResendCrmClientInvitationMutationVariables,
+  TContext
+> => {
+  return useMutation(getResendCrmClientInvitationMutationOptions(options), queryClient);
+};
+
+export const getCreateCrmRequestUrl = () => {
+  return `/api/v1/crm/requests`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
+ * @summary «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+ */
+export const createCrmRequest = async (
+  requestFormIn: RequestFormIn,
+  options?: Parameters<typeof http>[1],
+): Promise<RequestCreatedView> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<RequestCreatedView>(getCreateCrmRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestFormIn),
+  });
+};
+
+export const getCreateCrmRequestMutationKey = () => ["createCrmRequest"] as const;
+
+export const getCreateCrmRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCrmRequest>>,
+    TError,
+    CreateCrmRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCrmRequest>>,
+  TError,
+  CreateCrmRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCrmRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCrmRequest>>,
+    CreateCrmRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCrmRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCrmRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCrmRequest>>
+>;
+export type CreateCrmRequestMutationBody = RequestFormIn;
+export type CreateCrmRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCrmRequestMutationVariables = { data: RequestFormIn };
+
+/**
+ * @summary «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+ */
+export const useCreateCrmRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCrmRequest>>,
+      TError,
+      CreateCrmRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCrmRequest>>,
+  TError,
+  CreateCrmRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCrmRequestMutationOptions(options), queryClient);
+};
+
+export const getRetryCrmRequestUrl = (deal: number) => {
+  return `/api/v1/crm/requests/${deal}/retry`;
+};
+
+/**
+ * CRM `POST /deals/{id}/actions/retry_request` (B-082). Раздел `crm.clients` полный. Заявка снова уходит в ERP той же задачей и с тем же ключом (второй заявки не будет). Не в ошибке — 409 `request_not_failed`; данные заявки изменились после первой отправки — 409 `request_not_retryable` (создать заявку заново).
+ * @summary «Повторить отправку в ERP» для заявки с ошибкой передачи
+ */
+export const retryCrmRequest = async (
+  deal: number,
+  options?: Parameters<typeof http>[1],
+): Promise<RequestRetriedView> => {
+  return http<RequestRetriedView>(getRetryCrmRequestUrl(deal), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRetryCrmRequestMutationKey = () => ["retryCrmRequest"] as const;
+
+export const getRetryCrmRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof retryCrmRequest>>,
+    TError,
+    RetryCrmRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof retryCrmRequest>>,
+  TError,
+  RetryCrmRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRetryCrmRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof retryCrmRequest>>,
+    RetryCrmRequestMutationVariables
+  > = (props) => {
+    const { deal } = props ?? {};
+
+    return retryCrmRequest(deal, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RetryCrmRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof retryCrmRequest>>
+>;
+
+export type RetryCrmRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | RequestConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RetryCrmRequestMutationVariables = { deal: number };
+
+/**
+ * @summary «Повторить отправку в ERP» для заявки с ошибкой передачи
+ */
+export const useRetryCrmRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | RequestConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof retryCrmRequest>>,
+      TError,
+      RetryCrmRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof retryCrmRequest>>,
+  TError,
+  RetryCrmRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getRetryCrmRequestMutationOptions(options), queryClient);
+};
+
+export const getUploadCrmRequestFileUrl = () => {
+  return `/api/v1/crm/request-files`;
+};
+
+/**
+ * EDS `POST /files` от имени сотрудника (обмен токена `aud=eds`), W16-D1-2b. BFF читает тело до предела 25 МБ и передаёт EDS как есть. id файла уходит в `RequestFormIn.letter_file_id`; EDS прикрепляет файл к письму ВХ, если его загрузил менеджер заявки. Больше 25 МБ — 413, не PDF/изображение/Office — 415. Раздел `crm.clients` полный.
+ * @summary Письмо на имя директора для заявки — файл в EDS
+ */
+export const uploadCrmRequestFile = async (
+  edsFileUpload: EdsFileUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsFile> => {
+  const formData = new FormData();
+  formData.append(`file`, edsFileUpload.file);
+
+  return http<EdsFile>(getUploadCrmRequestFileUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadCrmRequestFileMutationKey = () => ["uploadCrmRequestFile"] as const;
+
+export const getUploadCrmRequestFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadCrmRequestFile>>,
+    TError,
+    UploadCrmRequestFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadCrmRequestFile>>,
+  TError,
+  UploadCrmRequestFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadCrmRequestFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadCrmRequestFile>>,
+    UploadCrmRequestFileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadCrmRequestFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadCrmRequestFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadCrmRequestFile>>
+>;
+export type UploadCrmRequestFileMutationBody = EdsFileUpload;
+export type UploadCrmRequestFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadCrmRequestFileMutationVariables = { data: EdsFileUpload };
+
+/**
+ * @summary Письмо на имя директора для заявки — файл в EDS
+ */
+export const useUploadCrmRequestFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadCrmRequestFile>>,
+      TError,
+      UploadCrmRequestFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadCrmRequestFile>>,
+  TError,
+  UploadCrmRequestFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadCrmRequestFileMutationOptions(options), queryClient);
+};
+
+export const getCopyCrmMessageAttachmentToRequestUrl = () => {
+  return `/api/v1/crm/request-files/from-message`;
+};
+
+/**
+ * Вложение сообщения лида CRM (`GET /leads/{id}/messages/{m}/attachments/{i}`) копируется в EDS `POST /files` от имени сотрудника — тот же ответ, что у загрузки. Разделы `crm.leads` (чтение) и `crm.clients` (полный).
+ * @summary Взять вложение из переписки как письмо директору
+ */
+export const copyCrmMessageAttachmentToRequest = async (
+  requestFileFromMessageIn: RequestFileFromMessageIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsFile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsFile>(getCopyCrmMessageAttachmentToRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(requestFileFromMessageIn),
+  });
+};
+
+export const getCopyCrmMessageAttachmentToRequestMutationKey = () =>
+  ["copyCrmMessageAttachmentToRequest"] as const;
+
+export const getCopyCrmMessageAttachmentToRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>,
+    TError,
+    CopyCrmMessageAttachmentToRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>,
+  TError,
+  CopyCrmMessageAttachmentToRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCopyCrmMessageAttachmentToRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>,
+    CopyCrmMessageAttachmentToRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return copyCrmMessageAttachmentToRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CopyCrmMessageAttachmentToRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>
+>;
+export type CopyCrmMessageAttachmentToRequestMutationBody = RequestFileFromMessageIn;
+export type CopyCrmMessageAttachmentToRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | BackendUnavailableResponse
+>;
+export type CopyCrmMessageAttachmentToRequestMutationVariables = { data: RequestFileFromMessageIn };
+
+/**
+ * @summary Взять вложение из переписки как письмо директору
+ */
+export const useCopyCrmMessageAttachmentToRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>,
+      TError,
+      CopyCrmMessageAttachmentToRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof copyCrmMessageAttachmentToRequest>>,
+  TError,
+  CopyCrmMessageAttachmentToRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCopyCrmMessageAttachmentToRequestMutationOptions(options), queryClient);
+};

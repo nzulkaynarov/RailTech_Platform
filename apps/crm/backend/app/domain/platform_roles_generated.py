@@ -304,7 +304,9 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "dashboard.queue": {},
     "dashboard.summary": {},
     "crm.leads": {},
-    "crm.clients": {},
+    "crm.clients": {
+        "full": ("files.upload",),
+    },
     "eds.inbox": {
         "read": (
             "letters.read",

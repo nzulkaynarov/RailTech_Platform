@@ -1,0 +1,98 @@
+{
+  "title": "Create request",
+  "intro": "The lead becomes a client, the letter goes to the director in “Documents · Incoming letters”, a project chat is created.",
+  "from": "From lead {{lead}}",
+  "client": {
+    "legend": "Client",
+    "searchHint": "Similar clients — pick one to avoid a duplicate company",
+    "pick": "Pick: {{name}}",
+    "picked": "Client: {{name}}",
+    "change": "Another client",
+    "name": "Company name",
+    "inn": "TIN",
+    "innHint": "9–14 digits; can be added later"
+  },
+  "contact": {
+    "legend": "Contact",
+    "existing": "Client contact",
+    "newContact": "New contact",
+    "name": "Name",
+    "position": "Position",
+    "phone": "Phone",
+    "email": "Email",
+    "telegram": "Lead's Telegram ({{username}})",
+    "channelsHint": "At least one channel is required: Telegram, phone or email"
+  },
+  "summary": {
+    "label": "Request summary",
+    "hint": "What the client needs: items, volume, timing"
+  },
+  "letter": {
+    "label": "Letter addressed to the director",
+    "hint": "PDF, image or Office document up to 25 MB. Optional",
+    "uploading": "Uploading the letter…",
+    "uploaded": "Letter uploaded: {{name}}",
+    "remove": "Remove letter",
+    "tooLarge": "The file is larger than 25 MB",
+    "unsupported": "PDF, image or Office document only",
+    "failed": "Could not upload the letter: {{reason}}"
+  },
+  "urgency": {
+    "legend": "Urgency",
+    "normal": "Normal",
+    "urgent": "Urgent"
+  },
+  "consent": {
+    "legend": "Consent to data processing",
+    "given": "Given in the bot on {{date}}",
+    "givenStaff": "Recorded by staff on {{date}}",
+    "missing": "The client has not given consent yet.",
+    "viaBot": "A Telegram lead gives consent in the bot: ask them to press “I agree”.",
+    "mark": "Consent received",
+    "method": "How it was received",
+    "methods": {
+      "phone": "By phone",
+      "email": "By email",
+      "paper": "On paper"
+    },
+    "comment": "Comment"
+  },
+  "consequence": {
+    "lead": "The lead becomes a client and you become responsible for the conversation; the bot keeps answering for this client.",
+    "request": "A request with a ЗВ number appears in the back office.",
+    "letter": "The letter goes to the director in “Documents · Incoming letters”{{urgent}}.",
+    "urgentSuffix": " marked “Urgent”",
+    "chat": "A project chat is created."
+  },
+  "clientGets": "The client gets: “Request ЗВ-… accepted, we are calculating” and an “Open portal” button — in Telegram or by email.",
+  "submit": "Create request → to the director's Inbox",
+  "submitting": "Creating the request…",
+  "cancel": "Cancel",
+  "done": {
+    "title": "Request created",
+    "text": "The request is going to the back office; the ЗВ number will appear on the client card.",
+    "repeated": "This request has already been created — showing it.",
+    "openClient": "Open client card"
+  },
+  "errors": {
+    "company": "Pick a client or enter the company name",
+    "contact": "Pick a contact or enter a name",
+    "channel": "At least one channel is required: Telegram, phone or email",
+    "summary": "Describe the request",
+    "consent": "A request cannot be created without the client's consent",
+    "inn": "TIN is 9 to 14 digits",
+    "handoff_no_consent": "The client has not given data consent — record how it was received",
+    "consent_via_bot": "A Telegram lead gives consent in the bot — ask them to agree",
+    "contact_channel_required": "The contact has no Telegram, phone or email",
+    "request_not_allowed": "The lead is lost — a request cannot be created from it",
+    "request_key_reused": "The form is outdated — open “Create request” again",
+    "erp_not_configured": "The back office is not connected — contact the administrator",
+    "not_lead_owner": "Another employee handles this lead",
+    "telegram_linked_elsewhere": "The lead's Telegram is already linked to another client",
+    "letter_failed": "The letter was not uploaded — remove it or pick another file, otherwise the request goes without it",
+    "request_not_failed": "The request is already being sent or was sent to the back office — refresh the card",
+    "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
+    "enqueue_failed": "Could not queue the sending — try again a bit later",
+    "generic": "Could not create the request. The form data is kept — try again"
+  }
+}

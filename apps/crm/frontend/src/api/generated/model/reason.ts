@@ -134,4 +134,6 @@ export const Reason = {
   request_not_allowed: "request_not_allowed",
   request_key_reused: "request_key_reused",
   erp_request_conflict: "erp_request_conflict",
+  request_not_failed: "request_not_failed",
+  request_not_retryable: "request_not_retryable",
 } as const;

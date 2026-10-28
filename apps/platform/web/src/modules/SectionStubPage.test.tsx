@@ -30,12 +30,12 @@ async function main() {
 }
 
 describe("SectionStubPage · раздел с мостом", () => {
-  it("менеджер, Лиды: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
-    signInAs("manager@demo.example");
-    renderApp("/crm/leads");
+  it("Чаты · С клиентами: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
+    signInAs("all@demo.example");
+    renderApp("/chats?scope=external");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "С клиентами" })).toBeVisible();
     expect(
       within(page).getByRole("heading", {
         level: 2,
@@ -44,16 +44,16 @@ describe("SectionStubPage · раздел с мостом", () => {
     ).toBeVisible();
     expect(
       within(page).getByText(
-        "Сейчас эта работа делается в старой CRM: раздел «Лиды». Данные не потеряны.",
+        "Сейчас эта работа делается в старой CRM: раздел «Входящие». Данные не потеряны.",
       ),
     ).toBeVisible();
 
     const open = await within(page).findByRole("link", { name: /Открыть в старой CRM/ });
-    expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads");
+    expect(open).toHaveAttribute("href", "http://crm.localhost:8088/inbox");
     expect(open).toHaveAttribute("target", "_blank");
     expect(open.getAttribute("rel")).toContain("noopener");
     expect(within(page).getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
-    expect(within(page).getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
+    expect(within(page).getByText("Когда появится: к пилоту.")).toBeVisible();
   });
 
   it("«Каналы связи» отсылают в «Настройки · Telegram-бот», а не в «Подключения» (W15-G-8)", async () => {
@@ -67,7 +67,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of ["/crm/leads", "/crm/clients", "/eds/payments", "/erp/catalog", "/chats"]) {
+    for (const path of ["/crm/requests", "/eds/payments", "/erp/catalog", "/chats"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
@@ -179,12 +179,12 @@ describe("SectionStubPage · раздел без аналога в старых 
 describe("SectionStubPage · адрес старой системы не определён", () => {
   it("кнопки нет, текст остаётся честным и подсказывает, у кого спросить", async () => {
     setBridgeMock({ crmUrl: null });
-    signInAs("manager@demo.example");
-    renderApp("/crm/leads");
+    signInAs("all@demo.example");
+    renderApp("/chats?scope=external");
     const page = await main();
 
     expect(
-      within(page).getByText(/Сейчас эта работа делается в старой CRM: раздел «Лиды»/),
+      within(page).getByText(/Сейчас эта работа делается в старой CRM: раздел «Входящие»/),
     ).toBeVisible();
     await waitFor(() => {
       expect(
@@ -198,27 +198,25 @@ describe("SectionStubPage · адрес старой системы не опр�
 });
 
 describe("SectionStubPage · карточка объекта по прямой ссылке", () => {
-  it("лид по ?lead=: «Лид L-2041», кнопка ведёт прямо в карточку лида старой CRM", async () => {
-    signInAs("manager@demo.example");
-    renderApp("/crm/leads?lead=L-2041&panel=open&tab=card");
+  it("счёт по прямой ссылке: «Счёт СЧ-2026/142», кнопка ведёт в раздел старого ERP", async () => {
+    signInAs("all@demo.example");
+    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F142");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Лид L-2041" })).toBeVisible();
-    const open = await within(page).findByRole("link", { name: /Открыть в старой CRM/ });
-    expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
-    expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/142" })).toBeVisible();
+    expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
+      "href",
+      "http://erp.localhost:8088/#payments",
+    );
   });
 
   it("очередь о нём ничего не знает — только номер и кнопка", async () => {
-    signInAs("manager@demo.example");
-    renderApp("/crm/leads/L-9999");
+    signInAs("all@demo.example");
+    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F999");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Лид L-9999" })).toBeVisible();
-    expect(await within(page).findByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
-      "href",
-      "http://crm.localhost:8088/leads/9999",
-    );
+    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/999" })).toBeVisible();
+    expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
     expect(within(page).queryByRole("region", { name: /Моей очереди/ })).not.toBeInTheDocument();
   });
 
@@ -230,20 +228,29 @@ describe("SectionStubPage · карточка объекта по прямой �
 });
 
 describe("Бейджи меню у заглушек", () => {
-  it("«Лиды»: бейдж 2 только с подсказкой «ещё в старой системе: 2», а текст раздела не говорит «пока нет»", async () => {
-    signInAs("manager@demo.example");
-    renderApp("/crm/leads");
+  it("«Проекты»: бейдж 4 только с подсказкой «ещё в старой системе: 4», а текст раздела не говорит «пока нет»", async () => {
+    signInAs("all@demo.example");
+    renderApp("/dashboard/projects");
     const page = await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
 
     const item = await within(menu).findByRole("link", {
-      name: /Лиды.*ещё в старой системе: 2/,
+      name: /Проекты.*ещё в старой системе: 4/,
     });
-    expect(item.querySelector("[title='ещё в старой системе: 2']")).not.toBeNull();
-    // «Ждут ответа» — настоящий экран (D1-1): живой бейдж, без подсказки о старой системе
-    const live = within(menu).getByRole("link", { name: /Ждут ответа/ });
-    expect(live.querySelector("[title^='ещё в старой системе']")).toBeNull();
+    expect(item.querySelector("[title='ещё в старой системе: 4']")).not.toBeNull();
     expect(within(page).queryByText(/пока нет/)).not.toBeInTheDocument();
+  });
+
+  it("«Лиды» — настоящий экран (D1-2b): живой бейдж без подсказки о старой системе", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/crm/leads");
+    await main();
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    const leads = await within(menu).findByRole("link", { name: /^Лиды/ });
+    await waitFor(() => {
+      expect(leads.querySelector(".pf-badge")).not.toBeNull();
+    });
+    expect(leads.querySelector("[title^='ещё в старой системе']")).toBeNull();
   });
 
   it("раздел без аналога в старых экранах: бейджа нет", async () => {
