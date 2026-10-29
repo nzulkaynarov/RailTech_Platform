@@ -78,7 +78,7 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
         open={open}
         onClose={onClose}
         title={t("drawer.title")}
-        width={mobile ? "100vw" : 400}
+        width={mobile ? "100vw" : 480}
         placement="right"
         destroyOnHidden
         footer={

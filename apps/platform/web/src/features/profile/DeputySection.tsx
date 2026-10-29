@@ -12,6 +12,7 @@ import {
   useSetDeputy,
 } from "../../shared/api/generated/platform-bff";
 import { useFormat } from "../../shared/lib/useFormat";
+import { ContextualSaveBar } from "../../shared/ui/ContextualSaveBar";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
 
@@ -68,6 +69,10 @@ export function DeputySection({ profile }: { profile: Profile }) {
     });
   };
   const today = dayjs().startOf("day");
+  const isDirty =
+    who !== deputy?.user_id ||
+    (from ? from.format(ISO) : null) !== (deputy?.date_from ?? null) ||
+    (to ? to.format(ISO) : null) !== (deputy?.date_to ?? null);
   const error = set.isError
     ? profileErrorText(t, "deputy", set.error)
     : clear.isError
@@ -78,6 +83,18 @@ export function DeputySection({ profile }: { profile: Profile }) {
 
   return (
     <Section title={t("deputy.title")} lead={t("deputy.lead")} testId="profile-deputy">
+      <ContextualSaveBar
+        visible={isDirty}
+        loading={set.isPending}
+        onSave={submit}
+        onDiscard={() => {
+          setWho(deputy?.user_id);
+          setFrom(deputy ? dayjs(deputy.date_from) : null);
+          setTo(deputy ? dayjs(deputy.date_to) : null);
+          setIncomplete(false);
+          set.reset();
+        }}
+      />
       <p style={{ margin: "0 0 12px" }} data-testid="deputy-sentence">
         {deputy
           ? t("deputy.sentence", {

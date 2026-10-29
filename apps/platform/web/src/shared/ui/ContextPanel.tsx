@@ -169,9 +169,9 @@ function PanelBody({
  */
 export function ContextPanel({
   open,
-  panelMode = "overlay",
+  panelMode = "docked",
   panelWidth = "default",
-  canDock = false,
+  canDock = true,
   ...props
 }: ContextPanelProps & { open: boolean }) {
   const widthPx = panelWidth === "wide" ? 600 : 440;
@@ -228,7 +228,9 @@ export function ContextPanel({
       aria-label={props.label}
       id={props.id}
     >
-      <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
+      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
+        <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
+      </aside>
     </Drawer>
   );
 }
@@ -269,7 +271,9 @@ export function ContextPanelDrawer({
       aria-label={props.label}
       id={props.id}
     >
-      <PanelBody {...props} />
+      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
+        <PanelBody {...props} />
+      </aside>
     </Drawer>
   );
 }
@@ -310,7 +314,9 @@ export function ContextPanelSheet({
       id={props.id}
       className="pf-panel-sheet"
     >
-      <PanelBody {...props} withHide={false} />
+      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
+        <PanelBody {...props} withHide={false} />
+      </aside>
     </Drawer>
   );
 }

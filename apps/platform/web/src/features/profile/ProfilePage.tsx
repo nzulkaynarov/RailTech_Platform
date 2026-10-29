@@ -1,5 +1,6 @@
-import { Alert, Button, Skeleton } from "antd";
+import { Alert, Button, Skeleton, Tabs } from "antd";
 import { useTranslation } from "react-i18next";
+import { useSearchParams } from "react-router";
 
 import { useAuth } from "../../app/auth/useAuth";
 import { useGetProfile } from "../../shared/api/generated/platform-bff";
@@ -16,14 +17,32 @@ import "./profile.css";
 /**
  * Профиль `/me` (W15-H6, UX-оценка P1-3): страница, а не окно. Фото, личные данные, «Telegram для уведомлений»,
  * подписки на уведомления бота и замещение. Данные принадлежат CRM (ADR-0015), сотрудник правит только свои; должность и
- * роли — только чтение. «Доступ: CRM · ERP» убран: роли записаны словами.
+ * роли — только чтение. Вкладки синхронизированы с URL (`?viewTab=`).
  */
 export function ProfilePage() {
   const { t } = useTranslation(["profile", "audit"]);
   const { me } = useAuth();
   const profile = useGetProfile();
+  const [params, setParams] = useSearchParams();
   const title = t("profile:title");
   useDocumentTitle(title);
+
+  const viewTab = params.get("viewTab") ?? "all";
+
+  const onTabChange = (key: string) => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (key === "all") {
+          next.delete("viewTab");
+        } else {
+          next.set("viewTab", key);
+        }
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   return (
     <div className="pf-profile">
@@ -49,12 +68,42 @@ export function ProfilePage() {
         />
       ) : (
         <>
-          <IdentitySection me={me} profile={profile.data} />
-          <TelegramSection profile={profile.data} />
-          <Section title={t("audit:profile.notifications")} testId="profile-notifications">
-            <NotificationSettings me={me} />
-          </Section>
-          <DeputySection profile={profile.data} />
+          <Tabs
+            activeKey={viewTab}
+            onChange={onTabChange}
+            items={[
+              {
+                key: "all",
+                label: t("profile:tabs.all", "Все разделы"),
+              },
+              {
+                key: "general",
+                label: t("profile:tabs.general", "Личные данные"),
+              },
+              {
+                key: "notifications",
+                label: t("audit:profile.notifications", "Уведомления"),
+              },
+              {
+                key: "deputy",
+                label: t("profile:deputy.title", "Замещение"),
+              },
+            ]}
+          />
+          {viewTab === "all" || viewTab === "general" ? (
+            <IdentitySection me={me} profile={profile.data} />
+          ) : null}
+          {viewTab === "all" || viewTab === "general" || viewTab === "notifications" ? (
+            <TelegramSection profile={profile.data} />
+          ) : null}
+          {viewTab === "all" || viewTab === "notifications" ? (
+            <Section title={t("audit:profile.notifications")} testId="profile-notifications">
+              <NotificationSettings me={me} />
+            </Section>
+          ) : null}
+          {viewTab === "all" || viewTab === "deputy" ? (
+            <DeputySection profile={profile.data} />
+          ) : null}
         </>
       )}
     </div>
