@@ -34,7 +34,7 @@ check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
 	$(MAKE) -C $(CRM) check
 
 .PHONY: check-erp
-check-erp: ## ERP: появится с M1-ERP-01; пока кода нет — пропуск
+check-erp: ## ERP: flake8, black, isort, eslint, tsc, i18n, vitest, pytest в Docker (apps/erp/Makefile)
 	@if [ -f $(ERP)/Makefile ]; then $(MAKE) -C $(ERP) check; else echo "check-erp: $(ERP) ещё без кода (M1-ERP-01) — пропуск"; fi
 
 .PHONY: check-cabinet

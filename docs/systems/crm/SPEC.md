@@ -1,6 +1,9 @@
 # RailTech CRM — техническое задание (SPEC)
 Статус: действует для бэкенда CRM; при расхождении права docs/product/ и стратегия · Владелец: лид · Обновлено: 2026-10-28
 
+Ссылки «ADR-NNNN» в этом документе — серия ADR CRM ([`docs/adr/crm/`](../../adr/crm/README.md), «ADR CRM-NNNN»), не ADR
+ансамбля с теми же номерами.
+
 Версия 2.8 · 2026-10-14 (центр внешних сервисов — §13.2, M3-CRM-12, ADR-0024; расходы на ИИ по ансамблю из журнала LiteLLM — §13.1, M3-CRM-09; RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016; передача в бэк-офис и итог из ERP — ADR-0022; коннектор «ERP» в «Подключениях» — M3-CRM-02; коннектор «Почта» и журнал писем — ADR-0023, M3-CRM-08: решение Q-010 «SMTP нет» пересмотрено — SMTP появляется как коннектор, ручной временный пароль остаётся)
 
 Документ описывает, *как* устроена система: архитектура, ядро, данные, агенты, интерфейсы, безопасность, стенды, связи. Порядок реализации — в `docs/history/crm/PLAN.md`; зачем всё это — в `docs/systems/crm/BUSINESS.md`; правила работы для Claude Code — в `docs/systems/crm/CONVENTIONS.md`.
@@ -347,7 +350,7 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 
 `new → engaged → qualified → handoff → in_progress → won → customer`; боковая: `lost` (выход — новое сообщение лида или «Забрать»); временная: `unresponsive`. Клиент может открыть новую сделку: `customer → in_progress → won|lost → customer` (ADR-0015).
 
-**Ансамбль CRM ↔ ERP (ADR-0022, proposed).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается). Зеркальная сделка (`deals.erp_deal_id`) — копия заявки ERP: название, сумму, валюту, стадию и причину отказа ведёт бэк-офис (приёмник событий перезаписывает их), `PATCH /deals/{id}` с изменением этих полей — 409 `deal_owned_by_erp` (`details.fields`); ответственный, срок и продукт правятся в CRM (FIX-57, I-26). Номер заявки в карточке лида — `leads.erp_request_id`, результат передачи этого лида, а не последняя сделка (поздние заявки клиента из Cabinet привязываются к тому же лиду, D-10).
+**Ансамбль CRM ↔ ERP (ADR CRM-0022, accepted 2026-10-13).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается). Зеркальная сделка (`deals.erp_deal_id`) — копия заявки ERP: название, сумму, валюту, стадию и причину отказа ведёт бэк-офис (приёмник событий перезаписывает их), `PATCH /deals/{id}` с изменением этих полей — 409 `deal_owned_by_erp` (`details.fields`); ответственный, срок и продукт правятся в CRM (FIX-57, I-26). Номер заявки в карточке лида — `leads.erp_request_id`, результат передачи этого лида, а не последняя сделка (поздние заявки клиента из Cabinet привязываются к тому же лиду, D-10).
 
 **«Создать заявку» (CRM-03, W16-D1-2; SPEC-v3 §3.1 шаг 2).** `POST /leads/{id}/actions/create_request` из любой активной
 стадии лида (кроме `lost`; переход в `customer` — действием менеджера, `domain/stage_machine.py`) и `POST /clients/{id}/actions/create_request`
@@ -711,7 +714,7 @@ Refine — оболочка: `authProvider` (cookie JWT), `accessControlProvider
 | Бэкапы | нет | ежедневно |
 | Доступ к Langfuse/консоли RustFS | открыт | IP allow-list |
 
-Переезд dev → prod — `docs/runbooks/crm/promote-to-prod.md`: чек-лист из `docs/history/crm/PLAN.md` фазы 9.
+Переезд dev → prod отдельной CRM — история (`docs/history/runbooks/crm-promote-to-prod.md`); пилот ансамбля — `docs/runbooks/wave18a-pilot-critical.md`. Чек-лист был из `docs/history/crm/PLAN.md` фазы 9.
 
 ---
 

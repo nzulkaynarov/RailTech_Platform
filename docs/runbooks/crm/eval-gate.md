@@ -1,4 +1,5 @@
 # Eval-gate в CI
+Статус: действует · Владелец: лид · Обновлено: 2026-10-22
 
 ## Когда применять
 PR меняет `backend/prompts/`, `app/agents/`, `domain/triggers.py|scoring.py|qualifier_decision.py`,

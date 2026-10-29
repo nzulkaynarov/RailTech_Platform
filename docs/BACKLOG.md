@@ -1,5 +1,5 @@
 # BACKLOG — единый реестр хвостов
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-29
 
 Единый источник незакрытых дефектов, долгов и открытых вопросов RailTech Platform (ORCHESTRATOR §3 п. 17: документация — только в `docs/`). Собран 2026-10-27 из [`PROGRESS.md`](PROGRESS.md) (волны 9–14, 11b, 11c, 13c), [`HANDOFF.md`](HANDOFF.md) §2 и §5, [`QUESTIONS.md`](QUESTIONS.md), отчётов гейтов в [`runbooks/`](runbooks/) (QA-P1, R-3, гейты B, 11c, C1, C2a, замер шины 13c), UX-оценки [`research/2026-10-27-ux-audit`](research/2026-10-27-ux-audit/README.md), исследования [`research/2026-10-27-document-templates`](research/2026-10-27-document-templates/README.md), описаний PR волн 13c–16 (#245–#272) и runbook'ов [волны 15](history/runbooks/wave15-honest-ui.md), [волны 16](runbooks/wave16-d1-work-screens.md), [волны 17](runbooks/wave17-d2-costing-accounting.md).
 
