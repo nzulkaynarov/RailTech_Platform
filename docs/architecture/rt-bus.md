@@ -2,7 +2,7 @@
 
 Библиотека [`packages/rt-bus`](../../packages/rt-bus/) (дистрибутив `rt-bus`, импорт `rt_bus`, Python 3.12) — единственный
 способ, которым сервис публикует события своих сущностей и получает чужие. Основание: [ADR-0014](../adr/0014-integration-bus-rt-bus.md),
-правило «интеграции только через шину» (ORCHESTRATOR §3 п. 14). Нормативка: CONTRACTS §9 «Шина rt_bus», [runbook волны 11](../runbooks/wave11-bus-v1.md) §2,
+правило «интеграции только через шину» (ORCHESTRATOR §3 п. 14). Нормативка: CONTRACTS §9 «Шина rt_bus», [runbook волны 11](../history/runbooks/wave11-bus-v1.md) §2,
 решения лида L1–L21 (§11). Транспорт v1 — PostgreSQL outbox сервиса, ретранслятор и подписанный HTTP к подписчикам. Бизнес-код
 транспорт не видит (v2 — NATS JetStream, этап F).
 
@@ -410,7 +410,7 @@ make -C packages/rt-bus check                                          # ruff, m
 | L14 | Пакеты в образах — compose `additional_contexts` (`rtbus`, `contracts`) и `COPY --from`, то же в `deploy.yml`; контракты в образе — `/opt/rt/contracts`. |
 | L15 | Документация шины — только в `docs/`: этот файл, CONTRACTS §9, runbook'и `docs/runbooks/rt-bus-*.md`. |
 
-Решения волны 11c (F1, 2026-10-26; основание — [отчёт гейта B](../runbooks/wave11b_gate_b_report.md) §4, [отчёт гейта C1](../runbooks/c1_eds_gate_report.md) §4, [runbook волны](../runbooks/wave11c-bus-fixes.md)):
+Решения волны 11c (F1, 2026-10-26; основание — [отчёт гейта B](../audits/wave11b_gate_b_report.md) §4, [отчёт гейта C1](../audits/c1_eds_gate_report.md) §4, [runbook волны](../history/runbooks/wave11c-bus-fixes.md)):
 
 | № | Решение |
 |---|---|
@@ -420,7 +420,7 @@ make -C packages/rt-bus check                                          # ruff, m
 | L19 | Итоги пачки пишутся по подписчикам в порядке имён, короткой транзакцией на подписчика; `40P01`/`40001` — повтор группы; ошибка одной группы не держит аренду чужих (W11B-G-1). |
 | L20 | Пробуждение Procrastinate — свой `queueing_lock` `rt_bus.pump.wakeup`, с периодическим `pump` не сливается; воркер опрашивает очередь раз в секунду (`WORKER_OPTIONS`) (W11B-G-6). |
 
-Решения волны 13 (A0, 2026-10-26; основание — [отчёт гейта 11c](../runbooks/wave11c_gate_report.md) §4 W11C-G-1):
+Решения волны 13 (A0, 2026-10-26; основание — [отчёт гейта 11c](../audits/wave11c_gate_report.md) §4 W11C-G-1):
 
 | № | Решение |
 |---|---|

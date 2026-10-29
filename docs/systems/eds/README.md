@@ -4,7 +4,7 @@
 EDS — отдельный сервис со своей базой `eds` (ADR-0015): письма и резолюции, служебные записки, заявления, отчёты, общий движок
 маршрутов согласования, реестр и нумерация документов. Стек — [ADR-0013](../../adr/0013-stack-and-standards.md): FastAPI + SQLAlchemy 2
 (async, psycopg 3) + Alembic + Procrastinate. Интеграции — только через шину `rt_bus` ([ADR-0014](../../adr/0014-integration-bus-rt-bus.md),
-[`rt-bus.md`](../../architecture/rt-bus.md)). План волны — [`wave12-eds-c1.md`](../../runbooks/wave12-eds-c1.md). Правила кода — [`CONVENTIONS.md`](CONVENTIONS.md).
+[`rt-bus.md`](../../architecture/rt-bus.md)). План волны — [`wave12-eds-c1.md`](../../history/runbooks/wave12-eds-c1.md). Правила кода — [`CONVENTIONS.md`](CONVENTIONS.md).
 
 | Владеет данными | Публикует события | Подписывается на |
 |---|---|---|
@@ -69,7 +69,7 @@ apps/eds/
 
 ## Вход и права
 
-Своей формы входа у EDS нет. Нормативно — [`sso-token.md`](../../architecture/sso-token.md), «Токен сотрудника для EDS» (решение L-C1-1), и [`wave12-eds-c1.md`](../../runbooks/wave12-eds-c1.md) §2.2:
+Своей формы входа у EDS нет. Нормативно — [`sso-token.md`](../../architecture/sso-token.md), «Токен сотрудника для EDS» (решение L-C1-1), и [`wave12-eds-c1.md`](../../history/runbooks/wave12-eds-c1.md) §2.2:
 
 1. BFF берёт у CRM SSO-токен (`aud=eds`, 60 с, одноразовый `jti`) и вызывает `POST /api/v1/auth/sso/exchange {token}`.
 2. Проверки по порядку: подпись `PLATFORM_SSO_SECRET` (оба значения) → `aud == "eds"` → срок (`exp` не прошёл с допуском 5 с, `exp − iat ≤ 60 (+5)`) → `jti` не встречался
@@ -96,7 +96,7 @@ apps/eds/
 
 ## Домен (E3)
 
-Нормативка — [`wave12-eds-c1.md`](../../runbooks/wave12-eds-c1.md) §2 и контракт (`packages/contracts/openapi/eds.yaml` 0.1.0, `events/eds/`): здесь только устройство кода. Объекты в пути
+Нормативка — [`wave12-eds-c1.md`](../../history/runbooks/wave12-eds-c1.md) §2 и контракт (`packages/contracts/openapi/eds.yaml` 0.1.0, `events/eds/`): здесь только устройство кода. Объекты в пути
 адресуются UUID, не номером (номер содержит «/»; номер — поле и фильтр `GET /registry?number=`). Слои: `api/v1/*` → `services/*` (команды и чтение отдельно: `letters` /
 `letters_read` и т. д.) → `models/*`; события публикует только сервис, в транзакции изменения.
 

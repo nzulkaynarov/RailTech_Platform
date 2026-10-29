@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Замер W13-A0 (W11C-G-1) на стенде compose-проекта rt-c2: быстрые подписчики (platform-bff, erp, eds, crm) при подписчике `slow`,
-# отвечающем 200 через 2,5 с. Генераторы нагрузки — общие скрипты гейта 11c (docs/runbooks/qa/w11c-gate/, STAND=rt-c2).
+# отвечающем 200 через 2,5 с. Генераторы нагрузки — общие скрипты гейта 11c (docs/audits/qa/w11c-gate/, STAND=rt-c2).
 # Предусловия: стенд поднят и подготовлен (setup, сопряжение ERP, сотрудники, клиент со сделкой ERP — см. отчёт PR), заглушка bus-slow
 # (slow_stub.py) запущена, файл подписок стенда — bind-mount на /opt/rt/contracts/bus (правится НА МЕСТЕ).
 #   SUBS_FILE=<копия subscriptions.yaml стенда> ./measure.sh <каталог вывода>
@@ -9,7 +9,7 @@
 # Фазы: control (без slow) -> x1 (30 лидов CRM = 60 событий с паузами 0..6 с + ERP и EDS вразбивку) -> burst (волны по 50 публикаций).
 set -u
 D="$(cd "$(dirname "$0")" && pwd)"
-GATE="$D/../../../runbooks/qa/w11c-gate"
+GATE="$D/../../../audits/qa/w11c-gate"
 OUT="${1:?каталог вывода}"; mkdir -p "$OUT"
 export STAND="${STAND:-rt-c2}"
 now() { date -u '+%Y-%m-%d %H:%M:%S'; }

@@ -73,7 +73,7 @@ ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный
 
 ## Токен сотрудника для EDS
 
-Решение лида L-C1-1 (волна 12, runbook [`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2.2; контракт —
+Решение лида L-C1-1 (волна 12, runbook [`wave12-eds-c1.md`](../history/runbooks/wave12-eds-c1.md) §2.2; контракт —
 `packages/contracts/openapi/eds.yaml`). У EDS нет своей формы входа и внешнего маршрута: сотрудник приходит только через BFF
 Платформы, BFF получает токен у CRM и обменивает его в EDS. Реализация: CRM — задача E4, EDS — E2, BFF — W13-A2 (при первом
 обращении к EDS; токен доступа EDS — в сессии BFF, `docs/architecture/platform-bff.md` §3).

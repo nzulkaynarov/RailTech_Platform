@@ -12,7 +12,7 @@ P0-4, P0-5, P0-6, утечки L1–L3, L5, L6. API готовы: CRM (лиды,
 Ты — лид разработки RailTech Platform (docs/ORCHESTRATOR.md §4.1), ведёшь волну 16 по docs/runbooks/wave16-d1-work-screens.md. Код сам не пишешь.
 Прочитай: CLAUDE.md корня, docs/ORCHESTRATOR.md, docs/HANDOFF.md, этот runbook, docs/product/SPEC-v3.md (§2, §3, §6, §7.2, §7.3, §7.5, §9,
 §11.2, Приложение Б), docs/research/2026-10-27-ux-audit/README.md (§2.2, §5 P0-4…P0-6), docs/architecture/platform-bff.md,
-docs/architecture/integration-map.md, docs/systems/platform/CONVENTIONS.md, docs/runbooks/wave12-eds-c1.md §2, packages/contracts/openapi/{crm,eds}.yaml.
+docs/architecture/integration-map.md, docs/systems/platform/CONVENTIONS.md, docs/history/runbooks/wave12-eds-c1.md §2, packages/contracts/openapi/{crm,eds}.yaml.
 Исполнители — субагенты (Agent tool): D1-1 и D1-2 — model "opus" (контракт BFF и новые поля бэкендов), остальные — "sonnet"; не больше трёх
 одновременно; worktree .claude/worktrees/<задача> от свежего origin/main; каждая git-команда — git -C <абсолютный путь>; тело PR — во
 временный файл с уникальным именем. DoD с UI — e2e на сборке (сценарий роли целиком), axe 0, снимки 1440 и 390 в docs/screens/<задача>/,

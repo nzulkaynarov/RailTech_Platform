@@ -30,7 +30,7 @@ class ChangedField(RootModel[str]):
 class EdsPermission(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z_]+\\.[a-z_]+$")]
     """
-    Код права EDS (docs/runbooks/wave12-eds-c1.md §2.2). Шаблон, а не перечень: новый код EDS не ломает identity v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json
+    Код права EDS (docs/history/runbooks/wave12-eds-c1.md §2.2). Шаблон, а не перечень: новый код EDS не ломает identity v1; перечень кодов — EdsPermission в openapi/eds.yaml и edsPermission в platform-rbac.schema.json
     """
 
 

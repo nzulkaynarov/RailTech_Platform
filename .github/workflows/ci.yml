@@ -2,7 +2,7 @@
 # (ORCHESTRATOR §3.11). Раннер — переменная репозитория CI_RUNNER (например, self-hosted),
 # по умолчанию ubuntu-latest (DECISIONS 2026-10-13: self-hosted или минуты GitHub — решает владелец).
 #
-# Скорость (волна 14, W14-S2; docs/runbooks/wave14-speed.md): цель — ответ по PR ≤ 10 мин. Поэтому задания приложения не ждут
+# Скорость (волна 14, W14-S2; docs/history/runbooks/wave14-speed.md): цель — ответ по PR ≤ 10 мин. Поэтому задания приложения не ждут
 # друг друга (lint, unit, integration, e2e, сборка идут параллельно сразу после `changes`), ERP разнесён на параллельные
 # задания, e2e Платформы — на сборке и в шардах. Контракты — по потребителям (фильтры ниже), не «весь packages/contracts».
 # Контракт: make contracts и чистый git diff в packages/contracts/generated.

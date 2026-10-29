@@ -239,8 +239,8 @@ C3 «Родной словарь» (C4 «Темы» — параллельно) 
 
 | Волна | Этап | Runbook | Состояние на 2026-10-23 |
 |---|---|---|---|
-| 9 | C1 «Роли как данные» (ADR-0012) | [`runbooks/wave9-roles.md`](runbooks/wave9-roles.md) | идёт |
-| 10 | 0 «Чистый лист и надёжность» | [`runbooks/wave10-stage0.md`](runbooks/wave10-stage0.md) | идёт |
+| 9 | C1 «Роли как данные» (ADR-0012) | [`runbooks/wave9-roles.md`](history/runbooks/wave9-roles.md) | идёт |
+| 10 | 0 «Чистый лист и надёжность» | [`runbooks/wave10-stage0.md`](history/runbooks/wave10-stage0.md) | идёт |
 | 11 | B «Шина v1 и контракты» | `runbooks/wave11-bus-v1.md` | идёт |
 
 Формат задачи: `ID · название · зависит от · результат · готово, когда`. Оценок в днях нет (правило владельца).

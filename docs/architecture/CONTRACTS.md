@@ -317,7 +317,7 @@ BFF (модели ответов CRM, `make -C apps/platform crm-models`). Св�
 ## 9. Шина rt_bus (события v2)
 
 ADR-0014 (шина, правило «интеграции только через шину» — ORCHESTRATOR §3.14), ADR-0015 (владелец поля, домены),
-ADR-0016 (версии); runbook `docs/runbooks/wave11-bus-v1.md`. Источник истины — файлы `packages/contracts/events/` и
+ADR-0016 (версии); runbook `docs/history/runbooks/wave11-bus-v1.md`. Источник истины — файлы `packages/contracts/events/` и
 `packages/contracts/bus/`; библиотека — `packages/rt-bus` (B1). Таблицы библиотеки: `rt_bus_outbox`, `rt_bus_delivery`,
 `rt_bus_inbox`, `rt_bus_subscriber_state`.
 
@@ -626,7 +626,7 @@ enum `ExternalServiceCode` контракта ERP остаётся — чита�
 ## 10. EDS (волна 12, этап C1)
 
 ADR-0015 (EDS — отдельный сервис, владелец реестра и маршрутов согласования), runbook
-[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2 (нормативка), карта интеграции §7 (EDS-01, EDS-02, EDS-03). Источник
+[`wave12-eds-c1.md`](../history/runbooks/wave12-eds-c1.md) §2 (нормативка), карта интеграции §7 (EDS-01, EDS-02, EDS-03). Источник
 истины — файлы `packages/contracts/`; здесь — объяснение.
 
 | Файл | Что | Версия |

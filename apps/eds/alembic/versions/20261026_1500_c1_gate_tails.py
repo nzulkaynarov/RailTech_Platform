@@ -1,6 +1,6 @@
 """Хвосты гейта C1: отметка «одобрено с опозданием» у маршрута КП и контакт отправителя письма
 
-Решения архитектора 2026-10-26 (docs/DECISIONS.md, runbook docs/runbooks/wave11c-bus-fixes.md, F4):
+Решения архитектора 2026-10-26 (docs/DECISIONS.md, runbook docs/history/runbooks/wave11c-bus-fixes.md, F4):
 * `approval_routes.approved_late` — КП одобрено, хотя готово позже срока резолюции (C1-G-1: `due` — предупреждение);
 * `letters.sender_contact` — контактное лицо отправителя; письмо по заявке берёт его из `erp.request.created` (C1-G-7).
 
