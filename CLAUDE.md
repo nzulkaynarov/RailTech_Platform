@@ -36,6 +36,7 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
 | Что | Команда |
 |---|---|
 | Worktree задачи (ORCHESTRATOR §4.1) | только `.claude/worktrees/<задача>`: `git worktree add .claude/worktrees/<задача> -b <ветка> origin/main` или `EnterWorktree`; имя задачи = `ERP_TEST_NS` |
+| Git-хуки (gitleaks, сообщение коммита) и хуки Claude Code | один раз на клон `make hooks`; что проверяют — `docs/systems/infra/claude-code.md` |
 | Зависимости (в новом worktree — первым шагом) | `make -C apps/<crm\|erp\|cabinet\|platform\|eds> install`; контракты — `cd packages/contracts && pnpm install --frozen-lockfile` |
 | Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; замороженный фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>` |
 | Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"`; замороженный фронтенд — `cd apps/erp/frontend && npm run test -- <шаблон>` |
