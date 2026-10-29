@@ -8,7 +8,7 @@ import { readTickets, resetTicketsMock } from "../../mocks/ticketsStore";
 import i18n from "../../shared/i18n";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { setViewportWidth } from "../../test/viewport";
-import { LATEST_WHATS_NEW } from "./changelog";
+import { CHANGELOG, LATEST_WHATS_NEW } from "./changelog";
 
 // W-REL: окно «Платформа обновлена» один раз на сотрудника, отметка «Новое» у «?», «Что нового» снимает её; под статьёй —
 // «Помогла?» и «Здесь устарело» (обращение администратору).
@@ -36,7 +36,10 @@ describe("«Платформа обновлена» (W-REL)", () => {
     signInWithNews();
     renderApp("/dashboard/queue");
     const notice = await screen.findByRole("region", { name: "Платформа обновлена" });
-    expect(within(notice).getByText(/Помощь, профиль и первые рабочие экраны/)).toBeInTheDocument();
+    // Окно называет последнюю запись — заголовок берём из неё, а не из конкретной даты.
+    expect(
+      within(notice).getByText(CHANGELOG[0]?.title ?? "", { exact: false }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Помощь (клавиша ?), есть новое" }),
     ).toBeInTheDocument();
