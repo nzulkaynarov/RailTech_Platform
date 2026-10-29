@@ -65,11 +65,12 @@ export function AppShell() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
-  // Где выбирать нечего, боковое окно закрыто по умолчанию (W15-H4): у заглушки раздела таблицы нет.
+  // В списках и таблицах боковое окно закрыто по умолчанию (открывается по ?panel=open);
+  // на карточке конкретного объекта (:id) открыто на широком экране, если не закрыто явно.
   const panels = usePanels(
     me.id,
     match?.section,
-    !(match && isStubSection(match.module.code, match.section.key)),
+    Boolean(match?.objectId && !isStubSection(match.module.code, match.section.key)),
   );
   const setupPending = useSetupPending();
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
@@ -301,6 +302,11 @@ export function AppShell() {
     onHide: () => {
       panels.setPanelOpen(false);
     },
+    panelMode: panels.panelMode,
+    onModeChange: panels.setPanelMode,
+    panelWidth: panels.panelWidth,
+    onWidthChange: panels.setPanelWidth,
+    canDock: viewport.canDock,
     children: (
       <>
         <div ref={attachPanelSlot} />
@@ -403,7 +409,7 @@ export function AppShell() {
             <SetupBanner />
             <Outlet />
           </Layout.Content>
-          {viewport.wide && hasPanel ? (
+          {!viewport.mobile && hasPanel ? (
             <ContextPanel open={panels.panelOpen} {...panelProps} />
           ) : null}
         </Layout>
@@ -418,17 +424,17 @@ export function AppShell() {
           closeLabel={t("panel.close")}
           {...panelProps}
         />
-      ) : viewport.wide || !hasPanel ? null : (
+      ) : viewport.mobile && hasPanel ? (
         <ContextPanelDrawer
           open={panels.panelOpen}
           onClose={() => {
             panels.setPanelOpen(false);
           }}
           offsetTop={HEADER_HEIGHT}
-          offsetBottom={viewport.mobile ? MOBILE_BAR_HEIGHT : 0}
+          offsetBottom={MOBILE_BAR_HEIGHT}
           {...panelProps}
         />
-      )}
+      ) : null}
       {viewport.mobile ? (
         <>
           <ModuleRail

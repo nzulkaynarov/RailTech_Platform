@@ -3,30 +3,39 @@ import { useSearchParams } from "react-router";
 
 import type { SectionConfig } from "../../modules/types";
 import { DEFAULT_TABS } from "../../modules/types";
-import { panelsKey, usePanelsStore } from "./panelsStore";
+import {
+  panelsKey,
+  usePanelsStore,
+  type PanelLayoutMode,
+  type PanelWidthPreset,
+} from "./panelsStore";
 import { useViewport } from "./useViewport";
 
 export interface Panels {
   menuOpen: boolean;
   panelOpen: boolean;
+  panelMode: PanelLayoutMode;
+  panelWidth: PanelWidthPreset;
   tab: string;
   tabs: readonly string[];
   toggleMenu: () => void;
   togglePanel: () => void;
   setPanelOpen: (open: boolean) => void;
+  setPanelMode: (mode: PanelLayoutMode) => void;
+  setPanelWidth: (width: PanelWidthPreset) => void;
   setTab: (tab: string) => void;
 }
 
 /**
- * Подменю: запоминается на пользователя и раздел. Боковое окно: `?panel=` важнее сохранённого, дальше сохранённое,
- * дальше умолчание раздела. На экранах < 1200 боковое окно — Drawer поверх основного: по умолчанию закрыт, открывается
- * только явным `?panel=open` и не записывается в сохранённое состояние широкого экрана.
+ * Подменю: запоминается на пользователя и раздел.
+ * Боковое окно: открытие panelOpen определяется ТОЛЬКО наличием ?panel=open в URL.
+ * Настройки отображения (режим overlay/docked, ширина default/wide, последняя вкладка lastTab)
+ * сохраняются в panelsStore (localStorage ключ rt-pf-panels-v2).
  */
 export function usePanels(
   userId: string,
   section: SectionConfig | undefined,
-  /** Умолчание бокового окна, если у раздела нет своего (`defaults.panelOpen`): у заглушки — закрыто */
-  fallbackOpen = true,
+  fallbackOpen = false,
 ): Panels {
   const { wide } = useViewport();
   const [params, setParams] = useSearchParams();
@@ -36,24 +45,25 @@ export function usePanels(
 
   const tabs = useMemo(() => (section?.tabs ?? DEFAULT_TABS).map((t) => t.key), [section]);
 
+  // Открытие панели: в списках определяется ?panel=open в URL; на карточке объекта (:id) — fallbackOpen на широком экране
   const urlPanel = params.get("panel");
-  const panelOpen = wide
-    ? urlPanel === "open"
-      ? true
-      : urlPanel === "closed"
-        ? false
-        : (entry?.panelOpen ?? section?.defaults?.panelOpen ?? fallbackOpen)
-    : urlPanel === "open";
+  const panelOpen =
+    urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && fallbackOpen;
+
+  const panelMode: PanelLayoutMode = entry?.panelMode ?? "overlay";
+  const panelWidth: PanelWidthPreset = entry?.panelWidth ?? "default";
+
   const isDesktopWide = typeof window !== "undefined" ? window.innerWidth >= 1440 : true;
   const defaultMenuOpen = isDesktopWide ? (section?.defaults?.menuOpen ?? true) : false;
   const menuOpen = entry?.menuOpen ?? defaultMenuOpen;
 
   const urlTab = params.get("tab");
+  const savedTab = entry?.lastTab ?? "";
   const tab =
     urlTab && tabs.includes(urlTab)
       ? urlTab
-      : tabs.includes(entry?.tab ?? "")
-        ? (entry?.tab ?? "")
+      : tabs.includes(savedTab)
+        ? savedTab
         : (tabs[0] ?? "card");
 
   const setPanelOpen = useCallback(
@@ -61,14 +71,33 @@ export function usePanels(
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          next.set("panel", open ? "open" : "closed");
+          if (open) {
+            next.set("panel", "open");
+          } else if (fallbackOpen) {
+            next.set("panel", "closed");
+          } else {
+            next.delete("panel");
+          }
           return next;
         },
         { replace: true },
       );
-      if (wide) patch(key, { panelOpen: open });
     },
-    [setParams, patch, key, wide],
+    [setParams, fallbackOpen],
+  );
+
+  const setPanelMode = useCallback(
+    (mode: PanelLayoutMode) => {
+      patch(key, { panelMode: mode });
+    },
+    [patch, key],
+  );
+
+  const setPanelWidth = useCallback(
+    (width: PanelWidthPreset) => {
+      patch(key, { panelWidth: width });
+    },
+    [patch, key],
   );
 
   const setTab = useCallback(
@@ -81,7 +110,7 @@ export function usePanels(
         },
         { replace: true },
       );
-      patch(key, { tab: next });
+      patch(key, { lastTab: next });
     },
     [setParams, patch, key],
   );
@@ -89,6 +118,8 @@ export function usePanels(
   return {
     menuOpen,
     panelOpen,
+    panelMode,
+    panelWidth,
     tab,
     tabs,
     toggleMenu: () => {
@@ -98,6 +129,8 @@ export function usePanels(
       setPanelOpen(!panelOpen);
     },
     setPanelOpen,
+    setPanelMode,
+    setPanelWidth,
     setTab,
   };
 }
