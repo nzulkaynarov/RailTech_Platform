@@ -1,4 +1,4 @@
-import { Drawer, Layout } from "antd";
+import { Button, Drawer, Layout } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router";
@@ -14,7 +14,10 @@ import { WhatsNewNotice } from "../../features/help/WhatsNewNotice";
 import { useWhatsNew } from "../../features/help/whatsNew";
 import { Onboarding } from "../../features/onboarding/Onboarding";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
-import { useNotifications } from "../../features/notifications/useNotifications";
+import {
+  useNotifications,
+  useReadNotifications,
+} from "../../features/notifications/useNotifications";
 import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
@@ -48,9 +51,9 @@ function isMac(): boolean {
 }
 
 /**
- * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 64 · подменю 208 · шапка 56 · основное окно · боковое окно 360.
+ * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 56 · подменю 208 · шапка 56 · основное окно · боковое окно 440/600 (Slide-over).
  * Модули и разделы — из `Me.modules` и `Me.resources`; панели запоминаются по пользователю и разделу.
- * < 1200 px боковое окно — Drawer, < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
+ * < 1440 px подменю свёрнуто по умолчанию (хоткей ⌘\); < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
  * показывает боковое окно листом на весь экран (B-020).
  */
 export function AppShell() {
@@ -107,13 +110,19 @@ export function AppShell() {
   // Поток подсказок BFF (SSE): события шины обновляют колокольчик, бейджи и очередь без ожидания опроса.
   useEventStream(hasQueue);
   const unread = useNotifications().query;
+  const readNotes = useReadNotifications();
 
   const unreadCount = unread.data?.unread_count ?? 0;
 
-  // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях.
+  // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях (работает и в раскладке RU).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        (event.key.toLowerCase() !== "k" && event.code !== "KeyK")
+      ) {
+        return;
+      }
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -151,10 +160,12 @@ export function AppShell() {
     };
   }, []);
 
-  // ⌘\ / Ctrl+\ переключает подменю (toggleMenu), не перехватывая ввод в полях
+  // ⌘\ / Ctrl+\ переключает подменю (toggleMenu), не перехватывая ввод в полях (работает и в раскладке RU)
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key !== "\\") return;
+      if (!(event.metaKey || event.ctrlKey) || (event.key !== "\\" && event.code !== "Backslash")) {
+        return;
+      }
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -377,9 +388,22 @@ export function AppShell() {
             onClick: openHelp,
             fresh: helpFresh,
           }}
+          bellExtra={
+            <Button
+              type="link"
+              size="small"
+              disabled={unreadCount === 0 || readNotes.markAllPending}
+              onClick={() => {
+                readNotes.markAll();
+              }}
+              style={{ padding: 0 }}
+            >
+              {t("notifications.markAll")}
+            </Button>
+          }
           bellContent={
             <NotificationCenter
-              variant="popover"
+              variant="drawer"
               onClose={() => {
                 setBellOpen(false);
               }}

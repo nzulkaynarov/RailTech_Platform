@@ -1,7 +1,6 @@
-import { Button, Skeleton, Tabs } from "antd";
+import { Button, Segmented, Select, Skeleton } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
 
 import type { Notification, NotificationTab } from "../../shared/api/generated/model";
 import { EmptyState } from "../../shared/ui/EmptyState";
@@ -10,35 +9,43 @@ import { NotificationList } from "./NotificationList";
 import { useNotifications, useReadNotifications } from "./useNotifications";
 import "./notifications.css";
 
-const TABS: readonly NotificationTab[] = ["all", "decisions", "clients", "system"];
-/** Куда ведёт «Все уведомления»: вкладка «Уведомления» бокового окна «Моей очереди». */
+/** Куда ведёт «Все уведомления»: вкладка «Уведомления» бокового окна «Моей очереди». Сохранено для совместимости. */
 export const ALL_NOTIFICATIONS_PATH = "/dashboard/queue?panel=open&tab=notifications";
 
 export interface NotificationCenterProps {
-  /** `popover` — под колокольчиком (вкладки, футер), `panel` — вкладка бокового окна Dashboard (плоский список) */
-  variant: "popover" | "panel";
+  /** `drawer` / `popover` — в шторке колокольчика, `panel` — вкладка бокового окна Dashboard (плоский список) */
+  variant: "popover" | "panel" | "drawer";
   /** Закрыть окно после перехода по уведомлению */
   onClose?: () => void;
 }
 
-function unreadBy(items: readonly Notification[], tab: NotificationTab, total: number): number {
-  return tab === "all" ? total : items.filter((n) => n.tab === tab && !n.read).length;
-}
-
 /**
- * Центр уведомлений (SPEC-v3 §6.4): вкладки «Все · Решения · Клиенты · Система» с числом непрочитанных, список,
- * «Отметить все прочитанными», «Все уведомления». Данные — `GET /notifications`, опрос 30 с и при фокусе.
+ * Центр уведомлений (SPEC-v3 §6.4, UX-Shell v2):
+ * В режиме Drawer/Popover — панель управления с Segmented (Непрочитанные (N) / Все) и Select категорий.
+ * В режиме панели Dashboard (variant="panel") — плоский список с кнопкой «Отметить все прочитанными».
+ * Данные — `GET /notifications`, опрос 30 с и при фокусе.
  */
 export function NotificationCenter({ variant, onClose }: NotificationCenterProps) {
   const { t } = useTranslation("shell");
   const { query, enabled } = useNotifications();
   const read = useReadNotifications();
-  const [tab, setTab] = useState<NotificationTab>("all");
+  const [readScope, setReadScope] = useState<"unread" | "all">("unread");
+  const [category, setCategory] = useState<NotificationTab>("all");
+  // Защита от исчезновения уведомления при раскрытии «Где посмотреть» в режиме «Непрочитанные»
+  const [pinnedIds, setPinnedIds] = useState<string[]>([]);
 
   const page = query.data;
   const items = page?.items ?? [];
-  const shown = variant === "panel" || tab === "all" ? items : items.filter((n) => n.tab === tab);
-  const unread = page?.unread_count ?? 0;
+  const unread = page?.unread_count ?? items.filter((n) => !n.read).length;
+
+  const shown =
+    variant === "panel"
+      ? items
+      : items.filter((item) => {
+          if (readScope === "unread" && item.read && !pinnedIds.includes(item.id)) return false;
+          if (category !== "all" && item.tab !== category) return false;
+          return true;
+        });
 
   const open = (item: Notification) => {
     if (!item.read) read.markRead(item.id);
@@ -94,6 +101,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
         items={shown}
         onOpen={open}
         onRead={(item) => {
+          setPinnedIds((prev) => (prev.includes(item.id) ? prev : [...prev, item.id]));
           read.markRead(item.id);
         }}
         label={t("notifications.label")}
@@ -107,57 +115,77 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
         type="text"
         size="small"
         disabled={unread === 0 || read.markAllPending}
-        onClick={read.markAll}
+        onClick={() => {
+          read.markAll();
+        }}
       >
         {t("notifications.markAll")}
       </Button>
-      {variant === "popover" ? (
-        <Link to={ALL_NOTIFICATIONS_PATH} onClick={onClose} style={{ fontSize: 12 }}>
-          {t("notifications.seeAll")}
-        </Link>
-      ) : null}
     </div>
   );
 
   return (
-    <div className="pf-notes-section">
+    <div
+      className="pf-notes-section"
+      style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}
+    >
       <SourceBanner
         sources={page?.sources}
         onRetry={() => {
           void query.refetch();
         }}
       />
-      {variant === "popover" ? (
-        <Tabs
-          size="small"
-          activeKey={tab}
-          onChange={(key) => {
-            setTab(key as NotificationTab);
+      {variant !== "panel" ? (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            padding: "8px 16px",
+            borderBottom: "1px solid #f0f0f0",
+            background: "#fff",
+            flex: "0 0 auto",
           }}
-          tabBarStyle={{ margin: 0, padding: "0 16px" }}
-          items={TABS.map((key) => {
-            const count = unreadBy(items, key, unread);
-            return {
-              key,
-              label: (
-                <span>
-                  {t(`notifications.tabs.${key}`)}
-                  {count > 0 ? (
-                    <>
-                      {" "}
-                      <span className="pf-hint">{count}</span>
-                    </>
-                  ) : null}
-                </span>
-              ),
-              children: key === tab ? body : null,
-            };
-          })}
-        />
-      ) : (
-        body
-      )}
-      {!enabled || query.isPending || query.isError ? null : footer}
+        >
+          <Segmented<"unread" | "all">
+            size="small"
+            value={readScope}
+            onChange={(val) => {
+              setPinnedIds([]);
+              setReadScope(val);
+            }}
+            options={[
+              {
+                value: "unread",
+                label:
+                  unread > 0 ? "Непрочитанные (" + String(unread) + ")" : "Непрочитанные",
+              },
+              {
+                value: "all",
+                label: "Все",
+              },
+            ]}
+          />
+          <Select<NotificationTab>
+            size="small"
+            style={{ width: 145 }}
+            value={category}
+            onChange={(val) => {
+              setPinnedIds([]);
+              setCategory(val);
+            }}
+            options={[
+              { value: "all", label: "Все типы" },
+              { value: "decisions", label: t("notifications.tabs.decisions") },
+              { value: "clients", label: t("notifications.tabs.clients") },
+              { value: "system", label: t("notifications.tabs.system") },
+            ]}
+          />
+        </div>
+      ) : null}
+      <div style={{ flex: 1, overflow: "auto", minHeight: 0 }}>{body}</div>
+      {variant === "panel" && enabled && !query.isPending && !query.isError ? footer : null}
     </div>
   );
 }

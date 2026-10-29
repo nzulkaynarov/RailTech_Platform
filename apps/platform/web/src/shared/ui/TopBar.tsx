@@ -1,4 +1,4 @@
-import { Button, Layout, Popover, theme } from "antd";
+import { Button, Drawer, Layout, theme } from "antd";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
@@ -32,6 +32,7 @@ export interface TopBarProps {
   unread: number;
   bellContent: ReactNode;
   bellTitle: string;
+  bellExtra?: ReactNode;
   /** Окно уведомлений открыто — состояние снаружи, чтобы закрыть его после перехода по уведомлению */
   bellOpen: boolean;
   onBellOpenChange: (open: boolean) => void;
@@ -90,6 +91,7 @@ export function TopBar({
   unread,
   bellContent,
   bellTitle,
+  bellExtra,
   bellOpen,
   onBellOpenChange,
   help,
@@ -111,7 +113,7 @@ export function TopBar({
     let tries = 0;
     const focusInside = () => {
       const target = dialogRef.current?.querySelector<HTMLElement>(
-        '[role="tab"][aria-selected="true"], button:not(:disabled), a',
+        '[role="tab"][aria-selected="true"], .ant-segmented-item-selected input, button:not(:disabled), a',
       );
       target?.focus();
       if (target && document.activeElement === target) return;
@@ -176,62 +178,58 @@ export function TopBar({
           {help.fresh ? <span className="pf-help-fresh" aria-hidden="true" /> : null}
         </button>
       ) : null}
-      <Popover
-        trigger="click"
-        placement="bottomRight"
-        title={bellTitle}
-        content={
-          <div
-            ref={dialogRef}
-            role="dialog"
-            aria-label={bellTitle}
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") return;
-              event.stopPropagation();
-              onBellOpenChange(false);
-              bellRef.current?.focus();
+      <button
+        ref={bellRef}
+        type="button"
+        className="pf-icon-btn pf-focusable"
+        aria-label={labels.bell}
+        aria-haspopup="dialog"
+        data-tour="bell"
+        onClick={() => {
+          onBellOpenChange(!bellOpen);
+        }}
+        style={{ position: "relative", width: 32, height: 32, flex: "0 0 auto" }}
+      >
+        <BellIcon />
+        {unread > 0 ? (
+          <span
+            className="pf-badge"
+            aria-hidden="true"
+            style={{
+              position: "absolute",
+              top: 2,
+              right: 0,
+              height: 16,
+              minWidth: 16,
+              lineHeight: "16px",
+              fontSize: 10,
+              padding: "0 4px",
+              marginLeft: 0,
             }}
           >
-            {bellContent}
-          </div>
-        }
+            {unread}
+          </span>
+        ) : null}
+      </button>
+      <Drawer
         open={bellOpen}
-        onOpenChange={onBellOpenChange}
-        // правый край окна — у колокольчика; на узком экране окно сдвигается внутрь экрана, а не уезжает за левый край
-        align={{ overflow: { shiftX: 8, adjustX: true } }}
-        styles={{ body: { width: "min(400px, calc(100vw - 32px))", maxWidth: "none" } }}
+        onClose={() => {
+          onBellOpenChange(false);
+          bellRef.current?.focus();
+        }}
+        placement="right"
+        width={420}
+        title={bellTitle}
+        extra={bellExtra}
+        aria-label={bellTitle}
+        styles={{
+          body: { padding: 0, display: "flex", flexDirection: "column" },
+        }}
       >
-        <button
-          ref={bellRef}
-          type="button"
-          className="pf-icon-btn pf-focusable"
-          aria-label={labels.bell}
-          aria-haspopup="dialog"
-          data-tour="bell"
-          style={{ position: "relative", width: 32, height: 32, flex: "0 0 auto" }}
-        >
-          <BellIcon />
-          {unread > 0 ? (
-            <span
-              className="pf-badge"
-              aria-hidden="true"
-              style={{
-                position: "absolute",
-                top: 2,
-                right: 0,
-                height: 16,
-                minWidth: 16,
-                lineHeight: "16px",
-                fontSize: 10,
-                padding: "0 4px",
-                marginLeft: 0,
-              }}
-            >
-              {unread}
-            </span>
-          ) : null}
-        </button>
-      </Popover>
+        <div ref={dialogRef} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+          {bellContent}
+        </div>
+      </Drawer>
       {!hasPanel ? null : mobile ? (
         <button
           type="button"
