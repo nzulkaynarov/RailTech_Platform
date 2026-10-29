@@ -1,21 +1,41 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type Ref } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { isActionable } from "../../modules/bridge";
 import { objectLink } from "../../modules/objectLinks";
-import { moduleName } from "../../modules/registry";
+import { MODULES, moduleName } from "../../modules/registry";
 import { WhereToDo } from "../../modules/stub/WhereToDo";
 import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
+import { MODULE_ICONS } from "../../shared/ui/moduleIcons";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchActions } from "./actions";
 import "./global-search.css";
 
 const MIN_LENGTH = 2;
 const DEBOUNCE_MS = 250;
+
+/** Дополнительные синонимы разделов для быстрого перехода через палитру команд (⌘K), например «Калькулятор» → /erp/calc */
+const SECTION_KEYWORDS: Record<string, readonly string[]> = {
+  "erp.calc": ["калькулятор", "себестоимость"],
+  "erp.catalog": ["каталог", "справочники"],
+  "admin.company": ["шаблоны", "реквизиты", "нумерация"],
+  "admin.integrations": ["интеграции", "smtp", "litellm"],
+  "admin.audit": ["аудит", "лог"],
+};
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -48,6 +68,10 @@ interface Option {
   path: string;
   /** Действие («создать заявку») — при Enter не перебивает найденный объект */
   action?: boolean;
+  /** Переход в раздел платформы */
+  navigation?: boolean;
+  /** Иконка модуля для навигации */
+  icon?: ReactNode;
 }
 
 interface Group {
@@ -85,10 +109,74 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
 
   const groups = useMemo(() => (ready ? (query.data?.groups ?? []) : []), [ready, query.data]);
   const actions = useMemo(() => matchActions(me, typed), [me, typed]);
+
+  // Локальная навигация по доступным модулям и разделам из Me.modules / Me.resources
+  const navItems = useMemo(() => {
+    if (typed.length < MIN_LENGTH) return [];
+    const q = typed.toLowerCase();
+    const results: Array<{
+      key: string;
+      title: string;
+      moduleTitle: string;
+      path: string;
+      moduleCode: keyof typeof MODULE_ICONS;
+    }> = [];
+
+    for (const mod of MODULES) {
+      if (!me.modules.includes(mod.code)) continue;
+      const modTitle = moduleName(t, mod.code);
+      const accessibleSections = mod.sections.filter(
+        (sec) => !sec.hidden && canSee(me, sec.access),
+      );
+
+      for (const sec of accessibleSections) {
+        const secTitle = t(`modules:${mod.code}.sections.${sec.key}`);
+        const extraKeywords = SECTION_KEYWORDS[`${mod.code}.${sec.key}`] ?? [];
+        const matchesKeyword = extraKeywords.some((kw) => kw.includes(q));
+        if (
+          secTitle.toLowerCase().includes(q) ||
+          modTitle.toLowerCase().includes(q) ||
+          matchesKeyword
+        ) {
+          results.push({
+            key: `${mod.code}-${sec.key}`,
+            title: secTitle,
+            moduleTitle: modTitle,
+            path: sec.path,
+            moduleCode: mod.code,
+          });
+        }
+      }
+    }
+    return results.slice(0, 5);
+  }, [me, typed, t]);
+
   // Группы с порядковым номером результата сквозь все группы: по нему работают стрелки и aria-activedescendant
   const view = useMemo(() => {
     let next = 0;
     const out: Group[] = [];
+
+    // Группа «Навигация по разделам» отображается в верхней секции при совпадении с запросом
+    if (navItems.length > 0) {
+      out.push({
+        key: "navigation",
+        name: "Навигация по разделам",
+        options: navItems.map((item) => {
+          const Icon = MODULE_ICONS[item.moduleCode];
+          return {
+            id: `${listId}-nav-${item.key}`,
+            index: next++,
+            title: item.title,
+            subtitle: item.moduleTitle,
+            tag: "Раздел",
+            path: item.path,
+            navigation: true,
+            icon: <Icon />,
+          };
+        }),
+      });
+    }
+
     groups.forEach((group, g) => {
       out.push({
         key: group.module,
@@ -120,7 +208,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       });
     }
     return out;
-  }, [actions, groups, listId, t]);
+  }, [actions, groups, listId, navItems, t]);
   const options = useMemo(() => view.flatMap((group) => group.options), [view]);
   const waiting = typed.length >= MIN_LENGTH && (debounced !== typed || query.isFetching);
 
@@ -162,10 +250,12 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((prev) => (prev + step + options.length) % options.length);
     } else if (event.key === "Enter") {
-      // Единственный вариант выбирается сам, но объект важнее действия: «создать» не уводит от найденного документа.
+      // При наличии навигационного совпадения — быстрый переход в раздел по Enter
+      const navTarget = options.find((option) => option.navigation === true);
       const objects = options.filter((option) => option.action !== true);
       const target =
         options[active] ??
+        navTarget ??
         (objects.length === 1 ? objects[0] : objects.length === 0 ? options[0] : undefined);
       if (target) {
         event.preventDefault();
@@ -277,9 +367,29 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
                       go(option);
                     }}
                   >
-                    <span className="pf-gsearch-main">
-                      <span className="pf-gsearch-title">{option.title}</span>
-                      {option.subtitle ? <span className="pf-hint">{option.subtitle}</span> : null}
+                    <span
+                      className="pf-gsearch-main"
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      {option.icon ? (
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            fontSize: 16,
+                            color: "#1677ff",
+                            flex: "0 0 auto",
+                          }}
+                        >
+                          {option.icon}
+                        </span>
+                      ) : null}
+                      <span style={{ display: "flex", flexDirection: "column" }}>
+                        <span className="pf-gsearch-title">{option.title}</span>
+                        {option.subtitle ? (
+                          <span className="pf-hint">{option.subtitle}</span>
+                        ) : null}
+                      </span>
                     </span>
                     <span className="pf-gsearch-kind">{option.tag}</span>
                   </div>
@@ -328,3 +438,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
     </div>
   );
 }
+
+export { GlobalSearch as GlobalSearchModal };
+export type { GlobalSearchProps as GlobalSearchModalProps };

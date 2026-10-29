@@ -158,8 +158,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             options={[
               {
                 value: "unread",
-                label:
-                  unread > 0 ? "Непрочитанные (" + String(unread) + ")" : "Непрочитанные",
+                label: unread > 0 ? "Непрочитанные (" + String(unread) + ")" : "Непрочитанные",
               },
               {
                 value: "all",

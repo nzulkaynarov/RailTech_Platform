@@ -408,12 +408,29 @@
   }
 }
 
-/* --- DefinitionList: подпись 130 px #595959 --- */
+/* --- DefinitionList: подпись 130 px #595959, адаптация под панели 440px и 600px --- */
+.pf-dl-wrap {
+  container-type: inline-size;
+  width: 100%;
+}
 .pf-dl {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr);
   gap: 8px 16px;
   margin: 0;
+}
+.pf-dl--1col {
+  grid-template-columns: 130px minmax(0, 1fr);
+}
+.pf-dl--2col {
+  grid-template-columns: 130px minmax(0, 1fr) 130px minmax(0, 1fr);
+  gap: 8px 24px;
+}
+@container (min-width: 520px) {
+  .pf-dl--auto {
+    grid-template-columns: 130px minmax(0, 1fr) 130px minmax(0, 1fr);
+    gap: 8px 24px;
+  }
 }
 .pf-dl dt {
   margin: 0;
