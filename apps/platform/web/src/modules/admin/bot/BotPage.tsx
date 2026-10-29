@@ -62,7 +62,7 @@ export function BotPage() {
   const navigate = useNavigate();
   const title = t("modules:admin.sections.bot");
   useDocumentTitle(title);
-  const part = resolvePart(params.get("part"), params.get("section"));
+  const part = resolvePart(params.get("viewTab") ?? params.get("part"), params.get("section"));
   // Настройки CRM нужны всем вкладкам, кроме «Подключения», шаблонов и выгрузок — там своё API.
   const needsSettings = part === "texts" || part === "behavior" || part === "kb";
   const query = useGetBotSettings({ query: { enabled: needsSettings } });
@@ -168,6 +168,7 @@ export function BotPage() {
           setParams(
             (prev) => {
               const next = new URLSearchParams();
+              next.set("viewTab", key);
               next.set("part", key);
               const panel = prev.get("panel");
               if (panel) next.set("panel", panel);

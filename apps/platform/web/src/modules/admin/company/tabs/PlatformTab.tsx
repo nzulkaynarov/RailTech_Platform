@@ -91,6 +91,10 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
         disabled={!changed}
         error={update.error}
         consequence={[t("platform.consequence.new"), t("platform.consequence.admin")]}
+        onDiscard={() => {
+          form.resetFields();
+          update.reset();
+        }}
       />
     </Form>
   );

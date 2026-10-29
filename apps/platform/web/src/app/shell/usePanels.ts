@@ -18,12 +18,14 @@ export interface Panels {
   panelWidth: PanelWidthPreset;
   tab: string;
   tabs: readonly string[];
+  entityId: string | null;
   toggleMenu: () => void;
   togglePanel: () => void;
   setPanelOpen: (open: boolean) => void;
   setPanelMode: (mode: PanelLayoutMode) => void;
   setPanelWidth: (width: PanelWidthPreset) => void;
   setTab: (tab: string) => void;
+  setEntityId: (entityId: string | null) => void;
 }
 
 /**
@@ -37,7 +39,7 @@ export function usePanels(
   section: SectionConfig | undefined,
   fallbackOpen = false,
 ): Panels {
-  const { wide } = useViewport();
+  const { wide, menuWide } = useViewport();
   const [params, setParams] = useSearchParams();
   const key = panelsKey(userId, section?.path.split("?")[0] ?? "-");
   const entry = usePanelsStore((s) => s.entries[key]);
@@ -49,11 +51,21 @@ export function usePanels(
   const urlPanel = params.get("panel");
   const panelOpen =
     urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && fallbackOpen;
+  const entityId = params.get("entityId");
 
-  const panelMode: PanelLayoutMode = entry?.panelMode ?? "overlay";
-  const panelWidth: PanelWidthPreset = entry?.panelWidth ?? "default";
+  const isStrictlyOverlay = Boolean(section?.path.startsWith("/chats"));
+  const panelMode: PanelLayoutMode = isStrictlyOverlay
+    ? "overlay"
+    : (entry?.panelMode ?? "overlay");
+  const isWideByDefault = Boolean(
+    section?.path.startsWith("/erp/calc") ||
+    section?.path.startsWith("/erp/docs") ||
+    section?.path.startsWith("/eds"),
+  );
+  const panelWidth: PanelWidthPreset = entry?.panelWidth ?? (isWideByDefault ? "wide" : "default");
 
-  const isDesktopWide = typeof window !== "undefined" ? window.innerWidth >= 1440 : true;
+  const isDesktopWide =
+    menuWide && (typeof window !== "undefined" ? window.innerWidth >= 1440 : true);
   const defaultMenuOpen = isDesktopWide ? (section?.defaults?.menuOpen ?? true) : false;
   const menuOpen = entry?.menuOpen ?? defaultMenuOpen;
 
@@ -77,6 +89,7 @@ export function usePanels(
             next.set("panel", "closed");
           } else {
             next.delete("panel");
+            next.delete("entityId");
           }
           return next;
         },
@@ -86,11 +99,31 @@ export function usePanels(
     [setParams, fallbackOpen],
   );
 
+  const setEntityId = useCallback(
+    (nextId: string | null) => {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (nextId) {
+            next.set("entityId", nextId);
+            next.set("panel", "open");
+          } else {
+            next.delete("entityId");
+          }
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setParams],
+  );
+
   const setPanelMode = useCallback(
     (mode: PanelLayoutMode) => {
+      if (isStrictlyOverlay && mode === "docked") return;
       patch(key, { panelMode: mode });
     },
-    [patch, key],
+    [patch, key, isStrictlyOverlay],
   );
 
   const setPanelWidth = useCallback(
@@ -122,6 +155,7 @@ export function usePanels(
     panelWidth,
     tab,
     tabs,
+    entityId,
     toggleMenu: () => {
       patch(key, { menuOpen: !menuOpen });
     },
@@ -132,5 +166,6 @@ export function usePanels(
     setPanelMode,
     setPanelWidth,
     setTab,
+    setEntityId,
   };
 }

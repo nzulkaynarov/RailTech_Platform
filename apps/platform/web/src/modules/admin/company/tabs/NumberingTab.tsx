@@ -225,6 +225,10 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
             t("numbering.consequence.issued"),
             ...(values.prefix.trim() === "" ? [t("numbering.consequence.noPrefix")] : []),
           ]}
+          onDiscard={() => {
+            form.resetFields();
+            update.reset();
+          }}
         />
       </Form>
       <div className="pf-co-panel">

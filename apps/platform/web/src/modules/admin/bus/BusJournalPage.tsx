@@ -64,7 +64,8 @@ export function BusJournalPage() {
   // Вкладка браузера различает фильтр журнала: «Журнал · Обмен между системами»
   useDocumentTitle(`${title} · ${t("modules:admin.journal.systems")}`);
   const [params, setParams] = useSearchParams();
-  const view: View = isView(params.get("view")) ? (params.get("view") as View) : "subscribers";
+  const rawView = params.get("viewTab") ?? params.get("view");
+  const view: View = isView(rawView) ? rawView : "subscribers";
   const journal = useGetBusJournal();
   const [selection, setSelection] = useState<Selection | null>(null);
   const sums = useMemo(() => totals(journal.data), [journal.data]);
@@ -150,7 +151,7 @@ export function BusJournalPage() {
           {VIEWS.map((key) => (
             <li key={key}>
               <Link
-                to={`${PATH}?view=${key}`}
+                to={`${PATH}?viewTab=${key}&view=${key}`}
                 className="pf-bus-view pf-focusable"
                 aria-current={key === view ? "page" : undefined}
               >

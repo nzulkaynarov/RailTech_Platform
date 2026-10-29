@@ -271,7 +271,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   useDocumentTitle(title);
   const [actionFailure, setActionFailure] = useState<string | null>(null);
 
-  const tab = pick(TABS, params.get("status"), "all");
+  const tab = pick(TABS, params.get("viewTab") ?? params.get("status"), "all");
   const scope = pick(SCOPES, params.get("scope"), "all");
   const channel = pick(["", ...CHANNELS], params.get("channel"), "");
   const q = params.get("q") ?? "";
@@ -436,8 +436,13 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
           <Tabs
             aria-label={t("leads:tabs.label")}
             activeKey={tab}
+            destroyOnHidden={false}
             onChange={(key) => {
-              change({ status: key === "all" ? null : key, offset: null });
+              change({
+                status: key === "all" ? null : key,
+                viewTab: key === "all" ? null : key,
+                offset: null,
+              });
             }}
             tabBarStyle={{ margin: 0, padding: "0 16px" }}
             items={TABS.map((key) => ({

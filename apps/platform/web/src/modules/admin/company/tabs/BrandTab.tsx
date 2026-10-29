@@ -261,6 +261,10 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
             disabled={isEmptyObject(changed)}
             error={update.error}
             consequence={[t("brand.consequence.documents"), t("brand.consequence.preview")]}
+            onDiscard={() => {
+              form.resetFields();
+              update.reset();
+            }}
           />
         </Form>
       </ReadOnlyFence>

@@ -69,7 +69,7 @@ export function CompanyPage() {
   const { t } = useTranslation(["company", "modules"]);
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
-  const requested = params.get("tab");
+  const requested = params.get("viewTab") ?? params.get("tab");
   const active: TabKey = isTab(requested) ? requested : "details";
   const readOnly = !canEdit(me, "company.settings");
   const company = useGetCompany();
@@ -90,6 +90,7 @@ export function CompanyPage() {
             setParams(
               (prev) => {
                 const next = new URLSearchParams(prev);
+                next.set("viewTab", key);
                 next.set("tab", key);
                 return next;
               },

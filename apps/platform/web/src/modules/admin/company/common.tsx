@@ -8,6 +8,7 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 
@@ -88,6 +89,7 @@ export function SaveBlock({
   consequence,
   htmlType = "submit",
   onClick,
+  onDiscard,
 }: {
   label: string;
   loading?: boolean;
@@ -96,15 +98,33 @@ export function SaveBlock({
   consequence: readonly ReactNode[];
   htmlType?: "submit" | "button";
   onClick?: () => void;
+  onDiscard?: () => void;
 }) {
   const { t } = useTranslation("company");
+  const saveBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleSave = () => {
+    if (onClick) {
+      onClick();
+    } else if (saveBtnRef.current?.form) {
+      saveBtnRef.current.form.requestSubmit();
+    }
+  };
+
   return (
     <div className="pf-co-save">
+      <ContextualSaveBar
+        visible={!disabled}
+        loading={loading}
+        onSave={handleSave}
+        onDiscard={onDiscard ?? (() => {})}
+      />
       {error ? (
         <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
       ) : null}
       <div>
         <Button
+          ref={saveBtnRef}
           type="primary"
           htmlType={htmlType}
           loading={loading}

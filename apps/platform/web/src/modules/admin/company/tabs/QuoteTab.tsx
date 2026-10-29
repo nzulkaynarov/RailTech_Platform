@@ -161,6 +161,10 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         disabled={isEmptyObject(changed)}
         error={update.error}
         consequence={[t("quote.consequence.new"), t("quote.consequence.issued")]}
+        onDiscard={() => {
+          form.resetFields();
+          update.reset();
+        }}
       />
     </Form>
   );

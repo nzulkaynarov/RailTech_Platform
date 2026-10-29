@@ -27,18 +27,19 @@ function viewOf(value: string | null): View {
 export function StockScreen() {
   const { t } = useTranslation("stock");
   const [params, setParams] = useSearchParams();
-  const view = viewOf(params.get("view"));
+  const view = viewOf(params.get("viewTab") ?? params.get("view"));
   useDocumentTitle(t("title"));
   return (
     <div className="pf-calc pf-stock">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
       <Tabs
         activeKey={view}
-        destroyOnHidden
+        destroyOnHidden={false}
         onChange={(key) => {
           setParams(
             (prev) => {
               const next = new URLSearchParams(prev);
+              next.set("viewTab", key);
               next.set("view", key);
               next.delete("overdue");
               return next;
