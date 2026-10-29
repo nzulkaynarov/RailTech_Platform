@@ -24,7 +24,7 @@
 
 | Пространство | Префикс | Кто зовёт | Аутентификация |
 |---|---|---|---|
-| internal | `/api/v1/` | ERP SPA (сотрудники) | JWT сотрудника |
+| internal | `/api/v1/` | BFF Платформы (до 1.0 — контракт Платформы, DECISIONS 2026-10-29), ERP SPA до отключения (P6 волны 18a) | JWT сотрудника |
 | portal | `/api/portal/v1/` | Cabinet SPA (клиенты) | сессия портала (Telegram initData / magic-link) |
 | integration | `/api/integration/v1/` | CRM | сервисный токен |
 | mcp | `/mcp/erp` | агент CRM | `X-Agent-Context` (HMAC) |

@@ -24,9 +24,9 @@
 | [0012](0012-configurable-platform-roles.md) | роли — данные: две системные роли и роли администратора | accepted 2026-10-22 | меняет SPEC-v3 §4.1–§4.3 |
 | [0013](0013-stack-and-standards.md) | стек и стандарты ансамбля | accepted 2026-10-23 | — |
 | [0014](0014-integration-bus-rt-bus.md) | шина `rt_bus`, интеграции только через шину | accepted 2026-10-23 | устройство — [`architecture/rt-bus.md`](../architecture/rt-bus.md), CONTRACTS §9 |
-| [0015](0015-eds-service-and-domain-boundaries.md) | EDS — отдельный сервис; границы доменов | accepted 2026-10-23 | уточнено ADR-0020 (документы на бланке) |
+| [0015](0015-eds-service-and-domain-boundaries.md) | EDS — отдельный сервис; границы доменов | accepted 2026-10-23 | уточнено ADR-0020 (документы на бланке) и DECISIONS 2026-10-29 (заявка — ERP; чаты — CRM) |
 | [0016](0016-versioning-and-release-train.md) | версии и релизный поезд | accepted 2026-10-23 | DECISIONS 2026-10-23 (до 1.0 ломающее — минором), 2026-10-28 (добавление версию не поднимает; номер выпуска — дата выкладки `ГГГГ.ММ.ДД`, W-REL) |
 | [0017](0017-reliability-slo-backups.md) | SLO, RPO, RTO, бэкапы, изоляция отказов | accepted 2026-10-23 | 2026-10-28: внешняя копия бэкапов — корпоративный Google Drive (в шапке ADR) |
-| [0018](0018-themes-semantic-tokens.md) | темы и семантические токены | accepted 2026-10-23 | не выполнено: этап C4 «Темы» не начат (вопрос владельцу — QUESTIONS) |
+| [0018](0018-themes-semantic-tokens.md) | темы и семантические токены | accepted 2026-10-23 | отложено DECISIONS 2026-10-29: C4 — после 1.0, без темы «Как в ERP» |
 | [0019](0019-product-readiness-tenant.md) | «одна компания — одна установка» | accepted 2026-10-23 | — |
 | [0020](0020-documents-letterhead-body-rendering.md) | документы: бланк, единый формат тела, рендеринг | accepted 2026-10-28 | — |
