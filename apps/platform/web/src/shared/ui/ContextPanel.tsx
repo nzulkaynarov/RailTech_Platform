@@ -4,8 +4,10 @@ import {
   PushpinOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { Drawer, Layout, Tabs } from "antd";
+import { Drawer, Layout, Tabs, type DrawerProps } from "antd";
 import { useEffect, type ReactNode } from "react";
+
+const AccessibleDrawer = Drawer as React.FC<DrawerProps & { role?: string }>;
 
 import type { PanelLayoutMode, PanelWidthPreset } from "../../app/shell/panelsStore";
 import { ChevronRightIcon } from "./icons";
@@ -202,12 +204,13 @@ export function ContextPanel({
   }
 
   return (
-    <Drawer
+    <AccessibleDrawer
       open={open}
       onClose={props.onHide}
       mask={false}
       closable={false}
       keyboard
+      role="region"
       width={widthPx}
       placement="right"
       rootStyle={{
@@ -231,7 +234,7 @@ export function ContextPanel({
       <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
         <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
       </aside>
-    </Drawer>
+    </AccessibleDrawer>
   );
 }
 
@@ -250,12 +253,13 @@ export function ContextPanelDrawer({
 }) {
   const widthPx = props.panelWidth === "wide" ? 600 : 440;
   return (
-    <Drawer
+    <AccessibleDrawer
       open={open}
       onClose={onClose}
       mask={false}
       closable={false}
       keyboard
+      role="region"
       width={widthPx}
       placement="right"
       rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto", pointerEvents: "none" }}
@@ -274,7 +278,7 @@ export function ContextPanelDrawer({
       <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
         <PanelBody {...props} />
       </aside>
-    </Drawer>
+    </AccessibleDrawer>
   );
 }
 

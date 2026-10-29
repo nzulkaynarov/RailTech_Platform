@@ -27,8 +27,17 @@ async function openBell(name = /^Центр уведомлений/) {
   return screen.findByRole("dialog", { name: "Центр уведомлений" });
 }
 
+/** Пункт открытого выпадающего списка antd по подписи. */
+async function option(label: string): Promise<Element> {
+  return waitFor(() => {
+    const found = document.querySelector(`.ant-select-item-option[title="${label}"]`);
+    expect(found).not.toBeNull();
+    return found as Element;
+  });
+}
+
 describe("Центр уведомлений", () => {
-  it("колокольчик показывает число непрочитанных, окно — вкладки с числами и список", async () => {
+  it("колокольчик показывает число непрочитанных, окно — фильтры и список", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
 
@@ -37,14 +46,17 @@ describe("Центр уведомлений", () => {
     ).toBeInTheDocument();
     const center = await openBell(/^Центр уведомлений, 3 новых/);
 
-    const tabs = within(center).getAllByRole("tab");
-    // у выбранной вкладки antd добавляет скрытую подсказку «Tab 1 of 4», поэтому — окончание текста
-    ["Все 3", "Решения 2", "Клиенты 1", "Система"].forEach((label, index) => {
-      expect(tabs[index]?.textContent).toMatch(new RegExp(`${label}$`));
-    });
-    expect(tabs).toHaveLength(4);
+    expect(within(center).getByText("Непрочитанные (3)")).toBeInTheDocument();
+    expect(within(center).getByText("Все")).toBeInTheDocument();
+
     const list = await within(center).findByRole("list", { name: "Уведомления" });
+    // По умолчанию выбран сегмент «Непрочитанные» -> 3 элемента
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+
+    // Переключение на «Все» отображает все 7 уведомлений прямо в шторке
+    fireEvent.click(within(center).getByText("Все"));
     expect(within(list).getAllByRole("listitem")).toHaveLength(7);
+
     // непрочитанное помечено словом, не только цветом; у договора и счёта есть экраны (D2-4, D2-5): ссылки, а не «Где посмотреть»
     expect(within(list).queryAllByRole("button", { name: /Где посмотреть/ })).toHaveLength(0);
     const first = within(list).getByRole("link", { name: /ДОГ-2026\/091/ });
@@ -52,12 +64,14 @@ describe("Центр уведомлений", () => {
     expect(first).toHaveAttribute("href", expect.stringContaining("/eds/projects/"));
   });
 
-  it("вкладка «Клиенты» оставляет только свои уведомления", async () => {
+  it("фильтр «Клиенты» оставляет только свои уведомления", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const center = await openBell();
 
-    fireEvent.click(within(center).getByRole("tab", { name: /^Клиенты/ }));
+    fireEvent.click(within(center).getByText("Все"));
+    fireEvent.mouseDown(within(center).getByRole("combobox"));
+    fireEvent.click(await option("Клиенты"));
 
     const list = await within(center).findByRole("list", { name: "Уведомления" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(2);
@@ -134,6 +148,8 @@ describe("Центр уведомлений", () => {
       signInAs(email);
       const { router } = renderApp("/dashboard/queue");
       const center = await openBell();
+
+      fireEvent.click(within(center).getByText("Все"));
 
       expect(
         within(center).queryByRole("button", {
@@ -265,29 +281,26 @@ describe("Центр уведомлений", () => {
     expect(within(center).getByRole("button", { name: "Повторить" })).toBeInTheDocument();
   });
 
-  it("«Все уведомления» открывает вкладку «Уведомления» бокового окна «Моей очереди»", async () => {
+  it("сегмент «Все» отображает полный список уведомлений прямо в шторке без деструктивного редиректа", async () => {
     signInAs("director@demo.example");
     const { router } = renderApp("/crm/leads");
     const center = await openBell();
 
-    fireEvent.click(within(center).getByRole("link", { name: "Все уведомления" }));
+    expect(within(center).queryByRole("link", { name: "Все уведомления" })).toBeNull();
 
-    await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/dashboard/queue");
-    });
-    expect(router.state.location.search).toBe("?panel=open&tab=notifications");
-    expect(
-      await screen.findByRole("tab", { name: "Уведомления", selected: true }),
-    ).toBeInTheDocument();
-    const panel = screen.getByRole("complementary", { name: "Боковое окно" });
-    expect(await within(panel).findByText(/КП-2026\/118 ждёт/)).toBeInTheDocument();
+    fireEvent.click(within(center).getByText("Все"));
+
+    expect(router.state.location.pathname).toBe("/crm/leads");
+    const list = await within(center).findByRole("list", { name: "Уведомления" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
+    expect(within(list).getByText(/КП-2026\/118 ждёт/)).toBeInTheDocument();
   });
 });
 
 describe("Боковое окно «Сегодня»", () => {
   it("лента событий компании: кто, что, модуль и время", async () => {
     signInAs("director@demo.example");
-    renderApp("/dashboard/queue");
+    renderApp("/dashboard/queue?panel=open");
 
     const panel = await screen.findByRole("complementary", { name: "Боковое окно" });
     const feed = await within(panel).findByRole("list", { name: "События за сегодня" });
@@ -317,7 +330,7 @@ describe("Боковое окно «Сегодня»", () => {
       ),
     );
     signInAs("director@demo.example");
-    renderApp("/dashboard/queue");
+    renderApp("/dashboard/queue?panel=open");
 
     const panel = await screen.findByRole("complementary");
     const feed = await within(panel).findByRole("list", { name: "События за сегодня" });
@@ -333,7 +346,7 @@ describe("Боковое окно «Сегодня»", () => {
       ),
     );
     signInAs("director@demo.example");
-    renderApp("/dashboard/queue");
+    renderApp("/dashboard/queue?panel=open");
 
     const panel = await screen.findByRole("complementary", { name: "Боковое окно" });
     expect(await within(panel).findByText("ERP не отвечает, данные неполные")).toBeInTheDocument();
