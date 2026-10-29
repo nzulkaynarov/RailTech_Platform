@@ -185,27 +185,32 @@ class GuardBashOther(unittest.TestCase):
 
 
 class GuardWrite(Repo):
+    """Пути — без «.md»: суффикс добавляет `md`, иначе scripts/check-doc-links.sh принял бы примеры за ссылки."""
+
     def reason(self, rel: str):
         return guard_write.check(os.path.join(self.dir, rel))
 
+    def md(self, rel: str):
+        return self.reason(rel + ".md")
+
     def test_new_md_outside_docs_blocked(self) -> None:
-        self.assertIsNotNone(self.reason("apps/crm/NOTES.md"))
-        self.assertIsNotNone(self.reason("PLAN.md"))
+        self.assertIsNotNone(self.md("apps/crm/NOTES"))
+        self.assertIsNotNone(self.md("PLAN"))
 
     def test_allowed_places(self) -> None:
         for rel in (
-            "docs/runbooks/x.md",
-            "apps/x/CLAUDE.md",
-            "packages/y/README.md",
-            ".claude/skills/a/SKILL.md",
-            ".claude/agents/executor.md",
-            "apps/crm/backend/prompts/p.md",
-            "apps/crm/backend/templates/email/a.md",
-            "apps/platform/web/src/generated/help-articles/a.md",
-            ".github/PULL_REQUEST_TEMPLATE.md",
-            "apps/crm/main.py",
+            "docs/runbooks/x",
+            "apps/x/CLAUDE",
+            "packages/y/README",
+            ".claude/skills/a/SKILL",
+            ".claude/agents/executor",
+            "apps/crm/backend/prompts/p",
+            "apps/crm/backend/templates/email/a",
+            "apps/platform/web/src/generated/help-articles/a",
+            ".github/PULL_REQUEST_TEMPLATE",
         ):
-            self.assertIsNone(self.reason(rel), rel)
+            self.assertIsNone(self.md(rel), rel)
+        self.assertIsNone(self.reason("apps/crm/main.py"))
 
     def test_existing_file_and_outside_repo_pass(self) -> None:
         Path(self.dir, "OLD.md").write_text("x")
@@ -234,7 +239,7 @@ class FormatFile(Repo):
                 "apps/erp/backend/b.py",
                 "apps/platform/web/src/c.tsx",
                 "apps/cabinet/src/d.tsx",
-                "docs/e.md",
+                "docs/e" + ".md",
             )
         }
         for f in files.values():
@@ -248,7 +253,7 @@ class FormatFile(Repo):
         self.assertEqual(tools["apps/erp/backend/b.py"], ["black", "isort"])
         self.assertEqual(tools["apps/platform/web/src/c.tsx"], ["prettier"])
         self.assertEqual(tools["apps/cabinet/src/d.tsx"], [])
-        self.assertEqual(tools["docs/e.md"], [])
+        self.assertEqual(tools["docs/e" + ".md"], [])
 
 
 class CommitMsg(unittest.TestCase):
