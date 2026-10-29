@@ -1,6 +1,10 @@
 # pre-commit корня ансамбля: `make hooks` (= pre-commit install).
 # Полная проверка — `make check`; здесь быстрые проверки изменённых файлов и gitleaks (ORCHESTRATOR §3.6).
 # legacy/b2b удалена по плану M2-INF-01 (тег b2b-final).
+# `make hooks` ставит два хука git: pre-commit (проверки ниже) и commit-msg (сообщение коммита агента, ORCHESTRATOR §4).
+# Проверки без явного `stages` идут только на pre-commit — иначе правили бы файл сообщения коммита.
+default_install_hook_types: [pre-commit, commit-msg]
+default_stages: [pre-commit]
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
@@ -62,3 +66,8 @@ repos:
         files: ^apps/crm/frontend/.*\.(ts|tsx|js)$
         # Клиент orval в eslint-ignore: явная передача этих файлов даёт warning «File ignored».
         exclude: ^apps/crm/frontend/src/api/generated/
+      - id: commit-msg-agent
+        name: сообщение коммита агента (Conventional Commits, трейлер Co-Authored-By)
+        language: system
+        entry: python3 scripts/check_commit_msg.py
+        stages: [commit-msg]
