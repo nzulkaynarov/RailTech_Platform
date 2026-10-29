@@ -35,17 +35,17 @@
   outline-offset: 2px;
 }
 
-/* Рейл: кнопка модуля 56×56, иконка 22, подпись 10 px */
+/* Рейл: кнопка модуля 48×52 (в рейле 56 px), иконка 22, подпись 10 px */
 .pf-rail-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: 56px;
-  height: 56px;
+  width: 48px;
+  height: 52px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 8px;
   background: transparent;
   color: #595959;
   font: inherit;
@@ -53,6 +53,16 @@
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.pf-rail-btn span {
+  max-width: 46px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
 }
 .pf-rail-btn:hover {
   background: #f5f5f5;

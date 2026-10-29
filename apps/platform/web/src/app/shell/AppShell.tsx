@@ -150,25 +150,34 @@ export function AppShell() {
     };
   }, []);
 
+  // ⌘\ / Ctrl+\ переключает подменю (toggleMenu), не перехватывая ввод в полях
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || event.key !== "\\") return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      panels.toggleMenu();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [panels]);
+
   if (!activeModule) return null;
 
-  const railItems: RailModule[] = railModules.map((module) => {
-    const target = firstSection(module, inMenu);
-    return {
-      code: module.code,
-      name: t(`modules:${module.code}.name`),
-      to: target?.path ?? `/${module.code}`,
-      active:
-        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
-    };
-  });
-
-  const badgeFor = (item: MenuCounter | undefined, section: SectionConfig) => {
+  const badgeFor = (item: MenuCounter | undefined, moduleCode: string, section: SectionConfig) => {
     if (!item || item.count <= 0) return undefined;
     // Раздел-заглушка (W15-H1): бейдж только с нейтральной подсказкой «ещё в старой системе: N» (названия систем — на самой заглушке), если то же число видно в старой системе;
     // иначе бейджа нет — рядом с честной заглушкой число без дела только путает.
-    if (isStubSection(activeModule.code, section.key)) {
-      const entry = bridgeEntry(activeModule.code, section.key);
+    if (isStubSection(moduleCode, section.key)) {
+      const entry = bridgeEntry(moduleCode, section.key);
       if (!entry?.legacyCount || !entry.legacy) return undefined;
       return {
         count: item.count,
@@ -178,6 +187,31 @@ export function AppShell() {
     }
     return { count: item.count, attention: item.attention };
   };
+
+  const railItems: RailModule[] = railModules.map((module) => {
+    const target = firstSection(module, inMenu);
+    const sections = module.sections.filter(inMenu).map((s) => ({
+      key: s.path,
+      path: s.path,
+      label: t(`modules:${module.code}.sections.${s.key}`),
+      active: homeOf ? homeOf.section.key === s.key : isSectionActive(s, match),
+      badge: badgeFor(
+        counters.data?.items.find((c) => c.module === module.code && c.section === s.key),
+        module.code,
+        s,
+      ),
+    }));
+    return {
+      code: module.code,
+      name: t(`modules:${module.code}.name`),
+      title: t(`modules:${module.code}.title`),
+      to: target?.path ?? `/${module.code}`,
+      active:
+        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
+      sections,
+    };
+  });
+
   const menuItems: MenuItem[] = activeModule.sections.filter(inMenu).map((section) => ({
     key: section.path,
     to: section.path,
@@ -185,6 +219,7 @@ export function AppShell() {
     active: homeOf ? homeOf.section.key === section.key : isSectionActive(section, match),
     badge: badgeFor(
       counters.data?.items.find((c) => c.module === activeModule.code && c.section === section.key),
+      activeModule.code,
       section,
     ),
   }));
@@ -292,6 +327,7 @@ export function AppShell() {
             logoLabel={t("rail.logo")}
             logoTo="/"
             profile={profile}
+            menuOpen={panels.menuOpen}
           />
           <ModuleMenu open={panels.menuOpen} onCollapse={panels.toggleMenu} {...menuProps} />
         </>

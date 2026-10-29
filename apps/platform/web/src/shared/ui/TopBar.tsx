@@ -147,7 +147,12 @@ export function TopBar({
             <ExpandRightIcon />
           </button>
         ) : (
-          <Button onClick={onShowMenu} icon={<ExpandRightIcon />} style={{ padding: "0 10px" }}>
+          <Button
+            onClick={onShowMenu}
+            icon={<ExpandRightIcon />}
+            title={`${labels.menu} (⌘\\)`}
+            style={{ padding: "0 10px" }}
+          >
             {labels.menu}
           </Button>
         )

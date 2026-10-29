@@ -44,7 +44,9 @@ export function usePanels(
         ? false
         : (entry?.panelOpen ?? section?.defaults?.panelOpen ?? fallbackOpen)
     : urlPanel === "open";
-  const menuOpen = entry?.menuOpen ?? section?.defaults?.menuOpen ?? true;
+  const isDesktopWide = typeof window !== "undefined" ? window.innerWidth >= 1440 : true;
+  const defaultMenuOpen = isDesktopWide ? (section?.defaults?.menuOpen ?? true) : false;
+  const menuOpen = entry?.menuOpen ?? defaultMenuOpen;
 
   const urlTab = params.get("tab");
   const tab =
