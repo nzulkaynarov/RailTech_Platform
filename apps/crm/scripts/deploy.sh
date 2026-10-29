@@ -12,7 +12,7 @@ usage() {
   <IMAGE_TAG>   тег образов в GHCR (git sha коммита тега)
   --no-backup   не делать бэкап перед выкладкой (не рекомендуется)
 Запускать в каталоге репозитория на VPS (там же .env). Откат вручную:
-  scripts/deploy.sh <предыдущий-тег> <его sha>   — см. docs/runbooks/crm/deploy.md
+  scripts/deploy.sh <предыдущий-тег> <его sha>   — см. docs/history/runbooks/crm-deploy.md
 USAGE
 }
 [[ "${1:-}" == "-h" || "${1:-}" == "--help" || $# -lt 2 ]] && { usage; exit 0; }

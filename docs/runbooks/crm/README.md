@@ -1,7 +1,9 @@
 # Runbooks
-Статус: действует · Владелец: лид · Обновлено: 2026-10-23
+Статус: действует · Владелец: лид · Обновлено: 2026-10-29
 
-Эксплуатация RailTech CRM. Создаются и обновляются скиллом `.claude/skills/runbook` в том же PR, что и изменение.
+Эксплуатация RailTech CRM. Создаются и обновляются скиллом `apps/crm/.claude/skills/runbook` в том же PR, что и изменение.
+Выкладка, откат и бэкапы прода — runbook'и ансамбля ([`../README.md`](../README.md)); прежний отдельный деплой CRM — в
+[`../../history/runbooks/`](../../history/runbooks/).
 
 | Runbook | Когда |
 |---|---|
@@ -11,10 +13,8 @@
 | [cost-spike.md](cost-spike.md) | Алерт бюджета, рост стоимости моделей |
 | [prompt-rollback.md](prompt-rollback.md) | Откат изменения промпта |
 | [eval-gate.md](eval-gate.md) | Настройка и разбор CI eval-gate |
-| [deploy.md](deploy.md) | Первичная настройка VPS, выкладка по тегу, откат |
 | [backup-restore.md](backup-restore.md) | Бэкапы, восстановление, проверка на dev |
 | [key-rotation.md](key-rotation.md) | Ротация ключей и секретов |
-| [promote-to-prod.md](promote-to-prod.md) | Чек-лист переезда на prod и пилот |
 | [integration-health.md](integration-health.md) | «Сломано» в Подключениях, оповещение, самовосстановление |
 
 

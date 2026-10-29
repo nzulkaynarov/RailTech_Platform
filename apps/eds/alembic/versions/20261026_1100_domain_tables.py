@@ -1,7 +1,7 @@
 """Домен EDS: счётчики номеров, письма, документы, маршруты согласования, журнал, файлы, идемпотентность
 
-Волна 12, E3 (docs/runbooks/wave12-eds-c1.md §2): реестр и нумерация (`number_counters`), входящие письма с резолюциями
-(`letters`), документы и их версии (`documents`, `document_versions`), маршруты и шаги (`approval_routes`,
+Волна 12, E3 (docs/history/runbooks/wave12-eds-c1.md §2): реестр и нумерация (`number_counters`), входящие письма
+с резолюциями (`letters`), документы и их версии (`documents`, `document_versions`), маршруты и шаги (`approval_routes`,
 `approval_steps`), журнал (`journal`), файлы с версиями (`files`, `file_versions`), ключи `Idempotency-Key`.
 
 Revision ID: 0004_domain

@@ -1,16 +1,16 @@
 # CLAUDE.md — корень монорепозитория RailTech Platform (GitHub `RailTech_Platform`, кодовое имя `rt_platform`)
 
-Бизнес-платформа одной компании: домены **CRM** (лиды, клиенты, бот), **EDS** (документооборот, с этапа C1) и **ERP**
+Бизнес-платформа одной компании: домены **CRM** (лиды, клиенты, бот), **EDS** (документооборот) и **ERP**
 (бэк-офис) со своими базами, связанные шиной `rt_bus`; фронтенды — **Платформа** (все сотрудники) и **Cabinet** (клиент).
 
-**Вся документация — в `docs/`, одна правда** (`docs/README.md` — карта «тема → документ»). Первым читай
-`docs/ORCHESTRATOR.md` (процесс, инварианты, роли агентов, протокол сессии), затем `docs/HANDOFF.md` (где мы и что дальше),
-затем `docs/systems/<система>/CONVENTIONS.md` той зоны, где работаешь. Правила процесса (коммиты с трейлером, ветки и PR,
+**Вся документация — в `docs/`, одна правда** (`docs/README.md` — карта «тема → документ» и «С чего начать» по ролям).
+Что читать агенту — по его уровню, `docs/ORCHESTRATOR.md` §7 п. 1: архитектор и лид — ORCHESTRATOR, `docs/HANDOFF.md`,
+PROGRESS, QUESTIONS, DECISIONS; исполнитель — то, что в его промпте, всегда с `docs/systems/<система>/CONVENTIONS.md` своей зоны. Правила процесса (коммиты с трейлером, ветки и PR,
 запрет `push`/`merge` в `main`, одна сессия — одна система, скриншоты в PR, `docs/PROGRESS.md` ведёт лид) — ORCHESTRATOR §4 и §7.
 
 ```
-apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (фронтенд удаляется на C2)
-apps/erp/            домен ERP: Django · DRF · Celery · Channels (фронтенд удаляется на C2)
+apps/crm/            домен CRM: FastAPI · SQLAlchemy · Procrastinate · aiogram · LangGraph (фронтенд заморожен, отключается в P6 волны 18a)
+apps/erp/            домен ERP: Django · DRF · Celery · Channels (фронтенд заморожен, отключается в P6 волны 18a)
 apps/cabinet/        кабинет клиента: React · shadcn, без бэкенда, портальный API ERP
 apps/platform/       Платформа: SPA (React · AntD) + BFF (FastAPI) без БД
 apps/eds/            домен EDS: FastAPI · SQLAlchemy · Procrastinate (без фронтенда и без внешнего маршрута)
@@ -37,23 +37,23 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
 |---|---|
 | Worktree задачи (ORCHESTRATOR §4.1) | только `.claude/worktrees/<задача>`: `git worktree add .claude/worktrees/<задача> -b <ветка> origin/main` или `EnterWorktree`; имя задачи = `ERP_TEST_NS` |
 | Git-хуки (gitleaks, сообщение коммита) и хуки Claude Code | один раз на клон `make hooks`; что проверяют — `docs/systems/infra/claude-code.md` |
-| Зависимости (в новом worktree — первым шагом) | `make -C apps/<crm\|erp\|cabinet> install`; контракты — `cd packages/contracts && pnpm install --frozen-lockfile` |
-| Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>` |
-| Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"`; фронтенд — `cd apps/erp/frontend && npm run test -- <шаблон>` |
+| Зависимости (в новом worktree — первым шагом) | `make -C apps/<crm\|erp\|cabinet\|platform\|eds> install`; контракты — `cd packages/contracts && pnpm install --frozen-lockfile` |
+| Один тест CRM | `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; замороженный фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>` |
+| Один тест ERP (одноразовые Postgres + Redis в Docker) | `ERP_TEST_NS=<задача> make -C apps/erp test-backend args="<app>/tests/<файл>.py -x -q"`; замороженный фронтенд — `cd apps/erp/frontend && npm run test -- <шаблон>` |
 | Один тест Cabinet | `cd apps/cabinet && npm run test -- <шаблон>` |
 | Один спек e2e Платформы | `cd apps/platform/web && pnpm exec playwright test e2e/<спек>.spec.ts` |
-| Приложение целиком (линтер, типы, все тесты) | `make check-crm\|erp\|cabinet\|platform`; контракт и OpenAPI — `make contracts`. Всё это уже внутри `ci-local` |
-| Всё, что делает CI | `make ci-local` (по умолчанию — всё, кроме e2e и audit; `args="--quick"` — без integration и build; `args="--full"` — с e2e и audit; `args="--force"` — не пропускать зелёные; задания по имени — `scripts/ci_local.sh crm-integration erp`) |
+| Приложение целиком (линтер, типы, все тесты) | `make check-crm\|erp\|cabinet\|platform\|eds`; контракт и OpenAPI — `make contracts`. Всё это уже внутри `ci-local` |
+| Всё, что делает CI | `make ci-local` (по умолчанию — всё, кроме e2e и audit; `args="--quick"` — весь быстрый набор, без `crm-integration`, `crm-build` и `rt-docs`; `args="--full"` — с e2e и audit; `args="--force"` — не пропускать зелёные; только названные задания — `scripts/ci_local.sh crm erp` или `make ci-local args="crm erp"`; `--quick` с именами не сочетать — он заменяет список целиком) |
 | Стенд ансамбля (для проверки глазами, не для тестов) | `make env && make up`, `make smoke` |
 
 Рабочий цикл (меньше прогонов, не больше проверок):
 
 1. Во время работы — только затронутые тесты (файл или шаблон из таблицы), не полные наборы и не весь e2e Платформы.
-2. Перед PR — **один** `make ci-local <затронутые задания>`; он включает `make check-<приложение>` и `make contracts`,
+2. Перед PR — **один** `scripts/ci_local.sh <затронутые задания>` (то же — `make ci-local args="<задания>"`); он включает `make check-<приложение>` и `make contracts`,
    отдельно перед ним их не гонять. Уже зелёное на этом дереве задание `ci_local.sh` пропускает (штамп
    `.ci-local/<задание>.ok`). Коммить только зелёное; push ветки и PR с кратким описанием — без вопроса.
-3. После чистого `git merge origin/main` — повтор только затронутых тестов; при конфликте — `make ci-local` по затронутым
-   заданиям.
+3. После чистого `git merge origin/main` — повтор только затронутых тестов; при конфликте — `scripts/ci_local.sh <затронутые
+   задания>`.
 4. После открытия PR — **остановись и доложи** (пока действует «Временное правило владельца 2026-10-28» ниже, свой PR можно смотреть и флейк перезапускать один раз). Не запускай CI вручную, не опрашивай его (`gh run watch`,
    `gh run list`, `gh pr checks`, чтение логов) и не жди результата. CI — финальная проверка владельца в чистой
    среде, один прогон на PR; после волны 14 push в `main` гоняет только быстрые задания, полный прогон — ночью.
@@ -61,7 +61,7 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
    `gh pr view <n> --json state,mergeable,mergeStateStatus,statusCheckRollup` (влит, конфликт, итог «CI ok»);
    логи не читает, в цикле не ждёт, полный прогон за исполнителя не повторяет. Ревью и гейт волны — ORCHESTRATOR §4.1.
 5. Если CI упал (скажет владелец или лид увидит красный «CI ok» по п. 4) — воспроизведи падение локально
-   (`make ci-local <задание>` или один тест) и чини здесь, а не методом «поправил → push → смотрю CI».
+   (`scripts/ci_local.sh <задание>` или один тест) и чини здесь, а не методом «поправил → push → смотрю CI».
    Разрешение владельца 2026-10-27: из лога упавшего задания можно прочитать **только** имена упавших тестов и текст их
    ошибки (`gh api …/actions/jobs/<id>/logs | grep` по `✘`, `Error:`, `failed`, `FAILED`), чтобы знать, что воспроизводить;
    остальной лог не читать, прогон не перезапускать (пока действует «Временное правило владельца 2026-10-28» ниже, логи упавших заданий своего PR читаются целиком).
@@ -80,7 +80,7 @@ docs/                вся документация: ORCHESTRATOR, HANDOFF, str
 
 **Временное правило владельца 2026-10-28 (пока репозиторий публичный и GitHub Actions бесплатны;** DECISIONS 2026-10-28,
 «полный карт-бланш»):
-- перед PR локально — только затронутые тесты и быстрые задания (`scripts/ci_local.sh --quick <затронутые задания>`);
+- перед PR локально — только затронутые тесты и быстрые задания (`scripts/ci_local.sh <затронутые задания>`, без `--quick`);
   полные integration и e2e можно отдать CI;
 - исполнитель и лид могут смотреть статус CI своего PR и читать логи упавших заданий целиком, а упавшее по флейку
   задание перезапускать один раз (`gh run rerun <id> --failed`);

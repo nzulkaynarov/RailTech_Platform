@@ -5,7 +5,7 @@ description: Создать или обновить runbook в docs/runbooks/crm
 
 # Runbook
 
-Существующие: `dev-stand`, `deploy`, `promote-to-prod`, `backup-restore`, `key-rotation`, `bot-silent`, `escalations-missing`, `cost-spike`, `eval-gate`, `prompt-rollback`. Новый симптом на уже описанном стенде — пункт в существующем runbook (как `dev-stand.md` п. 12 «старые тексты бота»), а не новый файл.
+Существующие: `dev-stand`, `backup-restore`, `key-rotation`, `bot-silent`, `escalations-missing`, `cost-spike`, `eval-gate`, `prompt-rollback`. Новый симптом на уже описанном стенде — пункт в существующем runbook (как `dev-stand.md` п. 12 «старые тексты бота»), а не новый файл.
 
 ## Шаги
 

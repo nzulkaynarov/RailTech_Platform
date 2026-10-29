@@ -2,7 +2,7 @@
 Статус: действует · Владелец: лид · Обновлено: 2026-10-28 (D-DOC1: задание rt-docs)
 
 Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает только корневой `.github/`). Здесь — пояснения. Цель волны 14 — ответ по PR
-не дольше 10 минут (`docs/runbooks/wave14-speed.md`): задания приложения идут параллельно, а запускается только то, что затронуто правкой.
+не дольше 10 минут (`docs/history/runbooks/wave14-speed.md`): задания приложения идут параллельно, а запускается только то, что затронуто правкой.
 
 - **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI; там же
   `scripts/backlog.py --check` — ID строк `docs/BACKLOG.md` уникальны и по формату (два PR с одним ID git сливает молча; 2026-10-28).
@@ -106,6 +106,6 @@ compose). Задание `packages · contracts` идёт на любую пра
 ## Прочее
 
 - **Матрица по путям** до волны 14 была грубее (`packages/contracts/**` во всех приложениях, `ci.yml` запускал qemu-образы); история решений —
-  `docs/runbooks/wave14-speed.md`.
+  `docs/history/runbooks/wave14-speed.md`.
 - Актуально: GitHub Actions работают (прежняя блокировка биллингом, Q-10, снята); `make ci-local` остаётся локальным аналогом workflow.
 - **CI → деплой** (W14-S4): `.github/workflows/deploy.yml` стартует по `workflow_run` после успешного workflow «CI» на push в `main` (schedule, ручной запуск CI, красный CI и запуски из форков не деплоят), на том же sha ещё раз проверяет зелёную проверку «CI ok» (`checks: read`) и входит ли sha в `main`, собирает образы параллельно и ждёт одобрения владельца в environment `production`. Порядок и режимы (в том числе `build` — сборка без выкладки) — `docs/runbooks/deploy.md` §2.

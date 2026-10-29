@@ -1,4 +1,5 @@
 # Runbook: прод на двух VPS — установка, деплой, откат, бэкапы (M5-INF-01)
+Статус: действует · Владелец: лид · Обновлено: 2026-10-28
 
 Раскладка и лимиты памяти — `docs/runbooks/servers.md`. Файлы: `infra/compose/prod.yml` (VPS 1, поверх `base.yml`),
 `infra/compose/db.yml` (VPS 2), `infra/caddy/Caddyfile.prod`, `infra/deploy/*`, `infra/db/*`, `infra/.env.prod.example`,
