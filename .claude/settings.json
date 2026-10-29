@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(make *)",
+      "Bash(scripts/ci_local.sh *)",
+      "Bash(scripts/check-doc-links.sh*)",
+      "Bash(python3 -m unittest *)",
+      "Bash(uv run *)",
+      "Bash(uv sync *)",
+      "Bash(uv lock *)",
+      "Bash(pnpm *)",
+      "Bash(npm ci*)",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(git *)",
+      "Bash(gh pr view *)",
+      "Bash(gh pr list*)",
+      "Bash(gh pr diff *)",
+      "Bash(gh pr checks *)",
+      "Bash(gh pr create *)",
+      "Bash(gh run view *)",
+      "Bash(gh run list*)",
+      "Bash(docker ps*)",
+      "Bash(docker info*)",
+      "Bash(docker images*)",
+      "Bash(docker logs *)",
+      "Bash(docker compose -p rt-*)"
+    ],
+    "ask": [
+      "Bash(ssh *)",
+      "Bash(scp *)",
+      "Bash(rsync *)",
+      "Bash(make up-prod*)",
+      "Bash(*infra/deploy/*.sh*)",
+      "Bash(make *eval*)",
+      "Bash(make *promptfoo*)",
+      "Bash(make *load-test*)",
+      "Bash(make *kb-demo*)",
+      "Bash(gh api *pending_deployments*)",
+      "Bash(gh workflow run *)",
+      "Bash(gh secret *)",
+      "Bash(gh variable *)",
+      "Bash(gh repo edit *)",
+      "Bash(gh release *)"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./**/.env)",
+      "Read(./**/.env.local)",
+      "Read(./**/.env.prod)",
+      "Read(~/.ssh/**)",
+      "Read(~/RailTech-secrets/**)",
+      "Edit(~/.ssh/**)",
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git push * --force*)",
+      "Bash(git push * -f*)",
+      "Bash(git push * +*)",
+      "Bash(git push * main)",
+      "Bash(git push * HEAD:main)",
+      "Bash(git commit --no-verify*)",
+      "Bash(git commit * --no-verify*)",
+      "Bash(docker system prune*)",
+      "Bash(docker volume prune*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup",
+        "hooks": [{ "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start.py\"", "timeout": 30 }]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_bash.py\"", "timeout": 10 }]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [{ "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard_write.py\"", "timeout": 10 }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [{ "type": "command", "command": "python3 \"$CLAUDE_PROJECT_DIR/.claude/hooks/format_file.py\"", "timeout": 30 }]
+      }
+    ]
+  }
+}
