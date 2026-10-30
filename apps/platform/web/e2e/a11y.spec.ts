@@ -30,6 +30,8 @@ test.describe("axe и скриншоты", () => {
       ).toBeVisible();
       await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
       if (width >= 1200) {
+        // Боковое окно в списке закрыто по умолчанию и открывается поверх очереди (ORCHESTRATOR §3 п. 18).
+        await page.getByRole("button", { name: "Панель", exact: true }).click();
         await expect(
           page.getByRole("listitem").filter({ hasText: "Демо Бухгалтерова" }),
         ).toBeVisible();
