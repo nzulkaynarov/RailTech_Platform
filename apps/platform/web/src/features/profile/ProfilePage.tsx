@@ -5,6 +5,7 @@ import { useSearchParams } from "react-router";
 import { useAuth } from "../../app/auth/useAuth";
 import { useViewport } from "../../app/shell/useViewport";
 import { useGetProfile } from "../../shared/api/generated/platform-bff";
+import type { Profile } from "../../shared/api/generated/model";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { NotificationSettings } from "../profile-notifications/NotificationSettings";
@@ -56,20 +57,18 @@ export function ProfilePage() {
     );
   };
 
-  const renderPart = (key: Part) => (
+  const renderPart = (key: Part, data: Profile) => (
     <div className="pf-profile-part">
-      {key === "all" || key === "general" ? (
-        <IdentitySection me={me} profile={profile.data} />
-      ) : null}
+      {key === "all" || key === "general" ? <IdentitySection me={me} profile={data} /> : null}
       {key === "all" || key === "general" || key === "notifications" ? (
-        <TelegramSection profile={profile.data} />
+        <TelegramSection profile={data} />
       ) : null}
       {key === "all" || key === "notifications" ? (
         <Section title={t("audit:profile.notifications")} testId="profile-notifications">
           <NotificationSettings me={me} />
         </Section>
       ) : null}
-      {key === "all" || key === "deputy" ? <DeputySection profile={profile.data} /> : null}
+      {key === "all" || key === "deputy" ? <DeputySection profile={data} /> : null}
     </div>
   );
 
@@ -100,7 +99,7 @@ export function ProfilePage() {
           {/* На телефоне вкладки не помещаются (antd уводит лишние в «ещё» внутри tablist — axe aria-required-children):
               там все разделы подряд, как одна страница. */}
           {mobile ? (
-            renderPart("all")
+            renderPart("all", profile.data)
           ) : (
             <Tabs
               activeKey={part}
@@ -109,7 +108,7 @@ export function ProfilePage() {
               items={PARTS.map((key) => ({
                 key,
                 label: t(PART_LABEL[key]),
-                children: renderPart(key),
+                children: renderPart(key, profile.data),
               }))}
             />
           )}
