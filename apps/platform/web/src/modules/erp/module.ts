@@ -23,6 +23,8 @@ export const erp: ModuleConfig = {
       detail: "/erp/calc/:id",
       access: { resource: "erp.calc" },
       tabs: CALC_TABS,
+      // Таблица расчёта на всю ширину: окно поверх закрыло бы кнопки строк; «Задание» — кнопкой «Панель» (UX-1a).
+      defaults: { panelOpen: false },
       actionTo: "/erp/requests",
       sheetOnMobile: true,
     },

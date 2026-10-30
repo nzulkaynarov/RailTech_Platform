@@ -32,8 +32,8 @@ export interface Panels {
  * выбор пользователя (⌘\ или кнопка), переход между разделами его не меняет.
  * Боковое окно: открыто только по адресу — `?panel=open`; на карточке объекта (`:id`) на широком экране открыто,
  * пока не закрыто явно (`?panel=closed`).
- * Вид окна (режим overlay/docked, ширина default/wide, последняя вкладка lastTab) — по разделу в panelsStore
- * (localStorage ключ rt-pf-panels-v2). Режим по умолчанию — поверх везде; рядом — только выбор пользователя (булавка),
+ * Режим окна (overlay/docked) и ширина (default/wide) — как подменю, одни на пользователя (оболочка не зависит от
+ * раздела); последняя вкладка lastTab — по разделу (panelsStore, localStorage ключ rt-pf-panels-v2). Режим по умолчанию — поверх везде; рядом — только выбор пользователя (булавка),
  * а поместится ли окно рядом, решает каркас (`AppShell`, рабочей области ≥ 760 px).
  */
 export function usePanels(
@@ -46,7 +46,7 @@ export function usePanels(
   const key = panelsKey(userId, section?.path.split("?")[0] ?? "-");
   const userKey = panelsKey(userId, USER_SCOPE);
   const entry = usePanelsStore((s) => s.entries[key]);
-  const storedMenuOpen = usePanelsStore((s) => s.entries[userKey]?.menuOpen);
+  const userEntry = usePanelsStore((s) => s.entries[userKey]);
   const patch = usePanelsStore((s) => s.patch);
 
   const tabs = useMemo(() => (section?.tabs ?? DEFAULT_TABS).map((t) => t.key), [section]);
@@ -62,11 +62,11 @@ export function usePanels(
   // булавкой пользователя; закрепление действует на ≥ 1280 px и при рабочей области ≥ 760 px (AppShell), иначе — поверх.
   const panelMode: PanelLayoutMode = isStrictlyOverlay
     ? "overlay"
-    : (entry?.panelMode ?? "overlay");
+    : (userEntry?.panelMode ?? "overlay");
   // 600 px — только выбор пользователя («Шире»), не умолчание раздела.
-  const panelWidth: PanelWidthPreset = entry?.panelWidth ?? "default";
+  const panelWidth: PanelWidthPreset = userEntry?.panelWidth ?? "default";
 
-  const menuOpen = storedMenuOpen ?? menuWide;
+  const menuOpen = userEntry?.menuOpen ?? menuWide;
 
   const urlTab = params.get("tab");
   const savedTab = entry?.lastTab ?? "";
@@ -100,16 +100,16 @@ export function usePanels(
   const setPanelMode = useCallback(
     (mode: PanelLayoutMode) => {
       if (isStrictlyOverlay && mode === "docked") return;
-      patch(key, { panelMode: mode });
+      patch(userKey, { panelMode: mode });
     },
-    [patch, key, isStrictlyOverlay],
+    [patch, userKey, isStrictlyOverlay],
   );
 
   const setPanelWidth = useCallback(
     (width: PanelWidthPreset) => {
-      patch(key, { panelWidth: width });
+      patch(userKey, { panelWidth: width });
     },
-    [patch, key],
+    [patch, userKey],
   );
 
   const setTab = useCallback(

@@ -42,18 +42,6 @@ async function openCalc(page: Page): Promise<void> {
   await expect(
     page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
   ).toBeVisible();
-  await hidePanel(page);
-}
-
-/**
- * Окно на карточке открыто поверх (UX-1a, решение 2026-10-30 п. 2) и на 1440 с подменю закрывает кнопки строк справа —
- * для работы с таблицей сотрудник прячет его кнопкой в шапке.
- */
-async function hidePanel(page: Page): Promise<void> {
-  // на телефоне окно на карточке закрыто — прятать нечего
-  if (!(await page.locator(PANEL).isVisible())) return;
-  await page.getByRole("button", { name: "Скрыть панель" }).click();
-  await expect(page.locator(PANEL)).toBeHidden();
 }
 
 function line(page: Page, name: string) {
@@ -90,7 +78,6 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await expect(
       page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
     ).toBeVisible();
-    await hidePanel(page);
     await expect(
       page.getByRole("list", { name: `Путь заявки ${NUMBER}` }).locator('[aria-current="step"]'),
     ).toContainText("Расчёт");
@@ -175,7 +162,6 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     await loginAndWait(page, "engineer@demo.example");
     await spaGoto(page, `/erp/calc/${encodeURIComponent("ЗВ-2026-103")}`);
     await expect(page.getByRole("heading", { name: "Расчёт ещё не начат" })).toBeVisible();
-    await hidePanel(page);
     await settledScreenshot(page, "calc-not-started");
     await page.getByRole("button", { name: "Начать расчёт" }).click();
     await expect(

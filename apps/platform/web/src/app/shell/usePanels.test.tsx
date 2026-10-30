@@ -102,8 +102,8 @@ describe("usePanels", () => {
     expect(locRef.current?.search).not.toContain("panel=open");
   });
 
-  it("переключение panelMode (overlay / docked) сохраняется в panelsStore", () => {
-    const key = panelsKey("user-1", "/crm/leads");
+  it("переключение panelMode (overlay / docked) сохраняется в panelsStore — одно на пользователя", () => {
+    const key = panelsKey("user-1", "*");
     const { result } = renderHook(() => usePanels("user-1", mockSection), {
       wrapper: createWrapper("/crm/leads?panel=open"),
     });
@@ -126,7 +126,7 @@ describe("usePanels", () => {
   });
 
   it("в разделе chats panelMode строго зафиксирован как overlay", () => {
-    const key = panelsKey("user-1", "/chats/inbox");
+    const key = panelsKey("user-1", "*");
     const { result } = renderHook(() => usePanels("user-1", chatsSection), {
       wrapper: createWrapper("/chats/inbox?panel=open"),
     });
@@ -142,8 +142,8 @@ describe("usePanels", () => {
     expect(usePanelsStore.getState().entries[key]?.panelMode).toBeUndefined();
   });
 
-  it("переключение panelWidth (default / wide) сохраняется в panelsStore", () => {
-    const key = panelsKey("user-1", "/crm/leads");
+  it("переключение panelWidth (default / wide) сохраняется в panelsStore — одно на пользователя", () => {
+    const key = panelsKey("user-1", "*");
     const { result } = renderHook(() => usePanels("user-1", mockSection), {
       wrapper: createWrapper("/crm/leads?panel=open"),
     });
@@ -206,12 +206,12 @@ describe("usePanels", () => {
     expect(stranger.result.current.menuOpen).toBe(false);
   });
 
-  it("v2 с подменю по разделу читается совместимо: выбор, сделанный чаще, переносится на пользователя", () => {
+  it("v2 с видом по разделу читается совместимо: подменю, булавка и ширина — выбор, сделанный чаще, переносится на пользователя", () => {
     window.localStorage.setItem(
       "rt-pf-panels-v2",
       JSON.stringify({
-        "user-1|/crm/leads": { menuOpen: true, lastTab: "history" },
-        "user-1|/erp/calc": { menuOpen: false },
+        "user-1|/crm/leads": { menuOpen: true, lastTab: "history", panelWidth: "wide" },
+        "user-1|/erp/calc": { menuOpen: false, panelMode: "overlay" },
         "user-1|/eds/inbox": { menuOpen: true, panelMode: "docked" },
         "user-2|/erp/calc": { menuOpen: false },
       }),
@@ -227,15 +227,41 @@ describe("usePanels", () => {
       wrapper: createWrapper("/erp/calc"),
     });
     expect(result.current.menuOpen).toBe(true);
+    // равенство голосов — побеждает записанное последним
+    expect(result.current.panelMode).toBe("docked");
+    expect(result.current.panelWidth).toBe("wide");
     expect(JSON.parse(window.localStorage.getItem("rt-pf-panels-v2") ?? "{}")).toEqual({
       "user-1|/crm/leads": { lastTab: "history" },
-      "user-1|/eds/inbox": { panelMode: "docked" },
-      "user-1|*": { menuOpen: true },
+      "user-1|*": { menuOpen: true, panelMode: "docked", panelWidth: "wide" },
       "user-2|*": { menuOpen: false },
     });
     // повторное чтение ничего не меняет
     usePanelsStore.getState().reload();
-    expect(usePanelsStore.getState().entries["user-1|*"]).toEqual({ menuOpen: true });
+    expect(usePanelsStore.getState().entries["user-1|*"]).toEqual({
+      menuOpen: true,
+      panelMode: "docked",
+      panelWidth: "wide",
+    });
+  });
+
+  it("булавка и ширина — одни на пользователя: в другом разделе окно в том же режиме", () => {
+    const calc: SectionConfig = {
+      key: "erp.calc",
+      path: "/erp/calc",
+      access: { resource: "erp.calc" },
+    };
+    const leads = renderHook(() => usePanels("user-1", mockSection), {
+      wrapper: createWrapper("/crm/leads?panel=open"),
+    });
+    act(() => {
+      leads.result.current.setPanelMode("docked");
+      leads.result.current.setPanelWidth("wide");
+    });
+    const other = renderHook(() => usePanels("user-1", calc), {
+      wrapper: createWrapper("/erp/calc?panel=open"),
+    });
+    expect(other.result.current.panelMode).toBe("docked");
+    expect(other.result.current.panelWidth).toBe("wide");
   });
 
   it("настройки со старого ключа rt-pf-panels-v1 переносятся: подменю и вкладка — да, «открыто» — нет", () => {
