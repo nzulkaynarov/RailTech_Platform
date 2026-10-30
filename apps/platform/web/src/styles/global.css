@@ -6,3 +6,20 @@ body,
 }
 
 /* Переменные --ant-* живут внутри ConfigProvider (cssVar), поэтому фон и шрифт задают компоненты antd. */
+
+/*
+ * Телефон: заголовок карточки не сжимается до нуля широким `extra` (переключатель статусов и т. п.) — `extra` уходит
+ * строкой ниже. С шрифтом «Inter Variable» (шире системного, UX-1b, S14) «Пробелы базы знаний» на 390 исчезали.
+ */
+@media (max-width: 575px) {
+  .ant-card .ant-card-head {
+    padding-block: 8px;
+  }
+  .ant-card-head-wrapper {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+  .ant-card-head-title {
+    min-width: min(100%, 160px);
+  }
+}

@@ -436,8 +436,9 @@ export function AppShell() {
             className="pf-main"
             style={{
               overflow: "auto",
-              // Полоса прокрутки не съедает ширину при появлении (Windows, 15 px; аудит 2026-10-30, S15)
-              scrollbarGutter: "stable",
+              // Полоса прокрутки не съедает ширину при появлении (Windows, 15 px; аудит 2026-10-30, S15). На телефоне
+              // полосы поверх контента, а 15 px резерва в узком окне браузера сжимали шапки карточек до нуля.
+              scrollbarGutter: viewport.mobile ? undefined : "stable",
               display: "flex",
               flexDirection: "column",
               gap: 16,
