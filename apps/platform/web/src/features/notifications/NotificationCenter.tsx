@@ -141,6 +141,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
+            flexWrap: "wrap",
             gap: 8,
             padding: "8px 16px",
             borderBottom: "1px solid #f0f0f0",
@@ -158,10 +159,19 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             options={[
               {
                 value: "unread",
-                label:
-                  unread > 0
-                    ? t("notifications.scope.unreadCount", { count: unread })
-                    : t("notifications.scope.unread"),
+                // Ширина сегмента постоянна (UX-1b, S16): невидимый образец «(99)» держит место, цифры — табличные.
+                label: (
+                  <span className="pf-notes-unread">
+                    <span aria-hidden="true" className="pf-notes-unread-ghost">
+                      {t("notifications.scope.unreadCount", { count: 99 })}
+                    </span>
+                    <span>
+                      {unread > 0
+                        ? t("notifications.scope.unreadCount", { count: unread })
+                        : t("notifications.scope.unread")}
+                    </span>
+                  </span>
+                ),
               },
               { value: "all", label: t("notifications.scope.all") },
             ]}

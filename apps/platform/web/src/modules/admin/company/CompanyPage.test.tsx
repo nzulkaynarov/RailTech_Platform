@@ -147,7 +147,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       await screen.findByText(/доступ к настройкам компании только для чтения/),
     ).toBeInTheDocument();
     expect(await screen.findByLabelText("Телефон")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Сохранить реквизиты" })).toBeDisabled();
+    // Без правок бар сохранения скрыт: кнопки сохранения нет (UX-1b, S6)
+    expect(screen.queryByRole("button", { name: "Сохранить реквизиты" })).toBeNull();
   });
 
   it("доступ «чтение»: вкладки и вид образца переключаются, а поля и кнопки изменения остаются заблокированными", async () => {
@@ -176,7 +177,7 @@ describe("Admin · Компания: доступ и каркас", () => {
       "true",
     );
     expect(await screen.findByLabelText("Подписант")).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Сохранить бланк" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Сохранить бланк" })).toBeNull();
     await screen.findByTitle("Образец: КП");
     fireEvent.click(screen.getByText("Договор", { selector: ".ant-segmented-item-label" }));
     await waitFor(() => {
@@ -204,10 +205,10 @@ describe("Admin · Компания: доступ и каркас", () => {
 });
 
 describe("Реквизиты и логотип", () => {
-  it("правка телефона: «Сохранить» активна только при изменении, в ERP уходит одно поле", async () => {
+  it("правка телефона: бар «Сохранить реквизиты» появляется только при изменении, в ERP уходит одно поле", async () => {
     await openTab("details");
-    const save = await button("Сохранить реквизиты");
-    expect(save).toBeDisabled();
+    await screen.findByLabelText("Телефон");
+    expect(screen.queryByRole("button", { name: "Сохранить реквизиты" })).toBeNull();
 
     type("Телефон", "+998 11 111 11 11");
     await waitFor(() => {

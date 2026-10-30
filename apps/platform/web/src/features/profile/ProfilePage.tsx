@@ -96,7 +96,8 @@ export function ProfilePage() {
         />
       ) : (
         <>
-          {/* На телефоне вкладки не помещаются (antd уводит лишние в «ещё» внутри tablist — axe aria-required-children):
+          {/* Вкладки не пересоздаются при смене: несохранённые правки формы остаются (UX-1b, S16).
+              На телефоне вкладки не помещаются (antd уводит лишние в «ещё» внутри tablist — axe aria-required-children):
               там все разделы подряд, как одна страница. */}
           {mobile ? (
             renderPart("all", profile.data)
@@ -104,7 +105,6 @@ export function ProfilePage() {
             <Tabs
               activeKey={part}
               onChange={onTabChange}
-              destroyOnHidden
               items={PARTS.map((key) => ({
                 key,
                 label: t(PART_LABEL[key]),

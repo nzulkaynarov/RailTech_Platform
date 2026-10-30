@@ -52,8 +52,9 @@ test.describe("Профиль /me", () => {
     await expect(main).not.toContainText("Доступ");
     await expect(main).not.toContainText("CRM · ERP");
 
+    // Бар «Сохранить» / «Отмена» — только при правках (UX-1b, S6)
     const save = main.getByRole("button", { name: "Сохранить", exact: true });
-    await expect(save).toBeDisabled();
+    await expect(save).toBeHidden();
     await main.getByRole("textbox", { name: "Телефон" }).fill("+998 90 123-45-67");
     await main
       .getByRole("textbox", { name: "Подпись для писем" })
@@ -61,13 +62,13 @@ test.describe("Профиль /me", () => {
     await expect(save).toBeEnabled();
     await main.getByRole("button", { name: "Отмена", exact: true }).click();
     await expect(main.getByRole("textbox", { name: "Телефон" })).toHaveValue("");
-    await expect(save).toBeDisabled();
+    await expect(save).toBeHidden();
 
     await main.getByRole("textbox", { name: "Имя" }).fill("Демо М. Менеджеров");
     await main.getByRole("textbox", { name: "Телефон" }).fill("+998 90 123-45-67");
     await save.click();
     await expect(page.getByText("Профиль сохранён")).toBeVisible();
-    await expect(save).toBeDisabled();
+    await expect(save).toBeHidden();
     // CRM сохранила номер без пробелов; имя видно в меню аватара
     await expect(main.getByRole("textbox", { name: "Телефон" })).toHaveValue("+998901234567");
     await expect(

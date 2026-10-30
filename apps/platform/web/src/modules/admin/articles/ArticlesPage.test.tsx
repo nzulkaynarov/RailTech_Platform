@@ -144,7 +144,9 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     signInAs("admin@demo.example");
     renderApp("/admin/articles");
     fireEvent.click(await screen.findByRole("button", { name: "Новая статья" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Сохранить черновик" }));
+    // Пустая форма — бара «Сохранить черновик» нет (UX-1b, S6); проверку проходит «Сохранить и опубликовать».
+    expect(screen.queryByRole("button", { name: "Сохранить черновик" })).toBeNull();
+    fireEvent.click(await screen.findByRole("button", { name: "Сохранить и опубликовать" }));
     expect(await screen.findByText("Напишите заголовок.")).toBeInTheDocument();
     expect(screen.getByText("Напишите текст статьи.")).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Заголовок" })).toHaveAttribute(
@@ -189,14 +191,14 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     expect(screen.getByRole("textbox", { name: "Текст статьи" })).toHaveValue("Текст");
   });
 
-  it("правка опубликованной статьи видна сотрудникам сразу; кнопка «Сохранить» ждёт изменений", async () => {
+  it("правка опубликованной статьи видна сотрудникам сразу; бар «Сохранить» ждёт изменений", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/articles");
     const row = await rowOf("Где лежат шаблоны писем");
     fireEvent.click(within(row).getByRole("button", { name: "Править: Где лежат шаблоны писем" }));
     const title = await screen.findByRole("textbox", { name: "Заголовок" });
     expect(title).toHaveValue("Где лежат шаблоны писем");
-    expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Сохранить" })).toBeNull();
     expect(screen.getByText(/Статья уже опубликована/)).toBeInTheDocument();
     fireEvent.change(title, { target: { value: "Где лежат шаблоны" } });
     expect(

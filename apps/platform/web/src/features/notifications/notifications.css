@@ -101,3 +101,15 @@ a.pf-feed-row:focus-visible {
   border-radius: 8px;
   background: #fafafa;
 }
+
+/* «Непрочитанные (N)» в шторке: ширина по образцу «(99)», цифры одной ширины — сегмент не прыгает (UX-1b, S16) */
+.pf-notes-unread {
+  display: inline-grid;
+  font-variant-numeric: tabular-nums;
+}
+.pf-notes-unread > span {
+  grid-area: 1 / 1;
+}
+.pf-notes-unread-ghost {
+  visibility: hidden;
+}

@@ -508,6 +508,7 @@
         "fromHint": "Shablon yangi rol ustuniga o'z bo'limlarini qo'yadi; keyin ularni o'zgartirish mumkin.",
         "empty": "Noldan — barcha bo'limlar yashirin",
         "submit": "Rol yaratish",
+        "unsaved": "Rol hali yaratilmagan",
         "cancel": "Bekor qilish",
         "created": "Rol matritsada va «Xodimlar» bo‘limidagi rollar ro'yxatida paydo bo'ladi; hozircha xodimlari yo'q — hech kimning huquqlari o'zgarmaydi.",
         "assign": "Rolni xodimlarga berish — Sozlamalar · Xodimlar bo‘limida."

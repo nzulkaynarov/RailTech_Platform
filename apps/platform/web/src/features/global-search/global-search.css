@@ -9,12 +9,15 @@
   position: relative;
   display: block;
 }
+/* Лупа в поле. До UX-1b второе правило с тем же классом (иконка результата) красило её в #0958d9 — цвет сохранён */
 .pf-gsearch-icon {
   position: absolute;
   left: 10px;
   top: 8px;
   display: flex;
-  color: #6e6e6e;
+  align-items: center;
+  color: #0958d9;
+  font-size: 16px;
   pointer-events: none;
 }
 .pf-gsearch-pop {
@@ -125,7 +128,8 @@
   align-items: center;
   gap: 8px;
 }
-.pf-gsearch-icon {
+/* Иконка модуля в строке результата (свой класс: прежде делила имя с лупой и уезжала в угол строки — аудит S7) */
+.pf-gsearch-result-icon {
   display: flex;
   flex: 0 0 auto;
   align-items: center;

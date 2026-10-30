@@ -8,13 +8,13 @@ import type { EscalationDryRun } from "../../../shared/api/generated/model";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { UnsavedGuard } from "../../../shared/ui/UnsavedGuard";
 import { DryRunPanel } from "./DryRunPanel";
 import { botErrorText, invalidPaths } from "./errors";
 import { useRefreshBot } from "./refresh";
 import { SchemaField } from "./SchemaField";
 import { type JsonSchema, normalize, withoutFields } from "./schemaForm";
 import { TextsSection } from "./TextsSection";
-import { useUnsavedGuard } from "./useUnsavedGuard";
 
 type Values = Record<string, unknown>;
 
@@ -81,7 +81,6 @@ export function SettingsForm({
   const baseline = useMemo(() => normalize(values, schema, schema), [values, schema]);
   const [dirty, setDirty] = useState(false);
   const [invalid, setInvalid] = useState<string[][]>([]);
-  useUnsavedGuard(dirty);
 
   const body = () => normalize(form.getFieldsValue(true), schema, schema) as Values;
   const save = useSaveBotSetting({
@@ -117,6 +116,7 @@ export function SettingsForm({
         save.mutate({ key: settingKey, data: body() });
       }}
     >
+      <UnsavedGuard when={dirty} busy={save.isPending} />
       <div className="pf-bot-form-head">
         <h2 className="pf-bot-section-title" id="pf-bot-section-title">
           {title}

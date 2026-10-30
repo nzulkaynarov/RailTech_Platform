@@ -73,7 +73,7 @@ test.describe("Мои задачи", () => {
     await expect(rows.nth(3)).toContainText("служебка");
 
     // боковое окно в очереди закрыто по умолчанию (ORCHESTRATOR §3 п. 18) — «Панель» открывает «Сегодня»
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
     await expect(panel.getByRole("listitem")).toHaveCount(4);
@@ -85,7 +85,7 @@ test.describe("Мои задачи", () => {
   }) => {
     await loginAndWait(page, "admin@demo.example");
 
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
     await expect(panel.getByRole("listitem")).toHaveCount(4);

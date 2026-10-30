@@ -31,7 +31,7 @@ test.describe("axe и скриншоты", () => {
       await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
       if (width >= 1200) {
         // Боковое окно в списке закрыто по умолчанию и открывается поверх очереди (ORCHESTRATOR §3 п. 18).
-        await page.getByRole("button", { name: "Панель", exact: true }).click();
+        await page.getByRole("button", { name: "Показать панель", exact: true }).click();
         await expect(
           page.getByRole("listitem").filter({ hasText: "Демо Бухгалтерова" }),
         ).toBeVisible();
@@ -45,7 +45,7 @@ test.describe("axe и скриншоты", () => {
         await expectNoViolations(page, "menu drawer 390");
         await settledScreenshot(page, "dashboard-menu-drawer");
         await page.getByRole("link", { name: "Мои задачи 3, требует действия" }).click();
-        await page.getByRole("button", { name: "Показать боковое окно" }).click();
+        await page.getByRole("button", { name: "Показать панель" }).click();
         await expect(page.getByRole("tab", { name: "Сегодня" })).toBeVisible();
         await expectNoViolations(page, "panel drawer 390");
         await settledScreenshot(page, "dashboard-panel-drawer");

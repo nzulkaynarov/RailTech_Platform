@@ -201,7 +201,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     signInAs("admin@demo.example");
     renderApp(`/admin/roles?role=${ROLE_ID.ACCOUNTANT}&panel=open&tab=role`);
     const panel = await panelEl();
-    await within(panel).findByRole("button", { name: "Сохранить роль" });
+    await within(panel).findByRole("textbox", { name: "Название" });
 
     fireEvent.change(
       within(table()).getByRole("combobox", {

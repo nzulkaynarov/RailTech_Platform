@@ -73,7 +73,6 @@
 .pf-rail-btn[aria-current="page"] {
   background: #e6f4ff;
   color: #0958d9;
-  font-weight: 500;
 }
 
 /* Нижняя панель модулей (< 768) */
@@ -98,7 +97,7 @@
   height: 52px;
 }
 
-/* Подменю: пункт 40 px, радиус 6 */
+/* Подменю: пункт 40 px, радиус 6. Активный — цветом и фоном, без смены насыщенности: ширина подписи не меняется (UX-1b, S13) */
 .pf-menu-list {
   list-style: none;
   margin: 0;
@@ -124,7 +123,6 @@
 .pf-menu-item[aria-current="page"] {
   background: #e6f4ff;
   color: #0958d9;
-  font-weight: 500;
 }
 
 /* Бейдж очереди: красный требует действия, серый — счётчик */
@@ -219,15 +217,25 @@
   color: #0958d9;
 }
 
+/* Крошки — гибкая область шапки: длинные обрезаются многоточием и не сдвигают поиск, «?» и колокольчик (UX-1b, S5) */
+.pf-crumbs-nav {
+  flex: 1 1 0;
+  min-width: 0;
+}
 .pf-crumbs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
   color: #595959;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pf-crumbs li {
+  display: inline;
+}
+.pf-crumbs-sep {
+  margin: 0 8px;
 }
 .pf-crumbs a {
   color: #595959;

@@ -232,15 +232,6 @@ export function RoleEditor({
         if (!saving && !nameMissing && (isNew || changes.any)) onSave();
       }}
     >
-      <ContextualSaveBar
-        visible={isNew ? Boolean(draft.name) : changes.any}
-        loading={saving}
-        disabled={nameMissing}
-        onSave={() => {
-          if (!saving && !nameMissing && (isNew || changes.any)) onSave();
-        }}
-        onDiscard={onReset}
-      />
       <div className="pf-role-head">
         <h3 style={{ margin: 0, fontSize: 16, lineHeight: "24px", fontWeight: 600 }}>
           {isNew ? t("admin.roles.new.title") : role.name}
@@ -322,22 +313,21 @@ export function RoleEditor({
           }
         />
       ) : null}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button
-          type="primary"
-          htmlType="submit"
-          block
-          loading={saving}
-          disabled={nameMissing || (!isNew && !changes.any)}
-        >
-          {isNew ? t("admin.roles.new.submit") : t("admin.roles.save")}
-        </Button>
-        {isNew || changes.any ? (
-          <Button block onClick={onReset}>
-            {isNew ? t("admin.roles.new.cancel") : t("admin.roles.reset")}
-          </Button>
-        ) : null}
-      </div>
+      {/* Новая роль: бар виден сразу («Создать роль» и «Отмена»), вопрос при уходе — когда есть название */}
+      <ContextualSaveBar
+        visible={isNew || changes.any}
+        guard={isNew ? Boolean(draft.name) : changes.any}
+        message={isNew ? t("admin.roles.new.unsaved") : undefined}
+        saveLabel={isNew ? t("admin.roles.new.submit") : t("admin.roles.save")}
+        discardLabel={isNew ? t("admin.roles.new.cancel") : t("admin.roles.reset")}
+        loading={saving}
+        disabled={nameMissing}
+        guardParams={["role"]}
+        onSave={() => {
+          if (!saving && !nameMissing && (isNew || changes.any)) onSave();
+        }}
+        onDiscard={onReset}
+      />
       {items.length > 0 ? <Consequence items={items} /> : null}
       {isNew ? null : (
         <div className="pf-panel-stack" style={{ gap: 8 }}>

@@ -114,25 +114,16 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
     setFile(picked);
   };
 
+  const reset = () => {
+    form.setFieldsValue(baseline);
+    form.setFields(
+      (Object.keys(baseline) as (keyof Values)[]).map((name) => ({ name, errors: [] })),
+    );
+    update.reset();
+  };
+
   return (
     <Section title={t("data.title")} lead={t("lead")} testId="profile-data">
-      <ContextualSaveBar
-        visible={dirty}
-        loading={update.isPending}
-        onSave={() => {
-          form.submit();
-        }}
-        onDiscard={() => {
-          form.setFieldsValue(baseline);
-          form.setFields(
-            (Object.keys(baseline) as (keyof Values)[]).map((name) => ({
-              name,
-              errors: [],
-            })),
-          );
-          update.reset();
-        }}
-      />
       <div className="pf-profile-identity">
         <div className="pf-profile-photo">
           <StaffAvatar initials={me.initials} src={me.avatar_url} size={96} fontSize={28} />
@@ -248,29 +239,21 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
             >
               <Input.TextArea rows={4} />
             </Form.Item>
-            <div className="pf-profile-actions">
-              <Button type="primary" htmlType="submit" disabled={!dirty} loading={update.isPending}>
-                {t("data.save")}
-              </Button>
-              <Button
-                disabled={!dirty || update.isPending}
-                onClick={() => {
-                  form.setFieldsValue(baseline);
-                  form.setFields(
-                    (Object.keys(baseline) as (keyof Values)[]).map((name) => ({
-                      name,
-                      errors: [],
-                    })),
-                  );
-                  update.reset();
-                }}
-              >
-                {t("data.cancel")}
-              </Button>
-            </div>
           </Form>
         </div>
       </div>
+      {/* Полоса на всю ширину карточки, под фото и полями (UX-1b) */}
+      <ContextualSaveBar
+        className="pf-profile-save-dock"
+        visible={dirty}
+        loading={update.isPending}
+        saveLabel={t("data.save")}
+        discardLabel={t("data.cancel")}
+        onSave={() => {
+          form.submit();
+        }}
+        onDiscard={reset}
+      />
 
       <AvatarCropper
         key={file ? `${file.name}-${String(file.lastModified)}-${String(file.size)}` : "none"}

@@ -20,7 +20,7 @@ test.describe("панели", () => {
     await page.getByRole("button", { name: "Свернуть меню" }).click();
     await expect(menu).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Меню" })).toBeVisible();
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     await expect(panel).toBeVisible();
     await expect(page).toHaveURL(/panel=open/);
     await settledScreenshot(page, "dashboard-panel-overlay");
@@ -101,7 +101,7 @@ test.describe("панели", () => {
     await expect(menu).toBeVisible();
     await expect(panel).toHaveCount(0);
     expect(await mainWidth()).toBe(listWidth);
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
@@ -130,7 +130,7 @@ test.describe("панели", () => {
 
   test("вкладка бокового окна живёт в ?tab= и переживает перезагрузку", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     await page.getByRole("tab", { name: "Уведомления" }).click();
     await expect(page).toHaveURL(/tab=notifications/);
     await page.reload();
@@ -293,7 +293,7 @@ test.describe("узкие экраны", () => {
       await expect(drawerMenu).toBeHidden();
 
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
-      await page.getByRole("button", { name: "Показать боковое окно" }).click();
+      await page.getByRole("button", { name: "Показать панель" }).click();
       await expect(page.getByRole("tab", { name: "Карточка" })).toBeVisible();
       await expect(page).toHaveURL(/panel=open/);
       await page
@@ -312,7 +312,7 @@ test.describe("узкие экраны", () => {
     await page.setViewportSize({ width: 1100, height: 800 });
     await loginAndWait(page, "director@demo.example");
     await expect(page.getByRole("tab", { name: "Сегодня" })).toBeHidden();
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await page.getByRole("button", { name: "Показать панель", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Сегодня" })).toBeVisible();
   });
 

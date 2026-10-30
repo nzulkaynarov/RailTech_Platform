@@ -55,6 +55,10 @@
   gap: 12px;
   max-width: 560px;
 }
+/* Бар сохранения вкладки — полоса на всю ширину формы, в её конце */
+.pf-co-save-dock {
+  margin-top: 16px;
+}
 .pf-co-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

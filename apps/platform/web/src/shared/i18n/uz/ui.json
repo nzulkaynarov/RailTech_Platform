@@ -35,6 +35,12 @@
   },
   "whereToDo": "Qayerda bajarish",
   "whereToDoItem": "Qayerda bajarish: {{title}}",
+  "unsavedGuard": {
+    "title": "Saqlamasdan chiqasizmi?",
+    "text": "Formada saqlanmagan o‘zgarishlar bor — ular yo‘qoladi.",
+    "leave": "Saqlamasdan chiqish",
+    "stay": "Qolish"
+  },
   "saveBar": {
     "label": "Saqlanmagan o‘zgarishlar",
     "message": "Saqlanmagan o‘zgarishlar bor",

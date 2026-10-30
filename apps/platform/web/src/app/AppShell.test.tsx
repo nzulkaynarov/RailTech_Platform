@@ -189,13 +189,13 @@ describe("каркас на 1440", () => {
     expect(screen.queryByRole("link", { name: "Настройки" })).not.toBeInTheDocument();
   });
 
-  it("умолчание CRM · Все лиды — боковое окно скрыто; «Панель» открывает его и пишет ?panel=open", async () => {
+  it("умолчание CRM · Все лиды — боковое окно скрыто; «Показать панель» открывает его и пишет ?panel=open", async () => {
     signIn("manager@demo.example");
     const { router } = renderAt("/crm/leads");
     await screen.findByRole("heading", { level: 1, name: "Лиды" });
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Панель" }));
+    fireEvent.click(screen.getByRole("button", { name: "Показать панель" }));
     expect(await screen.findByRole("complementary", { name: "Боковое окно" })).toBeVisible();
     expect(router.state.location.search).toContain("panel=open");
     expect(screen.getByRole("tab", { name: "Карточка" })).toBeVisible();

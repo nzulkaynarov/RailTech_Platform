@@ -65,25 +65,23 @@ describe("Профиль /me", () => {
     expect(within(data).queryByRole("textbox", { name: "Должность" })).toBeNull(); // только чтение
   });
 
-  it("«Сохранить» активна только при изменениях, «Отмена» возвращает значения", async () => {
+  it("бар «Сохранить» / «Отмена» появляется только при изменениях, «Отмена» возвращает значения", async () => {
     const page = await openProfile();
     const data = await within(page).findByRole("region", { name: "Личные данные" });
-    const save = within(data).getByRole("button", { name: /Сохранить$/ });
-    const cancel = within(data).getByRole("button", { name: "Отмена" });
-    expect(save).toBeDisabled();
-    expect(cancel).toBeDisabled();
+    // Без правок бар невидим (место держит): кнопок сохранения нет (UX-1b, S6)
+    expect(within(data).queryByRole("button", { name: /Сохранить$/ })).toBeNull();
+    expect(within(data).queryByRole("button", { name: "Отмена" })).toBeNull();
 
     const phone = within(data).getByRole("textbox", { name: "Телефон" });
     fireEvent.change(phone, { target: { value: "+998 90 123-45-67" } });
-    await waitFor(() => {
-      expect(save).toBeEnabled();
-    });
+    const save = await within(data).findByRole("button", { name: /Сохранить$/ });
+    expect(save).toBeEnabled();
 
-    fireEvent.click(cancel);
+    fireEvent.click(within(data).getByRole("button", { name: "Отмена" }));
     await waitFor(() => {
       expect(phone).toHaveValue("");
     });
-    expect(save).toBeDisabled();
+    expect(within(data).queryByRole("button", { name: /Сохранить$/ })).toBeNull();
   });
 
   it("сохранение уходит в BFF только с изменёнными полями", async () => {
@@ -112,7 +110,7 @@ describe("Профиль /me", () => {
     expect(await screen.findByText("Профиль сохранён")).toBeInTheDocument();
     expect(sent).toEqual([{ phone: "+998 90 123-45-67" }]);
     await waitFor(() => {
-      expect(within(data).getByRole("button", { name: /Сохранить$/ })).toBeDisabled();
+      expect(within(data).queryByRole("button", { name: /Сохранить$/ })).toBeNull();
     });
   });
 
@@ -229,15 +227,16 @@ describe("Профиль /me → Замещение", () => {
     const deputy = await within(page).findByRole("region", { name: "Замещение" });
     expect(within(deputy).getByText("Замещение не назначено.")).toBeInTheDocument();
 
-    // Неполная форма не уходит.
-    fireEvent.click(within(deputy).getByRole("button", { name: /Назначить$/ }));
+    // Без правок бара нет; неполная форма не уходит.
+    expect(within(deputy).queryByRole("button", { name: /Назначить$/ })).toBeNull();
+    const select = within(deputy).getByRole("combobox", { name: "Кто замещает" });
+    fireEvent.mouseDown(select);
+    fireEvent.click(await option("Демо Директоров"));
+    fireEvent.click(await within(deputy).findByRole("button", { name: /Назначить$/ }));
     expect(await within(deputy).findByRole("alert")).toHaveTextContent(
       "Выберите коллегу и обе даты",
     );
 
-    const select = within(deputy).getByRole("combobox", { name: "Кто замещает" });
-    fireEvent.mouseDown(select);
-    fireEvent.click(await option("Демо Директоров"));
     const year = new Date().getFullYear() + 1;
     pickDate("С даты", `01.12.${String(year)}`);
     pickDate("По дату", `10.12.${String(year)}`);

@@ -78,7 +78,8 @@ test.describe("Статьи компании", () => {
 
     // 2. Новая статья: пустое не уходит, предпросмотр показывает разметку, HTML остаётся текстом.
     await page.getByRole("button", { name: "Новая статья" }).click();
-    await page.getByRole("button", { name: "Сохранить черновик" }).click();
+    await expect(page.getByRole("button", { name: "Сохранить черновик" })).toBeHidden();
+    await page.getByRole("button", { name: "Сохранить и опубликовать" }).click();
     await expect(page.getByText("Напишите заголовок.", { exact: true })).toBeVisible();
     await page.getByRole("textbox", { name: "Заголовок" }).fill("Как оформить командировку");
     await page

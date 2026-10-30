@@ -52,11 +52,13 @@ make -C packages/ui-tokens check   # CI: контраст + сгенериров
 
 ## Шрифт
 
-Шрифт `Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif` задан в `font.family`, **файлов шрифта в пакете нет**
-(в `docs/history/platform/05-plan.md` «woff2 в пакете» отменено runbook'ом волны 7). Inter подключает само приложение пакетом
-`@fontsource-variable/inter` (самостоятельный хостинг, CSP `font-src 'self'`, не Google Fonts): Платформа — INF-P0-3,
-Cabinet — позже, CAB-03. Пока шрифт не подключён, стек падает на системный (`-apple-system`, `Segoe UI`, `Roboto`).
-ERP и CRM шрифт не подключают (заморожены, ADR-0011).
+Шрифт `'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif` задан в `font.family`, **файлов шрифта в
+пакете нет** (в `docs/history/platform/05-plan.md` «woff2 в пакете» отменено runbook'ом волны 7). Inter подключает само
+приложение (самостоятельный хостинг, CSP `font-src 'self'`, не Google Fonts): Платформа — пакетом `@fontsource-variable/inter`,
+он регистрирует семейство **«Inter Variable»** (INF-P0-3; до UX-1b стек начинался с `Inter`, и Платформа рисовала системным
+шрифтом — аудит 2026-10-30, S14); ERP — пакетом `@fontsource/inter`, семейство «Inter». Cabinet шрифт пока не грузит (CAB-03):
+оба имени Inter ему недоступны, и стек падает на системный (`-apple-system`, `Segoe UI`, `Roboto`). Метрики запасного шрифта
+(`size-adjust`) не заданы: woff2 отдаётся с того же адреса и в кэше, подмена шрифта после первой загрузки не видна.
 
 ## Тест контраста
 
