@@ -81,6 +81,7 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByRole("tab", { name: "КП" })).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Заявления" }));
+    await listSettled();
     await waitFor(() => {
       expect(
         screen.queryByRole("link", { name: "Открыть документ: Закупка канцтоваров на квартал" }),
@@ -91,8 +92,10 @@ describe("EDS · Документы: список", () => {
     ).toBeVisible();
 
     fireEvent.click(screen.getByRole("tab", { name: "Служебные" }));
+    await listSettled();
     fireEvent.mouseDown(screen.getByLabelText("Статус"));
     fireEvent.click(await screen.findByTitle("Черновик"));
+    await listSettled();
     expect(
       await screen.findByRole("link", {
         name: "Открыть документ: Ремонт кондиционера в переговорной",
@@ -105,6 +108,7 @@ describe("EDS · Документы: список", () => {
     });
 
     fireEvent.click(screen.getByRole("tab", { name: "Отчёты" }));
+    await listSettled();
     expect(await screen.findByText("По этим условиям ничего нет")).toBeVisible();
   });
 
@@ -169,6 +173,7 @@ describe("EDS · Документы: список", () => {
     await openDocuments("manager@demo.example");
 
     fireEvent.click(await screen.findByRole("tab", { name: "Письма" }));
+    await listSettled();
 
     expect(await screen.findByText("По этим условиям ничего нет")).toBeVisible();
     expect(screen.queryByRole("alert")).toBeNull();
