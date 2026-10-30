@@ -23,7 +23,6 @@ export const erp: ModuleConfig = {
       detail: "/erp/calc/:id",
       access: { resource: "erp.calc" },
       tabs: CALC_TABS,
-      defaults: { menuOpen: false },
       actionTo: "/erp/requests",
       sheetOnMobile: true,
     },

@@ -4,7 +4,7 @@ import {
   PushpinOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { Drawer, Layout, Tabs } from "antd";
+import { Drawer, Tabs } from "antd";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import type { PanelLayoutMode, PanelWidthPreset } from "../../app/shell/panelsStore";
@@ -161,59 +161,40 @@ function hideOnEscape(onHide: () => void) {
 }
 
 /**
- * Боковое окно (docs/architecture/platform-frontend.md §4, зона 5; ORCHESTRATOR §3 п. 18).
- * По умолчанию — поверх основного окна у правого края (overlay): таблицы не сжимаются. Это немодальная область
- * `complementary`, а не Drawer: у Drawer `aria-modal` и ловушка фокуса, а окно не модальное — Tab уходит обратно
- * в таблицу. Закреплённое (docked) — в сетке рядом с основным окном, только на ≥ 1280 px. Ширина 440 или 600 px;
- * закреплённое шире 440 — только на ≥ 1440 px, чтобы основному окну осталось ≥ 560 px.
+ * Боковое окно (docs/architecture/platform-frontend.md §4, зона 5, §4.1; ORCHESTRATOR §3 п. 18).
+ * По умолчанию — поверх основного окна у правого края (overlay): таблицы и карточки не сжимаются. Это немодальная
+ * область `complementary`, а не Drawer: у Drawer `aria-modal` и ловушка фокуса, а окно не модальное — Tab уходит обратно
+ * в таблицу. Рядом (docked) — только когда пользователь закрепил окно булавкой и оно помещается (`docked` решает каркас:
+ * ≥ 1280 px и рабочей области ≥ 760 px). Ширина 440 или 600 px — выбор пользователя.
+ *
+ * «Рядом» и «поверх» — одна обёртка, меняется только класс (UX-1a): булавка и переход порога ширины не размонтируют
+ * вкладки и формы окна. Закрытое окно остаётся в документе скрытым (`hidden`) — цель `aria-controls` кнопки «Панель».
  */
 export function ContextPanel({
   open,
-  panelMode = "docked",
+  docked = false,
+  panelMode = "overlay",
   panelWidth = "default",
   canDock = true,
-  roomy = true,
   ...props
 }: ContextPanelProps & {
   open: boolean;
-  /** Экран ≥ 1440 px: закреплённому окну доступна широкая ширина */
-  roomy?: boolean;
+  /** Окно сейчас в сетке рядом с основным: закреплено булавкой и помещается (решает каркас) */
+  docked?: boolean;
 }) {
-  const isDocked = panelMode === "docked" && canDock;
-  const widthPx = panelWidth === "wide" && (roomy || !isDocked) ? 600 : 440;
-  const body = (
-    <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
-  );
-
-  if (isDocked) {
-    return (
-      <Layout.Sider
-        id={props.id}
-        aria-label={open ? props.label : undefined}
-        aria-hidden={!open}
-        width={widthPx}
-        collapsedWidth={0}
-        collapsed={!open}
-        trigger={null}
-        theme="light"
-        onKeyDown={hideOnEscape(props.onHide)}
-        style={{ borderLeft: open ? "1px solid #f0f0f0" : "none", overflow: "auto" }}
-      >
-        {open ? body : null}
-      </Layout.Sider>
-    );
-  }
-
-  if (!open) return null;
+  const widthPx = panelWidth === "wide" ? 600 : 440;
   return (
     <aside
       id={props.id}
       aria-label={props.label}
-      className="pf-panel-overlay"
-      style={{ width: `min(${String(widthPx)}px, 100vw)` }}
+      hidden={!open}
+      className={docked ? "pf-panel-frame pf-panel-docked" : "pf-panel-frame pf-panel-overlay"}
+      style={{ width: docked ? widthPx : `min(${String(widthPx)}px, 100vw)` }}
       onKeyDown={hideOnEscape(props.onHide)}
     >
-      {body}
+      {open ? (
+        <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
+      ) : null}
     </aside>
   );
 }

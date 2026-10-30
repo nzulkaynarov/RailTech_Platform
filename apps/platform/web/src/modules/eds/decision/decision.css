@@ -5,6 +5,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Сетка карточки — от ширины карточки, а не экрана (UX-1a, аудит S1) */
+  container-type: inline-size;
 }
 .pf-dec-title {
   margin: 0;
@@ -263,13 +265,13 @@
   border-top: 1px solid #f0f0f0;
 }
 
-@media (max-width: 1199px) {
+@container (max-width: 879px) {
   .pf-dec-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
-/* Карточка КП: рядом с окном «Одобрение» основной колонке тесно для таблицы из шести столбцов — реквизиты уходят над ней */
-@media (max-width: 1699px) {
+/* Карточка КП: основной колонке нужно ≥ 620 px под таблицу из шести столбцов — уже реквизиты уходят над ней */
+@container (max-width: 959px) {
   .pf-dec-grid--quote {
     grid-template-columns: minmax(0, 1fr);
   }

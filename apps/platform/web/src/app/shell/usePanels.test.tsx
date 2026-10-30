@@ -158,7 +158,7 @@ describe("usePanels", () => {
     expect(usePanelsStore.getState().entries[key]?.panelWidth).toBe("wide");
   });
 
-  it("вид по умолчанию: список — поверх; карточка объекта и раздел с panelMode docked — рядом; булавка важнее", () => {
+  it("вид по умолчанию — поверх везде, и на карточке объекта (решение 2026-10-30, п. 2); булавка — выбор пользователя", () => {
     const list = renderHook(() => usePanels("user-1", mockSection), {
       wrapper: createWrapper("/crm/leads"),
     });
@@ -167,17 +167,75 @@ describe("usePanels", () => {
     const card = renderHook(() => usePanels("user-1", mockSection, true), {
       wrapper: createWrapper("/crm/leads/L-2041"),
     });
+    expect(card.result.current.panelMode).toBe("overlay");
+    // 600 px — не умолчание раздела, а выбор «Шире»
+    expect(card.result.current.panelWidth).toBe("default");
+    act(() => {
+      card.result.current.setPanelMode("docked");
+    });
     expect(card.result.current.panelMode).toBe("docked");
+  });
 
-    const messages: SectionConfig = { ...mockSection, defaults: { panelMode: "docked" } };
-    const work = renderHook(() => usePanels("user-2", messages), {
+  it("подменю — одно значение на пользователя: переход между разделами его не меняет", () => {
+    const calc: SectionConfig = {
+      key: "erp.calc",
+      path: "/erp/calc",
+      access: { resource: "erp.calc" },
+    };
+    const leads = renderHook(() => usePanels("user-1", mockSection), {
       wrapper: createWrapper("/crm/leads"),
     });
-    expect(work.result.current.panelMode).toBe("docked");
+    // matchMedia в jsdom ничему не отвечает «да» — экран узкий, по умолчанию свёрнуто
+    expect(leads.result.current.menuOpen).toBe(false);
     act(() => {
-      work.result.current.setPanelMode("overlay");
+      leads.result.current.toggleMenu();
     });
-    expect(work.result.current.panelMode).toBe("overlay");
+    expect(leads.result.current.menuOpen).toBe(true);
+
+    const other = renderHook(() => usePanels("user-1", calc), {
+      wrapper: createWrapper("/erp/calc"),
+    });
+    expect(other.result.current.menuOpen).toBe(true);
+    expect(usePanelsStore.getState().entries[panelsKey("user-1", "*")]?.menuOpen).toBe(true);
+    expect(usePanelsStore.getState().entries[panelsKey("user-1", "/crm/leads")]).toBeUndefined();
+
+    // другой пользователь — своё значение
+    const stranger = renderHook(() => usePanels("user-2", calc), {
+      wrapper: createWrapper("/erp/calc"),
+    });
+    expect(stranger.result.current.menuOpen).toBe(false);
+  });
+
+  it("v2 с подменю по разделу читается совместимо: выбор, сделанный чаще, переносится на пользователя", () => {
+    window.localStorage.setItem(
+      "rt-pf-panels-v2",
+      JSON.stringify({
+        "user-1|/crm/leads": { menuOpen: true, lastTab: "history" },
+        "user-1|/erp/calc": { menuOpen: false },
+        "user-1|/eds/inbox": { menuOpen: true, panelMode: "docked" },
+        "user-2|/erp/calc": { menuOpen: false },
+      }),
+    );
+    usePanelsStore.getState().reload();
+
+    const calc: SectionConfig = {
+      key: "erp.calc",
+      path: "/erp/calc",
+      access: { resource: "erp.calc" },
+    };
+    const { result } = renderHook(() => usePanels("user-1", calc), {
+      wrapper: createWrapper("/erp/calc"),
+    });
+    expect(result.current.menuOpen).toBe(true);
+    expect(JSON.parse(window.localStorage.getItem("rt-pf-panels-v2") ?? "{}")).toEqual({
+      "user-1|/crm/leads": { lastTab: "history" },
+      "user-1|/eds/inbox": { panelMode: "docked" },
+      "user-1|*": { menuOpen: true },
+      "user-2|*": { menuOpen: false },
+    });
+    // повторное чтение ничего не меняет
+    usePanelsStore.getState().reload();
+    expect(usePanelsStore.getState().entries["user-1|*"]).toEqual({ menuOpen: true });
   });
 
   it("настройки со старого ключа rt-pf-panels-v1 переносятся: подменю и вкладка — да, «открыто» — нет", () => {
@@ -196,7 +254,8 @@ describe("usePanels", () => {
     expect(result.current.panelOpen).toBe(false);
     expect(window.localStorage.getItem("rt-pf-panels-v1")).toBeNull();
     expect(JSON.parse(window.localStorage.getItem("rt-pf-panels-v2") ?? "{}")).toEqual({
-      "user-1|/crm/leads": { menuOpen: false, lastTab: "history" },
+      "user-1|/crm/leads": { lastTab: "history" },
+      "user-1|*": { menuOpen: false },
     });
   });
 

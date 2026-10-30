@@ -1,6 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { Button, Card, Pagination, Select, Skeleton, Table } from "antd";
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -15,6 +15,7 @@ import type {
   TicketSubject,
 } from "../../../shared/api/generated/model";
 import { useListTickets } from "../../../shared/api/generated/platform-bff";
+import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -42,20 +43,8 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
   useDocumentTitle(title);
   const base = useId();
 
-  const blockRef = useRef<HTMLDivElement>(null);
-  const [blockWidth, setBlockWidth] = useState(0);
-  useEffect(() => {
-    const element = blockRef.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => {
-      setBlockWidth(entry?.contentRect.width ?? 0);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  const compact = blockWidth > 0 ? blockWidth < TABLE_MIN_WIDTH : !wide;
+  // Таблица или список — по ширине самого блока, с запасом 40 px у порога (useCompactBlock).
+  const { ref: blockRef, compact } = useCompactBlock(TABLE_MIN_WIDTH, !wide);
 
   const [status, setStatus] = useState<TicketStatus | undefined>();
   const [subject, setSubject] = useState<TicketSubject | undefined>();

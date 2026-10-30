@@ -61,6 +61,9 @@ test.describe("Склад и закупки: снабженец", () => {
     await expect(
       page.getByRole("heading", { level: 1, name: `Расчёт по заявке ${NUMBER}` }),
     ).toBeVisible();
+    // окно «Задание» на карточке — поверх (UX-1a) и закрывает кнопки справа: для работы с таблицей его прячут
+    await page.getByRole("button", { name: "Скрыть панель" }).click();
+    await expect(page.locator("#pf-context-panel")).toBeHidden();
     await expect(line(page, DRIVE).getByText("Ячейка B-04-1")).toBeVisible();
     await expect(line(page, DRIVE).getByText("Свободно · 6")).toBeVisible();
     await line(page, DRIVE)

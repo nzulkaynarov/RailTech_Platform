@@ -1,10 +1,11 @@
 import { create } from "zustand";
 
 /**
- * Настройки отображения панелей по пользователю и разделу (docs/architecture/platform-frontend.md §1, §4).
+ * Настройки отображения панелей (docs/architecture/platform-frontend.md §1, §4.1).
  * Состояние открытия (panelOpen) живёт исключительно в URL (?panel=open).
  * В Zustand и localStorage (ключ rt-pf-panels-v2) сохраняются только предпочтения пользователя:
- * menuOpen, panelMode ('overlay' | 'docked'), panelWidth ('default' | 'wide'), lastTab.
+ * подменю (menuOpen) — одно на пользователя (запись `<user>|*`, UX-1a); по разделу (`<user>|<раздел>`) —
+ * panelMode ('overlay' | 'docked'), panelWidth ('default' | 'wide'), lastTab.
  */
 export const PANELS_STORAGE_KEY = "rt-pf-panels-v2";
 /** Прежний ключ (до 2026-10-30): `{ menuOpen, panelOpen, tab }`; переносится один раз, `panelOpen` отбрасывается. */
@@ -51,17 +52,63 @@ function migrateLegacy(): Entries {
   return out;
 }
 
+/** Раздел записи с настройками пользователя целиком (подменю): `<user>|*`. */
+export const USER_SCOPE = "*";
+
+/**
+ * До UX-1a подменю помнилось по разделу (`<user>|<раздел>`.menuOpen). Теперь значение одно на пользователя: переносим
+ * выбор, который он делал чаще (при равенстве — записанный последним), в `<user>|*`, а из разделов убираем. Записи без
+ * menuOpen и уже перенесённые не трогаем — перенос идемпотентный.
+ */
+function liftMenuToUser(entries: Entries): { entries: Entries; changed: boolean } {
+  const votes = new Map<string, { open: number; closed: number; last: boolean }>();
+  for (const [k, v] of Object.entries(entries)) {
+    const bar = k.lastIndexOf("|");
+    if (bar < 0 || k.slice(bar + 1) === USER_SCOPE || v.menuOpen === undefined) continue;
+    const user = k.slice(0, bar);
+    const vote = votes.get(user) ?? { open: 0, closed: 0, last: v.menuOpen };
+    if (v.menuOpen) vote.open += 1;
+    else vote.closed += 1;
+    vote.last = v.menuOpen;
+    votes.set(user, vote);
+  }
+  if (votes.size === 0) return { entries, changed: false };
+  const out: Entries = {};
+  for (const [k, v] of Object.entries(entries)) {
+    const bar = k.lastIndexOf("|");
+    if (bar >= 0 && k.slice(bar + 1) !== USER_SCOPE && v.menuOpen !== undefined) {
+      const rest = { ...v };
+      delete rest.menuOpen;
+      if (Object.keys(rest).length > 0) out[k] = rest;
+    } else {
+      out[k] = v;
+    }
+  }
+  for (const [user, vote] of votes) {
+    const key = panelsKey(user, USER_SCOPE);
+    if (out[key]?.menuOpen !== undefined) continue;
+    const menuOpen = vote.open === vote.closed ? vote.last : vote.open > vote.closed;
+    out[key] = { ...out[key], menuOpen };
+  }
+  return { entries: out, changed: true };
+}
+
 function readStorage(): Entries {
   try {
     const raw = window.localStorage.getItem(PANELS_STORAGE_KEY);
-    if (!raw) return migrateLegacy();
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    const out: Entries = {};
-    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
-      out[k] = sanitizeEntry(v);
-    }
-    return out;
+    const loaded = (() => {
+      if (!raw) return migrateLegacy();
+      const parsed: unknown = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      const out: Entries = {};
+      for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+        out[k] = sanitizeEntry(v);
+      }
+      return out;
+    })();
+    const lifted = liftMenuToUser(loaded);
+    if (lifted.changed) writeStorage(lifted.entries);
+    return lifted.entries;
   } catch {
     return {};
   }

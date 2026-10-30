@@ -490,19 +490,32 @@
   right: 8px;
 }
 
-/* --- ContextPanel поверх основного окна (overlay, platform-frontend.md §4 зона 5): у правого края под шапкой,
-   таблицы под ним не сжимаются. z-index ниже модальных окон и выпадающих списков antd (1000+). --- */
+/* --- ContextPanel (platform-frontend.md §4 зона 5, §4.1): одна обёртка, режим — класс (UX-1a). Поверх — у правого края
+   под шапкой, таблицы под ним не сжимаются; z-index ниже модальных окон и выпадающих списков antd (1000+). Рядом —
+   колонка в сетке справа от основного окна. Ширина не анимируется: появление поверх — только сдвиг transform. --- */
+.pf-panel-frame {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  overflow: auto;
+  background: #fff;
+  border-left: 1px solid #f0f0f0;
+}
+.pf-panel-frame[hidden] {
+  display: none;
+}
+.pf-panel-docked {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+}
 .pf-panel-overlay {
   position: fixed;
   top: 56px;
   right: 0;
   bottom: 0;
   z-index: 900;
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-  background: #fff;
-  border-left: 1px solid #f0f0f0;
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
   animation: pf-panel-in 0.2s ease;
 }

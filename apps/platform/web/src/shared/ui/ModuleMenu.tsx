@@ -1,4 +1,4 @@
-import { Layout, theme } from "antd";
+import { theme } from "antd";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
@@ -117,19 +117,31 @@ export function ModuleMenuContent({
   );
 }
 
-/** Подменю 208 px; свёрнутое — 0 px, содержимое не рендерится (не попадает в таб-порядок). */
+/** Ширина раскрытого подменю (platform-frontend.md §4, зона 2) */
+const MENU_WIDTH = 208;
+
+/**
+ * Подменю 208 px; свёрнутое не рендерится (не занимает места и не попадает в таб-порядок). Ширина меняется одним шагом,
+ * в одном кадре (UX-1a, аудит S3): у antd `Sider` — `transition` ширины (13–15 кадров перекладки основного окна) и
+ * внутреннее состояние `collapsed`, которое догоняет проп на кадр позже. Поэтому — простая колонка.
+ */
 export function ModuleMenu({ open, ...content }: ModuleMenuContentProps & { open: boolean }) {
+  if (!open) return null;
   return (
-    <Layout.Sider
-      width={208}
-      collapsedWidth={0}
-      collapsed={!open}
-      trigger={null}
-      theme="light"
+    <div
       role="presentation"
-      style={{ borderRight: open ? "1px solid #f0f0f0" : "none" }}
+      style={{
+        flex: `0 0 ${String(MENU_WIDTH)}px`,
+        width: MENU_WIDTH,
+        minWidth: MENU_WIDTH,
+        maxWidth: MENU_WIDTH,
+        boxSizing: "border-box",
+        background: "#fff",
+        borderRight: "1px solid #f0f0f0",
+        overflow: "hidden",
+      }}
     >
-      {open ? <ModuleMenuContent {...content} /> : null}
-    </Layout.Sider>
+      <ModuleMenuContent {...content} />
+    </div>
   );
 }

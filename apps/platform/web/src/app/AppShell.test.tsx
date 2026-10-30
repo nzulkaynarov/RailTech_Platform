@@ -201,7 +201,7 @@ describe("каркас на 1440", () => {
     expect(screen.getByRole("tab", { name: "Карточка" })).toBeVisible();
   });
 
-  it("подменю сворачивается, состояние пишется в localStorage по пользователю и разделу", async () => {
+  it("подменю сворачивается, состояние пишется в localStorage по пользователю (одно на все разделы)", async () => {
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
     await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
@@ -213,7 +213,7 @@ describe("каркас на 1440", () => {
       string,
       { menuOpen?: boolean }
     >;
-    expect(stored["u-demo-director|/dashboard/queue"]?.menuOpen).toBe(false);
+    expect(stored["u-demo-director|*"]?.menuOpen).toBe(false);
   });
 
   it("если localStorage бросает, панели всё равно работают", async () => {

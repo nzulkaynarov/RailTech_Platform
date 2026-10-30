@@ -1,6 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { Button, Card, Pagination, Skeleton } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -8,6 +8,7 @@ import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { AuditEntry, ListAuditParams } from "../../../shared/api/generated/model";
 import { useListAudit, useListEmployees } from "../../../shared/api/generated/platform-bff";
+import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -41,20 +42,8 @@ export function AuditPage() {
   // Вкладка браузера различает фильтр журнала: «Журнал · Действия людей»
   useDocumentTitle(`${title} · ${t("modules:admin.journal.people")}`);
 
-  const blockRef = useRef<HTMLDivElement>(null);
-  const [blockWidth, setBlockWidth] = useState(0);
-  useEffect(() => {
-    const element = blockRef.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => {
-      setBlockWidth(entry?.contentRect.width ?? 0);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  const compact = blockWidth > 0 ? blockWidth < TABLE_MIN_WIDTH : !wide;
+  // Таблица или список — по ширине самого блока, с запасом 40 px у порога (useCompactBlock).
+  const { ref: blockRef, compact } = useCompactBlock(TABLE_MIN_WIDTH, !wide);
 
   const entityId = params.get("entity_id");
   const [filters, setFilters] = useState<AuditFilterValues>({
