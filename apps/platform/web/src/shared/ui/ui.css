@@ -410,8 +410,11 @@
 
 /* --- DefinitionList: подпись 130 px #595959, адаптация под панели 440px и 600px --- */
 .pf-dl-wrap {
-  container-type: inline-size;
   width: 100%;
+}
+/* Контейнер запросов — только у колонок «auto»: inline-size-контейнер не берёт ширину от содержимого (UX-1b, S16) */
+.pf-dl-wrap--auto {
+  container-type: inline-size;
 }
 .pf-dl {
   display: grid;
@@ -477,10 +480,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --- ContextPanel: активная вкладка 500 (docs/architecture/platform-frontend.md §4); остальное — токены Tabs темы --- */
-.pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
-  font-weight: 500;
-}
+/* --- ContextPanel: активная вкладка — цветом и полосой Tabs, без смены насыщенности: соседи не сдвигаются (UX-1b, S13) --- */
 .pf-panel {
   position: relative;
 }
@@ -531,28 +531,34 @@
   }
 }
 
-/* --- ContextualSaveBar (platform-frontend.md §5): тёмная полоса над формой; цвет кнопки — токен темы --- */
-.pf-save-bar {
+/* --- ContextualSaveBar (platform-frontend.md §5, UX-1b S6): место в конце формы зарезервировано всегда; бар прилипает
+   к низу прокручиваемой области поверх контента. Отступ снизу — над нижней панелью модулей (< 768) из AppShell.
+   Цвета — токены темы (переменные ставит компонент из theme.useToken). --- */
+.pf-save-dock {
   position: sticky;
-  top: 0;
+  bottom: var(--pf-save-bar-offset, 0px);
   z-index: 100;
+  flex: none;
+}
+.pf-save-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 8px 12px;
   min-height: 48px;
-  padding: 8px 16px;
-  margin-bottom: 12px;
+  padding: 8px 12px 8px 16px;
+  border: 1px solid var(--pf-save-bar-border);
   border-radius: 8px;
-  background: #0f172a;
-  color: #f8fafc;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  background: var(--pf-save-bar-bg);
+  color: var(--pf-save-bar-text);
+  box-shadow: var(--pf-save-bar-shadow);
 }
 .pf-save-bar-status {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
   font-weight: 500;
 }
 .pf-save-bar-dot {
@@ -560,22 +566,60 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #f59e0b;
+  background: var(--pf-save-bar-dot);
 }
 .pf-save-bar-kbd {
   padding: 1px 6px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid var(--pf-save-bar-kbd-border);
   border-radius: 4px;
-  color: #e2e8f0;
+  color: var(--pf-save-bar-muted);
   font-family: inherit;
   font-size: 12px;
   line-height: 16px;
 }
+/* Сенсорный экран без клавиатуры: подсказки ⌘S нет */
+@media (hover: none) {
+  .pf-save-bar-kbd {
+    display: none;
+  }
+}
 .pf-save-bar-actions {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
 }
-.pf-save-bar .ant-btn-background-ghost:not(:disabled) {
-  color: #f8fafc;
-  border-color: rgba(255, 255, 255, 0.5);
+/* Телефон: статус одной строкой, под ним «Отменить» и главная кнопка на остаток строки — бар в две строки, а не в три */
+@media (max-width: 575px) {
+  .pf-save-bar {
+    padding: 8px 12px;
+  }
+  .pf-save-bar-status {
+    flex: 1 1 100%;
+  }
+  .pf-save-bar-status > span:nth-child(2) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .pf-save-bar-kbd {
+    display: none;
+  }
+  .pf-save-bar-actions {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    margin-left: 0;
+  }
+  .pf-save-bar-actions > .ant-btn {
+    flex: 0 0 auto;
+    min-width: 0;
+  }
+  .pf-save-bar-actions > .ant-btn-primary {
+    flex: 1 1 auto;
+  }
+  .pf-save-bar-actions > .ant-btn > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }

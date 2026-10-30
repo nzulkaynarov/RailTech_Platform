@@ -1,9 +1,11 @@
-import { Button } from "antd";
+import { Button, theme } from "antd";
 import { useEffect, useRef, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
+import { UnsavedGuard } from "./UnsavedGuard";
+
 export interface ContextualSaveBarProps {
-  /** Есть несохранённые изменения — бар виден только тогда */
+  /** Есть несохранённые изменения — бар виден только тогда (место под него зарезервировано всегда) */
   visible: boolean;
   /** Текст статуса; по умолчанию `ui:saveBar.message` */
   message?: string;
@@ -16,6 +18,12 @@ export interface ContextualSaveBarProps {
   loading?: boolean;
   /** Сохранить нельзя (например, поле заполнено с ошибкой): изменения видны, кнопка и ⌘S не действуют */
   disabled?: boolean;
+  /** Вопрос «Выйти без сохранения?» при уходе с несохранёнными правками; по умолчанию — есть */
+  guard?: boolean;
+  /** Параметры адреса, смена которых — уход из формы (`UnsavedGuard.params`): `tab` «Компании», `role` ролей */
+  guardParams?: readonly string[];
+  /** Класс места бара (ширина и отступ в форме); место — прямой потомок формы, чтобы бар прилипал к низу */
+  className?: string;
   style?: CSSProperties;
 }
 
@@ -26,11 +34,15 @@ function isMac(): boolean {
 }
 
 /**
- * Бар несохранённых изменений (docs/architecture/platform-frontend.md §5): прилипает к верху формы, «Отменить» и
- * «Сохранить изменения», ⌘S / Ctrl+S (и в раскладке RU). Только для обратимого сохранения настроек и черновиков:
- * действие с последствиями для других (создать заявку, отправить, подписать) остаётся главной кнопкой формы с блоком
- * «Что произойдёт» (CONVENTIONS §2 п. 8). Если на экране несколько баров, ⌘S сохраняет форму, в которой фокус.
- * Статус объявляет скринридеру живой регион, который есть на странице всегда, а не только при видимом баре.
+ * Бар несохранённых изменений (docs/architecture/platform-frontend.md §5): стоит в конце формы вместо её кнопки
+ * «Сохранить», прилипает к низу прокручиваемой области и лежит поверх контента; «Отменить» и «Сохранить …», ⌘S / Ctrl+S
+ * (и в раскладке RU). Место под бар зарезервировано и без правок, поэтому первый символ ничего не сдвигает (UX-1b, S6).
+ * Уход с несохранёнными правками спрашивает «Выйти без сохранения?» (`UnsavedGuard`, A1).
+ *
+ * Только для обратимого сохранения настроек и черновиков: действие с последствиями для других (создать заявку,
+ * отправить, подписать) остаётся главной кнопкой формы с блоком «Что произойдёт» (CONVENTIONS §2 п. 8). Если на экране
+ * несколько баров, ⌘S сохраняет форму, в которой фокус. Статус объявляет скринридеру живой регион, который есть на
+ * странице всегда, а не только при видимом баре.
  */
 export function ContextualSaveBar({
   visible,
@@ -41,10 +53,26 @@ export function ContextualSaveBar({
   onDiscard,
   loading = false,
   disabled = false,
+  guard = true,
+  guardParams,
+  className,
   style,
 }: ContextualSaveBarProps) {
   const { t } = useTranslation("ui");
+  const { token } = theme.useToken();
   const rootRef = useRef<HTMLDivElement>(null);
+  // «Отменить» может сам увести с формы (новая роль закрывается): этот переход вопроса не вызывает.
+  const discarding = useRef(false);
+  const discard = () => {
+    discarding.current = true;
+    try {
+      onDiscard();
+    } finally {
+      window.setTimeout(() => {
+        discarding.current = false;
+      }, 0);
+    }
+  };
   const text = message ?? t("saveBar.message");
 
   useEffect(() => {
@@ -65,35 +93,55 @@ export function ContextualSaveBar({
     };
   }, [visible, loading, disabled, onSave]);
 
+  const colors = {
+    "--pf-save-bar-bg": token.colorBgElevated,
+    "--pf-save-bar-border": token.colorBorderSecondary,
+    "--pf-save-bar-text": token.colorText,
+    "--pf-save-bar-muted": token.colorTextSecondary,
+    "--pf-save-bar-kbd-border": token.colorBorder,
+    "--pf-save-bar-dot": token.colorWarning,
+    "--pf-save-bar-shadow": token.boxShadowSecondary,
+  } as CSSProperties;
+
   return (
-    <>
+    <div
+      ref={rootRef}
+      className={className ? `pf-save-dock ${className}` : "pf-save-dock"}
+      style={colors}
+    >
       <span role="status" className="pf-sr-only">
         {visible ? text : ""}
       </span>
-      {visible ? (
-        <div
-          ref={rootRef}
-          {...{ [BAR_ATTR]: "" }}
-          className="pf-save-bar"
-          role="region"
-          aria-label={t("saveBar.label")}
-          style={style}
-        >
-          <div className="pf-save-bar-status" aria-hidden="true">
-            <span className="pf-save-bar-dot" />
-            <span>{text}</span>
-            <kbd className="pf-save-bar-kbd">{isMac() ? "⌘S" : "Ctrl+S"}</kbd>
-          </div>
-          <div className="pf-save-bar-actions">
-            <Button ghost onClick={onDiscard} disabled={loading}>
-              {discardLabel ?? t("saveBar.discard")}
-            </Button>
-            <Button type="primary" onClick={onSave} loading={loading} disabled={disabled}>
-              {saveLabel ?? t("saveBar.save")}
-            </Button>
-          </div>
+      <UnsavedGuard
+        when={visible && guard}
+        busy={loading}
+        params={guardParams}
+        skipRef={discarding}
+      />
+      <div
+        {...(visible ? { [BAR_ATTR]: "" } : {})}
+        className="pf-save-bar"
+        role="region"
+        aria-label={t("saveBar.label")}
+        aria-hidden={visible ? undefined : true}
+        // Без правок бар невидим, но держит место: форма не прыгает на первом символе.
+        {...(visible ? {} : { inert: "" })}
+        style={{ ...style, visibility: visible ? undefined : "hidden" }}
+      >
+        <div className="pf-save-bar-status" aria-hidden="true">
+          <span className="pf-save-bar-dot" />
+          <span>{text}</span>
+          <kbd className="pf-save-bar-kbd">{isMac() ? "⌘S" : "Ctrl+S"}</kbd>
         </div>
-      ) : null}
-    </>
+        <div className="pf-save-bar-actions">
+          <Button onClick={discard} disabled={loading}>
+            {discardLabel ?? t("saveBar.discard")}
+          </Button>
+          <Button type="primary" onClick={onSave} loading={loading} disabled={disabled}>
+            {saveLabel ?? t("saveBar.save")}
+          </Button>
+        </div>
+      </div>
+    </div>
   );
 }

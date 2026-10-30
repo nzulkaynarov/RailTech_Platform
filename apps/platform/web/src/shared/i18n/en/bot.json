@@ -73,12 +73,6 @@
     "step2": "The bot and staff start working by the new values at once, without a restart.",
     "step3": "The change goes to the CRM audit log: who and when, the old and the new value."
   },
-  "guard": {
-    "title": "Leave without saving?",
-    "text": "The form has unsaved changes — they will be lost.",
-    "leave": "Leave without saving",
-    "stay": "Stay"
-  },
   "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
   "channelMoved": "The team channel is chosen on the “Connection” tab; here — whom to mention and how often to write to a manager.",
   "openIntegrations": "Open “Connection”",

@@ -21,7 +21,7 @@
     "bell": "Bildirishnomalar markazi",
     "bellUnread": "Bildirishnomalar markazi, {{count}} ta yangi",
     "hidePanel": "Panelni yashirish",
-    "showPanel": "Panel",
+    "showPanel": "Panelni ko‘rsatish",
     "searchShort": "Qidiruv",
     "help": "Yordam (? tugmasi)"
   },
@@ -80,7 +80,6 @@
   "panel": {
     "label": "Yon oyna",
     "hide": "Yon oynani yashirish",
-    "show": "Yon oynani ko‘rsatish",
     "close": "Yopish",
     "wide": "Kengroq: 600 px",
     "narrow": "Torroq: 440 px",

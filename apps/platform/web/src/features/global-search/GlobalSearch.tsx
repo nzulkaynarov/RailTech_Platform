@@ -367,7 +367,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
                   >
                     <span className="pf-gsearch-main pf-gsearch-main-icon">
                       {option.icon ? (
-                        <span className="pf-gsearch-icon" aria-hidden="true">
+                        <span className="pf-gsearch-result-icon" aria-hidden="true">
                           {option.icon}
                         </span>
                       ) : null}

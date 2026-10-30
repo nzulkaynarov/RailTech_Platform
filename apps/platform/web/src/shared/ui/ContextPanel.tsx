@@ -141,7 +141,10 @@ function PanelBody({
           label: tab.label,
           children:
             tab.key === activeTab ? (
-              <div style={{ padding: 16, overflow: "auto", flex: 1 }}>{children}</div>
+              // Полоса прокрутки не меняет ширину тела окна (UX-1b, S15)
+              <div style={{ padding: 16, overflow: "auto", flex: 1, scrollbarGutter: "stable" }}>
+                {children}
+              </div>
             ) : null,
         }))}
       />

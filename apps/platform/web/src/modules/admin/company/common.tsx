@@ -78,8 +78,9 @@ export function QueryGate<T>({
 }
 
 /**
- * Главная кнопка вкладки с блоком «Что произойдёт» под ней (SPEC-v3 §5.3: одна главная кнопка на экран). Ошибка
- * последнего сохранения — над кнопкой словами, не одним цветом.
+ * Сохранение вкладки: бар несохранённого (`ContextualSaveBar`) в конце формы с подписью действия («Сохранить
+ * реквизиты»), над ним — ошибка последнего сохранения словами и блок «Что произойдёт». Отдельной кнопки под формой
+ * нет: бар и есть кнопка (UX-1b, S6). Уход с несохранёнными правками — в том числе на другую вкладку — спрашивает.
  */
 export function SaveBlock({
   label,
@@ -87,7 +88,6 @@ export function SaveBlock({
   disabled,
   error,
   consequence,
-  htmlType = "submit",
   onClick,
   onDiscard,
   dirty,
@@ -95,53 +95,44 @@ export function SaveBlock({
   label: string;
   loading?: boolean;
   disabled?: boolean;
-  /** Есть изменения (для бара сохранения); по умолчанию — «кнопка доступна» */
+  /** Есть изменения (для бара сохранения); по умолчанию — «сохранить можно» */
   dirty?: boolean;
   error?: unknown;
   consequence: readonly ReactNode[];
-  htmlType?: "submit" | "button";
+  /** Своё сохранение; без него — отправка формы, в которой стоит блок */
   onClick?: () => void;
-  onDiscard?: () => void;
+  onDiscard: () => void;
 }) {
   const { t } = useTranslation("company");
-  const saveBtnRef = useRef<HTMLButtonElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
 
   const handleSave = () => {
     if (onClick) {
       onClick();
-    } else if (saveBtnRef.current?.form) {
-      saveBtnRef.current.form.requestSubmit();
+    } else {
+      anchorRef.current?.closest("form")?.requestSubmit();
     }
   };
 
   return (
-    <div className="pf-co-save">
-      {onDiscard ? (
-        <ContextualSaveBar
-          visible={dirty ?? !disabled}
-          loading={loading ?? false}
-          disabled={disabled ?? false}
-          onSave={handleSave}
-          onDiscard={onDiscard}
-        />
-      ) : null}
-      {error ? (
-        <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
-      ) : null}
-      <div>
-        <Button
-          ref={saveBtnRef}
-          type="primary"
-          htmlType={htmlType}
-          loading={loading}
-          disabled={disabled}
-          onClick={onClick}
-        >
-          {label}
-        </Button>
+    <>
+      <div ref={anchorRef} className="pf-co-save">
+        {error ? (
+          <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
+        ) : null}
+        <Consequence items={consequence} />
       </div>
-      <Consequence items={consequence} />
-    </div>
+      <ContextualSaveBar
+        className="pf-co-save-dock"
+        visible={dirty ?? !disabled}
+        saveLabel={label}
+        loading={loading ?? false}
+        disabled={disabled ?? false}
+        guardParams={["tab"]}
+        onSave={handleSave}
+        onDiscard={onDiscard}
+      />
+    </>
   );
 }
 

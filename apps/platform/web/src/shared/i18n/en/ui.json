@@ -35,6 +35,12 @@
   },
   "whereToDo": "Where to do it",
   "whereToDoItem": "Where to do it: {{title}}",
+  "unsavedGuard": {
+    "title": "Leave without saving?",
+    "text": "The form has unsaved changes — they will be lost.",
+    "leave": "Leave without saving",
+    "stay": "Stay"
+  },
   "saveBar": {
     "label": "Unsaved changes",
     "message": "You have unsaved changes",

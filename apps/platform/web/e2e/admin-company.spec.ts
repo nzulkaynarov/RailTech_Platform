@@ -122,7 +122,8 @@ test.describe("Компания: реквизиты, бланк, нумерац�
   }) => {
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "details");
-    await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeDisabled();
+    // Без правок бар сохранения невидим (UX-1b, S6)
+    await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeHidden();
 
     await page.getByLabel("Телефон").fill("+998 11 111 11 11");
     await expect(

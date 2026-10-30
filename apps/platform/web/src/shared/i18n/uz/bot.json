@@ -73,12 +73,6 @@
     "step2": "Bot va xodimlar yangi qiymatlar bo‘yicha darhol, qayta ishga tushirmasdan ishlay boshlaydi.",
     "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon, eski va yangi qiymat."
   },
-  "guard": {
-    "title": "Saqlamasdan chiqasizmi?",
-    "text": "Formada saqlanmagan o‘zgarishlar bor — ular yo‘qoladi.",
-    "leave": "Saqlamasdan chiqish",
-    "stay": "Qolish"
-  },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
   "channelMoved": "Jamoa kanali «Ulanish» yorlig‘ida tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
   "openIntegrations": "«Ulanish»ni ochish",

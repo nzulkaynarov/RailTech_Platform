@@ -1,4 +1,4 @@
-import { Button, Drawer, Layout, theme } from "antd";
+import { Button, Drawer, Layout, Tooltip, theme } from "antd";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
@@ -24,11 +24,9 @@ export interface TopBarProps {
     menu: string;
     /** Полное имя кнопки: «Центр уведомлений» или «Центр уведомлений, N новых» */
     bell: string;
+    /** Имя и подсказка иконочной кнопки окна: «Скрыть панель» / «Показать панель» */
     hidePanel: string;
     showPanel: string;
-    /** Имена иконочной кнопки на узком экране (подписи «Панель» там нет) */
-    hidePanelIcon: string;
-    showPanelIcon: string;
   };
   /** Кнопка «›› Меню» — подменю свёрнуто (desktop) или открывается Drawer (< 768) */
   onShowMenu?: () => void;
@@ -49,7 +47,10 @@ export interface TopBarProps {
     /** Отметка «Новое» (W-REL): есть запись «Что нового», которую сотрудник не открывал; слово — в `label` */
     fresh?: boolean;
   };
-  /** Нет бокового окна у раздела (403, 404) — кнопка «Панель» не показывается */
+  /**
+   * Нет бокового окна у раздела (`/me`, `/help`, 403, 404) — кнопка окна невидима (`visibility: hidden`), но место
+   * держит: поиск, «?» и колокольчик стоят на одном x во всех разделах (UX-1b, S5).
+   */
   hasPanel: boolean;
   panelOpen: boolean;
   onTogglePanel: () => void;
@@ -60,12 +61,12 @@ export interface TopBarProps {
 function Crumbs({ crumbs, label }: { crumbs: readonly Crumb[]; label: string }) {
   const { token } = theme.useToken();
   return (
-    <nav aria-label={label}>
+    <nav aria-label={label} className="pf-crumbs-nav">
       <ol className="pf-crumbs">
         {crumbs.map((crumb, index) => {
           const last = index === crumbs.length - 1;
           return (
-            <li key={`${String(index)}-${crumb.label}`} style={{ display: "contents" }}>
+            <li key={`${String(index)}-${crumb.label}`}>
               {crumb.to && !last ? (
                 <Link to={crumb.to} className="pf-focusable">
                   {crumb.label}
@@ -78,7 +79,11 @@ function Crumbs({ crumbs, label }: { crumbs: readonly Crumb[]; label: string }) 
                   {crumb.label}
                 </span>
               )}
-              {last ? null : <span aria-hidden="true">/</span>}
+              {last ? null : (
+                <span aria-hidden="true" className="pf-crumbs-sep">
+                  /
+                </span>
+              )}
             </li>
           );
         })}
@@ -87,7 +92,11 @@ function Crumbs({ crumbs, label }: { crumbs: readonly Crumb[]; label: string }) 
   );
 }
 
-/** Шапка 56 px: крошки, поиск (слот), колокольчик, «Скрыть панель / Панель» (docs/architecture/platform-frontend.md §4, зона 3). */
+/**
+ * Шапка 56 px: крошки, поиск (слот), «?», колокольчик, кнопка окна (docs/architecture/platform-frontend.md §4, зона 3).
+ * Ширина правой группы постоянна: крошки занимают гибкую область и обрезаются многоточием, кнопка окна — иконка 32 px
+ * и не исчезает из потока (UX-1b, S5). Так поиск стоит на одном x при переходах и при открытии и закрытии окна.
+ */
 export function TopBar({
   crumbs,
   labels,
@@ -107,6 +116,7 @@ export function TopBar({
   mobile,
 }: TopBarProps) {
   const { token } = theme.useToken();
+  const panelLabel = panelOpen ? labels.hidePanel : labels.showPanel;
   const bellRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   // Окно уведомлений — диалог в портале в конце body: при открытии фокус переходит внутрь (на выбранную вкладку),
@@ -165,7 +175,6 @@ export function TopBar({
         )
       ) : null}
       {mobile ? null : <Crumbs crumbs={crumbs} label={labels.crumbs} />}
-      {mobile ? null : <div style={{ flex: 1 }} />}
       {search}
       {help ? (
         <button
@@ -236,30 +245,29 @@ export function TopBar({
           {bellContent}
         </div>
       </Drawer>
-      {!hasPanel ? null : mobile ? (
+      {/* Подсказка — слева, в строке шапки: снизу она ложилась на кнопку «›» открытого окна. На телефоне её нет. */}
+      <Tooltip title={hasPanel && !mobile ? panelLabel : undefined} placement="left">
         <button
           type="button"
           className="pf-icon-btn pf-focusable"
-          aria-label={panelOpen ? labels.hidePanelIcon : labels.showPanelIcon}
+          aria-label={panelLabel}
           aria-expanded={panelOpen}
-          aria-controls={panelId}
+          aria-controls={hasPanel ? panelId : undefined}
+          aria-hidden={hasPanel ? undefined : true}
+          disabled={!hasPanel}
+          tabIndex={hasPanel ? undefined : -1}
+          data-testid="panel-toggle"
           onClick={onTogglePanel}
-          style={{ width: 32, height: 32, flex: "0 0 auto" }}
+          style={{
+            width: 32,
+            height: 32,
+            flex: "0 0 auto",
+            visibility: hasPanel ? undefined : "hidden",
+          }}
         >
           <PanelIcon />
         </button>
-      ) : (
-        <Button
-          onClick={onTogglePanel}
-          aria-expanded={panelOpen}
-          aria-controls={panelId}
-          icon={<PanelIcon />}
-          iconPosition="end"
-          style={{ padding: "0 10px" }}
-        >
-          {panelOpen ? labels.hidePanel : labels.showPanel}
-        </Button>
-      )}
+      </Tooltip>
     </Layout.Header>
   );
 }

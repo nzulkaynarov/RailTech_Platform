@@ -55,6 +55,11 @@
   gap: 12px;
   max-width: 560px;
 }
+/* Бар сохранения вкладки — в конце формы, ширина как у блока «Что произойдёт» */
+.pf-co-save-dock {
+  max-width: 560px;
+  margin-top: 12px;
+}
 .pf-co-split {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

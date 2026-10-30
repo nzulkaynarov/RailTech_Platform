@@ -508,6 +508,7 @@
         "fromHint": "A template fills the new role's column with its sections; you can change them afterwards.",
         "empty": "Scratch — all sections hidden",
         "submit": "Create role",
+        "unsaved": "The role is not created yet",
         "cancel": "Cancel",
         "created": "The role appears in the matrix and in the role list in Employees; nobody holds it yet — nobody's rights change.",
         "assign": "Grant the role to employees in Settings · Employees."

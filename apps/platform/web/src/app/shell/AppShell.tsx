@@ -375,8 +375,6 @@ export function AppShell() {
               unreadCount > 0 ? t("topbar.bellUnread", { count: unreadCount }) : t("topbar.bell"),
             hidePanel: t("topbar.hidePanel"),
             showPanel: t("topbar.showPanel"),
-            hidePanelIcon: t("panel.hide"),
-            showPanelIcon: t("panel.show"),
           }}
           onShowMenu={
             menuHidden
@@ -438,6 +436,8 @@ export function AppShell() {
             className="pf-main"
             style={{
               overflow: "auto",
+              // Полоса прокрутки не съедает ширину при появлении (Windows, 15 px; аудит 2026-10-30, S15)
+              scrollbarGutter: "stable",
               display: "flex",
               flexDirection: "column",
               gap: 16,
@@ -445,6 +445,8 @@ export function AppShell() {
               paddingBottom: viewport.mobile ? MOBILE_BAR_HEIGHT + 16 : 24,
               outline: "none",
               ["--pf-overlay-inset" as string]: `${String(overlayInset)}px`,
+              // Бар несохранённого прилипает выше нижней панели модулей (< 768) или с отступом 16 px (UX-1b, S6)
+              ["--pf-save-bar-offset" as string]: `${String(viewport.mobile ? MOBILE_BAR_HEIGHT + 8 : 16)}px`,
             }}
           >
             <SetupBanner />

@@ -83,18 +83,6 @@ export function DeputySection({ profile }: { profile: Profile }) {
 
   return (
     <Section title={t("deputy.title")} lead={t("deputy.lead")} testId="profile-deputy">
-      <ContextualSaveBar
-        visible={isDirty}
-        loading={set.isPending}
-        onSave={submit}
-        onDiscard={() => {
-          setWho(deputy?.user_id);
-          setFrom(deputy ? dayjs(deputy.date_from) : null);
-          setTo(deputy ? dayjs(deputy.date_to) : null);
-          setIncomplete(false);
-          set.reset();
-        }}
-      />
       <p style={{ margin: "0 0 12px" }} data-testid="deputy-sentence">
         {deputy
           ? t("deputy.sentence", {
@@ -152,11 +140,22 @@ export function DeputySection({ profile }: { profile: Profile }) {
           />
         </div>
       </div>
-      <div className="pf-profile-actions">
-        <Button loading={set.isPending} onClick={submit}>
-          {deputy ? t("deputy.change") : t("deputy.set")}
-        </Button>
-        {deputy ? (
+      <ContextualSaveBar
+        className="pf-profile-save-dock"
+        visible={isDirty}
+        saveLabel={deputy ? t("deputy.change") : t("deputy.set")}
+        loading={set.isPending}
+        onSave={submit}
+        onDiscard={() => {
+          setWho(deputy?.user_id);
+          setFrom(deputy ? dayjs(deputy.date_from) : null);
+          setTo(deputy ? dayjs(deputy.date_to) : null);
+          setIncomplete(false);
+          set.reset();
+        }}
+      />
+      {deputy ? (
+        <div className="pf-profile-actions">
           <Button
             danger
             loading={clear.isPending}
@@ -166,8 +165,8 @@ export function DeputySection({ profile }: { profile: Profile }) {
           >
             {t("deputy.clear")}
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {profile.covering.length > 0 ? (
         <ul style={{ margin: "16px 0 0", paddingLeft: 20 }} data-testid="covering-list">
           {profile.covering.map((c) => (

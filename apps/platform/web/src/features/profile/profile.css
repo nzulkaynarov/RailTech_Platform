@@ -46,6 +46,10 @@
   flex-wrap: wrap;
   margin-top: 8px;
 }
+/* Бар несохранённого в конце формы раздела (UX-1b, S6): место держит всегда, прилипает к низу экрана */
+.pf-profile-save-dock {
+  margin-top: 8px;
+}
 .pf-profile-status {
   display: flex;
   align-items: center;

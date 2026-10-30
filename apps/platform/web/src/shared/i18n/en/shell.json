@@ -21,7 +21,7 @@
     "bell": "Notification center",
     "bellUnread": "Notification center, {{count}} new",
     "hidePanel": "Hide panel",
-    "showPanel": "Panel",
+    "showPanel": "Show panel",
     "searchShort": "Search",
     "help": "Help (key ?)"
   },
@@ -80,7 +80,6 @@
   "panel": {
     "label": "Side panel",
     "hide": "Hide side panel",
-    "show": "Show side panel",
     "close": "Close",
     "wide": "Wider: 600 px",
     "narrow": "Narrower: 440 px",

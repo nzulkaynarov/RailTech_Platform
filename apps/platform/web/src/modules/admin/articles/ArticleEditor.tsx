@@ -14,7 +14,6 @@ import {
   useUpdateCompanyArticle,
 } from "../../../shared/api/generated/platform-bff";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
-import { useUnsavedGuard } from "../bot/useUnsavedGuard";
 import { articleErrorText } from "./errors";
 
 import "../../../features/help/help.css";
@@ -55,7 +54,6 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
   const dirty = article
     ? title !== article.title || body !== article.body || language !== article.language
     : title !== "" || body !== "";
-  useUnsavedGuard(dirty && !readOnly);
 
   const create = useCreateCompanyArticle();
   const update = useUpdateCompanyArticle();
@@ -232,9 +230,28 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
           </div>
           {readOnly ? null : (
             <>
+              <p className="pf-hint" style={{ margin: 0 }}>
+                {published
+                  ? t("editor.consequencePublished")
+                  : `${t("editor.consequenceDraft")} ${t("editor.consequencePublish")}`}
+              </p>
+              {published ? null : (
+                <div className="pf-ca-actions">
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      void save(true);
+                    }}
+                  >
+                    {t("editor.saveAndPublish")}
+                  </Button>
+                </div>
+              )}
+              {/* «Сохранить» черновик или статью — только в баре (UX-1b, S6): он держит место в конце формы */}
               <ContextualSaveBar
-                visible={dirty && !readOnly}
+                visible={dirty}
                 message={t("editor.unsaved")}
+                saveLabel={article ? t("editor.save") : t("editor.saveDraft")}
                 loading={busy}
                 onSave={() => {
                   void save(false);
@@ -249,31 +266,6 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
                   publish.reset();
                 }}
               />
-              <p className="pf-hint" style={{ margin: 0 }}>
-                {published
-                  ? t("editor.consequencePublished")
-                  : `${t("editor.consequenceDraft")} ${t("editor.consequencePublish")}`}
-              </p>
-              <div className="pf-ca-actions">
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  loading={busy}
-                  disabled={busy || (article !== undefined && !dirty)}
-                >
-                  {article ? t("editor.save") : t("editor.saveDraft")}
-                </Button>
-                {published ? null : (
-                  <Button
-                    disabled={busy}
-                    onClick={() => {
-                      void save(true);
-                    }}
-                  >
-                    {t("editor.saveAndPublish")}
-                  </Button>
-                )}
-              </div>
             </>
           )}
         </form>

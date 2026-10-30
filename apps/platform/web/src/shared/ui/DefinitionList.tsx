@@ -27,7 +27,7 @@ export function DefinitionList({ items, columns = 1, className = "" }: Definitio
   const columnClass = columns === 2 ? "pf-dl--2col" : columns === 1 ? "pf-dl--1col" : "pf-dl--auto";
 
   return (
-    <div className="pf-dl-wrap">
+    <div className={columns === "auto" ? "pf-dl-wrap pf-dl-wrap--auto" : "pf-dl-wrap"}>
       <dl className={`pf-dl ${columnClass} ${className}`.trim()}>
         {items.map((item, index) => {
           const empty = item.value === null || item.value === undefined || item.value === "";
