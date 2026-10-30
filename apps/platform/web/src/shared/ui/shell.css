@@ -35,14 +35,14 @@
   outline-offset: 2px;
 }
 
-/* Рейл: кнопка модуля 52×52 (в рейле 56 px), иконка 22, подпись 10 px; длинное имя целиком — в подсказке рейла */
+/* Рейл: кнопка модуля 56×52 (во всю ширину рейла 56 px), иконка 22, подпись 9.5 px («Документы» целиком в 56 px); полное имя модуля — в подсказке */
 .pf-rail-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 3px;
-  width: 52px;
+  width: 56px;
   height: 52px;
   border: 0;
   border-radius: 8px;
@@ -58,7 +58,8 @@
     color 0.15s ease;
 }
 .pf-rail-btn span {
-  max-width: 52px;
+  max-width: 54px;
+  font-size: 9.5px;
   letter-spacing: -0.02em;
   overflow: hidden;
   text-overflow: ellipsis;

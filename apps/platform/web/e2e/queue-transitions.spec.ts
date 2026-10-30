@@ -359,6 +359,8 @@ test.describe("Колокольчик: объект с экраном откры
       await loginAndWait(page, "director@demo.example");
       await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
       const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+      // шторка открывается на «Непрочитанные»; прочитанные — во «Все»
+      await center.locator(".ant-segmented-item-label", { hasText: /^Все$/ }).click();
       await center.getByRole("link", { name: title }).click();
       await expectOpened(page, key);
       if (key === "letter") await settledScreenshot(page, "bell-opened-letter");
@@ -410,10 +412,9 @@ test.describe("Переходы на телефоне @mobile", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
-    await page
-      .getByRole("dialog", { name: "Центр уведомлений" })
-      .getByRole("link", { name: /Письмо ВХ-104\/26 ждёт резолюции/ })
-      .click();
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await center.locator(".ant-segmented-item-label", { hasText: /^Все$/ }).click();
+    await center.getByRole("link", { name: /Письмо ВХ-104\/26 ждёт резолюции/ }).click();
     await expect(page).toHaveURL(OBJECTS.letter.path);
     await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toBeVisible();
     await settledScreenshot(page, "bell-opened-letter-mobile");
