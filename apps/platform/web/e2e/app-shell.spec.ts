@@ -7,7 +7,9 @@ import { ROLES, ROLE_CAPTIONS, ROLE_NAMES, routesFor, visibleModules } from "./s
 test.describe("панели", () => {
   test.skip(({ isMobile }) => isMobile, "панели рейла и подменю — десктоп");
 
-  test("подменю помнится, боковое окно — только по адресу; Ctrl+\\, Esc и закрепление", async ({ page }) => {
+  test("подменю помнится, боковое окно — только по адресу; Ctrl+\\, Esc и закрепление", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     const panel = page.getByRole("complementary", { name: "Боковое окно" });

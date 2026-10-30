@@ -50,8 +50,7 @@ export function usePanels(
   const urlPanel = params.get("panel");
   // Раздел может закрыть окно и на карточке объекта (`defaults.panelOpen: false`: журнал заказа уже на карточке).
   const cardOpen = fallbackOpen && section?.defaults?.panelOpen !== false;
-  const panelOpen =
-    urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && cardOpen;
+  const panelOpen = urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && cardOpen;
 
   const isStrictlyOverlay = Boolean(section?.path.startsWith("/chats"));
   // Поверх — в списках (таблица не сжимается). Где окно открыто вместе с работой — на карточке объекта и в разделах
