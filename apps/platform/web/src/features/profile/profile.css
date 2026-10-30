@@ -75,3 +75,8 @@
     padding: 16px;
   }
 }
+.pf-profile-part {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}

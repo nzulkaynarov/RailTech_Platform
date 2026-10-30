@@ -15,6 +15,7 @@ import { moduleName } from "../../registry";
 import type { Role, RolePreview, SectionLevel } from "../../../shared/api/generated/model";
 import { usePreviewRole } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LockIcon } from "../../../shared/ui/icons";
@@ -231,6 +232,15 @@ export function RoleEditor({
         if (!saving && !nameMissing && (isNew || changes.any)) onSave();
       }}
     >
+      <ContextualSaveBar
+        visible={isNew ? Boolean(draft.name) : changes.any}
+        loading={saving}
+        disabled={nameMissing}
+        onSave={() => {
+          if (!saving && !nameMissing && (isNew || changes.any)) onSave();
+        }}
+        onDiscard={onReset}
+      />
       <div className="pf-role-head">
         <h3 style={{ margin: 0, fontSize: 16, lineHeight: "24px", fontWeight: 600 }}>
           {isNew ? t("admin.roles.new.title") : role.name}

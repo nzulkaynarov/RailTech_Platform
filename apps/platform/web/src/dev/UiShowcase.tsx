@@ -145,7 +145,7 @@ function Blocks() {
 function Panel() {
   const [tab, setTab] = useState("approval");
   return (
-    <Section id="panel" title="ContextPanel: боковое окно 360 px">
+    <Section id="panel" title="ContextPanel: боковое окно 440 px (закреплённое)">
       <div className="dev-panel">
         <ContextPanel
           open

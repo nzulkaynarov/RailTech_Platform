@@ -154,5 +154,9 @@
       "BACKEND_UNAVAILABLE": "CRM bilan bog‘lanib bo‘lmadi. Keyinroq takrorlang.",
       "default": "Parolni o‘zgartirib bo‘lmadi. Qayta urinib ko‘ring."
     }
+  },
+  "tabs": {
+    "all": "Barcha bo‘limlar",
+    "general": "Shaxsiy ma’lumotlar"
   }
 }

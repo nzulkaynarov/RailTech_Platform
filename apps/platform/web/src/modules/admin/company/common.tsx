@@ -8,6 +8,7 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 
@@ -88,23 +89,48 @@ export function SaveBlock({
   consequence,
   htmlType = "submit",
   onClick,
+  onDiscard,
+  dirty,
 }: {
   label: string;
   loading?: boolean;
   disabled?: boolean;
+  /** Есть изменения (для бара сохранения); по умолчанию — «кнопка доступна» */
+  dirty?: boolean;
   error?: unknown;
   consequence: readonly ReactNode[];
   htmlType?: "submit" | "button";
   onClick?: () => void;
+  onDiscard?: () => void;
 }) {
   const { t } = useTranslation("company");
+  const saveBtnRef = useRef<HTMLButtonElement>(null);
+
+  const handleSave = () => {
+    if (onClick) {
+      onClick();
+    } else if (saveBtnRef.current?.form) {
+      saveBtnRef.current.form.requestSubmit();
+    }
+  };
+
   return (
     <div className="pf-co-save">
+      {onDiscard ? (
+        <ContextualSaveBar
+          visible={dirty ?? !disabled}
+          loading={loading ?? false}
+          disabled={disabled ?? false}
+          onSave={handleSave}
+          onDiscard={onDiscard}
+        />
+      ) : null}
       {error ? (
         <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
       ) : null}
       <div>
         <Button
+          ref={saveBtnRef}
           type="primary"
           htmlType={htmlType}
           loading={loading}

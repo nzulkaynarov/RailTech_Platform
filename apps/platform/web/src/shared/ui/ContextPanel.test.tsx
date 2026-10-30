@@ -75,6 +75,38 @@ describe("ContextPanel", () => {
     expect(container.querySelector("#ctx-tabs-tab-approval")).not.toBeNull();
   });
 
+  it("поверх таблицы (overlay): немодальная область без aria-modal, Esc внутри закрывает", () => {
+    const onHide = vi.fn();
+    renderUi(
+      <ContextPanel
+        open
+        panelMode="overlay"
+        id="ctx"
+        label="Боковое окно"
+        hideLabel="Скрыть боковое окно"
+        tabs={TABS}
+        activeTab="approval"
+        onTabChange={() => undefined}
+        onHide={onHide}
+      >
+        <p>Содержимое вкладки</p>
+      </ContextPanel>,
+    );
+    const region = screen.getByRole("complementary", { name: "Боковое окно" });
+    expect(region).toHaveClass("pf-panel-overlay");
+    expect(document.querySelector("[aria-modal]")).toBeNull();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Одобрение" }), { key: "Escape" });
+    expect(onHide).toHaveBeenCalledOnce();
+  });
+
+  it("Esc вне бокового окна его не закрывает", () => {
+    const onHide = vi.fn();
+    renderUi(panel(true, { onHide }));
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onHide).not.toHaveBeenCalled();
+  });
+
   it("все id уникальны и в варианте Drawer", () => {
     renderUi(
       <ContextPanelDrawer

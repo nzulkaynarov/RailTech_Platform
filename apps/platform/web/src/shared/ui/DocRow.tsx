@@ -28,7 +28,7 @@ export function DocRow({ number, type, status, note, action, base }: DocRowProps
     <li className="pf-doc">
       <div>
         <div className="pf-doc-number">
-          <DocNumber number={number} base={base} />
+          <DocNumber number={number} base={base} copyable={false} />
         </div>
         <div className="pf-hint">{type}</div>
       </div>

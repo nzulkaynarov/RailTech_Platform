@@ -1,4 +1,4 @@
-import { Alert, App, Button, Input, Tabs } from "antd";
+import { Alert, App, Button, Input, Segmented } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -182,6 +182,7 @@ function ProfileForm({ state, editable }: { state: BotProfileState; editable: bo
   const { date } = useFormat();
   const refresh = useRefreshIntegrations();
   const [draft, setDraft] = useState<ProfileDraft>(() => draftOf(state.profile));
+  const [activeLang, setActiveLang] = useState<(typeof LANGS)[number]>("ru");
   const save = useSaveBotProfile({
     mutation: {
       onSuccess: () => {
@@ -224,45 +225,47 @@ function ProfileForm({ state, editable }: { state: BotProfileState; editable: bo
           });
         }}
       >
-        <Tabs
-          size="small"
-          items={LANGS.map((lang) => ({
-            key: lang,
-            label: t(`telegram.profile.lang.${lang}`),
-            children: (
-              <div className="pf-int-form">
-                {(["name", "short_description", "description"] as const).map((field) => {
-                  const id = `tg-profile-${field}-${lang}`;
-                  const over = draft[field][lang].length > LIMITS[field];
-                  const Control = field === "description" ? Input.TextArea : Input;
-                  return (
-                    <Field
-                      key={field}
-                      id={id}
-                      label={t(`telegram.profile.fields.${field}`)}
-                      hint={t("telegram.profile.counter", {
-                        count: draft[field][lang].length,
-                        max: LIMITS[field],
-                      })}
-                    >
-                      <Control
-                        id={id}
-                        value={draft[field][lang]}
-                        readOnly={!editable}
-                        status={over ? "error" : undefined}
-                        aria-describedby={`${id}-hint`}
-                        onChange={(event) => {
-                          set(field, lang, event.target.value);
-                        }}
-                        {...(field === "description" ? { rows: 4 } : {})}
-                      />
-                    </Field>
-                  );
+        <div style={{ marginBottom: 12 }}>
+          <Segmented<(typeof LANGS)[number]>
+            aria-label={t("telegram.profile.title")}
+            value={activeLang}
+            onChange={setActiveLang}
+            options={LANGS.map((lang) => ({
+              value: lang,
+              label: t(`telegram.profile.lang.${lang}`),
+            }))}
+          />
+        </div>
+        <div className="pf-int-form">
+          {(["name", "short_description", "description"] as const).map((field) => {
+            const id = `tg-profile-${field}-${activeLang}`;
+            const over = draft[field][activeLang].length > LIMITS[field];
+            const Control = field === "description" ? Input.TextArea : Input;
+            return (
+              <Field
+                key={field}
+                id={id}
+                label={t(`telegram.profile.fields.${field}`)}
+                hint={t("telegram.profile.counter", {
+                  count: draft[field][activeLang].length,
+                  max: LIMITS[field],
                 })}
-              </div>
-            ),
-          }))}
-        />
+              >
+                <Control
+                  id={id}
+                  value={draft[field][activeLang]}
+                  readOnly={!editable}
+                  status={over ? "error" : undefined}
+                  aria-describedby={`${id}-hint`}
+                  onChange={(event) => {
+                    set(field, activeLang, event.target.value);
+                  }}
+                  {...(field === "description" ? { rows: 4 } : {})}
+                />
+              </Field>
+            );
+          })}
+        </div>
         {tooLong ? (
           <Alert type="error" showIcon role="alert" message={t("telegram.profile.tooLong")} />
         ) : null}

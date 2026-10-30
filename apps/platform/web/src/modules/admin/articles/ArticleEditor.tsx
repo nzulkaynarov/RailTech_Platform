@@ -13,6 +13,7 @@ import {
   usePublishCompanyArticle,
   useUpdateCompanyArticle,
 } from "../../../shared/api/generated/platform-bff";
+import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { useUnsavedGuard } from "../bot/useUnsavedGuard";
 import { articleErrorText } from "./errors";
 
@@ -231,6 +232,23 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
           </div>
           {readOnly ? null : (
             <>
+              <ContextualSaveBar
+                visible={dirty && !readOnly}
+                message={t("editor.unsaved")}
+                loading={busy}
+                onSave={() => {
+                  void save(false);
+                }}
+                onDiscard={() => {
+                  setTitle(article?.title ?? "");
+                  setBody(article?.body ?? "");
+                  setLanguage(article?.language ?? "ru");
+                  setTouched(false);
+                  create.reset();
+                  update.reset();
+                  publish.reset();
+                }}
+              />
               <p className="pf-hint" style={{ margin: 0 }}>
                 {published
                   ? t("editor.consequencePublished")
@@ -254,13 +272,6 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
                   >
                     {t("editor.saveAndPublish")}
                   </Button>
-                )}
-                {dirty ? (
-                  <span className="pf-hint" role="status" style={{ alignSelf: "center" }}>
-                    {t("editor.unsaved")}
-                  </span>
-                ) : (
-                  <span role="status" />
                 )}
               </div>
             </>

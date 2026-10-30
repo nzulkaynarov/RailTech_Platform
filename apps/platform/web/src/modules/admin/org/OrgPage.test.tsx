@@ -54,7 +54,7 @@ async function panelEl(): Promise<HTMLElement> {
 describe("Admin · Оргструктура (экран целиком на MSW)", () => {
   it("админ видит всех сотрудников; пока никто не выбран, в боковом окне — подсказка", async () => {
     signIn("admin@demo.example");
-    renderAt("/admin/org");
+    renderAt("/admin/org?panel=open");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     expect(

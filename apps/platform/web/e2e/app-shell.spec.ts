@@ -7,51 +7,53 @@ import { ROLES, ROLE_CAPTIONS, ROLE_NAMES, routesFor, visibleModules } from "./s
 test.describe("панели", () => {
   test.skip(({ isMobile }) => isMobile, "панели рейла и подменю — десктоп");
 
-  test("подменю и боковое окно сворачиваются и восстанавливаются после перезагрузки", async ({
+  test("подменю помнится, боковое окно — только по адресу; Ctrl+\\, Esc и закрепление", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(menu).toBeVisible();
-    await expect(panel).toBeVisible();
+    // список: боковое окно закрыто по умолчанию (ORCHESTRATOR §3 п. 18)
+    await expect(panel).toHaveCount(0);
 
     await page.getByRole("button", { name: "Свернуть меню" }).click();
     await expect(menu).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Меню" })).toBeVisible();
-    await page.getByRole("button", { name: "Скрыть панель" }).click();
-    await expect(panel).toHaveCount(0);
-    await expect(page).toHaveURL(/panel=closed/);
-    await expect(page.getByRole("button", { name: "Панель", exact: true })).toBeVisible();
-    await settledScreenshot(page, "dashboard-panels-collapsed");
-
-    // перезагрузка с ?panel=closed
-    await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
-    await expect(menu).toHaveCount(0);
-    await expect(panel).toHaveCount(0);
-
-    // тот же раздел без параметров в адресе: состояние берётся из сохранённого по пользователю и разделу
-    await page.goto("/dashboard/queue");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
-    await expect(menu).toHaveCount(0);
-    await expect(panel).toHaveCount(0);
-
-    // другой раздел — свои умолчания (обе панели открыты)
-    await page.goto("/eds/inbox");
-    await expect(page.getByRole("tab", { name: "Резолюция" })).toBeVisible();
-    await expect(menu).toBeVisible();
-    await expect(panel).toBeVisible();
-
-    // возврат: «›› Меню» и «Панель» открывают обратно
-    await page.goto("/dashboard/queue");
-    await page.getByRole("button", { name: "Меню" }).click();
     await page.getByRole("button", { name: "Панель", exact: true }).click();
-    await expect(menu).toBeVisible();
     await expect(panel).toBeVisible();
+    await expect(page).toHaveURL(/panel=open/);
+    await settledScreenshot(page, "dashboard-panel-overlay");
+
+    // Esc при фокусе в окне закрывает его; в адресе параметра больше нет
+    await panel.getByRole("tab", { selected: true }).focus();
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await expect(page).not.toHaveURL(/panel=/);
+
+    // перезагрузка: подменю свёрнуто (запомнено), окно закрыто (адрес без panel=open)
     await page.reload();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(menu).toHaveCount(0);
+    await expect(panel).toHaveCount(0);
+
+    // Ctrl+\ возвращает подменю; ссылка с ?panel=open открывает окно
+    await page.keyboard.press("Control+Backslash");
     await expect(menu).toBeVisible();
+    await page.goto("/dashboard/queue?panel=open");
     await expect(panel).toBeVisible();
+
+    // закрепить рядом с таблицей: окно в сетке, выбор помнится после перезагрузки
+    const pin = page.getByRole("button", { name: "Закрепить рядом с таблицей" });
+    await pin.click();
+    const unpin = page.getByRole("button", { name: "Открывать поверх таблицы" });
+    await expect(unpin).toHaveAttribute("aria-pressed", "true");
+    await expect(panel).toHaveClass(/ant-layout-sider/);
+    await settledScreenshot(page, "dashboard-panel-docked");
+    await page.reload();
+    await expect(unpin).toBeVisible();
+    await unpin.click();
+    await expect(panel).toHaveClass(/pf-panel-overlay/);
   });
 
   test("состояние панелей раздельное по пользователю", async ({ page }) => {
@@ -63,7 +65,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю, окно открыто; у заглушки окно закрыто", async ({
+  test("умолчания: в списках окно закрыто, на карточке объекта — открыто; Расчёт — без подменю", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -76,31 +78,32 @@ test.describe("панели", () => {
     await expect(panel).toHaveCount(0);
     await settledScreenshot(page, "crm-leads");
 
-    // «Мои расчёты» — настоящий экран (D2-1): по SPEC-v3 §11 подменю свёрнуто, боковое окно открыто
+    // «Мои расчёты» (D2-1): подменю свёрнуто по умолчанию; окно — по кнопке «Панель», вкладка «Задание»
     await page.goto("/erp/calc");
     await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
     await expect(menu).toHaveCount(0);
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
     await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
 
-    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
-    await page.goto("/erp/catalog");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-    ).toBeVisible();
-    await expect(panel).toHaveCount(0);
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
-    await expect(panel).toBeVisible();
-
     await page.goto("/eds/inbox");
     await expect(menu).toBeVisible();
+    await expect(panel).toHaveCount(0);
+
+    // карточка объекта: окно открыто, пока его не закрыли (?panel=closed)
+    await page.goto("/eds/inbox/%D0%92%D0%A5-104%2F26");
+    await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
     await expect(panel).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Резолюция" })).toBeVisible();
+    await page.getByRole("button", { name: "Скрыть панель" }).click();
+    await expect(panel).toHaveCount(0);
+    await expect(page).toHaveURL(/panel=closed/);
   });
 
   test("вкладка бокового окна живёт в ?tab= и переживает перезагрузку", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
     await page.getByRole("tab", { name: "Уведомления" }).click();
     await expect(page).toHaveURL(/tab=notifications/);
     await page.reload();

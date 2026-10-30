@@ -219,12 +219,17 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
           label={t("numbering.save")}
           loading={update.isPending}
           disabled={isEmptyObject(changed) || !maskOk}
+          dirty={!isEmptyObject(changed)}
           error={update.error}
           consequence={[
             t("numbering.consequence.future"),
             t("numbering.consequence.issued"),
             ...(values.prefix.trim() === "" ? [t("numbering.consequence.noPrefix")] : []),
           ]}
+          onDiscard={() => {
+            form.resetFields();
+            update.reset();
+          }}
         />
       </Form>
       <div className="pf-co-panel">

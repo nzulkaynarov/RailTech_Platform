@@ -258,6 +258,54 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
   });
 
+  it("переход в раздел: «лиды» находит раздел, но Enter при одном найденном объекте открывает объект", async () => {
+    server.use(
+      http.get("*/search", () =>
+        HttpResponse.json({
+          groups: [
+            {
+              module: "crm",
+              items: [
+                {
+                  title: "ЗВ-2026-104 · Стрелочные приводы",
+                  object: { kind: "request", number: "ЗВ-2026-104", path: "/crm/clients/4" },
+                },
+              ],
+            },
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "лиды");
+    const nav = await screen.findByRole("group", { name: "Разделы" });
+    expect(within(nav).getByRole("option", { name: /Лиды/ })).toHaveTextContent("Раздел");
+    await screen.findByRole("option", { name: /ЗВ-2026-104/ });
+
+    fireEvent.keyDown(box, { key: "Enter" });
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/crm/clients/4");
+    });
+  });
+
+  it("синонимы раздела — по началу слова: «лог» находит журнал администратора и только его", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "лог");
+    const nav = await screen.findByRole("group", { name: "Разделы" });
+    expect(
+      within(nav)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual([expect.stringContaining("Журнал")]);
+  });
+
   it("у всех действий поиска есть экран: подписи «Пока делается в старой системе» нет", async () => {
     // «Создать заявку» (D1-2b) и «Создать документ» (D1-6b) — настоящие экраны
     signInAs("manager@demo.example");

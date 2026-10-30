@@ -154,5 +154,9 @@
       "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try again later.",
       "default": "Could not change the password. Try again."
     }
+  },
+  "tabs": {
+    "all": "All sections",
+    "general": "Personal details"
   }
 }

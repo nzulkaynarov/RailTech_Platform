@@ -1,6 +1,13 @@
+import {
+  ArrowsAltOutlined,
+  PushpinFilled,
+  PushpinOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
 import { Drawer, Layout, Tabs } from "antd";
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 
+import type { PanelLayoutMode, PanelWidthPreset } from "../../app/shell/panelsStore";
 import { ChevronRightIcon } from "./icons";
 import "./shell.css";
 import "./ui.css";
@@ -22,6 +29,23 @@ export interface ContextPanelProps {
   onHide: () => void;
   /** Содержимое активной вкладки */
   children: ReactNode;
+  /** Режим отображения: 'overlay' (slide-over поверх контента) или 'docked' (в сетке) */
+  panelMode?: PanelLayoutMode;
+  onModeChange?: (mode: PanelLayoutMode) => void;
+  /** Ширина: 'default' (440px) или 'wide' (600px) */
+  panelWidth?: PanelWidthPreset;
+  onWidthChange?: (width: PanelWidthPreset) => void;
+  /** Доступен ли режим docked (экран >= 1280px) */
+  canDock?: boolean;
+  /** Подписи кнопок ширины и закрепления (i18n `shell:panel.*`) */
+  controlLabels?: PanelControlLabels;
+}
+
+export interface PanelControlLabels {
+  wide: string;
+  narrow: string;
+  dock: string;
+  undock: string;
 }
 
 function PanelBody({
@@ -33,59 +57,168 @@ function PanelBody({
   onHide,
   children,
   withHide = true,
+  panelMode = "overlay",
+  onModeChange,
+  panelWidth = "default",
+  onWidthChange,
+  canDock = false,
+  controlLabels,
 }: ContextPanelProps & { withHide?: boolean }) {
-  // Кнопка «›» лежит рядом с `Tabs`, а не в `tabBarExtraContent`: antd вешает `role="tablist"` на всю полосу вместе с
-  // дополнительным содержимым, а внутри `tablist` допустимы только вкладки (axe: aria-required-children). Содержимое
-  // отдаём активной панели antd: свой `tabpanel` рядом с ней дублировал бы id и роль.
-  return (
-    <div className="pf-panel">
-      <Tabs
-        id={`${id}-tabs`}
-        className="pf-panel-tabs"
-        activeKey={activeTab}
-        onChange={onTabChange}
-        tabBarStyle={{ margin: 0, padding: "0 44px 0 16px" }}
-        items={tabs.map((tab) => ({
-          key: tab.key,
-          label: tab.label,
-          children: tab.key === activeTab ? <div style={{ padding: 16 }}>{children}</div> : null,
-        }))}
-      />
+  const controls = (
+    <div
+      style={{
+        position: "absolute",
+        top: 9,
+        right: 8,
+        display: "flex",
+        alignItems: "center",
+        gap: 4,
+        zIndex: 1,
+      }}
+    >
+      {onWidthChange && controlLabels ? (
+        <button
+          type="button"
+          className="pf-icon-btn pf-focusable"
+          aria-label={panelWidth === "wide" ? controlLabels.narrow : controlLabels.wide}
+          title={panelWidth === "wide" ? controlLabels.narrow : controlLabels.wide}
+          onClick={() => {
+            onWidthChange(panelWidth === "wide" ? "default" : "wide");
+          }}
+          style={{ width: 28, height: 28 }}
+        >
+          {panelWidth === "wide" ? <ShrinkOutlined /> : <ArrowsAltOutlined />}
+        </button>
+      ) : null}
+      {canDock && onModeChange && controlLabels ? (
+        <button
+          type="button"
+          className="pf-icon-btn pf-focusable"
+          aria-label={panelMode === "docked" ? controlLabels.undock : controlLabels.dock}
+          aria-pressed={panelMode === "docked"}
+          title={panelMode === "docked" ? controlLabels.undock : controlLabels.dock}
+          onClick={() => {
+            onModeChange(panelMode === "docked" ? "overlay" : "docked");
+          }}
+          style={{ width: 28, height: 28 }}
+        >
+          {panelMode === "docked" ? (
+            <PushpinFilled style={{ color: "var(--ant-color-primary, #1668dc)" }} />
+          ) : (
+            <PushpinOutlined />
+          )}
+        </button>
+      ) : null}
       {withHide ? (
         <button
           type="button"
           className="pf-icon-btn pf-focusable pf-panel-hide"
           aria-label={hideLabel}
+          title={hideLabel}
           onClick={onHide}
-          style={{ width: 28, height: 28 }}
+          style={{ position: "static", width: 28, height: 28 }}
         >
           <ChevronRightIcon />
         </button>
       ) : null}
     </div>
   );
-}
 
-/** Боковое окно 360 px справа, сворачивается до 0 (≥ 1200 px). Свёрнутое — не рендерится. */
-export function ContextPanel({ open, ...props }: ContextPanelProps & { open: boolean }) {
   return (
-    <Layout.Sider
-      id={props.id}
-      aria-label={open ? props.label : undefined}
-      aria-hidden={!open}
-      width={360}
-      collapsedWidth={0}
-      collapsed={!open}
-      trigger={null}
-      theme="light"
-      style={{ borderLeft: open ? "1px solid #f0f0f0" : "none", overflow: "auto" }}
+    <div
+      className="pf-panel"
+      style={{ position: "relative", height: "100%", display: "flex", flexDirection: "column" }}
     >
-      {open ? <PanelBody {...props} /> : null}
-    </Layout.Sider>
+      <Tabs
+        id={`${id}-tabs`}
+        className="pf-panel-tabs"
+        activeKey={activeTab}
+        onChange={onTabChange}
+        tabBarStyle={{ margin: 0, padding: "0 100px 0 16px" }}
+        style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}
+        items={tabs.map((tab) => ({
+          key: tab.key,
+          label: tab.label,
+          children:
+            tab.key === activeTab ? (
+              <div style={{ padding: 16, overflow: "auto", flex: 1 }}>{children}</div>
+            ) : null,
+        }))}
+      />
+      {controls}
+    </div>
   );
 }
 
-/** < 1200 px: боковое окно — `Drawer` без затемнения поверх основного (между шапкой и нижней панелью). */
+/** Esc внутри бокового окна закрывает его, если клавишу не забрал вложенный список, меню или поле. */
+function hideOnEscape(onHide: () => void) {
+  return (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('[aria-expanded="true"]')) return;
+    onHide();
+  };
+}
+
+/**
+ * Боковое окно (docs/architecture/platform-frontend.md §4, зона 5; ORCHESTRATOR §3 п. 18).
+ * По умолчанию — поверх основного окна у правого края (overlay): таблицы не сжимаются. Это немодальная область
+ * `complementary`, а не Drawer: у Drawer `aria-modal` и ловушка фокуса, а окно не модальное — Tab уходит обратно
+ * в таблицу. Закреплённое (docked) — в сетке рядом с основным окном, только на ≥ 1280 px. Ширина 440 или 600 px;
+ * закреплённое шире 440 — только на ≥ 1440 px, чтобы основному окну осталось ≥ 560 px.
+ */
+export function ContextPanel({
+  open,
+  panelMode = "docked",
+  panelWidth = "default",
+  canDock = true,
+  roomy = true,
+  ...props
+}: ContextPanelProps & {
+  open: boolean;
+  /** Экран ≥ 1440 px: закреплённому окну доступна широкая ширина */
+  roomy?: boolean;
+}) {
+  const isDocked = panelMode === "docked" && canDock;
+  const widthPx = panelWidth === "wide" && (roomy || !isDocked) ? 600 : 440;
+  const body = (
+    <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
+  );
+
+  if (isDocked) {
+    return (
+      <Layout.Sider
+        id={props.id}
+        aria-label={open ? props.label : undefined}
+        aria-hidden={!open}
+        width={widthPx}
+        collapsedWidth={0}
+        collapsed={!open}
+        trigger={null}
+        theme="light"
+        onKeyDown={hideOnEscape(props.onHide)}
+        style={{ borderLeft: open ? "1px solid #f0f0f0" : "none", overflow: "auto" }}
+      >
+        {open ? body : null}
+      </Layout.Sider>
+    );
+  }
+
+  if (!open) return null;
+  return (
+    <aside
+      id={props.id}
+      aria-label={props.label}
+      className="pf-panel-overlay"
+      style={{ width: `min(${String(widthPx)}px, 100vw)` }}
+      onKeyDown={hideOnEscape(props.onHide)}
+    >
+      {body}
+    </aside>
+  );
+}
+
+/** < 768 px: боковое окно — `Drawer` без затемнения поверх основного (между шапкой и нижней панелью). */
 export function ContextPanelDrawer({
   open,
   onClose,
@@ -105,7 +238,7 @@ export function ContextPanelDrawer({
       mask={false}
       closable={false}
       keyboard
-      width={360}
+      width={440}
       placement="right"
       rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto" }}
       styles={{

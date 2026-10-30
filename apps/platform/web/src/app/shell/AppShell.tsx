@@ -1,4 +1,4 @@
-import { Drawer, Layout } from "antd";
+import { Button, Drawer, Layout } from "antd";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router";
@@ -14,7 +14,10 @@ import { WhatsNewNotice } from "../../features/help/WhatsNewNotice";
 import { useWhatsNew } from "../../features/help/whatsNew";
 import { Onboarding } from "../../features/onboarding/Onboarding";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
-import { useNotifications } from "../../features/notifications/useNotifications";
+import {
+  useNotifications,
+  useReadNotifications,
+} from "../../features/notifications/useNotifications";
 import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
@@ -48,9 +51,9 @@ function isMac(): boolean {
 }
 
 /**
- * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 64 · подменю 208 · шапка 56 · основное окно · боковое окно 360.
+ * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 56 · подменю 208 · шапка 56 · основное окно · боковое окно 440/600 (Slide-over).
  * Модули и разделы — из `Me.modules` и `Me.resources`; панели запоминаются по пользователю и разделу.
- * < 1200 px боковое окно — Drawer, < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
+ * < 1440 px подменю свёрнуто по умолчанию (хоткей ⌘\); < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
  * показывает боковое окно листом на весь экран (B-020).
  */
 export function AppShell() {
@@ -65,11 +68,12 @@ export function AppShell() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
-  // Где выбирать нечего, боковое окно закрыто по умолчанию (W15-H4): у заглушки раздела таблицы нет.
+  // В списках и таблицах боковое окно закрыто по умолчанию (открывается по ?panel=open);
+  // на карточке конкретного объекта (:id) открыто на широком экране, если не закрыто явно.
   const panels = usePanels(
     me.id,
     match?.section,
-    !(match && isStubSection(match.module.code, match.section.key)),
+    Boolean(match?.objectId && !isStubSection(match.module.code, match.section.key)),
   );
   const setupPending = useSetupPending();
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
@@ -106,13 +110,19 @@ export function AppShell() {
   // Поток подсказок BFF (SSE): события шины обновляют колокольчик, бейджи и очередь без ожидания опроса.
   useEventStream(hasQueue);
   const unread = useNotifications().query;
+  const readNotes = useReadNotifications();
 
   const unreadCount = unread.data?.unread_count ?? 0;
 
-  // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях.
+  // ⌘K / Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях (работает и в раскладке RU).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== "k") return;
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        (event.key.toLowerCase() !== "k" && event.code !== "KeyK")
+      ) {
+        return;
+      }
       const target = event.target;
       if (
         target instanceof HTMLElement &&
@@ -150,25 +160,38 @@ export function AppShell() {
     };
   }, []);
 
+  // ⌘\ / Ctrl+\ переключает подменю, не перехватывая ввод в полях (работает и в раскладке RU). `toggleMenu`
+  // стабилен (useCallback): слушатель пересоздаётся только при смене раздела или состояния подменю.
+  const { toggleMenu } = panels;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey) || (event.key !== "\\" && event.code !== "Backslash")) {
+        return;
+      }
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      toggleMenu();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [toggleMenu]);
+
   if (!activeModule) return null;
 
-  const railItems: RailModule[] = railModules.map((module) => {
-    const target = firstSection(module, inMenu);
-    return {
-      code: module.code,
-      name: t(`modules:${module.code}.name`),
-      to: target?.path ?? `/${module.code}`,
-      active:
-        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
-    };
-  });
-
-  const badgeFor = (item: MenuCounter | undefined, section: SectionConfig) => {
+  const badgeFor = (item: MenuCounter | undefined, moduleCode: string, section: SectionConfig) => {
     if (!item || item.count <= 0) return undefined;
     // Раздел-заглушка (W15-H1): бейдж только с нейтральной подсказкой «ещё в старой системе: N» (названия систем — на самой заглушке), если то же число видно в старой системе;
     // иначе бейджа нет — рядом с честной заглушкой число без дела только путает.
-    if (isStubSection(activeModule.code, section.key)) {
-      const entry = bridgeEntry(activeModule.code, section.key);
+    if (isStubSection(moduleCode, section.key)) {
+      const entry = bridgeEntry(moduleCode, section.key);
       if (!entry?.legacyCount || !entry.legacy) return undefined;
       return {
         count: item.count,
@@ -178,6 +201,31 @@ export function AppShell() {
     }
     return { count: item.count, attention: item.attention };
   };
+
+  const railItems: RailModule[] = railModules.map((module) => {
+    const target = firstSection(module, inMenu);
+    const sections = module.sections.filter(inMenu).map((s) => ({
+      key: s.path,
+      path: s.path,
+      label: t(`modules:${module.code}.sections.${s.key}`),
+      active: homeOf ? homeOf.section.key === s.key : isSectionActive(s, match),
+      badge: badgeFor(
+        counters.data?.items.find((c) => c.module === module.code && c.section === s.key),
+        module.code,
+        s,
+      ),
+    }));
+    return {
+      code: module.code,
+      name: t(`modules:${module.code}.name`),
+      title: t(`modules:${module.code}.title`),
+      to: target?.path ?? `/${module.code}`,
+      active:
+        (homeOf !== undefined || matchedVisible === true) && module.code === activeModule.code,
+      sections,
+    };
+  });
+
   const menuItems: MenuItem[] = activeModule.sections.filter(inMenu).map((section) => ({
     key: section.path,
     to: section.path,
@@ -185,6 +233,7 @@ export function AppShell() {
     active: homeOf ? homeOf.section.key === section.key : isSectionActive(section, match),
     badge: badgeFor(
       counters.data?.items.find((c) => c.module === activeModule.code && c.section === section.key),
+      activeModule.code,
       section,
     ),
   }));
@@ -266,6 +315,17 @@ export function AppShell() {
     onHide: () => {
       panels.setPanelOpen(false);
     },
+    panelMode: panels.panelMode,
+    onModeChange: panels.setPanelMode,
+    panelWidth: panels.panelWidth,
+    onWidthChange: panels.setPanelWidth,
+    canDock: viewport.canDock,
+    controlLabels: {
+      wide: t("panel.wide"),
+      narrow: t("panel.narrow"),
+      dock: t("panel.dock"),
+      undock: t("panel.undock"),
+    },
     children: (
       <>
         <div ref={attachPanelSlot} />
@@ -292,6 +352,7 @@ export function AppShell() {
             logoLabel={t("rail.logo")}
             logoTo="/"
             profile={profile}
+            menuOpen={panels.menuOpen}
           />
           <ModuleMenu open={panels.menuOpen} onCollapse={panels.toggleMenu} {...menuProps} />
         </>
@@ -335,9 +396,22 @@ export function AppShell() {
             onClick: openHelp,
             fresh: helpFresh,
           }}
+          bellExtra={
+            <Button
+              type="link"
+              size="small"
+              disabled={unreadCount === 0 || readNotes.markAllPending}
+              onClick={() => {
+                readNotes.markAll();
+              }}
+              style={{ padding: 0 }}
+            >
+              {t("notifications.markAll")}
+            </Button>
+          }
           bellContent={
             <NotificationCenter
-              variant="popover"
+              variant="drawer"
               onClose={() => {
                 setBellOpen(false);
               }}
@@ -367,8 +441,8 @@ export function AppShell() {
             <SetupBanner />
             <Outlet />
           </Layout.Content>
-          {viewport.wide && hasPanel ? (
-            <ContextPanel open={panels.panelOpen} {...panelProps} />
+          {!viewport.mobile && hasPanel ? (
+            <ContextPanel open={panels.panelOpen} roomy={viewport.menuWide} {...panelProps} />
           ) : null}
         </Layout>
       </Layout>
@@ -382,17 +456,17 @@ export function AppShell() {
           closeLabel={t("panel.close")}
           {...panelProps}
         />
-      ) : viewport.wide || !hasPanel ? null : (
+      ) : viewport.mobile && hasPanel ? (
         <ContextPanelDrawer
           open={panels.panelOpen}
           onClose={() => {
             panels.setPanelOpen(false);
           }}
           offsetTop={HEADER_HEIGHT}
-          offsetBottom={viewport.mobile ? MOBILE_BAR_HEIGHT : 0}
+          offsetBottom={MOBILE_BAR_HEIGHT}
           {...panelProps}
         />
-      )}
+      ) : null}
       {viewport.mobile ? (
         <>
           <ModuleRail

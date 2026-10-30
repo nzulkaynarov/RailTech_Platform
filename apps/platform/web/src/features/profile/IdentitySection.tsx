@@ -14,6 +14,7 @@ import {
 } from "../../shared/api/generated/platform-bff";
 import { LANGUAGES } from "../../shared/i18n";
 import { StaffAvatar } from "../../shared/ui/StaffAvatar";
+import { ContextualSaveBar } from "../../shared/ui/ContextualSaveBar";
 import { AvatarCropper } from "./AvatarCropper";
 import { profileErrorText } from "./errors";
 import { Section } from "./Section";
@@ -115,6 +116,23 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
 
   return (
     <Section title={t("data.title")} lead={t("lead")} testId="profile-data">
+      <ContextualSaveBar
+        visible={dirty}
+        loading={update.isPending}
+        onSave={() => {
+          form.submit();
+        }}
+        onDiscard={() => {
+          form.setFieldsValue(baseline);
+          form.setFields(
+            (Object.keys(baseline) as (keyof Values)[]).map((name) => ({
+              name,
+              errors: [],
+            })),
+          );
+          update.reset();
+        }}
+      />
       <div className="pf-profile-identity">
         <div className="pf-profile-photo">
           <StaffAvatar initials={me.initials} src={me.avatar_url} size={96} fontSize={28} />
