@@ -72,6 +72,8 @@ test.describe("Мои задачи", () => {
     await expect(rows.nth(2)).toContainText("завтра");
     await expect(rows.nth(3)).toContainText("служебка");
 
+    // боковое окно в очереди закрыто по умолчанию (ORCHESTRATOR §3 п. 18) — «Панель» открывает «Сегодня»
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
     await expect(panel.getByRole("listitem")).toHaveCount(4);
@@ -83,6 +85,7 @@ test.describe("Мои задачи", () => {
   }) => {
     await loginAndWait(page, "admin@demo.example");
 
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
     await expect(panel.getByRole("listitem")).toHaveCount(4);
@@ -170,14 +173,20 @@ test.describe("Центр уведомлений", () => {
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-    await expect(center.getByRole("tab")).toContainText([
-      "Все 3",
-      "Решения 2",
-      "Клиенты 1",
+    await expect(center.getByRole("radio", { name: "Непрочитанные (3)" })).toBeChecked();
+    await expect(center.locator(".ant-segmented-item-label", { hasText: /^Все$/ })).toBeVisible();
+    // тип — с числом непрочитанных
+    await expect(center.getByRole("combobox", { name: "Тип уведомлений" })).toBeVisible();
+    await center.locator(".ant-select-selector").click();
+    await expect(page.locator(".ant-select-item-option")).toHaveText([
+      "Все типы",
+      "Решения · 2",
+      "Клиенты · 1",
       "Система",
     ]);
+    await page.keyboard.press("Escape");
     await settledScreenshot(page, "dashboard-notifications");
-    await expectNoViolations(page, "notifications popover");
+    await expectNoViolations(page, "notifications drawer");
 
     // Договор: у раздела «Проекты» есть экран (D2-5) — уведомление ведёт в карточку проекта на вкладку договора, счётчик уменьшается
     await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
@@ -196,7 +205,7 @@ test.describe("Центр уведомлений", () => {
 
     const dialog = page.getByRole("dialog", { name: "Центр уведомлений" });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("tab", { selected: true })).toBeFocused();
+    await expect(dialog.getByRole("radio", { name: "Непрочитанные (3)" })).toBeFocused();
 
     await page.keyboard.press("Tab");
     const inside = () =>
@@ -226,13 +235,24 @@ test.describe("Центр уведомлений", () => {
     await expect(center.getByText(/Новое:/)).toHaveCount(0);
   });
 
-  test("вкладка «Уведомления» бокового окна и ссылка «Все уведомления»", async ({ page }) => {
+  test("шторка не уводит с экрана: «Все» и тип фильтруют на месте; вкладка «Уведомления» в очереди", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/crm/leads");
     await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
-    await page.getByRole("link", { name: "Все уведомления" }).click();
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await center.locator(".ant-segmented-item-label", { hasText: /^Все$/ }).click();
+    await expect(center.getByRole("combobox", { name: "Тип уведомлений" })).toBeVisible();
+    await center.locator(".ant-select-selector").click();
+    await page.locator(".ant-select-item-option", { hasText: "Решения" }).click();
+    await expect(center.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();
+    await expect(page).toHaveURL(/\/crm\/leads$/);
+    await expectNoViolations(page, "notifications filtered");
+    await page.keyboard.press("Escape");
 
-    await expect(page).toHaveURL(/\/dashboard\/queue\?panel=open&tab=notifications$/);
+    // плоский список «Уведомления» в боковом окне очереди — по ссылке с вкладкой
+    await page.goto("/dashboard/queue?panel=open&tab=notifications");
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Уведомления", selected: true })).toBeVisible();
     await expect(panel.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();

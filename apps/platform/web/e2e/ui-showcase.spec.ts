@@ -114,8 +114,8 @@ test.describe("витрина общих компонентов", () => {
     const dt = await box(".pf-dl dt");
     expect(dt).toMatchObject({ width: 130, color: "rgb(89, 89, 89)" });
 
-    // ContextPanel: 360, вкладки с активной линией #1668dc и текстом #0958d9
-    expect(await box(".ant-layout-sider")).toMatchObject({ width: 360 });
+    // ContextPanel (закреплённое): 440, вкладки с активной линией #1668dc и текстом #0958d9
+    expect(await box(".ant-layout-sider")).toMatchObject({ width: 440 });
     const activeTab = await box(".pf-panel-tabs .ant-tabs-tab-active .ant-tabs-tab-btn");
     expect(activeTab).toMatchObject({ color: "rgb(9, 88, 217)", weight: "500" });
     const ink = await box(".pf-panel-tabs .ant-tabs-ink-bar");
