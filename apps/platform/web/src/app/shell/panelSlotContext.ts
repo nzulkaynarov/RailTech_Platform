@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect } from "react";
+import { createContext, useContext, useLayoutEffect } from "react";
 
 /** Контекст бокового окна для страниц (см. `PanelSlot.tsx`). */
 export interface PanelSlotValue {
@@ -18,7 +18,8 @@ export const PanelSlotContext = createContext<PanelSlotValue | null>(null);
 export function usePanelSlotHost(activeTab: string) {
   const slot = useContext(PanelSlotContext);
   const setTab = slot?.setTab;
-  useEffect(() => {
+  // До отрисовки (S12): страница узнаёт активную вкладку в том же кадре, что и каркас.
+  useLayoutEffect(() => {
     setTab?.(activeTab);
   }, [setTab, activeTab]);
   return {

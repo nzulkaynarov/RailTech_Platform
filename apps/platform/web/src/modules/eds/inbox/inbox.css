@@ -4,6 +4,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  /* Сетка карточки считается от ширины самой карточки, а не экрана (UX-1a, аудит S1): с окном рядом или подменю
+     колонка реквизитов уходит вниз, а не сжимается до букв. */
+  container-type: inline-size;
 }
 .pf-letters-title {
   margin: 0;
@@ -270,7 +273,7 @@
   border-top: 1px solid #f0f0f0;
 }
 
-@media (max-width: 1199px) {
+@container (max-width: 879px) {
   .pf-letters-grid {
     grid-template-columns: minmax(0, 1fr);
   }

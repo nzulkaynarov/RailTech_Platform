@@ -1,5 +1,5 @@
 import { Button, Card, Input, Select, Skeleton } from "antd";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 
@@ -11,6 +11,7 @@ import { isSystemAdmin } from "../../../entities/role/roles";
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
 import type { EmployeeStatus } from "../../../shared/api/generated/model";
 import { useListEmployees } from "../../../shared/api/generated/platform-bff";
+import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -39,21 +40,8 @@ export function OrgPage({ objectId }: { objectId?: string }) {
   const title = t("modules:admin.sections.org");
   useDocumentTitle(title);
 
-  // Таблица или список — по ширине самого блока, а не экрана: с открытым боковым окном на 1280 для таблицы тесно.
-  const blockRef = useRef<HTMLDivElement>(null);
-  const [blockWidth, setBlockWidth] = useState(0);
-  useEffect(() => {
-    const element = blockRef.current;
-    if (!element || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(([entry]) => {
-      setBlockWidth(entry?.contentRect.width ?? 0);
-    });
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-  const compact = blockWidth > 0 ? blockWidth < TABLE_MIN_WIDTH : !wide;
+  // Таблица или список — по ширине самого блока, с запасом 40 px у порога (useCompactBlock).
+  const { ref: blockRef, compact } = useCompactBlock(TABLE_MIN_WIDTH, !wide);
 
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<EmployeeStatus | "all">("all");

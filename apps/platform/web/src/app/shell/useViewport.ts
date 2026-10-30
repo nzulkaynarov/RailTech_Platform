@@ -1,6 +1,6 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
-/** Границы адаптивности каркаса (docs/architecture/platform-frontend.md §4): < 1440 — подменю свёрнуто по умолчанию, < 1280 — только overlay, < 1200 — боковое окно Drawer, < 768 — нижняя панель. */
+/** Границы адаптивности каркаса (docs/architecture/platform-frontend.md §4): < 1440 — подменю свёрнуто по умолчанию, < 1280 — только overlay, < 1200 — на карточке окно закрыто, < 768 — нижняя панель. */
 export const MENU_WIDE_QUERY = "(min-width: 1440px)";
 export const WIDE_QUERY = "(min-width: 1200px)";
 export const DOCK_QUERY = "(min-width: 1280px)";
@@ -17,6 +17,40 @@ function makeMedia(query: string): () => boolean {
   const snapshot = () => window.matchMedia(query).matches;
   // SSR нет; на сервере считаем экран широким.
   return () => useSyncExternalStore(subscribe, snapshot, () => true);
+}
+
+/** Произвольный media query (запрос меняется — подписка тоже). */
+export function useMediaQuery(query: string): boolean {
+  const subscribe = useCallback(
+    (notify: () => void) => {
+      const list = window.matchMedia(query);
+      list.addEventListener("change", notify);
+      return () => {
+        list.removeEventListener("change", notify);
+      };
+    },
+    [query],
+  );
+  return useSyncExternalStore(
+    subscribe,
+    () => window.matchMedia(query).matches,
+    () => true,
+  );
+}
+
+/** Ширины каркаса (platform-frontend.md §4): рейл и раскрытое подменю. */
+export const RAIL_WIDTH = 56;
+export const MENU_WIDTH = 208;
+/** Закреплённому окну рядом нужна рабочая область не уже этого (UX-1a), иначе окно — поверх. */
+export const MIN_MAIN_WITH_DOCK = 760;
+
+/**
+ * Помещается ли окно ширины `panelWidth` рядом: экран ≥ рейл + подменю (если открыто) + окно + 760 px рабочей области.
+ * Считается по ширине экрана, а не по замеру — решение готово в том же кадре, что и смена подменю.
+ */
+export function useDockFits(menuOpen: boolean, panelWidth: number): boolean {
+  const min = RAIL_WIDTH + (menuOpen ? MENU_WIDTH : 0) + panelWidth + MIN_MAIN_WITH_DOCK;
+  return useMediaQuery(`(min-width: ${String(min)}px)`);
 }
 
 const useMenuWide = makeMedia(MENU_WIDE_QUERY);

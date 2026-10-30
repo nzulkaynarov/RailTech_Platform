@@ -1,12 +1,4 @@
-import {
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useContext, useLayoutEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { PanelSlotContext } from "./panelSlotContext";
@@ -48,7 +40,8 @@ export function PanelSlotProvider({ children }: { children: ReactNode }) {
 export function PanelPortal({ tab, children }: { tab: string; children: ReactNode }) {
   const slot = useContext(PanelSlotContext);
   const claim = slot?.claim;
-  useEffect(() => claim?.(tab), [claim, tab]);
+  // До отрисовки (S12): окно наполняется в том же кадре, без промежуточного пустого состояния каркаса.
+  useLayoutEffect(() => claim?.(tab), [claim, tab]);
   const [host] = useState(() => document.createElement("div"));
   const target = slot?.tab === tab ? slot.element : null;
   useLayoutEffect(() => {

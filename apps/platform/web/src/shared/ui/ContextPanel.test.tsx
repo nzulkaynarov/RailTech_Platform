@@ -1,4 +1,5 @@
 import { fireEvent, screen } from "@testing-library/react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { renderUi } from "../../test/renderUi";
@@ -58,7 +59,53 @@ describe("ContextPanel", () => {
     renderUi(panel(false));
     expect(screen.queryByText("Содержимое вкладки")).toBeNull();
     expect(screen.queryByRole("tab")).toBeNull();
-    expect(document.getElementById("ctx")).toHaveAttribute("aria-hidden", "true");
+    // обёртка остаётся в документе (цель aria-controls кнопки «Панель»), но скрыта — и от скринридера
+    expect(document.getElementById("ctx")).not.toBeVisible();
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
+  it("булавка и порог ширины меняют только класс: вкладки и форма окна не пересоздаются (UX-1a, S4)", () => {
+    function Harness() {
+      const [docked, setDocked] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => {
+              setDocked((value) => !value);
+            }}
+          >
+            Порог
+          </button>
+          <ContextPanel
+            open
+            docked={docked}
+            panelMode={docked ? "docked" : "overlay"}
+            id="ctx"
+            label="Боковое окно"
+            hideLabel="Скрыть боковое окно"
+            tabs={TABS}
+            activeTab="approval"
+            onTabChange={() => undefined}
+            onHide={() => undefined}
+          >
+            <input aria-label="Комментарий" />
+          </ContextPanel>
+        </>
+      );
+    }
+    renderUi(<Harness />);
+    const region = screen.getByRole("complementary", { name: "Боковое окно" });
+    const field = screen.getByRole("textbox", { name: "Комментарий" });
+    fireEvent.change(field, { target: { value: "черновик" } });
+    expect(region).toHaveClass("pf-panel-overlay");
+
+    fireEvent.click(screen.getByRole("button", { name: "Порог" }));
+    expect(region).toHaveClass("pf-panel-docked");
+    expect(region).not.toHaveClass("pf-panel-overlay");
+    expect(screen.getByRole("complementary", { name: "Боковое окно" })).toBe(region);
+    expect(screen.getByRole("textbox", { name: "Комментарий" })).toBe(field);
+    expect(field).toHaveValue("черновик");
   });
 
   function duplicateIds(root: ParentNode): string[] {
@@ -66,7 +113,7 @@ describe("ContextPanel", () => {
     return ids.filter((id, index) => ids.indexOf(id) !== index);
   }
 
-  it("все id внутри бокового окна уникальны (Sider)", () => {
+  it("все id внутри бокового окна уникальны", () => {
     const { container } = renderUi(panel(true));
     expect(container.querySelectorAll("[id]").length).toBeGreaterThan(1);
     expect(duplicateIds(container)).toEqual([]);

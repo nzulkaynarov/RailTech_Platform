@@ -36,7 +36,7 @@ import { AvatarMenu } from "./AvatarMenu";
 import { PanelContent } from "./PanelContent";
 import { usePanelSlotHost } from "./panelSlotContext";
 import { usePanels } from "./usePanels";
-import { useViewport } from "./useViewport";
+import { useDockFits, useViewport } from "./useViewport";
 
 const PANEL_ID = "pf-context-panel";
 const MOBILE_BAR_HEIGHT = 60;
@@ -52,8 +52,8 @@ function isMac(): boolean {
 
 /**
  * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 56 · подменю 208 · шапка 56 · основное окно · боковое окно 440/600 (Slide-over).
- * Модули и разделы — из `Me.modules` и `Me.resources`; панели запоминаются по пользователю и разделу.
- * < 1440 px подменю свёрнуто по умолчанию (хоткей ⌘\); < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
+ * Модули и разделы — из `Me.modules` и `Me.resources`; подменю, режим и ширина окна запоминаются по пользователю, вкладка — по разделу.
+ * < 1440 px подменю свёрнуто, пока пользователь его не откроет (хоткей ⌘\); < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
  * показывает боковое окно листом на весь экран (B-020).
  */
 export function AppShell() {
@@ -77,6 +77,8 @@ export function AppShell() {
   );
   const setupPending = useSetupPending();
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
+  const panelWidthPx = panels.panelWidth === "wide" ? 600 : 440;
+  const dockFits = useDockFits(!viewport.mobile && panels.menuOpen, panelWidthPx);
 
   const railModules = useMemo(
     () => me.modules.flatMap((code) => findModule(code) ?? []),
@@ -338,6 +340,12 @@ export function AppShell() {
 
   const hasPanel = match !== undefined && sectionAllowed(match.section);
   const menuHidden = viewport.mobile ? true : !panels.menuOpen;
+  // Рядом — только булавкой и если помещается (≥ 1280 px и рабочей области ≥ 760 px); иначе поверх, выбор помнится.
+  const panelDocked = panels.panelMode === "docked" && viewport.canDock && dockFits;
+  // Окно поверх закрывает правый край основного окна: страницы, которым нужен этот край (поле ответа в переписке),
+  // берут отступ из `--pf-overlay-inset`. Ширина самого основного окна не меняется.
+  const overlayInset =
+    !viewport.mobile && hasPanel && panels.panelOpen && !panelDocked ? panelWidthPx : 0;
 
   return (
     <Layout style={{ height: "100dvh", overflow: "hidden" }} hasSider>
@@ -436,13 +444,14 @@ export function AppShell() {
               padding: viewport.mobile ? 16 : 24,
               paddingBottom: viewport.mobile ? MOBILE_BAR_HEIGHT + 16 : 24,
               outline: "none",
+              ["--pf-overlay-inset" as string]: `${String(overlayInset)}px`,
             }}
           >
             <SetupBanner />
             <Outlet />
           </Layout.Content>
           {!viewport.mobile && hasPanel ? (
-            <ContextPanel open={panels.panelOpen} roomy={viewport.menuWide} {...panelProps} />
+            <ContextPanel open={panels.panelOpen} docked={panelDocked} {...panelProps} />
           ) : null}
         </Layout>
       </Layout>

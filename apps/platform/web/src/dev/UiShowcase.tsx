@@ -149,6 +149,8 @@ function Panel() {
       <div className="dev-panel">
         <ContextPanel
           open
+          docked
+          panelMode="docked"
           id="dev-panel"
           label="Боковое окно"
           hideLabel="Скрыть боковое окно"

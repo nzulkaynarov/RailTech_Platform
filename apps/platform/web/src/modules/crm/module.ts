@@ -10,8 +10,6 @@ export const crm: ModuleConfig = {
       path: "/crm/messages",
       access: { resource: "crm.leads" },
       actionTo: "/crm/leads",
-      // карточка лида нужна рядом с перепиской: поверх она закрыла бы поле ответа и «Отправить»
-      defaults: { panelMode: "docked" },
     },
     {
       key: "leads",

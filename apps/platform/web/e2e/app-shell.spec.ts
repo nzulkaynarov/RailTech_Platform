@@ -37,21 +37,33 @@ test.describe("панели", () => {
     await expect(menu).toHaveCount(0);
     await expect(panel).toHaveCount(0);
 
-    // Ctrl+\ возвращает подменю; ссылка с ?panel=open открывает окно
+    // Ctrl+\ возвращает подменю; ссылка с ?panel=open открывает окно — поверх, рабочая область не сжимается
     await page.keyboard.press("Control+Backslash");
     await expect(menu).toBeVisible();
     await page.goto("/dashboard/queue?panel=open");
     await expect(panel).toBeVisible();
+    await expect(panel).toHaveClass(/pf-panel-overlay/);
+    const mainWidth = () =>
+      page.evaluate<number>(
+        `document.getElementById("main-content").getBoundingClientRect().width`,
+      );
+    const before = await mainWidth();
 
-    // закрепить рядом с таблицей: окно в сетке, выбор помнится после перезагрузки
+    // булавка: на 1440 с подменю рядом не помещается (рабочей области < 760 px) — окно остаётся поверх, выбор помнится
     const pin = page.getByRole("button", { name: "Закрепить рядом с таблицей" });
     await pin.click();
     const unpin = page.getByRole("button", { name: "Открывать поверх таблицы" });
     await expect(unpin).toHaveAttribute("aria-pressed", "true");
-    await expect(panel).toHaveClass(/ant-layout-sider/);
+    await expect(panel).toHaveClass(/pf-panel-overlay/);
+    expect(await mainWidth()).toBe(before);
+    // подменю свёрнуто — место есть: окно в сетке рядом
+    await page.keyboard.press("Control+Backslash");
+    await expect(menu).toHaveCount(0);
+    await expect(panel).toHaveClass(/pf-panel-docked/);
     await settledScreenshot(page, "dashboard-panel-docked");
     await page.reload();
     await expect(unpin).toBeVisible();
+    await expect(panel).toHaveClass(/pf-panel-docked/);
     await unpin.click();
     await expect(panel).toHaveClass(/pf-panel-overlay/);
   });
@@ -65,37 +77,52 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания: в списках окно закрыто, на карточке объекта — открыто; Расчёт — без подменю", async ({
+  test("умолчания: в списках окно закрыто, на карточке объекта — открыто поверх; подменю одно на все разделы", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
+    const mainWidth = () =>
+      page.evaluate<number>(
+        `document.getElementById("main-content").getBoundingClientRect().width`,
+      );
 
     await page.goto("/crm/leads");
     await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     await expect(menu).toBeVisible();
     await expect(panel).toHaveCount(0);
     await settledScreenshot(page, "crm-leads");
+    const listWidth = await mainWidth();
 
-    // «Мои расчёты» (D2-1): подменю свёрнуто по умолчанию; окно — по кнопке «Панель», вкладка «Задание»
+    // «Мои расчёты»: подменю как в других разделах (UX-1a — своего умолчания у раздела нет); окно — по кнопке «Панель»
     await page.goto("/erp/calc");
     await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
-    await expect(menu).toHaveCount(0);
+    await expect(menu).toBeVisible();
     await expect(panel).toHaveCount(0);
+    expect(await mainWidth()).toBe(listWidth);
     await page.getByRole("button", { name: "Панель", exact: true }).click();
     await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
 
+    // свёрнутое подменю остаётся свёрнутым при переходе в другой раздел
+    await page.keyboard.press("Control+Backslash");
+    await expect(menu).toHaveCount(0);
     await page.goto("/eds/inbox");
-    await expect(menu).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(menu).toHaveCount(0);
     await expect(panel).toHaveCount(0);
+    await page.keyboard.press("Control+Backslash");
+    await expect(menu).toBeVisible();
 
-    // карточка объекта: окно открыто, пока его не закрыли (?panel=closed)
+    // карточка объекта: окно открыто поверх (рабочая область не сжимается), пока его не закрыли (?panel=closed)
     await page.goto("/eds/inbox/%D0%92%D0%A5-104%2F26");
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
     await expect(panel).toBeVisible();
+    await expect(panel).toHaveClass(/pf-panel-overlay/);
+    await expect(panel).toHaveCSS("width", "440px");
+    expect(await mainWidth()).toBe(listWidth);
     await page.getByRole("button", { name: "Скрыть панель" }).click();
     await expect(panel).toHaveCount(0);
     await expect(page).toHaveURL(/panel=closed/);
