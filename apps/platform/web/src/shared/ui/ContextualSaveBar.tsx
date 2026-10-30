@@ -1,58 +1,63 @@
 import { Button } from "antd";
-import { useEffect, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 
 export interface ContextualSaveBarProps {
-  /** Флаг наличия несохранённых изменений (бар виден только при true) */
+  /** Есть несохранённые изменения — бар виден только тогда */
   visible: boolean;
-  /** Текст статуса, по умолчанию "Есть несохранённые изменения" */
+  /** Текст статуса; по умолчанию `ui:saveBar.message` */
   message?: string;
-  /** Подпись кнопки сохранения, по умолчанию "Сохранить изменения" */
+  /** Подпись кнопки сохранения; по умолчанию `ui:saveBar.save` */
   saveLabel?: string;
-  /** Подпись кнопки отмены, по умолчанию "Отменить" */
+  /** Подпись кнопки отмены; по умолчанию `ui:saveBar.discard` */
   discardLabel?: string;
-  /** Колбэк сохранения */
   onSave: () => void;
-  /** Колбэк отмены / сброса */
   onDiscard: () => void;
-  /** Флаг загрузки сохранения */
   loading?: boolean;
-  /** Отключить кнопки */
+  /** Сохранить нельзя (например, поле заполнено с ошибкой): изменения видны, кнопка и ⌘S не действуют */
   disabled?: boolean;
-  /** Дополнительные CSS стили */
   style?: CSSProperties;
 }
 
+const BAR_ATTR = "data-save-bar";
+
+function isMac(): boolean {
+  return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
+}
+
 /**
- * Контекстный бар сохранения (Shopify Polaris pattern):
- * Прилипает к верху рабочей области (position: sticky, top: 0, z-index: 100),
- * высота 48px, контрастный тёмный фон #0f172a, белый текст.
- * Показывается только при наличии несохранённых изменений (visible === true).
- * Поддерживает хоткей Cmd+S (macOS) / Ctrl+S (Win/Linux).
+ * Бар несохранённых изменений (docs/architecture/platform-frontend.md §5): прилипает к верху формы, «Отменить» и
+ * «Сохранить изменения», ⌘S / Ctrl+S (и в раскладке RU). Только для обратимого сохранения настроек и черновиков:
+ * действие с последствиями для других (создать заявку, отправить, подписать) остаётся главной кнопкой формы с блоком
+ * «Что произойдёт» (CONVENTIONS §2 п. 8). Если на экране несколько баров, ⌘S сохраняет форму, в которой фокус.
+ * Статус объявляет скринридеру живой регион, который есть на странице всегда, а не только при видимом баре.
  */
 export function ContextualSaveBar({
   visible,
-  message = "Есть несохранённые изменения",
-  saveLabel = "Сохранить изменения",
-  discardLabel = "Отменить",
+  message,
+  saveLabel,
+  discardLabel,
   onSave,
   onDiscard,
   loading = false,
   disabled = false,
   style,
 }: ContextualSaveBarProps) {
-  // Глобальный хоткей Cmd+S / Ctrl+S при открытом баре (работает в раскладках EN и RU)
+  const { t } = useTranslation("ui");
+  const rootRef = useRef<HTMLDivElement>(null);
+  const text = message ?? t("saveBar.message");
+
   useEffect(() => {
     if (!visible) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        (event.metaKey || event.ctrlKey) &&
-        (event.key.toLowerCase() === "s" || event.code === "KeyS")
-      ) {
-        event.preventDefault();
-        if (!loading && !disabled) {
-          onSave();
-        }
-      }
+      if (!(event.metaKey || event.ctrlKey) || event.altKey || event.shiftKey) return;
+      if (event.key.toLowerCase() !== "s" && event.code !== "KeyS") return;
+      // Пока на экране есть несохранённое, ⌘S не открывает «Сохранить страницу» браузера.
+      event.preventDefault();
+      const container = rootRef.current?.parentElement;
+      const bars = document.querySelectorAll(`[${BAR_ATTR}]`).length;
+      const focusInside = container?.contains(document.activeElement) ?? false;
+      if ((focusInside || bars === 1) && !loading && !disabled) onSave();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
@@ -60,97 +65,35 @@ export function ContextualSaveBar({
     };
   }, [visible, loading, disabled, onSave]);
 
-  if (!visible) {
-    return null;
-  }
-
   return (
-    <div
-      role="region"
-      aria-label="Панель сохранения"
-      style={{
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        height: 48,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 16px",
-        marginBottom: 12,
-        borderRadius: 8,
-        background: "#0f172a",
-        color: "#ffffff",
-        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-        transition: "all 0.2s ease-in-out",
-        flex: "0 0 48px",
-        ...style,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <span
-          aria-hidden="true"
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: "#f59e0b",
-            boxShadow: "0 0 0 3px rgba(245, 158, 11, 0.25)",
-            flex: "0 0 auto",
-          }}
-        />
-        <span
-          style={{
-            fontWeight: 500,
-            fontSize: 14,
-            color: "#f8fafc",
-            letterSpacing: "-0.01em",
-          }}
+    <>
+      <span role="status" className="pf-sr-only">
+        {visible ? text : ""}
+      </span>
+      {visible ? (
+        <div
+          ref={rootRef}
+          {...{ [BAR_ATTR]: "" }}
+          className="pf-save-bar"
+          role="region"
+          aria-label={t("saveBar.label")}
+          style={style}
         >
-          {message}
-        </span>
-        <kbd
-          aria-hidden="true"
-          style={{
-            padding: "1px 6px",
-            borderRadius: 4,
-            background: "rgba(255, 255, 255, 0.1)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            color: "#94a3b8",
-            fontSize: 11,
-            fontFamily: "inherit",
-            lineHeight: "16px",
-          }}
-        >
-          ⌘S
-        </kbd>
-      </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <Button
-          ghost
-          onClick={onDiscard}
-          disabled={loading || disabled}
-          style={{
-            color: "#e2e8f0",
-            borderColor: "rgba(255, 255, 255, 0.3)",
-          }}
-        >
-          {discardLabel}
-        </Button>
-        <Button
-          type="primary"
-          onClick={onSave}
-          loading={loading}
-          disabled={disabled}
-          style={{
-            background: "#1677ff",
-            borderColor: "#1677ff",
-            fontWeight: 500,
-          }}
-        >
-          {saveLabel}
-        </Button>
-      </div>
-    </div>
+          <div className="pf-save-bar-status" aria-hidden="true">
+            <span className="pf-save-bar-dot" />
+            <span>{text}</span>
+            <kbd className="pf-save-bar-kbd">{isMac() ? "⌘S" : "Ctrl+S"}</kbd>
+          </div>
+          <div className="pf-save-bar-actions">
+            <Button ghost onClick={onDiscard} disabled={loading}>
+              {discardLabel ?? t("saveBar.discard")}
+            </Button>
+            <Button type="primary" onClick={onSave} loading={loading} disabled={disabled}>
+              {saveLabel ?? t("saveBar.save")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

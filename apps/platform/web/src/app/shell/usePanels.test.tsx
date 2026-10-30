@@ -158,39 +158,24 @@ describe("usePanels", () => {
     expect(usePanelsStore.getState().entries[key]?.panelWidth).toBe("wide");
   });
 
-  it("setEntityId устанавливает entityId и открывает панель, а передача null удаляет entityId", () => {
-    const locRef = { current: null as Location | null };
-    function LocationTracker() {
-      locRef.current = useLocation();
-      return null;
-    }
+  it("настройки со старого ключа rt-pf-panels-v1 переносятся: подменю и вкладка — да, «открыто» — нет", () => {
+    window.localStorage.setItem(
+      "rt-pf-panels-v1",
+      JSON.stringify({ "user-1|/crm/leads": { menuOpen: false, panelOpen: true, tab: "history" } }),
+    );
+    usePanelsStore.getState().reload();
 
-    function Wrapper({ children }: { children: ReactNode }) {
-      return (
-        <MemoryRouter initialEntries={["/crm/leads"]}>
-          <LocationTracker />
-          {children}
-        </MemoryRouter>
-      );
-    }
-
-    const { result } = renderHook(() => usePanels("user-1", mockSection), { wrapper: Wrapper });
-
-    act(() => {
-      result.current.setEntityId("lead-401");
+    const { result } = renderHook(() => usePanels("user-1", mockSection), {
+      wrapper: createWrapper("/crm/leads"),
     });
 
-    expect(result.current.entityId).toBe("lead-401");
-    expect(result.current.panelOpen).toBe(true);
-    expect(locRef.current?.search).toContain("entityId=lead-401");
-    expect(locRef.current?.search).toContain("panel=open");
-
-    act(() => {
-      result.current.setEntityId(null);
+    expect(result.current.menuOpen).toBe(false);
+    expect(result.current.tab).toBe("history");
+    expect(result.current.panelOpen).toBe(false);
+    expect(window.localStorage.getItem("rt-pf-panels-v1")).toBeNull();
+    expect(JSON.parse(window.localStorage.getItem("rt-pf-panels-v2") ?? "{}")).toEqual({
+      "user-1|/crm/leads": { menuOpen: false, lastTab: "history" },
     });
-
-    expect(result.current.entityId).toBeNull();
-    expect(locRef.current?.search).not.toContain("entityId");
   });
 
   it("setTab синхронизирует URL query param и сохраняет lastTab в panelsStore", () => {

@@ -39,7 +39,7 @@ export function KbPage() {
   const { me } = useAuth();
   const editable = canEdit(me, "admin");
   const [params, setParams] = useSearchParams();
-  const view = viewOf(params.get("viewTab") ?? params.get("view"), editable);
+  const view = viewOf(params.get("view"), editable);
   const title = t("modules:crm.sections.kb");
   useDocumentTitle(title);
 
@@ -96,7 +96,6 @@ export function KbPage() {
             (prev) => {
               const next = new URLSearchParams(prev);
               next.set("view", value);
-              next.set("viewTab", value);
               for (const key of ["doc", "gap", "new", "page", "status"]) next.delete(key);
               return next;
             },

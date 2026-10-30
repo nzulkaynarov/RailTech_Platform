@@ -38,7 +38,6 @@
       "system": "System"
     },
     "markAll": "Mark all as read",
-    "seeAll": "All notifications",
     "unreadMark": "New",
     "emptyTab": "No notifications in this section",
     "loading": "Loading notifications…",
@@ -69,13 +68,24 @@
       "clients": "C",
       "system": "!"
     },
-    "where": "Where to look"
+    "where": "Where to look",
+    "scope": {
+      "unread": "Unread",
+      "unreadCount": "Unread ({{count}})",
+      "all": "All"
+    },
+    "category": "Notification type",
+    "allTypes": "All types"
   },
   "panel": {
     "label": "Side panel",
     "hide": "Hide side panel",
     "show": "Show side panel",
-    "close": "Close"
+    "close": "Close",
+    "wide": "Wider: 600 px",
+    "narrow": "Narrower: 440 px",
+    "dock": "Pin next to the table",
+    "undock": "Open over the table"
   },
   "avatar": {
     "open": "{{initials}} {{role}}: profile and settings, {{name}}",
@@ -234,6 +244,19 @@
       "legacyHint": "For now done in the old system — press to see where"
     },
     "where": "Where to look",
-    "whereClose": "Close the hint"
+    "whereClose": "Close the hint",
+    "navGroup": "Sections",
+    "sectionTag": "Section",
+    "keywords": {
+      "erp": {
+        "calc": "calculator, cost",
+        "catalog": "reference, items"
+      },
+      "admin": {
+        "company": "templates, details, numbering",
+        "integrations": "smtp, mail, litellm",
+        "audit": "audit, log"
+      }
+    }
   }
 }

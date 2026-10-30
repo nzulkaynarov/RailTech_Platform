@@ -34,5 +34,17 @@
     "retry": "Qayta urinish"
   },
   "whereToDo": "Qayerda bajarish",
-  "whereToDoItem": "Qayerda bajarish: {{title}}"
+  "whereToDoItem": "Qayerda bajarish: {{title}}",
+  "saveBar": {
+    "label": "Saqlanmagan o‘zgarishlar",
+    "message": "Saqlanmagan o‘zgarishlar bor",
+    "save": "O‘zgarishlarni saqlash",
+    "discard": "Bekor qilish"
+  },
+  "docNumber": {
+    "copy": "Raqamni nusxalash",
+    "copyNumber": "{{number}} raqamini nusxalash",
+    "copied": "Raqam nusxalandi",
+    "copyFailed": "Nusxalab bo‘lmadi: brauzer almashish buferiga ruxsat bermadi"
+  }
 }

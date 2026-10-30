@@ -160,7 +160,9 @@ export function AppShell() {
     };
   }, []);
 
-  // ⌘\ / Ctrl+\ переключает подменю (toggleMenu), не перехватывая ввод в полях (работает и в раскладке RU)
+  // ⌘\ / Ctrl+\ переключает подменю, не перехватывая ввод в полях (работает и в раскладке RU). `toggleMenu`
+  // стабилен (useCallback): слушатель пересоздаётся только при смене раздела или состояния подменю.
+  const { toggleMenu } = panels;
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.metaKey || event.ctrlKey) || (event.key !== "\\" && event.code !== "Backslash")) {
@@ -174,13 +176,13 @@ export function AppShell() {
         return;
       }
       event.preventDefault();
-      panels.toggleMenu();
+      toggleMenu();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [panels]);
+  }, [toggleMenu]);
 
   if (!activeModule) return null;
 
@@ -318,6 +320,12 @@ export function AppShell() {
     panelWidth: panels.panelWidth,
     onWidthChange: panels.setPanelWidth,
     canDock: viewport.canDock,
+    controlLabels: {
+      wide: t("panel.wide"),
+      narrow: t("panel.narrow"),
+      dock: t("panel.dock"),
+      undock: t("panel.undock"),
+    },
     children: (
       <>
         <div ref={attachPanelSlot} />
@@ -434,7 +442,7 @@ export function AppShell() {
             <Outlet />
           </Layout.Content>
           {!viewport.mobile && hasPanel ? (
-            <ContextPanel open={panels.panelOpen} {...panelProps} />
+            <ContextPanel open={panels.panelOpen} roomy={viewport.menuWide} {...panelProps} />
           ) : null}
         </Layout>
       </Layout>

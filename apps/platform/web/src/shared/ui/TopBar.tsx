@@ -11,6 +11,11 @@ export interface Crumb {
   to?: string;
 }
 
+const MENU_SHORTCUT =
+  typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+    ? "⌘\\"
+    : "Ctrl+\\";
+
 export interface TopBarProps {
   crumbs: readonly Crumb[];
   labels: {
@@ -152,7 +157,7 @@ export function TopBar({
           <Button
             onClick={onShowMenu}
             icon={<ExpandRightIcon />}
-            title={`${labels.menu} (⌘\\)`}
+            title={`${labels.menu} (${MENU_SHORTCUT})`}
             style={{ padding: "0 10px" }}
           >
             {labels.menu}
@@ -223,6 +228,7 @@ export function TopBar({
         extra={bellExtra}
         aria-label={bellTitle}
         styles={{
+          wrapper: { maxWidth: "100vw" },
           body: { padding: 0, display: "flex", flexDirection: "column" },
         }}
       >

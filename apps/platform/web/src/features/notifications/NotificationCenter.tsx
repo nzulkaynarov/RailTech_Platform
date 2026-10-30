@@ -9,19 +9,18 @@ import { NotificationList } from "./NotificationList";
 import { useNotifications, useReadNotifications } from "./useNotifications";
 import "./notifications.css";
 
-/** Куда ведёт «Все уведомления»: вкладка «Уведомления» бокового окна «Моей очереди». Сохранено для совместимости. */
-export const ALL_NOTIFICATIONS_PATH = "/dashboard/queue?panel=open&tab=notifications";
+const CATEGORIES: readonly NotificationTab[] = ["decisions", "clients", "system"];
 
 export interface NotificationCenterProps {
-  /** `drawer` / `popover` — в шторке колокольчика, `panel` — вкладка бокового окна Dashboard (плоский список) */
-  variant: "popover" | "panel" | "drawer";
+  /** `drawer` — шторка колокольчика, `panel` — вкладка бокового окна Dashboard (плоский список) */
+  variant: "panel" | "drawer";
   /** Закрыть окно после перехода по уведомлению */
   onClose?: () => void;
 }
 
 /**
- * Центр уведомлений (SPEC-v3 §6.4, UX-Shell v2):
- * В режиме Drawer/Popover — панель управления с Segmented (Непрочитанные (N) / Все) и Select категорий.
+ * Центр уведомлений (SPEC-v3 §6.4; шторка — ORCHESTRATOR §3 п. 18):
+ * в шторке колокольчика — «Непрочитанные (N) / Все» и тип с числом непрочитанных, без ухода с текущего экрана.
  * В режиме панели Dashboard (variant="panel") — плоский список с кнопкой «Отметить все прочитанными».
  * Данные — `GET /notifications`, опрос 30 с и при фокусе.
  */
@@ -37,6 +36,7 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
   const page = query.data;
   const items = page?.items ?? [];
   const unread = page?.unread_count ?? items.filter((n) => !n.read).length;
+  const unreadOf = (tab: NotificationTab) => items.filter((n) => n.tab === tab && !n.read).length;
 
   const shown =
     variant === "panel"
@@ -158,27 +158,30 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
             options={[
               {
                 value: "unread",
-                label: unread > 0 ? "Непрочитанные (" + String(unread) + ")" : "Непрочитанные",
+                label:
+                  unread > 0
+                    ? t("notifications.scope.unreadCount", { count: unread })
+                    : t("notifications.scope.unread"),
               },
-              {
-                value: "all",
-                label: "Все",
-              },
+              { value: "all", label: t("notifications.scope.all") },
             ]}
           />
           <Select<NotificationTab>
             size="small"
-            style={{ width: 145 }}
+            aria-label={t("notifications.category")}
+            style={{ width: 160 }}
             value={category}
             onChange={(val) => {
               setPinnedIds([]);
               setCategory(val);
             }}
             options={[
-              { value: "all", label: "Все типы" },
-              { value: "decisions", label: t("notifications.tabs.decisions") },
-              { value: "clients", label: t("notifications.tabs.clients") },
-              { value: "system", label: t("notifications.tabs.system") },
+              { value: "all", label: t("notifications.allTypes") },
+              ...CATEGORIES.map((tab) => {
+                const count = unreadOf(tab);
+                const name = t(`notifications.tabs.${tab}`);
+                return { value: tab, label: count > 0 ? `${name} · ${String(count)}` : name };
+              }),
             ]}
           />
         </div>

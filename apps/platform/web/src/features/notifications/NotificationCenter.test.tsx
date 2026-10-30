@@ -28,9 +28,12 @@ async function openBell(name = /^Центр уведомлений/) {
 }
 
 /** Пункт открытого выпадающего списка antd по подписи. */
+/** Пункт типа в шторке: «Клиенты» или «Клиенты · 2» (число непрочитанных). */
 async function option(label: string): Promise<Element> {
   return waitFor(() => {
-    const found = document.querySelector(`.ant-select-item-option[title="${label}"]`);
+    const found = document.querySelector(
+      `.ant-select-item-option[title="${label}"], .ant-select-item-option[title^="${label} · "]`,
+    );
     expect(found).not.toBeNull();
     return found as Element;
   });
@@ -70,7 +73,7 @@ describe("Центр уведомлений", () => {
     const center = await openBell();
 
     fireEvent.click(within(center).getByText("Все"));
-    fireEvent.mouseDown(within(center).getByRole("combobox"));
+    fireEvent.mouseDown(within(center).getByRole("combobox", { name: "Тип уведомлений" }));
     fireEvent.click(await option("Клиенты"));
 
     const list = await within(center).findByRole("list", { name: "Уведомления" });

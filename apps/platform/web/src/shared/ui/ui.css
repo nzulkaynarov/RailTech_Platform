@@ -489,3 +489,80 @@
   top: 9px;
   right: 8px;
 }
+
+/* --- ContextPanel поверх основного окна (overlay, platform-frontend.md §4 зона 5): у правого края под шапкой,
+   таблицы под ним не сжимаются. z-index ниже модальных окон и выпадающих списков antd (1000+). --- */
+.pf-panel-overlay {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  background: #fff;
+  border-left: 1px solid #f0f0f0;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
+  animation: pf-panel-in 0.2s ease;
+}
+@keyframes pf-panel-in {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-panel-overlay {
+    animation: none;
+  }
+}
+
+/* --- ContextualSaveBar (platform-frontend.md §5): тёмная полоса над формой; цвет кнопки — токен темы --- */
+.pf-save-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  min-height: 48px;
+  padding: 8px 16px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #f8fafc;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.pf-save-bar-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 500;
+}
+.pf-save-bar-dot {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+}
+.pf-save-bar-kbd {
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 16px;
+}
+.pf-save-bar-actions {
+  display: flex;
+  gap: 12px;
+}
+.pf-save-bar .ant-btn-background-ghost:not(:disabled) {
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.5);
+}

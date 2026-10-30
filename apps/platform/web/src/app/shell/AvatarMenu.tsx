@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { AboutModal } from "../../features/about/AboutModal";
 import { useReleaseText } from "../../features/about/release";
 import { getGetMeQueryKey, useLogout, useUpdateMe } from "../../shared/api/generated/platform-bff";
 import type { Language, Me } from "../../shared/api/generated/model";
@@ -33,7 +32,6 @@ export function AvatarMenu({
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
   const [opened, setOpened] = useState(false);
-  const [aboutOpen, setAboutOpen] = useState(false);
   const release = useReleaseText(opened);
   const queryClient = useQueryClient();
 
@@ -129,7 +127,7 @@ export function AvatarMenu({
     if (key === "profile") void navigate("/me");
     else if (key === "help") onHelp?.();
     else if (key === "password") void navigate("/change-password");
-    else if (key === "about") setAboutOpen(true);
+    else if (key === "about") void navigate("/help/about");
     else if (key === "logout") logout.mutate();
     else if (key.startsWith("role:")) {
       const value = key.slice(5);
@@ -140,61 +138,53 @@ export function AvatarMenu({
   };
 
   return (
-    <>
-      <Dropdown
-        trigger={["click"]}
-        placement={placement}
-        onOpenChange={(open) => {
-          if (open) setOpened(true);
-        }}
-        menu={{
-          items,
-          onClick,
-          selectable: true,
-          selectedKeys: [`role:${selectedRole}`, `lang:${me.language}`],
-          style: { minWidth: 220 },
+    <Dropdown
+      trigger={["click"]}
+      placement={placement}
+      onOpenChange={(open) => {
+        if (open) setOpened(true);
+      }}
+      menu={{
+        items,
+        onClick,
+        selectable: true,
+        selectedKeys: [`role:${selectedRole}`, `lang:${me.language}`],
+        style: { minWidth: 220 },
+      }}
+    >
+      <button
+        type="button"
+        className="pf-focusable"
+        aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
+        aria-haspopup="menu"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          border: 0,
+          background: "transparent",
+          padding: 0,
+          font: "inherit",
+          cursor: "pointer",
         }}
       >
-        <button
-          type="button"
-          className="pf-focusable"
-          aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
-          aria-haspopup="menu"
+        <StaffAvatar initials={me.initials} src={me.avatar_url} />{" "}
+        <span
+          aria-hidden="true"
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            border: 0,
-            background: "transparent",
-            padding: 0,
-            font: "inherit",
-            cursor: "pointer",
+            fontSize: 10,
+            lineHeight: "12px",
+            color: "#6e6e6e",
+            maxWidth: 60,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          <StaffAvatar initials={me.initials} src={me.avatar_url} />{" "}
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 10,
-              lineHeight: "12px",
-              color: "#6e6e6e",
-              maxWidth: 60,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {caption}
-          </span>
-        </button>
-      </Dropdown>
-      <AboutModal
-        open={aboutOpen}
-        onClose={() => {
-          setAboutOpen(false);
-        }}
-      />
-    </>
+          {caption}
+        </span>
+      </button>
+    </Dropdown>
   );
 }

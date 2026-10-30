@@ -235,7 +235,10 @@ export function RoleEditor({
       <ContextualSaveBar
         visible={isNew ? Boolean(draft.name) : changes.any}
         loading={saving}
-        onSave={onSave}
+        disabled={nameMissing}
+        onSave={() => {
+          if (!saving && !nameMissing && (isNew || changes.any)) onSave();
+        }}
         onDiscard={onReset}
       />
       <div className="pf-role-head">

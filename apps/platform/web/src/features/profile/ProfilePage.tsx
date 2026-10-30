@@ -17,8 +17,17 @@ import "./profile.css";
 /**
  * Профиль `/me` (W15-H6, UX-оценка P1-3): страница, а не окно. Фото, личные данные, «Telegram для уведомлений»,
  * подписки на уведомления бота и замещение. Данные принадлежат CRM (ADR-0015), сотрудник правит только свои; должность и
- * роли — только чтение. Вкладки синхронизированы с URL (`?viewTab=`).
+ * роли — только чтение. Вкладки «Все разделы · Личные данные · Уведомления · Замещение» — в адресе `?part=`.
  */
+const PARTS = ["all", "general", "notifications", "deputy"] as const;
+type Part = (typeof PARTS)[number];
+const PART_LABEL: Record<Part, string> = {
+  all: "profile:tabs.all",
+  general: "profile:tabs.general",
+  notifications: "audit:profile.notifications",
+  deputy: "profile:deputy.title",
+};
+
 export function ProfilePage() {
   const { t } = useTranslation(["profile", "audit"]);
   const { me } = useAuth();
@@ -27,16 +36,17 @@ export function ProfilePage() {
   const title = t("profile:title");
   useDocumentTitle(title);
 
-  const viewTab = params.get("viewTab") ?? "all";
+  const asked = params.get("part");
+  const part = PARTS.includes(asked as Part) ? (asked as Part) : "all";
 
   const onTabChange = (key: string) => {
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
         if (key === "all") {
-          next.delete("viewTab");
+          next.delete("part");
         } else {
-          next.set("viewTab", key);
+          next.set("part", key);
         }
         return next;
       },
@@ -69,41 +79,35 @@ export function ProfilePage() {
       ) : (
         <>
           <Tabs
-            activeKey={viewTab}
+            activeKey={part}
             onChange={onTabChange}
-            items={[
-              {
-                key: "all",
-                label: t("profile:tabs.all", "Все разделы"),
-              },
-              {
-                key: "general",
-                label: t("profile:tabs.general", "Личные данные"),
-              },
-              {
-                key: "notifications",
-                label: t("audit:profile.notifications", "Уведомления"),
-              },
-              {
-                key: "deputy",
-                label: t("profile:deputy.title", "Замещение"),
-              },
-            ]}
+            destroyOnHidden
+            items={PARTS.map((key) => ({
+              key,
+              label: t(PART_LABEL[key]),
+              children: (
+                <div className="pf-profile-part">
+                  {key === "all" || key === "general" ? (
+                    <IdentitySection me={me} profile={profile.data} />
+                  ) : null}
+                  {key === "all" || key === "general" || key === "notifications" ? (
+                    <TelegramSection profile={profile.data} />
+                  ) : null}
+                  {key === "all" || key === "notifications" ? (
+                    <Section
+                      title={t("audit:profile.notifications")}
+                      testId="profile-notifications"
+                    >
+                      <NotificationSettings me={me} />
+                    </Section>
+                  ) : null}
+                  {key === "all" || key === "deputy" ? (
+                    <DeputySection profile={profile.data} />
+                  ) : null}
+                </div>
+              ),
+            }))}
           />
-          {viewTab === "all" || viewTab === "general" ? (
-            <IdentitySection me={me} profile={profile.data} />
-          ) : null}
-          {viewTab === "all" || viewTab === "general" || viewTab === "notifications" ? (
-            <TelegramSection profile={profile.data} />
-          ) : null}
-          {viewTab === "all" || viewTab === "notifications" ? (
-            <Section title={t("audit:profile.notifications")} testId="profile-notifications">
-              <NotificationSettings me={me} />
-            </Section>
-          ) : null}
-          {viewTab === "all" || viewTab === "deputy" ? (
-            <DeputySection profile={profile.data} />
-          ) : null}
         </>
       )}
     </div>

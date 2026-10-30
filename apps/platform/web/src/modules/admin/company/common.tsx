@@ -90,10 +90,13 @@ export function SaveBlock({
   htmlType = "submit",
   onClick,
   onDiscard,
+  dirty,
 }: {
   label: string;
   loading?: boolean;
   disabled?: boolean;
+  /** Есть изменения (для бара сохранения); по умолчанию — «кнопка доступна» */
+  dirty?: boolean;
   error?: unknown;
   consequence: readonly ReactNode[];
   htmlType?: "submit" | "button";
@@ -113,12 +116,15 @@ export function SaveBlock({
 
   return (
     <div className="pf-co-save">
-      <ContextualSaveBar
-        visible={!disabled}
-        loading={loading}
-        onSave={handleSave}
-        onDiscard={onDiscard ?? (() => {})}
-      />
+      {onDiscard ? (
+        <ContextualSaveBar
+          visible={dirty ?? !disabled}
+          loading={loading ?? false}
+          disabled={disabled ?? false}
+          onSave={handleSave}
+          onDiscard={onDiscard}
+        />
+      ) : null}
       {error ? (
         <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
       ) : null}

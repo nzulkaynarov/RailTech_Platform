@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { renderUi as render } from "../../test/renderUi";
 import { ContextualSaveBar } from "./ContextualSaveBar";
 
 describe("ContextualSaveBar", () => {
@@ -10,7 +11,7 @@ describe("ContextualSaveBar", () => {
 
     render(<ContextualSaveBar visible={false} onSave={onSave} onDiscard={onDiscard} />);
 
-    expect(screen.queryByRole("region", { name: "Панель сохранения" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Несохранённые изменения" })).toBeNull();
   });
 
   it("рендерится при visible = true со стандартными подписями и индикатором", () => {
@@ -19,9 +20,9 @@ describe("ContextualSaveBar", () => {
 
     render(<ContextualSaveBar visible={true} onSave={onSave} onDiscard={onDiscard} />);
 
-    const region = screen.getByRole("region", { name: "Панель сохранения" });
+    const region = screen.getByRole("region", { name: "Несохранённые изменения" });
     expect(region).toBeInTheDocument();
-    expect(screen.getByText("Есть несохранённые изменения")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Есть несохранённые изменения");
     expect(screen.getByRole("button", { name: "Отменить" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Сохранить изменения/ })).toBeInTheDocument();
   });
@@ -41,7 +42,7 @@ describe("ContextualSaveBar", () => {
       />,
     );
 
-    expect(screen.getByText("Внесены правки в прайс-лист")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Внесены правки в прайс-лист");
     expect(screen.getByRole("button", { name: "Сбросить все" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Применить/ })).toBeInTheDocument();
   });
@@ -113,5 +114,35 @@ describe("ContextualSaveBar", () => {
     fireEvent.click(screen.getByRole("button", { name: /Сохранить изменения/ }));
     fireEvent.keyDown(window, { key: "s", metaKey: true });
     expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("живой регион статуса есть и при скрытом баре — скринридер слышит появление изменений", () => {
+    const { rerender } = render(
+      <ContextualSaveBar visible={false} onSave={vi.fn()} onDiscard={vi.fn()} />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("");
+    rerender(<ContextualSaveBar visible onSave={vi.fn()} onDiscard={vi.fn()} />);
+    expect(screen.getByRole("status")).toHaveTextContent("Есть несохранённые изменения");
+  });
+
+  it("два бара на экране: ⌘S сохраняет только форму с фокусом", () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    render(
+      <>
+        <form>
+          <ContextualSaveBar visible onSave={first} onDiscard={vi.fn()} />
+          <input aria-label="Имя" />
+        </form>
+        <form>
+          <ContextualSaveBar visible onSave={second} onDiscard={vi.fn()} />
+          <input aria-label="Заместитель" />
+        </form>
+      </>,
+    );
+    screen.getByRole("textbox", { name: "Заместитель" }).focus();
+    fireEvent.keyDown(window, { key: "s", ctrlKey: true });
+    expect(second).toHaveBeenCalledOnce();
+    expect(first).not.toHaveBeenCalled();
   });
 });

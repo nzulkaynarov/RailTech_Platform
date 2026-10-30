@@ -1,6 +1,7 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { message } from "antd";
+import { App } from "antd";
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { docNumberToPath } from "../lib/docNumber";
@@ -13,20 +14,30 @@ export interface DocNumberProps {
   copyable?: boolean;
 }
 
+/** Буфер обмена есть только в защищённом контексте (https или localhost). */
+function canCopy(): boolean {
+  return typeof navigator !== "undefined" && Boolean((navigator as Partial<Navigator>).clipboard);
+}
+
 /**
  * Бизнес-номер объекта (`ПР-2026-104`): не переносится по строкам, цифры одной ширины, не переводится автопереводчиком.
- * Поддерживает быстрое копирование в буфер по клику на иконку копирования с тостом message.success.
+ * Рядом — кнопка «Скопировать номер» (тост об итоге словами); без буфера обмена (http) кнопки нет.
  * С `base` — ссылка на карточку: `<base>/<номер в кодировке URL>` (SPEC-v3 §6.3, docs/architecture/platform-frontend.md §6).
  */
 export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
+  const { t } = useTranslation("ui");
+  const { message } = App.useApp();
   const handleCopy = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (typeof navigator !== "undefined") {
-      void navigator.clipboard.writeText(number).then(() => {
-        void message.success("Номер скопирован");
-      });
-    }
+    navigator.clipboard.writeText(number).then(
+      () => {
+        void message.success(t("docNumber.copied"));
+      },
+      () => {
+        void message.error(t("docNumber.copyFailed"));
+      },
+    );
   };
 
   const numberNode = (
@@ -43,7 +54,7 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
     numberNode
   );
 
-  if (!copyable) {
+  if (!copyable || !canCopy()) {
     return mainContent;
   }
 
@@ -57,14 +68,14 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
         type="button"
         onClick={handleCopy}
         className="pf-docnum-copy-btn"
-        title="Скопировать номер"
-        aria-label={`Скопировать номер ${number}`}
+        title={t("docNumber.copy")}
+        aria-label={t("docNumber.copyNumber", { number })}
         style={{
           border: "none",
           background: "transparent",
           padding: "0 2px",
           cursor: "pointer",
-          color: "#8c8c8c",
+          color: "#6e6e6e",
           display: "inline-flex",
           alignItems: "center",
           fontSize: 12,

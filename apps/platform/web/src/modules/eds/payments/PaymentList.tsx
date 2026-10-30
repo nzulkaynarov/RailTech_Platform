@@ -56,7 +56,7 @@ export function PaymentList() {
   const { t } = useTranslation(["payments", "modules"]);
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
-  const tab = showTab(params.get("viewTab") ?? params.get("show"));
+  const tab = showTab(params.get("show"));
   const query = (params.get("q") ?? "").trim();
   const memoStatus: PaymentMemoStatus = params.get("kind") === "paid" ? "paid" : "to_pay";
   const selectedPayment = params.get("payment");

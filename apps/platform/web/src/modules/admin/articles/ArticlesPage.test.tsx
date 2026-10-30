@@ -199,7 +199,11 @@ describe("Настройки · Статьи компании (W18A-P5, B-079)",
     expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
     expect(screen.getByText(/Статья уже опубликована/)).toBeInTheDocument();
     fireEvent.change(title, { target: { value: "Где лежат шаблоны" } });
-    expect(screen.getByText("Есть несохранённые изменения")).toBeInTheDocument();
+    expect(
+      within(screen.getByRole("region", { name: "Несохранённые изменения" })).getByText(
+        "Есть несохранённые изменения",
+      ),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Сохранить" }));
     expect(await screen.findByText("Изменения сохранены.")).toBeInTheDocument();
     expect(await rowOf("Где лежат шаблоны")).toHaveTextContent("Опубликовано");

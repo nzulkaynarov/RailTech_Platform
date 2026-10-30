@@ -46,6 +46,7 @@ function RailLink({ module, onClick }: { module: RailModule; onClick?: () => voi
     <Link
       to={module.to}
       onClick={onClick}
+      title={module.title ?? module.name}
       className="pf-rail-btn pf-focusable"
       aria-current={module.active ? "page" : undefined}
     >

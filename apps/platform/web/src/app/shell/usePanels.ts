@@ -18,19 +18,18 @@ export interface Panels {
   panelWidth: PanelWidthPreset;
   tab: string;
   tabs: readonly string[];
-  entityId: string | null;
   toggleMenu: () => void;
   togglePanel: () => void;
   setPanelOpen: (open: boolean) => void;
   setPanelMode: (mode: PanelLayoutMode) => void;
   setPanelWidth: (width: PanelWidthPreset) => void;
   setTab: (tab: string) => void;
-  setEntityId: (entityId: string | null) => void;
 }
 
 /**
  * Подменю: запоминается на пользователя и раздел.
- * Боковое окно: открытие panelOpen определяется ТОЛЬКО наличием ?panel=open в URL.
+ * Боковое окно: открыто только по адресу — `?panel=open`; на карточке объекта (`:id`) на широком экране открыто,
+ * пока не закрыто явно (`?panel=closed`).
  * Настройки отображения (режим overlay/docked, ширина default/wide, последняя вкладка lastTab)
  * сохраняются в panelsStore (localStorage ключ rt-pf-panels-v2).
  */
@@ -51,7 +50,6 @@ export function usePanels(
   const urlPanel = params.get("panel");
   const panelOpen =
     urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && fallbackOpen;
-  const entityId = params.get("entityId");
 
   const isStrictlyOverlay = Boolean(section?.path.startsWith("/chats"));
   const panelMode: PanelLayoutMode = isStrictlyOverlay
@@ -89,7 +87,6 @@ export function usePanels(
             next.set("panel", "closed");
           } else {
             next.delete("panel");
-            next.delete("entityId");
           }
           return next;
         },
@@ -97,25 +94,6 @@ export function usePanels(
       );
     },
     [setParams, fallbackOpen],
-  );
-
-  const setEntityId = useCallback(
-    (nextId: string | null) => {
-      setParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          if (nextId) {
-            next.set("entityId", nextId);
-            next.set("panel", "open");
-          } else {
-            next.delete("entityId");
-          }
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setParams],
   );
 
   const setPanelMode = useCallback(
@@ -148,6 +126,13 @@ export function usePanels(
     [setParams, patch, key],
   );
 
+  const toggleMenu = useCallback(() => {
+    patch(key, { menuOpen: !menuOpen });
+  }, [patch, key, menuOpen]);
+  const togglePanel = useCallback(() => {
+    setPanelOpen(!panelOpen);
+  }, [setPanelOpen, panelOpen]);
+
   return {
     menuOpen,
     panelOpen,
@@ -155,17 +140,11 @@ export function usePanels(
     panelWidth,
     tab,
     tabs,
-    entityId,
-    toggleMenu: () => {
-      patch(key, { menuOpen: !menuOpen });
-    },
-    togglePanel: () => {
-      setPanelOpen(!panelOpen);
-    },
+    toggleMenu,
+    togglePanel,
     setPanelOpen,
     setPanelMode,
     setPanelWidth,
     setTab,
-    setEntityId,
   };
 }

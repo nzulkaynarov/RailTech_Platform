@@ -38,7 +38,6 @@
       "system": "Tizim"
     },
     "markAll": "Hammasini o‘qilgan deb belgilash",
-    "seeAll": "Barcha bildirishnomalar",
     "unreadMark": "Yangi",
     "emptyTab": "Bu bo‘limda bildirishnoma yo‘q",
     "loading": "Bildirishnomalar yuklanmoqda…",
@@ -69,13 +68,24 @@
       "clients": "M",
       "system": "!"
     },
-    "where": "Qayerda ko‘rish"
+    "where": "Qayerda ko‘rish",
+    "scope": {
+      "unread": "O‘qilmagan",
+      "unreadCount": "O‘qilmagan ({{count}})",
+      "all": "Hammasi"
+    },
+    "category": "Bildirishnoma turi",
+    "allTypes": "Barcha turlar"
   },
   "panel": {
     "label": "Yon oyna",
     "hide": "Yon oynani yashirish",
     "show": "Yon oynani ko‘rsatish",
-    "close": "Yopish"
+    "close": "Yopish",
+    "wide": "Kengroq: 600 px",
+    "narrow": "Torroq: 440 px",
+    "dock": "Jadval yoniga mahkamlash",
+    "undock": "Jadval ustida ochish"
   },
   "avatar": {
     "open": "{{initials}} {{role}}: profil va sozlamalar, {{name}}",
@@ -234,6 +244,19 @@
       "legacyHint": "Hozircha eski tizimda bajariladi — qayerdaligini ko‘rish uchun bosing"
     },
     "where": "Qayerda ko‘rish",
-    "whereClose": "Maslahatni yopish"
+    "whereClose": "Maslahatni yopish",
+    "navGroup": "Bo‘limlar",
+    "sectionTag": "Bo‘lim",
+    "keywords": {
+      "erp": {
+        "calc": "kalkulyator, tannarx",
+        "catalog": "ma’lumotnomalar, nomenklatura"
+      },
+      "admin": {
+        "company": "shablonlar, rekvizitlar, raqamlash",
+        "integrations": "smtp, pochta, litellm",
+        "audit": "audit, jurnal"
+      }
+    }
   }
 }

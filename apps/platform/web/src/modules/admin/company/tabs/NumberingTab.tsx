@@ -219,6 +219,7 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
           label={t("numbering.save")}
           loading={update.isPending}
           disabled={isEmptyObject(changed) || !maskOk}
+          dirty={!isEmptyObject(changed)}
           error={update.error}
           consequence={[
             t("numbering.consequence.future"),

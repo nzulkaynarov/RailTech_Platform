@@ -4,10 +4,8 @@ import {
   PushpinOutlined,
   ShrinkOutlined,
 } from "@ant-design/icons";
-import { Drawer, Layout, Tabs, type DrawerProps } from "antd";
-import { useEffect, type ReactNode } from "react";
-
-const AccessibleDrawer = Drawer as React.FC<DrawerProps & { role?: string }>;
+import { Drawer, Layout, Tabs } from "antd";
+import type { KeyboardEvent, ReactNode } from "react";
 
 import type { PanelLayoutMode, PanelWidthPreset } from "../../app/shell/panelsStore";
 import { ChevronRightIcon } from "./icons";
@@ -39,6 +37,15 @@ export interface ContextPanelProps {
   onWidthChange?: (width: PanelWidthPreset) => void;
   /** Доступен ли режим docked (экран >= 1280px) */
   canDock?: boolean;
+  /** Подписи кнопок ширины и закрепления (i18n `shell:panel.*`) */
+  controlLabels?: PanelControlLabels;
+}
+
+export interface PanelControlLabels {
+  wide: string;
+  narrow: string;
+  dock: string;
+  undock: string;
 }
 
 function PanelBody({
@@ -55,25 +62,8 @@ function PanelBody({
   panelWidth = "default",
   onWidthChange,
   canDock = false,
+  controlLabels,
 }: ContextPanelProps & { withHide?: boolean }) {
-  // Esc закрывает панель, если поверх не открыто модальное окно или выпадающий список
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        const hasOpenOverlay = document.querySelector(
-          '.ant-modal-wrap:not([style*="display: none"]), .ant-select-dropdown:not(.ant-select-dropdown-hidden)',
-        );
-        if (!hasOpenOverlay) {
-          onHide();
-        }
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [onHide]);
-
   const controls = (
     <div
       style={{
@@ -86,12 +76,12 @@ function PanelBody({
         zIndex: 1,
       }}
     >
-      {onWidthChange ? (
+      {onWidthChange && controlLabels ? (
         <button
           type="button"
           className="pf-icon-btn pf-focusable"
-          aria-label={panelWidth === "wide" ? "Стандартная ширина" : "Широкая панель"}
-          title={panelWidth === "wide" ? "Стандартная ширина (440px)" : "Широкая панель (600px)"}
+          aria-label={panelWidth === "wide" ? controlLabels.narrow : controlLabels.wide}
+          title={panelWidth === "wide" ? controlLabels.narrow : controlLabels.wide}
           onClick={() => {
             onWidthChange(panelWidth === "wide" ? "default" : "wide");
           }}
@@ -100,23 +90,20 @@ function PanelBody({
           {panelWidth === "wide" ? <ShrinkOutlined /> : <ArrowsAltOutlined />}
         </button>
       ) : null}
-      {canDock && onModeChange ? (
+      {canDock && onModeChange && controlLabels ? (
         <button
           type="button"
           className="pf-icon-btn pf-focusable"
-          aria-label={panelMode === "docked" ? "Режим поверх" : "Закрепить в сетке"}
-          title={
-            panelMode === "docked"
-              ? "Режим: В сетке (нажмите для режима Поверх)"
-              : "Режим: Поверх (нажмите для закрепления в сетке)"
-          }
+          aria-label={panelMode === "docked" ? controlLabels.undock : controlLabels.dock}
+          aria-pressed={panelMode === "docked"}
+          title={panelMode === "docked" ? controlLabels.undock : controlLabels.dock}
           onClick={() => {
             onModeChange(panelMode === "docked" ? "overlay" : "docked");
           }}
           style={{ width: 28, height: 28 }}
         >
           {panelMode === "docked" ? (
-            <PushpinFilled style={{ color: "#1668dc" }} />
+            <PushpinFilled style={{ color: "var(--ant-color-primary, #1668dc)" }} />
           ) : (
             <PushpinOutlined />
           )}
@@ -163,21 +150,40 @@ function PanelBody({
   );
 }
 
+/** Esc внутри бокового окна закрывает его, если клавишу не забрал вложенный список, меню или поле. */
+function hideOnEscape(onHide: () => void) {
+  return (event: KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Escape" || event.defaultPrevented) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && target.closest('[aria-expanded="true"]')) return;
+    onHide();
+  };
+}
+
 /**
- * Боковое окно (docs/architecture/platform-frontend.md §4, зона 5):
- * По умолчанию 'overlay' (slide-over без Layout Shift).
- * Опционально 'docked' на экранах ≥ 1280px (в сетке).
- * Ширина: default (440px) vs wide (600px).
+ * Боковое окно (docs/architecture/platform-frontend.md §4, зона 5; ORCHESTRATOR §3 п. 18).
+ * По умолчанию — поверх основного окна у правого края (overlay): таблицы не сжимаются. Это немодальная область
+ * `complementary`, а не Drawer: у Drawer `aria-modal` и ловушка фокуса, а окно не модальное — Tab уходит обратно
+ * в таблицу. Закреплённое (docked) — в сетке рядом с основным окном, только на ≥ 1280 px. Ширина 440 или 600 px;
+ * закреплённое шире 440 — только на ≥ 1440 px, чтобы основному окну осталось ≥ 560 px.
  */
 export function ContextPanel({
   open,
   panelMode = "docked",
   panelWidth = "default",
   canDock = true,
+  roomy = true,
   ...props
-}: ContextPanelProps & { open: boolean }) {
-  const widthPx = panelWidth === "wide" ? 600 : 440;
+}: ContextPanelProps & {
+  open: boolean;
+  /** Экран ≥ 1440 px: закреплённому окну доступна широкая ширина */
+  roomy?: boolean;
+}) {
   const isDocked = panelMode === "docked" && canDock;
+  const widthPx = panelWidth === "wide" && (roomy || !isDocked) ? 600 : 440;
+  const body = (
+    <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
+  );
 
   if (isDocked) {
     return (
@@ -190,55 +196,29 @@ export function ContextPanel({
         collapsed={!open}
         trigger={null}
         theme="light"
-        style={{
-          borderLeft: open ? "1px solid #f0f0f0" : "none",
-          overflow: "auto",
-          transition: "width 0.2s ease",
-        }}
+        onKeyDown={hideOnEscape(props.onHide)}
+        style={{ borderLeft: open ? "1px solid #f0f0f0" : "none", overflow: "auto" }}
       >
-        {open ? (
-          <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
-        ) : null}
+        {open ? body : null}
       </Layout.Sider>
     );
   }
 
+  if (!open) return null;
   return (
-    <AccessibleDrawer
-      open={open}
-      onClose={props.onHide}
-      mask={false}
-      closable={false}
-      keyboard
-      role="region"
-      width={widthPx}
-      placement="right"
-      rootStyle={{
-        top: 56,
-        height: "calc(100vh - 56px)",
-        pointerEvents: "none",
-      }}
-      styles={{
-        body: { padding: 0 },
-        wrapper: {
-          maxWidth: "100vw",
-          boxShadow: "-4px 0 16px rgba(0, 0, 0, 0.08)",
-          borderLeft: "1px solid #f0f0f0",
-          transition: "width 0.2s ease",
-          pointerEvents: "auto",
-        },
-      }}
-      aria-label={props.label}
+    <aside
       id={props.id}
+      aria-label={props.label}
+      className="pf-panel-overlay"
+      style={{ width: `min(${String(widthPx)}px, 100vw)` }}
+      onKeyDown={hideOnEscape(props.onHide)}
     >
-      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
-        <PanelBody {...props} panelMode={panelMode} panelWidth={panelWidth} canDock={canDock} />
-      </aside>
-    </AccessibleDrawer>
+      {body}
+    </aside>
   );
 }
 
-/** < 1200 px: боковое окно — `Drawer` без затемнения поверх основного (между шапкой и нижней панелью). */
+/** < 768 px: боковое окно — `Drawer` без затемнения поверх основного (между шапкой и нижней панелью). */
 export function ContextPanelDrawer({
   open,
   onClose,
@@ -251,34 +231,25 @@ export function ContextPanelDrawer({
   offsetTop: number;
   offsetBottom: number;
 }) {
-  const widthPx = props.panelWidth === "wide" ? 600 : 440;
   return (
-    <AccessibleDrawer
+    <Drawer
       open={open}
       onClose={onClose}
       mask={false}
       closable={false}
       keyboard
-      role="region"
-      width={widthPx}
+      width={440}
       placement="right"
-      rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto", pointerEvents: "none" }}
+      rootStyle={{ top: offsetTop, bottom: offsetBottom, height: "auto" }}
       styles={{
         body: { padding: 0 },
-        wrapper: {
-          maxWidth: "100vw",
-          boxShadow: "none",
-          borderLeft: "1px solid #f0f0f0",
-          pointerEvents: "auto",
-        },
+        wrapper: { maxWidth: "100vw", boxShadow: "none", borderLeft: "1px solid #f0f0f0" },
       }}
       aria-label={props.label}
       id={props.id}
     >
-      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
-        <PanelBody {...props} />
-      </aside>
-    </AccessibleDrawer>
+      <PanelBody {...props} />
+    </Drawer>
   );
 }
 
@@ -318,9 +289,7 @@ export function ContextPanelSheet({
       id={props.id}
       className="pf-panel-sheet"
     >
-      <aside role="complementary" aria-label={props.label} style={{ height: "100%" }}>
-        <PanelBody {...props} withHide={false} />
-      </aside>
+      <PanelBody {...props} withHide={false} />
     </Drawer>
   );
 }

@@ -26,7 +26,7 @@ export function CatalogScreen() {
   const { t } = useTranslation(["catalog", "modules"]);
   useDocumentTitle(t("modules:erp.sections.catalog"));
   const [params, setParams] = useSearchParams();
-  const requested = params.get("viewTab") ?? params.get("part");
+  const requested = params.get("part");
   const part: Part = PARTS.find((p) => p === requested) ?? "items";
   const pending = useListCatalogCategoryRequests({ status: "pending" });
   const pendingCount = pending.data?.items.length ?? 0;
@@ -49,7 +49,7 @@ export function CatalogScreen() {
         active={part}
         tabs={PARTS.map((key) => ({ key, label: label(key) }))}
         onChange={(key) => {
-          setParams({ part: key, viewTab: key });
+          setParams({ part: key });
         }}
       >
         {panels[part]}

@@ -296,7 +296,7 @@ export function DocumentsPage() {
   // Реестр компании — по умолчанию у ролей, которым он открыт; остальным — только «Мои».
   const scope: Scope = canViewAll && params.get("scope") !== "mine" ? "all" : "mine";
   const lettersAllowed = canSee(me, { resource: "eds.inbox" });
-  const askedTab = tabOf(params.get("viewTab") ?? params.get("kind"), scope);
+  const askedTab = tabOf(params.get("kind"), scope);
   const tab = askedTab === "letters" && !lettersAllowed ? "all" : askedTab;
   const status = params.get("status") ?? "";
   const docId = parseDocumentId(params.get("doc"));
@@ -496,9 +496,8 @@ export function DocumentsPage() {
           <Tabs
             aria-label={t("documents:list.tabs.label")}
             activeKey={tab}
-            destroyOnHidden={false}
             onChange={(key) => {
-              setFilter({ kind: key === "all" ? null : key, viewTab: key === "all" ? null : key });
+              setFilter({ kind: key === "all" ? null : key });
             }}
             tabBarStyle={{ margin: 0, padding: "0 16px" }}
             items={kindTabs.map((key) => ({

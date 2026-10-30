@@ -15,7 +15,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { Consequence } from "../../../shared/ui/Consequence";
-import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -233,16 +232,6 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
           if (!pending && !uploading) void run(true);
         }}
       >
-        <ContextualSaveBar
-          visible={Boolean(values.subject || values.amount || values.attachments.length)}
-          loading={pending}
-          onSave={() => {
-            if (!pending && !uploading) void run(true);
-          }}
-          onDiscard={() => {
-            void navigate("/eds/documents");
-          }}
-        />
         <Card>
           <div className="pf-fp-form">
             <Field

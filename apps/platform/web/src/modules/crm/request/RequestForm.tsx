@@ -1,5 +1,5 @@
 import { Button, Checkbox, Input, Radio, Select, Skeleton } from "antd";
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useViewport } from "../../../app/shell/useViewport";
@@ -16,7 +16,6 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { Consequence } from "../../../shared/ui/Consequence";
-import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { reasonError } from "../common/errors";
@@ -181,12 +180,6 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
     consentGiven: lead === null || lead.consent.given_at !== null,
     contacts,
   };
-  const initial = useMemo(() => initialState(lead, clientId), [lead, clientId]);
-  const isDirty = useMemo(
-    () => JSON.stringify(state) !== JSON.stringify(initial),
-    [state, initial],
-  );
-
   const errors: RequestErrors = tried ? validateRequest(form, ctx) : {};
   const err = (field: keyof RequestErrors) =>
     errors[field] ? t(`request:errors.${errors[field]}`) : undefined;
@@ -259,17 +252,6 @@ export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: Req
         submit();
       }}
     >
-      <ContextualSaveBar
-        visible={isDirty}
-        loading={create.isPending}
-        onSave={submit}
-        onDiscard={() => {
-          setState(initial);
-          setContactTouched(false);
-          setTried(false);
-          setServerError(null);
-        }}
-      />
       <div className="pf-fp-stack" style={{ gap: 4 }}>
         {/* На телефоне заголовок листа уже «Создать заявку» — второй виден только скринридеру */}
         <h3 className={mobile ? "pf-sr-only" : "pf-fp-title"} id={id("title")}>

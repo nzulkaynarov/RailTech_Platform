@@ -34,5 +34,17 @@
     "retry": "Retry"
   },
   "whereToDo": "Where to do it",
-  "whereToDoItem": "Where to do it: {{title}}"
+  "whereToDoItem": "Where to do it: {{title}}",
+  "saveBar": {
+    "label": "Unsaved changes",
+    "message": "You have unsaved changes",
+    "save": "Save changes",
+    "discard": "Discard"
+  },
+  "docNumber": {
+    "copy": "Copy number",
+    "copyNumber": "Copy number {{number}}",
+    "copied": "Number copied",
+    "copyFailed": "Couldn’t copy: the browser blocked clipboard access"
+  }
 }

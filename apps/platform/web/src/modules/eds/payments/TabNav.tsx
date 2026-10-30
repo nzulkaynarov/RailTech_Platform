@@ -35,7 +35,6 @@ export function TabNav({
                 aria-current={tab === active ? "page" : undefined}
                 to={withParams(params, {
                   show: tab,
-                  viewTab: tab,
                   payment: null,
                   memo: null,
                   sheet: null,
