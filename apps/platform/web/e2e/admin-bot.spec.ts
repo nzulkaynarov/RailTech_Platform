@@ -44,7 +44,7 @@ async function openBot(page: Page, section?: string, extra = ""): Promise<void> 
   const query = [section ? `section=${section}` : "part=behavior", extra].filter(Boolean).join("&");
   await spaGoto(page, `/admin/bot${query ? `?${query}` : ""}`);
   await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
-  await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+  await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
 }
 
 function side(page: Page): Locator {
@@ -399,7 +399,7 @@ test.describe("Настройки бота: axe и снимки", () => {
       // W15-H4: вкладка «Подключение» — токен, канал команды и профиль бота
       await spaGoto(page, "/admin/bot?part=connection");
       await expect(page.getByRole("tabpanel").getByText("@demo_railtech_bot")).toBeVisible();
-      await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+      await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
       await expectNoViolations(page, `connection ${String(width)}`);
       await settledScreenshot(page, "a11y-connection");
 

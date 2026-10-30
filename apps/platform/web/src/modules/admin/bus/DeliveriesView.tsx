@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Input, Skeleton, Table } from "antd";
+import { Button, Card, Input, Table } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,6 +15,8 @@ import {
   listBusDeliveries,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
@@ -126,9 +128,10 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
     </div>
   ) : null;
 
+  const shownKey = useShownKey(getListBusDeliveriesQueryKey(params), query.isPlaceholderData);
   let body;
   if (query.isPending) {
-    body = <Skeleton active paragraph={{ rows: 6 }} title={false} style={{ padding: 24 }} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (query.isError) {
     body = (
       <EmptyState
@@ -366,7 +369,9 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
             </Button>
           ) : null}
         </div>
-        {body}
+        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+          {body}
+        </DataBlock>
       </Card>
     </div>
   );

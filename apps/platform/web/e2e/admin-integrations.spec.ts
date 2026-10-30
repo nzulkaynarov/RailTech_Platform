@@ -414,7 +414,7 @@ test.describe("Внешние интеграции: axe и снимки", () => 
         await openIntegrations(page, card);
         await expect(side(page).getByRole("heading", { level: 3 }).first()).toBeVisible();
         // дожидаемся данных панели: скелетона и «Загрузка» уже нет
-        await expect(side(page).locator(".ant-skeleton")).toHaveCount(0);
+        await expect(side(page).locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
         await expectNoViolations(page, `${card} ${String(width)}`);
         await settledScreenshot(page, `a11y-${card}`);
       }
@@ -515,7 +515,7 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await openIntegrations(page);
       await expectNoViolations(page, `director overview ${String(width)}`);
       await openIntegrations(page, "spend");
-      await expect(side(page).locator(".ant-skeleton")).toHaveCount(0);
+      await expect(side(page).locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
       await expectNoViolations(page, `director spend ${String(width)}`);
     });
   }

@@ -9,7 +9,7 @@ import { usePollQuery } from "../../shared/api/polling";
 import { todayLabel } from "../../shared/lib/format";
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../shared/lib/useFormat";
-import { CounterCard, CounterGrid } from "../../shared/ui/CounterCard";
+import { CounterCard, CounterGrid, CounterGridSkeleton } from "../../shared/ui/CounterCard";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
@@ -22,6 +22,7 @@ import { isActionable } from "../bridge";
 import { objectLink } from "../objectLinks";
 import { WhereToDo } from "../stub/WhereToDo";
 import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
+import { useCardsCount } from "./useCardsCount";
 import "./dashboard.css";
 
 /** Плашка нужна, если хотя бы в одном из ответов источник не ответил. */
@@ -57,6 +58,8 @@ export function QueuePage() {
   const poll = usePollQuery();
   const queue = useGetQueue(params, { query: poll });
   const cards = useGetQueueCards(params, { query: poll });
+  // Сколько счётчиков было в прошлый раз: до ответа — столько же карточек-скелетонов той же высоты (UX-1c, S10).
+  const cardsCount = useCardsCount(me.id, cards.data?.cards.length);
   const title = t("modules:dashboard.sections.queue");
   useDocumentTitle(title);
 
@@ -176,7 +179,9 @@ export function QueuePage() {
     <div className="pf-queue-page">
       <PageHeader title={title} subtitle={subtitle} />
       <SourceBanner sources={sources} onRetry={retry} messages={partialMessages} />
-      {cards.data && cards.data.cards.length > 0 ? (
+      {cards.isPending && cardsCount > 0 ? (
+        <CounterGridSkeleton count={cardsCount} />
+      ) : cards.data && cards.data.cards.length > 0 ? (
         <section aria-label={t("modules:dashboard.queue.cardsLabel")}>
           <CounterGrid>
             {cards.data.cards.map((card) => (

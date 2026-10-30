@@ -193,7 +193,7 @@ test.describe("Журнал интеграций: axe и снимки", () => {
         await openJournal(page, view);
         // 1440 — таблица, 390 — список строк
         await expect(page.locator(".pf-bus table, .pf-bus ul.pf-bus-list").first()).toBeVisible();
-        await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+        await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
         await expectNoViolations(page, `${view} ${String(width)}`);
         await settledScreenshot(page, `a11y-${view}`);
       }

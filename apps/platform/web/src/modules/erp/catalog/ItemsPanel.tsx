@@ -217,7 +217,7 @@ export function ItemsPanel() {
           </Button>
         ) : null}
       </div>
-      <QueryState query={query} labels={queryLabels(t)}>
+      <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState

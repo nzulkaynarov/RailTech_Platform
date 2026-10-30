@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Checkbox, Input, Pagination, Segmented, Select, Skeleton } from "antd";
+import { Button, Card, Checkbox, Input, Pagination, Segmented, Select } from "antd";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -10,6 +10,9 @@ import type { ProjectRow, ProjectStage } from "../../../shared/api/generated/mod
 import { useListEdsProjects } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -22,6 +25,9 @@ import { ProjectStatusTag } from "./status";
 
 import "../decision/decision.css";
 import "./projects.css";
+
+/** Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие (UX-1c, S9) */
+const COLS = [140, null, 190, 140, 120, 100, 150, 110] as const;
 
 const STEPS: readonly ProjectStage[] = ["CONTRACT", "PAYMENT", "DONE"];
 
@@ -128,8 +134,9 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-dec-table">
+      <table className="pf-dec-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 150) }}>
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -168,7 +175,9 @@ function Rows({ items }: { items: readonly ProjectRow[] }) {
                 <Documents row={row} />
               </td>
               <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>
-              <td>{row.responsible?.name ?? "—"}</td>
+              <td className="pf-ell" title={row.responsible?.name ?? undefined}>
+                {row.responsible?.name ?? "—"}
+              </td>
               <td>
                 <LinkButton
                   size="small"
@@ -232,9 +241,10 @@ export function ProjectList() {
     );
   };
 
+  const shownKey = useShownKey(query.queryKey, query.isPlaceholderData);
   let body;
   if (query.isPending) {
-    body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+    body = <ListSkeleton rows={PAGE_SIZE} />;
   } else if (query.isError) {
     const error = query.error;
     const text =
@@ -356,7 +366,11 @@ export function ProjectList() {
           />
         </div>
       </div>
-      <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+          {body}
+        </DataBlock>
+      </Card>
     </div>
   );
 }

@@ -6,12 +6,17 @@ import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import type { KbGap, KbGapStatus } from "../../../shared/api/generated/model";
 import { useListKbGaps } from "../../../shared/api/generated/platform-bff";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { GAP_STATUSES, PAGE_SIZE, gapPageParam, gapStatusParam, leadNumber } from "./gaps";
 import { useKbStateLabels } from "./labels";
 import { parseId, withParams } from "./refresh";
+
+/** Ширины колонок: вопрос (гибкая), раз, язык, оценка, лид (UX-1c, S9) */
+const COLS = [null, 110, 120, 110, 140] as const;
 
 export function LeadRef({ id }: { id: number | null }) {
   const { me } = useAuth();
@@ -37,8 +42,9 @@ function GapsTable({ items, status }: { items: readonly KbGap[]; status: KbGapSt
   }
   return (
     <ScrollRegion label={t("gaps.tableScroll")}>
-      <table className="pf-kb-table">
+      <table className="pf-kb-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 280) }}>
         <caption className="pf-sr-only">{t("gaps.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("gaps.columns.question")}</th>
@@ -117,7 +123,7 @@ export function GapsView() {
         }
       >
         <p className="pf-fp-sub pf-kb-lead">{t("gaps.hint")}</p>
-        <QueryState query={query} labels={labels}>
+        <QueryState query={query} labels={labels} rows={PAGE_SIZE}>
           {(data) => (
             <>
               <GapsTable items={data.items} status={status} />

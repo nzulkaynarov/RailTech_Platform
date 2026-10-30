@@ -7,12 +7,20 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { SupplierOrderRow, SupplierOrderStatus } from "../../../shared/api/generated/model";
 import { useListSupplierOrders } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ORDER_STATUSES, ORDER_TONE, useStateLabels } from "./api";
 import { OrderCreateModal } from "./OrderCreateModal";
+
+/** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
+const colsOf = (prices: boolean) =>
+  prices
+    ? ([120, null, 140, 130, 140, 110, 140, 120] as const)
+    : ([120, null, 140, 130, 140, 110, 120] as const);
 
 export function OrderStatusTag({ status }: { status: SupplierOrderStatus }) {
   const { t } = useTranslation("stock");
@@ -101,8 +109,12 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
   }
   return (
     <ScrollRegion label={t("orders.scroll")}>
-      <table className="pf-calc-table">
+      <table
+        className="pf-calc-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(colsOf(prices), 160) }}
+      >
         <caption className="pf-sr-only">{t("orders.caption")}</caption>
+        <TableCols widths={colsOf(prices)} />
         <thead>
           <tr>
             <th scope="col">{t("orders.columns.number")}</th>
@@ -125,7 +137,9 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
                   {row.number}
                 </Link>
               </td>
-              <td>{row.supplier.name}</td>
+              <td className="pf-ell" title={row.supplier.name}>
+                {row.supplier.name}
+              </td>
               <td>
                 <Requests row={row} />
               </td>
@@ -221,9 +235,14 @@ export function OrdersTab() {
             >
               {t("orders.create")}
             </Button>
+          ) : query.isPending ? (
+            // До ответа право неизвестно: место кнопки держится, чтобы панель не переносилась, когда она появится (UX-1c, S10)
+            <span className="pf-stock-toolbar-action pf-stock-action-slot" aria-hidden="true">
+              {t("orders.create")}
+            </span>
           ) : null}
         </div>
-        <QueryState query={query} labels={labels}>
+        <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState

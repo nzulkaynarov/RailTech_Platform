@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Pagination, Select, Skeleton, Table } from "antd";
+import { Button, Card, Pagination, Select, Table } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
@@ -18,6 +18,8 @@ import { useListTickets } from "../../../shared/api/generated/platform-bff";
 import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TicketCard } from "./TicketCard";
@@ -77,9 +79,10 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
     </Link>
   );
 
+  const shownKey = useShownKey(list.queryKey, list.isPlaceholderData);
   let body;
   if (list.isPending) {
-    body = <Skeleton active paragraph={{ rows: 6 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (list.isError) {
     body = (
       <EmptyState
@@ -244,7 +247,9 @@ export function TicketsPage({ objectId }: { objectId?: string | undefined }) {
               </span>
             ) : null}
           </form>
-          {body}
+          <DataBlock busy={list.isPlaceholderData} resetKey={shownKey}>
+            {body}
+          </DataBlock>
           {list.data && total > PAGE ? (
             <div className="pf-ticket-footer">
               <span className="pf-hint">{t("admin.total", { count: total })}</span>

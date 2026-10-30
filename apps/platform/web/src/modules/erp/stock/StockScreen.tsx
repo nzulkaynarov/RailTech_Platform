@@ -1,9 +1,11 @@
-import { Tabs } from "antd";
+import type React from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { DataBlock } from "../../../shared/ui/DataBlock";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { TabsBar } from "../../../shared/ui/TabsBar";
 import { BalancesTab } from "./BalancesTab";
 import { OrdersTab } from "./OrdersTab";
 import { ReceiptsTab } from "./ReceiptsTab";
@@ -14,6 +16,13 @@ import "./stock.css";
 
 const VIEWS = ["balances", "orders", "receipts", "shipments"] as const;
 type View = (typeof VIEWS)[number];
+
+const BODY: Record<View, () => React.ReactNode> = {
+  balances: () => <BalancesTab />,
+  orders: () => <OrdersTab />,
+  receipts: () => <ReceiptsTab />,
+  shipments: () => <ShipmentsTab />,
+};
 
 function viewOf(value: string | null): View {
   return VIEWS.find((v) => v === value) ?? "balances";
@@ -32,9 +41,10 @@ export function StockScreen() {
   return (
     <div className="pf-calc pf-stock">
       <PageHeader title={t("title")} subtitle={t("subtitle")} />
-      <Tabs
+      <TabsBar
+        id="pf-stock-tabs"
+        label={t("title")}
         activeKey={view}
-        destroyOnHidden
         onChange={(key) => {
           setParams(
             (prev) => {
@@ -46,13 +56,11 @@ export function StockScreen() {
             { replace: true },
           );
         }}
-        items={[
-          { key: "balances", label: t("tabs.balances"), children: <BalancesTab /> },
-          { key: "orders", label: t("tabs.orders"), children: <OrdersTab /> },
-          { key: "receipts", label: t("tabs.receipts"), children: <ReceiptsTab /> },
-          { key: "shipments", label: t("tabs.shipments"), children: <ShipmentsTab /> },
-        ]}
-      />
+        items={VIEWS.map((key) => ({ key, label: t(`tabs.${key}`) }))}
+      >
+        {/* Вкладка ещё не загружена — блок держит высоту прежней, пока виден скелетон (UX-1c, S8). */}
+        <DataBlock>{BODY[view]()}</DataBlock>
+      </TabsBar>
     </div>
   );
 }

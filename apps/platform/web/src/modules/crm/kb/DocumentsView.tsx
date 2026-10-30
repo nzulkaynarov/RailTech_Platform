@@ -6,6 +6,8 @@ import type { KbDocument } from "../../../shared/api/generated/model";
 import { useListKbDocuments } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import type { StatusTone } from "../../../shared/lib/statuses";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
@@ -13,6 +15,9 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { KbSearch } from "./KbSearch";
 import { useKbStateLabels } from "./labels";
 import { parseId, withParams } from "./refresh";
+
+/** Ширины колонок: название (гибкая), язык, продукт, индексация, частей, обновлён (UX-1c, S9) */
+const COLS = [null, 120, 170, 170, 110, 150] as const;
 
 const INGEST_TONE: Record<KbDocument["ingest_status"], StatusTone> = {
   pending: "default",
@@ -48,8 +53,9 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
   }
   return (
     <ScrollRegion label={t("documents.tableScroll")}>
-      <table className="pf-kb-table">
+      <table className="pf-kb-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 240) }}>
         <caption className="pf-sr-only">{t("documents.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("documents.columns.title")}</th>
@@ -82,7 +88,9 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
                 )}
               </td>
               <td>{t(`languages.${doc.language}`)}</td>
-              <td>{doc.product_key ?? t("documents.noProduct")}</td>
+              <td className="pf-ell" title={doc.product_key ?? undefined}>
+                {doc.product_key ?? t("documents.noProduct")}
+              </td>
               <td>
                 <IngestTag status={doc.ingest_status} />
               </td>
@@ -113,7 +121,7 @@ export function DocumentsView({ editable }: { editable: boolean }) {
             </h2>
           }
         >
-          <QueryState query={query} labels={labels}>
+          <QueryState query={query} labels={labels} rows={10}>
             {(data) => <DocumentsTable items={data.items} editable={editable} />}
           </QueryState>
         </Card>

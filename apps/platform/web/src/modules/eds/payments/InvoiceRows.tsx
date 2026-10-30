@@ -5,12 +5,17 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { withParams } from "../inbox/api";
 import { InvoiceStatus } from "./InvoiceStatus";
 import { invoicePath, moneyProps, rowAction } from "./model";
+
+/** Ширины колонок: номер и проект, клиент (гибкая), сумма, выставлен, срок, статус, действие (UX-1c, S9) */
+const COLS = [140, null, 150, 110, 140, 170, 140] as const;
 
 function useSelect() {
   const [params] = useSearchParams();
@@ -126,8 +131,12 @@ export function InvoiceRows({
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-dec-table pf-pay-table">
+      <table
+        className="pf-dec-table pf-pay-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 200) }}
+      >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -166,7 +175,9 @@ export function InvoiceRows({
                 </Link>
                 <div className="pf-hint">{row.project_number}</div>
               </td>
-              <td>{row.client_name}</td>
+              <td className="pf-ell" title={row.client_name}>
+                {row.client_name}
+              </td>
               <td className="pf-dec-right">
                 <Amount row={row} />
               </td>

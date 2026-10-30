@@ -2,6 +2,8 @@ import { Alert, Button, Skeleton } from "antd";
 import { type ReactNode, useId } from "react";
 
 import { ApiError } from "../api/errors";
+import { useShownKey } from "../lib/useShownKey";
+import { DataBlock, ListSkeleton } from "./DataBlock";
 import { EmptyState } from "./EmptyState";
 
 import "./form-parts.css";
@@ -89,6 +91,10 @@ export interface QueryLike<T> {
   error: unknown;
   data: T | undefined;
   refetch: () => unknown;
+  /** Прежние данные на время загрузки с новыми условиями (`keepSamePathData`, UX-1c) */
+  isPlaceholderData?: boolean;
+  /** Ключ запроса (хуки orval отдают его): по нему список перестраивается при новых условиях */
+  queryKey?: unknown;
 }
 
 export interface QueryStateLabels {
@@ -98,21 +104,62 @@ export interface QueryStateLabels {
   forbidden: { title: string; text: string };
 }
 
-/** Загрузка, «нет права» и сбой словами; данные получает функция-потомок. `level` — заголовок пустого состояния. */
+/**
+ * Загрузка, «нет права» и сбой словами; данные получает функция-потомок. `level` — заголовок пустого состояния.
+ * Скелетон — только при первой загрузке без данных (UX-1c, S8): при смене фильтра, вкладки и страницы видны прежние
+ * данные (`isPlaceholderData`). `rows` — список: блок данных (`DataBlock`) с полосой загрузки поверх прежних строк и
+ * скелетон высотой в страницу (`rows` — её размер).
+ */
 export function QueryState<T>({
   query,
   labels,
   level = 2,
   compact = false,
+  rows,
   children,
 }: {
   query: QueryLike<T>;
   labels: QueryStateLabels;
   level?: 2 | 3;
   compact?: boolean;
+  rows?: number;
   children: (data: T) => ReactNode;
 }) {
-  if (query.isPending) return <Skeleton active paragraph={{ rows: 4 }} title={false} />;
+  const placeholder = query.isPlaceholderData === true;
+  const shownKey = useShownKey(query.queryKey, placeholder);
+  const content = queryContent({ query, labels, level, compact, rows, children });
+  if (rows === undefined) return <>{content}</>;
+  return (
+    <DataBlock busy={placeholder} resetKey={shownKey}>
+      {content}
+    </DataBlock>
+  );
+}
+
+function queryContent<T>({
+  query,
+  labels,
+  level,
+  compact,
+  rows,
+  children,
+}: {
+  query: QueryLike<T>;
+  labels: QueryStateLabels;
+  level: 2 | 3;
+  compact: boolean;
+  rows: number | undefined;
+  children: (data: T) => ReactNode;
+}): ReactNode {
+  if (query.isPending) {
+    return rows === undefined ? (
+      <div data-pf-skeleton="">
+        <Skeleton active paragraph={{ rows: 4 }} title={false} />
+      </div>
+    ) : (
+      <ListSkeleton rows={rows} />
+    );
+  }
   if (query.isError || query.data === undefined) {
     const error = query.error;
     const text =
@@ -141,5 +188,5 @@ export function QueryState<T>({
       />
     );
   }
-  return <>{children(query.data)}</>;
+  return children(query.data);
 }

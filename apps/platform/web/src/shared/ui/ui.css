@@ -289,6 +289,29 @@
   line-height: 36px;
   font-variant-numeric: tabular-nums;
 }
+/* Счётчик до ответа: те же строки 20/36/20 px, вместо текста — полосы (UX-1c, S10). */
+.pf-counter-skel {
+  pointer-events: none;
+}
+.pf-counter-skel .pf-counter-label,
+.pf-counter-skel .pf-counter-value,
+.pf-counter-skel .pf-counter-source {
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+.pf-counter-skel .pf-counter-value {
+  height: 36px;
+}
+.pf-counter-skel-bar {
+  display: block;
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.06);
+}
+.pf-counter-skel .pf-counter-value .pf-counter-skel-bar {
+  height: 24px;
+}
 
 /* --- History: точка 16, вертикальная линия 2 px; рамка и заливка точки ≥ 3:1 на белом (WCAG 1.4.11) --- */
 .pf-history {
@@ -478,6 +501,31 @@
 .pf-docnum {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+.pf-docnum-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+/* Кнопка копирования — 16 px; без буфера обмена на её месте пустой слот той же ширины (UX-1c, S9). */
+.pf-docnum-copy-btn {
+  display: inline-flex;
+  flex: 0 0 16px;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #6e6e6e;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pf-docnum-copy-slot {
+  cursor: default;
 }
 
 /* --- ContextPanel: активная вкладка — цветом и полосой Tabs, без смены насыщенности: соседи не сдвигаются (UX-1b, S13) --- */

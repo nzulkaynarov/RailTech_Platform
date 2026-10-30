@@ -4,12 +4,17 @@ import { Link, useNavigate, useSearchParams } from "react-router";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentMemoRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { withParams } from "../inbox/api";
 import { memoPath, moneyProps } from "./model";
+
+/** Ширины колонок: номер и тема (гибкая), автор, сумма, срок, счёт, статус, действие (UX-1c, S9) */
+const COLS = [null, 170, 150, 110, 140, 170, 140] as const;
 
 function useSelect() {
   const [params] = useSearchParams();
@@ -107,8 +112,12 @@ export function MemoRows({
   }
   return (
     <ScrollRegion label={t("memo.scroll")}>
-      <table className="pf-dec-table pf-pay-table">
+      <table
+        className="pf-dec-table pf-pay-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 200) }}
+      >
         <caption className="pf-sr-only">{t("memo.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("memo.columns.number")}</th>
@@ -147,7 +156,9 @@ export function MemoRows({
                 </Link>
                 <div className="pf-hint">{row.subject}</div>
               </td>
-              <td>{row.author.full_name}</td>
+              <td className="pf-ell" title={row.author.full_name}>
+                {row.author.full_name}
+              </td>
               <td className="pf-dec-right">
                 {row.amount ? <MoneyText {...moneyProps(row.amount)} /> : "—"}
               </td>

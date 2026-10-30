@@ -7,11 +7,16 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { StockPendingReceiptLine } from "../../../shared/api/generated/model";
 import { useListStockReceipts } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
 import { ReceiveModal } from "./OrderModals";
+
+/** Ширины колонок: заказ, поставщик, позиция (гибкая), осталось, ожидается, действие (UX-1c, S9) */
+const COLS = [140, 200, null, 120, 140, 150] as const;
 
 function Pending({
   items,
@@ -73,8 +78,12 @@ function Pending({
   }
   return (
     <ScrollRegion label={t("receipts.pendingScroll")}>
-      <table className="pf-calc-table">
+      <table
+        className="pf-calc-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 220) }}
+      >
         <caption className="pf-sr-only">{t("receipts.pendingCaption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("receipts.columns.order")}</th>
@@ -95,7 +104,9 @@ function Pending({
                   {line.order_number}
                 </Link>
               </td>
-              <td>{line.supplier}</td>
+              <td className="pf-ell" title={line.supplier}>
+                {line.supplier}
+              </td>
               <td>
                 <div>{line.name}</div>
                 <div className="pf-hint pf-num">{line.article}</div>
@@ -125,7 +136,7 @@ export function ReceiptsTab() {
   const [receiving, setReceiving] = useState<StockPendingReceiptLine | null>(null);
   return (
     <div className="pf-calc-stack">
-      <QueryState query={query} labels={labels}>
+      <QueryState query={query} labels={labels} rows={10}>
         {(data) => (
           <>
             <Card

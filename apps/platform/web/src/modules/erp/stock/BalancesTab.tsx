@@ -6,11 +6,16 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { StockRow } from "../../../shared/api/generated/model";
 import { useListStockBalances } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useStateLabels } from "./api";
 import { ProductDrawer } from "./ProductDrawer";
+
+/** Ширины колонок: номенклатура (гибкая), на складе, резерв, свободно, в пути, ячейки (UX-1c, S9) */
+const COLS = [null, 120, 100, 140, 160, 160] as const;
 
 function Incoming({ row }: { row: StockRow }) {
   const { t } = useTranslation("stock");
@@ -82,8 +87,12 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
   }
   return (
     <ScrollRegion label={t("balances.scroll")}>
-      <table className="pf-calc-table">
+      <table
+        className="pf-calc-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 240) }}
+      >
         <caption className="pf-sr-only">{t("balances.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("balances.columns.product")}</th>
@@ -162,7 +171,7 @@ export function BalancesTab() {
             {t("balances.only")}
           </Checkbox>
         </div>
-        <QueryState query={query} labels={labels}>
+        <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState

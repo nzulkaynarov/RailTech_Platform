@@ -192,6 +192,61 @@ describe("Баннер настройки и мастер", () => {
     );
   });
 
+  it("баннер не вставляется над готовым экраном: до ответа чек-листа рабочая область скрыта и держит место (UX-1c, S10)", async () => {
+    let answer: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    server.use(
+      http.get("*/setup/checklist", async () => {
+        await gate;
+        return undefined;
+      }),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+    const main = await screen.findByRole("main", { hidden: true });
+    expect(main).toHaveStyle({ visibility: "hidden" });
+    expect(main).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
+
+    answer();
+    const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
+    expect(banner).toBeVisible();
+    expect(main).not.toHaveAttribute("aria-busy");
+  });
+
+  it("чек-лист завис — через 800 мс рабочая область всё равно видна, баннер придёт позже (UX-1c, предел ожидания)", async () => {
+    let answer: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    server.use(
+      http.get("*/setup/checklist", async () => {
+        await gate;
+        return undefined;
+      }),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+    const main = await screen.findByRole("main", { hidden: true });
+    expect(main).toHaveStyle({ visibility: "hidden" });
+    const started = Date.now();
+    await waitFor(
+      () => {
+        expect(main).not.toHaveStyle({ visibility: "hidden" });
+      },
+      { timeout: 3000 },
+    );
+    expect(Date.now() - started).toBeLessThan(2000);
+    expect(main).not.toHaveAttribute("aria-busy");
+    expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
+
+    // Ответ пришёл позже — баннер показывается (один сдвиг допустим как исключение)
+    answer();
+    expect(await screen.findByRole("region", { name: "Настройка Платформы" })).toBeVisible();
+  });
+
   it("«Скрыть до завтра» убирает баннер до начала следующих суток и запоминает выбор в браузере", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");

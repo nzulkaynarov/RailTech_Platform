@@ -1,4 +1,4 @@
-import { Button, Card, Input, Segmented, Select, Tabs } from "antd";
+import { Button, Card, Input, Segmented, Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -16,10 +16,13 @@ import { useListCrmLeads, useTakeCrmLead } from "../../../shared/api/generated/p
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { TabsBar } from "../../../shared/ui/TabsBar";
 import { actionError, channelLabel } from "../messages/labels";
 import { canCreateFromLead } from "../common/access";
 import { Sheet } from "../common/Sheet";
@@ -45,6 +48,8 @@ const TABS = [
 ] as const satisfies readonly ListCrmLeadsTab[];
 const SCOPES = ["all", "mine", "overdue"] as const satisfies readonly ListCrmLeadsScope[];
 const CHANNELS = ["telegram", "web", "email", "phone", "referral"] as const;
+/** Ширины колонок: имя, статус, что нужно, ответственный, последнее, действие (UX-1c, S9) */
+const COLS = [null, 150, null, 170, 130, 170] as const;
 
 function pick<T extends string>(list: readonly T[], value: string | null, fallback: T): T {
   return list.find((item) => item === value) ?? fallback;
@@ -180,8 +185,9 @@ function LeadsTable({
   const { t } = useTranslation(["leads", "messages"]);
   return (
     <ScrollRegion label={t("leads:tableScroll")}>
-      <table className="pf-crm-table">
+      <table className="pf-crm-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS) }}>
         <caption className="pf-sr-only">{t("leads:caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("leads:columns.name")}</th>
@@ -205,7 +211,9 @@ function LeadsTable({
                 <StatusTag kind="lead" status={row.status} />
               </td>
               <td className="pf-crm-need">{row.need ?? <span aria-hidden="true">—</span>}</td>
-              <td>{row.assigned?.name ?? t("leads:nobody")}</td>
+              <td className="pf-ell" title={row.assigned?.name ?? t("leads:nobody")}>
+                {row.assigned?.name ?? t("leads:nobody")}
+              </td>
               <td>
                 <LastMessage row={row} />
               </td>
@@ -317,7 +325,7 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   };
 
   const body = (
-    <QueryState query={list} labels={labels}>
+    <QueryState query={list} labels={labels} rows={PAGE_SIZE}>
       {(data) =>
         data.items.length === 0 ? (
           <EmptyState
@@ -433,19 +441,18 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
         {mobile ? (
           body
         ) : (
-          <Tabs
-            aria-label={t("leads:tabs.label")}
+          <TabsBar
+            id="pf-leads-tabs"
+            label={t("leads:tabs.label")}
             activeKey={tab}
             onChange={(key) => {
               change({ status: key === "all" ? null : key, offset: null });
             }}
             tabBarStyle={{ margin: 0, padding: "0 16px" }}
-            items={TABS.map((key) => ({
-              key,
-              label: t(`leads:tabs.${key}`),
-              children: key === tab ? body : null,
-            }))}
-          />
+            items={TABS.map((key) => ({ key, label: t(`leads:tabs.${key}`) }))}
+          >
+            {body}
+          </TabsBar>
         )}
       </Card>
       {lead ? (

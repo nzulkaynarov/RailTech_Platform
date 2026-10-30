@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Segmented, Skeleton } from "antd";
+import { Button, Card, Segmented } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -14,6 +14,9 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -24,6 +27,9 @@ import { DocumentStatusTag } from "../documents/status";
 import { type Scope, quotePath, scopeOf } from "./api";
 import { ApprovalSlot } from "./ApprovalPanel";
 import { useStateLabels } from "./labels";
+
+/** Ширины колонок: номер, заявка, клиент (гибкая), сумма, срок, получено, статус, действие (UX-1c, S9) */
+const COLS = [130, 130, null, 140, 100, 130, 170, 120] as const;
 
 const PAGE = 25;
 
@@ -105,8 +111,9 @@ function Rows({
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-dec-table">
+      <table className="pf-dec-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 180) }}>
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -148,7 +155,9 @@ function Rows({
                 <div className="pf-hint">{t("list.version", { version: row.version })}</div>
               </td>
               <td className="pf-num">{row.request_number ?? "—"}</td>
-              <td>{row.client_name ?? "—"}</td>
+              <td className="pf-ell" title={row.client_name ?? undefined}>
+                {row.client_name ?? "—"}
+              </td>
               <td className="pf-dec-right">
                 <Total row={row} />
               </td>
@@ -212,9 +221,10 @@ export function QuoteList() {
     );
   };
 
+  const shownKey = useShownKey(getListQuoteApprovalsQueryKey(listParams), query.isPlaceholderData);
   let body;
   if (query.isPending) {
-    body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (query.isError) {
     const error = query.error;
     const text =
@@ -304,7 +314,11 @@ export function QuoteList() {
           }}
         />
       ) : null}
-      <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+          {body}
+        </DataBlock>
+      </Card>
       {selected ? <ApprovalSlot quoteRef={selected} brief /> : null}
     </div>
   );

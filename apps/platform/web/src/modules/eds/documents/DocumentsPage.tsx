@@ -1,4 +1,4 @@
-import { Button, Card, Select, Segmented, Tabs } from "antd";
+import { Button, Card, Select, Segmented } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -13,14 +13,18 @@ import type {
 } from "../../../shared/api/generated/model";
 import { useListEdsDocuments } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { useShownValue } from "../../../shared/lib/useShownKey";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PlusIcon } from "../../../shared/ui/icons";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { TabsBar } from "../../../shared/ui/TabsBar";
 import { DocumentSheet } from "./DocumentSheet";
 import { parseDocumentId, withParams } from "./params";
 import { DocumentStatusTag } from "./status";
@@ -28,6 +32,14 @@ import { DocumentStatusTag } from "./status";
 import "./documents.css";
 
 const PAGE_SIZE = 25;
+/**
+ * Ширины колонок (UX-1c, S9): номер, тема (гибкая), тип, статус, сумма, срок, [ответственный — в реестре «Все»], создан,
+ * действие.
+ */
+const colsOf = (scope: Scope) =>
+  scope === "all"
+    ? ([130, null, 110, 160, 110, 100, 130, 100, 120] as const)
+    : ([130, null, 110, 160, 110, 100, 100, 120] as const);
 const KIND_TABS = [
   "all",
   "memo",
@@ -177,10 +189,15 @@ function DocumentsTable({
   const { t } = useTranslation("documents");
   const { date } = useFormat();
   const isOwn = useIsOwn(scope);
+  const cols = colsOf(scope);
   return (
     <ScrollRegion label={t("list.tableScroll")}>
-      <table className="pf-docs-table">
+      <table
+        className="pf-docs-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(cols, 140) }}
+      >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={cols} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -209,16 +226,24 @@ function DocumentsTable({
               <td className="pf-docs-subject">
                 <SubjectCell row={row} params={params} selected={selected === row.id} />
               </td>
-              <td>{t(`kinds.${row.kind}`)}</td>
+              <td className="pf-ell" title={t(`kinds.${row.kind}`)}>
+                {t(`kinds.${row.kind}`)}
+              </td>
               <td>
                 <DocumentStatusTag kind={row.kind} status={row.status} />
               </td>
               <td className="num">
                 <Amount row={row} />
               </td>
-              <td>{row.due_date ? date(row.due_date) : <span aria-hidden="true">—</span>}</td>
-              {scope === "all" ? <td>{row.author?.full_name ?? "—"}</td> : null}
-              <td>{date(row.created_at)}</td>
+              <td className="pf-num">
+                {row.due_date ? date(row.due_date) : <span aria-hidden="true">—</span>}
+              </td>
+              {scope === "all" ? (
+                <td className="pf-ell" title={row.author?.full_name ?? undefined}>
+                  {row.author?.full_name ?? "—"}
+                </td>
+              ) : null}
+              <td className="pf-num">{date(row.created_at)}</td>
               <td>
                 <RowAction row={row} own={isOwn(row)} />
               </td>
@@ -321,6 +346,8 @@ export function DocumentsPage() {
     [scope, tab, status, cursor],
   );
   const list = useListEdsDocuments(query);
+  // Колонки, подписи и подзаголовок — по реестру, к которому относятся строки на экране (UX-1c, S8)
+  const shownScope = useShownValue(scope, list.isPlaceholderData);
 
   const setFilter = (changes: Record<string, string | null>) => {
     setParams(
@@ -363,21 +390,21 @@ export function DocumentsPage() {
   );
 
   const body = (
-    <QueryState query={list} labels={labels}>
+    <QueryState query={list} labels={labels} rows={PAGE_SIZE}>
       {(data) =>
         data.items.length === 0 ? (
           <EmptyState
             title={t(
               filtered
                 ? "documents:list.empty.filteredTitle"
-                : scope === "all"
+                : shownScope === "all"
                   ? "documents:list.empty.allTitle"
                   : "documents:list.empty.mineTitle",
             )}
             text={t(
               filtered
                 ? "documents:list.empty.filteredText"
-                : scope === "all"
+                : shownScope === "all"
                   ? "documents:list.empty.allText"
                   : "documents:list.empty.mineText",
             )}
@@ -392,9 +419,19 @@ export function DocumentsPage() {
         ) : (
           <>
             {mobile ? (
-              <DocumentsList items={data.items} scope={scope} selected={docId} params={params} />
+              <DocumentsList
+                items={data.items}
+                scope={shownScope}
+                selected={docId}
+                params={params}
+              />
             ) : (
-              <DocumentsTable items={data.items} scope={scope} selected={docId} params={params} />
+              <DocumentsTable
+                items={data.items}
+                scope={shownScope}
+                selected={docId}
+                params={params}
+              />
             )}
             {cursors.length > 0 || data.next_cursor ? (
               <nav className="pf-docs-pager" aria-label={t("documents:list.paging.label")}>
@@ -430,7 +467,9 @@ export function DocumentsPage() {
     <div className="pf-docs">
       <PageHeader
         title={title}
-        subtitle={t(scope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle")}
+        subtitle={t(
+          shownScope === "all" ? "documents:list.subtitleAll" : "documents:list.subtitle",
+        )}
         extra={
           canEdit(me, "eds.memo.create") ? (
             <LinkButton type="primary" icon={<PlusIcon />} to="/eds/new">
@@ -493,19 +532,18 @@ export function DocumentsPage() {
         {mobile ? (
           body
         ) : (
-          <Tabs
-            aria-label={t("documents:list.tabs.label")}
+          <TabsBar
+            id="pf-docs-tabs"
+            label={t("documents:list.tabs.label")}
             activeKey={tab}
             onChange={(key) => {
               setFilter({ kind: key === "all" ? null : key });
             }}
             tabBarStyle={{ margin: 0, padding: "0 16px" }}
-            items={kindTabs.map((key) => ({
-              key,
-              label: t(`documents:list.tabs.${key}`),
-              children: key === tab ? body : null,
-            }))}
-          />
+            items={kindTabs.map((key) => ({ key, label: t(`documents:list.tabs.${key}`) }))}
+          >
+            {body}
+          </TabsBar>
         )}
       </Card>
       {docId ? <DocumentSheet id={docId} /> : null}

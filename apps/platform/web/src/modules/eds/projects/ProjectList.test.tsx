@@ -118,7 +118,11 @@ describe("Проекты: список", () => {
   it("админ без раздела — «Нет доступа»", async () => {
     signIn("admin@demo.example");
     renderAt("/eds/projects");
-    expect(await screen.findByText(/Нет доступа/)).toBeVisible();
+    const denied = await screen.findByText(/Нет доступа/);
+    // Администратору рабочая область видна после ответа чек-листа настройки (UX-1c, S10)
+    await waitFor(() => {
+      expect(denied).toBeVisible();
+    });
     expect(screen.queryByRole("table")).toBeNull();
   });
 });

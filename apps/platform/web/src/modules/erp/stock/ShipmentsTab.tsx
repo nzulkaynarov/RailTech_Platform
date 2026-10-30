@@ -11,10 +11,15 @@ import {
   useShipFromStock,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
+
+/** Ширины колонок: накладная, заявка, строки (гибкая), трек, когда (UX-1c, S9) */
+const COLS = [130, 180, null, 180, 170] as const;
 
 function NewShipment({ manage }: { manage: boolean }) {
   const { t } = useTranslation("stock");
@@ -195,8 +200,12 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
   }
   return (
     <ScrollRegion label={t("shipments.scroll")}>
-      <table className="pf-calc-table">
+      <table
+        className="pf-calc-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 240) }}
+      >
         <caption className="pf-sr-only">{t("shipments.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("shipments.columns.number")}</th>
@@ -253,7 +262,7 @@ export function ShipmentsTab() {
         title={<h2 className="pf-calc-title">{t("shipments.listTitle")}</h2>}
         styles={{ body: { padding: 0 } }}
       >
-        <QueryState query={query} labels={labels} level={3}>
+        <QueryState query={query} labels={labels} level={3} rows={10}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState title={t("shipments.empty.title")} text={t("shipments.empty.text")} />

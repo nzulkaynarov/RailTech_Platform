@@ -7,6 +7,7 @@ import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/br
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
+import { useSetupKnown } from "../../features/first-run/useSetupKnown";
 import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
@@ -76,6 +77,7 @@ export function AppShell() {
     Boolean(match?.objectId && !isStubSection(match.module.code, match.section.key)),
   );
   const setupPending = useSetupPending();
+  const setupKnown = useSetupKnown();
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
   const panelWidthPx = panels.panelWidth === "wide" ? 600 : 440;
   const dockFits = useDockFits(!viewport.mobile && panels.menuOpen, panelWidthPx);
@@ -434,7 +436,11 @@ export function AppShell() {
             id="main-content"
             tabIndex={-1}
             className="pf-main"
+            aria-busy={setupKnown ? undefined : true}
             style={{
+              // Баннер настройки не вставляется над готовым экраном: до ответа чек-листа администратора область скрыта
+              // и держит место, экран под ней уже грузится (UX-1c, S10; `useSetupKnown`).
+              visibility: setupKnown ? undefined : "hidden",
               overflow: "auto",
               // Полоса прокрутки не съедает ширину при появлении (Windows, 15 px; аудит 2026-10-30, S15). На телефоне
               // полосы поверх контента, а 15 px резерва в узком окне браузера сжимали шапки карточек до нуля.

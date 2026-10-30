@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Input, Segmented, Skeleton } from "antd";
+import { Button, Card, Input, Segmented } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -13,6 +13,8 @@ import {
   listPayments,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { useLastDefined, useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { withParams } from "../inbox/api";
@@ -78,14 +80,21 @@ export function PaymentList() {
     ...(query && tab !== "memos" ? { q: query } : {}),
     limit: tab === "memos" ? 1 : PAGE,
   };
+  const boardKey = getListPaymentsQueryKey(boardParams);
   const board = useInfiniteQuery({
-    queryKey: getListPaymentsQueryKey(boardParams),
+    queryKey: boardKey,
     queryFn: ({ pageParam }) => listPayments({ ...boardParams, offset: pageParam }),
     initialPageParam: 0,
     getNextPageParam: (last, pages) => {
       const loaded = pages.reduce((total, page) => total + page.items.length, 0);
       return loaded < last.count ? loaded : undefined;
     },
+    // Прежние строки — только от списка счетов: на вкладке служебок тот же запрос идёт за одним счётом (ради чисел
+    // вкладок), и его строка не должна мелькнуть вместо списка (UX-1c, S8)
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[0] === boardKey[0] && previousQuery.queryKey[1]?.limit === PAGE
+        ? previous
+        : undefined,
   });
   const memoParams = { status: memoStatus, limit: PAGE };
   const memos = useInfiniteQuery({
@@ -109,10 +118,15 @@ export function PaymentList() {
     text: t("payments:state.erpForbidden.text"),
   };
 
+  const memosTab = tab === "memos";
+  const shownKey = useShownKey(
+    memosTab ? getListPaymentMemosQueryKey(memoParams) : getListPaymentsQueryKey(boardParams),
+    memosTab ? memos.isPlaceholderData : board.isPlaceholderData,
+  );
   let body;
   if (tab === "memos") {
     if (memos.isPending) {
-      body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+      body = <ListSkeleton rows={PAGE} />;
     } else if (memos.isError) {
       const state = errorState(memos.error, labels, erpText);
       body = (
@@ -168,7 +182,7 @@ export function PaymentList() {
       );
     }
   } else if (board.isPending) {
-    body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (board.isError) {
     const state = errorState(board.error, labels, erpText);
     body = (
@@ -229,8 +243,11 @@ export function PaymentList() {
     );
   }
 
-  const counts = board.isError ? undefined : first?.counts;
-  const memosToPay = first ? first.memos_to_pay : undefined;
+  // Числа вкладок — последние известные, пока счета перечитываются с другой вкладкой (UX-1c, S8)
+  const knownCounts = useLastDefined(first?.counts);
+  const knownMemos = useLastDefined(first ? first.memos_to_pay : undefined);
+  const counts = board.isError ? undefined : knownCounts;
+  const memosToPay = board.isError ? undefined : knownMemos;
 
   return (
     <div className="pf-dec-page">
@@ -267,7 +284,14 @@ export function PaymentList() {
           />
         </div>
       )}
-      <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock
+          busy={memosTab ? memos.isPlaceholderData : board.isPlaceholderData}
+          resetKey={shownKey}
+        >
+          {body}
+        </DataBlock>
+      </Card>
       {tab !== "memos" && selectedPayment && /^\d+$/.test(selectedPayment) ? (
         <PaymentSlot invoiceId={Number(selectedPayment)} brief />
       ) : null}

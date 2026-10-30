@@ -8,6 +8,8 @@ import { useListCrmClients } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -17,6 +19,9 @@ import { CreateRequest } from "../request/CreateRequest";
 import { ClientPanel } from "./ClientPanel";
 
 import "../crm.css";
+
+/** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9) */
+const COLS = [null, 140, 100, 170, 150] as const;
 
 function ErpTag({ row }: { row: ClientRow }) {
   const { t } = useTranslation("clients");
@@ -122,7 +127,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
         </div>
       </div>
       <Card styles={{ body: { padding: 0 } }}>
-        <QueryState query={list} labels={labels}>
+        <QueryState query={list} labels={labels} rows={20}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState
@@ -153,8 +158,12 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
               </ul>
             ) : (
               <ScrollRegion label={t("clients:tableScroll")}>
-                <table className="pf-crm-table">
+                <table
+                  className="pf-crm-table pf-fixed-table"
+                  style={{ minWidth: tableMinWidth(COLS, 240) }}
+                >
                   <caption className="pf-sr-only">{t("clients:caption")}</caption>
+                  <TableCols widths={COLS} />
                   <thead>
                     <tr>
                       <th scope="col">{t("clients:columns.name")}</th>
@@ -172,7 +181,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                         <td className="pf-crm-wrap">
                           <NameLink row={row} params={params} selected={selected === row.id} />
                         </td>
-                        <td>{row.inn ?? <span aria-hidden="true">—</span>}</td>
+                        <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
                         <td className="num">{row.open_requests}</td>
                         <td>
                           <ErpTag row={row} />

@@ -33,6 +33,37 @@ async function main() {
 }
 
 describe("Dashboard · Моя очередь", () => {
+  it("до ответа — счётчики-скелетоны той же сетки, сколько было в прошлый раз; потом настоящие (UX-1c, S10)", async () => {
+    let answer: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    server.use(
+      http.get("*/queue/cards", async () => {
+        await gate;
+        return undefined;
+      }),
+    );
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+    // Впервые в этом браузере — четыре карточки-заглушки
+    expect(page.querySelectorAll(".pf-counter-skel")).toHaveLength(4);
+
+    answer();
+    await within(page).findByRole("link", { name: /Входящие без резолюции/ });
+    expect(page.querySelector(".pf-counter-skel")).toBeNull();
+    const shown = page.querySelectorAll(".pf-counter:not(.pf-counter-skel)").length;
+    // Число запомнено: в следующий раз заглушек столько же
+    expect(
+      Object.keys(window.localStorage).some(
+        (key) =>
+          key.startsWith("rt-pf-queue-cards:") &&
+          window.localStorage.getItem(key) === String(shown),
+      ),
+    ).toBe(true);
+  });
+
   it("пока очередь грузится, карточка-заглушка — область status с именем, а не безымянный div (axe, W15-G-4)", async () => {
     server.use(
       http.get("*/queue", async () => {

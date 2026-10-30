@@ -1,0 +1,123 @@
+/* Данные обновляются на месте (UX-1c, аудит 2026-10-30, S8, S9; platform-frontend.md §4.1, инвариант 6). */
+.pf-data-block {
+  position: relative;
+}
+/* Признак загрузки с прежними строками: полоса 2 px поверх верхнего края, без сдвига; появляется через 150 мс, чтобы
+   быстрый ответ не мигал. */
+.pf-data-block[data-busy]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 2;
+  height: 2px;
+  background:
+    linear-gradient(90deg, transparent 0%, #1668dc 50%, transparent 100%) 0 0 / 40% 100% no-repeat,
+    #e6f4ff;
+  opacity: 0;
+  pointer-events: none;
+  animation:
+    pf-busy-in 0s linear 150ms forwards,
+    pf-busy-run 1.1s linear 150ms infinite;
+}
+@keyframes pf-busy-in {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pf-busy-run {
+  from {
+    background-position:
+      -40% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      140% 0,
+      0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-data-block[data-busy]::before {
+    animation: pf-busy-in 0s linear 150ms forwards;
+    background: #1668dc;
+  }
+}
+
+/* Скелетон первой загрузки: строки высотой строки таблицы, с отступом 16 px от рамки карточки. */
+.pf-list-skel {
+  padding: 8px 16px;
+}
+.pf-list-skel-row {
+  display: flex;
+  align-items: center;
+  height: var(--pf-skel-row, 44px);
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-list-skel-row:last-child {
+  border-bottom: 0;
+}
+.pf-list-skel-bar {
+  display: block;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.06) 25%,
+    rgba(0, 0, 0, 0.12) 37%,
+    rgba(0, 0, 0, 0.06) 63%
+  );
+  background-size: 400% 100%;
+  animation: pf-skel-shine 1.4s ease infinite;
+}
+@keyframes pf-skel-shine {
+  from {
+    background-position: 100% 50%;
+  }
+  to {
+    background-position: 0 50%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf-list-skel-bar {
+    animation: none;
+  }
+}
+
+/* Таблицы рабочих списков: ширины колонок из <colgroup>, а не из содержимого страницы (S9). */
+.pf-fixed-table {
+  table-layout: fixed;
+  width: 100%;
+}
+.pf-fixed-table th,
+.pf-fixed-table td {
+  overflow-wrap: anywhere;
+}
+/* Тег статуса не вылезает в соседнюю колонку: длинный переносится внутри своей. */
+.pf-fixed-table .ant-tag {
+  max-width: 100%;
+  /* у StatusTag в разметке nowrap: в таблице с фиксированными колонками перенос важнее */
+  white-space: normal !important;
+}
+/* Одна строка с многоточием; полный текст — в `title`. */
+.pf-fixed-table .pf-ell {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pf-fixed-table .pf-ell a {
+  outline-offset: -2px;
+}
+/* Номера, даты и суммы: цифры одной ширины. */
+.pf-fixed-table .pf-num,
+.pf-fixed-table .num,
+.pf-fixed-table .pf-dec-right {
+  font-variant-numeric: tabular-nums;
+}
+
+/* TabsBar: у antd `Tabs` остаётся только полоса вкладок, панель — своя, общая для всех вкладок. */
+.pf-tabs-bar > .ant-tabs-content-holder {
+  display: none;
+}
+.pf-tabs-bar > .ant-tabs-nav {
+  margin-bottom: 0;
+}
