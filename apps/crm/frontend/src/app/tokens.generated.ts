@@ -44,7 +44,7 @@ export const RT_TOKENS = {
   colorBorderSecondary: "#f0f0f0",
   colorBgLayout: "#f5f5f5",
   colorBgContainer: "#ffffff",
-  fontFamily: 'Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif',
+  fontFamily: "'Inter Variable', Inter, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif",
   fontFamilyCode: "ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace",
   fontSize: 14,
   borderRadius: 6,

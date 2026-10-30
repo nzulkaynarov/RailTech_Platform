@@ -191,7 +191,7 @@ test("значения SPEC-v3 §5.2 / docs/architecture/platform-frontend.md §
   assert.deepEqual([c.surface.border, c.surface.split], ["#d9d9d9", "#f0f0f0"]);
   assert.deepEqual([c.surface.layout, c.surface.background], ["#f5f5f5", "#ffffff"]);
   assert.deepEqual([tokens.radius.md, tokens.radius.lg], [6, 8]);
-  assert.equal(tokens.font.family, 'Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif');
+  assert.equal(tokens.font.family, `'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`);
 });
 
 test("AntD: статусные цвета — «text», затравки только в RT_STATUS_FILL", () => {
