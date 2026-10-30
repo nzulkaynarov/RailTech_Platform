@@ -54,36 +54,26 @@ export function DocNumber({ number, base, copyable = true }: DocNumberProps) {
     numberNode
   );
 
-  if (!copyable || !canCopy()) {
-    return mainContent;
-  }
+  if (!copyable) return mainContent;
 
+  // Место под кнопку держится всегда (UX-1c, S9): без буфера обмена (http) — пустое место той же ширины, и колонка
+  // номера не меняет ширину от того, есть ли кнопка.
   return (
-    <span
-      className="pf-docnum-wrap"
-      style={{ display: "inline-flex", alignItems: "center", gap: 4 }}
-    >
+    <span className="pf-docnum-wrap">
       {mainContent}
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="pf-docnum-copy-btn"
-        title={t("docNumber.copy")}
-        aria-label={t("docNumber.copyNumber", { number })}
-        style={{
-          border: "none",
-          background: "transparent",
-          padding: "0 2px",
-          cursor: "pointer",
-          color: "#6e6e6e",
-          display: "inline-flex",
-          alignItems: "center",
-          fontSize: 12,
-          lineHeight: 1,
-        }}
-      >
-        <CopyOutlined />
-      </button>
+      {canCopy() ? (
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="pf-docnum-copy-btn"
+          title={t("docNumber.copy")}
+          aria-label={t("docNumber.copyNumber", { number })}
+        >
+          <CopyOutlined />
+        </button>
+      ) : (
+        <span className="pf-docnum-copy-btn pf-docnum-copy-slot" aria-hidden="true" />
+      )}
     </span>
   );
 }

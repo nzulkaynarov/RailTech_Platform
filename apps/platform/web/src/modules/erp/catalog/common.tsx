@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { CatalogOffer } from "../../../shared/api/generated/model";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -20,6 +22,13 @@ export interface Column<T> {
   render: (row: T) => ReactNode;
   /** Число: выравнивание по правому краю */
   num?: boolean;
+  /** Ширина колонки, px; без неё — числа 130 px, остальные делят остаток поровну (UX-1c, S9) */
+  width?: number;
+}
+
+/** Ширина колонки таблицы: своя, у чисел 130 px, у прочих — гибкая (`null`). */
+function columnWidth<T>(column: Column<T>): number | null {
+  return column.width ?? (column.num ? 130 : null);
 }
 
 /**
@@ -61,10 +70,15 @@ export function DataList<T extends object>({
       </ul>
     );
   }
+  const widths = columns.map(columnWidth);
   return (
     <ScrollRegion label={label}>
-      <table className="pf-cat-table">
+      <table
+        className="pf-cat-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(widths, 160) }}
+      >
         <caption className="pf-sr-only">{label}</caption>
+        <TableCols widths={widths} />
         <thead>
           <tr>
             {columns.map((column) => (

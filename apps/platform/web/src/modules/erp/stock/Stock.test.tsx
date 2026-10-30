@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
+import { listSettled } from "../../../test/settled";
 
 setupCalcTests();
 
@@ -45,6 +46,7 @@ describe("Склад · остатки и резервы", () => {
     await openStock("supply@demo.example");
     await screen.findByRole("table", { name: "Остатки и резервы по номенклатуре" });
     fireEvent.click(screen.getByRole("checkbox", { name: "Только с резервом" }));
+    await listSettled();
     expect(await screen.findByText("Скрепление рельсовое КБ-65")).toBeVisible();
     expect(
       screen.queryByText("Привод стрелочный электромеханический СП-6М"),
@@ -94,7 +96,11 @@ describe("Склад · остатки и резервы", () => {
   it("роль без раздела «Склад» получает экран «нет доступа»", async () => {
     signIn("admin@demo.example");
     renderAt("/erp/stock");
-    expect(await screen.findByText(/нет доступа|Нет доступа|не положен/i)).toBeVisible();
+    const denied = await screen.findByText(/нет доступа|Нет доступа|не положен/i);
+    // Администратору рабочая область видна после ответа чек-листа настройки (UX-1c, S10)
+    await waitFor(() => {
+      expect(denied).toBeVisible();
+    });
     expect(screen.queryByRole("heading", { level: 1, name: "Склад" })).not.toBeInTheDocument();
   });
 });

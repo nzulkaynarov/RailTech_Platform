@@ -1,5 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { createQueryClient } from "./queryClient";
 import { HttpResponse, http } from "msw";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -21,7 +21,7 @@ import { PANELS_STORAGE_KEY, usePanelsStore } from "./shell/panelsStore";
 import { ROLE_ID, type PresetCode } from "../mocks/fixtures/roles";
 
 function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = createQueryClient({ retry: false, staleTime: 0 });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <AppProviders queryClient={queryClient}>

@@ -120,7 +120,7 @@ function RatesView() {
           </Button>
         ) : null}
       </div>
-      <QueryState query={query} labels={queryLabels(t)}>
+      <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState title={t("refs.rates.empty.title")} text={t("refs.rates.empty.text")} />
@@ -331,7 +331,7 @@ function HsView() {
           </Button>
         ) : null}
       </div>
-      <QueryState query={query} labels={queryLabels(t)}>
+      <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState title={t("refs.hs.empty.title")} text={t("refs.hs.empty.text")} />
@@ -558,7 +558,7 @@ function BrandsView() {
           </Button>
         ) : null}
       </div>
-      <QueryState query={query} labels={queryLabels(t)}>
+      <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState title={t("refs.brands.empty.title")} text={t("refs.brands.empty.text")} />

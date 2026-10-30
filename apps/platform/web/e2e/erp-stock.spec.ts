@@ -105,7 +105,8 @@ test.describe("Склад и закупки: снабженец", () => {
     await page.getByRole("button", { name: "Создать заказ" }).click();
     const create = page.getByRole("dialog", { name: "Новый заказ поставщику" });
     await create.getByRole("combobox", { name: "Поставщик" }).click();
-    await page.getByTitle("ООО «Вымышленная Сталь»").click();
+    // Вариант списка поставщиков (у ячейки таблицы тоже есть `title` с полным именем — UX-1c)
+    await page.locator(".ant-select-dropdown").getByTitle("ООО «Вымышленная Сталь»").click();
     const product = create.getByRole("combobox", { name: "Товар, строка 1" });
     await product.click();
     await product.pressSequentially("перевод");

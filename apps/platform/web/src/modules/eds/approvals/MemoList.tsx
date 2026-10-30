@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button, Card, Segmented, Skeleton } from "antd";
+import { Button, Card, Segmented } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -13,6 +13,9 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -25,6 +28,9 @@ import { AgreeSlot } from "./AgreePanel";
 import { memoPath } from "./api";
 import { useStateLabels } from "./labels";
 import { mayDecideMemos } from "./model";
+
+/** Ширины колонок: номер, тема (гибкая), автор, сумма, срок, получено, статус, действие (UX-1c, S9) */
+const COLS = [130, null, 150, 140, 100, 130, 170, 120] as const;
 
 const PAGE = 25;
 
@@ -116,8 +122,9 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-dec-table">
+      <table className="pf-dec-table pf-fixed-table" style={{ minWidth: tableMinWidth(COLS, 160) }}>
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -158,7 +165,9 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
                 <div className="pf-hint">{t(`kinds.${row.kind}`)}</div>
               </td>
               <td>{row.subject}</td>
-              <td>{row.author?.full_name ?? "—"}</td>
+              <td className="pf-ell" title={row.author?.full_name ?? undefined}>
+                {row.author?.full_name ?? "—"}
+              </td>
               <td className="pf-dec-right">
                 <Amount row={row} />
               </td>
@@ -222,9 +231,10 @@ export function MemoList() {
     );
   };
 
+  const shownKey = useShownKey(getListMemoApprovalsQueryKey(listParams), query.isPlaceholderData);
   let body;
   if (query.isPending) {
-    body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (query.isError) {
     const error = query.error;
     const text =
@@ -308,7 +318,11 @@ export function MemoList() {
           }}
         />
       ) : null}
-      <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+          {body}
+        </DataBlock>
+      </Card>
       {selected ? <AgreeSlot memoRef={selected} brief /> : null}
     </div>
   );

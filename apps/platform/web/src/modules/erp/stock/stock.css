@@ -16,6 +16,15 @@
 .pf-stock-toolbar-action {
   margin-left: auto;
 }
+/* Место кнопки «Новый заказ» до ответа: ширина и высота кнопки antd, невидимо (UX-1c, S10). */
+.pf-stock-action-slot {
+  visibility: hidden;
+  display: inline-block;
+  height: 32px;
+  padding: 4px 15px;
+  line-height: 22px;
+  white-space: nowrap;
+}
 .pf-stock-numbers {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

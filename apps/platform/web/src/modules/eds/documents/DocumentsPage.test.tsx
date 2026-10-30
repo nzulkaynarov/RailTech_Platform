@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import { panelEl, renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
+import { listSettled } from "../../../test/settled";
 
 setupEdsTests();
 
@@ -111,6 +112,7 @@ describe("EDS · Документы: список", () => {
     await openDocuments("director@demo.example");
 
     fireEvent.click(await screen.findByRole("tab", { name: "КП" }));
+    await listSettled();
 
     expect(await screen.findByText("КП · Монтаж стрелочных переводов")).toBeVisible();
     expect(screen.getByText("На одобрении")).toBeVisible();
@@ -121,6 +123,7 @@ describe("EDS · Документы: список", () => {
     await openDocuments("director@demo.example");
 
     fireEvent.click(await screen.findByRole("tab", { name: "Договоры" }));
+    await listSettled();
 
     const contract = (await screen.findByText("Поставка стрелочных переводов")).closest(
       "tr",
@@ -135,6 +138,7 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Монтаж крепежа, объект «Север»")).toBeNull();
 
     fireEvent.click(screen.getByRole("tab", { name: "Акты" }));
+    await listSettled();
     const act = (await screen.findByText("Монтаж крепежа, объект «Север»")).closest(
       "tr",
     ) as HTMLElement;

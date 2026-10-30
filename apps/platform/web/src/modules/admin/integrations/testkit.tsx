@@ -1,5 +1,5 @@
-import { QueryClient } from "@tanstack/react-query";
 import { render, waitFor } from "@testing-library/react";
+import { createQueryClient } from "../../../app/queryClient";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect } from "vitest";
 
@@ -14,7 +14,7 @@ import { setViewportWidth } from "../../../test/viewport";
 
 /** Общая оснастка тестов экрана «Внешние интеграции»: вход, рендер по адресу, боковое окно, учёт пропущенных ключей i18n. */
 export function renderAt(path: string) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const queryClient = createQueryClient({ retry: false, staleTime: 0 });
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   render(
     <AppProviders queryClient={queryClient}>

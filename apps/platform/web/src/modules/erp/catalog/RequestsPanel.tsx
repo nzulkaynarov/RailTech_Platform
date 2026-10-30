@@ -125,7 +125,7 @@ export function RequestsPanel() {
           </Button>
         ) : null}
       </div>
-      <QueryState query={query} labels={queryLabels(t)}>
+      <QueryState query={query} labels={queryLabels(t)} rows={10}>
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState title={t("requests.empty.title")} text={t("requests.empty.text")} />

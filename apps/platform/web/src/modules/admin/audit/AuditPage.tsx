@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Card, Pagination, Skeleton } from "antd";
+import { Button, Card, Pagination } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -10,6 +10,8 @@ import type { AuditEntry, ListAuditParams } from "../../../shared/api/generated/
 import { useListAudit, useListEmployees } from "../../../shared/api/generated/platform-bff";
 import { useCompactBlock } from "../../../shared/lib/useCompactBlock";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { AuditEntryCard } from "./AuditEntryCard";
@@ -97,9 +99,10 @@ export function AuditPage() {
     return `${PATH}?${next.toString()}`;
   };
 
+  const shownKey = useShownKey(list.queryKey, list.isPlaceholderData);
   let body;
   if (list.isPending) {
-    body = <Skeleton active paragraph={{ rows: 8 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (list.isError) {
     body = (
       <EmptyState
@@ -159,7 +162,9 @@ export function AuditPage() {
             entityId={entityId}
             onReset={reset}
           />
-          {body}
+          <DataBlock busy={list.isPlaceholderData} resetKey={shownKey}>
+            {body}
+          </DataBlock>
           {list.data && total > 0 ? (
             <div className="pf-audit-footer">
               <span className="pf-hint" aria-live="polite">

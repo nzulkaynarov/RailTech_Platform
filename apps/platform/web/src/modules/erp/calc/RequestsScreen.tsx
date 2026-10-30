@@ -8,6 +8,8 @@ import { useListCalcRequests } from "../../../shared/api/generated/platform-bff"
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -18,6 +20,9 @@ import { TaskSlot } from "./TaskPanel";
 import { VisaIndicators } from "./VisaIndicators";
 
 import "./calc.css";
+
+/** Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9) */
+const COLS = [140, null, 180, 110, 150, 160, 140] as const;
 
 function companyToday(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -98,8 +103,12 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-calc-table">
+      <table
+        className="pf-calc-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 220) }}
+      >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -148,7 +157,9 @@ function Rows({ items, selected }: { items: readonly CalcRequestRow[]; selected:
               <td>
                 <VisaIndicators visas={row.visas} />
               </td>
-              <td>{row.responsible ?? "—"}</td>
+              <td className="pf-ell" title={row.responsible ?? undefined}>
+                {row.responsible ?? "—"}
+              </td>
               <td>
                 <LinkButton
                   size="small"
@@ -186,7 +197,7 @@ export function RequestsScreen({ mine }: { mine: boolean }) {
         subtitle={t(mine ? "calc:list.subtitleMine" : "calc:list.subtitle")}
       />
       <Card styles={{ body: { padding: 0 } }}>
-        <QueryState query={query} labels={labels}>
+        <QueryState query={query} labels={labels} rows={10}>
           {(data) =>
             data.items.length === 0 ? (
               <EmptyState

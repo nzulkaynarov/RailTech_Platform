@@ -54,6 +54,30 @@ describe("Клиенты · Лиды (D1-2b)", () => {
     expect(within(table()).getByText("Срок ответа прошёл")).toBeVisible();
   });
 
+  it("смена вкладки и фильтра — прежние строки на месте с признаком загрузки, без скелетона (UX-1c, S8)", async () => {
+    await open("manager@demo.example");
+    const before = await screen.findByRole("table", { name: "Лиды" });
+    const blockBefore = before.closest(".pf-data-block");
+    fireEvent.click(screen.getByRole("tab", { name: "Просят КП" }));
+    // Та же таблица (не размонтирована), прежние строки, блок помечен «идёт загрузка»
+    expect(table()).toBe(before);
+    expect(names()).toContain("Отказ Демо");
+    expect(before.closest("[aria-busy]")).toHaveAttribute("aria-busy", "true");
+    expect(document.querySelector("[data-pf-skeleton]")).toBeNull();
+    await waitFor(() => {
+      expect(names().sort()).toEqual(["Азиз Демо", "Шахноза Демо"]);
+    });
+    // С новыми данными таблица строится заново (строки не «едут» на новые места), блок тот же и без признака загрузки
+    const block = table().closest(".pf-data-block");
+    expect(block).toBe(blockBefore);
+    expect(block).not.toHaveAttribute("aria-busy");
+    // Одна панель списка под полосой вкладок, связанная с выбранной вкладкой (пустые панели antd скрыты стилем)
+    expect(document.getElementById("pf-leads-tabs-body")).toHaveAttribute(
+      "aria-labelledby",
+      screen.getByRole("tab", { name: "Просят КП" }).id,
+    );
+  });
+
   it("канал — из адреса: только лиды с сайта", async () => {
     await open("manager@demo.example", "/crm/leads?channel=web");
     await waitFor(() => {

@@ -1,4 +1,4 @@
-import { Button, Card, Segmented, Skeleton } from "antd";
+import { Button, Card, Segmented } from "antd";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -9,6 +9,9 @@ import type { LetterRow, LetterStatus } from "../../../shared/api/generated/mode
 import { getListLettersQueryKey, listLetters } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { useShownKey } from "../../../shared/lib/useShownKey";
+import { DataBlock, ListSkeleton, TableCols } from "../../../shared/ui/DataBlock";
+import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -19,6 +22,8 @@ import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 
 const PAGE = 25;
+/** Ширины колонок: номер, тема (гибкая), клиент, заявка, получено, статус, действие (UX-1c, S9) */
+const COLS = [120, null, 180, 120, 110, 170, 110] as const;
 type Filter = LetterStatus | "all";
 
 function filterOf(value: string | null): Filter {
@@ -85,8 +90,12 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
   }
   return (
     <ScrollRegion label={t("list.scroll")}>
-      <table className="pf-letters-table">
+      <table
+        className="pf-letters-table pf-fixed-table"
+        style={{ minWidth: tableMinWidth(COLS, 240) }}
+      >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
+        <TableCols widths={COLS} />
         <thead>
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
@@ -131,7 +140,9 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
                   </>
                 ) : null}
               </td>
-              <td>{row.client_name ?? "—"}</td>
+              <td className="pf-ell" title={row.client_name ?? undefined}>
+                {row.client_name ?? "—"}
+              </td>
               <td className="pf-num">{row.request_number ?? "—"}</td>
               <td className="pf-num">{date(row.received_at)}</td>
               <td>
@@ -188,9 +199,10 @@ export function InboxList() {
     );
   };
 
+  const shownKey = useShownKey(getListLettersQueryKey(listParams), query.isPlaceholderData);
   let body;
   if (query.isPending) {
-    body = <Skeleton active paragraph={{ rows: 5 }} title={false} />;
+    body = <ListSkeleton rows={PAGE} />;
   } else if (query.isError) {
     const error = query.error;
     const text =
@@ -273,7 +285,11 @@ export function InboxList() {
           setFilter(value as Filter);
         }}
       />
-      <Card styles={{ body: { padding: 0 } }}>{body}</Card>
+      <Card styles={{ body: { padding: 0 } }}>
+        <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
+          {body}
+        </DataBlock>
+      </Card>
       {selected ? <ResolutionSlot letterRef={selected} brief /> : null}
     </div>
   );

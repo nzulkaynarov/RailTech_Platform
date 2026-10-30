@@ -205,7 +205,7 @@ export function TemplatesView({ editable }: { editable: boolean }) {
         }
       >
         <p className="pf-fp-sub pf-bot-lead">{t("templates.intro")}</p>
-        <QueryState query={query} labels={labels}>
+        <QueryState query={query} labels={labels} rows={10}>
           {(data) => {
             const selected = data.items.find((tpl) => tpl.id === selectedId) ?? null;
             return (

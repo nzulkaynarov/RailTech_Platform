@@ -108,12 +108,12 @@ test.describe("Настройки без переброса", () => {
       await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByRole("tabpanel").getByText("@demo_railtech_bot")).toBeVisible();
-      await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+      await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
       await expectNoViolations(page, `bot connection ${String(width)}`);
       await shot(page, "bot-connection");
       await page.getByRole("tab", { name: "База знаний" }).click();
       await expect(page.getByRole("link", { name: "Открыть базу знаний" })).toBeVisible();
-      await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+      await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
       await expectNoViolations(page, `bot kb ${String(width)}`);
       await shot(page, "bot-kb");
 

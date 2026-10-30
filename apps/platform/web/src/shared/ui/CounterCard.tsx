@@ -35,3 +35,27 @@ export function CounterCard({ label, value, source, to }: CounterCardProps) {
 export function CounterGrid({ children }: { children: ReactNode }) {
   return <div className="pf-counters">{children}</div>;
 }
+
+/**
+ * Счётчики до ответа (UX-1c, аудит 2026-10-30, S10): карточки той же высоты (подпись, число, источник), чтобы очередь под
+ * ними не съезжала, когда придут числа. `count` — сколько карточек было в прошлый раз.
+ */
+export function CounterGridSkeleton({ count }: { count: number }) {
+  return (
+    <div className="pf-counters" aria-hidden="true" data-pf-skeleton="">
+      {Array.from({ length: count }, (_, index) => (
+        <div key={index} className="pf-card pf-counter pf-counter-skel">
+          <span className="pf-counter-label">
+            <span className="pf-counter-skel-bar" style={{ width: "70%" }} />
+          </span>
+          <span className="pf-counter-value">
+            <span className="pf-counter-skel-bar" style={{ width: 40 }} />
+          </span>
+          <span className="pf-counter-source">
+            <span className="pf-counter-skel-bar" style={{ width: "55%" }} />
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}

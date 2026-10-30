@@ -192,6 +192,30 @@ describe("Баннер настройки и мастер", () => {
     );
   });
 
+  it("баннер не вставляется над готовым экраном: до ответа чек-листа рабочая область скрыта и держит место (UX-1c, S10)", async () => {
+    let answer: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    server.use(
+      http.get("*/setup/checklist", async () => {
+        await gate;
+        return undefined;
+      }),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+    const main = await screen.findByRole("main", { hidden: true });
+    expect(main).toHaveStyle({ visibility: "hidden" });
+    expect(main).toHaveAttribute("aria-busy", "true");
+    expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
+
+    answer();
+    const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
+    expect(banner).toBeVisible();
+    expect(main).not.toHaveAttribute("aria-busy");
+  });
+
   it("«Скрыть до завтра» убирает баннер до начала следующих суток и запоминает выбор в браузере", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");

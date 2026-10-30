@@ -531,7 +531,7 @@ test.describe("Компания: axe и снимки", () => {
       for (const [tab] of TABS) {
         await openCompany(page, tab);
         // данные вкладки пришли: форма, список или таблица, а не скелетон
-        await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+        await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
         await expect(page.locator(".pf-co-body")).toBeVisible();
         if (tab === "brand") await expect(page.locator('iframe[title^="Образец"]')).toBeVisible();
         if (tab === "numbering") {
