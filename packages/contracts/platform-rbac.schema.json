@@ -137,7 +137,7 @@
         "bus.manage",
         "files.upload"
       ],
-      "description": "Код права EDS v1 (docs/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
+      "description": "Код права EDS v1 (docs/history/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
     },
     "queueKind": {
       "enum": [

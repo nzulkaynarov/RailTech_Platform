@@ -1,16 +1,16 @@
 # Карта интеграции: экраны → BFF → домены (CRM, EDS, ERP)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-29
 
 Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — OpenAPI CRM (тогда `apps/crm/docs/api/openapi.json`, теперь `packages/contracts/openapi/crm.yaml`) (109 путей), ERP —
 `packages/contracts/openapi/erp-internal.yaml` (251 путь), шов — `erp-integration.yaml` 0.5.0, портал —
-`erp-portal.yaml` 0.3.0.
+`erp-portal.yaml` 0.3.0 (версии на дату сверки; текущие — `info.version` файлов).
 
 > **Поправки стратегии 2026-10-23 (действуют поверх текста ниже).** Сущности EDS — письма, резолюции, служебные записки,
 > маршруты согласования и реестр документов — живут в **сервисе EDS** (ADR-0015), а не в приложении `eds` внутри ERP:
 > разрывы ERP-01 и ERP-05 стали **EDS-01** и **EDS-02** (§7), одобрение КП директором — маршрут согласования EDS
 > (`approval.requested/decided`, **EDS-03**). ERP-08 (чаты) из ERP уходит: по ADR-0015 чаты — домен коммуникаций CRM,
 > окончательно — на этапе D. ERP-10 (события для BFF) — шина `rt_bus` (ADR-0014, этап B), не Redis Streams. Колонка
-> «Фаза» (P2–P4) читается как этапы C–D стратегии; перенаправления §6 — этап C2 (старые фронты удаляются).
+> «Фаза» (P2–P4) читается как этапы C–D стратегии; перенаправления §6 — задача P6 волны 18a (старые фронты отключаются по модулям).
 
 Обозначения: **✓** — операция есть; **Δ** — нужна доработка бэкенда (номер разрыва из §7); BFF-эндпоинты
 описываются контрактом `packages/contracts/openapi/platform-bff.yaml` (создаётся в задаче PLT-02).
@@ -266,7 +266,7 @@ CRM считает статус сама — поле `platform_status` лида
 Статус контракта (волна 12, задача E1): **контракт есть** — `packages/contracts/openapi/eds.yaml` 0.1.0, события
 `packages/contracts/events/eds/*.v1.json` и `events/erp/quote.ready_for_approval.v1.json`, подписки `bus/subscriptions.yaml`,
 права `platform-rbac.yaml` (`backend.eds`); объяснение — [`CONTRACTS.md`](CONTRACTS.md) §10. Код — задачи E2–E5
-[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md); сторона ERP (EDS-01, EDS-03) реализована задачей E5 — CONTRACTS §10.6.
+[`wave12-eds-c1.md`](../history/runbooks/wave12-eds-c1.md); сторона ERP (EDS-01, EDS-03) реализована задачей E5 — CONTRACTS §10.6.
 
 | ID | Что | Фаза | Контракт |
 |---|---|---|---|

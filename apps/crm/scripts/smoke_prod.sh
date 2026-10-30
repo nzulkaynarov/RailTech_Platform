@@ -60,7 +60,7 @@ if [[ "$redirect" =~ ^30[178]\ https:// ]]; then ok "http → https"; else bad "
 if [[ "$failed" == 1 ]]; then
   echo
   echo "Что делать: make ps, make logs s=api / s=caddy; curl -s $BASE/ready (какая зависимость fail);"
-  echo "docs/runbooks/crm/deploy.md (откат на предыдущий тег)."
+  echo "docs/history/runbooks/crm-deploy.md (откат на предыдущий тег)."
   exit 1
 fi
 echo "Smoke prod OK: $DOMAIN"

@@ -1,7 +1,8 @@
-# CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet, сервис EDS)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
+# CONTRACTS — контракты доменов: CRM, ERP, EDS, портал Cabinet, BFF Платформы и шина `rt_bus`
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-29
 
-Версия 0 · 2026-10-13 · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
+Начат 2026-10-13 · Версии файлов — `info.version` в `packages/contracts/openapi/*.yaml`; номер версии в тексте ниже
+означает «с какой версии», а не текущую · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
 этот документ объясняет их. Изменение контракта — PR с обеих сторон в одной вехе (ORCHESTRATOR §3.3).
 
 ## 0. Общие правила
@@ -23,7 +24,7 @@
 
 | Пространство | Префикс | Кто зовёт | Аутентификация |
 |---|---|---|---|
-| internal | `/api/v1/` | ERP SPA (сотрудники) | JWT сотрудника |
+| internal | `/api/v1/` | BFF Платформы (до 1.0 — контракт Платформы, DECISIONS 2026-10-29), ERP SPA до отключения (P6 волны 18a) | JWT сотрудника |
 | portal | `/api/portal/v1/` | Cabinet SPA (клиенты) | сессия портала (Telegram initData / magic-link) |
 | integration | `/api/integration/v1/` | CRM | сервисный токен |
 | mcp | `/mcp/erp` | агент CRM | `X-Agent-Context` (HMAC) |
@@ -317,7 +318,7 @@ BFF (модели ответов CRM, `make -C apps/platform crm-models`). Св�
 ## 9. Шина rt_bus (события v2)
 
 ADR-0014 (шина, правило «интеграции только через шину» — ORCHESTRATOR §3.14), ADR-0015 (владелец поля, домены),
-ADR-0016 (версии); runbook `docs/runbooks/wave11-bus-v1.md`. Источник истины — файлы `packages/contracts/events/` и
+ADR-0016 (версии); runbook `docs/history/runbooks/wave11-bus-v1.md`. Источник истины — файлы `packages/contracts/events/` и
 `packages/contracts/bus/`; библиотека — `packages/rt-bus` (B1). Таблицы библиотеки: `rt_bus_outbox`, `rt_bus_delivery`,
 `rt_bus_inbox`, `rt_bus_subscriber_state`.
 
@@ -373,7 +374,7 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
 | `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
-| `uz.railtech.eds.*.v1` — 8 типов §10.2 | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
+| `uz.railtech.eds.*.v1` — 9 типов: 8 — §10.2, `mail.requested` — §9.9 | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
 | `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (W18A-P1) | `rt://erp`, `rt://eds` → crm (platform-bff получает по маскам и подсказок не даёт) | запрос письма почтовому сервису CRM: `request_key`, `purpose`, `to`, `reply_to?`, `subject`, `language?`, `ref?`, `notify?`, `attachments?` (метаданные), `content` (`alg = fernet-pair-v1`, шифртекст) — §9.9 |
 | `uz.railtech.crm.mail.sent.v1`, `uz.railtech.crm.mail.failed.v1` (W18A-P1) | `rt://crm` → erp (EDS подпишется, когда итог понадобится — B-W18AP1-1) | итог запроса с `notify`: `requester`, `request_key`, `purpose`, `ref?`, `email_log_id`, `attempts`, `sent_at` либо `failed_at` + `reason` (+ `detail`); ни текста, ни адресов |
 
@@ -626,19 +627,19 @@ enum `ExternalServiceCode` контракта ERP остаётся — чита�
 ## 10. EDS (волна 12, этап C1)
 
 ADR-0015 (EDS — отдельный сервис, владелец реестра и маршрутов согласования), runbook
-[`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2 (нормативка), карта интеграции §7 (EDS-01, EDS-02, EDS-03). Источник
+[`wave12-eds-c1.md`](../history/runbooks/wave12-eds-c1.md) §2 (нормативка), карта интеграции §7 (EDS-01, EDS-02, EDS-03). Источник
 истины — файлы `packages/contracts/`; здесь — объяснение.
 
 | Файл | Что | Версия |
 |---|---|---|
 | `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
-| `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
+| `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 9 типов `uz.railtech.eds.*.v1` (8 — §10.2, `mail.requested` — §9.9) | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
 | `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1; `User.permissions.sections` — разделы модулей EDS и ERP и уровень (`full`/`read`), необязательное, аддитивно в v1 (D1-8: зона исполнителя резолюции в EDS, `assignee_zone_mismatch`) | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
 | `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
 
-### 10.1. API (`eds.yaml` 0.2.0)
+### 10.1. API (`eds.yaml`)
 
 - **Кто зовёт.** Только BFF во внутренней сети (`http://eds-api:8000`); внешнего маршрута в Caddy нет, своей формы входа нет.
 - **Пути.** `/api/v1/letters` (список, регистрация), `/letters/{letter_id}` (карточка), `…/resolution` `{text, assignees[{crm_user_id,

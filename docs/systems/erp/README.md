@@ -1,8 +1,8 @@
 # ERP (бэк-офис) — `apps/erp`
-Статус: действует · Владелец: лид · Обновлено: 2026-10-23
+Статус: действует · Владелец: лид · Обновлено: 2026-10-29
 
 Домен бэк-офиса: каталог, расчёт, КП, договор, счёт, акт, оплаты, исполнение, склад, закупки; портальный API для Cabinet и
-интеграционный API для CRM. Django · DRF · Celery · Channels; фронтенд React + shadcn/Tailwind заморожен и удаляется на этапе C2.
+интеграционный API для CRM. Django · DRF · Celery · Channels; фронтенд React + shadcn/Tailwind заморожен и отключается задачей P6 волны 18a после гейтов D1-7 и D2-6 (DECISIONS 2026-10-27, 2026-10-28).
 Выделена из B2B в M1 (история — тег `b2b-final`). Правила кода — [`CONVENTIONS.md`](CONVENTIONS.md); runbook'и —
 [`docs/runbooks/erp/`](../../runbooks/erp/README.md); границы домена — стратегия 2026-10-23 §3.3, ADR-0015.
 
@@ -26,9 +26,6 @@ ERP поднимается только корневым `make up` (`infra/compo
 Файлы — в RustFS (бакеты `erp-private`, `erp-public`, `erp-temp`; S0-1). Первый суперпользователь:
 `make -C apps/erp createsuperuser`; демо-справочники: `make -C apps/erp seed`.
 
-## Что ещё не сделано (по вехе M1)
+## Что сделано и что дальше
 
-Удаление слоёв маркетплейса/подписок/KYC/операторской плоскости (M1-ERP-02), новые имена приложений и свежие
-миграции (M1-ERP-03), бренд в настройки (M1-ERP-04), роли бэк-офиса (M1-ERP-05), ИИ через LiteLLM (M1-ERP-06),
-каталог с двумя слоями (M1-ERP-07), курс на дату КП (M1-ERP-08), настройки (M1-ERP-09), окончательный docs/systems/erp/CONVENTIONS.md,
-OpenAPI в `packages/contracts`, runbook (M1-ERP-10). До M1-ERP-04 в UI и письмах остаётся бренд B2B.
+Здесь не ведётся: журнал задач и PR — `docs/PROGRESS.md`, где мы и что дальше — `docs/HANDOFF.md`, хвосты — `docs/BACKLOG.md`.

@@ -1,4 +1,5 @@
 # Runbook: стенд ансамбля локально (`make up`)
+Статус: действует · Владелец: лид · Обновлено: 2026-10-23
 
 Один `docker compose` поднимает общую инфраструктуру, CRM, ERP, Cabinet и Платформу.
 Файлы: `infra/compose/base.yml` + `dev.yml`, `infra/caddy/Caddyfile.dev`, `infra/ai/*`, `infra/db/init-databases.sh`.

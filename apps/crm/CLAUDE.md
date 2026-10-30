@@ -1,6 +1,6 @@
 # CLAUDE.md — `apps/crm` (указатель)
 
-RailTech CRM — домен фронт-офиса: лиды, клиенты и контакты, переписка, база знаний, Telegram-бот, консоль администратора; до этапа F — вход и роли (идентичность v1). Фронтенд `frontend/` заморожен и удаляется на этапе C2.
+RailTech CRM — домен фронт-офиса: лиды, клиенты и контакты, переписка, база знаний, Telegram-бот, консоль администратора; до этапа F — вход и роли (идентичность v1). Фронтенд `frontend/` заморожен и отключается задачей P6 волны 18a.
 
 **Прочитай:** `docs/systems/crm/CONVENTIONS.md` (правила кода; в коде ссылки `CONVENTIONS.md §N` ведут туда) и
 `docs/ORCHESTRATOR.md` (процесс, инварианты, протокол сессии); правило среды, тестов и CI — `CLAUDE.md` корня.
@@ -13,5 +13,5 @@ RailTech CRM — домен фронт-офиса: лиды, клиенты и �
 - `make install` — зависимости (в новом worktree — первым шагом)
 - `make check` (= `make check-crm` из корня) — ruff, mypy, eslint, tsc, unit
 - `cd backend && uv run pytest tests/<файл>.py -x -q` — один тест; `scripts/test_int_local.sh` — integration
-- `make openapi` — экспорт OpenAPI в `docs/api/openapi.json` и клиент orval
+- `make openapi` — экспорт OpenAPI в `packages/contracts/openapi/crm.yaml` и клиент orval
 - `make migration m="..."` — миграция Alembic

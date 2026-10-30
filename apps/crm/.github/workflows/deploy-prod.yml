@@ -1,7 +1,7 @@
 # Выкладка prod (PLAN Фаза 8): тег v* → образы в GHCR (тег = git sha) → ssh на VPS →
 # scripts/deploy.sh: бэкап, pull/up, миграции, smoke, откат при провале.
 # Secrets (environment production): VPS_HOST, VPS_USER, VPS_SSH_KEY, VPS_KNOWN_HOSTS,
-# VPS_APP_DIR. Настройка — docs/runbooks/crm/deploy.md.
+# VPS_APP_DIR. Настройка — docs/history/runbooks/crm-deploy.md.
 
 name: Deploy prod
 

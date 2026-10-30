@@ -4,7 +4,7 @@ EDS — отдельный сервис электронного докумен�
 интеграции только через шину `rt_bus`. Внешнего маршрута нет: сотрудники — через BFF Платформы, системы — по шине.
 
 **Прочитай:** `docs/systems/eds/CONVENTIONS.md` (правила кода; в коде ссылки `CONVENTIONS.md §N` ведут туда) и `docs/ORCHESTRATOR.md` (процесс, инварианты);
-правило среды, тестов и CI — `CLAUDE.md` корня. Запуск и устройство — `docs/systems/eds/README.md`. План волны — `docs/runbooks/wave12-eds-c1.md`.
+правило среды, тестов и CI — `CLAUDE.md` корня. Запуск и устройство — `docs/systems/eds/README.md`. План волны — `docs/history/runbooks/wave12-eds-c1.md`.
 Контракт — `packages/contracts/openapi/eds.yaml` и `packages/contracts/events/eds/` (контракт раньше кода, в том же PR).
 
 Документация — только в `docs/` (ORCHESTRATOR §3 п. 17): здесь новых `.md` не заводить.

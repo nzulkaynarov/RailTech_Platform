@@ -1,4 +1,5 @@
 # Runbook: прод на двух VPS — установка, деплой, откат, бэкапы (M5-INF-01)
+Статус: действует · Владелец: лид · Обновлено: 2026-10-28
 
 Раскладка и лимиты памяти — `docs/runbooks/servers.md`. Файлы: `infra/compose/prod.yml` (VPS 1, поверх `base.yml`),
 `infra/compose/db.yml` (VPS 2), `infra/caddy/Caddyfile.prod`, `infra/deploy/*`, `infra/db/*`, `infra/.env.prod.example`,
@@ -123,7 +124,8 @@ Settings → Environments → `production` (включить Required reviewers 
    «CI ok»** (check-run; нет проверки или она не `success` — ошибка «деплой не идёт», образы не собираются).
 2. **`build`**: восемь образов параллельно (по job'у на образ, кэш `type=gha,scope=<образ>`), push в GHCR с тегом = полный git sha.
    Без environment и без секретов — только `GITHUB_TOKEN`.
-3. **`deploy`** — **ждёт одобрения владельца** (Required reviewers в environment `production`): собирает `rt-cabinet` (его build-args —
+3. **`deploy`** — **ждёт одобрения** (Required reviewers в environment `production`; одобряет архитектор после зелёного CI и
+   сам проверяет прод — DECISIONS 2026-10-29): собирает `rt-cabinet` (его build-args —
    variables `TELEGRAM_BOT_USERNAME` и `CRM_DOMAIN` из `production`, в job `build` их нет), загружает релиз на VPS 1, `deploy.sh`, smoke.
    Без одобрения ничего на сервер не попадает; отклонённый запуск — просто отменённый деплой.
 
