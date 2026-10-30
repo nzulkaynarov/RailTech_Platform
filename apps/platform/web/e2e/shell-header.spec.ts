@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
@@ -18,11 +18,44 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
+// Поле в фокусе не под баром: центр его рамки виден и в этой точке не бар. «bar» — фокус дошёл до кнопок бара,
+// «done» — ушёл из формы с баром.
+const FOCUS_STATE = `(() => {
+  const a = document.activeElement;
+  const dock = document.querySelector(".pf-save-dock");
+  if (!a || !dock) return "done";
+  if (a.closest(".pf-save-bar")) return "bar";
+  if (!dock.parentElement.contains(a)) return "done";
+  const box = (a.closest(".ant-select, .ant-picker, .ant-input-affix-wrapper") || a).getBoundingClientRect();
+  if (box.width === 0 || box.height === 0) return "ok";
+  const x = box.left + box.width / 2;
+  const y = box.top + box.height / 2;
+  const hit = document.elementFromPoint(x, y);
+  if (!hit) return "вне экрана: " + (a.id || a.tagName) + " y=" + Math.round(y);
+  if (hit.closest(".pf-save-bar")) return "под баром: " + (a.id || a.tagName);
+  return "ok";
+})()`;
+
+async function tabThroughForm(page: Page, first: Locator): Promise<number> {
+  await first.focus();
+  let checked = 0;
+  for (let step = 0; step < 25; step += 1) {
+    await page.waitForTimeout(120);
+    const state = await page.evaluate<string>(FOCUS_STATE);
+    if (state === "bar" || state === "done") break;
+    expect(state, `поле №${String(step + 1)}`).toBe("ok");
+    checked += 1;
+    await page.keyboard.press("Tab");
+  }
+  return checked;
+}
+
 const searchX = (page: Page) =>
   page.evaluate<number>(`document.querySelector(".pf-gsearch").getBoundingClientRect().x`);
+// Положение в прокручиваемой области (y + scrollTop): прокрутка к полю над баром — не сдвиг вёрстки.
 const top = (page: Page, selector: string) =>
   page.evaluate<number>(
-    `Math.round(document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().y)`,
+    `Math.round(document.querySelector(${JSON.stringify(selector)}).getBoundingClientRect().y + document.getElementById("main-content").scrollTop)`,
   );
 
 test.describe("Шапка и бар несохранённого", () => {
@@ -82,6 +115,8 @@ test.describe("Шапка и бар несохранённого", () => {
       await name.pressSequentially("я");
       const save = data.getByRole("button", { name: "Сохранить", exact: true });
       await expect(save).toBeVisible();
+      await page.waitForTimeout(120);
+      expect(await page.evaluate<string>(FOCUS_STATE), "поле ввода над баром").toBe("ok");
       expect(await top(page, '[data-testid="profile-data"] form')).toBe(formTop);
       expect(
         await top(
@@ -96,6 +131,8 @@ test.describe("Шапка и бар несохранённого", () => {
       );
       await settledScreenshot(page, "profile-savebar");
       await expectNoViolations(page, "Профиль, бар");
+      // Tab по полям: ни одно поле в фокусе не уходит под бар
+      expect(await tabThroughForm(page, name)).toBeGreaterThanOrEqual(4);
 
       // уход с правками — вопрос; «Остаться» оставляет правку
       await page.getByRole("navigation", { name: "Модули" }).getByRole("link").first().click();
@@ -123,6 +160,11 @@ test.describe("Шапка и бар несохранённого", () => {
       await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toHaveCount(1);
       await settledScreenshot(page, "company-savebar");
       await expectNoViolations(page, "Компания, бар");
+      // Tab по полям реквизитов: ни одно поле в фокусе не уходит под бар
+      expect(
+        await tabThroughForm(page, page.getByLabel("Полное наименование")),
+      ).toBeGreaterThanOrEqual(8);
+      await page.getByLabel("Телефон").focus();
 
       await page.getByRole("tab", { name: "Бланк и бренд" }).click();
       const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });

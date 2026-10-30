@@ -29,6 +29,25 @@ export interface ContextualSaveBarProps {
 
 const BAR_ATTR = "data-save-bar";
 
+/** Ближайший прокручиваемый предок: рабочая область `#main-content` или тело бокового окна. */
+function scrollParent(node: HTMLElement): HTMLElement | null {
+  for (let el = node.parentElement; el; el = el.parentElement) {
+    const overflow = getComputedStyle(el).overflowY;
+    if ((overflow === "auto" || overflow === "scroll") && el.scrollHeight > el.clientHeight)
+      return el;
+  }
+  return null;
+}
+
+/** Видимая рамка поля: у Select и DatePicker фокус на внутреннем input, рамка — у обёртки. */
+function fieldBox(target: HTMLElement): DOMRect {
+  const box =
+    target.closest<HTMLElement>(".ant-select, .ant-picker, .ant-input-affix-wrapper") ?? target;
+  return box.getBoundingClientRect();
+}
+
+const FIELD_GAP = 16;
+
 function isMac(): boolean {
   return typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 }
@@ -61,6 +80,7 @@ export function ContextualSaveBar({
   const { t } = useTranslation("ui");
   const { token } = theme.useToken();
   const rootRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
   // «Отменить» может сам увести с формы (новая роль закрывается): этот переход вопроса не вызывает.
   const discarding = useRef(false);
   const discard = () => {
@@ -93,6 +113,52 @@ export function ContextualSaveBar({
     };
   }, [visible, loading, disabled, onSave]);
 
+  // Поле в фокусе никогда не уходит под бар (UX-1b): у полей формы `scroll-margin-bottom` = место бара (переменная
+  // `--pf-save-bar-space` у формы), а если поле всё же под баром — после фокуса, ввода или появления бара — область
+  // прокручивается ровно настолько, чтобы поле стояло над баром с зазором 16 px.
+  useEffect(() => {
+    const scope = rootRef.current?.parentElement;
+    const bar = barRef.current;
+    const dock = rootRef.current;
+    if (!scope || !bar || !dock) return;
+    const space = () => {
+      const offset = Number.parseFloat(getComputedStyle(dock).bottom) || 0;
+      scope.style.setProperty(
+        "--pf-save-bar-space",
+        `${String(bar.offsetHeight + offset + FIELD_GAP)}px`,
+      );
+    };
+    space();
+    if (!visible) return;
+    let frame = 0;
+    const reveal = (target: Element | null) => {
+      if (!(target instanceof HTMLElement) || bar.contains(target) || !scope.contains(target))
+        return;
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        const field = fieldBox(target);
+        const barTop = bar.getBoundingClientRect().top;
+        const overlap = field.bottom + FIELD_GAP - barTop;
+        if (overlap <= 0) return;
+        scrollParent(dock)?.scrollBy({ top: overlap });
+      });
+    };
+    const onFocus = (event: FocusEvent) => {
+      reveal(event.target as Element | null);
+    };
+    const onInput = (event: Event) => {
+      reveal(event.target as Element | null);
+    };
+    scope.addEventListener("focusin", onFocus);
+    scope.addEventListener("input", onInput);
+    reveal(document.activeElement);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      scope.removeEventListener("focusin", onFocus);
+      scope.removeEventListener("input", onInput);
+    };
+  }, [visible]);
+
   const colors = {
     "--pf-save-bar-bg": token.colorBgElevated,
     "--pf-save-bar-border": token.colorBorderSecondary,
@@ -119,6 +185,7 @@ export function ContextualSaveBar({
         skipRef={discarding}
       />
       <div
+        ref={barRef}
         {...(visible ? { [BAR_ATTR]: "" } : {})}
         className="pf-save-bar"
         role="region"

@@ -239,20 +239,21 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
             >
               <Input.TextArea rows={4} />
             </Form.Item>
-            <ContextualSaveBar
-              className="pf-profile-save-dock"
-              visible={dirty}
-              loading={update.isPending}
-              saveLabel={t("data.save")}
-              discardLabel={t("data.cancel")}
-              onSave={() => {
-                form.submit();
-              }}
-              onDiscard={reset}
-            />
           </Form>
         </div>
       </div>
+      {/* Полоса на всю ширину карточки, под фото и полями (UX-1b) */}
+      <ContextualSaveBar
+        className="pf-profile-save-dock"
+        visible={dirty}
+        loading={update.isPending}
+        saveLabel={t("data.save")}
+        discardLabel={t("data.cancel")}
+        onSave={() => {
+          form.submit();
+        }}
+        onDiscard={reset}
+      />
 
       <AvatarCropper
         key={file ? `${file.name}-${String(file.lastModified)}-${String(file.size)}` : "none"}

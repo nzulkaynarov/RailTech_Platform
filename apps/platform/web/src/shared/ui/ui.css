@@ -531,8 +531,8 @@
   }
 }
 
-/* --- ContextualSaveBar (platform-frontend.md §5, UX-1b S6): место в конце формы зарезервировано всегда; бар прилипает
-   к низу прокручиваемой области поверх контента. Отступ снизу — над нижней панелью модулей (< 768) из AppShell.
+/* --- ContextualSaveBar (platform-frontend.md §5, UX-1b S6): полоса-подвал на всю ширину формы или её карточки; место
+   в конце формы зарезервировано всегда; бар прилипает к низу прокручиваемой области поверх контента. Отступ снизу — над нижней панелью модулей (< 768) из AppShell.
    Цвета — токены темы (переменные ставит компонент из theme.useToken). --- */
 .pf-save-dock {
   position: sticky;
@@ -540,7 +540,23 @@
   z-index: 100;
   flex: none;
 }
+/* Поля формы с баром: прокрутка к полю (Tab, фокус) оставляет его над баром */
+:has(> .pf-save-dock)
+  :is(
+    input,
+    textarea,
+    select,
+    button,
+    [tabindex],
+    .ant-select,
+    .ant-picker,
+    .ant-input-affix-wrapper
+  ) {
+  scroll-margin-bottom: var(--pf-save-bar-space, 96px);
+}
 .pf-save-bar {
+  box-sizing: border-box;
+  width: 100%;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
