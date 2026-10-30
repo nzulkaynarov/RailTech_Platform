@@ -51,6 +51,8 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "карточка лида");
 
     // «Создать заявку»: поля из переписки, письмо директору, срочность, «Что произойдёт»
+    // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await page.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const form = panel.getByRole("form", { name: "Создать заявку" });
     await expect(form.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");

@@ -242,6 +242,8 @@ test.describe("Счета и оплаты: бухгалтер", () => {
       .getByText("Оплаченные")
       .click();
     await expect(row(page, "СЗ-2026/015").getByText(/Оплачена/)).toBeVisible();
+    // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await row(page, "СЗ-2026/015")
       .getByRole("link", { name: "Открыть служебку СЗ-2026/015" })
       .click();

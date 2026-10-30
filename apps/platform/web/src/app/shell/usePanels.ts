@@ -48,13 +48,20 @@ export function usePanels(
 
   // Открытие панели: в списках определяется ?panel=open в URL; на карточке объекта (:id) — fallbackOpen на широком экране
   const urlPanel = params.get("panel");
+  // Раздел может закрыть окно и на карточке объекта (`defaults.panelOpen: false`: журнал заказа уже на карточке).
+  const cardOpen = fallbackOpen && section?.defaults?.panelOpen !== false;
   const panelOpen =
-    urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && fallbackOpen;
+    urlPanel === "open" ? true : urlPanel === "closed" ? false : wide && cardOpen;
 
   const isStrictlyOverlay = Boolean(section?.path.startsWith("/chats"));
+  // Поверх — в списках (таблица не сжимается). Где окно открыто вместе с работой — на карточке объекта и в разделах
+  // с `defaults.panelMode: "docked"` (переписка) — закреплено рядом, иначе поверх оно закрыло бы кнопки самой карточки.
+  // Выбор пользователя (булавка) важнее; закрепление действует на ≥ 1280 px (`canDock`), уже — всегда поверх.
+  const defaultMode: PanelLayoutMode =
+    fallbackOpen || section?.defaults?.panelMode === "docked" ? "docked" : "overlay";
   const panelMode: PanelLayoutMode = isStrictlyOverlay
     ? "overlay"
-    : (entry?.panelMode ?? "overlay");
+    : (entry?.panelMode ?? defaultMode);
   const isWideByDefault = Boolean(
     section?.path.startsWith("/erp/calc") ||
     section?.path.startsWith("/erp/docs") ||
@@ -83,7 +90,7 @@ export function usePanels(
           const next = new URLSearchParams(prev);
           if (open) {
             next.set("panel", "open");
-          } else if (fallbackOpen) {
+          } else if (cardOpen) {
             next.set("panel", "closed");
           } else {
             next.delete("panel");
@@ -93,7 +100,7 @@ export function usePanels(
         { replace: true },
       );
     },
-    [setParams, fallbackOpen],
+    [setParams, cardOpen],
   );
 
   const setPanelMode = useCallback(

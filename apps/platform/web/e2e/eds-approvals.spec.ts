@@ -67,6 +67,8 @@ test.describe("КП на одобрение: директор", () => {
     await expect(page).toHaveURL(/\/eds\/drafts\?/);
 
     // карточка КП
+    // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await first.getByRole("link", { name: "Открыть карточку КП КП-2026/115" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/115" })).toBeVisible();
     await expect(page.getByText("Черновик · отправка заблокирована")).toBeVisible();

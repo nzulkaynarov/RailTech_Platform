@@ -42,8 +42,12 @@ export interface SectionConfig {
   menuHome?: { module: ModuleCode; section: string };
   /** Вкладки бокового окна; первая — по действию экрана (SPEC-v3 §6.1). По умолчанию — Карточка · Чат проекта · Документы */
   tabs?: readonly PanelTab[];
-  /** Состояния панелей по умолчанию (SPEC-v3 приложение А); без поля — обе открыты */
-  defaults?: { menuOpen?: boolean; panelOpen?: boolean };
+  /**
+   * Панели по умолчанию (SPEC-v3 §6.1): `menuOpen` — подменю на ≥ 1440 px; `panelOpen: false` — окно закрыто и на карточке
+   * объекта (в списках оно закрыто всегда, ORCHESTRATOR §3 п. 18); `panelMode: "docked"` — раздел, где окно нужно рядом с
+   * работой (переписка): на ≥ 1280 px оно закреплено, а не поверх.
+   */
+  defaults?: { menuOpen?: boolean; panelOpen?: boolean; panelMode?: "overlay" | "docked" };
   /** Куда ведёт действие пустого состояния; без поля — кнопка неактивна («появится в фазе P2») */
   actionTo?: string;
   /** < 768 px боковое окно раздела — лист на весь экран (B-020), а не узкое окно справа */

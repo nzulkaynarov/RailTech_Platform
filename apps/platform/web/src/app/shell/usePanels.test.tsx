@@ -158,6 +158,28 @@ describe("usePanels", () => {
     expect(usePanelsStore.getState().entries[key]?.panelWidth).toBe("wide");
   });
 
+  it("вид по умолчанию: список — поверх; карточка объекта и раздел с panelMode docked — рядом; булавка важнее", () => {
+    const list = renderHook(() => usePanels("user-1", mockSection), {
+      wrapper: createWrapper("/crm/leads"),
+    });
+    expect(list.result.current.panelMode).toBe("overlay");
+
+    const card = renderHook(() => usePanels("user-1", mockSection, true), {
+      wrapper: createWrapper("/crm/leads/L-2041"),
+    });
+    expect(card.result.current.panelMode).toBe("docked");
+
+    const messages: SectionConfig = { ...mockSection, defaults: { panelMode: "docked" } };
+    const work = renderHook(() => usePanels("user-2", messages), {
+      wrapper: createWrapper("/crm/leads"),
+    });
+    expect(work.result.current.panelMode).toBe("docked");
+    act(() => {
+      work.result.current.setPanelMode("overlay");
+    });
+    expect(work.result.current.panelMode).toBe("overlay");
+  });
+
   it("настройки со старого ключа rt-pf-panels-v1 переносятся: подменю и вкладка — да, «открыто» — нет", () => {
     window.localStorage.setItem(
       "rt-pf-panels-v1",

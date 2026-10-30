@@ -61,6 +61,8 @@ test.describe("Входящие письма: директор", () => {
     await settledScreenshot(page, "list-panel");
 
     // карточка письма
+    // окно поверх списка закрывает правые столбцы (ORCHESTRATOR §3 п. 18): сначала скрыть его
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await first.getByRole("link", { name: "Открыть карточку письма ВХ-104/26" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
     const steps = page.getByRole("list", { name: "Путь заявки ЗВ-2026-104" });
