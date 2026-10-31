@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot as shot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // EDS · «Проекты: договор, акт, сканы» на MSW (D2-5): бухгалтер ведёт проект ПР-2026-104 от «Сформировать проект договора» до
 // «Подписан (скан)», акт проекта ПР-2026-097 — до «Выполнено»; менеджер читает без кнопок; администратор не видит раздел;
@@ -113,7 +114,7 @@ test.describe("Проекты: бухгалтер", () => {
     const act = page.locator(PANEL);
     await expect(act.getByText(/Акт у клиента на приёмке/)).toBeVisible();
     await settledScreenshot(page, "act-issued");
-    await act.getByLabel("Скан подписанного акта").setInputFiles(SCAN("akt-demo.pdf"));
+    await pickFiles(act.getByLabel("Скан подписанного акта"), SCAN("akt-demo.pdf"));
     await act.getByRole("button", { name: "Прикрепить скан → Подписан" }).click();
     await expect(act.getByText("Акт подписан, скан сохранён.")).toBeVisible();
     await expect(

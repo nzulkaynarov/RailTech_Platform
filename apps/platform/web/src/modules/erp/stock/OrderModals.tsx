@@ -12,6 +12,7 @@ import {
   useUpdateSupplierOrder,
 } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock } from "./api";
 
@@ -157,15 +158,7 @@ export function ConfirmModal({
     >
       <div className="pf-calc-stack">
         <FormField id={id} label={t("order.confirm.date")} hint={t("order.confirm.dateHint")}>
-          <Input
-            id={id}
-            type="date"
-            value={date}
-            aria-describedby={`${id}-hint`}
-            onChange={(event) => {
-              setDate(event.target.value);
-            }}
-          />
+          <DateField id={id} value={date} aria-describedby={`${id}-hint`} onChange={setDate} />
         </FormField>
         <ErrorNote message={action.error} />
         <Consequence items={t("order.confirm.consequence", { returnObjects: true }) as string[]} />
@@ -394,14 +387,7 @@ export function EditModal({ order, onClose }: { order: SupplierOrderDetail; onCl
     >
       <div className="pf-calc-stack">
         <FormField id={dateId} label={t("order.edit.date")}>
-          <Input
-            id={dateId}
-            type="date"
-            value={date}
-            onChange={(event) => {
-              setDate(event.target.value);
-            }}
-          />
+          <DateField id={dateId} value={date} onChange={setDate} />
         </FormField>
         <FormField id={noteId} label={t("order.edit.note")}>
           <Input

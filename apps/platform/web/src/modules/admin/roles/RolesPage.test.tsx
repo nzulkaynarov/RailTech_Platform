@@ -6,6 +6,7 @@ import { writeEmployees, readEmployees } from "../../../mocks/fixtures/employees
 import { ROLE_ID, readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { endSession } from "../../../mocks/mockSession";
 import i18n from "../../../shared/i18n";
+import { chooseOption } from "../../../test/fields";
 import { renderApp, signInAs } from "../../../test/renderApp";
 import { setViewportWidth } from "../../../test/viewport";
 
@@ -74,11 +75,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     fireEvent.change(within(panel).getByLabelText("Название"), {
       target: { value: "Менеджер и бухгалтер" },
     });
-    fireEvent.change(
+    await chooseOption(
       within(table()).getByRole("combobox", {
         name: "Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «Менеджер и бухгалтер»",
       }),
-      { target: { value: "full" } },
+      "Полный доступ",
     );
     fireEvent.click(
       within(table()).getByRole("checkbox", {
@@ -103,11 +104,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     const panel = await panelEl();
     await within(panel).findByRole("heading", { level: 3, name: "Новая роль" });
 
-    fireEvent.change(
+    await chooseOption(
       within(table()).getByRole("combobox", {
         name: "Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании — роль «Новая роль»",
       }),
-      { target: { value: "full" } },
+      "Полный доступ",
     );
 
     expect(
@@ -203,11 +204,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     const panel = await panelEl();
     await within(panel).findByRole("textbox", { name: "Название" });
 
-    fireEvent.change(
+    await chooseOption(
       within(table()).getByRole("combobox", {
         name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»",
       }),
-      { target: { value: "" } },
+      "Скрыто",
     );
 
     expect(await within(panel).findByText(/^1 сотрудник потеряет: /)).toBeVisible();

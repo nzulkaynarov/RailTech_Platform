@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // Admin · Внешние интеграции на MSW (W13-A1): каждое действие экрана — проверка связи, сопряжение и ротация ERP, токен бота и
 // канал команды, SMTP и тестовое письмо, выключатель сервиса, смена и сброс модели, копия вне расписания; директор читает
@@ -240,7 +241,7 @@ test.describe("Внешние интеграции: администратор",
       private_key_id: "0123456789abcdef1a2b",
       private_key: "-----BEGIN PRIVATE KEY-----\\nDEMO-PRIVATE-BODY\\n-----END PRIVATE KEY-----",
     });
-    await form.getByLabel("Ключ сервисного аккаунта (файл JSON)").setInputFiles({
+    await pickFiles(form.getByLabel("Ключ сервисного аккаунта (файл JSON)"), {
       name: "rt-backups-1a2b.json",
       mimeType: "application/json",
       buffer: Buffer.from(key),

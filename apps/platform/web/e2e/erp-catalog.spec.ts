@@ -10,6 +10,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // Расчёт · Номенклатура и поставщики и Техдокументация на MSW (D2-3). Снабженец: находит позицию, открывает поставщика с ценами
 // и сроком цены, подаёт запрос на категорию; директор (company.settings) одобряет его; гл. инженер: бригады со ставками,
@@ -251,9 +252,11 @@ test.describe("Техдокументация", () => {
 
     await page.getByRole("button", { name: "Загрузить файл" }).click();
     const form = page.getByRole("dialog", { name: "Загрузить файл" });
-    await form
-      .getByLabel("Файл")
-      .setInputFiles({ name: "wiring.pdf", mimeType: "application/pdf", buffer: samplePdf() });
+    await pickFiles(form.getByLabel("Файл"), {
+      name: "wiring.pdf",
+      mimeType: "application/pdf",
+      buffer: samplePdf(),
+    });
     await form.getByLabel("Название").fill("Схема подключения реле РЗ-1");
     await form.getByLabel("Позиция номенклатуры").click();
     await pickOption(page, /Реле защиты РЗ-1/);
@@ -291,7 +294,7 @@ test.describe("Техдокументация", () => {
     await openDocs(page, "?product_id=1");
     await page.getByRole("button", { name: "Загрузить файл" }).click();
     const form = page.getByRole("dialog", { name: "Загрузить файл" });
-    await form.getByLabel("Файл").setInputFiles({
+    await pickFiles(form.getByLabel("Файл"), {
       name: "huge.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.alloc(21 * 1024 * 1024, 37),

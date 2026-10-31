@@ -10,6 +10,7 @@ import {
   getDownloadEdsDocumentFileUrl,
   useGetMemoApproval,
 } from "../../../shared/api/generated/platform-bff";
+import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
@@ -22,7 +23,6 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { DocumentStatusTag } from "../documents/status";
-import { formatFileSize } from "../documents/fileSize";
 import { AgreeSlot } from "./AgreePanel";
 import { memoRef } from "./api";
 import { useStateLabels } from "./labels";
