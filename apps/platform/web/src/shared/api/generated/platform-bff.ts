@@ -12142,8 +12142,8 @@ export const getGetOffsiteBackupUrl = () => {
 };
 
 /**
- * CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` — итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
- * @summary Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+ * CRM `GET /integrations/offsite` (OPS-GDRIVE-2, OPS-YADISK). `provider` — выбранный провайдер: `yandex` (Яндекс Диск компании, WebDAV и пароль приложения «Файлы») или `gdrive` (общий диск Google Workspace, сервисный аккаунт). Секреты не возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID ключа), у Яндекса — логин и `app_password_configured` (пароль задан, без символов). `delivered_at` и `last_check` — выбранного провайдера. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+ * @summary Внешняя копия бэкапов: провайдер (Яндекс Диск или Google Drive), папка, доступ — без секретов
  */
 export const getOffsiteBackup = async (
   options?: Parameters<typeof http>[1],
@@ -12231,7 +12231,7 @@ export function useGetOffsiteBackup<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+ * @summary Внешняя копия бэкапов: провайдер (Яндекс Диск или Google Drive), папка, доступ — без секретов
  */
 
 export function useGetOffsiteBackup<
@@ -12258,8 +12258,8 @@ export const getSaveOffsiteBackupUrl = () => {
 };
 
 /**
- * CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
- * @summary Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+ * CRM `PUT /integrations/offsite`. `provider` — `yandex` или `gdrive` (не задан — `gdrive`, как до OPS-YADISK). Яндекс Диск: `login` — адрес почты Яндекс 360, `folder_path` — путь папки на Диске (пусто — `default_folder_path`), `app_password` — пароль приложения «Файлы» (`null` — оставить прежний). Google Drive: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес. `password` — пароль администратора. Секрет хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]` или `[folder_path]`), `offsite_login_invalid` (`[login]`), `offsite_app_password_invalid` (`[app_password]` — пароля нет и прежнего нет); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+ * @summary Выбрать провайдера внешней копии, сохранить доступ и сразу проверить
  */
 export const saveOffsiteBackup = async (
   offsiteBackupIn: OffsiteBackupIn,
@@ -12356,7 +12356,7 @@ export type SaveOffsiteBackupMutationError = ErrorType<
 export type SaveOffsiteBackupMutationVariables = { data: OffsiteBackupIn };
 
 /**
- * @summary Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+ * @summary Выбрать провайдера внешней копии, сохранить доступ и сразу проверить
  */
 export const useSaveOffsiteBackup = <
   TError = ErrorType<
@@ -12395,8 +12395,8 @@ export const getCheckOffsiteBackupUrl = () => {
 };
 
 /**
- * CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы. Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
- * @summary Проверить ключ и папку у Google
+ * CRM `POST /integrations/offsite/check`. Google: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы (на Drive ничего не пишет). Яндекс: вход по WebDAV, папка (нет — создаётся), запись и удаление проверочного файла. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — доступа или папки ещё нет.
+ * @summary Проверить доступ выбранного провайдера к папке
  */
 export const checkOffsiteBackup = async (
   options?: Parameters<typeof http>[1],
@@ -12454,7 +12454,7 @@ export type CheckOffsiteBackupMutationError = ErrorType<
 >;
 
 /**
- * @summary Проверить ключ и папку у Google
+ * @summary Проверить доступ выбранного провайдера к папке
  */
 export const useCheckOffsiteBackup = <
   TError = ErrorType<

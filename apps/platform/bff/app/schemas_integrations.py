@@ -97,11 +97,16 @@ class SmtpSettingsIn(_In):
 
 
 class OffsiteBackupIn(_In):
-    """Внешняя копия бэкапов (OPS-GDRIVE-2): ключ сервисного аккаунта Google (`None` — прежний),
-    папка общего диска, пароль администратора. Ключ дальше CRM не уходит и не возвращается."""
+    """Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): провайдер; Яндекс — логин, папка, пароль
+    приложения «Файлы» (`None` — прежний); Google — ключ сервисного аккаунта (`None` — прежний) и
+    папка общего диска; пароль администратора. Секреты дальше CRM не уходят и не возвращаются."""
 
+    provider: Literal["gdrive", "yandex"] = "gdrive"
+    login: str = Field(default="", max_length=254)
+    folder_path: str = Field(default="", max_length=255)
+    app_password: SecretStr | None = Field(default=None, min_length=1, max_length=256)
     key_json: SecretStr | None = Field(default=None, min_length=1, max_length=16384)
-    folder_id: str = Field(min_length=1, max_length=512)
+    folder_id: str = Field(default="", max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
 
 
@@ -251,6 +256,10 @@ OffsiteReason = Literal[
     "not_shared_drive",
     "read_only",
     "network",
+    "auth_failed",
+    "not_app_password",
+    "webdav_forbidden",
+    "no_space",
 ]
 
 
@@ -262,7 +271,13 @@ class OffsiteCheck(_Out):
 
 
 class OffsiteBackup(_Out):
+    provider: Literal["gdrive", "yandex"]
     configured: bool
+    login: str
+    folder_path: str
+    app_password_configured: bool
+    app_password_updated_at: datetime | None
+    default_folder_path: str
     folder_id: str
     client_email: str
     key_suffix: str | None
