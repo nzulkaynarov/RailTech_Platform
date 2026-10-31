@@ -23,6 +23,7 @@ import { groupDeliveries } from '@/lib/deliveries';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { BillingNavTabs } from '@/pages/billing';
 import { CanAct } from '@/session/CanAct';
 
 /**
@@ -209,6 +210,7 @@ export function DocumentsPage() {
   return (
     <>
       <PageHeader title={t('pages.documents.title')} icon={FolderOpen} />
+      <BillingNavTabs />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
           {[undefined, ...DOCUMENT_KINDS].map((option) => (

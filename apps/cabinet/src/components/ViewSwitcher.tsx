@@ -59,9 +59,9 @@ export function ViewSwitcher({
         aria-selected={activeView === "kanban"}
         onClick={() => setView("kanban")}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-all duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring",
           activeView === "kanban"
-            ? "bg-canvas font-semibold text-navy shadow-2xs"
+            ? "bg-canvas font-semibold text-navy shadow-xs"
             : "text-muted-foreground hover:text-charcoal",
         )}
       >
@@ -75,9 +75,9 @@ export function ViewSwitcher({
         aria-selected={activeView === "list"}
         onClick={() => setView("list")}
         className={cn(
-          "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-all duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring",
           activeView === "list"
-            ? "bg-canvas font-semibold text-navy shadow-2xs"
+            ? "bg-canvas font-semibold text-navy shadow-xs"
             : "text-muted-foreground hover:text-charcoal",
         )}
       >
@@ -92,16 +92,16 @@ export function ViewSwitcher({
           aria-selected={activeView === "documents"}
           onClick={() => setView("documents")}
           className={cn(
-            "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-all duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring",
             activeView === "documents"
-              ? "bg-canvas font-semibold text-navy shadow-2xs"
+              ? "bg-canvas font-semibold text-navy shadow-xs"
               : "text-muted-foreground hover:text-charcoal",
           )}
         >
           <FileText className="size-3.5" aria-hidden="true" />
           <span>{t("views.documents", { defaultValue: "Документы" })}</span>
           {typeof documentsCount === "number" && (
-            <span className="ml-0.5 rounded-full bg-ice-navy px-1.5 py-0.2 font-mono text-xs text-navy">
+            <span className="ml-0.5 rounded-full bg-ice-navy px-1.5 py-0.5 font-mono text-xs font-semibold text-navy">
               {documentsCount}
             </span>
           )}

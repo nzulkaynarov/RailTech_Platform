@@ -89,7 +89,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
   return (
     <aside
       className={cn(
-        'sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-hairline bg-alabaster transition-all duration-200 md:flex',
+        'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-hairline bg-alabaster transition-all duration-200 md:flex',
         collapsed ? 'w-16' : 'w-64',
       )}
     >

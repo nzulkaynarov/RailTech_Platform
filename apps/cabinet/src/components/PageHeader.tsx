@@ -21,8 +21,8 @@ export function PageHeader({ title, subtitle, actions, icon: Icon, badge }: Page
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-hairline pb-4">
       <div className="flex min-w-0 items-center gap-3.5">
         {Icon ? (
-          <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-navy text-primary-foreground shadow-xs">
-            <Icon className="size-6 text-primary-foreground" aria-hidden="true" />
+          <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-navy text-primary-foreground shadow-xs md:size-12 md:rounded-2xl">
+            <Icon className="size-5 text-primary-foreground md:size-6" aria-hidden="true" />
           </div>
         ) : null}
         <div className="min-w-0">

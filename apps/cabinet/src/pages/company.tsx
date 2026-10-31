@@ -264,6 +264,7 @@ export function TeamPage() {
     <>
       <PageHeader
         title={t('pages.team.title')}
+        icon={Users}
         actions={
           <CanAct>
             <Button onClick={() => setInviting(true)}>
@@ -297,7 +298,7 @@ export function TeamPage() {
 function MemberCard({ member, isMe }: { member: TeamMember; isMe: boolean }) {
   const { t } = useTranslation();
   return (
-    <article className="flex h-full min-w-0 flex-col gap-3 rounded-lg border bg-card p-4">
+    <article className="notion-card flex h-full min-w-0 flex-col gap-3 rounded-2xl border border-border bg-card p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h2 className="text-sm font-semibold break-words">{member.name}</h2>
         {isMe ? <ToneBadge tone="info">{t('pages.team.you')}</ToneBadge> : null}

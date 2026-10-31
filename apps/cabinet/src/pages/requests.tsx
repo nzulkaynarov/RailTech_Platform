@@ -85,18 +85,18 @@ export function RequestsPage() {
       ) : viewMode === 'kanban' ? (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Колонка 1: Ждут решения (КП выставлено) */}
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between rounded-xl border border-hairline bg-ice-navy/60 px-3.5 py-2">
+          <section className="flex flex-col gap-3 rounded-2xl border border-hairline bg-alabaster/40 p-3 sm:p-4">
+            <div className="flex items-center justify-between rounded-xl border border-hairline bg-ice-navy/80 px-3.5 py-2.5 shadow-xs">
               <span className="flex items-center gap-2 font-semibold text-navy text-xs">
-                <span className="size-2 rounded-full bg-coral" />
+                <span className="size-2 rounded-full bg-coral animate-pulse" />
                 {t('views.kanbanAwaiting', { defaultValue: 'Ждут вашего решения' })}
               </span>
-              <span className="rounded-full bg-ice-navy px-2 py-0.5 font-mono text-xs font-semibold text-navy">
+              <span className="rounded-full bg-canvas px-2.5 py-0.5 font-mono text-xs font-semibold text-navy shadow-xs border border-hairline">
                 {waitingQuotes.length}
               </span>
             </div>
             {waitingQuotes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-hairline p-6 text-center text-xs text-muted-foreground">
+              <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-xs text-muted-foreground bg-canvas">
                 {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов, требующих ответа' })}
               </div>
             ) : (
@@ -119,18 +119,18 @@ export function RequestsPage() {
           </section>
 
           {/* Колонка 2: В исполнении и работе */}
-          <section className="flex flex-col gap-3">
-            <div className="flex items-center justify-between rounded-xl border border-sand-border bg-sand-bg/60 px-3.5 py-2">
+          <section className="flex flex-col gap-3 rounded-2xl border border-hairline bg-alabaster/40 p-3 sm:p-4">
+            <div className="flex items-center justify-between rounded-xl border border-sand-border/80 bg-sand-bg/80 px-3.5 py-2.5 shadow-xs">
               <span className="flex items-center gap-2 font-semibold text-sand text-xs">
                 <span className="size-2 rounded-full bg-sand" />
                 {t('views.kanbanInProgress', { defaultValue: 'В исполнении и работе' })}
               </span>
-              <span className="rounded-full bg-canvas px-2 py-0.5 font-mono text-xs font-semibold text-sand border border-sand-border">
+              <span className="rounded-full bg-canvas px-2.5 py-0.5 font-mono text-xs font-semibold text-sand border border-sand-border shadow-xs">
                 {inWorkRequests.length}
               </span>
             </div>
             {inWorkRequests.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-hairline p-6 text-center text-xs text-muted-foreground">
+              <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-xs text-muted-foreground bg-canvas">
                 {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов в работе' })}
               </div>
             ) : (

@@ -5,6 +5,7 @@ import { Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
 import { useMe } from '@/session/useMe';
 import { BottomNav } from './BottomNav';
@@ -57,23 +58,61 @@ export function AppShell() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Вычисление хлебных крошек
-  const getBreadcrumbs = () => {
+  // Вычисление интерактивных хлебных крошек
+  const getBreadcrumbs = (): Array<{ label: string; href?: string }> => {
     const path = location.pathname;
-    if (path.startsWith('/requests')) return t('nav.requests');
-    if (path.startsWith('/quotes')) return t('nav.quotes');
-    if (path.startsWith('/contracts')) return t('nav.contracts');
-    if (path.startsWith('/invoices')) return t('nav.invoices');
-    if (path.startsWith('/acts')) return t('nav.acts');
-    if (path.startsWith('/deliveries')) return t('nav.deliveries');
-    if (path.startsWith('/documents')) return t('nav.documents');
-    if (path.startsWith('/catalog')) return t('nav.catalog');
-    if (path.startsWith('/company')) return t('nav.company');
-    if (path.startsWith('/team')) return t('nav.team');
-    if (path.startsWith('/deals')) return t('common.deal', { defaultValue: 'Сделка' });
-    if (path.startsWith('/profile')) return t('nav.profile');
-    return t('app.name');
+    const segments: Array<{ label: string; href?: string }> = [];
+
+    if (path.startsWith('/requests/new')) {
+      segments.push({ label: t('nav.requests'), href: '/requests' });
+      segments.push({ label: t('pages.requests.new') });
+    } else if (path.startsWith('/requests/')) {
+      const id = path.replace('/requests/', '');
+      segments.push({ label: t('nav.requests'), href: '/requests' });
+      segments.push({ label: `№ ${id}` });
+    } else if (path.startsWith('/requests')) {
+      segments.push({ label: t('nav.requests') });
+    } else if (path.startsWith('/quotes/')) {
+      const id = path.replace('/quotes/', '');
+      segments.push({ label: t('nav.quotes'), href: '/quotes' });
+      segments.push({ label: `№ ${id}` });
+    } else if (path.startsWith('/quotes')) {
+      segments.push({ label: t('nav.quotes') });
+    } else if (path.startsWith('/contracts')) {
+      segments.push({ label: t('nav.contracts') });
+    } else if (path.startsWith('/invoices')) {
+      segments.push({ label: t('nav.invoices') });
+    } else if (path.startsWith('/acts')) {
+      segments.push({ label: t('nav.acts') });
+    } else if (path.startsWith('/billing')) {
+      segments.push({ label: t('nav.invoices') });
+    } else if (path.startsWith('/deliveries')) {
+      segments.push({ label: t('nav.deliveries') });
+    } else if (path.startsWith('/documents')) {
+      segments.push({ label: t('nav.documents') });
+    } else if (path.startsWith('/catalog/')) {
+      segments.push({ label: t('nav.catalog'), href: '/catalog' });
+      segments.push({ label: t('pages.catalog.item', { defaultValue: 'Товар' }) });
+    } else if (path.startsWith('/catalog')) {
+      segments.push({ label: t('nav.catalog') });
+    } else if (path.startsWith('/company')) {
+      segments.push({ label: t('nav.company') });
+    } else if (path.startsWith('/team')) {
+      segments.push({ label: t('nav.company'), href: '/company' });
+      segments.push({ label: t('nav.team') });
+    } else if (path.startsWith('/deals/')) {
+      const id = path.replace('/deals/', '');
+      segments.push({ label: t('common.deal', { defaultValue: 'Сделка' }), href: '/requests' });
+      segments.push({ label: `№ ${id}` });
+    } else if (path.startsWith('/profile')) {
+      segments.push({ label: t('nav.profile') });
+    } else {
+      segments.push({ label: t('app.name') });
+    }
+    return segments;
   };
+
+  const breadcrumbs = getBreadcrumbs();
 
   return (
     <div className="min-h-dvh bg-alabaster text-charcoal md:flex">
@@ -111,11 +150,35 @@ export function AppShell() {
                 </Button>
 
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="truncate font-medium text-charcoal md:inline">{me?.company.name || t('app.name')}</span>
-                    <span className="text-muted-foreground/60">/</span>
-                    <span className="truncate font-semibold text-navy">{getBreadcrumbs()}</span>
-                  </div>
+                  <nav aria-label={t('app.breadcrumbs', { defaultValue: 'Хлебные крошки' })} className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <Link
+                      to="/company"
+                      className="truncate font-medium text-charcoal hover:text-navy hover:underline transition-colors"
+                      title={me?.company.name || t('app.name')}
+                    >
+                      {me?.company.name || t('app.name')}
+                    </Link>
+                    {breadcrumbs.map((segment, index) => {
+                      const isLast = index === breadcrumbs.length - 1;
+                      return (
+                        <span key={index} className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-muted-foreground/50">/</span>
+                          {segment.href && !isLast ? (
+                            <Link
+                              to={segment.href}
+                              className="truncate font-medium text-muted-foreground hover:text-navy hover:underline transition-colors"
+                            >
+                              {segment.label}
+                            </Link>
+                          ) : (
+                            <span className={cn('truncate', isLast ? 'font-semibold text-navy' : 'font-medium text-charcoal')}>
+                              {segment.label}
+                            </span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </nav>
                 </div>
               </div>
 

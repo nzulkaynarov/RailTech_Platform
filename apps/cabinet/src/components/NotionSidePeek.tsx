@@ -94,7 +94,7 @@ export function NotionSidePeek(props: NotionSidePeekProps) {
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-charcoal/20 backdrop-blur-2xs transition-opacity"
+        className="fixed inset-0 z-40 bg-charcoal/30 backdrop-blur-xs transition-opacity duration-200 animate-in fade-in-0"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -104,7 +104,7 @@ export function NotionSidePeek(props: NotionSidePeekProps) {
         role="dialog"
         aria-label={title}
         aria-modal="true"
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[460px] flex-col border-l border-hairline bg-canvas shadow-2xl transition-transform duration-200"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-full sm:max-w-[480px] flex-col border-l border-hairline bg-canvas shadow-2xl transition-all duration-250 ease-out animate-in slide-in-from-right-full"
       >
         {/* Шапка боковой панели */}
         <div className="flex items-center justify-between border-b border-hairline p-4">
@@ -188,7 +188,13 @@ export function NotionSidePeek(props: NotionSidePeekProps) {
                 const isCurrent = stepIndex === currentStep;
 
                 return (
-                  <li key={label} className="flex items-center justify-between p-3 text-xs">
+                  <li
+                    key={label}
+                    className={cn(
+                      'flex items-center justify-between p-3 text-xs transition-colors',
+                      isCurrent && 'bg-ice-navy/30',
+                    )}
+                  >
                     <div className="flex items-center gap-2.5">
                       {isPassed ? (
                         <div className="flex size-5 items-center justify-center rounded-full bg-sage-bg text-sage">

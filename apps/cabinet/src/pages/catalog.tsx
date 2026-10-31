@@ -79,7 +79,7 @@ export function CatalogPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.catalog.title')} />
+      <PageHeader title={t('pages.catalog.title')} icon={Package} />
       <SearchForm key={q} initial={q} onSearch={(value) => update({ q: value || null, page: null })} />
       {categories.length > 0 ? (
         <div role="group" aria-label={t('pages.catalog.categories')} className="mb-4 flex flex-wrap gap-2">

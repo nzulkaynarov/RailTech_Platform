@@ -42,7 +42,7 @@ export function UnsavedChangesBar({
       role="region"
       aria-label={t('common.unsavedChanges', { defaultValue: 'Несохранённые изменения' })}
       className={cn(
-        'sticky top-3 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-navy px-4 py-3 text-primary-foreground shadow-xl transition-all duration-200',
+        'sticky top-3 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-navy px-4 py-3 text-primary-foreground shadow-xl border border-navy/20 animate-in fade-in-0 slide-in-from-top-2 duration-200 ease-out',
         className,
       )}
     >

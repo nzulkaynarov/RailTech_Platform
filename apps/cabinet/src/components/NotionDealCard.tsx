@@ -99,13 +99,14 @@ export function NotionDealCard(props: NotionDealCardProps) {
         </div>
         <div className="grid grid-cols-5 gap-1.5" role="progressbar" aria-valuenow={clampedStep} aria-valuemin={1} aria-valuemax={5}>
           {[1, 2, 3, 4, 5].map((index) => {
-            const isCompleted = index <= clampedStep;
+            const isCompleted = index < clampedStep;
+            const isCurrent = index === clampedStep;
             return (
               <span
                 key={index}
                 className={cn(
                   'h-1.5 rounded-full transition-colors',
-                  isCompleted ? 'bg-sage' : 'bg-hairline',
+                  isCompleted ? 'bg-sage' : isCurrent ? 'bg-navy' : 'bg-hairline',
                 )}
                 title={`${index}. ${MILESTONES[index - 1]}`}
               />
