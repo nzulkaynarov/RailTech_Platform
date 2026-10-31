@@ -112,10 +112,10 @@ describe("карты статусов", () => {
     expect(conflicts).toEqual([]);
   });
 
-  it("смысл → цвет по SPEC-v3 §5.2: ждёт — золотой, одобрено — зелёный, отклонено — красный, отменено — серый", () => {
+  it("смысл → цвет по SPEC-v3 §5.2: ждёт — золотой, черновик и отменено — серый, одобрено — зелёный, отклонено — красный", () => {
     expect(MEANING_TONE).toEqual({
       waiting: "gold",
-      draft: "gold",
+      draft: "default",
       done: "green",
       failed: "red",
       memo: "purple",
