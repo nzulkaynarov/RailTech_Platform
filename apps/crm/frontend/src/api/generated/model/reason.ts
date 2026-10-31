@@ -86,6 +86,8 @@ export const Reason = {
   offsite_folder_invalid: "offsite_folder_invalid",
   offsite_not_configured: "offsite_not_configured",
   offsite_delivery_failed: "offsite_delivery_failed",
+  offsite_login_invalid: "offsite_login_invalid",
+  offsite_app_password_invalid: "offsite_app_password_invalid",
   lead_exists: "lead_exists",
   client_exists: "client_exists",
   contact_required: "contact_required",

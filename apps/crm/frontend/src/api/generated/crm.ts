@@ -7419,9 +7419,10 @@ export const getGetOffsiteStatusUrl = () => {
 };
 
 /**
- * Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
- * последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
- * возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов.
+ * Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): выбранный провайдер — Яндекс Диск (логин,
+ * папка, «пароль приложения задан») или Google Drive (папка, адрес сервисного аккаунта, последние
+ * символы ID ключа), доставка сервису копирования, итог последней проверки. Секреты не
+ * возвращаются никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов.
  * @summary Get Offsite Status
  */
 export const getOffsiteStatus = async (
@@ -7535,13 +7536,15 @@ export const getPutOffsiteConnectorUrl = () => {
 };
 
 /**
- * Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+ * Выбрать провайдера, сохранить доступ (после пароля админа) и сразу проверить.
  *
- * Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
- * хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
- * Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
- * `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
- * `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).
+ * Секрет (ключ Google или пароль приложения Яндекса) доставляется сервису копирования (бакет
+ * `offsite-config`, у CRM — только запись) и хранится зашифрованным; `null` — оставить прежний.
+ * Итог проверки — `last_check`. Ошибки (422, `details.field`): `offsite_key_invalid` (`key_json`;
+ * `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri`),
+ * `offsite_folder_invalid` (`folder_id` или `folder_path`), `offsite_login_invalid` (`login`),
+ * `offsite_app_password_invalid` (`app_password`), `wrong_password`; `secrets_key_missing`
+ * (409), `offsite_delivery_failed` (502).
  * @summary Put Offsite Connector
  */
 export const putOffsiteConnector = async (
@@ -7648,9 +7651,9 @@ export const getCheckOffsiteConnectorUrl = () => {
 };
 
 /**
- * «Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
- *
- * Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
+ * «Проверить» выбранного провайдера. Google: ключ → токен → папка (общий диск, право добавлять
+ * файлы), ничего не пишет. Яндекс: вход по WebDAV → папка (нет — создаётся) → запись и удаление
+ * проверочного файла. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
  * @summary Check Offsite Connector
  */
 export const checkOffsiteConnector = async (

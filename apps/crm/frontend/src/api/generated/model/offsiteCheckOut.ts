@@ -4,9 +4,12 @@
  */
 
 /**
- * Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
- * (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
- * `read_only`), `network` — Google не ответил (хостинг).
+ * Итог «Проверить» внешней копии (OPS-GDRIVE-2, OPS-YADISK): `reason` — `ok` или что исправить.
+ *
+ * Google Drive: `key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`,
+ * `not_shared_drive`, `read_only`. Яндекс Диск: `auth_failed` (логин или пароль приложения не
+ * приняты), `not_app_password` (введён не пароль приложения), `webdav_forbidden` (доступ по WebDAV
+ * закрыт администратором Яндекс 360), `not_folder`, `no_space`. `network` — сервис не ответил.
  */
 export interface OffsiteCheckOut {
   checked_at: string;

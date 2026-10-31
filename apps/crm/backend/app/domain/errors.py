@@ -104,6 +104,10 @@ class Reason(StrEnum):
     OFFSITE_FOLDER_INVALID = "offsite_folder_invalid"
     OFFSITE_NOT_CONFIGURED = "offsite_not_configured"
     OFFSITE_DELIVERY_FAILED = "offsite_delivery_failed"
+    # Внешняя копия на Яндекс Диске (OPS-YADISK): логин — не адрес почты, пароль приложения
+    # не задан (а прежнего нет) или длиннее предела.
+    OFFSITE_LOGIN_INVALID = "offsite_login_invalid"
+    OFFSITE_APP_PASSWORD_INVALID = "offsite_app_password_invalid"  # noqa: S105 — код, не секрет
     # Источники лидов (M3-CRM-05): ручное создание и форма «Запрос» с сайта.
     LEAD_EXISTS = "lead_exists"
     CLIENT_EXISTS = "client_exists"
