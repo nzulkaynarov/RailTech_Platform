@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { companyDayKey, formatActivityTime, formatDate } from "./dates";
+import { companyDayKey, companyToday, formatActivityTime, formatDate } from "./dates";
 
 describe("formatDate (часовой пояс компании — Asia/Tashkent, UTC+5)", () => {
   const moment = new Date("2026-10-24T06:50:00Z"); // 11:50 в Ташкенте
@@ -61,5 +61,10 @@ describe("formatActivityTime", () => {
   it("companyDayKey", () => {
     expect(companyDayKey("2026-10-24T20:30:00Z")).toBe("2026-10-25");
     expect(companyDayKey(null)).toBeNull();
+  });
+
+  it("companyToday — сегодня по Ташкенту, а не по браузеру", () => {
+    expect(companyToday(new Date("2026-10-27T23:30:00Z"))).toBe("2026-10-28");
+    expect(companyToday(new Date("2026-10-27T10:00:00Z"))).toBe("2026-10-27");
   });
 });

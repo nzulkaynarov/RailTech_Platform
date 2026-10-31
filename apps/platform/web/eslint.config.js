@@ -21,6 +21,37 @@ const QUERY_KEY_METHODS = [
 ].join("|");
 const LITERAL_KEY_MESSAGE = "Ключ кэша — сгенерированный orval (get…QueryKey), не массив-литерал.";
 
+const QUERY_KEY_RULES = [
+  {
+    selector: `CallExpression[callee.property.name=/^(${QUERY_KEY_METHODS})$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
+    message: LITERAL_KEY_MESSAGE,
+  },
+  {
+    selector: `CallExpression[callee.name=/^(useQuery|useSuspenseQuery|useInfiniteQuery)$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
+    message: LITERAL_KEY_MESSAGE,
+  },
+  {
+    selector: `CallExpression[callee.property.name=/^(setQueryData|getQueryData|getQueryState)$/][arguments.0.type="ArrayExpression"]`,
+    message: LITERAL_KEY_MESSAGE,
+  },
+];
+
+// Системных полей браузера в экранах нет (UX-2a, platform-frontend.md §5): дата `mm/dd/yyyy`, «Choose Files» и родной
+// `select` выбиваются из русского интерфейса. Исключение — сами `shared/ui/DateField` и `shared/ui/FileField`.
+const NATIVE_FIELD_TYPES = "/^(date|datetime-local|file)$/";
+const NATIVE_FIELD_RULES = [
+  {
+    selector: 'JSXOpeningElement[name.name="select"]',
+    message:
+      "Родной <select> запрещён: antd Select с подписью label for (поиск — если вариантов больше 7).",
+  },
+  {
+    selector: `JSXOpeningElement[name.name=/^(input|Input)$/] > JSXAttribute[name.name="type"][value.value=${NATIVE_FIELD_TYPES}]`,
+    message:
+      "Системное поле даты или файла запрещено: DateField / DateRangeField (shared/ui/DateField) или FileField / FilePicker (shared/ui/FileField).",
+  },
+];
+
 export default tseslint.config(
   {
     ignores: ["dist", "coverage", "playwright-report", "test-results", "src/shared/api/generated"],
@@ -43,21 +74,20 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
-      "no-restricted-syntax": [
-        "error",
-        {
-          selector: `CallExpression[callee.property.name=/^(${QUERY_KEY_METHODS})$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
-          message: LITERAL_KEY_MESSAGE,
-        },
-        {
-          selector: `CallExpression[callee.name=/^(useQuery|useSuspenseQuery|useInfiniteQuery)$/] > ObjectExpression > Property[key.name="queryKey"] > ArrayExpression.value`,
-          message: LITERAL_KEY_MESSAGE,
-        },
-        {
-          selector: `CallExpression[callee.property.name=/^(setQueryData|getQueryData|getQueryState)$/][arguments.0.type="ArrayExpression"]`,
-          message: LITERAL_KEY_MESSAGE,
-        },
-      ],
+      "no-restricted-syntax": ["error", ...QUERY_KEY_RULES],
+    },
+  },
+  {
+    files: [
+      "src/modules/**/*.tsx",
+      "src/features/**/*.tsx",
+      "src/shared/**/*.tsx",
+      "src/app/**/*.tsx",
+      "src/dev/**/*.tsx",
+    ],
+    ignores: ["src/shared/ui/DateField.tsx", "src/shared/ui/FileField.tsx"],
+    rules: {
+      "no-restricted-syntax": ["error", ...QUERY_KEY_RULES, ...NATIVE_FIELD_RULES],
     },
   },
   {
