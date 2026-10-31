@@ -3,10 +3,12 @@ Invariant: every Company must have at least one CompanyType.
 Otherwise the frontend cannot derive a status context (BUYER/SELLER/MANUFACTURER)
 and Admin-role users get bounced to ProfileCompletionForm when they open the app.
 
-Default restoration: CLIENT for ALL companies. Super-rights belong
+Default restoration: CLIENT for companies left WITHOUT any type. Super-rights belong
 exclusively to the superuser account (is_superuser + SystemRole.ADMIN).
 If a company needs to act as a seller, a human must add SUPPLIER to its types
-through normal Admin UI — no magic bypass.
+through normal Admin UI — no magic bypass. SUPPLIER does NOT imply CLIENT (K0, 2026-11-01):
+the marketplace rule "a seller may also buy" is gone, and CLIENT is what opens the
+client cabinet (`portal/services/access.py`), so a supplier must not get it for free.
 
 Mirrors the backfill in core/migrations/0002_seed_enterprise_lookups.py, but
 applied on every M2M-edit, not once per migrate.
@@ -61,32 +63,4 @@ def ensure_company_has_at_least_one_type(sender, instance: Company, action: str,
         "Company %s had no types left after %s — auto-restored CLIENT default",
         instance.pk,
         action,
-    )
-
-
-@receiver(m2m_changed, sender=Company.types.through)
-def supplier_or_manufacturer_implies_client(sender, instance: Company, action: str, pk_set, **kwargs):
-    """Business rule: a SELLER (SUPPLIER) company is also allowed to buy.
-
-    Source: user directive 2026-04-19 — a company that becomes a seller automatically
-    gains CLIENT (buyer) capability. (MANUFACTURER retired as a role 2026-06-23 —
-    sellers are SUPPLIER; OEM is now only catalog.Manufacturer.)
-    """
-    if action != "post_add" or not pk_set:
-        return
-    added = set(
-        CompanyType.objects.filter(pk__in=pk_set).values_list("code", flat=True),
-    )
-    if not added & {"SUPPLIER"}:
-        return
-    if instance.types.filter(code="CLIENT").exists():
-        return
-    client = CompanyType.objects.filter(code="CLIENT").first()
-    if client is None:
-        return
-    instance.types.add(client)
-    logger.info(
-        "Company %s received %s — auto-granted CLIENT capability (can buy).",
-        instance.pk,
-        added,
     )

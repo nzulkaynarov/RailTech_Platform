@@ -34,8 +34,7 @@ def _type(code):
 
 
 def _company(name, inn, *codes):
-    """Компания с заданными типами. Сигнал `accounts.signals` сам выдаёт CLIENT любому SUPPLIER и возвращает его
-    компании без типов, поэтому «поставщик без CLIENT» собирается так же, как в админке: добавили, затем сняли."""
+    """Компания с заданными типами; CLIENT, которого нет в `codes`, снимается (типов-то хоть один остаётся)."""
     company = Company.objects.create(name=name, inn=inn)
     for code in codes:
         company.types.add(_type(code))
@@ -59,7 +58,9 @@ def _contact(company, email, telegram_user_id=None):
 
 @pytest.fixture
 def own(seller_company, settings):
-    """Своя компания (владелец ERP): у неё тип SUPPLIER, а CLIENT выдал сигнал; `OWN_COMPANY_ID` — явный выбор."""
+    """Своя компания (владелец ERP) с лишним CLIENT (остался с времён сигнала «продавец тоже покупает», до миграции
+    accounts/0013); `OWN_COMPANY_ID` — явный выбор."""
+    seller_company.types.add(_type("CLIENT"))
     settings.OWN_COMPANY_ID = seller_company.pk
     return seller_company
 
@@ -78,7 +79,7 @@ class TestRule:
         assert company_has_cabinet_access(None) is False
 
     def test_own_company_is_not_admitted_even_with_client_type(self, own):
-        """Сигнал выдал своей компании CLIENT вместе с SUPPLIER; кабинет ей всё равно закрыт."""
+        """Если у своей компании остался CLIENT, кабинет ей всё равно закрыт."""
         assert own.types.filter(code="CLIENT").exists()
         assert company_has_cabinet_access(own.pk) is False
 
