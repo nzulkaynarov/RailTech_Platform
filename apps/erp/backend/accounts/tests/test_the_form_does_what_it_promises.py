@@ -101,11 +101,9 @@ def test_the_operator_can_set_the_company_type(operator, company):
 
     assert resp.status_code == 200, resp.content
     codes = set(company.types.values_list("code", flat=True))
-    # SUPPLIER тянет за собой CLIENT — это не побочный эффект записи, а правило продукта
-    # (`accounts/signals.py`: продавец умеет и покупать). Закрепляем, чтобы следующая правка
-    # типов не сняла его молча.
-    assert "SUPPLIER" in codes
-    assert codes == {"SUPPLIER", "CLIENT"}, codes
+    # SUPPLIER больше не тянет за собой CLIENT (K0, 2026-11-01): CLIENT открывает кабинет клиента, и поставщик не
+    # должен получать его даром. Закрепляем, чтобы сигнал «продавец тоже покупает» не вернулся молча.
+    assert codes == {"SUPPLIER"}, codes
 
 
 def test_the_created_company_lands_in_the_tab_it_was_given(operator, db):
