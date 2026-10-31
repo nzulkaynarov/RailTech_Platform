@@ -5,18 +5,21 @@ import { cn } from '@/lib/utils';
 import { statusLabelKey, statusTone, type StatusEntity, type StatusTone } from '@/lib/status';
 import type { Schemas } from '@/api/portal';
 
-/** Тон → семантические токены (как `StatusBadge` B2B/ERP): цвет несёт смысл, подпись — всегда текстом. */
+/**
+ * Тон → семантические токены палитры «Legal Eminence»:
+ * мягкие полутона с четким контрастом и обязательной текстовой подписью.
+ */
 const TONE_CLASS: Record<StatusTone, string> = {
-  success: 'border-success/30 bg-success/10 text-success',
-  warning: 'border-warning/30 bg-warning/10 text-warning',
-  danger: 'border-destructive/30 bg-destructive/10 text-destructive',
-  info: 'border-info/30 bg-info/10 text-info',
-  neutral: 'border-border bg-muted text-muted-foreground',
+  success: 'border-transparent bg-sage-bg text-sage',
+  warning: 'border-sand-border bg-sand-bg text-sand',
+  danger: 'border-coral-border bg-coral-bg text-coral',
+  info: 'border-transparent bg-ice-navy text-navy',
+  neutral: 'border-hairline bg-alabaster text-muted-foreground',
 };
 
 export function ToneBadge({ tone, children, className }: { tone: StatusTone; children: React.ReactNode; className?: string }) {
   return (
-    <Badge variant="outline" className={cn('rounded-md whitespace-normal', TONE_CLASS[tone], className)}>
+    <Badge variant="outline" className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-normal', TONE_CLASS[tone], className)}>
       {children}
     </Badge>
   );

@@ -5,6 +5,63 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+:root {
+  /* Палитра «Legal Eminence» (85% база / 15% семантика) */
+  --navy: #1F2E4A;
+  --navy-hover: #162238;
+  --charcoal: #343A40;
+  --alabaster: #F8F9FA;
+  --canvas: #FFFFFF;
+  --silver: #CED4DA;
+  --hairline: #E9ECEF;
+
+  --ice-navy: #EDF2F8;
+  --sage: #2D8A61;
+  --sage-bg: #EDF7F2;
+  --sand: #8A5A19;
+  --sand-bg: #FDF6EA;
+  --sand-border: #F3DFC1;
+  --coral: #9E2A2B;
+  --coral-bg: #FDF0F0;
+  --coral-border: #F5D0D0;
+
+  /* Переопределение переменных shadcn под палитру Legal Eminence */
+  --primary: #1F2E4A;
+  --primary-hover: #162238;
+  --primary-foreground: #FFFFFF;
+  --foreground: #343A40;
+  --card: #FFFFFF;
+  --card-foreground: #343A40;
+  --muted: #F8F9FA;
+  --muted-foreground: #6C757D;
+  --accent: #EDF2F8;
+  --accent-foreground: #1F2E4A;
+  --border: #CED4DA;
+  --input: #CED4DA;
+  --ring: #1F2E4A;
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-navy: var(--navy);
+  --color-navy-hover: var(--navy-hover);
+  --color-charcoal: var(--charcoal);
+  --color-alabaster: var(--alabaster);
+  --color-canvas: var(--canvas);
+  --color-silver: var(--silver);
+  --color-hairline: var(--hairline);
+
+  --color-ice-navy: var(--ice-navy);
+  --color-sage: var(--sage);
+  --color-sage-bg: var(--sage-bg);
+  --color-sand: var(--sand);
+  --color-sand-bg: var(--sand-bg);
+  --color-sand-border: var(--sand-border);
+  --color-coral: var(--coral);
+  --color-coral-bg: var(--coral-bg);
+  --color-coral-border: var(--coral-border);
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -19,10 +76,51 @@
   }
 }
 
+@layer utilities {
+  .notion-card {
+    @apply rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-silver hover:shadow-[0_8px_24px_-6px_rgba(31,46,74,0.07)];
+  }
+
+  .spring-transition {
+    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
 /* Тёмная тема Mini App (`colorScheme: dark`, src/telegram/theme.ts): статусные токены светлой темы на тёмном
    фоне Telegram не держат контраст AA. Светлые оттенки той же палитры — до тёмных токенов в packages/ui-tokens
    (M2-CAB-02, DECISIONS). `--destructive` Telegram перекрывает своим `destructive_text_color`, если он есть. */
 .dark {
+  --navy: #82aaff;
+  --navy-hover: #98bfff;
+  --charcoal: #f5f5f5;
+  --alabaster: #17212b;
+  --canvas: #232e3c;
+  --silver: #3c4a5c;
+  --hairline: #2e3a4b;
+
+  --ice-navy: #1f2e4a;
+  --sage: #73d13d;
+  --sage-bg: #132b1a;
+  --sand: #ffc53d;
+  --sand-bg: #2b2310;
+  --sand-border: #4d3e1d;
+  --coral: #ff7875;
+  --coral-bg: #2b1414;
+  --coral-border: #4d2020;
+
+  --background: #17212b;
+  --foreground: #f5f5f5;
+  --card: #232e3c;
+  --card-foreground: #f5f5f5;
+  --muted: #1e2836;
+  --muted-foreground: #8a9aa8;
+  --border: #3c4a5c;
+  --input: #3c4a5c;
+  --primary: #5288c1;
+  --primary-foreground: #ffffff;
+  --accent: #1f2e4a;
+  --accent-foreground: #82aaff;
+
   --success: #73d13d;
   --success-foreground: #141414;
   --warning: #ffc53d;
