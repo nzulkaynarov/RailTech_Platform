@@ -135,10 +135,7 @@ function Details({ doc }: { doc: EdsDocument }) {
         {
           label: t("panel.fields.amount"),
           value: doc.amount ? (
-            <MoneyText
-              value={doc.amount.amount}
-              {...(doc.amount.currency === "UZS" ? {} : { currency: doc.amount.currency })}
-            />
+            <MoneyText value={doc.amount.amount} currency={doc.amount.currency} />
           ) : null,
         },
         { label: t("panel.fields.due"), value: doc.due_date ? date(doc.due_date) : null },

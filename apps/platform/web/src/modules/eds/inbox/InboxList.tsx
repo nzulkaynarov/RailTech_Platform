@@ -271,20 +271,23 @@ export function InboxList() {
   return (
     <div className="pf-letters">
       <PageHeader title={title} subtitle={t("letters:list.subtitle")} />
-      <Segmented
-        aria-label={t("letters:list.filter.label")}
-        value={filter}
-        options={[
-          ...STATUS_FILTERS.map((value) => ({
-            value,
-            label: t(`dictionary:status.incoming.${value}`),
-          })),
-          { value: "all", label: t("letters:list.filter.all") },
-        ]}
-        onChange={(value) => {
-          setFilter(value as Filter);
-        }}
-      />
+      {/* На узком экране фильтр прокручивается вбок, обрезанный край виден — все варианты доступны (UX-2b) */}
+      <div className="pf-letters-filter">
+        <Segmented
+          aria-label={t("letters:list.filter.label")}
+          value={filter}
+          options={[
+            ...STATUS_FILTERS.map((value) => ({
+              value,
+              label: t(`dictionary:status.incoming.${value}`),
+            })),
+            { value: "all", label: t("letters:list.filter.all") },
+          ]}
+          onChange={(value) => {
+            setFilter(value as Filter);
+          }}
+        />
+      </div>
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock busy={query.isPlaceholderData} resetKey={shownKey}>
           {body}

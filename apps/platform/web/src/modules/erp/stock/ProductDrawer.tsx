@@ -169,7 +169,7 @@ export function ProductDrawer({ row, onClose }: { row: StockRow; onClose: () => 
                   {product.movements.map((m, index) => (
                     <li key={index}>
                       <span>
-                        <StatusTag tone={m.quantity > 0 ? "green" : "default"}>
+                        <StatusTag kind="movement" status={m.quantity > 0 ? "in" : "out"}>
                           {t(`product.kind.${m.kind}`)}
                         </StatusTag>
                         <span className="pf-hint">

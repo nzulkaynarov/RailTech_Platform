@@ -213,12 +213,6 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.pf-int-table td.num,
-.pf-int-table th.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .pf-int-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));

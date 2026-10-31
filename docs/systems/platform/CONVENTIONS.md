@@ -68,6 +68,10 @@
 15. **Системных полей браузера нет** (UX-2a): дата — `shared/ui/DateField` (`ДД.ММ.ГГГГ`, наружу `YYYY-MM-DD`), файл — `shared/ui/FileField` /
     `FilePicker`, выбор — antd `Select` с `label for`; `<select>` и `input type="date|datetime-local|file"` ловит eslint
     (`docs/architecture/platform-frontend.md` §5).
+16. **Деньги и статусы — одно правило в `shared`** (UX-2b): «сум» ставит `formatMoney`/`MoneyText`/`currencyLabel` по коду валюты из
+    ответа (литерал `"UZS"` в модулях запрещён, валюта компании — `HOME_CURRENCY`); числа в таблицах — вправо классом `pf-col-num`;
+    цвет статуса — только из `STATUS_TONE` (`<StatusTag kind status>`), локальных карт цветов нет; на 390 страница не шире экрана.
+    Всё ловит eslint (`docs/architecture/platform-frontend.md` §5).
 
 ## 3. Стек и команды
 

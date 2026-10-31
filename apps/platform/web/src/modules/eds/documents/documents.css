@@ -38,10 +38,6 @@
   font-size: 13px;
   white-space: nowrap;
 }
-.pf-docs-table td.num,
-.pf-docs-table th.num {
-  text-align: right;
-}
 .pf-docs-table tr[data-selected="true"] {
   background: #e6f4ff;
 }

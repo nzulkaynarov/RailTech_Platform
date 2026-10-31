@@ -57,12 +57,7 @@ function useOpenTab() {
 
 function Money({ value }: { value: { amount: string; currency: string } | null | undefined }) {
   if (!value) return <>—</>;
-  return (
-    <MoneyText
-      value={value.amount}
-      {...(value.currency === "UZS" ? {} : { currency: value.currency })}
-    />
-  );
+  return <MoneyText value={value.amount} currency={value.currency} />;
 }
 
 function historyNote(
@@ -373,7 +368,7 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
         subtitle={card.title}
         extra={
           <div className="pf-dec-row">
-            <StatusTag tone={card.step === "DONE" ? "green" : "blue"}>
+            <StatusTag kind="stage" status={card.step}>
               {t(`clientStatus.${card.client_status}`)}
             </StatusTag>
             {problems.map((p) => (

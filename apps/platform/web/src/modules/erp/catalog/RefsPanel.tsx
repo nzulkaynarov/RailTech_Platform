@@ -85,7 +85,7 @@ function RatesView() {
       key: "source",
       title: t("refs.rates.columns.source"),
       render: (row) => (
-        <StatusTag tone={row.source === "MANUAL" ? "gold" : "blue"}>
+        <StatusTag kind="origin" status={row.source}>
           {t(`refs.rates.source.${row.source}`)}
         </StatusTag>
       ),
@@ -258,7 +258,7 @@ function HsView() {
       title: t("refs.hs.columns.state"),
       render: (row) => (
         <>
-          <StatusTag tone={row.is_active ? "green" : "default"}>
+          <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
             {row.is_active ? t("refs.hs.active") : t("refs.hs.closed")}
           </StatusTag>
           {row.valid_until ? (
@@ -504,7 +504,7 @@ function BrandsView() {
       key: "state",
       title: t("refs.brands.columns.state"),
       render: (row) => (
-        <StatusTag tone={row.is_active ? "green" : "default"}>
+        <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
           {row.is_active ? t("refs.brands.active") : t("refs.brands.inactive")}
         </StatusTag>
       ),

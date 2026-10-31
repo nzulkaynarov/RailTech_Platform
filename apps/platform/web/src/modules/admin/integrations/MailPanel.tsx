@@ -16,7 +16,6 @@ import {
   useSendSmtpTest,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { type StatusTone } from "../../../shared/lib/statuses";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
@@ -30,12 +29,6 @@ import {
 } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 
-const MAIL_TONE: Record<MailLogItemStatus, StatusTone> = {
-  queued: "blue",
-  sent: "green",
-  failed: "red",
-  skipped_no_smtp: "default",
-};
 const MAIL_STATUSES: readonly MailLogItemStatus[] = ["queued", "sent", "failed", "skipped_no_smtp"];
 const SECURITY = ["starttls", "ssl", "none"] as const;
 /** Сколько ждать итога «Проверить отправку»: опрос журнала раз в 2 с, не дольше минуты. */
@@ -228,7 +221,7 @@ function MailLog() {
                 <li key={row.id}>
                   <div className="pf-int-item-head">
                     <span className="pf-int-item-title">{row.subject}</span>
-                    <StatusTag tone={MAIL_TONE[row.status]}>
+                    <StatusTag kind="mail" status={row.status}>
                       {t(`mail.log.status.${row.status}`)}
                     </StatusTag>
                   </div>

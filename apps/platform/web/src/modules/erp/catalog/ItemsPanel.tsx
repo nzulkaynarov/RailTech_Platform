@@ -44,7 +44,7 @@ import { queryLabels } from "./labels";
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
   return (
-    <StatusTag tone={kind.startsWith("service") ? "purple" : kind === "stock" ? "green" : "blue"}>
+    <StatusTag kind="itemKind" status={kind}>
       {t(`kinds.${kind}`)}
     </StatusTag>
   );

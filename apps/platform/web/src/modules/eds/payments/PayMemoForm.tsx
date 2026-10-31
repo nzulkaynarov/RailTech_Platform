@@ -19,6 +19,7 @@ import { companyDate } from "../inbox/api";
 import { MAX_FILE_BYTES } from "../documents/fileSize";
 import { type MemoReason, isMemoStale, memoReason, useRefreshPayments } from "./api";
 import { normalizeAmount, toCents } from "./model";
+import { HOME_CURRENCY } from "../../../shared/lib/money";
 
 export interface PayMemoFormProps {
   memo: PaymentMemoCard;
@@ -34,13 +35,13 @@ export interface PayMemoFormProps {
 export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProps) {
   const { t } = useTranslation("payments");
   const { message } = App.useApp();
-  const { money } = useFormat();
+  const { money, currency: currencyText } = useFormat();
   const refresh = useRefreshPayments();
   const client = useQueryClient();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
   const approved = memo.amount?.amount ?? "0.00";
-  const currency = memo.amount?.currency ?? "UZS";
+  const currency = memo.amount?.currency ?? HOME_CURRENCY;
   const today = companyDate();
   const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const uploaded = useRef<{ key: string; id: string } | null>(null);
@@ -148,7 +149,7 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
       </FormField>
       <FormField
         id={id("amount")}
-        label={t("memo.form.amount.label", { currency })}
+        label={t("memo.form.amount.label", { currency: currencyText(currency) })}
         hint={t("memo.form.amount.hint", { approved: fmt(approved) })}
       >
         <Input

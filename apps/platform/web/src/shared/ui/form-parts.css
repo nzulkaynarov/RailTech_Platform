@@ -53,7 +53,9 @@
   line-height: 20px;
   overflow-wrap: anywhere;
 }
+/* `position: relative` — подписи `pf-sr-only` (absolute) внутри таблицы не выходят за полосу прокрутки и не растягивают страницу. */
 .pf-fp-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .pf-fp-scroll:focus-visible {

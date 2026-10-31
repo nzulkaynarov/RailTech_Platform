@@ -141,7 +141,7 @@ export function InvoiceRows({
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.client")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("list.columns.amount")}
             </th>
             <th scope="col">{t("list.columns.issued")}</th>
@@ -178,7 +178,7 @@ export function InvoiceRows({
               <td className="pf-ell" title={row.client_name}>
                 {row.client_name}
               </td>
-              <td className="pf-dec-right">
+              <td className="pf-col-num">
                 <Amount row={row} />
               </td>
               <td className="pf-num">{row.issued_at ? date(row.issued_at) : "—"}</td>

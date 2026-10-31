@@ -35,12 +35,6 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.pf-kb-table td.num,
-.pf-kb-table th.num {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 .pf-kb-table tr[data-selected="true"] td {
   background: #e6f4ff;
 }

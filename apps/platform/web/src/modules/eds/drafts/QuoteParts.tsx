@@ -12,9 +12,7 @@ import { Restricted } from "../decision/Restricted";
 export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
   const { t } = useTranslation("quotes");
   const currency = quote.totals?.currency;
-  const money = (value: string) => (
-    <MoneyText value={value} {...(currency && currency !== "UZS" ? { currency } : {})} />
-  );
+  const money = (value: string) => <MoneyText value={value} currency={currency} />;
   if (quote.lines === null) {
     return (
       <>
@@ -33,16 +31,16 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
             <tr>
               <th scope="col">{t("card.columns.position")}</th>
               <th scope="col">{t("card.columns.name")}</th>
-              <th scope="col" className="pf-dec-right">
+              <th scope="col" className="pf-col-num">
                 {t("card.columns.quantity")}
               </th>
-              <th scope="col" className="pf-dec-right">
+              <th scope="col" className="pf-col-num">
                 {t("card.columns.price")}
               </th>
-              <th scope="col" className="pf-dec-right">
+              <th scope="col" className="pf-col-num">
                 {t("card.columns.amount")}
               </th>
-              <th scope="col" className="pf-dec-right">
+              <th scope="col" className="pf-col-num">
                 {t("card.columns.term")}
               </th>
             </tr>
@@ -57,13 +55,13 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
                     <span className="pf-dec-optional"> · {t("card.optional")}</span>
                   ) : null}
                 </td>
-                <td className="pf-num pf-dec-right">
+                <td className="pf-col-num">
                   {line.quantity}
                   {line.unit ? ` ${line.unit}` : ""}
                 </td>
-                <td className="pf-dec-right">{money(line.unit_price)}</td>
-                <td className="pf-dec-right">{money(line.amount)}</td>
-                <td className="pf-num pf-dec-right">
+                <td className="pf-col-num">{money(line.unit_price)}</td>
+                <td className="pf-col-num">{money(line.amount)}</td>
+                <td className="pf-col-num">
                   {line.lead_time_days !== null
                     ? t("card.days", { count: line.lead_time_days })
                     : "—"}
@@ -89,13 +87,7 @@ function SnapshotTotal({ quote }: { quote: QuoteApprovalCard }) {
       items={[
         {
           label: t("card.snapshotTotal"),
-          value: (
-            <MoneyText
-              value={total.amount}
-              strong
-              {...(total.currency === "UZS" ? {} : { currency: total.currency })}
-            />
-          ),
+          value: <MoneyText value={total.amount} strong currency={total.currency} />,
         },
       ]}
     />
@@ -107,8 +99,7 @@ function Mismatch({ quote }: { quote: QuoteApprovalCard }) {
   const { t } = useTranslation("quotes");
   const format = useFormat();
   if (!quote.totals_mismatch || !quote.totals || !quote.snapshot_total) return null;
-  const money = (value: string, currency: string) =>
-    format.money(value, currency === "UZS" ? {} : { currency });
+  const money = (value: string, currency: string) => format.money(value, { currency });
   return (
     <p className="pf-dec-warn" role="note">
       {t("card.mismatch", {
@@ -123,9 +114,9 @@ function Totals({ quote }: { quote: QuoteApprovalCard }) {
   const { t } = useTranslation("quotes");
   const totals = quote.totals;
   if (!totals) return null;
-  const currency = totals.currency === "UZS" ? {} : { currency: totals.currency };
+  const currency = totals.currency;
   const money = (value: string | null) =>
-    value === null ? null : <MoneyText value={value} {...currency} />;
+    value === null ? null : <MoneyText value={value} currency={currency} />;
   return (
     <DefinitionList
       items={[
@@ -138,7 +129,7 @@ function Totals({ quote }: { quote: QuoteApprovalCard }) {
         },
         {
           label: t("card.totals.total"),
-          value: <MoneyText value={totals.total} strong {...currency} />,
+          value: <MoneyText value={totals.total} strong currency={currency} />,
         },
       ]}
     />
@@ -151,8 +142,7 @@ export function InternalBlock({ quote }: { quote: QuoteApprovalCard }) {
   const { date } = useFormat();
   const internal = quote.internal;
   if (!internal) return null;
-  const currency = quote.totals?.currency ?? "UZS";
-  const opts = currency === "UZS" ? {} : { currency };
+  const currency = quote.totals?.currency;
   return (
     <Restricted group="cost_margin">
       <section className="pf-dec-internal" aria-labelledby="pf-dec-internal-title">
@@ -164,7 +154,7 @@ export function InternalBlock({ quote }: { quote: QuoteApprovalCard }) {
           items={[
             {
               label: t("card.internal.cost"),
-              value: internal.cost ? <MoneyText value={internal.cost} {...opts} /> : null,
+              value: internal.cost ? <MoneyText value={internal.cost} currency={currency} /> : null,
             },
             {
               label: t("card.internal.margin"),
@@ -174,7 +164,7 @@ export function InternalBlock({ quote }: { quote: QuoteApprovalCard }) {
                   {internal.margin_amount ? (
                     <>
                       {" · "}
-                      <MoneyText value={internal.margin_amount} {...opts} />
+                      <MoneyText value={internal.margin_amount} currency={currency} />
                     </>
                   ) : null}
                 </>

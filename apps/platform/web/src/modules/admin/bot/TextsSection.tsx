@@ -1,4 +1,4 @@
-import { Button, Collapse, Form, Input, Tag, Typography } from "antd";
+import { Button, Collapse, Form, Input, Typography } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -12,6 +12,7 @@ import { fieldLabel } from "./fieldLabel";
 import { LocalizedFields, SchemaField } from "./SchemaField";
 import { type JsonSchema, kindOf, resolve } from "./schemaForm";
 import { emptyLanguages, matchesText, oneLine, textGroups } from "./sections";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 
 interface Props {
   schema: JsonSchema;
@@ -28,7 +29,7 @@ const LANGS = ["ru", "uz", "en"] as const;
 function LangCell({ field, lang }: { field: string; lang: string }) {
   const { t } = useTranslation("bot");
   const text = oneLine(Form.useWatch([field, lang], { preserve: true }));
-  if (!text) return <Tag color="warning">{t("texts.empty")}</Tag>;
+  if (!text) return <StatusTag tone="gold">{t("texts.empty")}</StatusTag>;
   return (
     <span className="pf-bot-text-cell" title={text}>
       {text}
@@ -43,9 +44,9 @@ function EmptyMark({ field }: { field: string }) {
   if (empty.length === 0) return null;
   return (
     <span>
-      <Tag color="warning">
+      <StatusTag tone="gold">
         {t("bot:texts.empty")}: {empty.map((l) => t(`kb:languages.${l}`)).join(", ")}
-      </Tag>
+      </StatusTag>
     </span>
   );
 }
@@ -92,7 +93,7 @@ function TextsTable({
             <tr key={row.key}>
               <td>
                 <strong>{row.label}</strong>{" "}
-                {row.invalid ? <Tag color="error">{t("bot:texts.invalid")}</Tag> : null}
+                {row.invalid ? <StatusTag tone="red">{t("bot:texts.invalid")}</StatusTag> : null}
                 {row.when ? <div className="pf-hint">{row.when}</div> : null}
                 {mobile ? <EmptyMark field={row.key} /> : null}
               </td>

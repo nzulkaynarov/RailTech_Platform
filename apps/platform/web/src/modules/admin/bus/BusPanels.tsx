@@ -19,8 +19,6 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
-  DELIVERY_TONE,
-  INBOX_TONE,
   busErrorText,
   deliveryWord,
   domainName,
@@ -61,7 +59,9 @@ export function DeliveryPanel({ delivery }: { delivery: BusDelivery }) {
       <h3 className="pf-bus-panel-title">
         {t("panel.deliveryTitle", { id: String(delivery.id), domain })}
       </h3>
-      <StatusTag tone={DELIVERY_TONE[word]}>{t(`delivery.${word}`)}</StatusTag>
+      <StatusTag kind="busDelivery" status={word}>
+        {t(`delivery.${word}`)}
+      </StatusTag>
       <DefinitionList
         items={[
           { label: t("panel.fields.domain"), value: domain },
@@ -139,7 +139,9 @@ export function InboxPanel({ entry }: { entry: BusInboxEntry }) {
   return (
     <div className="pf-bus-panel">
       <h3 className="pf-bus-panel-title">{t("panel.inboxTitle", { domain })}</h3>
-      <StatusTag tone={INBOX_TONE[word]}>{t(`inbox.${word}`)}</StatusTag>
+      <StatusTag kind="busInbox" status={word}>
+        {t(`inbox.${word}`)}
+      </StatusTag>
       <DefinitionList
         items={[
           { label: t("panel.fields.receiver"), value: domain },

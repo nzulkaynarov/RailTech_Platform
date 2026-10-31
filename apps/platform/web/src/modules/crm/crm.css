@@ -45,10 +45,6 @@
   font-size: 13px;
   white-space: nowrap;
 }
-.pf-crm-table td.num,
-.pf-crm-table th.num {
-  text-align: right;
-}
 .pf-crm-table tr[data-selected="true"],
 .pf-crm-item[data-selected="true"] {
   background: #e6f4ff;

@@ -1,36 +1,40 @@
 import type { EdsRegistryKind } from "../../../shared/api/generated/model";
-import type { StatusTone } from "../../../shared/lib/statuses";
+import type { StatusKind } from "../../../shared/lib/statuses";
 
-/** Статус документа EDS словами SPEC-v3 §2.4 (слова — словарь `dictionary:status.memo.*`) и цветом. */
-const DOCUMENT: Record<string, { tone: StatusTone; key: string }> = {
-  draft: { tone: "default", key: "documents:status.draft" },
-  on_approval: { tone: "gold", key: "dictionary:status.memo.pending" },
-  returned: { tone: "gold", key: "dictionary:status.memo.returned" },
-  rejected: { tone: "red", key: "dictionary:status.memo.rejected" },
-  approved: { tone: "green", key: "dictionary:status.memo.approved" },
-  to_accountant: { tone: "blue", key: "dictionary:status.memo.passed_to_accountant" },
-  paid: { tone: "green", key: "dictionary:status.memo.paid" },
-  sent: { tone: "blue", key: "documents:status.sent" },
+/**
+ * Статус документа EDS словами SPEC-v3 §2.4: вид карты цвета (`STATUS_TONE`, UX-2b) и ключ слова. Цвет здесь не задаётся —
+ * его даёт общая карта по виду и коду.
+ */
+const DOCUMENT: Record<string, string> = {
+  draft: "documents:status.draft",
+  on_approval: "dictionary:status.memo.pending",
+  returned: "dictionary:status.memo.returned",
+  rejected: "dictionary:status.memo.rejected",
+  approved: "dictionary:status.memo.approved",
+  to_accountant: "dictionary:status.memo.passed_to_accountant",
+  paid: "dictionary:status.memo.paid",
+  sent: "documents:status.sent",
 };
 
-const LETTER_IN: Record<string, { tone: StatusTone; key: string }> = {
-  awaiting_resolution: { tone: "gold", key: "dictionary:status.incoming.awaiting_resolution" },
-  resolved: { tone: "green", key: "dictionary:status.incoming.resolved" },
-  returned: { tone: "gold", key: "dictionary:status.incoming.returned" },
-  rejected: { tone: "red", key: "dictionary:status.incoming.rejected" },
+const LETTER_IN: Record<string, string> = {
+  awaiting_resolution: "dictionary:status.incoming.awaiting_resolution",
+  resolved: "dictionary:status.incoming.resolved",
+  returned: "dictionary:status.incoming.returned",
+  rejected: "dictionary:status.incoming.rejected",
 };
 
-const QUOTE: Record<string, { tone: StatusTone; key: string }> = {
-  open: { tone: "gold", key: "documents:status.quote.open" },
-  approved: { tone: "green", key: "documents:status.quote.approved" },
-  returned: { tone: "gold", key: "documents:status.quote.returned" },
-  rejected: { tone: "red", key: "documents:status.quote.rejected" },
+const QUOTE: Record<string, string> = {
+  open: "documents:status.quote.open",
+  approved: "documents:status.quote.approved",
+  returned: "documents:status.quote.returned",
+  rejected: "documents:status.quote.rejected",
 };
 
 export function statusEntry(
   kind: EdsRegistryKind,
   status: string,
-): { tone: StatusTone; key: string } | undefined {
-  const table = kind === "letter_in" ? LETTER_IN : kind === "quote" ? QUOTE : DOCUMENT;
-  return table[status];
+): { kind: StatusKind; key: string | undefined } {
+  if (kind === "letter_in") return { kind: "incoming", key: LETTER_IN[status] };
+  if (kind === "quote") return { kind: "quote", key: QUOTE[status] };
+  return { kind: "memo", key: DOCUMENT[status] };
 }

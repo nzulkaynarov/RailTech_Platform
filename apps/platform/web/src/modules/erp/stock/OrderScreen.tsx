@@ -19,6 +19,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { useStateLabels } from "./api";
 import { OrderStatusTag } from "./OrdersTab";
 import { CancelModal, ConfirmModal, EditModal, ReceiveModal, SendModal } from "./OrderModals";
+import { MoneyText } from "../../../shared/ui/MoneyText";
 
 import "../calc/calc.css";
 import "./stock.css";
@@ -38,7 +39,7 @@ function OrderLog({ order }: { order: SupplierOrderDetail }) {
 
 function Lines({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
-  const { money, number } = useFormat();
+  const { number } = useFormat();
   const priced = order.lines.some((l) => l.unit_price !== null);
   return (
     <ScrollRegion label={t("order.lines.scroll")}>
@@ -50,10 +51,22 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
           <tr>
             <th scope="col">{t("order.lines.position")}</th>
             <th scope="col">{t("order.lines.request")}</th>
-            <th scope="col">{t("order.lines.quantity")}</th>
-            <th scope="col">{t("order.lines.received")}</th>
-            {priced ? <th scope="col">{t("order.lines.price")}</th> : null}
-            {priced ? <th scope="col">{t("order.lines.total")}</th> : null}
+            <th scope="col" className="pf-col-num">
+              {t("order.lines.quantity")}
+            </th>
+            <th scope="col" className="pf-col-num">
+              {t("order.lines.received")}
+            </th>
+            {priced ? (
+              <th scope="col" className="pf-col-num">
+                {t("order.lines.price")}
+              </th>
+            ) : null}
+            {priced ? (
+              <th scope="col" className="pf-col-num">
+                {t("order.lines.total")}
+              </th>
+            ) : null}
           </tr>
         </thead>
         <tbody>
@@ -72,15 +85,19 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
                   <span className="pf-hint">—</span>
                 )}
               </td>
-              <td className="pf-num">
+              <td className="pf-col-num">
                 {number(l.quantity)} {l.unit}
               </td>
-              <td className="pf-num">{number(l.received_quantity)}</td>
+              <td className="pf-col-num">{number(l.received_quantity)}</td>
               {priced ? (
-                <td className="pf-num">{l.unit_price ? money(l.unit_price) : "—"}</td>
+                <td className="pf-col-num">
+                  <MoneyText value={l.unit_price} currency={order.currency} />
+                </td>
               ) : null}
               {priced ? (
-                <td className="pf-num">{l.line_total ? money(l.line_total) : "—"}</td>
+                <td className="pf-col-num">
+                  <MoneyText value={l.line_total} currency={order.currency} />
+                </td>
               ) : null}
             </tr>
           ))}
@@ -91,8 +108,8 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
               <th scope="row" colSpan={priced ? 5 : 4}>
                 {t("order.lines.totals")}
               </th>
-              <td className="pf-num">
-                <strong>{money(order.total)}</strong>
+              <td className="pf-col-num">
+                <MoneyText value={order.total} currency={order.currency} strong />
               </td>
             </tr>
           </tfoot>

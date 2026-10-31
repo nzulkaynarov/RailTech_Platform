@@ -54,9 +54,11 @@ export function ProofList({ card }: { card: PaymentCard }) {
             </a>
             {/* Платёжка без подтверждения у уже оплаченного счёта — лишняя: ждать нечего (отклонение — B-D24-7) */}
             {proof.status === "PENDING" && card.status === "paid" ? (
-              <StatusTag tone="default">{t("proofs.state.EXTRA")}</StatusTag>
+              <StatusTag kind="proof" status="EXTRA">
+                {t("proofs.state.EXTRA")}
+              </StatusTag>
             ) : (
-              <StatusTag tone={proof.status === "PENDING" ? "gold" : "green"}>
+              <StatusTag kind="proof" status={proof.status}>
                 {t(`proofs.state.${proof.status}`)}
               </StatusTag>
             )}

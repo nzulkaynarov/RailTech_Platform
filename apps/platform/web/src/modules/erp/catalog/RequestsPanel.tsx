@@ -21,8 +21,6 @@ import { type Column, DataList, FormModal } from "./common";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
 
-const TONE = { pending: "gold", approved: "green", rejected: "red" } as const;
-
 /**
  * Расчёт · Запросы на новые категории: сотрудник с правом вести каталог просит категорию (она ничего не создаёт сама), решает
  * директор или администратор — раздел «Компания» (`company.settings`): одобрение привязывает заведённую категорию.
@@ -64,7 +62,9 @@ export function RequestsPanel() {
       title: t("requests.columns.status"),
       render: (row) => (
         <>
-          <StatusTag tone={TONE[row.status]}>{t(`requests.status.${row.status}`)}</StatusTag>
+          <StatusTag kind="categoryRequest" status={row.status}>
+            {t(`requests.status.${row.status}`)}
+          </StatusTag>
           {row.status === "approved" && row.resulting_category_name ? (
             <span className="pf-cat-sub">{row.resulting_category_name}</span>
           ) : null}
