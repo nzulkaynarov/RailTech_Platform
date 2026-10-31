@@ -2,8 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { statusLabelKey, statusTone, type StatusEntity, type StatusTone } from '@/lib/status';
-import type { Schemas } from '@/api/portal';
+import { statusLabelKey, statusTone, type StatusCode, type StatusEntity, type StatusTone } from '@/lib/status';
 
 /**
  * Тон → семантические токены палитры «Legal Eminence»:
@@ -25,18 +24,8 @@ export function ToneBadge({ tone, children, className }: { tone: StatusTone; chi
   );
 }
 
-type Codes = {
-  request: Schemas['RequestStatus'];
-  quote: Schemas['QuoteStatus'];
-  contract: Schemas['ContractStatus'];
-  invoice: Schemas['InvoiceStatus'];
-  act: Schemas['ActStatus'];
-  delivery: Schemas['DeliveryStatus'];
-  availability: Schemas['Availability'];
-};
-
 /** Бейдж статуса сущности контракта: подпись из `status.<entity>.<code>`, тон из `lib/status`. */
-export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: E; code: Codes[E] }) {
+export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: E; code: StatusCode<E> }) {
   const { t } = useTranslation();
   return <ToneBadge tone={statusTone(entity, code)}>{t(statusLabelKey(entity, code))}</ToneBadge>;
 }

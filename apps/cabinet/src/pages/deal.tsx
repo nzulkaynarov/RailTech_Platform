@@ -12,10 +12,10 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
-import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
+import { dealProgress, type DealProgress } from '@/lib/dealStage';
 import { invoiceView } from '@/lib/invoice';
 import { cn } from '@/lib/utils';
 
@@ -85,15 +85,14 @@ export function DealPage() {
     );
   }
 
-  // Определение текущего этапа сделки (1..5)
-  const currentStep = dealActs.length > 0 ? 5 : dealInvoices.length > 0 ? 4 : dealContracts.length > 0 ? 3 : dealQuotes.length > 0 ? 2 : 1;
-  const milestones = [
-    { step: 1, title: t('deal.step1', { defaultValue: '1. Запрос' }), active: dealRequests.length > 0 },
-    { step: 2, title: t('deal.step2', { defaultValue: '2. КП' }), active: dealQuotes.length > 0 },
-    { step: 3, title: t('deal.step3', { defaultValue: '3. Договор' }), active: dealContracts.length > 0 },
-    { step: 4, title: t('deal.step4', { defaultValue: '4. Счёт и Оплата' }), active: dealInvoices.length > 0 },
-    { step: 5, title: t('deal.step5', { defaultValue: '5. Исполнение и Акт' }), active: dealActs.length > 0 },
-  ];
+  const progress = dealProgress({
+    requests: dealRequests,
+    quotes: dealQuotes,
+    contracts: dealContracts,
+    invoices: dealInvoices,
+    acts: dealActs,
+    deliveries: dealLines,
+  });
 
   return (
     <>
@@ -104,45 +103,7 @@ export function DealPage() {
         actions={<ManagerButton dealId={dealId} />}
       />
 
-      {/* Сегментированный прогресс-бар этапов сделки */}
-      <div className="mb-6 rounded-2xl border border-hairline bg-alabaster/60 p-4">
-        <div className="mb-2 flex items-center justify-between text-xs">
-          <span className="font-semibold text-navy uppercase tracking-wider">
-            {t('deal.milestones', { defaultValue: 'Этапы жизненного цикла сделки' })}
-          </span>
-          <span className="font-mono font-semibold tabular-nums text-navy">
-            {currentStep}/5
-          </span>
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {milestones.map((m) => {
-            const isDone = m.step < currentStep || (m.step === 5 && dealActs.some((a) => a.status === 'accepted'));
-            const isCurrent = m.step === currentStep;
-            return (
-              <div
-                key={m.step}
-                className={cn(
-                  'flex items-center gap-2 rounded-xl border p-2.5 text-xs transition-colors',
-                  isDone
-                    ? 'border-transparent bg-sage-bg text-sage font-medium'
-                    : isCurrent
-                      ? 'border-sand-border bg-sand-bg text-sand font-semibold shadow-2xs'
-                      : 'border-hairline bg-canvas text-muted-foreground',
-                )}
-              >
-                {isDone ? (
-                  <Check className="size-3.5 text-sage stroke-[3]" />
-                ) : (
-                  <span className="font-mono text-xs">{m.step}.</span>
-                )}
-                <span className="truncate">{m.title.replace(/^\d+\.\s*/, '')}</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <ConsequenceCallout className="mb-6" />
+      <DealStages progress={progress} />
 
       <div className="flex flex-col gap-6">
         <DealSection title={t('pages.deal.requests')} count={dealRequests.length}>
@@ -234,5 +195,46 @@ function DealRow({ to, title, meta, children }: { to: string; title: string; met
         </span>
       </Link>
     </li>
+  );
+}
+
+/** Этапы сделки по статусам документов (`lib/dealStage`): выполнено, в работе, впереди; закрытый запрос — без «в работе». */
+function DealStages({ progress }: { progress: DealProgress }) {
+  const { t } = useTranslation();
+  return (
+    <section aria-labelledby="deal-stages" className="mb-6 rounded-2xl border border-hairline bg-alabaster/60 p-4">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <h2 id="deal-stages" className="font-semibold tracking-wider text-navy uppercase">
+          {t('pages.deal.stages.title')}
+        </h2>
+        {progress.closed ? <span className="font-medium text-muted-foreground">{t('pages.deal.stages.closed')}</span> : null}
+      </div>
+      <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        {progress.stages.map((stage, index) => (
+          <li
+            key={stage.id}
+            aria-current={stage.state === 'active' ? 'step' : undefined}
+            className={cn(
+              'flex items-center gap-2 rounded-xl border p-2.5 text-xs',
+              stage.state === 'done'
+                ? 'border-transparent bg-sage-bg font-medium text-sage'
+                : stage.state === 'active'
+                  ? 'border-sand-border bg-sand-bg font-semibold text-sand shadow-2xs'
+                  : 'border-hairline bg-canvas text-muted-foreground',
+            )}
+          >
+            {stage.state === 'done' ? (
+              <Check className="size-3.5 stroke-[3] text-sage" aria-hidden="true" />
+            ) : (
+              <span className="font-mono text-xs" aria-hidden="true">
+                {index + 1}.
+              </span>
+            )}
+            <span className="truncate">{t(`pages.deal.stages.${stage.id}`)}</span>
+            <span className="sr-only">{`, ${t(`pages.deal.stages.state.${stage.state}`)}`}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

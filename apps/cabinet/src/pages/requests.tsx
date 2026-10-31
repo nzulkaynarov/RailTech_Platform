@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -14,9 +14,6 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
-import { DealCard } from '@/components/DealCard';
-import { ViewSwitcher } from '@/components/ViewSwitcher';
-import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -29,7 +26,6 @@ import { formatDate, formatDateTime, formatFileSize, formatMoney, formatQuantity
 import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/lib/requests';
 import { clearRequestDraft, loadRequestDraft, requestDraftKey, saveRequestDraft } from '@/lib/requestDraft';
 import { MAX_UPLOAD_BYTES } from '@/lib/upload';
-import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 import { useMe } from '@/session/useMe';
 
@@ -55,26 +51,13 @@ export function RequestsPage() {
   const { t } = useTranslation();
   const requests = useRequests();
   const [searchParams] = useSearchParams();
-  const viewMode = searchParams.get('view') || 'list';
 
-  // Разделение запросов для Канбана:
-  // Колонка 1: «Ждут решения» (запросы со статусом 'quoted' — по ним выставлено КП)
-  // Колонка 2: «В исполнении и работе» ('new', 'in_progress', 'done')
-  const waitingQuotes = (requests.data ?? []).filter((r) => r.status === 'quoted');
-  const inWorkRequests = (requests.data ?? []).filter((r) => r.status !== 'quoted');
+  // Старые ссылки с `?view=…` (вид-переключатель убран, CAB-FIX-1) ведут на список без параметра.
+  if (searchParams.has('view')) return <Navigate to="/requests" replace />;
 
   return (
     <>
-      <PageHeader
-        title={t('pages.requests.title')}
-        icon={Inbox}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <ViewSwitcher showDocumentsTab={false} />
-            <NewRequestButton />
-          </div>
-        }
-      />
+      <PageHeader title={t('pages.requests.title')} icon={Inbox} actions={<NewRequestButton />} />
       <ActionRequiredWidget />
       {requests.isPending ? (
         <ListSkeleton />
@@ -82,76 +65,6 @@ export function RequestsPage() {
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
       ) : requests.data.length === 0 ? (
         <EmptyState icon={Inbox} title={t('pages.requests.emptyTitle')} text={t('pages.requests.emptyText')} />
-      ) : viewMode === 'kanban' ? (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Колонка 1: Ждут решения (КП выставлено) */}
-          <section className="flex flex-col gap-3 rounded-2xl border border-hairline bg-alabaster/40 p-3 sm:p-4">
-            <div className="flex items-center justify-between rounded-xl border border-hairline bg-ice-navy/80 px-3.5 py-2.5 shadow-xs">
-              <span className="flex items-center gap-2 font-semibold text-navy text-xs">
-                <span className="size-2 rounded-full bg-coral animate-pulse" />
-                {t('views.kanbanAwaiting', { defaultValue: 'Ждут вашего решения' })}
-              </span>
-              <span className="rounded-full bg-canvas px-2.5 py-0.5 font-mono text-xs font-semibold text-navy shadow-xs border border-hairline">
-                {waitingQuotes.length}
-              </span>
-            </div>
-            {waitingQuotes.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-xs text-muted-foreground bg-canvas">
-                {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов, требующих ответа' })}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {waitingQuotes.map((req) => (
-                  <DealCard
-                    key={req.id}
-                    id={req.id}
-                    code={req.number}
-                    title={req.summary}
-                    href={`/requests/${req.id}`}
-                    step={2}
-                    dateLabel={formatDate(req.created_at)}
-                    statusEntity="request"
-                    statusCode={req.status}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Колонка 2: В исполнении и работе */}
-          <section className="flex flex-col gap-3 rounded-2xl border border-hairline bg-alabaster/40 p-3 sm:p-4">
-            <div className="flex items-center justify-between rounded-xl border border-sand-border/80 bg-sand-bg/80 px-3.5 py-2.5 shadow-xs">
-              <span className="flex items-center gap-2 font-semibold text-sand text-xs">
-                <span className="size-2 rounded-full bg-sand" />
-                {t('views.kanbanInProgress', { defaultValue: 'В исполнении и работе' })}
-              </span>
-              <span className="rounded-full bg-canvas px-2.5 py-0.5 font-mono text-xs font-semibold text-sand border border-sand-border shadow-xs">
-                {inWorkRequests.length}
-              </span>
-            </div>
-            {inWorkRequests.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-hairline p-8 text-center text-xs text-muted-foreground bg-canvas">
-                {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов в работе' })}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {inWorkRequests.map((req) => (
-                  <DealCard
-                    key={req.id}
-                    id={req.id}
-                    code={req.number}
-                    title={req.summary}
-                    href={`/requests/${req.id}`}
-                    step={req.status === 'closed' ? 5 : 1}
-                    dateLabel={formatDate(req.created_at)}
-                    statusEntity="request"
-                    statusCode={req.status}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
       ) : (
         <ResponsiveList<ClientRequest>
           label={t('pages.requests.title')}
@@ -454,60 +367,9 @@ function RequestForm() {
     );
   };
 
-  const isDirty = Boolean(summary.trim() || lines.some((l) => l.text.trim()));
-  const [inquiryType, setInquiryType] = useState<'products' | 'service' | 'routine' | 'partner'>('products');
-
-  const inquiryOptions = [
-    { id: 'products', title: t('inquiry.products', { defaultValue: '1. Покупка товаров / Каталог' }), hint: t('inquiry.productsHint', { defaultValue: 'Закупка материалов, оборудования и запчастей' }) },
-    { id: 'service', title: t('inquiry.service', { defaultValue: '2. Сервисное ТО и ремонт' }), hint: t('inquiry.serviceHint', { defaultValue: 'Техническое обслуживание и диагностика' }) },
-    { id: 'routine', title: t('inquiry.routine', { defaultValue: '3. Рутинные услуги' }), hint: t('inquiry.routineHint', { defaultValue: 'Логистика, погрузка, клининг, регламент' }) },
-    { id: 'partner', title: t('inquiry.partner', { defaultValue: '4. Партнёрство / Подряд' }), hint: t('inquiry.partnerHint', { defaultValue: 'Субподрядные работы и спецпредложения' }) },
-  ] as const;
-
-  const resetForm = () => {
-    setSummary('');
-    setLines([blankLine()]);
-    setAttachments([]);
-    if (draftKey) clearRequestDraft(draftKey);
-  };
-
   return (
     <>
-      <UnsavedChangesBar
-        dirty={isDirty && !submitted}
-        onSave={() => submit({ preventDefault: () => {} } as FormEvent)}
-        onReset={resetForm}
-        pending={create.isPending || isUploading}
-      />
       <form onSubmit={submit} noValidate className="flex flex-col gap-6">
-        {/* Классификатор направлений W-DOCS2 */}
-        <div className="flex flex-col gap-2">
-          <Label className="text-xs font-semibold text-navy uppercase tracking-wider">
-            {t('inquiry.directionLabel', { defaultValue: 'Направление обращения (W-DOCS2)' })}
-          </Label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {inquiryOptions.map((opt) => {
-              const active = inquiryType === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  type="button"
-                  onClick={() => setInquiryType(opt.id)}
-                  className={cn(
-                    'flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                    active
-                      ? 'border-navy bg-ice-navy/70 text-navy shadow-2xs'
-                      : 'border-hairline bg-canvas hover:border-silver hover:bg-alabaster/50 text-charcoal',
-                  )}
-                >
-                  <span className="text-xs font-semibold">{opt.title}</span>
-                  <span className="text-xs text-muted-foreground">{opt.hint}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         <div className="flex flex-col gap-2">
           <Label htmlFor={summaryId}>{t('pages.requestNew.summary')}</Label>
           <p id={`${summaryId}-hint`} className="text-xs text-muted-foreground">
@@ -616,7 +478,7 @@ function RequestForm() {
           </Alert>
         ) : null}
 
-        <ConsequenceCallout action="submit_request" />
+        <ConsequenceCallout text={t('pages.requestNew.consequence')} />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button asChild variant="outline">

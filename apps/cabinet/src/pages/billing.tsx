@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, FolderOpen, PenLine, Receipt, Undo2, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import type { Act, Contract, Invoice } from '@/api/portal';
 import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
+import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -25,54 +25,7 @@ import { formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/fo
 import { invoiceView } from '@/lib/invoice';
 import { contractAwaitsClient } from '@/lib/status';
 import { scanProblem, type UploadProblem } from '@/lib/upload';
-import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
-
-/** Консолидированный таб-бар для финансового и договорного контура. */
-export function BillingNavTabs() {
-  const { t } = useTranslation();
-  const location = useLocation();
-
-  const tabs = [
-    { to: '/contracts', label: t('nav.contracts'), icon: FileSignature },
-    { to: '/invoices', label: t('nav.invoices'), icon: Receipt },
-    { to: '/acts', label: t('nav.acts'), icon: ClipboardCheck },
-    { to: '/documents', label: t('nav.documents'), icon: FolderOpen },
-  ];
-
-  return (
-    <div
-      role="tablist"
-      aria-label={t('nav.billingTabs', { defaultValue: 'Финансовые разделы' })}
-      className="mb-4 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-hairline bg-alabaster p-1 text-xs"
-    >
-      {tabs.map((tab) => {
-        const isActive = location.pathname === tab.to || (location.pathname === '/billing' && tab.to === '/invoices');
-        return (
-          <Link
-            key={tab.to}
-            to={tab.to}
-            role="tab"
-            aria-selected={isActive}
-            className={cn(
-              'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-all duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              isActive
-                ? 'bg-canvas font-semibold text-navy shadow-xs'
-                : 'text-muted-foreground hover:text-charcoal',
-            )}
-          >
-            <tab.icon className="size-3.5" aria-hidden="true" />
-            <span>{tab.label}</span>
-          </Link>
-        );
-      })}
-    </div>
-  );
-}
-
-export function BillingPage() {
-  return <InvoicesPage />;
-}
 
 /**
  * Договоры, счета и акты (B2B `ContractsPage`, `InvoicesPage`, `ActsPage`, `RejectActDialog`) — проекция

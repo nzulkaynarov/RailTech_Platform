@@ -22,13 +22,14 @@ export function UnsavedChangesBar({
 }: UnsavedChangesBarProps) {
   const { t } = useTranslation();
 
+  // Ctrl+S / ⌘S перехватывается, только пока бар виден: без правок сочетание остаётся браузеру (CAB-FIX-1).
+  // Бар — только для обратимого сохранения (DECISIONS 2026-10-30 п. 5); на форме отправки его нет.
   useEffect(() => {
+    if (!dirty) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        if (dirty && !pending) {
-          onSave();
-        }
+        if (!pending) onSave();
       }
     };
     window.addEventListener('keydown', handleKeyDown);

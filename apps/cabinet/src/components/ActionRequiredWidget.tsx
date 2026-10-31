@@ -10,6 +10,7 @@ import { useNow } from '@/hooks/useNow';
 import { formatMoney } from '@/lib/format';
 import { invoiceViews } from '@/lib/invoice';
 import { quoteAwaitsDecision } from '@/lib/quotes';
+import { contractAwaitsClient } from '@/lib/status';
 
 /**
  * Виджет «Требует вашего решения» (M2-CAB-04, бенчмарк Odoo/ERPNext: клиент видит «что от меня ждут»).
@@ -45,7 +46,7 @@ export function ActionRequiredWidget() {
 
   const pendingQuotes = (quotesQuery.data ?? []).filter((q) => quoteAwaitsDecision(q, now));
   const pendingContracts = (contractsQuery.data ?? []).filter(
-    (c) => (c.status === 'sent' || c.status === 'signed_by_company') && !c.signed_by_client_at,
+    (c) => contractAwaitsClient(c.status) && !c.signed_by_client_at,
   );
   const views = invoiceViews(invoicesQuery.data ?? [], now);
   const pendingInvoices = (invoicesQuery.data ?? []).filter((inv) => Boolean(views.get(inv.id)?.overdueDays));

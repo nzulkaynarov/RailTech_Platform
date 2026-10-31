@@ -19,6 +19,9 @@ type StatusMaps = {
 
 export type StatusEntity = keyof StatusMaps;
 
+/** Код статуса сущности — единственное место, где сущность связана со своим перечнем из контракта. */
+export type StatusCode<E extends StatusEntity> = StatusMaps[E];
+
 const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
   request: { new: 'info', in_progress: 'info', quoted: 'warning', closed: 'neutral' },
   quote: { sent: 'warning', viewed: 'warning', accepted: 'success', rejected: 'danger', expired: 'neutral' },

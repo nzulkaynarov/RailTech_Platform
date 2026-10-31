@@ -84,8 +84,6 @@ export function AppShell() {
       segments.push({ label: t('nav.invoices') });
     } else if (path.startsWith('/acts')) {
       segments.push({ label: t('nav.acts') });
-    } else if (path.startsWith('/billing')) {
-      segments.push({ label: t('nav.invoices') });
     } else if (path.startsWith('/deliveries')) {
       segments.push({ label: t('nav.deliveries') });
     } else if (path.startsWith('/documents')) {

@@ -7,6 +7,7 @@ import { toast } from '@/lib/toast';
 import { apiErrorKey } from '@/api/errors';
 import type { DeliveryLine, DocumentKind, PortalDocument } from '@/api/portal';
 import { useAcceptDelivery, useDeliveries, useDisputeDelivery, useDocuments } from '@/api/queries';
+import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { DealLink } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -23,7 +24,6 @@ import { groupDeliveries } from '@/lib/deliveries';
 import { DOCUMENT_KINDS, isDocumentKind } from '@/lib/documents';
 import { formatDate, formatDateTime, formatFileSize, formatQuantity } from '@/lib/format';
 import { cn } from '@/lib/utils';
-import { BillingNavTabs } from '@/pages/billing';
 import { CanAct } from '@/session/CanAct';
 
 /**

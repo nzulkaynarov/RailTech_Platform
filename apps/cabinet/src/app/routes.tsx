@@ -3,7 +3,7 @@ import type { RouteObject } from 'react-router-dom';
 import { AppShell } from '@/components/shell/AppShell';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
-import { ActsPage, BillingPage, ContractsPage, InvoicesPage } from '@/pages/billing';
+import { ActsPage, ContractsPage, InvoicesPage } from '@/pages/billing';
 import { CatalogItemPage, CatalogPage } from '@/pages/catalog';
 import { CompanyPage, TeamPage } from '@/pages/company';
 import { DealPage } from '@/pages/deal';
@@ -51,7 +51,6 @@ export const routes: RouteObject[] = [
               { path: '/quotes/:id', element: <QuoteDetailPage /> },
               { path: '/contracts', element: <ContractsPage /> },
               { path: '/invoices', element: <InvoicesPage /> },
-              { path: '/billing', element: <BillingPage /> },
               { path: '/acts', element: <ActsPage /> },
               { path: '/deliveries', element: <DeliveriesPage /> },
               { path: '/documents', element: <DocumentsPage /> },
