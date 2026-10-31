@@ -48,7 +48,7 @@ export function DealPage() {
   if (all.some((query) => query.isPending)) {
     return (
       <>
-        <PageHeader title={title} />
+        <PageHeader title={title} crumb={dealRef?.number} />
         <ListSkeleton />
       </>
     );
@@ -57,7 +57,7 @@ export function DealPage() {
   if (failed) {
     return (
       <>
-        <PageHeader title={title} />
+        <PageHeader title={title} crumb={dealRef?.number} />
         <ErrorState error={failed.error} onRetry={() => all.forEach((query) => void query.refetch())} />
       </>
     );
@@ -75,7 +75,7 @@ export function DealPage() {
   if (empty) {
     return (
       <>
-        <PageHeader title={title} />
+        <PageHeader title={title} crumb={dealRef?.number} />
         <EmptyState icon={Briefcase} title={t('common.notFoundTitle')} text={t('common.notFoundText')}>
           <Button asChild variant="outline">
             <Link to="/requests">{t('pages.deal.toRequests')}</Link>
@@ -98,6 +98,7 @@ export function DealPage() {
     <>
       <PageHeader
         title={title}
+        crumb={dealRef?.number}
         subtitle={subtitle}
         icon={Briefcase}
         actions={<ManagerButton dealId={dealId} />}
@@ -157,10 +158,10 @@ export function DealPage() {
           {dealDocuments.map((doc) => (
             <li key={doc.id} className="portal-card flex min-w-0 flex-wrap items-center justify-between gap-2 p-3 text-sm">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-coral-bg text-coral">
-                  <FileText className="size-4 text-coral" />
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent text-primary">
+                  <FileText className="size-4" aria-hidden="true" />
                 </div>
-                <span className="min-w-0 font-medium break-words text-charcoal">{doc.title}</span>
+                <span className="min-w-0 font-medium break-words text-foreground">{doc.title}</span>
               </div>
               <DocumentButton documentId={doc.id} fileName={doc.file_name ?? `${doc.number}.pdf`} label={doc.title} variant="ghost" />
             </li>
@@ -202,9 +203,9 @@ function DealRow({ to, title, meta, children }: { to: string; title: string; met
 function DealStages({ progress }: { progress: DealProgress }) {
   const { t } = useTranslation();
   return (
-    <section aria-labelledby="deal-stages" className="mb-6 rounded-2xl border border-hairline bg-alabaster/60 p-4">
+    <section aria-labelledby="deal-stages" className="mb-6 rounded-2xl border border-border/60 bg-muted/60 p-4">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <h2 id="deal-stages" className="font-semibold tracking-wider text-navy uppercase">
+        <h2 id="deal-stages" className="font-semibold tracking-wider text-primary uppercase">
           {t('pages.deal.stages.title')}
         </h2>
         {progress.closed ? <span className="font-medium text-muted-foreground">{t('pages.deal.stages.closed')}</span> : null}
@@ -217,14 +218,14 @@ function DealStages({ progress }: { progress: DealProgress }) {
             className={cn(
               'flex items-center gap-2 rounded-xl border p-2.5 text-xs',
               stage.state === 'done'
-                ? 'border-transparent bg-sage-bg font-medium text-sage'
+                ? 'border-success/30 bg-success/10 font-medium text-success'
                 : stage.state === 'active'
-                  ? 'border-sand-border bg-sand-bg font-semibold text-sand shadow-2xs'
-                  : 'border-hairline bg-canvas text-muted-foreground',
+                  ? 'border-warning/30 bg-warning/10 font-semibold text-warning shadow-2xs'
+                  : 'border-border/60 bg-background text-muted-foreground',
             )}
           >
             {stage.state === 'done' ? (
-              <Check className="size-3.5 stroke-[3] text-sage" aria-hidden="true" />
+              <Check className="size-3.5 stroke-[3] text-success" aria-hidden="true" />
             ) : (
               <span className="font-mono text-xs" aria-hidden="true">
                 {index + 1}.

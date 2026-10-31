@@ -48,7 +48,13 @@ describe('Mini App', () => {
   it('тема Telegram ложится на переменные shadcn, тёмная схема включает .dark', () => {
     const webApp = asMiniApp({
       colorScheme: 'dark',
-      themeParams: { bg_color: '#17212b', text_color: '#f5f5f5', button_color: '#5288c1', button_text_color: '#ffffff' },
+      themeParams: {
+        bg_color: '#17212b',
+        secondary_bg_color: '#232e3c',
+        text_color: '#f5f5f5',
+        button_color: '#5288c1',
+        button_text_color: '#ffffff',
+      },
     });
     applyTelegramTheme(webApp);
     const style = document.documentElement.style;
@@ -56,6 +62,9 @@ describe('Mini App', () => {
     expect(style.getPropertyValue('--foreground')).toBe('#f5f5f5');
     expect(style.getPropertyValue('--primary')).toBe('#5288c1');
     expect(style.getPropertyValue('--primary-foreground')).toBe('#ffffff');
+    // Холст кабинета (CAB-FIX-2): лист --background на рамке --muted, «navy» = --primary и его hover — из темы Telegram
+    expect(style.getPropertyValue('--muted')).toBe('#232e3c');
+    expect(style.getPropertyValue('--primary-hover')).toBe('#5288c1');
     expect(document.documentElement).toHaveClass('dark');
   });
 

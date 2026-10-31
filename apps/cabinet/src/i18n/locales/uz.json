@@ -5,7 +5,8 @@
     "skipToContent": "Asosiy qismga oʻtish",
     "loading": "Yuklanmoqda…",
     "mainNav": "Asosiy boʻlimlar",
-    "sideNav": "Kabinet boʻlimlari"
+    "sideNav": "Kabinet boʻlimlari",
+    "breadcrumbs": "Sahifaga yoʻl"
   },
   "nav": {
     "requests": "Soʻrovlar",
@@ -22,7 +23,17 @@
     "more": "Yana",
     "moreTitle": "Boshqa boʻlimlar",
     "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, kompaniya va profil",
-    "billingTabs": "Moliyaviy bo'limlar"
+    "billingTabs": "Moliyaviy boʻlimlar",
+    "expandSidebar": "Menyuni ochish",
+    "collapseSidebar": "Menyuni yigʻish",
+    "sectionMain": "Asosiy",
+    "sectionDocumentsAndTeam": "Hujjatlar va kompaniya"
+  },
+  "crumbs": {
+    "request": "Soʻrov",
+    "quote": "Tijorat taklifi",
+    "deal": "Bitim",
+    "catalogItem": "Mahsulot"
   },
   "common": {
     "retry": "Qayta urinish",
@@ -44,10 +55,16 @@
     "crashTitle": "Nimadir xato ketdi",
     "crashText": "Sahifa xato tufayli ochilmadi. Uni yangilang; yordam bermasa, menejerga yozing.",
     "reload": "Yangilash",
-    "unsavedChanges": "Saqlanmagan o'zgarishlar bor",
+    "unsavedChanges": "Saqlanmagan oʻzgarishlar bor",
     "saveCmdS": "Saqlash ⌘S",
     "reset": "Qaytarish",
-    "whatHappens": "Nima boʻladi"
+    "whatHappens": "Nima boʻladi",
+    "copyLink": "Havolani nusxalash",
+    "linkCopied": "Havola nusxalandi"
+  },
+  "access": {
+    "canAct": "Vakolat tasdiqlangan",
+    "viewOnly": "Faqat koʻrish"
   },
   "status": {
     "request": {

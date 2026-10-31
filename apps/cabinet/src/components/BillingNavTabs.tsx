@@ -19,8 +19,8 @@ export function BillingNavTabs() {
   return (
     <div
       role="tablist"
-      aria-label={t('nav.billingTabs', { defaultValue: 'Финансовые разделы' })}
-      className="mb-4 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-hairline bg-alabaster p-1 text-xs"
+      aria-label={t('nav.billingTabs')}
+      className="mb-4 inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl border border-border/60 bg-muted p-1 text-xs"
     >
       {tabs.map((tab) => {
         const isActive = location.pathname === tab.to;
@@ -33,8 +33,8 @@ export function BillingNavTabs() {
             className={cn(
               'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 font-medium transition-all duration-150 ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring',
               isActive
-                ? 'bg-canvas font-semibold text-navy shadow-xs'
-                : 'text-muted-foreground hover:text-charcoal',
+                ? 'bg-background font-semibold text-primary shadow-xs'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
             <tab.icon className="size-3.5" aria-hidden="true" />

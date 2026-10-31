@@ -1,36 +1,66 @@
 /* Сгенерировано из packages/ui-tokens/tokens.json (v0.2.0) — не править руками, запускать make tokens. */
-/* Подключение (ERP, Cabinet): @import "tailwindcss"; @import "../../../packages/ui-tokens/dist/shadcn.css";
-   Тёмная тема (.dark) задаётся приложением поверх; здесь — токены светлой темы. */
+/* Тема кабинета клиента (shadcnThemes.cabinet): переменные shadcn со значениями темы; только Cabinet
+   (копия apps/cabinet/src/styles/tokens.generated.css). .dark — тёмная тема Mini App (src/telegram/theme.ts);
+   цвета themeParams Telegram ложатся поверх тех же переменных inline-стилем. */
 :root {
   --background: #ffffff;
-  --foreground: #1f1f1f;
+  --foreground: #343a40;
   --card: #ffffff;
-  --card-foreground: #1f1f1f;
+  --card-foreground: #343a40;
   --popover: #ffffff;
-  --popover-foreground: #1f1f1f;
-  --primary: #1668dc;
+  --popover-foreground: #343a40;
+  --primary: #1f2e4a;
   --primary-foreground: #ffffff;
-  --primary-hover: #0958d9;
-  --secondary: #f5f5f5;
-  --secondary-foreground: #1f1f1f;
-  --muted: #f5f5f5;
-  --muted-foreground: #595959;
-  --accent: #e6f4ff;
-  --accent-foreground: #0958d9;
-  --destructive: #a8071a;
+  --primary-hover: #162238;
+  --secondary: #f1f3f5;
+  --secondary-foreground: #1f2e4a;
+  --muted: #f8f9fa;
+  --muted-foreground: #5f6b76;
+  --accent: #edf2f8;
+  --accent-foreground: #1f2e4a;
+  --destructive: #9e2a2b;
   --destructive-foreground: #ffffff;
-  --success: #237804;
+  --success: #1e7550;
   --success-foreground: #ffffff;
-  --warning: #874d00;
+  --warning: #8a5a19;
   --warning-foreground: #ffffff;
-  --info: #0958d9;
+  --info: #2b4c7e;
   --info-foreground: #ffffff;
-  --border: #d9d9d9;
-  --input: #d9d9d9;
-  --ring: #1668dc;
-  --radius: 0.375rem;
+  --border: #ced4da;
+  --input: #ced4da;
+  --ring: #1f2e4a;
+  --radius: 0.75rem;
   --font-sans: 'Inter Variable', Inter, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+.dark {
+  --background: #17212b;
+  --foreground: #f5f5f5;
+  --card: #232e3c;
+  --card-foreground: #f5f5f5;
+  --popover: #232e3c;
+  --popover-foreground: #f5f5f5;
+  --primary: #82aaff;
+  --primary-foreground: #141414;
+  --primary-hover: #98bfff;
+  --secondary: #2b3746;
+  --secondary-foreground: #f5f5f5;
+  --muted: #1e2836;
+  --muted-foreground: #9aa8b5;
+  --accent: #1f2e4a;
+  --accent-foreground: #82aaff;
+  --destructive: #ff7875;
+  --destructive-foreground: #141414;
+  --success: #73d13d;
+  --success-foreground: #141414;
+  --warning: #ffc53d;
+  --warning-foreground: #141414;
+  --info: #69b1ff;
+  --info-foreground: #141414;
+  --border: #3c4a5c;
+  --input: #3c4a5c;
+  --ring: #82aaff;
 }
 
 @theme inline {

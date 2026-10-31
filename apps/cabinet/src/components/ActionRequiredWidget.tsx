@@ -67,7 +67,7 @@ export function ActionRequiredWidget() {
   return (
     <section role="region" aria-label={t('widgets.actionRequired.title')} className="mb-6 flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <h2 id="action-required-heading" className="text-sm font-semibold tracking-tight text-navy">
+        <h2 id="action-required-heading" className="text-sm font-semibold tracking-tight text-primary">
           {t('widgets.actionRequired.title')}
         </h2>
         <ToneBadge tone="warning">{totalActions}</ToneBadge>
@@ -77,17 +77,17 @@ export function ActionRequiredWidget() {
         {pendingQuotes.map((quote) => (
           <Card
             key={`quote-${quote.id}`}
-            className="portal-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-ring/40"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-sand">
-                  <FileText className="size-3.5 text-sand" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-warning">
+                  <FileText className="size-3.5 text-warning" aria-hidden="true" />
                   {t('widgets.actionRequired.quoteBadge')}
                 </span>
-                <span className="font-mono font-semibold tabular-nums text-charcoal">{formatMoney(quote.total)}</span>
+                <span className="font-mono font-semibold tabular-nums text-foreground">{formatMoney(quote.total)}</span>
               </div>
-              <p className="text-sm font-medium text-charcoal">
+              <p className="text-sm font-medium text-foreground">
                 <Link
                   to={`/quotes/${quote.id}`}
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -103,17 +103,17 @@ export function ActionRequiredWidget() {
         {pendingContracts.map((contract) => (
           <Card
             key={`contract-${contract.id}`}
-            className="portal-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-ring/40"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-navy">
-                  <FileSignature className="size-3.5 text-navy" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-primary">
+                  <FileSignature className="size-3.5 text-primary" aria-hidden="true" />
                   {t('widgets.actionRequired.contractBadge')}
                 </span>
-                <AlertCircle className="size-3.5 text-navy" aria-hidden="true" />
+                <AlertCircle className="size-3.5 text-primary" aria-hidden="true" />
               </div>
-              <p className="text-sm font-medium text-charcoal">
+              <p className="text-sm font-medium text-foreground">
                 <Link
                   to="/contracts"
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -131,17 +131,17 @@ export function ActionRequiredWidget() {
           return (
             <Card
               key={`inv-${inv.id}`}
-              className="portal-card group relative border-border hover:border-silver"
+              className="portal-card group relative border-border hover:border-ring/40"
             >
               <CardContent className="flex flex-col gap-1.5 p-3.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium text-sand">
-                    <Receipt className="size-3.5 text-sand" aria-hidden="true" />
+                  <span className="flex items-center gap-1 font-medium text-warning">
+                    <Receipt className="size-3.5 text-warning" aria-hidden="true" />
                     {t('widgets.actionRequired.invoiceBadge')}
                   </span>
-                  <span className="font-mono font-semibold tabular-nums text-charcoal">{formatMoney(view?.remaining)}</span>
+                  <span className="font-mono font-semibold tabular-nums text-foreground">{formatMoney(view?.remaining)}</span>
                 </div>
-                <p className="text-sm font-medium text-charcoal">
+                <p className="text-sm font-medium text-foreground">
                   <Link
                     to="/invoices"
                     className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -161,17 +161,17 @@ export function ActionRequiredWidget() {
         {pendingActs.map((act) => (
           <Card
             key={`act-${act.id}`}
-            className="portal-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-ring/40"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-navy">
-                  <ClipboardCheck className="size-3.5 text-navy" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-primary">
+                  <ClipboardCheck className="size-3.5 text-primary" aria-hidden="true" />
                   {t('widgets.actionRequired.actBadge')}
                 </span>
-                <AlertCircle className="size-3.5 text-navy" aria-hidden="true" />
+                <AlertCircle className="size-3.5 text-primary" aria-hidden="true" />
               </div>
-              <p className="text-sm font-medium text-charcoal">
+              <p className="text-sm font-medium text-foreground">
                 <Link
                   to="/acts"
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"

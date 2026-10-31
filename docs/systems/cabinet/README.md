@@ -37,7 +37,7 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; 
 | `src/components/` | общие части экранов: `UnsavedChangesBar` (панель несохранённых правок формы «Компания»; Ctrl+S перехватывает, только пока она видна), `ConsequenceCallout` («Что произойдёт» рядом с главной кнопкой необратимого действия — текст передаёт экран, только про настоящий процесс), `ActionRequiredWidget` (виджет «Требует вашего решения»), `BillingNavTabs` (вкладки договоров, счетов, актов и документов), `ResponsiveList`, `StatusBadge`, `QueryStates`, `ActionDialog`, `ReasonDialog`, `DocumentButton`, `Details`, `TelegramLinkButton` / `ManagerButton` («Написать менеджеру» → `t.me/<бот>?start=deal_<id>`, в Mini App — `openTelegramLink`); `ui/` — shadcn из ERP |
 | `src/lib/` | `format.ts` (деньги, даты Asia/Tashkent, размеры), `status.ts` (подписи, тоны и типы статусов — одно место), `dealStage.ts` (этапы сделки по статусам документов), `invoice.ts`, `quotes.ts`, `download.ts` (202 + Retry-After), `catalog.ts`, `company.ts`, `leadForm.ts` (проверка формы «Я новый клиент», тело для CRM, повтор с новым токеном) |
 | `src/i18n/locales/{ru,uz,en}.json` | словари; симметрия — `scripts/check_i18n_symmetry.py` |
-| `src/styles/tokens.generated.css` | копия `packages/ui-tokens/dist/shadcn.css` (`make tokens`), подключается в `src/index.css` |
+| `src/styles/tokens.generated.css` | копия `packages/ui-tokens/dist/cabinet.css` — тема кабинета `shadcnThemes.cabinet`, светлая и `.dark` (`make tokens`), подключается в `src/index.css`; своих цветов в `index.css` нет |
 
 Маршруты: `/login`, `/login/sent`, `/new-client` (только веб), `/auth/magic#token=…` (токен во фрагменте → `POST /auth/magic`; `/auth/magic/:token` — только редирект на него на переходный период); за сессией —
 `/requests[/new|/:id]`, `/quotes[/:id]`, `/contracts`, `/invoices`, `/acts`, `/deliveries`, `/documents`,
@@ -48,16 +48,23 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; 
 В Cabinet реализован визуальный слой в строгой премиальной эстетике B2B (Legal Eminence) с архитектурой Floating Canvas:
 
 1. **Floating Canvas (Плавающий холст)**:
-   - Внешний фон приложения — холодный нейтральный `#F8F9FA` (`bg-alabaster`).
-   - Контентная рабочая область — приподнятый плавающий белый холст `#FFFFFF` (`bg-canvas`) с мягким радиусом скругления (`rounded-2xl`) и тонкой рамкой (`border-silver/80`).
+   - Внешний фон приложения и сайдбар — рамка `bg-muted`; в Mini App — `secondary_bg_color` Telegram.
+   - Контентная рабочая область — холст `bg-background` (в Mini App — `bg_color` Telegram) с радиусом `rounded-2xl` и рамкой `border-border`.
+   - Марка «RT · RailTech Cabinet» и компания клиента — в шапке сайдбара; на телефоне — плитка «RT» в шапке (`BrandMark`).
+   - Хлебные крошки: разделы — ссылки, документ — его номер из уже загруженных данных экрана (`PageHeader crumb`, `shell/crumbs.ts`):
+     KP-…, Z-…, D-…; без данных — тип документа без номера; «Сделка» — текстом (списка сделок у клиента нет).
    - Слева расположен сворачиваемый сайдбар `SideNav`: переключение кнопкой-пиктограммой и шорткатом `⌘\` / `Ctrl+\`, состояние сохраняется в `localStorage` (`rt-cab-sidebar-collapsed-v1`).
    - В мобильном представлении (≤ 768 px) и Telegram Mini App сайдбар заменяется компактным нижним таб-баром.
    - Плавные бесшовные переходы между экранами обеспечены CSS-анимацией `page-enter-fade` (180ms ease-out).
 
-2. **Палитра Legal Eminence (инвариант 85/15)**:
-   - **85% — Глубокий темно-синий / графит**: `#1F2E4A` (`--navy`), `#121A2A` (`--charcoal`), формирующий фундаментальную иерархию, контрастную типографику и структурные разделители.
-   - **15% — Благородное золото / песок**: `#C29B38` (`--sand`), мягкий фон `--sand-bg` и акцентная граница `--sand-border` для подсветки активных шагов, ключевых статусов и первичных CTA.
-   - Дополнительные семантические статусы: изумрудный (`--emerald`, успех/оплачено/доставлено), коралловый (`--coral`, отклонено/ошибки), серебряный (`--silver`, нейтральные разделители).
+2. **Палитра Legal Eminence — тема `cabinet` в `packages/ui-tokens`** (CAB-FIX-2; `tokens.json` → `shadcnThemes.cabinet`):
+   - Цвета — только значения семантических переменных shadcn: navy `--primary` (`#1f2e4a`), графит `--foreground`,
+     рамка `--muted`, холст `--background`, активный пункт `--accent`, статусы `--success` / `--warning` / `--destructive` /
+     `--info`. Компоненты пишут `bg-primary`, `text-muted-foreground`, `bg-success/10 text-success`…; своих имён
+     (`navy`, `sand`, `sage`…) и hex в коде нет.
+   - Каждая пара «текст на фоне» светлой и тёмной (`.dark`, Mini App) темы ≥ 4.5:1, значки и точки статуса ≥ 3:1 —
+     `packages/ui-tokens/contrast.test.mjs`. `StatusBadge` — `border-X/30 bg-X/10 text-X` для success, warning, danger, info; neutral — `bg-muted text-muted-foreground`.
+   - Все экраны (actor и viewer, 1440 и 390, uz и en, Mini App) с axe — `npm run test:e2e:screens` (сводка и снимки — `docs/screens/cab-fix-2`).
 
 3. **Ключевые компоненты**:
    - Этапы на странице сделки «Запрос — КП — Договор — Оплата — Поставка и акт» считаются по **статусам** документов

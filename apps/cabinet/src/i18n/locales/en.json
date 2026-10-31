@@ -5,7 +5,8 @@
     "skipToContent": "Skip to content",
     "loading": "Loading…",
     "mainNav": "Main sections",
-    "sideNav": "Cabinet sections"
+    "sideNav": "Cabinet sections",
+    "breadcrumbs": "Page path"
   },
   "nav": {
     "requests": "Requests",
@@ -22,7 +23,17 @@
     "more": "More",
     "moreTitle": "More sections",
     "moreDescription": "Contracts, invoices, acts, deliveries, company and profile",
-    "billingTabs": "Financial sections"
+    "billingTabs": "Financial sections",
+    "expandSidebar": "Expand menu",
+    "collapseSidebar": "Collapse menu",
+    "sectionMain": "Main",
+    "sectionDocumentsAndTeam": "Documents and company"
+  },
+  "crumbs": {
+    "request": "Request",
+    "quote": "Quotation",
+    "deal": "Deal",
+    "catalogItem": "Product"
   },
   "common": {
     "retry": "Retry",
@@ -47,7 +58,13 @@
     "unsavedChanges": "You have unsaved changes",
     "saveCmdS": "Save ⌘S",
     "reset": "Reset",
-    "whatHappens": "What happens next"
+    "whatHappens": "What happens next",
+    "copyLink": "Copy link",
+    "linkCopied": "Link copied"
+  },
+  "access": {
+    "canAct": "Authorized to approve",
+    "viewOnly": "View only"
   },
   "status": {
     "request": {

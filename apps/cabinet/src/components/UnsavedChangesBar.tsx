@@ -41,16 +41,16 @@ export function UnsavedChangesBar({
   return (
     <aside
       role="region"
-      aria-label={t('common.unsavedChanges', { defaultValue: 'Несохранённые изменения' })}
+      aria-label={t('common.unsavedChanges')}
       className={cn(
-        'sticky top-3 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-navy px-4 py-3 text-primary-foreground shadow-xl border border-navy/20 animate-in fade-in-0 slide-in-from-top-2 duration-200 ease-out',
+        'sticky top-3 z-30 mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-primary px-4 py-3 text-primary-foreground shadow-xl border border-primary/20 animate-in fade-in-0 slide-in-from-top-2 duration-200 ease-out',
         className,
       )}
     >
       <div className="flex items-center gap-2.5">
-        <AlertCircle className="size-4 shrink-0 text-sand" aria-hidden="true" />
+        <AlertCircle className="size-4 shrink-0 text-primary-foreground" aria-hidden="true" />
         <span className="text-xs font-medium">
-          {t('common.unsavedChanges', { defaultValue: 'Есть несохранённые изменения' })}
+          {t('common.unsavedChanges')}
         </span>
       </div>
 
@@ -59,23 +59,23 @@ export function UnsavedChangesBar({
           type="button"
           variant="ghost"
           size="sm"
-          className="rounded-xl text-xs text-primary-foreground hover:bg-navy-hover hover:text-primary-foreground"
+          className="rounded-xl text-xs text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground"
           onClick={onReset}
           disabled={pending}
         >
           <RotateCcw className="size-3.5" aria-hidden="true" />
-          {t('common.reset', { defaultValue: 'Сбросить' })}
+          {t('common.reset')}
         </Button>
 
         <Button
           type="button"
           size="sm"
-          className="rounded-xl bg-canvas text-navy hover:bg-ice-navy text-xs font-semibold shadow-xs"
+          className="rounded-xl bg-background text-primary hover:bg-accent text-xs font-semibold shadow-xs"
           onClick={onSave}
           disabled={pending}
         >
-          <Save className="size-3.5 text-navy" aria-hidden="true" />
-          {t('common.saveCmdS', { defaultValue: 'Сохранить ⌘S' })}
+          <Save className="size-3.5 text-primary" aria-hidden="true" />
+          {t('common.saveCmdS')}
         </Button>
       </div>
     </aside>

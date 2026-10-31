@@ -3,7 +3,9 @@ import type { TelegramThemeParams, TelegramWebApp } from './webapp';
 /**
  * Тема Telegram поверх семантических переменных shadcn (CONVENTIONS.md §3): компоненты не знают о
  * Telegram, меняются только `--background`, `--primary`… на `<html>`. Переменные, которых
- * в `themeParams` нет, остаются из `packages/ui-tokens`.
+ * в `themeParams` нет, остаются из `packages/ui-tokens` (тема кабинета, светлая или `.dark`).
+ * Холст кабинета — `--background` (лист) на `--muted` (рамка и сайдбар), основной цвет «navy» — `--primary`:
+ * в Mini App это `bg_color`, `secondary_bg_color` и `button_color` Telegram (CAB-FIX-2).
  */
 const THEME_MAP: Array<[keyof TelegramThemeParams, string[]]> = [
   ['bg_color', ['--background', '--popover']],
@@ -11,7 +13,7 @@ const THEME_MAP: Array<[keyof TelegramThemeParams, string[]]> = [
   ['secondary_bg_color', ['--muted', '--secondary']],
   ['section_bg_color', ['--card']],
   ['hint_color', ['--muted-foreground']],
-  ['button_color', ['--primary', '--ring']],
+  ['button_color', ['--primary', '--primary-hover', '--ring']],
   ['button_text_color', ['--primary-foreground']],
   ['accent_text_color', ['--accent-foreground']],
   ['section_separator_color', ['--border', '--input']],

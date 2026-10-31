@@ -346,7 +346,7 @@ export function CatalogItemPage() {
 
   return (
     <>
-      <PageHeader title={item.name} />
+      <PageHeader title={item.name} crumb={item.name} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           {item.images?.length ? (

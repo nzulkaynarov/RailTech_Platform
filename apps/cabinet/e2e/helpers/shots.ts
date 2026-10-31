@@ -82,11 +82,16 @@ async function runAxe(page: Page): Promise<{ violations: AxeViolation[]; passes:
 
 /**
  * Скриншот текущего экрана на 1440 и 390 px (`<экран>-<ширина>.png` в docs/screens/fix-51b/), axe в браузере и
- * проверка горизонтальной прокрутки на каждой ширине. Нарушения serious/critical и прокрутка — `expect.soft`:
+ * проверка горизонтальной прокрутки на каждой ширине; `screenshot: false` — только axe и прокрутка (CAB-FIX-2). Нарушения serious/critical и прокрутка — `expect.soft`:
  * прогон не обрывается, дефекты видны в итоге и в `axe-summary.json`.
  */
-export async function snap(page: Page, screen: string, options: { axe?: boolean; blocking?: boolean } = {}): Promise<void> {
+export async function snap(
+  page: Page,
+  screen: string,
+  options: { axe?: boolean; blocking?: boolean; screenshot?: boolean } = {},
+): Promise<void> {
   const withAxe = options.axe ?? true;
+  const withScreenshot = options.screenshot ?? true;
   fs.mkdirSync(SCREENS_DIR, { recursive: true });
   const original = page.viewportSize() ?? WIDTHS[0];
   try {
@@ -95,13 +100,15 @@ export async function snap(page: Page, screen: string, options: { axe?: boolean;
       await settle(page);
       // Вся страница: окно растягивается по высоте документа (fullPage размазывал бы фиксированную нижнюю навигацию
       // телефона посреди экрана), снимок — обычный, как увидел бы человек с очень высоким экраном.
-      const tall = await page.evaluate(() => document.documentElement.scrollHeight);
-      if (tall > size.height) {
-        await page.setViewportSize({ width: size.width, height: Math.min(tall, 3200) });
-        await page.waitForTimeout(150);
+      if (withScreenshot) {
+        const tall = await page.evaluate(() => document.documentElement.scrollHeight);
+        if (tall > size.height) {
+          await page.setViewportSize({ width: size.width, height: Math.min(tall, 3200) });
+          await page.waitForTimeout(150);
+        }
+        await page.screenshot({ path: path.join(SCREENS_DIR, `${screen}-${size.width}.png`) });
+        await page.setViewportSize(size);
       }
-      await page.screenshot({ path: path.join(SCREENS_DIR, `${screen}-${size.width}.png`) });
-      await page.setViewportSize(size);
       const axe = withAxe ? await runAxe(page) : { violations: [], passes: 0 };
       const violations = axe.violations;
       const overflowPx = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

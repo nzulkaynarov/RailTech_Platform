@@ -5,15 +5,15 @@ import { cn } from '@/lib/utils';
 import { statusLabelKey, statusTone, type StatusCode, type StatusEntity, type StatusTone } from '@/lib/status';
 
 /**
- * Тон → семантические токены палитры «Legal Eminence»:
- * мягкие полутона с четким контрастом и обязательной текстовой подписью.
+ * Тон → семантические токены темы кабинета (`packages/ui-tokens`, shadcnThemes.cabinet): текст статуса на его 10 %
+ * заливке — пары «text-X на bg-X/10» поверх холста и рамки проверяет `contrast.test.mjs` (≥ 4.5:1, светлая и тёмная).
  */
 const TONE_CLASS: Record<StatusTone, string> = {
-  success: 'border-transparent bg-sage-bg text-sage',
-  warning: 'border-sand-border bg-sand-bg text-sand',
-  danger: 'border-coral-border bg-coral-bg text-coral',
-  info: 'border-transparent bg-ice-navy text-navy',
-  neutral: 'border-hairline bg-alabaster text-muted-foreground',
+  success: 'border-success/30 bg-success/10 text-success',
+  warning: 'border-warning/30 bg-warning/10 text-warning',
+  danger: 'border-destructive/30 bg-destructive/10 text-destructive',
+  info: 'border-info/30 bg-info/10 text-info',
+  neutral: 'border-border bg-muted text-muted-foreground',
 };
 
 export function ToneBadge({ tone, children, className }: { tone: StatusTone; children: React.ReactNode; className?: string }) {

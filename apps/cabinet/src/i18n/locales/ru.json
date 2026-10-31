@@ -5,7 +5,8 @@
     "skipToContent": "Перейти к содержимому",
     "loading": "Загрузка…",
     "mainNav": "Основные разделы",
-    "sideNav": "Разделы кабинета"
+    "sideNav": "Разделы кабинета",
+    "breadcrumbs": "Путь к странице"
   },
   "nav": {
     "requests": "Запросы",
@@ -22,7 +23,17 @@
     "more": "Ещё",
     "moreTitle": "Ещё разделы",
     "moreDescription": "Договоры, счета, акты, поставки, компания и профиль",
-    "billingTabs": "Финансовые разделы"
+    "billingTabs": "Финансовые разделы",
+    "expandSidebar": "Развернуть меню",
+    "collapseSidebar": "Свернуть меню",
+    "sectionMain": "Основное",
+    "sectionDocumentsAndTeam": "Документы и компания"
+  },
+  "crumbs": {
+    "request": "Запрос",
+    "quote": "Коммерческое предложение",
+    "deal": "Сделка",
+    "catalogItem": "Товар"
   },
   "common": {
     "retry": "Повторить",
@@ -47,7 +58,13 @@
     "unsavedChanges": "Есть несохранённые изменения",
     "saveCmdS": "Сохранить ⌘S",
     "reset": "Сбросить",
-    "whatHappens": "Что произойдёт"
+    "whatHappens": "Что произойдёт",
+    "copyLink": "Копировать ссылку",
+    "linkCopied": "Ссылка скопирована"
+  },
+  "access": {
+    "canAct": "Полномочия подтверждены",
+    "viewOnly": "Только просмотр"
   },
   "status": {
     "request": {

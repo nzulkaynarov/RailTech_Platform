@@ -18,7 +18,7 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, '01-login');
 
     await page.getByLabel('E-mail').fill('neznakomets@example.com');
-    await page.getByRole('button', { name: 'Войти' }).click();
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Проверьте почту' })).toBeVisible();
     await expect(
       page.getByText('Если адрес neznakomets@example.com зарегистрирован, мы отправили ссылку для входа.'),

@@ -75,7 +75,7 @@ export function RequestsPage() {
             header: t('pages.requests.columns.request'),
             cell: (row) => (
               <span className="flex flex-col gap-0.5">
-                <span className="font-semibold text-navy">{row.number}</span>
+                <span className="font-semibold text-primary">{row.number}</span>
                 <span className="line-clamp-2 font-normal text-muted-foreground">{row.summary}</span>
               </span>
             ),
@@ -119,7 +119,7 @@ export function RequestDetailPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.requestDetail.title', { number: request.number })} />
+      <PageHeader title={t('pages.requestDetail.title', { number: request.number })} crumb={request.number} />
       <div className="flex flex-col gap-4">
         <Card>
           <CardContent className="flex flex-col gap-4">

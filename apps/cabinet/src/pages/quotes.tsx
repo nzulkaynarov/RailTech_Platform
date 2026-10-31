@@ -115,6 +115,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
     <>
       <PageHeader
         title={t('pages.quoteDetail.title', { number: quote.number })}
+        crumb={quote.number}
         actions={
           <>
             {quote.pdf_document_id ? (
