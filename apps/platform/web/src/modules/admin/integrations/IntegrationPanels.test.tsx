@@ -496,8 +496,10 @@ describe("карточка «Хранилище и бэкапы»", () => {
   });
 });
 
-describe("«Внешняя копия бэкапов» в «Хранилище» (OPS-GDRIVE-2)", () => {
+describe("«Внешняя копия бэкапов» в «Хранилище» (OPS-GDRIVE-2, OPS-YADISK)", () => {
   const PRIVATE = "-----BEGIN PRIVATE KEY-----\\nMIIE-demo-SECRET-BODY\\n-----END PRIVATE KEY-----";
+  // Пароль приложения Яндекса — 16 строчных латинских букв; здесь заведомо фиктивный, из частей.
+  const APP_PASSWORD = "demo" + "demo" + "demo" + "test";
   const keyFile = (content: string) =>
     new File([content], "rt-backups-1a2b.json", { type: "application/json" });
   const KEY = JSON.stringify({
@@ -506,24 +508,85 @@ describe("«Внешняя копия бэкапов» в «Хранилище»
     private_key_id: "0123456789abcdef1a2b",
     private_key: PRIVATE,
   });
+  const offsiteSection = async (side: HTMLElement) =>
+    (await within(side).findByRole("heading", { name: "Внешняя копия бэкапов" })).closest(
+      "section",
+    ) as HTMLElement;
 
-  it("не настроено: кто исправляет, 4 шага со ссылками; ключ и папка — без сервера, ключ не показывается", async () => {
+  it("не настроено: по умолчанию Яндекс Диск, шаги в Яндекс ID; пароль приложения не показывается", async () => {
     const side = await openPanel("storage");
-    const section = (
-      await within(side).findByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" })
-    ).closest("section") as HTMLElement;
+    const section = await offsiteSection(side);
     expect(await within(section).findByText("Не настроено")).toBeVisible();
     expect(within(section).getByText(/Владелец компании/)).toBeVisible();
-    const steps = within(section).getByRole("list", { name: /Подготовка в Google/ });
+    expect(within(section).getByRole("button", { name: "Проверить" })).toBeDisabled();
+
+    fireEvent.click(within(section).getByRole("button", { name: "Настроить" }));
+    const form = within(section).getByRole("form", { name: "Подключение внешней копии" });
+    expect(within(form).getByRole("radio", { name: "Яндекс Диск (рекомендуется)" })).toBeChecked();
+    const steps = within(form).getByRole("list", { name: /Подготовка в Яндексе/ });
     expect(within(steps).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(steps).getByRole("link", { name: "Пароли приложений" })).toHaveAttribute(
+      "href",
+      "https://id.yandex.ru/security/app-passwords",
+    );
+    expect(within(form).getByLabelText("Папка на Яндекс Диске")).toHaveValue(
+      "RailTech-backups/prod",
+    );
+
+    type("Адрес почты Яндекс 360", "backup", form);
+    type("Пароль приложения «Файлы»", APP_PASSWORD, form);
+    submitPassword(form);
+    press(form, "Сохранить и проверить");
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "Логин — это адрес почты Яндекс 360",
+    );
+    expect(within(form).getByLabelText("Адрес почты Яндекс 360")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
+    type("Адрес почты Яндекс 360", "backup@demo.example", form);
+    press(form, "Сохранить и проверить");
+    expect(await within(section).findByText("backup@demo.example")).toBeVisible();
+    expect(within(section).getByText("RailTech-backups/prod")).toBeVisible();
+    expect(
+      within(section).getByText(/Доступ есть: папка «RailTech-backups\/prod» на Яндекс Диске/),
+    ).toBeVisible();
+    expect(within(section).getByText(/Копия на Яндекс Диске обновлена/)).toBeVisible();
+    expect(document.body.textContent).not.toContain(APP_PASSWORD);
+    expect(document.body.textContent).not.toContain(APP_PASSWORD.slice(-4));
+  });
+
+  it("обычный пароль вместо пароля приложения — причина словами", async () => {
+    const side = await openPanel("storage");
+    const section = await offsiteSection(side);
+    fireEvent.click(await within(section).findByRole("button", { name: "Настроить" }));
+    const form = within(section).getByRole("form", { name: "Подключение внешней копии" });
+    type("Адрес почты Яндекс 360", "backup@demo.example", form);
+    type("Пароль приложения «Файлы»", "Account-Pass-0", form);
+    submitPassword(form);
+    press(form, "Сохранить и проверить");
+    expect(
+      await within(section).findByText(/Похоже, введён обычный пароль аккаунта/),
+    ).toBeVisible();
+  });
+
+  it("Google Drive: предупреждение про Workspace, ключ и папка — без сервера, ключ не показывается", async () => {
+    const side = await openPanel("storage");
+    const section = await offsiteSection(side);
+    fireEvent.click(await within(section).findByRole("button", { name: "Настроить" }));
+    const form = within(section).getByRole("form", { name: "Подключение внешней копии" });
+    fireEvent.click(
+      within(form).getByRole("radio", { name: "Google Drive (общий диск Workspace)" }),
+    );
+    expect(
+      within(form).getByText("Нужен общий диск Google Workspace. Личный Google Drive не подходит."),
+    ).toBeVisible();
+    const steps = within(form).getByRole("list", { name: /Подготовка в Google/ });
     expect(within(steps).getByRole("link", { name: "Google Drive API" })).toHaveAttribute(
       "href",
       "https://console.cloud.google.com/apis/library/drive.googleapis.com",
     );
-    expect(within(section).getByRole("button", { name: "Проверить" })).toBeDisabled();
-
-    fireEvent.click(within(section).getByRole("button", { name: "Настроить" }));
-    const form = within(section).getByRole("form", { name: "Ключ и папка" });
     const input = within(form).getByLabelText("Ключ сервисного аккаунта (файл JSON)");
     fireEvent.change(input, { target: { files: [keyFile('{"type": "authorized_user"}')] } });
     expect(await within(form).findByRole("alert")).toHaveTextContent(
@@ -553,6 +616,11 @@ describe("«Внешняя копия бэкапов» в «Хранилище»
     expect(
       within(section).getByText(/Доступ есть: папка «rt-platform-offsite» на общем диске/),
     ).toBeVisible();
+    expect(
+      within(section).getByText(
+        "Нужен общий диск Google Workspace. Личный Google Drive не подходит.",
+      ),
+    ).toBeVisible();
     expect(document.body.textContent).not.toContain("SECRET-BODY");
 
     press(section, "Проверить");
@@ -563,10 +631,8 @@ describe("«Внешняя копия бэкапов» в «Хранилище»
 
   it("директор видит состояние, но не настраивает и не проверяет", async () => {
     const side = await openPanel("storage", "director@demo.example");
-    const section = (
-      await within(side).findByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" })
-    ).closest("section") as HTMLElement;
-    expect(await within(section).findByText("Папка общего диска (ID)")).toBeVisible();
+    const section = await offsiteSection(side);
+    expect(await within(section).findByText("Логин Яндекс 360")).toBeVisible();
     expect(within(section).queryByRole("button", { name: "Настроить" })).toBeNull();
     expect(within(section).queryByRole("button", { name: "Проверить" })).toBeNull();
   });

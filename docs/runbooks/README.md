@@ -13,7 +13,7 @@ runbook'и идущих волн. Закрытые волны — [`../history/r
 | [`servers.md`](servers.md) | серверы VPS1 (приложения) и VPS2 (база), доступ, что где лежит |
 | [`deploy.md`](deploy.md) | выкладка `main` на прод, одобрение, откат, первый подъём |
 | [`backup-pitr.md`](backup-pitr.md) | WAL-архив PostgreSQL, восстановление на момент времени, ежемесячная проверка |
-| [`offsite-gdrive.md`](offsite-gdrive.md) | внешняя копия бэкапов на Google Drive: включение, восстановление, учения |
+| [`offsite-gdrive.md`](offsite-gdrive.md) | внешняя копия бэкапов — Яндекс Диск компании (рекомендуется) или общий диск Google Workspace: включение в интерфейсе, восстановление, учения |
 | [`crm-erp-pairing.md`](crm-erp-pairing.md) | сопряжение CRM ↔ ERP, «Обновить ключи», сбои подключения |
 | [`rt-bus-erp.md`](rt-bus-erp.md) | шина в ERP: журнал, DLQ, повтор, метрики, ротация секрета, код акцепта КП |
 | [`rt-bus-crm.md`](rt-bus-crm.md) | шина в CRM: DLQ, повтор, метрики, необработанные события ERP |

@@ -16,8 +16,10 @@ from app.clients.base import PROBE_TIMEOUT_SECONDS
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.integrations_support import (
+    EARLIER,
     CrmIntegrationsFake,
     fresh_secret,
+    offsite_status,
     service,
     services_out,
 )
@@ -1132,6 +1134,85 @@ async def test_offsite_keeps_key_when_not_sent_and_check_passes_reason(
     assert checked.status_code == 200
     check(checked, "/admin/integrations/offsite/check", "post")
     assert (checked.json()["ok"], checked.json()["reason"]) == (False, "not_shared_drive")
+
+
+async def test_offsite_yandex_password_goes_to_crm_only_and_never_comes_back(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """OPS-YADISK: пароль приложения «Файлы» — только на запись; поля Google в CRM не уходят."""
+    await web.login(["ADMIN"])
+    app_password = fresh_secret("ya", 16)
+    crm.answer(
+        "PUT",
+        "integrations/offsite",
+        200,
+        offsite_status(
+            provider="yandex",
+            login="backup@example.org",
+            folder_path="RailTech-backups/prod",
+            app_password_configured=True,
+            app_password_updated_at=EARLIER,
+            last_check={
+                "ok": False,
+                "reason": "webdav_forbidden",
+                "folder_name": None,
+                "checked_at": EARLIER,
+            },
+        ),
+    )
+
+    response = await web.send(
+        "PUT",
+        f"{BASE}/offsite",
+        json={
+            "provider": "yandex",
+            "login": " backup@example.org ",
+            "folder_path": " RailTech-backups/prod ",
+            "app_password": app_password,
+            "key_json": "ignored",
+            "folder_id": "ignored-folder-id",
+            "password": PASSWORD,
+        },
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/integrations/offsite", "put")
+    assert crm.body("PUT", "integrations/offsite") == {
+        "provider": "yandex",
+        "login": "backup@example.org",
+        "folder_path": "RailTech-backups/prod",
+        "app_password": app_password,
+        "password": PASSWORD,
+    }
+    assert app_password not in response.text
+    body = response.json()
+    assert (body["provider"], body["app_password_configured"]) == ("yandex", True)
+    assert body["last_check"]["reason"] == "webdav_forbidden"
+
+
+async def test_offsite_yandex_field_errors_name_the_field(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    crm.answer(
+        "PUT",
+        "integrations/offsite",
+        422,
+        {
+            "code": "validation_failed",
+            "message": "x",
+            "details": {"reason": "offsite_login_invalid", "field": "login"},
+        },
+    )
+    invalid = await web.send(
+        "PUT",
+        f"{BASE}/offsite",
+        json={"provider": "yandex", "login": "backup", "password": PASSWORD},
+    )
+    assert invalid.status_code == 422
+    check(invalid, "/admin/integrations/offsite", "put")
+    assert invalid.json()["details"]["reason"] == "offsite_login_invalid"
+    assert invalid.json()["details"]["fields"] == ["login"]
 
 
 async def test_offsite_errors_are_translated(

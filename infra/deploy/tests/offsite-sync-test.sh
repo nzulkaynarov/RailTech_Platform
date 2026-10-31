@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Тест OPS-GDRIVE: внешняя копия архива WAL-G на Google Drive (infra/offsite/gdrive-sync.sh, сервис offsite-backup). Секретов и
+# Тест OPS-GDRIVE: внешняя копия архива WAL-G на Google Drive (infra/offsite/offsite-sync.sh, сервис offsite-backup; ветка Яндекс
+# Диска — offsite-yandex-test.sh). Секретов и
 # доступа к Google не требует: Drive и RustFS подменены локальными каталогами (бэкенд local того же закреплённого образа rclone).
 #  1. Конфигурация: сервис только в проде, образ rclone закреплён версией и digest, ключ S3 свой (S3_OFFSITE_*) и только у
 #     offsite-backup и s3-init; каталог секретов — только чтение; лимит памяти; CRM не получает ключ; ensure-secrets создаёт
@@ -20,7 +21,7 @@ root="$(cd "$here/../../.." && pwd)"
 tmp="$(mktemp -d)"; trap 'docker run --rm -v "$tmp:/t" alpine:3.22 rm -rf /t/w >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 base="$root/infra/compose/base.yml"; prod="$root/infra/compose/prod.yml"; dev="$root/infra/compose/dev.yml"
-init="$root/infra/s3/init.sh"; deploy="$root/infra/deploy/deploy.sh"; script="$root/infra/offsite/gdrive-sync.sh"
+init="$root/infra/s3/init.sh"; deploy="$root/infra/deploy/deploy.sh"; script="$root/infra/offsite/offsite-sync.sh"
 
 # --- 1. Конфигурация ------------------------------------------------------------------------------------------------------
 mkenv() { # mkenv <пример> <выход>
@@ -29,7 +30,7 @@ mkenv() { # mkenv <пример> <выход>
 }
 mkenv "$root/infra/.env.prod.example" "$tmp/env.prod"
 grep -v '^#' "$root/.env.example" | grep -v '^$' > "$tmp/env.dev.raw"; mkenv "$tmp/env.dev.raw" "$tmp/env.dev"
-export RT_IMAGE_TAG=offsite-gdrive-test
+export RT_IMAGE_TAG=offsite-sync-test
 profiles=(--profile observability --profile kb-ingest --profile mcp)
 docker compose -f "$base" -f "$prod" --env-file "$tmp/env.prod" "${profiles[@]}" config --format json > "$tmp/prod.json"
 docker compose -f "$base" -f "$dev" --env-file "$tmp/env.dev" "${profiles[@]}" config --format json > "$tmp/dev.json"
@@ -38,7 +39,7 @@ svc() { jq -r --arg k "$1" '.services["offsite-backup"] | getpath($k | split("."
 [[ "$(jq -r '.services["offsite-backup"] // "none"' "$tmp/dev.json")" == none ]] || fail "dev: offsite-backup не нужен на стенде (архива WAL нет)"
 image="$(svc image)"
 [[ "$image" =~ ^rclone/rclone:[0-9]+\.[0-9]+\.[0-9]+@sha256:[0-9a-f]{64}$ ]] || fail "образ offsite-backup не rclone/rclone:<версия>@sha256:<digest>: $image"
-[[ "$(jq -r '.services["offsite-backup"].entrypoint | join(" ")' "$j")" == "sh /offsite/gdrive-sync.sh" ]] || fail "entrypoint offsite-backup"
+[[ "$(jq -r '.services["offsite-backup"].entrypoint | join(" ")' "$j")" == "sh /offsite/offsite-sync.sh" ]] || fail "entrypoint offsite-backup"
 [[ "$(svc environment.OFFSITE_S3_ACCESS_KEY)" == ak-OFFSITE && "$(svc environment.OFFSITE_S3_SECRET_KEY)" == sk-OFFSITE ]] || fail "offsite-backup не на ключе S3_OFFSITE_*"
 [[ "$(svc environment.OFFSITE_WAL_BUCKET)" == wal && "$(svc environment.OFFSITE_STATUS_BUCKET)" == offsite ]] || fail "бакеты offsite-backup"
 [[ "$(svc environment.OFFSITE_KEEP_DAYS)" == 14 && "$(svc environment.OFFSITE_BWLIMIT)" == 2M ]] || fail "окно 14 суток и полоса 2M по умолчанию"
@@ -48,10 +49,10 @@ image="$(svc image)"
 [[ "$(svc restart)" == unless-stopped ]] || fail "offsite-backup: restart unless-stopped"
 [[ "$(jq -r '[.services["offsite-backup"].volumes[] | select(.target == "/secrets" and .read_only == true and .source == "/opt/rt/secrets")] | length' "$j")" == 1 ]] \
   || fail "каталог секретов /opt/rt/secrets должен монтироваться только на чтение"
-[[ "$(jq -r '[.services["offsite-backup"].volumes[] | select(.target == "/offsite/gdrive-sync.sh" and .read_only == true)] | length' "$j")" == 1 ]] || fail "скрипт не смонтирован только на чтение"
+[[ "$(jq -r '[.services["offsite-backup"].volumes[] | select(.target == "/offsite/offsite-sync.sh" and .read_only == true)] | length' "$j")" == 1 ]] || fail "скрипт не смонтирован только на чтение"
 [[ "$(jq -r '[.services["offsite-backup"].volumes[] | select(.target == "/state" and .type == "volume")] | length' "$j")" == 1 ]] || fail "нет тома состояния /state"
 [[ "$(svc depends_on.s3-init.condition)" == service_completed_successfully ]] || fail "offsite-backup не ждёт s3-init (политики)"
-[[ "$(jq -r '.services["offsite-backup"].healthcheck.test | join(" ")' "$j")" == "CMD sh /offsite/gdrive-sync.sh --health" ]] || fail "healthcheck offsite-backup"
+[[ "$(jq -r '.services["offsite-backup"].healthcheck.test | join(" ")' "$j")" == "CMD sh /offsite/offsite-sync.sh --health" ]] || fail "healthcheck offsite-backup"
 holders="$(jq -r '[.services | to_entries[] | select(.value.environment // {} | tostring | test("ak-OFFSITE|sk-OFFSITE")) | .key] | sort | join(",")' "$j")"
 [[ "$holders" == offsite-backup,s3-init ]] || fail "ключ offsite у лишних сервисов: $holders"
 [[ "$(jq -r '.services["offsite-backup"].environment | tostring | test("S3_WAL|WAL_S3_(ACCESS|SECRET)|WAL_ENC_KEY|S3_ROOT")' "$j")" == false ]] \
@@ -95,11 +96,11 @@ bash -n "$root/infra/deploy/offsite-check.sh" || fail "offsite-check.sh: син�
 # --- 2. Поведение -----------------------------------------------------------------------------------------------------------
 w="$tmp/w"; mkdir -p "$w"
 FOLDER_ID=TESTFOLDERID1234567890
-run() { # run <аргументы gdrive-sync.sh> — переменные OFFSITE_* из массива extra
-  docker run --rm -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
+run() { # run <аргументы offsite-sync.sh> — переменные OFFSITE_* из массива extra
+  docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
     -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
     -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json \
-    "${extra[@]}" --entrypoint sh "$image" /offsite/gdrive-sync.sh "$@"
+    "${extra[@]}" --entrypoint sh "$image" /offsite/offsite-sync.sh "$@"
 }
 status() { cat "$w/status/status.json"; }
 field() { jq -r ".$1" "$w/status/status.json"; }
@@ -125,7 +126,7 @@ extra=(-e OFFSITE_KEEP_DAYS=14)
 # 2.1 Не настроено: нет ключа — итог not_configured, код 3 у --now, демон бы не упал; ID папки в журнале и статусе нет.
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 ]] || { cat "$tmp/out"; fail "нет ключа: ожидался код 3 (не настроено), получен $rc"; }
-[[ "$(field result)" == not_configured && "$(field reason)" == no_key ]] || { status; fail "нет ключа: not_configured/no_key"; }
+[[ "$(field result)" == not_configured && "$(field reason)" == no_config ]] || { status; fail "ничего не настроено: not_configured/no_config"; }
 [[ "$(field message)" == *"Admin → Подключения"* ]] || fail "сообщение не ведёт в интерфейс (Admin → Подключения)"
 [[ ! -d "$w/drive" ]] || fail "без ключа на Drive ничего не должно появиться"
 printf '{"type": "authorized_user"}' > "$w/secrets/gdrive-sa.json"
@@ -231,14 +232,14 @@ run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "копия после с�
 # 2.6b Блокировка от прежнего контейнера (SIGKILL посреди копии) снимается при старте демона; SIGTERM — штатный выход.
 in_box 'mkdir -p /t/state/lock'
 lname="rt-offsite-lock-$$"
-docker run -d --name "$lname" -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
-  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/gdrive-sync.sh --daemon >/dev/null
+docker run -d --name "$lname" -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
+  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/offsite-sync.sh --daemon >/dev/null
 sleep 4; docker logs "$lname" > "$tmp/out" 2>&1; docker rm -f "$lname" >/dev/null
 grep -q '"offsite_stale_lock_removed"' "$tmp/out" || { cat "$tmp/out"; fail "демон не снял блокировку прежнего контейнера"; }
 [[ ! -d "$w/state/lock" ]] || fail "блокировка осталась после старта демона"
 cname="rt-offsite-sigterm-$$"
-docker run -d --name "$cname" -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
-  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/gdrive-sync.sh --daemon >/dev/null
+docker run -d --name "$cname" -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
+  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/offsite-sync.sh --daemon >/dev/null
 sleep 3; t0=$(date +%s); docker stop -t 10 "$cname" >/dev/null; took=$(( $(date +%s) - t0 ))
 docker logs "$cname" 2>&1 | grep -q '"offsite_daemon_stopped"' || { docker logs "$cname"; docker rm -f "$cname" >/dev/null; fail "демон не обработал SIGTERM"; }
 [[ "$(docker inspect -f '{{.State.ExitCode}}' "$cname")" == 0 && "$took" -lt 8 ]] || { docker rm -f "$cname" >/dev/null; fail "SIGTERM: ожидался выход 0 сразу, а не SIGKILL через 10 с (took=$took)"; }
@@ -261,11 +262,11 @@ rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 in_box 'rm -f /t/secrets/gdrive-sa.json'
 
 # 2.7 Расписание и healthcheck (функции скрипта в режиме библиотеки).
-docker run --rm -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC --entrypoint sh "$image" -c '
+docker run --rm -v "$w:/t" -v "$script:/offsite/offsite-sync.sh:ro" -e TZ=UTC --entrypoint sh "$image" -c '
 set -e
 export OFFSITE_LIB=1 OFFSITE_STATE_DIR=/t/sched OFFSITE_RETRY_MIN=30
 mkdir -p /t/sched; rm -f /t/sched/*
-. /offsite/gdrive-sync.sh
+. /offsite/offsite-sync.sh
 t=$(date -u +%s)
 ok() { if due; then echo "due"; else echo "wait"; fi; }
 [ "$(ok)" = due ] || { echo "первый запуск без отметок должен быть сразу"; exit 1; }
@@ -288,4 +289,4 @@ echo $t > /t/sched/heartbeat; (health) || { echo "свежая отметка �
 echo $((t - 900)) > /t/sched/heartbeat; if (health) >/dev/null; then echo "старая отметка — unhealthy"; exit 1; fi
 mkdir /t/sched/lock; (health) || { echo "идёт копирование — healthy"; exit 1; }
 ' > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "расписание или healthcheck"; }
-echo "offsite-gdrive-test: ok"
+echo "offsite-sync-test: ok"

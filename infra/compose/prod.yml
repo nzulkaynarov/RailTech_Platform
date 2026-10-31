@@ -100,16 +100,17 @@ services:
   s3-init:
     logging: { driver: json-file, options: { max-size: "5m", max-file: "2" } }
 
-  # Внешняя копия архива базы на корпоративном Google Drive (OPS-GDRIVE; docs/runbooks/offsite-gdrive.md): раз в сутки rclone copy
-  # из бакета wal RustFS в папку общего диска — базовые копии WAL-G за OFFSITE_KEEP_DAYS и WAL с копии, покрывающей границу срока.
-  # Только прод (на стенде архива WAL нет). Ключ S3 свой (S3_OFFSITE_*: чтение wal, запись только в бакет offsite — туда идёт
-  # status.json для строки CRM «Внешняя копия бэкапов»). Ключ сервисного аккаунта Google владелец кладёт в /opt/rt/secrets
-  # (каталог создаёт deploy.sh, chmod 700); нет ключа или OFFSITE_GDRIVE_FOLDER_ID — статус «не настроено», сервис работает.
+  # Внешняя копия архива базы вне наших серверов (OPS-GDRIVE, OPS-YADISK; docs/runbooks/offsite-gdrive.md): раз в сутки rclone copy
+  # из бакета wal RustFS на Яндекс Диск компании (WebDAV, пароль приложения «Файлы») или в папку общего диска Google Workspace —
+  # базовые копии WAL-G за OFFSITE_KEEP_DAYS и WAL с копии, покрывающей границу срока. Только прод (на стенде архива WAL нет).
+  # Ключ S3 свой (S3_OFFSITE_*: чтение wal и offsite-config, запись только в бакет offsite — туда идёт status.json для строки CRM
+  # «Внешняя копия бэкапов»). Провайдер и доступ задаются в интерфейсе (бакет offsite-config); аварийный путь Google — ключ в
+  # /opt/rt/secrets (каталог создаёт deploy.sh, chmod 700) и OFFSITE_GDRIVE_FOLDER_ID. Не настроено — статус «не настроено».
   # Образ rclone — официальный, версия и digest закреплены; Go-бинарь без требований к CPU выше x86-64 v1 (cpu-baseline-rules.sh).
   offsite-backup:
     <<: [*ops, *mem-128]
     image: rclone/rclone:1.75.2@sha256:2687085f718d3c628f7fdfb77c52a1d344332aed543110bb88088f2c70d43eb5
-    entrypoint: ["sh", "/offsite/gdrive-sync.sh"]
+    entrypoint: ["sh", "/offsite/offsite-sync.sh"]
     command: ["--daemon"]
     environment:
       TZ: UTC
@@ -122,8 +123,10 @@ services:
       # Тот же каталог архива, что у WAL-G на VPS 2 и у строки CRM «Архив WAL» (по умолчанию pg17).
       OFFSITE_WAL_PREFIX: ${WAL_S3_PREFIX:-pg17}
       OFFSITE_STATUS_BUCKET: offsite
-      # Ключ и ID папки из интерфейса (OPS-GDRIVE-2): CRM пишет, сервис читает раз в минуту.
+      # Провайдер и доступ из интерфейса (OPS-GDRIVE-2, OPS-YADISK): CRM пишет, сервис читает раз в минуту.
       OFFSITE_CONFIG_BUCKET: offsite-config
+      # Пусто — провайдер из интерфейса; yandex или gdrive — сильнее интерфейса (аварийный путь).
+      OFFSITE_PROVIDER: ${OFFSITE_PROVIDER:-}
       OFFSITE_GDRIVE_SA_FILE: /secrets/gdrive-sa.json
       OFFSITE_SA_HOST_PATH: ${RT_SECRETS_DIR:-/opt/rt/secrets}/gdrive-sa.json
       OFFSITE_GDRIVE_FOLDER_ID: ${OFFSITE_GDRIVE_FOLDER_ID:-}
@@ -133,14 +136,14 @@ services:
       OFFSITE_BWLIMIT: ${OFFSITE_BWLIMIT:-2M}
       OFFSITE_AT_UTC: ${OFFSITE_AT_UTC:-23:00}
     volumes:
-      - ../offsite/gdrive-sync.sh:/offsite/gdrive-sync.sh:ro
+      - ../offsite/offsite-sync.sh:/offsite/offsite-sync.sh:ro
       - ${RT_SECRETS_DIR:-/opt/rt/secrets}:/secrets:ro
       - offsite_state:/state
     depends_on:
       s3-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "sh", "/offsite/gdrive-sync.sh", "--health"]
+      test: ["CMD", "sh", "/offsite/offsite-sync.sh", "--health"]
       interval: 60s
       timeout: 10s
       retries: 3

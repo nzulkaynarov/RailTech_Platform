@@ -42,6 +42,12 @@ function side(page: Page): Locator {
   return page.locator(PANEL);
 }
 
+function offsiteSection(page: Page): Locator {
+  return side(page).locator("section", {
+    has: page.getByRole("heading", { name: "Внешняя копия бэкапов", exact: true }),
+  });
+}
+
 function tile(page: Page, key: string): Locator {
   return page.locator(`article[data-card="${key}"]`);
 }
@@ -209,22 +215,24 @@ test.describe("Внешние интеграции: администратор",
     await expect(page.locator("body")).not.toContainText("fresh-smtp-secret");
   });
 
-  test("Внешняя копия бэкапов: шаги Google, ключ JSON и папка из интерфейса, ключ не показывается, axe", async ({
+  test("Внешняя копия бэкапов: Google Drive — предупреждение про Workspace, ключ JSON и папка, ключ не показывается, axe", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openIntegrations(page, "storage");
-    const section = side(page).locator("section", {
-      has: page.getByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" }),
-    });
+    const section = offsiteSection(page);
     await expect(section.getByText("Не настроено")).toBeVisible();
-    await expect(
-      section.getByRole("list", { name: /Подготовка в Google/ }).getByRole("listitem"),
-    ).toHaveCount(4);
     await expectNoViolations(page, "offsite not configured");
 
     await section.getByRole("button", { name: "Настроить" }).click();
-    const form = section.getByRole("form", { name: "Ключ и папка" });
+    const form = section.getByRole("form", { name: "Подключение внешней копии" });
+    await form.getByRole("radio", { name: "Google Drive (общий диск Workspace)" }).check();
+    await expect(
+      form.getByText("Нужен общий диск Google Workspace", { exact: false }),
+    ).toBeVisible();
+    await expect(
+      form.getByRole("list", { name: /Подготовка в Google/ }).getByRole("listitem"),
+    ).toHaveCount(4);
     await expectNoViolations(page, "offsite form");
     const key = JSON.stringify({
       type: "service_account",
@@ -446,6 +454,45 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await openIntegrations(page, "services");
       await side(page).getByRole("button", { name: "Выключить сервис: Telegram Bot API" }).click();
       await expectNoViolations(page, `services form ${String(width)}`);
+    });
+
+    test(`внешняя копия на Яндекс Диске на ${String(width)}: форма, причина проверки, успех (OPS-YADISK)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await openIntegrations(page, "storage");
+      const section = offsiteSection(page);
+      await section.getByRole("button", { name: "Настроить" }).click();
+      const form = section.getByRole("form", { name: "Подключение внешней копии" });
+      await expect(form.getByRole("radio", { name: "Яндекс Диск (рекомендуется)" })).toBeChecked();
+      await expect(
+        form.getByRole("list", { name: /Подготовка в Яндексе/ }).getByRole("listitem"),
+      ).toHaveCount(4);
+      await expect(form.getByLabel("Папка на Яндекс Диске")).toHaveValue("RailTech-backups/prod");
+      await form.getByLabel("Адрес почты Яндекс 360").fill("backup@demo.example");
+      // Обычный пароль аккаунта вместо пароля приложения «Файлы» (фиктивный): проверка называет причину.
+      await form.getByLabel("Пароль приложения «Файлы»").fill("Account-Pass-0");
+      await password(form);
+      await expectNoViolations(page, `yadisk form ${String(width)}`);
+      await tallScreenshot(page, "yadisk-form");
+      await form.getByRole("button", { name: "Сохранить и проверить" }).click();
+      await expect(section.getByText(/Похоже, введён обычный пароль аккаунта/)).toBeVisible();
+      await expectNoViolations(page, `yadisk check error ${String(width)}`);
+      await tallScreenshot(page, "yadisk-check-error");
+
+      await section.getByRole("button", { name: "Изменить подключение" }).click();
+      const again = section.getByRole("form", { name: "Подключение внешней копии" });
+      await again.getByLabel("Пароль приложения «Файлы»").fill("demo" + "demo" + "demo" + "test");
+      await password(again);
+      await again.getByRole("button", { name: "Сохранить и проверить" }).click();
+      await expect(
+        section.getByText(/Доступ есть: папка «RailTech-backups\/prod» на Яндекс Диске/),
+      ).toBeVisible();
+      await expect(section.getByText(/Копия на Яндекс Диске обновлена/)).toBeVisible();
+      await expect(page.locator("body")).not.toContainText("demodemodemotest");
+      await expectNoViolations(page, `yadisk ok ${String(width)}`);
+      await tallScreenshot(page, "yadisk-ok");
     });
 
     test(`здоровье интеграций на ${String(width)}: группа, подробности, готовый текст, ключ, состояния (W15-H3)`, async ({

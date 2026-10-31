@@ -6,7 +6,7 @@
 #   каталог в бакете $WAL_S3_PREFIX (по умолчанию pg17).
 # ext — внешнее S3 (BACKUP_EXT_*): бакет $BACKUP_EXT_BUCKET, каталог wal/$WAL_S3_PREFIX/. Копия туда идёт из walg-daemon.sh.
 # file — копия архива на диске, каталог $WAL_FILE_PREFIX (в нём basebackups_005/ и wal_005/): скачанная с Google Drive
-#   (infra/db/restore-from-gdrive.sh, OPS-GDRIVE). Только для восстановления и проверки.
+#   (infra/db/restore-from-offsite.sh, OPS-GDRIVE). Только для восстановления и проверки.
 # Шифрование — libsodium, ключ $WAL_ENC_KEY (64 hex-символа = 32 байта). Значения секретов никуда не печатаются.
 set -euo pipefail
 

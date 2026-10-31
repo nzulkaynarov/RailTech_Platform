@@ -552,7 +552,7 @@ export const adminIntegrationsHandlers = [
     return HttpResponse.json({ profile: state.profile, published: state.published });
   }),
 
-  // --- Внешняя копия бэкапов (OPS-GDRIVE-2): ключ только на запись — в состоянии мока его нет вовсе
+  // --- Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): секреты только на запись — в состоянии мока их нет вовсе
   http.get(
     "*/admin/integrations/offsite",
     () => guard("read") ?? HttpResponse.json(readIntegrations().offsite ?? seedOffsite()),
@@ -563,11 +563,52 @@ export const adminIntegrationsHandlers = [
     const body = (await request.json()) as OffsiteBackupIn;
     const wrong = wrongPassword(body.password);
     if (wrong) return wrong;
-    const match = /\/folders\/([A-Za-z0-9_-]{10,128})/.exec(body.folder_id);
-    const folder = match?.[1] ?? body.folder_id.trim();
+    const current = readIntegrations().offsite ?? seedOffsite();
+    if (body.provider === "yandex") {
+      const login = (body.login ?? "").trim().toLowerCase();
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(login))
+        return invalid("login", "offsite_login_invalid");
+      const path = (body.folder_path ?? "").trim().replace(/^\/+|\/+$/g, "");
+      const folderPath = path || current.default_folder_path;
+      if (folderPath.split("/").some((part) => part === ".." || part === "."))
+        return invalid("folder_path", "offsite_folder_invalid");
+      const appPassword = (body.app_password ?? "").replace(/\s+/g, "");
+      if (!appPassword && !current.app_password_configured)
+        return invalid("app_password", "offsite_app_password_invalid");
+      // Как CRM: Яндекс не принял пароль, не похожий на пароль приложения (16 латинских букв).
+      const ok = !appPassword || /^[a-z]{16}$/.test(appPassword);
+      const state = update((s) => {
+        s.offsite = {
+          ...current,
+          provider: "yandex",
+          configured: true,
+          login,
+          folder_path: folderPath,
+          app_password_configured: true,
+          app_password_updated_at: appPassword ? MOCK_NOW : current.app_password_updated_at,
+          delivered_at: MOCK_NOW,
+          last_check: {
+            ok,
+            reason: ok ? "ok" : "not_app_password",
+            folder_name: ok ? folderPath : null,
+            checked_at: MOCK_NOW,
+          },
+          secrets_enabled: true,
+        };
+        const row = findService(s, "offsite_backup");
+        if (row && ok)
+          settleOk(
+            row,
+            MOCK_NOW,
+            "Копия на Яндекс Диске обновлена 0 ч назад: 1,2 ГБ, базовых копий 1, средняя скорость 1,8 МБ/с",
+          );
+      });
+      return HttpResponse.json(state.offsite);
+    }
+    const match = /\/folders\/([A-Za-z0-9_-]{10,128})/.exec(body.folder_id ?? "");
+    const folder = match?.[1] ?? (body.folder_id ?? "").trim();
     if (!/^[A-Za-z0-9_-]{10,128}$/.test(folder))
       return invalid("folder_id", "offsite_folder_invalid");
-    const current = readIntegrations().offsite ?? seedOffsite();
     let email = current.client_email;
     let suffix = current.key_suffix;
     if (body.key_json) {
@@ -587,6 +628,8 @@ export const adminIntegrationsHandlers = [
     }
     const state = update((s) => {
       s.offsite = {
+        ...current,
+        provider: "gdrive",
         configured: true,
         folder_id: folder,
         client_email: email,
@@ -620,12 +663,14 @@ export const adminIntegrationsHandlers = [
         reason: "offsite_not_configured",
       });
     }
-    return HttpResponse.json({
-      ok: true,
-      reason: "ok",
-      folder_name: "rt-platform-offsite",
-      checked_at: MOCK_NOW,
-    });
+    return HttpResponse.json(
+      offsite.last_check ?? {
+        ok: true,
+        reason: "ok",
+        folder_name: "rt-platform-offsite",
+        checked_at: MOCK_NOW,
+      },
+    );
   }),
 
   // --- Почта

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Живой тест OPS-GDRIVE (Docker, без Google и без секретов, ≈ 3–5 минут): архив WAL-G → копия «на Drive» (gdrive-sync.sh) →
-# восстановление и учения из неё (infra/db/restore-from-gdrive.sh --check и --latest). Drive подменён локальным каталогом
-# (RESTORE_GDRIVE_REMOTE, OFFSITE_DST), RustFS — каталогом файлового хранилища WAL-G.
+# Живой тест OPS-GDRIVE (Docker, без Google и без секретов, ≈ 3–5 минут): архив WAL-G → копия «на Drive» (offsite-sync.sh) →
+# восстановление и учения из неё (infra/db/restore-from-offsite.sh --check и --latest). Drive подменён локальным каталогом
+# (RESTORE_OFFSITE_REMOTE, OFFSITE_DST), RustFS — каталогом файлового хранилища WAL-G.
 #  1. Одноразовый PostgreSQL из образа rt-db-postgres пишет архив WAL-G (WALG_FILE_PREFIX, шифрование libsodium) — базы crm, erp, eds,
 #     базовая копия, запись A, переключение сегмента, запись B.
-#  2. gdrive-sync.sh --now копирует архив в «Drive»: итог ok.
-#  3. restore-from-gdrive.sh --check: скачивает, wal-g видит копию, разворачивает, базы на месте — учения пройдены, остатков нет.
-#  4. restore-from-gdrive.sh --latest: в восстановленной базе есть и A, и B (WAL после базовой копии проигран).
+#  2. offsite-sync.sh --now копирует архив в «Drive»: итог ok.
+#  3. restore-from-offsite.sh --check: скачивает, wal-g видит копию, разворачивает, базы на месте — учения пройдены, остатков нет.
+#  4. restore-from-offsite.sh --latest: в восстановленной базе есть и A, и B (WAL после базовой копии проигран).
 #  5. Неверный WAL_ENC_KEY — восстановление не проходит, и после провала не остаётся контейнера, тома и скачанной копии.
 # Запуск: bash этот-файл [образ rt-db-postgres] (по умолчанию rt-db-postgres:local; нет — docker build -f infra/db/Dockerfile.postgres infra/db)
 set -euo pipefail
@@ -49,30 +49,30 @@ compgen -G "$w/archive/pg17/basebackups_005/*_backup_stop_sentinel.json" >/dev/n
 
 # 2. Копия «на Drive».
 printf '{"type": "service_account", "private_key": "fake"}' > "$w/sa.json"
-docker run --rm -v "$w:/t" -v "$root/infra/offsite/gdrive-sync.sh:/offsite/gdrive-sync.sh:ro" -e TZ=UTC \
+docker run --rm -v "$w:/t" -v "$root/infra/offsite/offsite-sync.sh:/offsite/offsite-sync.sh:ro" -e TZ=UTC \
   -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/archive/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
   -e OFFSITE_GDRIVE_SA_FILE=/t/sa.json -e OFFSITE_GDRIVE_FOLDER_ID=LIVETESTFOLDER123 \
-  --entrypoint sh "$rclone_image" /offsite/gdrive-sync.sh --now > "$w/sync.out" 2>&1 || { cat "$w/sync.out"; fail "gdrive-sync.sh --now"; }
+  --entrypoint sh "$rclone_image" /offsite/offsite-sync.sh --now > "$w/sync.out" 2>&1 || { cat "$w/sync.out"; fail "offsite-sync.sh --now"; }
 grep -q '"result":"ok"' "$w/status/status.json" || { cat "$w/status/status.json"; fail "итог копии не ok"; }
 
 # 3. Учения.
-export RESTORE_GDRIVE_REMOTE="$w/drive"
-"$root/infra/db/restore-from-gdrive.sh" --check --env-file "$w/env.db" --image "$image" --dir "$w/dl-check" --name rt-pitr-offsite-live \
-  > "$w/check.out" 2>&1 || { cat "$w/check.out"; fail "restore-from-gdrive --check"; }
+export RESTORE_OFFSITE_REMOTE="$w/drive"
+"$root/infra/db/restore-from-offsite.sh" --check --env-file "$w/env.db" --image "$image" --dir "$w/dl-check" --name rt-pitr-offsite-live \
+  > "$w/check.out" 2>&1 || { cat "$w/check.out"; fail "restore-from-offsite --check"; }
 grep -q 'учения пройдены' "$w/check.out" || { cat "$w/check.out"; fail "нет итога учений"; }
 grep -q 'base_' "$w/check.out" || fail "backup-list не показал копии"
 ! docker inspect rt-pitr-offsite-live >/dev/null 2>&1 || fail "после учений остался контейнер"
 ! docker volume inspect rt-pitr-offsite-live-data >/dev/null 2>&1 || fail "после учений остался том"
 
 # 4. Восстановление до конца архива: и A, и B.
-"$root/infra/db/restore-from-gdrive.sh" --latest --env-file "$w/env.db" --image "$image" --dir "$w/dl-latest" --name rt-pitr-offsite-live \
-  > "$w/latest.out" 2>&1 || { cat "$w/latest.out"; fail "restore-from-gdrive --latest"; }
+"$root/infra/db/restore-from-offsite.sh" --latest --env-file "$w/env.db" --image "$image" --dir "$w/dl-latest" --name rt-pitr-offsite-live \
+  > "$w/latest.out" 2>&1 || { cat "$w/latest.out"; fail "restore-from-offsite --latest"; }
 [[ "$(docker exec -u postgres rt-pitr-offsite-live psql -X -At -U postgres -d erp -c "SELECT string_agg(v, ',' ORDER BY v) FROM t")" == A,B ]] \
   || fail "в восстановленной базе нет записей A и B"
 
 # 5. Неверный ключ шифрования — восстановления нет.
 printf 'WAL_ENC_KEY=%s\n' "$(openssl rand -hex 32)" > "$w/env.bad"
-if WAL_FETCH_TIMEOUT_S=60 "$root/infra/db/restore-from-gdrive.sh" --check --env-file "$w/env.bad" --image "$image" --dir "$w/dl-bad" \
+if WAL_FETCH_TIMEOUT_S=60 "$root/infra/db/restore-from-offsite.sh" --check --env-file "$w/env.bad" --image "$image" --dir "$w/dl-bad" \
   --name rt-pitr-offsite-bad > "$w/bad.out" 2>&1; then
   cat "$w/bad.out"; fail "с неверным WAL_ENC_KEY учения не должны проходить"
 fi

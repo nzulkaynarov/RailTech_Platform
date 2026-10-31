@@ -476,6 +476,8 @@ export * from "./objectKind";
 export * from "./objectRef";
 export * from "./offsiteBackup";
 export * from "./offsiteBackupIn";
+export * from "./offsiteBackupInProvider";
+export * from "./offsiteBackupProvider";
 export * from "./offsiteCheck";
 export * from "./offsiteCheckReason";
 export * from "./pageLimitParameter";

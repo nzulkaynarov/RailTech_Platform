@@ -3,18 +3,30 @@
  * RailTech CRM API
  */
 import type { OffsiteCheckOut } from "./offsiteCheckOut";
+import type { OffsiteStatusOutProvider } from "./offsiteStatusOutProvider";
 
 /**
- * Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
- * (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.
+ * Внешняя копия бэкапов: выбранный провайдер (`gdrive` или `yandex`) и его настройка.
+ *
+ * Секреты не возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID
+ * ключа),
+ * у Яндекса — логин и `app_password_configured` (пароль приложения задан, без символов).
+ * `delivered_at` и `last_check` — выбранного провайдера; `default_folder_path` — папка на Диске
+ * по умолчанию (`RailTech-backups/<окружение>`).
  */
 export interface OffsiteStatusOut {
+  app_password_configured: boolean;
+  app_password_updated_at: string | null;
   client_email: string;
   configured: boolean;
+  default_folder_path: string;
   delivered_at: string | null;
   folder_id: string;
+  folder_path: string;
   key_suffix: string | null;
   key_updated_at: string | null;
   last_check: OffsiteCheckOut | null;
+  login: string;
+  provider: OffsiteStatusOutProvider;
   secrets_enabled: boolean;
 }

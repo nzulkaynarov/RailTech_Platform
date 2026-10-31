@@ -239,9 +239,12 @@ class EmailQueuedOut(BaseModel):
 
 
 class OffsiteCheckOut(BaseModel):
-    """Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
-    (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
-    `read_only`), `network` — Google не ответил (хостинг)."""
+    """Итог «Проверить» внешней копии (OPS-GDRIVE-2, OPS-YADISK): `reason` — `ok` или что исправить.
+
+    Google Drive: `key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`,
+    `not_shared_drive`, `read_only`. Яндекс Диск: `auth_failed` (логин или пароль приложения не
+    приняты), `not_app_password` (введён не пароль приложения), `webdav_forbidden` (доступ по WebDAV
+    закрыт администратором Яндекс 360), `not_folder`, `no_space`. `network` — сервис не ответил."""
 
     ok: bool
     reason: str
@@ -250,25 +253,45 @@ class OffsiteCheckOut(BaseModel):
 
 
 class OffsiteStatusOut(BaseModel):
-    """Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
-    (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования."""
+    """Внешняя копия бэкапов: выбранный провайдер (`gdrive` или `yandex`) и его настройка.
 
+    Секреты не возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID
+    ключа),
+    у Яндекса — логин и `app_password_configured` (пароль приложения задан, без символов).
+    `delivered_at` и `last_check` — выбранного провайдера; `default_folder_path` — папка на Диске
+    по умолчанию (`RailTech-backups/<окружение>`)."""
+
+    provider: Literal["gdrive", "yandex"]
     configured: bool
     folder_id: str
     client_email: str
     key_suffix: str | None
     key_updated_at: datetime | None
+    login: str
+    folder_path: str
+    app_password_configured: bool
+    app_password_updated_at: datetime | None
+    default_folder_path: str
     delivered_at: datetime | None
     last_check: OffsiteCheckOut | None
     secrets_enabled: bool
 
 
 class OffsiteConnectorIn(BaseModel):
-    """Сохранение: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить
-    прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль админа."""
+    """Сохранение: `provider` — `yandex` (Яндекс Диск) или `gdrive` (общий диск Google Workspace,
+    по умолчанию — как до OPS-YADISK). Google: `key_json` — содержимое JSON-ключа сервисного
+    аккаунта
+    (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес. Яндекс: `login` —
+    адрес почты Яндекс 360, `folder_path` — путь папки на Диске (пусто — по умолчанию),
+    `app_password` — пароль приложения «Файлы» (`null` — оставить прежний). `password` — пароль
+    админа."""
 
     model_config = ConfigDict(extra="forbid")
 
+    provider: Literal["gdrive", "yandex"] = "gdrive"
     key_json: SecretStr | None = Field(default=None, min_length=1, max_length=16384)
-    folder_id: str = Field(min_length=1, max_length=512)
+    folder_id: str = Field(default="", max_length=512)
+    login: str = Field(default="", max_length=254)
+    folder_path: str = Field(default="", max_length=255)
+    app_password: SecretStr | None = Field(default=None, min_length=1, max_length=256)
     password: SecretStr = Field(min_length=1, max_length=256)

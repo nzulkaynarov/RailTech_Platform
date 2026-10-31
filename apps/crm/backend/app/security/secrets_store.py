@@ -41,6 +41,8 @@ SMTP_USERNAME: Final = "smtp_username"
 SMTP_PASSWORD: Final = "smtp_password"  # noqa: S105 — имя ключа, не секрет (M3-CRM-08)
 # JSON-ключ сервисного аккаунта Google внешней копии бэкапов (OPS-GDRIVE-2).
 OFFSITE_GDRIVE_KEY: Final = "offsite_gdrive_key"
+# Пароль приложения «Файлы» Яндекс 360 для внешней копии на Яндекс Диске (OPS-YADISK).
+OFFSITE_YANDEX_PASSWORD: Final = "offsite_yandex_password"  # noqa: S105 — имя ключа, не секрет
 
 
 class SecretsKeyError(RuntimeError):
@@ -125,12 +127,24 @@ class SecretsStore:
 
     async def put(self, session: AsyncSession, key: str, value: str, user_id: int | None) -> None:
         """Записать в транзакции вызывающего (вместе с аудитом)."""
+        await self._upsert(session, key, value, user_id, last4(value))
+
+    async def put_unmasked(
+        self, session: AsyncSession, key: str, value: str, user_id: int | None
+    ) -> None:
+        """Как `put`, но без последних символов в маске (`****`): короткий секрет, например пароль
+        приложения Яндекса (OPS-YADISK), — его хвост не хранится и открытым текстом."""
+        await self._upsert(session, key, value, user_id, "****")
+
+    async def _upsert(
+        self, session: AsyncSession, key: str, value: str, user_id: int | None, mask: str
+    ) -> None:
         if self._cipher is None:
             raise SecretsKeyError("SECRETS_KEY is not set")
         values = {
             "key": key,
             "ciphertext": self._cipher.encrypt(value),
-            "last4": last4(value),
+            "last4": mask,
             "updated_by": user_id,
         }
         stmt = insert(IntegrationSecret).values(**values)

@@ -923,9 +923,12 @@ class NoticeOut(BaseModel):
 
 class OffsiteCheckOut(BaseModel):
     """
-    Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
-    (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
-    `read_only`), `network` — Google не ответил (хостинг).
+    Итог «Проверить» внешней копии (OPS-GDRIVE-2, OPS-YADISK): `reason` — `ok` или что исправить.
+
+    Google Drive: `key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`,
+    `not_shared_drive`, `read_only`. Яндекс Диск: `auth_failed` (логин или пароль приложения не
+    приняты), `not_app_password` (введён не пароль приложения), `webdav_forbidden` (доступ по WebDAV
+    закрыт администратором Яндекс 360), `not_folder`, `no_space`. `network` — сервис не ответил.
     """
 
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
@@ -936,17 +939,30 @@ class OffsiteCheckOut(BaseModel):
 
 class OffsiteStatusOut(BaseModel):
     """
-    Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
-    (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.
+    Внешняя копия бэкапов: выбранный провайдер (`gdrive` или `yandex`) и его настройка.
+
+    Секреты не возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID
+    ключа),
+    у Яндекса — логин и `app_password_configured` (пароль приложения задан, без символов).
+    `delivered_at` и `last_check` — выбранного провайдера; `default_folder_path` — папка на Диске
+    по умолчанию (`RailTech-backups/<окружение>`).
     """
 
+    app_password_configured: Annotated[bool, Field(title="App Password Configured")]
+    app_password_updated_at: Annotated[
+        AwareDatetime | None, Field(title="App Password Updated At")
+    ]
     client_email: Annotated[str, Field(title="Client Email")]
     configured: Annotated[bool, Field(title="Configured")]
+    default_folder_path: Annotated[str, Field(title="Default Folder Path")]
     delivered_at: Annotated[AwareDatetime | None, Field(title="Delivered At")]
     folder_id: Annotated[str, Field(title="Folder Id")]
+    folder_path: Annotated[str, Field(title="Folder Path")]
     key_suffix: Annotated[str | None, Field(title="Key Suffix")]
     key_updated_at: Annotated[AwareDatetime | None, Field(title="Key Updated At")]
     last_check: OffsiteCheckOut | None
+    login: Annotated[str, Field(title="Login")]
+    provider: Annotated[Provider, Field(title="Provider")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
 
 
@@ -1004,6 +1020,11 @@ class ProfilePublishOut(BaseModel):
     error: Annotated[Error1 | None, Field(title="Error")]
     ok: Annotated[bool, Field(title="Ok")]
     retry_after: Annotated[int | None, Field(title="Retry After")]
+
+
+class Provider(StrEnum):
+    gdrive = "gdrive"
+    yandex = "yandex"
 
 
 class ProviderKeyResult(BaseModel):
