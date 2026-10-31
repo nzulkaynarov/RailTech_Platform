@@ -24,9 +24,10 @@ from django.utils import timezone
 from parties.models import Contact
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
 from portal.models import MagicLinkToken
-from portal.services.access import company_in_circulation
+from portal.services.access import company_has_cabinet_access, company_in_circulation
 from portal.services.magic_link import build_login_url
 from portal.services.tokens import generate_token, hash_token
+from rest_framework.exceptions import PermissionDenied
 
 from notifications.emails import send_templated_email
 
@@ -142,7 +143,7 @@ def invite_contact(
     Каналы: `email`, `telegram`, `both`; по умолчанию — `contact.preferred_channel`. `both` пробует оба: приглашение
     считается ушедшим, если ушло хотя бы по одному (причина второго — в `errors`). Не ушло никуда — `error` с кодом
     причины: `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`
-    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`.
+    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (K0: в кабинет входят только компании с типом CLIENT), `CONTACT_ARCHIVED`.
     """
 
     def failed(code: str) -> InviteOutcome:
@@ -152,6 +153,8 @@ def invite_contact(
         return failed("CONTACT_WITHOUT_COMPANY")
     if not company_in_circulation(contact.company_id):
         return failed("COMPANY_ARCHIVED")
+    if not company_has_cabinet_access(contact.company_id):
+        return failed("COMPANY_NOT_CLIENT")  # K0: поставщика приглашать некуда — войти он всё равно не сможет
     if contact.is_archived:
         return failed("CONTACT_ARCHIVED")  # контакт удалён в CRM: в Cabinet не приглашается
 
@@ -219,6 +222,9 @@ def invite_team_member(company, inviter, data: dict) -> Contact:
     (`CONTACT_EMAIL_REQUIRED`) → дубль в компании (`TEAM_MEMBER_EXISTS`). Контакт остаётся, только если письмо ушло:
     при сбое доставки он удаляется (повторить можно сразу), клиенту — 503, а не «отправлено».
     """
+    if not company_has_cabinet_access(company.pk):
+        # Сессия такой компании не живёт (PortalAuthentication), сюда доходят только прямым вызовом: коллега не заводится.
+        raise PermissionDenied("FORBIDDEN")
     channels = list(dict.fromkeys(data["channels"]))
     if set(channels) - set(DELIVERABLE_CHANNELS):
         raise PortalValidationError("INVALID_CHANNEL")

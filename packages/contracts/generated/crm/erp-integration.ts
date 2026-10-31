@@ -92,7 +92,7 @@ export const getInviteClientContactUrl = (crmClientId: number) => {
  * `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
  * `error` называет причину, по которой приглашение не ушло ни одним из каналов
  * (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
- * `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
+ * `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (у компании нет типа CLIENT — в кабинет входят только клиенты, K0), `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
  * или он не сопоставлен с контактом CRM); CRM переводит её в слова для менеджера. 404 — неизвестен сам клиент.
  * Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
  * повтора одного запроса.

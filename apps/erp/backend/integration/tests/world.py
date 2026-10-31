@@ -13,7 +13,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 from integration.models import CrmClientMapping
-from parties.models import Company, Contact
+from parties.models import Company, CompanyType, Contact
 from portal.tests.contract_world import make_quote
 
 from core.models import Currency
@@ -61,6 +61,9 @@ def usd() -> Currency:
 
 def make_company(name="ООО Клиент", crm_client_id=7001, inn=None) -> Company:
     company = Company.objects.create(name=name, inn=inn or f"{next(_counter):09d}")
+    # Клиент CRM приходит в ERP компанией с типом CLIENT (передача, `handoff._find_or_create_company`); без него
+    # кабинет закрыт (K0).
+    company.types.add(CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})[0])
     if crm_client_id is not None:
         CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
     Contact.objects.create(
