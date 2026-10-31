@@ -21,7 +21,8 @@
     "profile": "Profil",
     "more": "Yana",
     "moreTitle": "Boshqa boʻlimlar",
-    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, kompaniya va profil"
+    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, kompaniya va profil",
+    "billingTabs": "Moliyaviy bo'limlar"
   },
   "common": {
     "retry": "Qayta urinish",
@@ -42,7 +43,13 @@
     "noDeal": "Hali bitimsiz",
     "crashTitle": "Nimadir xato ketdi",
     "crashText": "Sahifa xato tufayli ochilmadi. Uni yangilang; yordam bermasa, menejerga yozing.",
-    "reload": "Yangilash"
+    "reload": "Yangilash",
+    "unsavedChanges": "Saqlanmagan o'zgarishlar bor",
+    "saveCmdS": "Saqlash ⌘S",
+    "reset": "Qaytarish",
+    "confirmInOneClick": "1 marta bosishda tasdiqlash",
+    "reject": "Rad etish",
+    "documents": "Hujjatlar"
   },
   "status": {
     "request": {
@@ -213,7 +220,8 @@
     "aboutQuote": "Menejerga yozish: {{number}} taklifi",
     "aboutContract": "Menejerga yozish: {{number}} shartnomasi",
     "aboutInvoice": "Menejerga yozish: {{number}} hisob-fakturasi",
-    "aboutAct": "Menejerga yozish: {{number}} dalolatnomasi"
+    "aboutAct": "Menejerga yozish: {{number}} dalolatnomasi",
+    "contactSupport": "Shaxsiy menejer bilan chat"
   },
   "profile": {
     "title": "Profil",
@@ -651,6 +659,58 @@
       "payInvoice": "Toʻlash",
       "actBadge": "Dalolatnoma",
       "acceptAct": "Dalolatnomani qabul qilish"
+    }
+  },
+  "deal": {
+    "milestones": "Bitim bosqichlari",
+    "inProgress": "Jarayonda"
+  },
+  "views": {
+    "switcherLabel": "Ko'rinish rejimi",
+    "kanban": "Bosqichlar kanbani",
+    "list": "Ro'yxat",
+    "documents": "Hujjatlar"
+  },
+  "peek": {
+    "windowTitle": "Yagona bitim oynasi",
+    "status": "Holat",
+    "manager": "Mas'ul xodim",
+    "amount": "Summa",
+    "dueDate": "Bosqich muddati",
+    "attachments": "Bitim birikmalari"
+  },
+  "inquiry": {
+    "directionLabel": "Murojaat yo'nalishi (W-DOCS2)",
+    "products": "1. Tovarlar xaridi / Katalog",
+    "productsHint": "Materiallar, uskunalar va ehtiyot qismlarni sotib olish",
+    "service": "2. Servis xizmati va ta'mirlash",
+    "serviceHint": "Texnik xizmat ko'rsatish va diagnostika",
+    "routine": "3. Muntazam xizmatlar",
+    "routineHint": "Logistika, yuklash, tozalash, reglament",
+    "partner": "4. Hamkorlik / Pudrat",
+    "partnerHint": "Subpudrat ishlari va maxsus takliflar"
+  },
+  "consequence": {
+    "title": "Ushbu bosqichdan keyin nima sodir bo'ladi",
+    "sign_contract": {
+      "title": "Shartnoma imzolangandan keyin",
+      "desc": "Shartnoma RailTech yuridik xizmatiga o'tkaziladi. Hujjat ro'yxatdan o'tkaziladi, jo'natish jadvallari tuziladi va hisob-faktura bosqichi ochiladi."
+    },
+    "accept_act": {
+      "title": "Dalolatnoma qabul qilingandan keyin",
+      "desc": "Yetkazib berish/xizmat bo'yicha majburiyatlar to'liq bajarilgan deb hisoblanadi. Yakuniy hujjatlar buxgalteriyada qayd etiladi va EHMga yuboriladi."
+    },
+    "return_act": {
+      "title": "Dalolatnoma qaytarilganda",
+      "desc": "RailTech menejeri va yuristi ko'rsatilgan e'tiroz sababini oladi. 1 ish kuni ichida asoslangan javob yoki tuzatish hujjati tayyorlanadi."
+    },
+    "submit_request": {
+      "title": "So'rov yuborilgandan keyin",
+      "desc": "So'rov narxni hisoblash bo'limiga yuboriladi. Shaxsiy menejer siz bilan bog'lanadi va aniq yetkazib berish muddatlari bilan tijorat taklifini tayyorlaydi."
+    },
+    "accept_quote": {
+      "title": "Tijorat taklifi tasdiqlangandan keyin",
+      "desc": "Ombordagi qoldiqlar band qilinadi va qat'iy narx bilan yetkazib berish shartnomasini chiqarish boshlanadi."
     }
   }
 }

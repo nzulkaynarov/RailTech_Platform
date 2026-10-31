@@ -309,7 +309,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
                 <p className="truncate text-xs text-muted-foreground">{t('manager.directSupport', { defaultValue: 'Прямая связь' })}</p>
               </div>
             </div>
-            <ManagerButton dealId={null} compact label={t('manager.write')} />
+            <ManagerButton dealId={null} compact label={t('manager.contactSupport', { defaultValue: 'Чат с персональным менеджером' })} />
           </div>
         </div>
       )}

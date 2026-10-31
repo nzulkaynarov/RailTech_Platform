@@ -21,7 +21,8 @@
     "profile": "Profile",
     "more": "More",
     "moreTitle": "More sections",
-    "moreDescription": "Contracts, invoices, acts, deliveries, company and profile"
+    "moreDescription": "Contracts, invoices, acts, deliveries, company and profile",
+    "billingTabs": "Financial sections"
   },
   "common": {
     "retry": "Retry",
@@ -42,7 +43,13 @@
     "noDeal": "No deal yet",
     "crashTitle": "Something went wrong",
     "crashText": "The page failed to open because of an error. Reload it; if that does not help, contact your manager.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "unsavedChanges": "You have unsaved changes",
+    "saveCmdS": "Save ⌘S",
+    "reset": "Reset",
+    "confirmInOneClick": "Confirm in 1 click",
+    "reject": "Reject",
+    "documents": "Documents"
   },
   "status": {
     "request": {
@@ -213,7 +220,8 @@
     "aboutQuote": "Message the manager about quote {{number}}",
     "aboutContract": "Message the manager about contract {{number}}",
     "aboutInvoice": "Message the manager about invoice {{number}}",
-    "aboutAct": "Message the manager about act {{number}}"
+    "aboutAct": "Message the manager about act {{number}}",
+    "contactSupport": "Chat with personal manager"
   },
   "profile": {
     "title": "Profile",
@@ -651,6 +659,58 @@
       "payInvoice": "Pay invoice",
       "actBadge": "Act",
       "acceptAct": "Accept act"
+    }
+  },
+  "deal": {
+    "milestones": "Deal stages",
+    "inProgress": "In progress"
+  },
+  "views": {
+    "switcherLabel": "View mode",
+    "kanban": "Stage Kanban",
+    "list": "List",
+    "documents": "Documents"
+  },
+  "peek": {
+    "windowTitle": "Deal side peek",
+    "status": "Status",
+    "manager": "Manager",
+    "amount": "Amount",
+    "dueDate": "Due date",
+    "attachments": "Deal attachments"
+  },
+  "inquiry": {
+    "directionLabel": "Inquiry direction (W-DOCS2)",
+    "products": "1. Purchase of goods / Catalog",
+    "productsHint": "Purchase of materials, equipment, and spare parts",
+    "service": "2. Maintenance and repair service",
+    "serviceHint": "Technical maintenance and diagnostics",
+    "routine": "3. Routine services",
+    "routineHint": "Logistics, loading, cleaning, routine procedures",
+    "partner": "4. Partnership / Subcontracting",
+    "partnerHint": "Subcontracting works and special offers"
+  },
+  "consequence": {
+    "title": "What will happen after this step",
+    "sign_contract": {
+      "title": "After signing the contract",
+      "desc": "The contract is transferred to the RailTech legal department. The document is registered, shipment schedules are generated, and invoicing access opens."
+    },
+    "accept_act": {
+      "title": "After accepting the act",
+      "desc": "Delivery/service obligations are considered fully fulfilled. Closing documents are recorded in accounting and sent to EDI."
+    },
+    "return_act": {
+      "title": "Upon returning the act",
+      "desc": "RailTech manager and lawyer will receive the specified dispute reason. A reasoned response or corrective document will be prepared within 1 business day."
+    },
+    "submit_request": {
+      "title": "After sending the request",
+      "desc": "The request will be sent to the cost estimation department. A personal manager will contact you and prepare a commercial offer with exact delivery terms."
+    },
+    "accept_quote": {
+      "title": "After accepting the quote",
+      "desc": "Warehouse stock is reserved and the issuance of a supply contract with fixed pricing is initiated."
     }
   }
 }
