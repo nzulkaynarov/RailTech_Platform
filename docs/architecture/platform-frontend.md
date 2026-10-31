@@ -235,8 +235,8 @@ eslint (`MONEY_STATUS_RULES` в `web/eslint.config.js`, `modules/**`, `features/
 вычисляемый `tone={…}` и цветной antd `Tag color`. Витрина — `/dev/ui`, раздел «StatusTag: единая карта статусов».
 
 **Телефон, 390 px** (UX-2b): страница и рабочая область `#main-content` не прокручиваются вбок — широкое живёт в своей полосе
-(`ScrollRegion`, лента вкладок); полоса прокрутки — `position: relative`, чтобы скрытые подписи `pf-sr-only` не растягивали
-страницу. Фильтр-`Segmented`, который не помещается, — в обёртке с `overflow-x: auto` (видно обрезанный край); `TabsBar` не
+(`ScrollRegion`, лента вкладок); `ScrollRegion` (в матрице ролей — ячейка `td`) — `position: relative`, чтобы скрытые
+подписи `pf-sr-only` не растягивали страницу. Фильтр-`Segmented`, который не помещается, — в обёртке с `overflow-x: auto` (видно обрезанный край); `TabsBar` не
 показывает меню «…» antd — лента вкладок прокручивается вбок, как у `SectionTabs`. Проверка — `e2e/ux-2b.spec.ts` (основные
 экраны на 390).
 
