@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { HttpResponse, http } from "msw";
 
+import { companyToday } from "../../../shared/lib/dates";
+import { fillDate } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
@@ -98,7 +100,20 @@ describe("EDS · Создать документ: форма", () => {
     await openForm("manager@demo.example");
     fillMemo();
     type("Сумма, сум", "0");
-    type("Нужно до", "2020-01-01");
+    const due = screen.getByLabelText("Нужно до");
+    // Дни раньше сегодня по Ташкенту в календаре отключены — прошедший срок не выбрать.
+    fireEvent.mouseDown(due);
+    fireEvent.click(due);
+    const today = companyToday();
+    const [y = 0, m = 1, d = 1] = today.split("-").map(Number);
+    const yesterday = new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
+    const cell = (day: string) =>
+      document.querySelector<HTMLElement>(`.ant-picker-cell[title="${day}"]`);
+    await waitFor(() => {
+      expect(cell(yesterday)).toHaveClass("ant-picker-cell-disabled");
+    });
+    expect(cell(today)).not.toHaveClass("ant-picker-cell-disabled");
+    fillDate(due, "2020-01-01");
 
     fireEvent.click(screen.getByRole("button", { name: "Сохранить черновик" }));
 
@@ -106,7 +121,7 @@ describe("EDS · Создать документ: форма", () => {
       await screen.findByText("Сумма должна быть больше нуля, например 1 500 000."),
     ).toBeVisible();
     expect(screen.getByText("Срок «нужно до» не может быть в прошлом.")).toBeVisible();
-    expect(screen.getByLabelText("Нужно до")).toHaveAttribute("min");
+    expect(due).toHaveValue("01.01.2020");
   });
 
   it("отправка: служебка с суммой уходит на согласование, открывается документ в боковом окне со статусом словами", async () => {

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 
-import { EMPLOYEE_STATUS_TONE, erpAttention } from "../../../entities/employee/status";
+import { erpAttention } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 
@@ -22,7 +22,7 @@ export function RoleTags({ roles }: { roles: Employee["roles"] }) {
 export function CrmTag({ employee }: { employee: Employee }) {
   const { t } = useTranslation("modules");
   return (
-    <StatusTag tone={employee.access.crm ? "green" : "default"}>
+    <StatusTag kind="access" status={employee.access.crm ? "yes" : "no"}>
       {t(employee.access.crm ? "admin.org.access.crm" : "admin.org.access.crmNo")}
     </StatusTag>
   );
@@ -32,22 +32,26 @@ export function CrmTag({ employee }: { employee: Employee }) {
 export function ErpTag({ employee }: { employee: Employee }) {
   const { t } = useTranslation("modules");
   const attention = erpAttention(employee);
-  const [tone, key] =
+  const [status, key] =
     attention === "error"
-      ? (["red", "erpError"] as const)
+      ? (["error", "erpError"] as const)
       : attention === "pending"
-        ? (["gold", "erpPending"] as const)
+        ? (["pending", "erpPending"] as const)
         : employee.access.erp
-          ? (["green", "erp"] as const)
-          : (["default", "erpNo"] as const);
-  return <StatusTag tone={tone}>{t(`admin.org.access.${key}`)}</StatusTag>;
+          ? (["yes", "erp"] as const)
+          : (["no", "erpNo"] as const);
+  return (
+    <StatusTag kind="access" status={status}>
+      {t(`admin.org.access.${key}`)}
+    </StatusTag>
+  );
 }
 
 /** Telegram для уведомлений сотруднику: привязан — зелёный тег, нет — серый «Telegram: нет». */
 export function TelegramTag({ linked }: { linked: boolean }) {
   const { t } = useTranslation("modules");
   return (
-    <StatusTag tone={linked ? "green" : "default"}>
+    <StatusTag kind="access" status={linked ? "yes" : "no"}>
       {t(linked ? "admin.org.access.telegram" : "admin.org.access.telegramNo")}
     </StatusTag>
   );
@@ -72,7 +76,9 @@ export function TelegramText({ linked }: { linked: boolean }) {
 export function EmployeeStatusTag({ status }: { status: Employee["status"] }) {
   const { t } = useTranslation("modules");
   return (
-    <StatusTag tone={EMPLOYEE_STATUS_TONE[status]}>{t(`admin.org.status.${status}`)}</StatusTag>
+    <StatusTag kind="employee" status={status}>
+      {t(`admin.org.status.${status}`)}
+    </StatusTag>
   );
 }
 

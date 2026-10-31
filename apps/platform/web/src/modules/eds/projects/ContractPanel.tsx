@@ -268,12 +268,7 @@ function ContractBody({
             {
               label: t("contract.fields.total"),
               value: contract.total ? (
-                <MoneyText
-                  value={contract.total.amount}
-                  {...(contract.total.currency === "UZS"
-                    ? {}
-                    : { currency: contract.total.currency })}
-                />
+                <MoneyText value={contract.total.amount} currency={contract.total.currency} />
               ) : null,
             },
             { label: t("contract.fields.created"), value: date(contract.created_at) },

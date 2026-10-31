@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // EDS · «Счета и оплаты» бухгалтера на MSW (D2-4): сценарий целиком — платёжка клиента на подтверждение → сверка с выпиской →
 // «Подтвердить оплату» → счёт «Оплачен»; частичная оплата с видимым остатком; «Запросить платёжку»; служебка к оплате →
@@ -192,7 +193,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await settledScreenshot(page, "request-proof");
 
     await panel.getByRole("button", { name: "Приложить платёжку" }).click();
-    await panel.getByLabel("Файл платёжки").setInputFiles({
+    await pickFiles(panel.getByLabel("Файл платёжки"), {
       name: "pp-142.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),
@@ -226,7 +227,7 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
       "станет «Оплачена»",
     );
-    await form.getByLabel(/Платёжка/).setInputFiles({
+    await pickFiles(form.getByLabel(/Платёжка/), {
       name: "pp-015.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 demo"),

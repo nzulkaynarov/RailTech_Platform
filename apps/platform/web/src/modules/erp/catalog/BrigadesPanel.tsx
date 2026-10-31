@@ -21,6 +21,7 @@ import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "./common";
 import { useDebounced } from "./useDebounced";
 import { errorFields } from "./errors";
 import { queryLabels } from "./labels";
+import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 
 const KINDS: readonly BrigadeKind[] = ["brigade", "person", "subcontractor"];
 
@@ -93,12 +94,7 @@ export function BrigadesPanel() {
       render: (row) =>
         row.rate ? (
           <>
-            <MoneyText
-              value={row.rate.amount}
-              {...(row.rate.currency && row.rate.currency !== "UZS"
-                ? { currency: row.rate.currency }
-                : {})}
-            />{" "}
+            <MoneyText value={row.rate.amount} currency={row.rate.currency} />{" "}
             <span className="pf-hint">{t(`rateUnits.${row.rate.unit}`)}</span>
           </>
         ) : row.rate_visible ? (
@@ -185,7 +181,7 @@ export function BrigadesPanel() {
 }
 
 function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onClose: () => void }) {
-  const { t } = useTranslation("catalog");
+  const { t, i18n } = useTranslation("catalog");
   const queryClient = useQueryClient();
   const lookups = useGetCatalogLookups();
   const rateAllowed = brigade ? brigade.rate_visible : true;
@@ -215,7 +211,7 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
   const update = useUpdateBrigade({ mutation: { onSuccess: done } });
   const mutation = brigade ? update : create;
   const fields = errorFields(mutation.error);
-  const currency = brigade?.rate?.currency ?? lookups.data?.currencies[0]?.code ?? "UZS";
+  const currency = brigade?.rate?.currency ?? lookups.data?.currencies[0]?.code ?? HOME_CURRENCY;
   const rateValue = amount.trim().replace(",", ".");
   const validCount = /^[1-9]\d{0,2}$/.test(headcount.trim());
   const submit = () => {
@@ -298,7 +294,7 @@ function BrigadeForm({ brigade, onClose }: { brigade?: Brigade | undefined; onCl
         <div className="pf-cat-form-row">
           <FormField
             id={ids.rate}
-            label={t("brigades.form.rate", { currency })}
+            label={t("brigades.form.rate", { currency: currencyLabel(currency, i18n.language) })}
             hint={t("brigades.form.rateHint")}
           >
             <Input

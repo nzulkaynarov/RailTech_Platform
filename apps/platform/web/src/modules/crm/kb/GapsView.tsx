@@ -48,11 +48,11 @@ function GapsTable({ items, status }: { items: readonly KbGap[]; status: KbGapSt
         <thead>
           <tr>
             <th scope="col">{t("gaps.columns.question")}</th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("gaps.columns.occurrences")}
             </th>
             <th scope="col">{t("gaps.columns.language")}</th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("gaps.columns.score")}
             </th>
             <th scope="col">{t("gaps.columns.lead")}</th>
@@ -71,9 +71,11 @@ function GapsTable({ items, status }: { items: readonly KbGap[]; status: KbGapSt
                   {gap.question}
                 </Link>
               </td>
-              <td className="num">{gap.occurrences}</td>
+              <td className="pf-col-num">{gap.occurrences}</td>
               <td>{t(`languages.${gap.language}`)}</td>
-              <td className="num">{gap.best_score === null ? "—" : gap.best_score.toFixed(2)}</td>
+              <td className="pf-col-num">
+                {gap.best_score === null ? "—" : gap.best_score.toFixed(2)}
+              </td>
               <td>
                 <LeadRef id={gap.lead_id} />
               </td>
@@ -169,6 +171,9 @@ function StatusLine({ total }: { total: number }) {
 
 export function GapStatusTag({ status }: { status: KbGapStatus }) {
   const { t } = useTranslation("kb");
-  const tone = status === "open" ? "gold" : status === "resolved" ? "green" : "default";
-  return <StatusTag tone={tone}>{t(`gaps.statuses.${status}`)}</StatusTag>;
+  return (
+    <StatusTag kind="kbGap" status={status}>
+      {t(`gaps.statuses.${status}`)}
+    </StatusTag>
+  );
 }

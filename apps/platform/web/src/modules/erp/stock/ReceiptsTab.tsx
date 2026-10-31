@@ -89,7 +89,9 @@ function Pending({
             <th scope="col">{t("receipts.columns.order")}</th>
             <th scope="col">{t("receipts.columns.supplier")}</th>
             <th scope="col">{t("receipts.columns.position")}</th>
-            <th scope="col">{t("receipts.columns.left")}</th>
+            <th scope="col" className="pf-col-num">
+              {t("receipts.columns.left")}
+            </th>
             <th scope="col">{t("receipts.columns.expected")}</th>
             <th scope="col">
               <span className="pf-sr-only">{t("receipts.columns.action")}</span>
@@ -111,7 +113,7 @@ function Pending({
                 <div>{line.name}</div>
                 <div className="pf-hint pf-num">{line.article}</div>
               </td>
-              <td className="pf-num">
+              <td className="pf-col-num">
                 {t("receipts.left", {
                   left: line.quantity - line.received_quantity,
                   total: line.quantity,

@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import type { KbDocument } from "../../../shared/api/generated/model";
 import { useListKbDocuments } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import type { StatusTone } from "../../../shared/lib/statuses";
 import { TableCols } from "../../../shared/ui/DataBlock";
 import { tableMinWidth } from "../../../shared/ui/tableWidth";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -19,16 +18,13 @@ import { parseId, withParams } from "./refresh";
 /** Ширины колонок: название (гибкая), язык, продукт, индексация, частей, обновлён (UX-1c, S9) */
 const COLS = [null, 120, 170, 170, 110, 150] as const;
 
-const INGEST_TONE: Record<KbDocument["ingest_status"], StatusTone> = {
-  pending: "default",
-  processing: "blue",
-  done: "green",
-  failed: "red",
-};
-
 export function IngestTag({ status }: { status: KbDocument["ingest_status"] }) {
   const { t } = useTranslation("kb");
-  return <StatusTag tone={INGEST_TONE[status]}>{t(`ingest.${status}`)}</StatusTag>;
+  return (
+    <StatusTag kind="kbIngest" status={status}>
+      {t(`ingest.${status}`)}
+    </StatusTag>
+  );
 }
 
 function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; editable: boolean }) {
@@ -62,7 +58,7 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
             <th scope="col">{t("documents.columns.language")}</th>
             <th scope="col">{t("documents.columns.product")}</th>
             <th scope="col">{t("documents.columns.status")}</th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("documents.columns.chunks")}
             </th>
             <th scope="col">{t("documents.columns.updated")}</th>
@@ -83,7 +79,9 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
                 {doc.is_active ? null : (
                   <>
                     {" "}
-                    <StatusTag tone="gold">{t("documents.disabled")}</StatusTag>
+                    <StatusTag kind="activity" status="inactive">
+                      {t("documents.disabled")}
+                    </StatusTag>
                   </>
                 )}
               </td>
@@ -94,7 +92,7 @@ function DocumentsTable({ items, editable }: { items: readonly KbDocument[]; edi
               <td>
                 <IngestTag status={doc.ingest_status} />
               </td>
-              <td className="num">{doc.chunk_count}</td>
+              <td className="pf-col-num">{doc.chunk_count}</td>
               <td>{date(doc.updated_at, "datetime")}</td>
             </tr>
           ))}

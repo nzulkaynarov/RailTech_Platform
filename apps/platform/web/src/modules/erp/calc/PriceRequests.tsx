@@ -33,11 +33,17 @@ function Entry({ item, canAnswer }: { item: PriceRequest; canAnswer: boolean }) 
       <div className="pf-calc-card-head">
         <strong>{item.supplier.name}</strong>
         {item.status === "failed" ? (
-          <StatusTag tone="red">{t("priceRequest.status.failed")}</StatusTag>
+          <StatusTag kind="priceRequest" status="failed">
+            {t("priceRequest.status.failed")}
+          </StatusTag>
         ) : item.answered_at ? (
-          <StatusTag tone="green">{t("priceRequest.status.answered")}</StatusTag>
+          <StatusTag kind="priceRequest" status="answered">
+            {t("priceRequest.status.answered")}
+          </StatusTag>
         ) : (
-          <StatusTag tone="blue">{t("priceRequest.status.sent")}</StatusTag>
+          <StatusTag kind="priceRequest" status="sent">
+            {t("priceRequest.status.sent")}
+          </StatusTag>
         )}
       </div>
       <p className="pf-hint">

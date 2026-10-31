@@ -1,0 +1,53 @@
+/* FileField (UX-2a): кнопка выбора, подсказка о перетаскивании, список выбранного. Литералы токенов — как в ui.css. */
+.pf-file-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  border-radius: 6px;
+}
+.pf-file-field-drag {
+  outline: 1px dashed #1668dc;
+  outline-offset: 4px;
+  background: #e6f4ff;
+}
+.pf-file-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pf-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-file-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  min-width: 0;
+}
+.pf-file-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf-file-remove.ant-btn {
+  height: auto;
+  padding: 0;
+}
+.pf-file-error {
+  color: #cf1322;
+  font-size: 12px;
+  line-height: 20px;
+}
+/* Телефон: перетаскивать нечего — подсказка не нужна */
+@media (max-width: 767px) {
+  .pf-file-drop {
+    display: none;
+  }
+}

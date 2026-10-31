@@ -6,6 +6,7 @@ import {
   getDownloadEdsDocumentFileUrl,
   useGetPaymentMemo,
 } from "../../../shared/api/generated/platform-bff";
+import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -13,7 +14,6 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { DecisionSlot } from "../decision/DecisionSlot";
-import { formatFileSize } from "../documents/fileSize";
 import { PayMemoForm } from "./PayMemoForm";
 import { useStateLabels } from "./labels";
 import { memoPath, moneyProps } from "./model";
@@ -44,7 +44,9 @@ export function MemoStatus({ status }: { status: PaymentMemoCard["status"] }) {
   const { t } = useTranslation("payments");
   if (status === "other") return null;
   return (
-    <StatusTag tone={status === "paid" ? "green" : "blue"}>{t(`memo.status.${status}`)}</StatusTag>
+    <StatusTag kind="memo" status={status}>
+      {t(`memo.status.${status}`)}
+    </StatusTag>
   );
 }
 

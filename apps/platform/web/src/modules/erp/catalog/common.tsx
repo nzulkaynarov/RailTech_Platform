@@ -82,7 +82,7 @@ export function DataList<T extends object>({
         <thead>
           <tr>
             {columns.map((column) => (
-              <th key={column.key} scope="col" className={column.num ? "num" : undefined}>
+              <th key={column.key} scope="col" className={column.num ? "pf-col-num" : undefined}>
                 {column.title}
               </th>
             ))}
@@ -94,7 +94,7 @@ export function DataList<T extends object>({
               {columns.map((column, index) => (
                 <td
                   key={column.key}
-                  className={[column.num ? "num" : "", index === 0 ? "pf-cat-main" : ""]
+                  className={[column.num ? "pf-col-num" : "", index === 0 ? "pf-cat-main" : ""]
                     .filter(Boolean)
                     .join(" ")}
                 >
@@ -185,12 +185,14 @@ export function FormModal({
   );
 }
 
-const VALIDITY_TONE = { ok: "green", expiring: "gold", expired: "red" } as const;
-
 /** Срок действия цены словом и цветом: действует, истекает в ближайшие 14 дней, истёк. */
 export function ValidityTag({ validity }: { validity: CatalogOffer["validity"] }) {
   const { t } = useTranslation("catalog");
-  return <StatusTag tone={VALIDITY_TONE[validity]}>{t(`validity.${validity}`)}</StatusTag>;
+  return (
+    <StatusTag kind="validity" status={validity}>
+      {t(`validity.${validity}`)}
+    </StatusTag>
+  );
 }
 
 /** Цена закупки или слово «скрыта» (нет поля `supplier_prices`). */
@@ -199,10 +201,5 @@ export function PriceCell({ price }: { price: CatalogOffer["price"] }) {
   if (price === null) {
     return <span className="pf-hint">{t("offers.priceHidden")}</span>;
   }
-  return (
-    <MoneyText
-      value={price.amount}
-      {...(price.currency && price.currency !== "UZS" ? { currency: price.currency } : {})}
-    />
-  );
+  return <MoneyText value={price.amount} currency={price.currency} />;
 }

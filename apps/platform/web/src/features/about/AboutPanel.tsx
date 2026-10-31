@@ -10,14 +10,14 @@ import { releaseText, supportText, useAbout } from "./release";
 
 import "../help/help.css";
 
-const TONE = { ok: "green", fail: "red", disabled: "default" } as const;
-
 function ServiceRow({ service }: { service: ServiceVersion }) {
   const { t } = useTranslation("help");
   return (
     <li className="pf-about-row">
       <span style={{ fontWeight: 500 }}>{t(`about.service.${service.key}`)}</span>
-      <StatusTag tone={TONE[service.status]}>{t(`about.status.${service.status}`)}</StatusTag>
+      <StatusTag kind="service" status={service.status}>
+        {t(`about.status.${service.status}`)}
+      </StatusTag>
       <span className="pf-hint">
         {service.version
           ? t("about.serviceVersion", { version: service.version })

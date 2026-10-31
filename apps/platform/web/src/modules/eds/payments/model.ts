@@ -4,7 +4,6 @@ import type {
   PaymentMoney,
   PaymentRow,
 } from "../../../shared/api/generated/model";
-import type { StatusTone } from "../../../shared/lib/statuses";
 
 /** Вкладки «Счетов и оплат» (SPEC-v3 §7.3) плюс «Все счета»: параметр адреса `?show=`. */
 export const TABS = ["to_issue", "awaiting", "proofs", "overdue", "memos", "all"] as const;
@@ -25,21 +24,16 @@ export const isNumericId = (value: string): boolean => /^\d{1,9}$/.test(value);
 export const invoicePath = (id: number): string => `/eds/payments/${String(id)}`;
 export const memoPath = (id: string): string => `/eds/payments/${id}`;
 
-/** Тег статуса счёта: пять статусов — из словаря SPEC-v3 §2.4, «не выставлен» и «отменён» — свои. */
-export const OWN_STATUS_TONE: Partial<Record<PaymentDisplayStatus, StatusTone>> = {
-  draft: "default",
-  cancelled: "default",
-};
+/** Статусы счёта со своим словом раздела (`payments:status.*`): «не выставлен» и «отменён»; остальные — словарь SPEC-v3 §2.4. */
+export const OWN_STATUS_WORDS: ReadonlySet<PaymentDisplayStatus> = new Set(["draft", "cancelled"]);
 
 /** Счёт ждёт денег: можно подтверждать оплату и прикладывать платёжки. */
 export function isOpen(status: PaymentDisplayStatus): boolean {
   return status !== "paid" && status !== "draft" && status !== "cancelled";
 }
 
-export function moneyProps(money: PaymentMoney): { value: string; currency?: string } {
-  return money.currency === "UZS"
-    ? { value: money.amount }
-    : { value: money.amount, currency: money.currency };
+export function moneyProps(money: PaymentMoney): { value: string; currency: string } {
+  return { value: money.amount, currency: money.currency };
 }
 
 /** Действие в строке таблицы: платёжку проверяют, остальное — подтверждают оплату или открывают. */

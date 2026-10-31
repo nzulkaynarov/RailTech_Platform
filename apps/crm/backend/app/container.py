@@ -626,6 +626,7 @@ class Container:
 
     @cached_property
     def offsite_connector(self) -> "OffsiteConnectorService":
+        from app.integrations import yadisk
         from app.integrations.gdrive import probe
         from app.security.reauth import LockoutPolicy
         from app.services.offsite_connector import OffsiteConnectorService
@@ -637,6 +638,8 @@ class Container:
             self.storage,
             self.settings.s3_bucket_offsite_config,
             probe,
+            yadisk.probe,
+            env=self.settings.app_env,
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),

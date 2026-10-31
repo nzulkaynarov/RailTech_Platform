@@ -7,6 +7,7 @@ import type {
 } from "../../../shared/api/generated/model";
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import type { FieldKey } from "../documents/errors";
+import { HOME_CURRENCY } from "../../../shared/lib/money";
 
 /** Тип из адреса `/eds/new?type=memo|statement|report|letter` (SPEC-v3 §6.3) -> тип документа EDS. */
 const TYPE_PARAM: Record<string, EdsDocumentKind> = {
@@ -140,7 +141,7 @@ export function toPayload(values: FormValues, submit: boolean): Payload {
   return {
     subject: values.subject.trim(),
     text: values.text.trim(),
-    amount: amount ? { amount, currency: "UZS" } : null,
+    amount: amount ? { amount, currency: HOME_CURRENCY } : null,
     due_date: !letter && values.dueDate !== "" ? values.dueDate : null,
     file_ids: values.attachments.flatMap((a) => (a.status === "done" && a.id ? [a.id] : [])),
     erp_deal_id: values.deal?.erp_deal_id ?? null,

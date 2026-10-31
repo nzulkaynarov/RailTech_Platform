@@ -162,11 +162,15 @@ export function News() {
             {entry.items.map((item) => (
               <li key={item.text}>
                 <span className="pf-news-roles">
-                  {(item.roles.length > 0 ? item.roles : [t("news.forAll")]).map((role) => (
-                    <StatusTag key={role} tone={item.roles.length > 0 ? "blue" : "default"}>
-                      {role}
-                    </StatusTag>
-                  ))}
+                  {item.roles.length > 0 ? (
+                    item.roles.map((role) => (
+                      <StatusTag key={role} tone="blue">
+                        {role}
+                      </StatusTag>
+                    ))
+                  ) : (
+                    <StatusTag tone="default">{t("news.forAll")}</StatusTag>
+                  )}
                 </span>
                 <InlineMarkdown text={item.text} />
               </li>

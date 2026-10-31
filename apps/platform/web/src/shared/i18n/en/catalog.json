@@ -462,10 +462,6 @@
   },
   "docs": {
     "subtitle": "Specifications, drawings, certificates and commissioning procedures — linked to an item and to a request.",
-    "size": {
-      "kb": "{{value}} KB",
-      "mb": "{{value}} MB"
-    },
     "search": "Search by name, file and item",
     "filterKind": "Kind",
     "anyKind": "Any kind",

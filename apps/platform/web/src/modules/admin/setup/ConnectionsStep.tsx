@@ -1,18 +1,11 @@
 import { useTranslation } from "react-i18next";
 
 import { STEP_TARGET } from "../../../entities/setup/steps";
-import type { SetupStep, SetupStepState } from "../../../shared/api/generated/model";
-import type { StatusTone } from "../../../shared/lib/statuses";
+import type { SetupStep } from "../../../shared/api/generated/model";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 
 import "../../../features/first-run/first-run.css";
-
-const TONE: Record<SetupStepState, StatusTone> = {
-  done: "green",
-  todo: "gold",
-  unknown: "default",
-};
 
 /**
  * Пять шагов чек-листа (SPEC-v3 §7.6): статус словом и одна ссылка на экран, где шаг делается. Сделанный шаг остаётся
@@ -27,7 +20,7 @@ export function ConnectionsStep({ steps }: { steps: readonly SetupStep[] }) {
           <div className="pf-setup-step-text">
             <span className="pf-setup-step-title">
               {t(`admin.setup.steps.${step.key}.title`)}
-              <StatusTag tone={TONE[step.state]}>
+              <StatusTag kind="setupStep" status={step.state}>
                 {/* Проверка не выполнялась — не «Готово» и не «Нет данных» (O-4, W15-H3) */}
                 {step.state === "unknown"
                   ? t("integrations:health.setupUnchecked")

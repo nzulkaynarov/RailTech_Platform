@@ -88,7 +88,7 @@ export function EmailTemplates() {
                 title: t("status"),
                 dataIndex: "is_active",
                 render: (value: boolean) => (
-                  <StatusTag tone={value ? "green" : "default"}>
+                  <StatusTag kind="activity" status={value ? "active" : "inactive"}>
                     {t(value ? "templates.emails.replaces" : "templates.emails.fileUsed")}
                   </StatusTag>
                 ),

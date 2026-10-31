@@ -52,5 +52,27 @@
     "copyNumber": "Copy number {{number}}",
     "copied": "Number copied",
     "copyFailed": "Couldn’t copy: the browser blocked clipboard access"
+  },
+  "fileSize": {
+    "b": "{{value}} B",
+    "kb": "{{value}} KB",
+    "mb": "{{value}} MB",
+    "gb": "{{value}} GB"
+  },
+  "date": {
+    "placeholder": "DD.MM.YYYY",
+    "from": "From",
+    "to": "To"
+  },
+  "file": {
+    "choose": "Choose file",
+    "chooseMany": "Choose files",
+    "replace": "Choose another file",
+    "list": "Selected files",
+    "remove": "Remove",
+    "removeItem": "Remove file {{name}}",
+    "drop": "or drag it here",
+    "tooLarge": "File “{{name}}” is larger than {{max}} — choose a smaller one",
+    "wrongType": "File “{{name}}” is not allowed: use {{accept}}"
   }
 }

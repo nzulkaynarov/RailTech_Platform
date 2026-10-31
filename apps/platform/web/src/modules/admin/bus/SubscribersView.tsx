@@ -9,7 +9,7 @@ import type {
 } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { STATE_TONE, ageText, domainName, subscriberName } from "./format";
+import { ageText, domainName, subscriberName } from "./format";
 import { ScrollRegion } from "./parts";
 
 export interface SubscribersViewProps {
@@ -23,7 +23,9 @@ function StateCell({ subscriber }: { subscriber: BusSubscriber }) {
   const { date } = useFormat();
   return (
     <span className="pf-bus-state">
-      <StatusTag tone={STATE_TONE[subscriber.state]}>{t(`state.${subscriber.state}`)}</StatusTag>
+      <StatusTag kind="busSubscriber" status={subscriber.state}>
+        {t(`state.${subscriber.state}`)}
+      </StatusTag>
       {subscriber.state === "paused" && subscriber.paused_until ? (
         <span className="pf-hint">
           {t("subscribers.pausedUntil", { time: date(subscriber.paused_until, "time") })}

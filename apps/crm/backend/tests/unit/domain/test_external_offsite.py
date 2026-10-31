@@ -1,4 +1,4 @@
-"""Внешняя копия бэкапов на Google Drive (OPS-GDRIVE): правила строки и кто исправляет, без сети."""
+"""Внешняя копия бэкапов (OPS-GDRIVE, OPS-YADISK): правила строки, провайдер и кто исправляет."""
 
 import json
 from datetime import UTC, datetime, timedelta
@@ -16,6 +16,7 @@ from app.domain.external_offsite import (
     offsite_backup,
     parse,
     size_text,
+    speed_text,
 )
 from app.domain.system_status import HOSTING_WHO, hosting_ask
 
@@ -29,7 +30,7 @@ def ago(**delta: float) -> datetime:
 
 
 def status(**fields: Any) -> bytes:
-    """status.json, как его пишет infra/offsite/gdrive-sync.sh."""
+    """status.json, как его пишет infra/offsite/offsite-sync.sh (до OPS-YADISK — без provider)."""
     body: dict[str, Any] = {
         "schema": 1,
         "result": "ok",
@@ -141,11 +142,12 @@ def test_not_configured_says_who_fixes_and_what_to_do(reason: str) -> None:
     result = offsite_backup(facts, NOW)
     assert result.status == "off"
     assert result.cause == "offsite_not_configured"
-    assert result.summary.startswith("Внешняя копия бэкапов на Google Drive не настроена")
+    assert result.summary.startswith("Внешняя копия бэкапов не настроена")
     assert result.hint
     assert "Кто исправляет: владелец" in result.hint
     assert "Admin → Подключения" in result.hint
-    assert "загрузить JSON-ключ" in result.hint
+    assert "пароль приложения типа «Файлы»" in result.hint
+    assert "только с общим диском Google Workspace" in result.hint
     assert "docs/runbooks/offsite-gdrive.md" in result.hint
     assert result.metrics["reason"] == reason
 
@@ -220,3 +222,74 @@ def test_network_failure_is_broken_for_hosting_with_a_ready_message() -> None:
     d = diagnose(failed, fail_for=timedelta(minutes=20))
     assert (d.state, d.owner, d.action) == ("broken", "hosting", "write_hosting")
     assert hosting_ask(d.detail)
+
+
+# --- Яндекс Диск (OPS-YADISK) ---------------------------------------------------------------------
+
+
+def yandex(**fields: Any) -> bytes:
+    return status(provider="yandex", **fields)
+
+
+def test_old_status_without_provider_is_google_drive() -> None:
+    assert parse(status()).provider == "gdrive"
+    assert offsite_backup(parse(status()), NOW).metrics["provider"] == "gdrive"
+
+
+def test_yandex_copy_names_the_provider_and_the_average_speed() -> None:
+    result = offsite_backup(parse(yandex(speed_bps=1887437)), NOW)
+    assert result.status == "ok"
+    assert result.summary == (
+        "Копия на Яндекс Диске обновлена 12 ч назад: 12,4 ГБ, базовых копий 15 (с 13.10), "
+        "средняя скорость 1,8 МБ/с"
+    )
+    assert (result.metrics["provider"], result.metrics["speed_bps"]) == ("yandex", 1887437)
+
+
+@pytest.mark.parametrize(
+    ("reason", "expected_cause", "todo"),
+    [
+        ("access", "offsite_access", "пароль приложения типа «Файлы»"),
+        ("quota", "offsite_quota", "место на Яндекс Диске"),
+    ],
+)
+def test_yandex_refusals_tell_the_owner_what_to_fix_there(
+    reason: str, expected_cause: str, todo: str
+) -> None:
+    failed = parse(yandex(result="fail", reason=reason, message="Яндекс Диск отказал"))
+    result = offsite_backup(failed, NOW)
+    assert (result.status, result.cause) == ("fail", expected_cause)
+    assert result.hint
+    assert todo in result.hint
+    assert "Google" not in result.hint
+
+
+def test_yandex_network_failure_is_for_hosting_and_names_webdav() -> None:
+    failed = parse(yandex(result="fail", reason="network", message=""))
+    result = offsite_backup(failed, NOW)
+    assert result.summary == (
+        "Внешняя копия бэкапов не обновляется: Копирование на Яндекс Диск завершилось ошибкой"
+    )
+    assert result.cause == "server_down"
+    assert result.hint
+    assert "webdav.yandex.ru" in result.hint
+
+
+def test_yandex_quota_warning_names_the_disk() -> None:
+    result = offsite_backup(parse(yandex(bytes=85 * GB)), NOW)
+    assert result.status == "warn"
+    assert result.summary == "Внешняя копия бэкапов: занято 85 % предела копии на Яндекс Диске"
+
+
+def test_not_configured_without_provider_does_not_guess_one() -> None:
+    facts = parse(status(result="not_configured", reason="no_config", provider="", bytes=None))
+    result = offsite_backup(facts, NOW)
+    assert result.status == "off"
+    assert result.metrics["provider"] is None
+
+
+@pytest.mark.parametrize(
+    ("bps", "text"), [(655360, "640 КБ/с"), (1887437, "1,8 МБ/с"), (0, "0 КБ/с")]
+)
+def test_speed_text(bps: int, text: str) -> None:
+    assert speed_text(bps) == text

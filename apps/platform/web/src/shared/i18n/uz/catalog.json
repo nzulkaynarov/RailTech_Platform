@@ -462,10 +462,6 @@
   },
   "docs": {
     "subtitle": "TT, chizmalar, sertifikatlar va ishga tushirish reglamentlari — pozitsiya va arizaga bog'langan holda.",
-    "size": {
-      "kb": "{{value}} KB",
-      "mb": "{{value}} MB"
-    },
     "search": "Nomi, fayl va pozitsiya bo'yicha qidiruv",
     "filterKind": "Turi",
     "anyKind": "Istalgan tur",

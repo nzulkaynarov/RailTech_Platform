@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { chooseOption } from "./support/fields";
 
 // Хвосты QA ролей (волна 11b, T1 R-1c) на MSW: R3-D-1 — хотя бы одна роль (интерфейс и 422 ROLES_REQUIRED), R3-D-3 —
 // число и глагол в «Что произойдёт», R3-D-4 — боковое окно не теряет несохранённое при смене ширины, ссылка директора
@@ -79,16 +80,20 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
     const panel = page.locator(PANEL);
 
     await openRole(page, "Бухгалтер");
-    await matrix(page)
-      .getByRole("combobox", { name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»" })
-      .selectOption({ label: "Скрыто" });
+    await chooseOption(
+      matrix(page).getByRole("combobox", {
+        name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»",
+      }),
+      "Скрыто",
+    );
     await expect(panel.getByText(/^1 сотрудник потеряет: /)).toBeVisible();
     await settledScreenshot(page, "roles-preview-one");
 
     await openRole(page, "Гл. инженер");
-    await matrix(page)
-      .getByRole("combobox", { name: /^Виза расчёта: услуги — роль «Гл\. инженер»/ })
-      .selectOption({ label: "Скрыто" });
+    await chooseOption(
+      matrix(page).getByRole("combobox", { name: /^Виза расчёта: услуги — роль «Гл\. инженер»/ }),
+      "Скрыто",
+    );
     await expect(panel.getByText(/^2 сотрудника потеряют: /)).toBeVisible();
     await expectNoViolations(page, "preview");
     await settledScreenshot(page, "roles-preview-two");
@@ -123,11 +128,12 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
     const panel = page.locator(PANEL);
     await expect(panel.getByRole("heading", { level: 3, name: "Новая роль" })).toBeVisible();
     await panel.getByLabel("Название").fill("Временная");
-    await matrix(page)
-      .getByRole("combobox", {
+    await chooseOption(
+      matrix(page).getByRole("combobox", {
         name: /^Клиенты, Заявки, Создать заявку — роль «Временная»/,
-      })
-      .selectOption({ label: "Только чтение" });
+      }),
+      "Только чтение",
+    );
     await panel.getByRole("button", { name: "Создать роль" }).click();
     await expect(page.getByText("Роль «Временная» создана")).toBeVisible();
 

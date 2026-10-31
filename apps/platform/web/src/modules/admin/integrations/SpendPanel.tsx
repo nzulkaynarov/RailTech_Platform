@@ -54,10 +54,10 @@ function ProvidersTable({ providers }: { providers: SpendReport["providers"] }) 
         <thead>
           <tr>
             <th scope="col">{t("spend.providers.provider")}</th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("spend.providers.spent")}
             </th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("spend.providers.limit")}
             </th>
             <th scope="col">{t("spend.providers.state")}</th>
@@ -69,8 +69,8 @@ function ProvidersTable({ providers }: { providers: SpendReport["providers"] }) 
             return (
               <tr key={provider.provider}>
                 <th scope="row">{provider.provider}</th>
-                <td className="num">{usd(provider.spent_usd)}</td>
-                <td className="num">
+                <td className="pf-col-num">{usd(provider.spent_usd)}</td>
+                <td className="pf-col-num">
                   {provider.limit_usd > 0 ? usd(provider.limit_usd) : t("spend.providers.noLimit")}
                 </td>
                 <td>
@@ -136,10 +136,10 @@ function BotSpend() {
                   <thead>
                     <tr>
                       <th scope="col">{t("spend.series.day")}</th>
-                      <th scope="col" className="num">
+                      <th scope="col" className="pf-col-num">
                         {t("spend.series.work")}
                       </th>
-                      <th scope="col" className="num">
+                      <th scope="col" className="pf-col-num">
                         {t("spend.series.test")}
                       </th>
                     </tr>
@@ -148,8 +148,8 @@ function BotSpend() {
                     {report.series.slice(-10).map((row) => (
                       <tr key={row.day}>
                         <th scope="row">{date(row.day)}</th>
-                        <td className="num">{usd(row.work_usd)}</td>
-                        <td className="num">{usd(row.test_usd)}</td>
+                        <td className="pf-col-num">{usd(row.work_usd)}</td>
+                        <td className="pf-col-num">{usd(row.test_usd)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -162,10 +162,10 @@ function BotSpend() {
                   <thead>
                     <tr>
                       <th scope="col">{t("spend.purpose.key")}</th>
-                      <th scope="col" className="num">
+                      <th scope="col" className="pf-col-num">
                         {t("spend.purpose.calls")}
                       </th>
-                      <th scope="col" className="num">
+                      <th scope="col" className="pf-col-num">
                         {t("spend.purpose.cost")}
                       </th>
                     </tr>
@@ -174,8 +174,8 @@ function BotSpend() {
                     {report.by_purpose.map((row) => (
                       <tr key={row.key}>
                         <th scope="row">{row.key}</th>
-                        <td className="num">{number(row.calls)}</td>
-                        <td className="num">{usd(row.cost_usd)}</td>
+                        <td className="pf-col-num">{number(row.calls)}</td>
+                        <td className="pf-col-num">{usd(row.cost_usd)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -217,10 +217,10 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
             <thead>
               <tr>
                 <th scope="col">{t("spend.ensemble.system")}</th>
-                <th scope="col" className="num">
+                <th scope="col" className="pf-col-num">
                   {t("spend.ensemble.budget")}
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="pf-col-num">
                   {t("spend.ensemble.today")}
                 </th>
                 <th scope="col">{t("spend.ensemble.state")}</th>
@@ -230,10 +230,10 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
               {report.systems.map((system) => (
                 <tr key={system.system}>
                   <th scope="row">{system.system}</th>
-                  <td className="num">
+                  <td className="pf-col-num">
                     {system.daily_usd > 0 ? usd(system.daily_usd) : t("spend.providers.noLimit")}
                   </td>
-                  <td className="num">{usd(system.today_usd)}</td>
+                  <td className="pf-col-num">{usd(system.today_usd)}</td>
                   <td>
                     {!system.connected ? (
                       <LevelTag level="off" />
@@ -262,13 +262,13 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
             <thead>
               <tr>
                 <th scope="col">{t(`spend.ensemble.group.${report.group}`)}</th>
-                <th scope="col" className="num">
+                <th scope="col" className="pf-col-num">
                   {t("spend.ensemble.calls")}
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="pf-col-num">
                   {t("spend.ensemble.tokens")}
                 </th>
-                <th scope="col" className="num">
+                <th scope="col" className="pf-col-num">
                   {t("spend.ensemble.cost")}
                 </th>
               </tr>
@@ -277,9 +277,9 @@ function EnsembleBody({ report }: { report: AiSpendReport }) {
               {report.rows.map((row) => (
                 <tr key={row.key}>
                   <th scope="row">{report.group === "day" ? date(row.key) : row.key}</th>
-                  <td className="num">{number(row.calls)}</td>
-                  <td className="num">{number(row.input_tokens + row.output_tokens)}</td>
-                  <td className="num">{usd(row.cost_usd)}</td>
+                  <td className="pf-col-num">{number(row.calls)}</td>
+                  <td className="pf-col-num">{number(row.input_tokens + row.output_tokens)}</td>
+                  <td className="pf-col-num">{usd(row.cost_usd)}</td>
                 </tr>
               ))}
             </tbody>

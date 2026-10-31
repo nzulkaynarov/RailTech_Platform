@@ -408,6 +408,20 @@ class OffsiteGdriveSettings(StrictModel):
     last_check: OffsiteCheckSettings | None = None
 
 
+class OffsiteYandexSettings(StrictModel):
+    """Внешняя копия бэкапов на Яндекс Диске компании (OPS-YADISK) без секретов.
+
+    Пароль приложения «Файлы» — `integration_secrets` (`offsite_yandex_password`, только на запись);
+    здесь — логин (адрес почты Яндекс 360), путь папки на Диске, когда настройка доставлена сервису
+    копирования и итог последней проверки.
+    """
+
+    login: str = Field(default="", max_length=254)
+    folder_path: str = Field(default="", max_length=255)
+    delivered_at: datetime | None = None
+    last_check: OffsiteCheckSettings | None = None
+
+
 class ModelKeyMask(StrictModel):
     """Откуда ключ роли модели и его последние 4 символа (ADR-0020, W13-A1).
 
@@ -432,7 +446,11 @@ class IntegrationsSettings(StrictModel):
     # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
     erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+    # Куда идёт внешняя копия бэкапов (OPS-YADISK): `None` — ещё не выбирали (настроенный Google Drive
+    # остаётся Google Drive без миграции, иначе по умолчанию — Яндекс Диск).
+    offsite_provider: Literal["gdrive", "yandex"] | None = None
     offsite_gdrive: OffsiteGdriveSettings = Field(default_factory=OffsiteGdriveSettings)
+    offsite_yandex: OffsiteYandexSettings = Field(default_factory=OffsiteYandexSettings)
     # Маска ключей ролей моделей (алиас → источник и последние 4 символа); пишет «Модели ИИ» при смене и сбросе.
     model_keys: dict[str, ModelKeyMask] = Field(default_factory=dict)
 

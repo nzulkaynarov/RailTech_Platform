@@ -100,10 +100,14 @@ export function DocumentTemplates() {
                 key: "status",
                 render: (_: unknown, row) => (
                   <span className="pf-co-actions">
-                    <StatusTag tone={row.is_sample ? "blue" : "default"}>
+                    <StatusTag kind="origin" status={row.is_sample ? "sample" : "own"}>
                       {t(row.is_sample ? "templates.documents.sample" : "templates.documents.own")}
                     </StatusTag>
-                    {!row.is_active ? <StatusTag tone="default">{t("inactive")}</StatusTag> : null}
+                    {!row.is_active ? (
+                      <StatusTag kind="activity" status="inactive">
+                        {t("inactive")}
+                      </StatusTag>
+                    ) : null}
                   </span>
                 ),
               },

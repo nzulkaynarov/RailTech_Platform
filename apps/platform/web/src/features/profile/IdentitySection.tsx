@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Form, Input, Select, Tag } from "antd";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { Language, Me, Profile } from "../../shared/api/generated/model";
@@ -13,6 +13,7 @@ import {
   useUploadAvatar,
 } from "../../shared/api/generated/platform-bff";
 import { LANGUAGES } from "../../shared/i18n";
+import { FilePicker } from "../../shared/ui/FileField";
 import { StaffAvatar } from "../../shared/ui/StaffAvatar";
 import { ContextualSaveBar } from "../../shared/ui/ContextualSaveBar";
 import { AvatarCropper } from "./AvatarCropper";
@@ -51,7 +52,6 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
   const baseline = useMemo(() => baselineOf(profile), [profile]);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const picker = useRef<HTMLInputElement | null>(null);
 
   const dirty =
     watched !== undefined &&
@@ -127,26 +127,15 @@ export function IdentitySection({ me, profile }: { me: Me; profile: Profile }) {
       <div className="pf-profile-identity">
         <div className="pf-profile-photo">
           <StaffAvatar initials={me.initials} src={me.avatar_url} size={96} fontSize={28} />
-          <input
-            ref={picker}
-            type="file"
-            accept={ACCEPTED.join(",")}
-            className="pf-sr-only"
-            aria-label={t("photo.choose")}
-            tabIndex={-1}
-            onChange={(event) => {
-              onPick(event.target.files?.[0]);
-              event.target.value = "";
-            }}
-          />
           <div className="pf-profile-photo-actions">
-            <Button
-              onClick={() => {
-                picker.current?.click();
+            <FilePicker
+              accept={ACCEPTED.join(",")}
+              inputLabel={t("photo.choose")}
+              buttonLabel={me.avatar_url ? t("photo.change") : t("photo.choose")}
+              onPick={(files) => {
+                onPick(files[0]);
               }}
-            >
-              {me.avatar_url ? t("photo.change") : t("photo.choose")}
-            </Button>
+            />
             {me.avatar_url ? (
               <Button
                 loading={remove.isPending}

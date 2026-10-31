@@ -1,6 +1,6 @@
 import { levelOf } from "../../app/access";
 import type { Me, QueueItem } from "../../shared/api/generated/model";
-import type { StatusTone } from "../../shared/lib/statuses";
+import { statusTone } from "../../shared/lib/statuses";
 
 export type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -9,19 +9,25 @@ export function dueBadge(
   item: Pick<QueueItem, "due_label" | "due_at">,
   t: Translate,
   formatShort: (value: string) => string,
-): { tone: StatusTone; label: string } {
+): { tone: ReturnType<typeof statusTone>; label: string } {
   switch (item.due_label) {
     case "overdue":
-      return { tone: "red", label: t("modules:dashboard.queue.due.overdue") };
+      return {
+        tone: statusTone("due", "overdue"),
+        label: t("modules:dashboard.queue.due.overdue"),
+      };
     case "today":
-      return { tone: "red", label: t("modules:dashboard.queue.due.today") };
+      return { tone: statusTone("due", "today"), label: t("modules:dashboard.queue.due.today") };
     case "tomorrow":
-      return { tone: "gold", label: t("modules:dashboard.queue.due.tomorrow") };
+      return {
+        tone: statusTone("due", "tomorrow"),
+        label: t("modules:dashboard.queue.due.tomorrow"),
+      };
     case "memo":
-      return { tone: "purple", label: t("modules:dashboard.queue.due.memo") };
+      return { tone: statusTone("due", "memo"), label: t("modules:dashboard.queue.due.memo") };
     case "later":
       return {
-        tone: "default",
+        tone: statusTone("due", "later"),
         label: item.due_at
           ? t("modules:dashboard.queue.due.until", { date: formatShort(item.due_at) })
           : t("modules:dashboard.queue.due.none"),

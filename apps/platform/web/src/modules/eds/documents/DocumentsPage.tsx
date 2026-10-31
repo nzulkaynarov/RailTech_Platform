@@ -167,12 +167,7 @@ function SubjectCell({
 
 function Amount({ row }: { row: EdsDocumentRow }) {
   if (!row.amount) return <span aria-hidden="true">—</span>;
-  return (
-    <MoneyText
-      value={row.amount.amount}
-      {...(row.amount.currency === "UZS" ? {} : { currency: row.amount.currency })}
-    />
-  );
+  return <MoneyText value={row.amount.amount} currency={row.amount.currency} />;
 }
 
 function DocumentsTable({
@@ -204,7 +199,7 @@ function DocumentsTable({
             <th scope="col">{t("list.columns.subject")}</th>
             <th scope="col">{t("list.columns.kind")}</th>
             <th scope="col">{t("list.columns.status")}</th>
-            <th scope="col" className="num">
+            <th scope="col" className="pf-col-num">
               {t("list.columns.amount")}
             </th>
             <th scope="col">{t("list.columns.due")}</th>
@@ -232,7 +227,7 @@ function DocumentsTable({
               <td>
                 <DocumentStatusTag kind={row.kind} status={row.status} />
               </td>
-              <td className="num">
+              <td className="pf-col-num">
                 <Amount row={row} />
               </td>
               <td className="pf-num">

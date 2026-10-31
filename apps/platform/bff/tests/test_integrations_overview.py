@@ -532,6 +532,54 @@ async def test_offsite_copy_failure_reddens_the_storage_card_and_not_configured_
     assert cards(response.json())["storage"]["status"] != "fail"
 
 
+async def test_offsite_yandex_failure_names_the_provider_and_the_reason(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """OPS-YADISK: строка внешней копии на Яндекс Диске — провайдер и причина словами из CRM."""
+    summary = "Внешняя копия бэкапов не обновляется: Яндекс Диск не принял пароль приложения"
+    offsite = service(
+        "offsite_backup",
+        "fail",
+        state="broken",
+        action="write_owner",
+        summary=summary,
+        metrics={"provider": "yandex", "reason": "access"},
+    )
+    headline = "Внешняя копия бэкапов: Яндекс Диск не принял пароль приложения"
+    crm.answer(
+        "GET",
+        "admin/external-services",
+        200,
+        services_out(
+            [offsite],
+            [
+                group(
+                    "offsite_backup",
+                    "broken",
+                    action="write_owner",
+                    owner="owner",
+                    headline=headline,
+                    detail="Создайте пароль приложения «Файлы» и введите его в «Хранилище»",
+                )
+            ],
+        ),
+    )
+    crm.answer("GET", "system/backups", 200, backups())
+    await web.login(["ADMIN"])
+
+    response = await web.client.get(URL)
+
+    check(response, "/admin/integrations", "get")
+    body = response.json()
+    assert cards(body)["storage"]["status"] == "fail"
+    item = next(a for a in body["attention"] if a["id"] == "group:offsite_backup:status")
+    assert item["subject"] == headline
+    assert "пароль приложения «Файлы»" in item["detail"]
+    rows = (await web.client.get("/api/v1/admin/integrations/services")).json()["items"]
+    row = next(r for r in rows if r["key"] == "offsite_backup")
+    assert row["summary"] == summary
+
+
 async def test_wal_archive_is_on_the_storage_card_and_the_bus_row_keeps_its_action(
     web: Web, crm: CrmIntegrationsFake, check: ContractChecker
 ) -> None:

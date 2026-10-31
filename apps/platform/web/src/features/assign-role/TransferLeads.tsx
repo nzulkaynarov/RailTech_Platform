@@ -1,3 +1,4 @@
+import { Select } from "antd";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,8 +7,8 @@ import { useListEmployees } from "../../shared/api/generated/platform-bff";
 
 /**
  * Кому передать лиды (ADR-0015, Q-PLT-15-1 п. 4): выбор активного коллеги; повтор сохранения уходит в CRM с
- * `transfer_to_user_id`. Коллеги — из списка Оргструктуры (он уже загружен на странице). Нативный `select` — договорённость
- * по доступности для выбора из списка в формах.
+ * `transfer_to_user_id`. Коллеги — из списка Оргструктуры (он уже загружен на странице). Выбор — antd `Select` с подписью
+ * `label for` и поиском при длинном списке (UX-2a).
  */
 export function TransferLeads({
   employee,
@@ -29,23 +30,19 @@ export function TransferLeads({
       <label htmlFor={id} style={{ display: "block", marginBottom: 4 }}>
         {t("admin.org.transfer.label")}
       </label>
-      <select
+      <Select<string>
         id={id}
-        className="pf-native-select pf-focusable"
-        value={value ?? ""}
-        onChange={(event) => {
-          if (event.target.value) onChange(event.target.value);
+        style={{ width: "100%" }}
+        value={value ?? undefined}
+        placeholder={t("admin.org.transfer.placeholder")}
+        showSearch={colleagues.length > 7}
+        optionFilterProp="label"
+        loading={list.isPending}
+        options={colleagues.map((e) => ({ value: e.id, label: e.name }))}
+        onChange={(next) => {
+          onChange(next);
         }}
-      >
-        <option value="" disabled>
-          {t("admin.org.transfer.placeholder")}
-        </option>
-        {colleagues.map((e) => (
-          <option key={e.id} value={e.id}>
-            {e.name}
-          </option>
-        ))}
-      </select>
+      />
     </div>
   );
 }

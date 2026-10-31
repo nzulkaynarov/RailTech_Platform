@@ -17,6 +17,11 @@
 .pf-matrix-scroll {
   overflow-x: auto;
 }
+/* Скрытые подписи уровня (`pf-sr-only`, absolute) — внутри своей ячейки: не выходят за полосу прокрутки и не растягивают
+   рабочую область на 390 (UX-2b). Не у полосы прокрутки: она — точка отсчёта прокрутки к выбранному столбцу. */
+.pf-matrix td {
+  position: relative;
+}
 .pf-matrix {
   width: 100%;
   border-collapse: separate;
@@ -114,21 +119,9 @@
   color: #6e6e6e;
   font-weight: 600;
 }
-/* Уровень раздела в столбце изменяемой роли: нативный select (18 строк — легче и доступнее выпадающих antd). */
+/* Уровень раздела в столбце изменяемой роли: antd Select малого размера (UX-2a). */
 .pf-level-select {
-  height: 28px;
   min-width: 128px;
-  padding: 0 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  background: #fff;
-  color: #1f1f1f;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.pf-level-select:hover {
-  border-color: #1677ff;
 }
 .pf-role-head {
   display: flex;

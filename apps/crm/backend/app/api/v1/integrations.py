@@ -327,9 +327,10 @@ def offsite_out(status: OffsiteStatus) -> OffsiteStatusOut:
 
 @router.get("/offsite", response_model=OffsiteStatusOut)
 async def get_offsite_status(_: Reader, service: OffsiteDep) -> OffsiteStatusOut:
-    """Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
-    последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
-    возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов."""
+    """Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): выбранный провайдер — Яндекс Диск (логин,
+    папка, «пароль приложения задан») или Google Drive (папка, адрес сервисного аккаунта, последние
+    символы ID ключа), доставка сервису копирования, итог последней проверки. Секреты не
+    возвращаются никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов."""
     return offsite_out(await service.status())
 
 
@@ -337,19 +338,26 @@ async def get_offsite_status(_: Reader, service: OffsiteDep) -> OffsiteStatusOut
 async def put_offsite_connector(
     body: OffsiteConnectorIn, who: Writer, service: OffsiteDep
 ) -> OffsiteStatusOut:
-    """Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+    """Выбрать провайдера, сохранить доступ (после пароля админа) и сразу проверить.
 
-    Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
-    хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
-    Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
-    `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
-    `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).
+    Секрет (ключ Google или пароль приложения Яндекса) доставляется сервису копирования (бакет
+    `offsite-config`, у CRM — только запись) и хранится зашифрованным; `null` — оставить прежний.
+    Итог проверки — `last_check`. Ошибки (422, `details.field`): `offsite_key_invalid` (`key_json`;
+    `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri`),
+    `offsite_folder_invalid` (`folder_id` или `folder_path`), `offsite_login_invalid` (`login`),
+    `offsite_app_password_invalid` (`app_password`), `wrong_password`; `secrets_key_missing`
+    (409), `offsite_delivery_failed` (502).
     """
-    secret = body.key_json.get_secret_value() if body.key_json is not None else None
     status = await service.save(
         who,
-        key_json=secret,
+        provider=body.provider,
+        key_json=body.key_json.get_secret_value() if body.key_json is not None else None,
         folder_id=body.folder_id,
+        login=body.login,
+        folder_path=body.folder_path,
+        app_password=(
+            body.app_password.get_secret_value() if body.app_password is not None else None
+        ),
         admin_password=body.password.get_secret_value(),
     )
     return offsite_out(status)
@@ -357,8 +365,8 @@ async def put_offsite_connector(
 
 @router.post("/offsite/check", response_model=OffsiteCheckOut)
 async def check_offsite_connector(who: Writer, service: OffsiteDep) -> OffsiteCheckOut:
-    """«Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
-
-    Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
+    """«Проверить» выбранного провайдера. Google: ключ → токен → папка (общий диск, право добавлять
+    файлы), ничего не пишет. Яндекс: вход по WebDAV → папка (нет — создаётся) → запись и удаление
+    проверочного файла. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
     """
     return OffsiteCheckOut.model_validate(asdict(await service.check(who)))

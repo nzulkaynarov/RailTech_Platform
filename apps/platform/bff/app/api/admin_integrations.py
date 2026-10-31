@@ -333,16 +333,23 @@ async def get_offsite(authed: Reader) -> OffsiteBackup:
 
 @router.put("/offsite", response_model=OffsiteBackup, operation_id="saveOffsiteBackup")
 async def save_offsite(body: OffsiteBackupIn, authed: Admin) -> OffsiteBackup:
-    """Ключ сервисного аккаунта — только на запись: уходит в CRM и не возвращается."""
+    """Ключ Google и пароль приложения Яндекса — только на запись: уходят в CRM и не возвращаются.
+    Поля другого провайдера в CRM не передаются."""
+    fields: dict[str, Any] = (
+        {
+            "provider": "yandex",
+            "login": body.login.strip(),
+            "folder_path": body.folder_path.strip(),
+            "app_password": secret(body.app_password),
+        }
+        if body.provider == "yandex"
+        else {"key_json": secret(body.key_json), "folder_id": body.folder_id.strip()}
+    )
     out = await _crm(authed).get_model(
         crm.OffsiteStatusOut,
         "PUT",
         f"{API}/integrations/offsite",
-        json={
-            "key_json": secret(body.key_json),
-            "folder_id": body.folder_id.strip(),
-            "password": secret(body.password),
-        },
+        json={**fields, "password": secret(body.password)},
         probe=True,
     )
     return _to(OffsiteBackup, out)

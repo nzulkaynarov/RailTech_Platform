@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # АВАРИЙНЫЙ путь включения внешней копии на Google Drive — ключ на сервере (OPS-GDRIVE; docs/runbooks/offsite-gdrive.md, раздел 1а).
-# Основной путь — интерфейс: Admin → Подключения → «Хранилище» → «Внешняя копия бэкапов» (OPS-GDRIVE-2). VPS 1, от deploy:
+# Основной путь — интерфейс: Admin → Подключения → «Хранилище» → «Внешняя копия бэкапов» (OPS-GDRIVE-2, OPS-YADISK: там же Яндекс
+# Диск — рекомендуемый провайдер; для него этот скрипт не нужен). VPS 1, от deploy:
 #   /opt/rt/current/infra/deploy/offsite-check.sh
 # 1. Проверяет ключ сервисного аккаунта ($RT_SECRETS_DIR/gdrive-sa.json): есть, chmod 600, владелец — текущий пользователь, это ключ
 #    сервисного аккаунта Google (печатает только адрес аккаунта — ему владелец даёт доступ к папке; сам ключ не печатается).
@@ -49,7 +50,7 @@ log "пересоздаю offsite-backup (релиз $tag) и запускаю �
 compose "$rel" up -d --no-deps --force-recreate offsite-backup
 sleep 5
 rc=0
-compose "$rel" exec -T offsite-backup sh /offsite/gdrive-sync.sh --now || rc=$?
+compose "$rel" exec -T offsite-backup sh /offsite/offsite-sync.sh --now || rc=$?
 if [[ "$rc" == 75 ]]; then
   # Демон после пересоздания начал копирование сам: ждём его итога (идёт, пока есть /state/lock).
   log "копирование уже начал сам сервис — жду итога (Ctrl+C не мешает копированию; журнал: docker compose logs -f offsite-backup)"

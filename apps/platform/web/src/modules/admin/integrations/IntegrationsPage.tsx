@@ -305,15 +305,7 @@ function AttentionSection({
               const { subject, detail } = attentionTexts(t, item);
               return (
                 <li key={item.id} data-severity={item.severity}>
-                  <StatusTag
-                    tone={
-                      item.severity === "fail"
-                        ? "red"
-                        : item.severity === "warn"
-                          ? "gold"
-                          : "default"
-                    }
-                  >
+                  <StatusTag kind="integration" status={item.severity}>
                     {t(`attention.severity.${item.severity}`)}
                   </StatusTag>
                   <div className="pf-int-attention-text">

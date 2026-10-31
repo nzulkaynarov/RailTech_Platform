@@ -6,6 +6,7 @@ import {
   type MoneyFormatOptions,
   type NumberFormatOptions,
   type NumberInput,
+  currencyLabel,
   formatMoney,
   formatNumber,
   formatPercent,
@@ -22,6 +23,8 @@ export function useFormat() {
         formatNumber(value, { language, ...options }),
       money: (value: NumberInput, options?: MoneyFormatOptions) =>
         formatMoney(value, { language, ...options }),
+      /** Подпись валюты для поля и заголовка: `UZS` → «сум» / «so‘m», другая — код. */
+      currency: (code?: string | null) => currencyLabel(code, language),
       percent: (value: NumberInput, options?: NumberFormatOptions) =>
         formatPercent(value, { language, ...options }),
       date: (value: DateInput, style: DateStyle = "date") => formatDate(value, { language, style }),

@@ -26,13 +26,25 @@ const COLS = [null, 140, 100, 170, 150] as const;
 function ErpTag({ row }: { row: ClientRow }) {
   const { t } = useTranslation("clients");
   if (row.handoff_status === "failed")
-    return <StatusTag tone="red">{t("handoff.failed")}</StatusTag>;
+    return (
+      <StatusTag kind="access" status="error">
+        {t("handoff.failed")}
+      </StatusTag>
+    );
   if (row.handoff_status === "pending")
-    return <StatusTag tone="gold">{t("handoff.pending")}</StatusTag>;
+    return (
+      <StatusTag kind="access" status="pending">
+        {t("handoff.pending")}
+      </StatusTag>
+    );
   return row.in_erp ? (
-    <StatusTag tone="green">{t("inErp")}</StatusTag>
+    <StatusTag kind="access" status="yes">
+      {t("inErp")}
+    </StatusTag>
   ) : (
-    <StatusTag tone="default">{t("notInErp")}</StatusTag>
+    <StatusTag kind="access" status="no">
+      {t("notInErp")}
+    </StatusTag>
   );
 }
 
@@ -168,7 +180,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                     <tr>
                       <th scope="col">{t("clients:columns.name")}</th>
                       <th scope="col">{t("clients:columns.inn")}</th>
-                      <th scope="col" className="num">
+                      <th scope="col" className="pf-col-num">
                         {t("clients:columns.requests")}
                       </th>
                       <th scope="col">{t("clients:columns.erp")}</th>
@@ -182,7 +194,7 @@ export function ClientsPage({ objectId }: { objectId?: string | undefined }) {
                           <NameLink row={row} params={params} selected={selected === row.id} />
                         </td>
                         <td className="pf-num">{row.inn ?? <span aria-hidden="true">—</span>}</td>
-                        <td className="num">{row.open_requests}</td>
+                        <td className="pf-col-num">{row.open_requests}</td>
                         <td>
                           <ErpTag row={row} />
                         </td>

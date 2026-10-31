@@ -7,7 +7,7 @@ import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/br
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
-import { useSetupKnown } from "../../features/first-run/useSetupKnown";
+import { useLateSetupBanner, useSetupKnown } from "../../features/first-run/useSetupKnown";
 import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
@@ -78,6 +78,7 @@ export function AppShell() {
   );
   const setupPending = useSetupPending();
   const setupKnown = useSetupKnown();
+  const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
   const panelWidthPx = panels.panelWidth === "wide" ? 600 : 440;
   const dockFits = useDockFits(!viewport.mobile && panels.menuOpen, panelWidthPx);
@@ -456,8 +457,10 @@ export function AppShell() {
               ["--pf-save-bar-offset" as string]: `${String(viewport.mobile ? MOBILE_BAR_HEIGHT + 8 : 16)}px`,
             }}
           >
-            <SetupBanner />
+            {setupBannerLate ? null : <SetupBanner />}
             <Outlet />
+            {/* Чек-лист ответил после показа экрана — баннер под экраном, готовый экран не сдвигается (UX-2b) */}
+            {setupBannerLate ? <SetupBanner /> : null}
           </Layout.Content>
           {!viewport.mobile && hasPanel ? (
             <ContextPanel open={panels.panelOpen} docked={panelDocked} {...panelProps} />

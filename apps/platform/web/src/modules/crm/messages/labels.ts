@@ -1,8 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
-import type { HandoffFacts, HandoffInfoPriority } from "../../../shared/api/generated/model";
-import type { StatusTone } from "../../../shared/lib/statuses";
+import type { HandoffFacts } from "../../../shared/api/generated/model";
 
 const KNOWN_REASONS = new Set([
   "human_requested",
@@ -22,12 +21,6 @@ const KNOWN_REASONS = new Set([
   "stop_word",
 ]);
 const KNOWN_CHANNELS = new Set(["telegram", "web", "email", "phone", "referral"]);
-
-export const PRIORITY_TONE: Record<HandoffInfoPriority, StatusTone> = {
-  hot: "red",
-  warm: "gold",
-  info: "default",
-};
 
 /** Причины передачи словами; неизвестный код CRM — «Другая причина», без сырого кода в интерфейсе. */
 export function reasonLabels(t: TFunction, codes: readonly string[]): string[] {

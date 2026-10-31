@@ -1,9 +1,9 @@
 import { Button } from "antd";
-import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 import { useUploadCrmRequestFile } from "../../../shared/api/generated/platform-bff";
+import { FilePicker } from "../../../shared/ui/FileField";
 import { MAX_FILE_BYTES } from "../../eds/documents/fileSize";
 import { reasonError } from "../common/errors";
 import type { LetterFile } from "./formModel";
@@ -25,10 +25,8 @@ export function LetterField({
 }) {
   const { t } = useTranslation("request");
   const upload = useUploadCrmRequestFile();
-  const input = useRef<HTMLInputElement>(null);
 
   const pick = (file: File | undefined) => {
-    if (input.current) input.current.value = "";
     if (!file) return;
     if (file.size > MAX_FILE_BYTES) {
       onChange({ name: file.name, status: "error", error: t("letter.tooLarge") });
@@ -54,16 +52,17 @@ export function LetterField({
 
   return (
     <div className="pf-fp-stack" style={{ gap: 8 }}>
-      <input
-        id={id}
-        ref={input}
-        type="file"
-        accept={ACCEPT}
-        aria-describedby={`${id}-hint`}
-        onChange={(event) => {
-          pick(event.target.files?.[0]);
-        }}
-      />
+      <div>
+        <FilePicker
+          id={id}
+          accept={ACCEPT}
+          aria-describedby={`${id}-hint`}
+          buttonLabel={value ? t("ui:file.replace") : undefined}
+          onPick={(files) => {
+            pick(files[0]);
+          }}
+        />
+      </div>
       {value ? (
         <div className="pf-fp-row" style={{ alignItems: "center" }}>
           {value.status === "uploading" ? (

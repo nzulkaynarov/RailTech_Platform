@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { companyDate } from "./api";
 import { panelEl, renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
@@ -18,7 +19,9 @@ async function openForm(path = LETTER, directoryReady = true) {
   // справочник сотрудников загружен: зона «услуги» с одним кандидатом выбрана сама
   if (directoryReady) {
     await waitFor(() => {
-      expect(within(form).getByLabelText("Сотрудник: Гл. инженер")).toHaveValue("41");
+      expect(selectedLabel(within(form).getByLabelText("Сотрудник: Гл. инженер"))).toBe(
+        "Демо Инженеров · Главный инженер",
+      );
     });
   }
   return { ...view, panel, form };
@@ -28,13 +31,11 @@ function draftKeys(): string[] {
   return Object.keys(window.sessionStorage).filter((k) => k.startsWith("rt-pf-letter-draft-v1"));
 }
 
-function fillValid(form: HTMLElement) {
+async function fillValid(form: HTMLElement) {
   fireEvent.change(within(form).getByLabelText("Текст резолюции"), {
     target: { value: "Посчитать с запасом по складу." },
   });
-  fireEvent.change(within(form).getByLabelText("Сотрудник: Снабженец"), {
-    target: { value: "31" },
-  });
+  await chooseOption(within(form).getByLabelText("Сотрудник: Снабженец"), "Демо Снабженцев");
 }
 
 describe("Резолюция: форма", () => {
@@ -53,9 +54,13 @@ describe("Резолюция: форма", () => {
     expect(engineer).toBeChecked();
     expect(accountant).not.toBeChecked();
     // в «товарах» двое — выбор за директором; в «услугах» один — выбран сам
-    expect(within(form).getByLabelText("Сотрудник: Снабженец")).toHaveValue("");
-    expect(within(form).getByLabelText("Сотрудник: Гл. инженер")).toHaveValue("41");
-    expect(within(form).getByLabelText("Срок расчёта")).toHaveValue(companyDate(3));
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабженец"))).toBe("");
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Гл. инженер"))).toBe(
+      "Демо Инженеров · Главный инженер",
+    );
+    expect(within(form).getByLabelText("Срок расчёта")).toHaveValue(
+      companyDate(3).split("-").reverse().join("."),
+    );
     expect(within(form).getByLabelText("Маржа не ниже, %")).toBeVisible();
     const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
     expect(within(consequence).getAllByRole("listitem")).toHaveLength(3);
@@ -103,12 +108,25 @@ describe("Резолюция: форма", () => {
     expect(called).toBe(false);
   });
 
+  it("срок в прошлом не выбрать: в календаре дни раньше сегодня по Ташкенту отключены", async () => {
+    const { form } = await openForm();
+    const due = within(form).getByLabelText("Срок расчёта");
+    fireEvent.mouseDown(due);
+    fireEvent.click(due);
+    const cell = (day: string) =>
+      document.querySelector<HTMLElement>(`.ant-picker-cell[title="${day}"]`);
+    await waitFor(() => {
+      expect(cell(companyDate(-1))).toHaveClass("ant-picker-cell-disabled");
+    });
+    expect(cell(companyDate(0))).not.toHaveClass("ant-picker-cell-disabled");
+    fillDate(due, companyDate(5));
+    expect(due).toHaveValue(companyDate(5).split("-").reverse().join("."));
+  });
+
   it("срок в прошлом и неверная маржа отсекаются в форме", async () => {
     const { form } = await openForm();
-    fillValid(form);
-    fireEvent.change(within(form).getByLabelText("Срок расчёта"), {
-      target: { value: "2020-01-01" },
-    });
+    await fillValid(form);
+    fillDate(within(form).getByLabelText("Срок расчёта"), "2020-01-01");
     fireEvent.change(within(form).getByLabelText("Маржа не ниже, %"), { target: { value: "120" } });
 
     fireEvent.click(within(form).getByRole("button", { name: /Утвердить резолюцию/ }));
@@ -129,7 +147,7 @@ describe("Резолюция: форма", () => {
       }),
     );
     const { form, panel } = await openForm();
-    fillValid(form);
+    await fillValid(form);
     fireEvent.change(within(form).getByLabelText("Маржа не ниже, %"), {
       target: { value: "15,5" },
     });
@@ -194,7 +212,7 @@ describe("Резолюция: форма", () => {
 describe("Резолюция: ошибки и черновик", () => {
   it("срок в прошлом отвергнут EDS: «Резолюция не сохранена: …», введённое не потеряно, черновик в браузере", async () => {
     const { form } = await openForm();
-    fillValid(form);
+    await fillValid(form);
     // форма сама отсекает прошлую дату, поэтому подменяем «сегодня» EDS: он считает срок прошлым
     server.use(
       http.post("*/eds/letters/:id/resolution", () =>
@@ -220,7 +238,9 @@ describe("Резолюция: ошибки и черновик", () => {
     expect(within(form).getByLabelText("Текст резолюции")).toHaveValue(
       "Посчитать с запасом по складу.",
     );
-    expect(within(form).getByLabelText("Сотрудник: Снабженец")).toHaveValue("31");
+    expect(selectedLabel(within(form).getByLabelText("Сотрудник: Снабженец"))).toBe(
+      "Демо Снабженцев · Специалист по снабжению",
+    );
     // поле срока подсвечено словами
     expect(within(form).getByText("Срок расчёта не может быть в прошлом.")).toBeVisible();
     const [key] = draftKeys();
@@ -240,7 +260,7 @@ describe("Резолюция: ошибки и черновик", () => {
       ),
     );
     const first = await openForm();
-    fillValid(first.form);
+    await fillValid(first.form);
     fireEvent.click(within(first.form).getByRole("button", { name: /Утвердить резолюцию/ }));
     expect(
       await within(first.form).findByText(
@@ -258,7 +278,9 @@ describe("Резолюция: ошибки и черновик", () => {
     expect(within(second.form).getByLabelText("Текст резолюции")).toHaveValue(
       "Посчитать с запасом по складу.",
     );
-    expect(within(second.form).getByLabelText("Сотрудник: Снабженец")).toHaveValue("31");
+    expect(selectedLabel(within(second.form).getByLabelText("Сотрудник: Снабженец"))).toBe(
+      "Демо Снабженцев · Специалист по снабжению",
+    );
   });
 
   it("письмо уже решено другим (409): объяснение «обновите карточку», комментарий возврата в черновике", async () => {
@@ -325,7 +347,7 @@ describe("Резолюция: ошибки и черновик", () => {
       ),
     );
     const { form } = await openForm();
-    fillValid(form);
+    await fillValid(form);
 
     fireEvent.click(within(form).getByRole("button", { name: /Утвердить резолюцию/ }));
 

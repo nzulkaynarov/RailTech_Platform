@@ -497,8 +497,39 @@
   },
   "storage": {
     "offsite": {
-      "title": "Zaxira nusxalarning tashqi nusxasi (Google Drive)",
-      "purpose": "Kuniga bir marta baza arxivi kompaniyangizning Google umumiy diskidagi papkaga nusxalanadi — ikkala server yo'qolsa ham tiklash mumkin. Hammasi shu yerda sozlanadi, serverga kirish shart emas.",
+      "title": "Zaxira nusxalarning tashqi nusxasi",
+      "purpose": "Kuniga bir marta baza arxivi kompaniyaning Yandex Disk'iga (yoki Google Workspace umumiy diskiga) nusxalanadi — ikkala server yo'qolsa ham tiklash mumkin. Hammasi shu yerda sozlanadi, serverga kirish shart emas.",
+      "gdriveWarning": "Google Workspace umumiy diski kerak. Shaxsiy Google Drive mos kelmaydi.",
+      "provider": {
+        "label": "Qayerga nusxalash",
+        "yandex": "Yandex Disk (tavsiya etiladi)",
+        "gdrive": "Google Drive (Workspace umumiy diski)"
+      },
+      "yandex": {
+        "login": "Yandex 360 login",
+        "folder": "Diskdagi papka",
+        "password": "Ilova paroli",
+        "steps": {
+          "title": "Yandex'da tayyorgarlik (bir marta, ≈ 3 daqiqa)",
+          "account": "Nusxalar Disk'ida saqlanadigan Yandex 360 hisobining Yandex ID'siga kiring.",
+          "passwords": "Xavfsizlik → Ilova parollari bo'limini oching.",
+          "passwordsLink": "Ilova parollari",
+          "files": "«Fayllar» turidagi ilova parolini yarating (Disk'ga WebDAV orqali kirish), masalan «RailTech zaxira» deb nomlang.",
+          "paste": "Parolni nusxalang (u bir marta ko'rsatiladi) va quyida shu hisobning pochta manzili bilan birga kiriting."
+        },
+        "form": {
+          "login": "Yandex 360 pochta manzili",
+          "loginHint": "Nusxalar Disk'iga boradigan hisob pochtasi, masalan backup@kompaniyangiz.uz.",
+          "folder": "Yandex Disk'dagi papka",
+          "folderHint": "Disk ildizidan yo'l; bo'lmasa — papka o'zi yaratiladi. Standart: {{folder}}.",
+          "password": "«Fayllar» ilova paroli",
+          "passwordHint": "Yandex ID → Xavfsizlik → Ilova parollari'dagi parol. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
+          "passwordKeepHint": "Avvalgi parolni saqlash uchun bo'sh qoldiring.",
+          "step1": "Parol shifrlangan holda saqlanadi; faqat login va «kiritilgan» belgisi ko'rinadi.",
+          "step2": "Login, papka va parol nusxalash xizmatiga uzatiladi — birinchi nusxa bir necha daqiqada boshlanadi.",
+          "step3": "Saqlangandan so'ng darhol tekshiruv: Disk'ga kirish, papka va sinov faylini yozish; o'zgarish amallar jurnaliga tushadi."
+        }
+      },
       "copyState": "Nusxa holati",
       "folder": "Umumiy disk papkasi (ID)",
       "account": "Xizmat hisobi",
@@ -508,7 +539,7 @@
       "checkedAt": "Tekshirildi: {{date}}",
       "check": "Tekshirish",
       "setup": "Sozlash",
-      "change": "Kalit yoki papkani almashtirish",
+      "change": "Ulanishni o'zgartirish",
       "reason": {
         "ok": "Kirish bor: «{{folder}}» papkasi umumiy diskda, fayl qo'shish mumkin.",
         "key_rejected": "Google kalitni qabul qilmadi: u bekor qilingan yoki o'chirilgan, yoki xizmat hisobi o'chirilgan. Yangi kalit yarating (3-qadam) va yuklang.",
@@ -517,7 +548,14 @@
         "not_folder": "Bu ID papka emas — papka manzilidagi ID ni kiriting.",
         "not_shared_drive": "«{{folder}}» papkasi «Mening diskim»da, umumiy diskdagi papka kerak: xizmat hisobining o'z joyi yo'q (1-qadam).",
         "read_only": "Xizmat hisobi «{{folder}}» papkasiga fayl qo'sha olmaydi: unga «Kontent menejeri» rolini bering (4-qadam).",
-        "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering."
+        "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering.",
+        "auth_failed": "Yandex login yoki ilova parolini qabul qilmadi: pochta manzilini va parol «Fayllar» uchun yaratilgani hamda o'chirilmaganini tekshiring. Yangi parol yarating (3-qadam) va saqlang.",
+        "not_app_password": "Hisobning oddiy paroli kiritilganga o'xshaydi, «Fayllar» turidagi ilova paroli (16 lotin harfi) kerak: uni yarating (2–3-qadamlar).",
+        "webdav_forbidden": "Yandex Disk'ga WebDAV orqali kirishni yopdi: uni Yandex 360 administratori o'chirgan yoki hisobda Disk yo'q. Yandex 360 admin panelida ruxsat bering va qayta tekshiring.",
+        "no_space": "Yandex Disk'da joy yo'q: joy bo'shating (va Disk Savatini tozalang) yoki tarifni kengaytiring.",
+        "ok_yandex": "Kirish bor: Yandex Disk'dagi «{{folder}}» papkasi, fayllar yoziladi va o'chiriladi.",
+        "not_folder_yandex": "Diskdagi «{{folder}}» yo'lida papka emas, fayl bor: boshqa yo'l kiriting.",
+        "network_yandex": "Yandex Disk javob bermadi: server aloqasi muammosi yoki so'rovlar cheklovi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering."
       },
       "steps": {
         "title": "Google'da tayyorlash (bir marta, ≈ 15 daqiqa)",
@@ -530,7 +568,7 @@
         "share": "Papkada xizmat hisobi manziliga «Kontent menejeri» roli bilan kirish bering, bildirishnomani o'chiring."
       },
       "form": {
-        "title": "Kalit va papka",
+        "title": "Tashqi nusxani ulash",
         "submit": "Saqlash va tekshirish",
         "step1": "Kalit shifrlangan holda saqlanadi; faqat hisob manzili va kalitning oxirgi belgilari ko'rinadi.",
         "step2": "Kalit va papka nusxalash xizmatiga uzatiladi — birinchi nusxa bir necha daqiqada boshlanadi.",
@@ -614,9 +652,11 @@
     },
     "reasons": {
       "offsite_key_invalid": "Fayl Google xizmat hisobi kaliti emas. JSON kalitni qayta yuklab oling (3-qadam).",
-      "offsite_folder_invalid": "Papka ID si noto'g'ri: manzilning /folders/ dan keyingi qismi kerak.",
+      "offsite_folder_invalid": "Papka noto'g'ri: Google uchun — manzilning /folders/ dan keyingi ID qismi, Yandex uchun — RailTech-backups/prod ko'rinishidagi yo'l (harflar, raqamlar, bo'shliq, «-», «_», «.»).",
       "offsite_delivery_failed": "Kalitni nusxalash xizmatiga uzatib bo'lmadi (ombor javob bermadi). Hech narsa saqlanmadi — keyinroq takrorlang.",
-      "offsite_not_configured": "Tashqi nusxa hali sozlanmagan: kalitni yuklang va papkani kiriting.",
+      "offsite_not_configured": "Tashqi nusxa hali sozlanmagan: Yandex Disk yoki Google Drive'ni tanlang va kirishni saqlang.",
+      "offsite_login_invalid": "Login — Yandex 360 pochta manzili, masalan backup@kompaniyangiz.uz.",
+      "offsite_app_password_invalid": "«Fayllar» ilova parolini kiriting: avvalgi parol yo'q.",
       "erp_not_configured": "ERP hali ulanmagan.",
       "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",
       "erp_https_required": "Ish muhitida ERP manzili https bilan boshlanishi kerak.",

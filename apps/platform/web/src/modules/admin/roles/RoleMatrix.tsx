@@ -1,4 +1,4 @@
-import { Checkbox } from "antd";
+import { Checkbox, Select } from "antd";
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -171,25 +171,23 @@ export function RoleMatrix({ columns, selectedId, onSelect, draft, onDraft }: Ro
                     {columns.map((column) => (
                       <td key={column.id} className={sel(column)}>
                         {isEditing(column) && draft ? (
-                          <select
-                            className="pf-level-select pf-focusable"
+                          <Select<AccessLevel | "hidden">
+                            className="pf-level-select"
+                            size="small"
+                            popupMatchSelectWidth={false}
                             aria-label={t("admin.roles.cellLabel", {
                               section: label,
                               role: draft.name.trim() || column.name,
                             })}
                             value={draft.access[key] ?? "hidden"}
-                            onChange={(event) => {
-                              onDraft(
-                                setLevel(draft, key, event.target.value as AccessLevel | "hidden"),
-                              );
+                            options={levelOptions(key).map((option) => ({
+                              value: option.value,
+                              label: option.label,
+                            }))}
+                            onChange={(next) => {
+                              onDraft(setLevel(draft, key, next));
                             }}
-                          >
-                            {levelOptions(key).map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         ) : (
                           <LevelMark level={column.access[key]} />
                         )}

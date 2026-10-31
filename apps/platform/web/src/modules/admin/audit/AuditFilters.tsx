@@ -1,4 +1,4 @@
-import { Button, Input, Select, Switch } from "antd";
+import { Button, Select, Switch } from "antd";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +8,7 @@ import {
   actionLabel,
   entityLabel,
 } from "../../../entities/audit/labels";
+import { DateRangeField } from "../../../shared/ui/DateField";
 import { type AuditFilterValues, hasFilters } from "./filters";
 
 export interface AuditFiltersProps {
@@ -82,30 +83,18 @@ export function AuditFilters({ value, onChange, actors, entityId, onReset }: Aud
           }}
         />
       </div>
-      <div className="pf-audit-field">
-        <label htmlFor={`${base}-from`}>{t("filters.from")}</label>
-        <Input
-          id={`${base}-from`}
-          type="date"
-          value={value.from}
-          max={value.to || undefined}
-          onChange={(event) => {
-            set({ from: event.target.value });
-          }}
-        />
-      </div>
-      <div className="pf-audit-field">
-        <label htmlFor={`${base}-to`}>{t("filters.to")}</label>
-        <Input
-          id={`${base}-to`}
-          type="date"
-          value={value.to}
-          min={value.from || undefined}
-          onChange={(event) => {
-            set({ to: event.target.value });
-          }}
-        />
-      </div>
+      <DateRangeField
+        idFrom={`${base}-from`}
+        idTo={`${base}-to`}
+        labelFrom={t("filters.from")}
+        labelTo={t("filters.to")}
+        fieldClassName="pf-audit-field"
+        style={{ width: 160 }}
+        value={{ from: value.from, to: value.to }}
+        onChange={(range) => {
+          set(range);
+        }}
+      />
       <div className="pf-audit-logins">
         <Switch
           id={`${base}-logins`}

@@ -5,7 +5,7 @@
 import type { OffsiteCheckReason } from "./offsiteCheckReason";
 
 /**
- * Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); `network` — Google не ответил (хостинг).
+ * Итог проверки доступа. `reason`: `ok`; исправляет владелец — Google: `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); Яндекс: `auth_failed` (логин или пароль приложения не приняты), `not_app_password` (введён не пароль приложения), `webdav_forbidden` (доступ к Диску по WebDAV закрыт администратором Яндекс 360), `not_folder` (по пути — файл), `no_space` (на Диске нет места); `network` — сервис не ответил (хостинг).
  */
 export interface OffsiteCheck {
   ok: boolean;

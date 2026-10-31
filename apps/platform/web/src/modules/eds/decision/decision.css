@@ -90,9 +90,6 @@
   font-weight: 600;
   white-space: nowrap;
 }
-.pf-dec-table .pf-dec-right {
-  text-align: right;
-}
 .pf-dec-table tbody tr[data-row] {
   cursor: pointer;
 }

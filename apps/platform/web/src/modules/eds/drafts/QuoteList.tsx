@@ -48,12 +48,7 @@ function useSelect() {
 
 function Total({ row }: { row: QuoteApprovalRow }) {
   if (!row.total) return <>—</>;
-  return (
-    <MoneyText
-      value={row.total.amount}
-      {...(row.total.currency === "UZS" ? {} : { currency: row.total.currency })}
-    />
-  );
+  return <MoneyText value={row.total.amount} currency={row.total.currency} />;
 }
 
 function Rows({
@@ -119,7 +114,7 @@ function Rows({
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.request")}</th>
             <th scope="col">{t("list.columns.client")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("list.columns.total")}
             </th>
             <th scope="col">{t("list.columns.due")}</th>
@@ -158,7 +153,7 @@ function Rows({
               <td className="pf-ell" title={row.client_name ?? undefined}>
                 {row.client_name ?? "—"}
               </td>
-              <td className="pf-dec-right">
+              <td className="pf-col-num">
                 <Total row={row} />
               </td>
               <td className="pf-num">{row.due ? date(row.due) : "—"}</td>

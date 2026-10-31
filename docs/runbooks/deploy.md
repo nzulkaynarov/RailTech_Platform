@@ -304,10 +304,11 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   и раз в месяц проверяет восстановление; сбой виден как `unhealthy` у контейнера `walg`. Восстановление на любой момент последних 14 суток в отдельный контейнер —
   `infra/db/restore-pitr.sh --target-time "YYYY-MM-DD HH:MM:SS+00"`. Подробно (включение, где лежат копии, переключение, ключ `WAL_ENC_KEY`, ротация,
   заполнение бакета) — `docs/runbooks/backup-pitr.md`. Ежедневный `pg_dump` ниже остаётся вторым рубежом.
-- **Внешняя копия на корпоративном Google Drive (OPS-GDRIVE):** сервис `offsite-backup` на VPS 1 раз в сутки (23:00 UTC) копирует архив WAL-G
+- **Внешняя копия на Яндекс Диске компании или Google Drive (OPS-GDRIVE, OPS-YADISK):** сервис `offsite-backup` на VPS 1 раз в сутки (23:00 UTC) копирует архив WAL-G
   (базовые копии и WAL за 14 суток, уже зашифрованные) в папку общего диска Google; итог — строка «Внешняя копия бэкапов» в «Состоянии системы».
-  Ключ сервисного аккаунта (`/opt/rt/secrets/gdrive-sa.json`, каталог создаёт `deploy.sh`) и `OFFSITE_GDRIVE_FOLDER_ID` в `.env.prod` кладёт
-  владелец; без них копия «не настроена», остальное работает. Ключ S3 сервиса (`S3_OFFSITE_*`) деплой создаёт сам (`ensure-secrets`).
+  Провайдер и доступ (пароль приложения Яндекса «Файлы» или ключ Google) админ вводит в Платформе — на сервер ничего не кладут;
+  аварийно — `OFFSITE_PROVIDER` и для Google ключ `/opt/rt/secrets/gdrive-sa.json` с `OFFSITE_GDRIVE_FOLDER_ID` в `.env.prod`. Без
+  настройки копия «не настроена», остальное работает. Ключ S3 сервиса (`S3_OFFSITE_*`) деплой создаёт сам (`ensure-secrets`).
   Включение, диагностика, восстановление и учения — [`offsite-gdrive.md`](offsite-gdrive.md).
 - **Расписание:** контейнер `backup` на VPS 2 ежедневно в 22:00 UTC (03:00 Ташкент) делает `pg_dump` каждой базы, проверяет читаемость
   (`pg_restore -l`), хранит `BACKUP_KEEP_DAYS` (14) дней в `/var/backups/rt/<UTC-штамп>/`, выгружает в бакет `backups` RustFS
@@ -391,7 +392,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 | Redis: ERP в журнале «Кэш (Redis) недоступен», сессии Платформы не работают, очередь стоит | «Redis: брокер и кэш раздельно» ниже: `docker compose … ps redis-broker redis-cache`, `logs`, `redis-cli ping` |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
 | WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
-| Строка «Внешняя копия бэкапов» — сбой или «не настроено» | `docker compose … logs offsite-backup`, `exec offsite-backup sh /offsite/gdrive-sync.sh --probe` — [`offsite-gdrive.md`](offsite-gdrive.md), разделы 1 и 3 |
+| Строка «Внешняя копия бэкапов» — сбой или «не настроено» | `docker compose … logs offsite-backup`, `exec offsite-backup sh /offsite/offsite-sync.sh --probe` — [`offsite-gdrive.md`](offsite-gdrive.md), разделы 1 и 3 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.

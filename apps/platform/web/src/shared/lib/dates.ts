@@ -66,6 +66,11 @@ export function companyDayKey(value: DateInput): string | null {
   return `${year}-${month}-${day}`;
 }
 
+/** «Сегодня» в поясе компании ключом `2026-10-24` — граница `min`/`max` полей даты («не раньше сегодня» по Ташкенту). */
+export function companyToday(now: Date = new Date()): string {
+  return companyDayKey(now) ?? "";
+}
+
 export interface DateFormatOptions {
   language?: string;
   style?: DateStyle;

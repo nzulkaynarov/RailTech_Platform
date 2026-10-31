@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { endSession } from "../../../mocks/mockSession";
 import i18n from "../../../shared/i18n";
+import { fillDate } from "../../../test/fields";
 import { panelEl } from "../../../test/panel";
 import { renderApp, signInAs } from "../../../test/renderApp";
 import { server } from "../../../test/server";
@@ -73,11 +74,11 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     await waitFor(() => {
       expect(screen.getByText("Записей: 2")).toBeVisible();
     });
-    fireEvent.change(screen.getByLabelText("С даты"), { target: { value: "2026-10-24" } });
+    fillDate(screen.getByLabelText("С даты"), "2026-10-24");
     await waitFor(() => {
       expect(screen.getByText("Записей: 1")).toBeVisible();
     });
-    fireEvent.change(screen.getByLabelText("С даты"), { target: { value: "2026-12-01" } });
+    fillDate(screen.getByLabelText("С даты"), "2026-12-01");
     expect(await screen.findByText("По этим фильтрам записей нет")).toBeVisible();
 
     fireEvent.click(screen.getAllByRole("button", { name: "Сбросить фильтры" })[0] as HTMLElement);

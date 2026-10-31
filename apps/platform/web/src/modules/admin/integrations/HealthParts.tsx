@@ -15,14 +15,17 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { copyText, mailtoLink, telegramShareLink } from "./copy";
-import { STATE_TONE } from "./levels";
 import { ActionForm, Field, PanelState } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 import { SwitchForm } from "./SwitchForm";
 
 export function StateTag({ state }: { state: ServiceState }) {
   const { t } = useTranslation("integrations");
-  return <StatusTag tone={STATE_TONE[state]}>{t(`health.state.${state}`)}</StatusTag>;
+  return (
+    <StatusTag kind="service" status={state}>
+      {t(`health.state.${state}`)}
+    </StatusTag>
+  );
 }
 
 /** «Кто исправляет: …» — одна строка, слово из словаря; без владельца (исправлять нечего) строки нет. */

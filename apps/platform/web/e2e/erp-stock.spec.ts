@@ -8,6 +8,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { fillDate } from "./support/fields";
 
 // Склад и закупки на MSW (D2-2, SPEC-v3 §7.4): сценарий снабженца целиком — резерв строки из расчёта и «Запросить цену у
 // поставщика» (письмо в журнале) → заказ поставщику ЗП: черновик → отправлен (письмо) → подтверждён → приёмка частичная и
@@ -128,7 +129,7 @@ test.describe("Склад и закупки: снабженец", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Поставщик подтвердил" }).click();
     const confirm = page.getByRole("dialog", { name: `Поставщик подтвердил заказ ${NEW_ORDER}` });
-    await confirm.getByLabel("Подтверждённая дата поставки").fill("2099-01-15");
+    await fillDate(confirm.getByLabel("Подтверждённая дата поставки"), "2099-01-15");
     await confirm.getByRole("button", { name: "Подтвердить" }).click();
     await expect(page.getByRole("button", { name: "Принять товар" })).toBeVisible();
     await settledScreenshot(page, "order-confirmed");

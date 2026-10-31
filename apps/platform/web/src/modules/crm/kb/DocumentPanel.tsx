@@ -163,9 +163,13 @@ function DocumentBody({ doc, editable }: { doc: KbDocument; editable: boolean })
         <div className="pf-fp-row">
           <IngestTag status={doc.ingest_status} />
           {doc.is_active ? (
-            <StatusTag tone="green">{t("panel.active")}</StatusTag>
+            <StatusTag kind="activity" status="active">
+              {t("panel.active")}
+            </StatusTag>
           ) : (
-            <StatusTag tone="gold">{t("documents.disabled")}</StatusTag>
+            <StatusTag kind="activity" status="inactive">
+              {t("documents.disabled")}
+            </StatusTag>
           )}
         </div>
       </div>

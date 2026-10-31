@@ -37,12 +37,7 @@ function stepOf(value: string | null): ProjectStage | undefined {
 
 function Total({ row }: { row: ProjectRow }) {
   if (!row.total) return <>—</>;
-  return (
-    <MoneyText
-      value={row.total.amount}
-      {...(row.total.currency === "UZS" ? {} : { currency: row.total.currency })}
-    />
-  );
+  return <MoneyText value={row.total.amount} currency={row.total.currency} />;
 }
 
 /** Документы проекта в строке: статусы договора, счёта и акта словами; проблемы — красными тегами. */
@@ -93,8 +88,7 @@ function Problems({ row }: { row: ProjectRow }) {
 }
 
 function StepTag({ step }: { step: ProjectStage }) {
-  const { t } = useTranslation("dictionary");
-  return <StatusTag tone={step === "DONE" ? "green" : "blue"}>{t(`stage.${step}`)}</StatusTag>;
+  return <StatusTag kind="stage" status={step} />;
 }
 
 function Rows({ items }: { items: readonly ProjectRow[] }) {

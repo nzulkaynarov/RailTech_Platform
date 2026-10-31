@@ -4,8 +4,10 @@ import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 import { useUploadEdsDocumentFile } from "../../../shared/api/generated/platform-bff";
+import { formatFileSize } from "../../../shared/lib/fileSize";
+import { FilePicker } from "../../../shared/ui/FileField";
 import { reasonText } from "../documents/errors";
-import { MAX_FILE_BYTES, formatFileSize } from "../documents/fileSize";
+import { MAX_FILE_BYTES } from "../documents/fileSize";
 import type { Attachment } from "./formModel";
 
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.gif,.webp,.tif,.tiff,.doc,.docx,.xls,.xlsx,.ppt,.pptx";
@@ -26,7 +28,6 @@ export function AttachmentsField({
 }) {
   const { t, i18n } = useTranslation("documents");
   const upload = useUploadEdsDocumentFile();
-  const input = useRef<HTMLInputElement>(null);
   const counter = useRef(0);
 
   const patch = (key: string, change: Partial<Attachment>) => {
@@ -51,10 +52,7 @@ export function AttachmentsField({
       });
   };
 
-  const pick = (list: FileList | null) => {
-    const files = Array.from(list ?? []);
-    if (input.current) input.current.value = "";
-    if (files.length === 0) return;
+  const pick = (files: File[]) => {
     const items = files.map((file) => {
       counter.current += 1;
       const tooLarge = file.size > MAX_FILE_BYTES;
@@ -73,17 +71,15 @@ export function AttachmentsField({
 
   return (
     <div className="pf-fp-stack" style={{ gap: 8 }}>
-      <input
-        id={id}
-        ref={input}
-        type="file"
-        multiple
-        accept={ACCEPT}
-        aria-describedby={`${id}-hint`}
-        onChange={(event) => {
-          pick(event.target.files);
-        }}
-      />
+      <div>
+        <FilePicker
+          id={id}
+          multiple
+          accept={ACCEPT}
+          aria-describedby={`${id}-hint`}
+          onPick={pick}
+        />
+      </div>
       {value.length > 0 ? (
         <ul className="pf-doc-files" aria-label={t("form.files.list")}>
           {value.map((item) => (
@@ -115,7 +111,7 @@ export function AttachmentsField({
                     onChange((prev) => prev.filter((other) => other.key !== item.key));
                   }}
                 >
-                  ×
+                  {t("ui:file.remove")}
                 </Button>
               )}
             </li>

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-import { type StatusTone, TONE_STYLE } from "../lib/statuses";
+import { statusStyle } from "../lib/statuses";
 import { CheckIcon, CrossIcon, MinusIcon } from "./icons";
 import "./ui.css";
 
@@ -14,10 +14,11 @@ export interface ChecklistItem {
   meta?: ReactNode;
 }
 
-const CHIP: Record<CheckState, { tone: StatusTone; icon: ReactNode }> = {
-  ok: { tone: "green", icon: <CheckIcon /> },
-  fail: { tone: "red", icon: <CrossIcon /> },
-  pending: { tone: "default", icon: <MinusIcon /> },
+/** Значок пункта; цвет — карта `check` (`STATUS_TONE`, UX-2b). */
+const ICON: Record<CheckState, ReactNode> = {
+  ok: <CheckIcon />,
+  fail: <CrossIcon />,
+  pending: <MinusIcon />,
 };
 
 /**
@@ -29,11 +30,14 @@ export function Checklist({ items, label }: { items: readonly ChecklistItem[]; l
   return (
     <ul className="pf-list" aria-label={label}>
       {items.map((item, index) => {
-        const chip = CHIP[item.state];
         return (
           <li key={index} className="pf-check">
-            <span className="pf-check-chip" style={TONE_STYLE[chip.tone]} aria-hidden="true">
-              {chip.icon}
+            <span
+              className="pf-check-chip"
+              style={statusStyle("check", item.state)}
+              aria-hidden="true"
+            >
+              {ICON[item.state]}
             </span>
             <span className="pf-check-label">
               <span className="pf-sr-only">{t(`checklist.${item.state}`)}: </span>

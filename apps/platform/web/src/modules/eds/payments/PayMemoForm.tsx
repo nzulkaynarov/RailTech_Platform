@@ -12,11 +12,14 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
+import { FileField } from "../../../shared/ui/FileField";
 import { ActionToggle, ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate } from "../inbox/api";
 import { MAX_FILE_BYTES } from "../documents/fileSize";
 import { type MemoReason, isMemoStale, memoReason, useRefreshPayments } from "./api";
 import { normalizeAmount, toCents } from "./model";
+import { HOME_CURRENCY } from "../../../shared/lib/money";
 
 export interface PayMemoFormProps {
   memo: PaymentMemoCard;
@@ -32,15 +35,15 @@ export interface PayMemoFormProps {
 export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProps) {
   const { t } = useTranslation("payments");
   const { message } = App.useApp();
-  const { money } = useFormat();
+  const { money, currency: currencyText } = useFormat();
   const refresh = useRefreshPayments();
   const client = useQueryClient();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
   const approved = memo.amount?.amount ?? "0.00";
-  const currency = memo.amount?.currency ?? "UZS";
+  const currency = memo.amount?.currency ?? HOME_CURRENCY;
   const today = companyDate();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [receiptFiles, setReceiptFiles] = useState<File[]>([]);
   const uploaded = useRef<{ key: string; id: string } | null>(null);
 
   const [date, setDate] = useState(today);
@@ -61,7 +64,7 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
   const pay = useMutation({
     mutationFn: async () => {
       let receipt: string | null = null;
-      const file = fileRef.current?.files?.[0];
+      const file = receiptFiles[0];
       if (file) {
         if (file.size > MAX_FILE_BYTES) throw new Error("too_large");
         const signature = `${file.name}:${String(file.size)}:${String(file.lastModified)}`;
@@ -132,22 +135,21 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
       }}
     >
       <FormField id={id("date")} label={t("memo.form.date.label")} hint={t("memo.form.date.hint")}>
-        <Input
+        <DateField
           id={id("date")}
-          type="date"
           value={date}
           max={today}
           aria-describedby={`${id("date")}-hint`}
           aria-invalid={!dateValid}
-          onChange={(event) => {
-            setDate(event.target.value);
+          onChange={(next) => {
+            setDate(next);
             setFailure(null);
           }}
         />
       </FormField>
       <FormField
         id={id("amount")}
-        label={t("memo.form.amount.label", { currency })}
+        label={t("memo.form.amount.label", { currency: currencyText(currency) })}
         hint={t("memo.form.amount.hint", { approved: fmt(approved) })}
       >
         <Input
@@ -168,12 +170,12 @@ export function PayMemoForm({ memo, variant = "panel", onDone }: PayMemoFormProp
         label={t("memo.form.receipt.label")}
         hint={t("memo.form.receipt.hint")}
       >
-        <input
+        <FileField
           id={id("receipt")}
-          ref={fileRef}
-          type="file"
+          value={receiptFiles}
           aria-describedby={`${id("receipt")}-hint`}
-          onChange={() => {
+          onChange={(files) => {
+            setReceiptFiles(files);
             setFailure(null);
           }}
         />

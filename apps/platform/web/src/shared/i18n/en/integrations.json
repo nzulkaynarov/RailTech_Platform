@@ -487,8 +487,39 @@
   },
   "storage": {
     "offsite": {
-      "title": "Offsite backup copy (Google Drive)",
-      "purpose": "Once a day the database archive is copied to a folder on your company's Google shared drive, so it can be restored even if both servers are lost. Everything is set up here; no server access needed.",
+      "title": "Offsite backup copy",
+      "purpose": "Once a day the database archive is copied to the company's Yandex Disk (or a Google Workspace shared drive), so it can be restored even if both servers are lost. Everything is set up here; no server access needed.",
+      "gdriveWarning": "A Google Workspace shared drive is required. A personal Google Drive will not work.",
+      "provider": {
+        "label": "Copy to",
+        "yandex": "Yandex Disk (recommended)",
+        "gdrive": "Google Drive (Workspace shared drive)"
+      },
+      "yandex": {
+        "login": "Yandex 360 login",
+        "folder": "Folder on Disk",
+        "password": "App password",
+        "steps": {
+          "title": "Preparation in Yandex (once, ≈ 3 minutes)",
+          "account": "Sign in to Yandex ID of the Yandex 360 account whose Disk will hold the copies.",
+          "passwords": "Open Security → App passwords.",
+          "passwordsLink": "App passwords",
+          "files": "Create an app password of type “Files” (Disk access over WebDAV), name it, for example, “RailTech backups”.",
+          "paste": "Copy the password (it is shown once) and paste it below together with this account's email address."
+        },
+        "form": {
+          "login": "Yandex 360 email address",
+          "loginHint": "The email of the account whose Disk receives the copies, e.g. backup@your-company.uz.",
+          "folder": "Folder on Yandex Disk",
+          "folderHint": "Path from the Disk root; if missing, the folder is created. Default: {{folder}}.",
+          "password": "“Files” app password",
+          "passwordHint": "The password from Yandex ID → Security → App passwords. Stored encrypted and never shown.",
+          "passwordKeepHint": "Leave empty to keep the current password.",
+          "step1": "The password is stored encrypted; only the login and a “set” mark are shown.",
+          "step2": "The login, folder and password go to the copy service — the first copy starts within minutes.",
+          "step3": "Right after saving — a check: Disk sign-in, the folder and writing a test file; the change goes to the audit log."
+        }
+      },
       "copyState": "Copy state",
       "folder": "Shared drive folder (ID)",
       "account": "Service account",
@@ -498,7 +529,7 @@
       "checkedAt": "Checked: {{date}}",
       "check": "Check",
       "setup": "Set up",
-      "change": "Change key or folder",
+      "change": "Change connection",
       "reason": {
         "ok": "Access works: folder “{{folder}}” is on a shared drive and files can be added.",
         "key_rejected": "Google rejected the key: it was revoked or deleted, or the service account is disabled. Create a new key (step 3) and upload it.",
@@ -507,7 +538,14 @@
         "not_folder": "This ID is not a folder — use the folder ID from its address.",
         "not_shared_drive": "Folder “{{folder}}” is in My Drive, but a shared drive folder is required: a service account has no storage of its own (step 1).",
         "read_only": "The service account cannot add files to folder “{{folder}}”: give it the Content manager role (step 4).",
-        "network": "Google did not respond: server connectivity problem. Try later; if it persists, tell your hosting."
+        "network": "Google did not respond: server connectivity problem. Try later; if it persists, tell your hosting.",
+        "auth_failed": "Yandex did not accept the login or app password: check the email and that the password was created for “Files” and not deleted. Create a new password (step 3) and save it.",
+        "not_app_password": "This looks like the regular account password, but a “Files” app password (16 Latin letters) is needed: create one (steps 2–3).",
+        "webdav_forbidden": "Yandex closed WebDAV access to Disk: the Yandex 360 administrator disabled it or the account has no Disk. Allow access in the Yandex 360 admin console and check again.",
+        "no_space": "Yandex Disk is out of space: free some space (and empty the Disk Trash) or upgrade the plan.",
+        "ok_yandex": "Access works: folder “{{folder}}” on Yandex Disk, files are written and deleted.",
+        "not_folder_yandex": "The path “{{folder}}” on Disk is a file, not a folder: enter another path.",
+        "network_yandex": "Yandex Disk did not respond: server connectivity or request limits. Try later; if it persists, tell your hosting."
       },
       "steps": {
         "title": "Preparation in Google (once, ≈ 15 minutes)",
@@ -520,7 +558,7 @@
         "share": "Share the folder with the service account address as Content manager, without notification."
       },
       "form": {
-        "title": "Key and folder",
+        "title": "Offsite copy connection",
         "submit": "Save and check",
         "step1": "The key is stored encrypted; only the account address and the last characters of the key are shown.",
         "step2": "The key and folder are handed to the copy service — the first copy starts within a few minutes.",
@@ -604,9 +642,11 @@
     },
     "reasons": {
       "offsite_key_invalid": "The file is not a Google service account key. Download the JSON key again (step 3).",
-      "offsite_folder_invalid": "The folder ID is wrong: use the part of the address after /folders/.",
+      "offsite_folder_invalid": "The folder is wrong: for Google — the ID after /folders/ in the address, for Yandex — a path like RailTech-backups/prod (letters, digits, space, “-”, “_”, “.”).",
       "offsite_delivery_failed": "The key could not be handed to the copy service (storage did not respond). Nothing was saved — try again later.",
-      "offsite_not_configured": "The offsite copy is not set up yet: upload the key and enter the folder.",
+      "offsite_not_configured": "The offsite copy is not set up yet: choose Yandex Disk or Google Drive and save the access.",
+      "offsite_login_invalid": "The login is a Yandex 360 email address, e.g. backup@your-company.uz.",
+      "offsite_app_password_invalid": "Enter the “Files” app password: there is no previous one.",
       "erp_not_configured": "ERP is not connected yet.",
       "erp_invalid_url": "The ERP address is incorrect.",
       "erp_https_required": "In production the ERP address must start with https.",

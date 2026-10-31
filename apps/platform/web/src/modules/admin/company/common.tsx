@@ -10,6 +10,7 @@ import { ApiError } from "../../../shared/api/errors";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { FilePicker } from "../../../shared/ui/FileField";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 
 import "./company.css";
@@ -186,7 +187,6 @@ export function LogoField({
   deleting?: boolean;
 }) {
   const { t } = useTranslation("company");
-  const input = useRef<HTMLInputElement>(null);
   const id = useId();
   const [tooBig, setTooBig] = useState(false);
   const [broken, setBroken] = useState<string | null>(null);
@@ -211,16 +211,13 @@ export function LogoField({
           )}
         </div>
         <div className="pf-co-logo-actions">
-          <input
-            ref={input}
-            type="file"
+          <FilePicker
             accept={LOGO_TYPES}
-            className="pf-sr-only"
-            tabIndex={-1}
-            aria-label={t("logo.file", { label })}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
+            inputLabel={t("logo.file", { label })}
+            loading={uploading}
+            buttonLabel={url ? t("logo.replace") : t("logo.upload")}
+            onPick={(files) => {
+              const file = files[0];
               if (!file) return;
               if (file.size > LOGO_MAX_BYTES) {
                 setTooBig(true);
@@ -230,14 +227,6 @@ export function LogoField({
               onUpload(file);
             }}
           />
-          <Button
-            loading={uploading}
-            onClick={() => {
-              input.current?.click();
-            }}
-          >
-            {url ? t("logo.replace") : t("logo.upload")}
-          </Button>
           {url && onDelete ? (
             <Button type="link" danger loading={deleting} onClick={onDelete}>
               {t("logo.delete")}

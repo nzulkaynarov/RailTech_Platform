@@ -8,13 +8,16 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { integrationErrorText, isForbidden, isWrongPassword } from "./errors";
-import { LEVEL_TONE } from "./levels";
 
 import "./integrations.css";
 
 export function LevelTag({ level }: { level: IntegrationStatus }) {
   const { t } = useTranslation("integrations");
-  return <StatusTag tone={LEVEL_TONE[level]}>{t(`status.${level}`)}</StatusTag>;
+  return (
+    <StatusTag kind="integration" status={level}>
+      {t(`status.${level}`)}
+    </StatusTag>
+  );
 }
 
 export function Field({

@@ -48,9 +48,13 @@ function Cells({ row }: { row: StockRow }) {
 function Free({ row }: { row: StockRow }) {
   const { t } = useTranslation("stock");
   return row.free > 0 ? (
-    <StatusTag tone="green">{t("balances.free", { count: row.free })}</StatusTag>
+    <StatusTag kind="stock" status="free">
+      {t("balances.free", { count: row.free })}
+    </StatusTag>
   ) : (
-    <StatusTag tone="default">{t("balances.noFree")}</StatusTag>
+    <StatusTag kind="stock" status="none">
+      {t("balances.noFree")}
+    </StatusTag>
   );
 }
 
@@ -96,8 +100,12 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
         <thead>
           <tr>
             <th scope="col">{t("balances.columns.product")}</th>
-            <th scope="col">{t("balances.columns.onHand")}</th>
-            <th scope="col">{t("balances.columns.reserved")}</th>
+            <th scope="col" className="pf-col-num">
+              {t("balances.columns.onHand")}
+            </th>
+            <th scope="col" className="pf-col-num">
+              {t("balances.columns.reserved")}
+            </th>
             <th scope="col">{t("balances.columns.free")}</th>
             <th scope="col">{t("balances.columns.incoming")}</th>
             <th scope="col">{t("balances.columns.cells")}</th>
@@ -119,10 +127,10 @@ function Rows({ items, onOpen }: { items: readonly StockRow[]; onOpen: (row: Sto
                 </Button>
                 <div className="pf-hint pf-num">{row.article}</div>
               </td>
-              <td className="pf-num">
+              <td className="pf-col-num">
                 {row.on_hand} <span className="pf-hint">{row.unit}</span>
               </td>
-              <td className="pf-num">{row.reserved}</td>
+              <td className="pf-col-num">{row.reserved}</td>
               <td>
                 <Free row={row} />
               </td>

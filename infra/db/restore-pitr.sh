@@ -7,7 +7,7 @@
 #   restore-pitr.sh --latest                                   до конца архива (последний сохранённый момент)
 #   restore-pitr.sh --drop [--name rt-pitr]                    убрать контейнер и том восстановления
 #   restore-pitr.sh --latest --source file --file-dir <каталог>  из копии архива на диске (скачана с Google Drive:
-#                                                              infra/db/restore-from-gdrive.sh); ключ — WAL_ENC_KEY из --env-file
+#                                                              infra/db/restore-from-offsite.sh); ключ — WAL_ENC_KEY из --env-file
 # Параметры: --name <имя> (по умолчанию rt-pitr; должно начинаться с rt-pitr), --backup <имя-копии> (по умолчанию — последняя,
 #   завершённая до момента), --source primary|ext|file (хранилище: RustFS на VPS 1, внешнее S3 или каталог --file-dir), --port <порт> (опубликовать на
 #   127.0.0.1), --memory <лимит> (по умолчанию 512m: VPS 2 — 2 ГБ, боевая база держит 1,25 ГБ), --timeout <сек> (ожидание конца восстановления, по умолчанию 1800),

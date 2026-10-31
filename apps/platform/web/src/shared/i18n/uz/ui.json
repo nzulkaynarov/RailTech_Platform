@@ -52,5 +52,27 @@
     "copyNumber": "{{number}} raqamini nusxalash",
     "copied": "Raqam nusxalandi",
     "copyFailed": "Nusxalab bo‘lmadi: brauzer almashish buferiga ruxsat bermadi"
+  },
+  "fileSize": {
+    "b": "{{value}} B",
+    "kb": "{{value}} KB",
+    "mb": "{{value}} MB",
+    "gb": "{{value}} GB"
+  },
+  "date": {
+    "placeholder": "KK.OO.YYYY",
+    "from": "Dan",
+    "to": "Gacha"
+  },
+  "file": {
+    "choose": "Faylni tanlash",
+    "chooseMany": "Fayllarni tanlash",
+    "replace": "Boshqa faylni tanlash",
+    "list": "Tanlangan fayllar",
+    "remove": "Olib tashlash",
+    "removeItem": "{{name}} faylini olib tashlash",
+    "drop": "yoki shu yerga torting",
+    "tooLarge": "«{{name}}» fayli {{max}} dan katta — kichikroq fayl tanlang",
+    "wrongType": "«{{name}}» fayli mos emas: {{accept}} mumkin"
   }
 }

@@ -1739,13 +1739,13 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
-     * @description CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` — итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+     * Внешняя копия бэкапов: провайдер (Яндекс Диск или Google Drive), папка, доступ — без секретов
+     * @description CRM `GET /integrations/offsite` (OPS-GDRIVE-2, OPS-YADISK). `provider` — выбранный провайдер: `yandex` (Яндекс Диск компании, WebDAV и пароль приложения «Файлы») или `gdrive` (общий диск Google Workspace, сервисный аккаунт). Секреты не возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID ключа), у Яндекса — логин и `app_password_configured` (пароль задан, без символов). `delivered_at` и `last_check` — выбранного провайдера. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
      */
     get: operations["getOffsiteBackup"];
     /**
-     * Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
-     * @description CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+     * Выбрать провайдера внешней копии, сохранить доступ и сразу проверить
+     * @description CRM `PUT /integrations/offsite`. `provider` — `yandex` или `gdrive` (не задан — `gdrive`, как до OPS-YADISK). Яндекс Диск: `login` — адрес почты Яндекс 360, `folder_path` — путь папки на Диске (пусто — `default_folder_path`), `app_password` — пароль приложения «Файлы» (`null` — оставить прежний). Google Drive: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес. `password` — пароль администратора. Секрет хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]` или `[folder_path]`), `offsite_login_invalid` (`[login]`), `offsite_app_password_invalid` (`[app_password]` — пароля нет и прежнего нет); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
      */
     put: operations["saveOffsiteBackup"];
     post?: never;
@@ -1765,8 +1765,8 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * Проверить ключ и папку у Google
-     * @description CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы. Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+     * Проверить доступ выбранного провайдера к папке
+     * @description CRM `POST /integrations/offsite/check`. Google: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы (на Drive ничего не пишет). Яндекс: вход по WebDAV, папка (нет — создаётся), запись и удаление проверочного файла. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — доступа или папки ещё нет.
      */
     post: operations["checkOffsiteBackup"];
     delete?: never;
@@ -5603,12 +5603,27 @@ export interface components {
     };
     OffsiteBackupIn: {
       /**
+       * @description Куда идёт копия — `yandex` (Яндекс Диск, рекомендуется) или `gdrive` (общий диск Google Workspace)
+       * @default gdrive
+       * @enum {string}
+       */
+      provider: "gdrive" | "yandex";
+      /** @description Яндекс: адрес почты Яндекс 360 (логин WebDAV) */
+      login?: string;
+      /** @description Яндекс: путь папки на Диске; пусто — папка по умолчанию */
+      folder_path?: string;
+      /**
+       * Format: password
+       * @description Яндекс: пароль приложения типа «Файлы»; `null` — оставить прежний
+       */
+      app_password?: string | null;
+      /**
        * Format: password
        * @description Содержимое JSON-ключа сервисного аккаунта Google; `null` — оставить прежний
        */
       key_json?: string | null;
-      /** @description ID папки общего диска или её адрес */
-      folder_id: string;
+      /** @description Google: ID папки общего диска или её адрес */
+      folder_id?: string;
       /**
        * Format: password
        * @description Пароль администратора
@@ -5747,9 +5762,25 @@ export interface components {
       /** @constant */
       ok: true;
     };
-    /** @description Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2). Ключ не возвращается — адрес сервисного аккаунта и последние 4 символа ID ключа. */
+    /** @description Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): выбранный провайдер и настройка обоих. Секреты не возвращаются — у Google адрес сервисного аккаунта и последние 4 символа ID ключа, у Яндекса логин и признак «пароль задан». */
     OffsiteBackup: {
+      /**
+       * @description Выбранный провайдер; ещё не выбирали — `gdrive`, если он настроен, иначе `yandex`
+       * @enum {string}
+       */
+      provider: "gdrive" | "yandex";
+      /** @description Выбранный провайдер настроен */
       configured: boolean;
+      /** @description Яндекс: адрес почты Яндекс 360 */
+      login: string;
+      /** @description Яндекс: путь папки на Диске */
+      folder_path: string;
+      /** @description Яндекс: пароль приложения задан (сам пароль и его символы не возвращаются) */
+      app_password_configured: boolean;
+      /** Format: date-time */
+      app_password_updated_at: string | null;
+      /** @description Яндекс: папка по умолчанию — RailTech-backups/<окружение> */
+      default_folder_path: string;
       folder_id: string;
       client_email: string;
       key_suffix: string | null;
@@ -5757,13 +5788,13 @@ export interface components {
       key_updated_at: string | null;
       /**
        * Format: date-time
-       * @description Когда ключ и папка ушли сервису копирования
+       * @description Когда настройка выбранного провайдера ушла сервису копирования
        */
       delivered_at: string | null;
       last_check: components["schemas"]["OffsiteCheck"] | null;
       secrets_enabled: boolean;
     };
-    /** @description Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); `network` — Google не ответил (хостинг). */
+    /** @description Итог проверки доступа. `reason`: `ok`; исправляет владелец — Google: `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); Яндекс: `auth_failed` (логин или пароль приложения не приняты), `not_app_password` (введён не пароль приложения), `webdav_forbidden` (доступ к Диску по WebDAV закрыт администратором Яндекс 360), `not_folder` (по пути — файл), `no_space` (на Диске нет места); `network` — сервис не ответил (хостинг). */
     OffsiteCheck: {
       ok: boolean;
       /** @enum {string} */
@@ -5775,7 +5806,11 @@ export interface components {
         | "not_folder"
         | "not_shared_drive"
         | "read_only"
-        | "network";
+        | "network"
+        | "auth_failed"
+        | "not_app_password"
+        | "webdav_forbidden"
+        | "no_space";
       folder_name: string | null;
       /** Format: date-time */
       checked_at: string;

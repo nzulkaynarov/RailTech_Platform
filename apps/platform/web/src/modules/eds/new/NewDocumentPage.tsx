@@ -15,6 +15,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
@@ -384,16 +385,15 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
                   hint={t("documents:form.due.hint")}
                   error={errors.due_date ? fieldText(t, "due_date") : undefined}
                 >
-                  <Input
+                  <DateField
                     id={ids.due}
-                    type="date"
                     min={today}
                     value={values.dueDate}
                     status={errors.due_date ? "error" : undefined}
                     aria-invalid={errors.due_date || undefined}
                     aria-describedby={describedBy(ids.due, true, Boolean(errors.due_date))}
-                    onChange={(event) => {
-                      set("dueDate", event.target.value);
+                    onChange={(next) => {
+                      set("dueDate", next);
                     }}
                   />
                 </Field>

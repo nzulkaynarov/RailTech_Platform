@@ -10,6 +10,7 @@ import {
   useSearchCalcCatalog,
 } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
 import { clean, orderPath, useErrorText, useRefreshStock } from "./api";
 
 interface LineValues {
@@ -188,7 +189,7 @@ export function OrderCreateModal({ prices, onClose }: { prices: boolean; onClose
           <>
             <div className="pf-calc-add-row">
               <Form.Item name="expected_date" label={t("create.expected")}>
-                <Input type="date" />
+                <DateField />
               </Form.Item>
               <Form.Item name="note" label={t("create.note")}>
                 <Input maxLength={5000} />

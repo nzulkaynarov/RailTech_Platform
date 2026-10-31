@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // Клиенты · Лиды, Клиенты и «Создать заявку» (D1-2b) на MSW: менеджер — лид «Просит КП» → «Создать заявку» с письмом на
 // имя директора → заявка ЗВ видна в карточке клиента; двойная отправка — одна заявка; карточка клиента 360° и «Повторить
@@ -56,7 +57,7 @@ test.describe("Лиды → «Создать заявку» → карточка
     await page.getByRole("link", { name: "Создать заявку для Азиз Демо" }).click();
     const form = panel.getByRole("form", { name: "Создать заявку" });
     await expect(form.getByLabel("Название компании")).toHaveValue("ООО Демо-Логистик");
-    await form.getByLabel("Письмо на имя директора").setInputFiles(LETTER);
+    await pickFiles(form.getByLabel("Письмо на имя директора"), LETTER);
     await expect(form.getByText(`Письмо загружено: ${LETTER.name}`)).toBeVisible();
     await form.getByRole("radio", { name: "Срочная" }).check();
     await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(

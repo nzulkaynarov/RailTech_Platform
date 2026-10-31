@@ -18,8 +18,8 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { calcRef, useApplySheet, useErrorText } from "./api";
 import { useErrorText as useStockErrorText } from "../stock/api";
 import { MatchModal } from "./MatchModal";
+import { MoneyText } from "../../../shared/ui/MoneyText";
 
-const KIND_TONE = { goods: "blue", goods_to_order: "purple", service: "cyan" } as const;
 const GROUP_OF = { stock: "stock", supply: "supply", engineer: "engineer" } as const;
 
 /** Число с пробелами тысяч в поле ввода; в API уходит без пробелов. */
@@ -125,7 +125,9 @@ function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
       <span className="pf-calc-line-name">{line.name}</span>
       <span className="pf-calc-line-meta">
         {line.article ? <span className="pf-hint pf-num">{line.article}</span> : null}
-        <StatusTag tone={KIND_TONE[line.kind]}>{t(`lines.kind.${line.kind}`)}</StatusTag>
+        <StatusTag kind="itemKind" status={line.kind}>
+          {t(`lines.kind.${line.kind}`)}
+        </StatusTag>
       </span>
       {line.product_id === null && line.can_edit ? (
         <Button
@@ -161,16 +163,22 @@ function Stock({
   return (
     <div className="pf-calc-supplier">
       {line.stock.on_hand > 0 ? (
-        <StatusTag tone="green">{t("lines.inStock", { count: line.stock.on_hand })}</StatusTag>
+        <StatusTag kind="stock" status="free">
+          {t("lines.inStock", { count: line.stock.on_hand })}
+        </StatusTag>
       ) : (
-        <StatusTag tone="default">{t("lines.noStock")}</StatusTag>
+        <StatusTag kind="stock" status="none">
+          {t("lines.noStock")}
+        </StatusTag>
       )}
       {line.stock.cell ? (
         <span className="pf-hint">{t("lines.cell", { cell: line.stock.cell })}</span>
       ) : null}
       {free !== null ? <span className="pf-hint">{t("lines.free", { count: free })}</span> : null}
       {reserved > 0 ? (
-        <StatusTag tone="blue">{t("lines.reservedTag", { count: reserved })}</StatusTag>
+        <StatusTag kind="stock" status="reserved">
+          {t("lines.reservedTag", { count: reserved })}
+        </StatusTag>
       ) : null}
       {canStock && line.product_id !== null ? (
         <span className="pf-stock-reserve">
@@ -234,7 +242,9 @@ function Supplier({ line }: { line: CalcLine }) {
       </span>
       {supplier.offer_price ? (
         <span className="pf-hint">
-          {t("lines.offerPrice", { price: money(supplier.offer_price) })}
+          {t("lines.offerPrice", {
+            price: money(supplier.offer_price, { currency: supplier.offer_currency }),
+          })}
         </span>
       ) : null}
     </div>
@@ -243,7 +253,6 @@ function Supplier({ line }: { line: CalcLine }) {
 
 function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
   const { t } = useTranslation("calc");
-  const { money } = useFormat();
   if (line.zone === "services") {
     // Ставку и дни бригады видит `cost_margin` или держатель зоны услуг; остальным — прочерк, а не пустые поля.
     if (
@@ -280,7 +289,9 @@ function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
           />
         </label>
         {line.cost !== undefined && line.cost !== null ? (
-          <span className="pf-hint pf-num">= {money(line.cost)}</span>
+          <span className="pf-hint">
+            = <MoneyText value={line.cost} currency={line.purchase_currency} />
+          </span>
         ) : null}
       </div>
     );
@@ -306,7 +317,9 @@ function Visa({ line, actions }: { line: CalcLine; actions: Actions }) {
   if (line.visa) {
     return (
       <span className="pf-calc-visa">
-        <StatusTag tone="green">{t("lines.signedGroup", { group })}</StatusTag>
+        <StatusTag kind="visa" status="done">
+          {t("lines.signedGroup", { group })}
+        </StatusTag>
         <span className="pf-hint">{line.visa.by}</span>
         <span className="pf-sr-only">{t("lines.signed", { group, name: line.visa.by })}</span>
       </span>
@@ -326,7 +339,11 @@ function Visa({ line, actions }: { line: CalcLine; actions: Actions }) {
       </Button>
     );
   }
-  return <StatusTag tone="gold">{t("lines.waits", { group })}</StatusTag>;
+  return (
+    <StatusTag kind="visa" status="waiting">
+      {t("lines.waits", { group })}
+    </StatusTag>
+  );
 }
 
 function Remove({ line, actions }: { line: CalcLine; actions: Actions }) {
@@ -387,7 +404,6 @@ function Quantity({ line, actions }: { line: CalcLine; actions: Actions }) {
 
 function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
   const { t } = useTranslation("calc");
-  const { money } = useFormat();
   const totals = sheet.totals;
   const purchase = totals.purchase;
   const markup = totals.markup_pct;
@@ -399,11 +415,11 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
         </strong>
         {purchase !== undefined ? (
           <span>
-            {t("lines.columns.purchase")}: <span className="pf-num">{money(purchase)}</span>
+            {t("lines.columns.purchase")}: <MoneyText value={purchase} />
           </span>
         ) : null}
         <span>
-          {t("lines.columns.client")}: <span className="pf-num">{money(totals.client)}</span>
+          {t("lines.columns.client")}: <MoneyText value={totals.client} />
         </span>
         {markup !== undefined && markup !== null ? (
           <span>
@@ -418,13 +434,13 @@ function Totals({ sheet, mobile }: { sheet: CalcSheet; mobile: boolean }) {
       <th scope="row" colSpan={4}>
         {t("lines.totals")} <span className="pf-hint">· {t("lines.noVat")}</span>
       </th>
-      <td className="pf-num">
-        {purchase !== undefined ? money(purchase, { currency: false }) : "—"}
+      <td className="pf-col-num">
+        {purchase !== undefined ? <MoneyText value={purchase} currency={false} /> : "—"}
       </td>
-      <td className="pf-num">
-        <strong>{money(totals.client, { currency: false })}</strong>
+      <td className="pf-col-num">
+        <MoneyText value={totals.client} currency={false} strong />
       </td>
-      <td className="pf-num">{markup ?? "—"}</td>
+      <td className="pf-col-num">{markup ?? "—"}</td>
       <td colSpan={2} />
     </tr>
   );
@@ -513,12 +529,20 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
           <thead>
             <tr>
               <th scope="col">{t("lines.columns.position")}</th>
-              <th scope="col">{t("lines.columns.quantity")}</th>
+              <th scope="col" className="pf-col-num">
+                {t("lines.columns.quantity")}
+              </th>
               <th scope="col">{t("lines.columns.stock")}</th>
               <th scope="col">{t("lines.columns.supplier")}</th>
-              <th scope="col">{t("lines.columns.purchase")}</th>
-              <th scope="col">{t("lines.columns.client")}</th>
-              <th scope="col">{t("lines.columns.markup")}</th>
+              <th scope="col" className="pf-col-num">
+                {t("lines.columns.purchase")}
+              </th>
+              <th scope="col" className="pf-col-num">
+                {t("lines.columns.client")}
+              </th>
+              <th scope="col" className="pf-col-num">
+                {t("lines.columns.markup")}
+              </th>
               <th scope="col">{t("lines.columns.visa")}</th>
               <th scope="col">
                 <span className="pf-sr-only">{t("lines.columns.action")}</span>
@@ -536,7 +560,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                     }}
                   />
                 </td>
-                <td>
+                <td className="pf-col-num">
                   <Quantity line={line} actions={actions} />
                 </td>
                 <td>
@@ -545,13 +569,13 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <td>
                   <Supplier line={line} />
                 </td>
-                <td>
+                <td className="pf-col-num">
                   <Purchase line={line} actions={actions} />
                 </td>
-                <td>
+                <td className="pf-col-num">
                   <ClientPrice line={line} actions={actions} />
                 </td>
-                <td className="pf-num">{showMarkup ? (line.markup_pct ?? "—") : "—"}</td>
+                <td className="pf-col-num">{showMarkup ? (line.markup_pct ?? "—") : "—"}</td>
                 <td>
                   <Visa line={line} actions={actions} />
                 </td>

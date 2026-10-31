@@ -430,11 +430,7 @@ function RequestList() {
                     dataIndex: "status",
                     render: (value: CategoryRequest["status"], row) => (
                       <>
-                        <StatusTag
-                          tone={
-                            value === "pending" ? "gold" : value === "approved" ? "green" : "red"
-                          }
-                        >
+                        <StatusTag kind="categoryRequest" status={value}>
                           {t(`categories.requests.statuses.${value}`)}
                         </StatusTag>
                         {value === "approved" && row.resulting_category_name ? (

@@ -6,25 +6,18 @@ import { isActionable } from "../../modules/bridge";
 import { objectLink } from "../../modules/objectLinks";
 import { WhereToDo } from "../../modules/stub/WhereToDo";
 import type { Notification } from "../../shared/api/generated/model";
-import { TONE_STYLE, type StatusTone } from "../../shared/lib/statuses";
+import { statusStyle } from "../../shared/lib/statuses";
 import { relativeTime } from "./relativeTime";
 import "./notifications.css";
 
-/** Цвет значка по вкладке: решения — золотой, клиенты — бирюзовый, система — красный (текст ≥ 4.5:1 на своём фоне). */
-const TAB_TONE: Record<Notification["tab"], StatusTone> = {
-  all: "blue",
-  decisions: "gold",
-  clients: "cyan",
-  system: "red",
-};
-
+/** Цвет значка по вкладке — карта `notification` (`STATUS_TONE`): решения — золотой, клиенты — бирюзовый, система — красный. */
 export function NotificationChip({ item }: { item: Pick<Notification, "tab" | "object"> }) {
   const { t } = useTranslation("shell");
   const text = item.object
     ? t(`notifications.kindChip.${item.object.kind}`)
     : t(`notifications.tabChip.${item.tab}`);
   return (
-    <span className="pf-chip" style={TONE_STYLE[TAB_TONE[item.tab]]} aria-hidden="true">
+    <span className="pf-chip" style={statusStyle("notification", item.tab)} aria-hidden="true">
       {text}
     </span>
   );

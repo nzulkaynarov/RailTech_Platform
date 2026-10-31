@@ -30,14 +30,6 @@ import { TaskSlot } from "./TaskPanel";
 
 import "./calc.css";
 
-const STATE_TONE = {
-  not_started: "default",
-  in_progress: "blue",
-  returned: "gold",
-  at_director: "purple",
-  rejected: "red",
-  approved: "green",
-} as const;
 const GROUPS = ["stock", "supply", "engineer"] as const;
 
 function stateOf(sheet: CalcSheet) {
@@ -141,7 +133,9 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
   if (stateOf(sheet) === "at_director") {
     return (
       <div className="pf-calc-ready">
-        <StatusTag tone="purple">{t("ready.done")}</StatusTag>
+        <StatusTag kind="quote" status="at_director">
+          {t("ready.done")}
+        </StatusTag>
       </div>
     );
   }
@@ -206,7 +200,9 @@ function Content({ sheet }: { sheet: CalcSheet }) {
         subtitle={subtitle}
         extra={
           <div className="pf-calc-row">
-            <StatusTag tone={STATE_TONE[state]}>{t(`state.${state}`)}</StatusTag>
+            <StatusTag kind="quote" status={state}>
+              {t(`state.${state}`)}
+            </StatusTag>
             {sheet.quote !== null && sheet.rights.stock === true ? (
               <Button
                 onClick={() => {

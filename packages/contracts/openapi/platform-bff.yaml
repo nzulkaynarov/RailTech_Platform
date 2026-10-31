@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.29.0
+  version: 0.30.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -3393,11 +3393,13 @@ paths:
     get:
       tags: [integrations]
       operationId: getOffsiteBackup
-      summary: 'Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска'
+      summary: 'Внешняя копия бэкапов: провайдер (Яндекс Диск или Google Drive), папка, доступ — без секретов'
       description: >-
-        CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и
-        `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` —
-        итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+        CRM `GET /integrations/offsite` (OPS-GDRIVE-2, OPS-YADISK). `provider` — выбранный провайдер: `yandex` (Яндекс Диск
+        компании, WebDAV и пароль приложения «Файлы») или `gdrive` (общий диск Google Workspace, сервисный аккаунт). Секреты не
+        возвращаются: у Google — адрес аккаунта и `key_suffix` (последние 4 символа ID ключа), у Яндекса — логин и
+        `app_password_configured` (пароль задан, без символов). `delivered_at` и `last_check` — выбранного провайдера.
+        Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
       responses:
         '200':
           description: Готово
@@ -3414,14 +3416,18 @@ paths:
     put:
       tags: [integrations]
       operationId: saveOffsiteBackup
-      summary: 'Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google'
+      summary: 'Выбрать провайдера внешней копии, сохранить доступ и сразу проверить'
       description: >-
-        CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить
-        прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится
-        зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`:
-        `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`,
-        `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`);
-        `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+        CRM `PUT /integrations/offsite`. `provider` — `yandex` или `gdrive` (не задан — `gdrive`, как до OPS-YADISK).
+        Яндекс Диск: `login` — адрес почты Яндекс 360, `folder_path` — путь папки на Диске (пусто — `default_folder_path`),
+        `app_password` — пароль приложения «Файлы» (`null` — оставить прежний). Google Drive: `key_json` — содержимое
+        JSON-ключа сервисного аккаунта (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес.
+        `password` — пароль администратора. Секрет хранится зашифрованным и доставляется сервису копирования без захода на
+        сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`;
+        `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на
+        `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]` или `[folder_path]`), `offsite_login_invalid`
+        (`[login]`), `offsite_app_password_invalid` (`[app_password]` — пароля нет и прежнего нет); `INTEGRATION_FAILED`
+        (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -3458,10 +3464,11 @@ paths:
     post:
       tags: [integrations]
       operationId: checkOffsiteBackup
-      summary: 'Проверить ключ и папку у Google'
+      summary: 'Проверить доступ выбранного провайдера к папке'
       description: >-
-        CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы.
-        Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+        CRM `POST /integrations/offsite/check`. Google: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять
+        файлы (на Drive ничего не пишет). Яндекс: вход по WebDAV, папка (нет — создаётся), запись и удаление проверочного
+        файла. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — доступа или папки ещё нет.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       responses:
@@ -10762,8 +10769,22 @@ components:
     OffsiteBackupIn:
       type: object
       additionalProperties: false
-      required: [folder_id, password]
+      required: [password]
       properties:
+        provider:
+          type: string
+          enum: [gdrive, yandex]
+          default: gdrive
+          description: Куда идёт копия — `yandex` (Яндекс Диск, рекомендуется) или `gdrive` (общий диск Google Workspace)
+        login: {type: string, maxLength: 254, description: 'Яндекс: адрес почты Яндекс 360 (логин WebDAV)'}
+        folder_path: {type: string, maxLength: 255, description: 'Яндекс: путь папки на Диске; пусто — папка по умолчанию'}
+        app_password:
+          type: [string, 'null']
+          format: password
+          writeOnly: true
+          minLength: 1
+          maxLength: 256
+          description: 'Яндекс: пароль приложения типа «Файлы»; `null` — оставить прежний'
         key_json:
           type: [string, 'null']
           format: password
@@ -10771,7 +10792,7 @@ components:
           minLength: 1
           maxLength: 16384
           description: Содержимое JSON-ключа сервисного аккаунта Google; `null` — оставить прежний
-        folder_id: {type: string, minLength: 1, maxLength: 512, description: ID папки общего диска или её адрес}
+        folder_id: {type: string, maxLength: 512, description: 'Google: ID папки общего диска или её адрес'}
         password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256, description: Пароль администратора}
 
     ServiceSwitchIn:
@@ -10947,34 +10968,44 @@ components:
       additionalProperties: false
     OffsiteBackup:
       description: >-
-        Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2). Ключ не возвращается — адрес сервисного аккаунта и последние
-        4 символа ID ключа.
+        Внешняя копия бэкапов (OPS-GDRIVE-2, OPS-YADISK): выбранный провайдер и настройка обоих. Секреты не возвращаются —
+        у Google адрес сервисного аккаунта и последние 4 символа ID ключа, у Яндекса логин и признак «пароль задан».
       properties:
-        configured: {type: boolean}
+        provider: {type: string, enum: [gdrive, yandex], description: 'Выбранный провайдер; ещё не выбирали — `gdrive`, если он настроен, иначе `yandex`'}
+        configured: {type: boolean, description: Выбранный провайдер настроен}
+        login: {type: string, description: 'Яндекс: адрес почты Яндекс 360'}
+        folder_path: {type: string, description: 'Яндекс: путь папки на Диске'}
+        app_password_configured: {type: boolean, description: 'Яндекс: пароль приложения задан (сам пароль и его символы не возвращаются)'}
+        app_password_updated_at: {format: date-time, type: [string, 'null']}
+        default_folder_path: {type: string, description: 'Яндекс: папка по умолчанию — RailTech-backups/<окружение>'}
         folder_id: {type: string}
         client_email: {type: string}
         key_suffix: {type: [string, 'null']}
         key_updated_at: {format: date-time, type: [string, 'null']}
-        delivered_at: {format: date-time, type: [string, 'null'], description: Когда ключ и папка ушли сервису копирования}
+        delivered_at: {format: date-time, type: [string, 'null'], description: Когда настройка выбранного провайдера ушла сервису копирования}
         last_check:
           oneOf:
             - $ref: '#/components/schemas/OffsiteCheck'
             - type: 'null'
         secrets_enabled: {type: boolean}
-      required: [configured, folder_id, client_email, key_suffix, key_updated_at, delivered_at, last_check, secrets_enabled]
+      required: [provider, configured, folder_id, client_email, key_suffix, key_updated_at, login, folder_path, app_password_configured,
+        app_password_updated_at, default_folder_path, delivered_at, last_check, secrets_enabled]
       type: object
       additionalProperties: false
     OffsiteCheck:
       description: >-
-        Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён),
+        Итог проверки доступа. `reason`: `ok`; исправляет владелец — Google: `key_rejected` (ключ отозван или удалён),
         `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа),
-        `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»);
-        `network` — Google не ответил (хостинг).
+        `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); Яндекс:
+        `auth_failed` (логин или пароль приложения не приняты), `not_app_password` (введён не пароль приложения),
+        `webdav_forbidden` (доступ к Диску по WebDAV закрыт администратором Яндекс 360), `not_folder` (по пути — файл),
+        `no_space` (на Диске нет места); `network` — сервис не ответил (хостинг).
       properties:
         ok: {type: boolean}
         reason:
           type: string
-          enum: [ok, key_rejected, drive_api_disabled, folder_not_found, not_folder, not_shared_drive, read_only, network]
+          enum: [ok, key_rejected, drive_api_disabled, folder_not_found, not_folder, not_shared_drive, read_only, network, auth_failed,
+            not_app_password, webdav_forbidden, no_space]
         folder_name: {type: [string, 'null']}
         checked_at: {format: date-time, type: string}
       required: [ok, reason, folder_name, checked_at]

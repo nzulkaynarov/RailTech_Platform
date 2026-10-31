@@ -15,7 +15,6 @@ import { calcPath, calcRef, useStateLabels } from "./api";
 const GROUPS = ["stock", "supply", "engineer"] as const;
 /** Зона резолюции, исполнители которой визируют группу строк: склад и снабжение — товары, гл. инженер — услуги. */
 const ZONE_OF = { stock: "goods", supply: "goods", engineer: "services" } as const;
-const TONE = { done: "green", waiting: "gold", none: "default" } as const;
 
 function VisaRow({
   group,
@@ -31,7 +30,7 @@ function VisaRow({
     <li className="pf-calc-task-visa">
       <div className="pf-calc-task-visa-head">
         <strong>{t(`groups.${group}`)}</strong>
-        <StatusTag tone={TONE[data.state]}>
+        <StatusTag kind="visa" status={data.state}>
           {t(`task.state.${data.state}`)}
           {data.total ? ` · ${t("task.counts", { signed: data.signed, total: data.total })}` : ""}
         </StatusTag>

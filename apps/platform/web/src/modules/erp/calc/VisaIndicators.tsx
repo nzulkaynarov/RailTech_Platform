@@ -1,14 +1,9 @@
 import { useTranslation } from "react-i18next";
 
-import type { CalcVisaIndicators, CalcVisaState } from "../../../shared/api/generated/model";
+import type { CalcVisaIndicators } from "../../../shared/api/generated/model";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 
 const GROUPS = ["stock", "supply", "engineer"] as const;
-const TONE: Record<CalcVisaState, "green" | "gold" | "default"> = {
-  done: "green",
-  waiting: "gold",
-  none: "default",
-};
 
 /**
  * Три индикатора виз заявки (SPEC-v3 §7.4): склад — товары со склада, снабжение — товары под заказ, гл. инженер — услуги.
@@ -23,7 +18,7 @@ export function VisaIndicators({ visas }: { visas: CalcVisaIndicators }) {
         const name = t(`groups.${group}`);
         return (
           <li key={group}>
-            <StatusTag tone={TONE[state]}>
+            <StatusTag kind="visa" status={state}>
               <span aria-hidden="true">{t(`visaState.${state}`, { group: name })}</span>
               <span className="pf-sr-only">{t(`visaState.${state}Label`, { group: name })}</span>
             </StatusTag>

@@ -6516,6 +6516,10 @@ export const getGetOffsiteBackupResponseOffsiteCheckMock = (
       "not_shared_drive",
       "read_only",
       "network",
+      "auth_failed",
+      "not_app_password",
+      "webdav_forbidden",
+      "no_space",
     ] as const),
     folder_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -6529,7 +6533,16 @@ export const getGetOffsiteBackupResponseOffsiteCheckMock = (
 export const getGetOffsiteBackupResponseMock = (
   overrideResponse: Partial<Extract<OffsiteBackup, object>> = {},
 ): OffsiteBackup => ({
+  provider: faker.helpers.arrayElement(["gdrive", "yandex"] as const),
   configured: faker.datatype.boolean(),
+  login: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  folder_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  app_password_configured: faker.datatype.boolean(),
+  app_password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  default_folder_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   folder_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   key_suffix: faker.helpers.arrayElement([
@@ -6566,6 +6579,10 @@ export const getSaveOffsiteBackupResponseOffsiteCheckMock = (
       "not_shared_drive",
       "read_only",
       "network",
+      "auth_failed",
+      "not_app_password",
+      "webdav_forbidden",
+      "no_space",
     ] as const),
     folder_name: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -6579,7 +6596,16 @@ export const getSaveOffsiteBackupResponseOffsiteCheckMock = (
 export const getSaveOffsiteBackupResponseMock = (
   overrideResponse: Partial<Extract<OffsiteBackup, object>> = {},
 ): OffsiteBackup => ({
+  provider: faker.helpers.arrayElement(["gdrive", "yandex"] as const),
   configured: faker.datatype.boolean(),
+  login: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  folder_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  app_password_configured: faker.datatype.boolean(),
+  app_password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  default_folder_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   folder_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
   client_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   key_suffix: faker.helpers.arrayElement([
@@ -6615,6 +6641,10 @@ export const getCheckOffsiteBackupResponseMock = (
     "not_shared_drive",
     "read_only",
     "network",
+    "auth_failed",
+    "not_app_password",
+    "webdav_forbidden",
+    "no_space",
   ] as const),
   folder_name: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),

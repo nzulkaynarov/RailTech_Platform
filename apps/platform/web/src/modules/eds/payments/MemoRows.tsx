@@ -33,7 +33,7 @@ function Status({ row }: { row: PaymentMemoRow }) {
   const { t } = useTranslation("payments");
   const { date } = useFormat();
   return (
-    <StatusTag tone={row.status === "paid" ? "green" : "blue"}>
+    <StatusTag kind="memo" status={row.status}>
       {t(`memo.status.${row.status}`)}
       {row.paid_on ? ` · ${t("memo.paidOn", { date: date(row.paid_on) })}` : ""}
     </StatusTag>
@@ -122,7 +122,7 @@ export function MemoRows({
           <tr>
             <th scope="col">{t("memo.columns.number")}</th>
             <th scope="col">{t("memo.columns.author")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("memo.columns.amount")}
             </th>
             <th scope="col">{t("memo.columns.due")}</th>
@@ -159,7 +159,7 @@ export function MemoRows({
               <td className="pf-ell" title={row.author.full_name}>
                 {row.author.full_name}
               </td>
-              <td className="pf-dec-right">
+              <td className="pf-col-num">
                 {row.amount ? <MoneyText {...moneyProps(row.amount)} /> : "—"}
               </td>
               <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>

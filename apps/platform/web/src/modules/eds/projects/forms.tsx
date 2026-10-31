@@ -2,19 +2,11 @@ import { Button, Input, Upload } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { formatFileSize } from "../../../shared/lib/fileSize";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { scanProblem } from "./model";
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
-
-function sizeText(bytes: number, language: string): string {
-  const mb = bytes / (1024 * 1024);
-  const value =
-    mb >= 1
-      ? `${mb.toLocaleString(language, { maximumFractionDigits: 1 })} MB`
-      : `${Math.max(1, Math.round(bytes / 1024)).toLocaleString(language)} KB`;
-  return value;
-}
 
 export interface ScanFormLabels {
   label: string;
@@ -73,7 +65,7 @@ export function ScanForm({
       </FormField>
       {file ? (
         <p className="pf-hint" role="status">
-          {t("files.selected", { name: file.name, size: sizeText(file.size, i18n.language) })}
+          {t("files.selected", { name: file.name, size: formatFileSize(file.size, i18n.language) })}
         </p>
       ) : null}
       {problem === "tooLarge" ? <p className="pf-field-error">{t("files.tooLarge")}</p> : null}

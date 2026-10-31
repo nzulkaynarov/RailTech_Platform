@@ -14,4 +14,8 @@ export const OffsiteCheckReason = {
   not_shared_drive: "not_shared_drive",
   read_only: "read_only",
   network: "network",
+  auth_failed: "auth_failed",
+  not_app_password: "not_app_password",
+  webdav_forbidden: "webdav_forbidden",
+  no_space: "no_space",
 } as const;

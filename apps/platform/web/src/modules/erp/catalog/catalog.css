@@ -42,10 +42,6 @@
   font-size: 13px;
   white-space: nowrap;
 }
-.pf-cat-table td.num,
-.pf-cat-table th.num {
-  text-align: right;
-}
 .pf-cat-table tr[data-selected="true"] {
   background: #e6f4ff;
 }

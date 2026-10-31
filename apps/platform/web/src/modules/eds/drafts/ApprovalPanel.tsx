@@ -34,14 +34,7 @@ function Brief({ quote }: { quote: QuoteApprovalCard }) {
           { label: t("panel.brief.request"), value: quote.request?.number },
           {
             label: t("panel.brief.total"),
-            value: total ? (
-              <MoneyText
-                value={total}
-                {...(quote.totals && quote.totals.currency !== "UZS"
-                  ? { currency: quote.totals.currency }
-                  : {})}
-              />
-            ) : null,
+            value: total ? <MoneyText value={total} currency={quote.totals?.currency} /> : null,
           },
           { label: t("panel.brief.due"), value: quote.due ? date(quote.due) : null },
         ]}

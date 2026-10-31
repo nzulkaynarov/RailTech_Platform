@@ -6,22 +6,13 @@ import { NotificationCenter } from "../../features/notifications/NotificationCen
 import type { ActivityItem } from "../../shared/api/generated/model";
 import { useGetActivityToday } from "../../shared/api/generated/platform-bff";
 import { usePollQuery } from "../../shared/api/polling";
-import { type StatusTone, TONE_STYLE } from "../../shared/lib/statuses";
+import { avatarStyle } from "../../shared/lib/statuses";
 import { useFormat } from "../../shared/lib/useFormat";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { objectLink } from "../objectLinks";
 import { moduleName } from "../registry";
 import "../../features/notifications/notifications.css";
-
-const AVATAR_TONES: readonly StatusTone[] = ["blue", "gold", "cyan", "purple"];
-
-/** Цвет аватара — по имени сотрудника: один человек всегда одного цвета. */
-function toneOf(name: string): StatusTone {
-  let hash = 0;
-  for (const char of name) hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % 997;
-  return AVATAR_TONES[hash % AVATAR_TONES.length] ?? "blue";
-}
 
 function Row({ item }: { item: ActivityItem }) {
   const format = useFormat();
@@ -35,7 +26,7 @@ function Row({ item }: { item: ActivityItem }) {
   const hint = [module, item.object?.number, format.activity(item.at)].filter(Boolean).join(" · ");
   const body = (
     <>
-      <span className="pf-chip" style={TONE_STYLE[toneOf(item.actor.name)]} aria-hidden="true">
+      <span className="pf-chip" style={avatarStyle(item.actor.name)} aria-hidden="true">
         {item.actor.initials}
       </span>
       <span style={{ minWidth: 0 }}>

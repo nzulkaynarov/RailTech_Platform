@@ -1,6 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App, Button, Drawer, Input, Select, Skeleton } from "antd";
-import type { TFunction } from "i18next";
 import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -22,10 +21,12 @@ import {
   useListTechDocs,
   useUploadTechDoc,
 } from "../../../shared/api/generated/platform-bff";
+import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { FileField } from "../../../shared/ui/FileField";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -41,15 +42,6 @@ const PdfViewer = lazy(() => import("./PdfViewer"));
 const KINDS: readonly TechDocKind[] = ["tz", "drawing", "certificate", "pnr", "other"];
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx";
-
-function sizeLabel(t: TFunction, bytes: number, language: string): string {
-  const mb = bytes / (1024 * 1024);
-  const kb = bytes / 1024;
-  const fmt = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
-  return mb >= 1
-    ? t("docs.size.mb", { value: fmt.format(mb) })
-    : t("docs.size.kb", { value: fmt.format(Math.max(kb, 0.1)) });
-}
 
 /**
  * Расчёт · Техдокументация (`/erp/docs`, SPEC-v3 §7.4, B-019 часть «ERP · Документация», D2-3): ТЗ, чертежи, сертификаты
@@ -143,7 +135,7 @@ export function DocsScreen() {
       key: "size",
       title: t("catalog:docs.columns.size"),
       num: true,
-      render: (row) => sizeLabel(t, row.size_bytes, i18n.language),
+      render: (row) => formatFileSize(row.size_bytes, i18n.language),
     },
     {
       key: "who",
@@ -318,7 +310,7 @@ function DocDrawer({
               { label: t("docs.fields.kind"), value: t(`docKinds.${doc.kind}`) },
               {
                 label: t("docs.fields.file"),
-                value: `${doc.original_name} · ${sizeLabel(t, doc.size_bytes, i18n.language)}`,
+                value: `${doc.original_name} · ${formatFileSize(doc.size_bytes, i18n.language)}`,
               },
               {
                 label: t("docs.fields.product"),
@@ -482,13 +474,14 @@ function UploadForm({
       onCancel={onClose}
     >
       <FormField id={ids.file} label={t("docs.form.file")} hint={t("docs.form.fileHint")}>
-        <input
+        <FileField
           id={ids.file}
-          type="file"
+          value={file ? [file] : []}
           accept={ACCEPT}
+          aria-describedby={`${ids.file}-hint`}
           aria-invalid={fields.includes("file") || problem !== null}
-          onChange={(event) => {
-            pick(event.target.files?.[0] ?? null);
+          onChange={(files) => {
+            pick(files[0] ?? null);
           }}
         />
       </FormField>

@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { chooseOption } from "./support/fields";
 
 // Admin · Журнал интеграций на MSW (W13-A2): подписчики трёх доменов с состоянием словом, «Повторить все dead» с «Что
 // произойдёт», DLQ и «Повторить доставку», доставки с фильтрами, входящие с ошибками и «Повторить обработку»; директору и
@@ -119,7 +120,7 @@ test.describe("Журнал интеграций: администратор", (
     const table = page.getByRole("table", { name: "Доставки событий подписчикам" });
     await expect(table.getByRole("row")).toHaveCount(12);
 
-    await page.getByLabel("Домен").selectOption({ label: "ERP" });
+    await chooseOption(page.getByLabel("Домен"), "ERP");
     await expect(table.getByRole("row")).toHaveCount(5);
     await page.getByLabel("Тип события содержит").fill("quote");
     await expect(table.getByRole("row")).toHaveCount(2);

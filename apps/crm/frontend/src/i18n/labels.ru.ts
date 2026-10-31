@@ -168,6 +168,7 @@ export const labelsRu = {
     "integrations.erp": "Настроил коннектор ERP",
     "integrations.smtp": "Настроил коннектор «Почта»",
     "integrations.offsite_gdrive": "Настроил внешнюю копию бэкапов (Google Drive)",
+    "integrations.offsite_yandex": "Настроил внешнюю копию бэкапов (Яндекс Диск)",
     "user.invite": "Отправил приглашение по почте",
     "user.reset_password_email": "Сбросил пароль и отправил по почте",
     "user.password_reset_link": "Задал новый пароль по ссылке из письма",

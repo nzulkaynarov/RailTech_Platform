@@ -9,6 +9,7 @@ import {
   getDownloadEdsDocumentFileUrl,
   useGetEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
+import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { DocNumber } from "../../../shared/ui/DocNumber";
@@ -17,7 +18,6 @@ import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { reasonText } from "./errors";
-import { formatFileSize } from "./fileSize";
 import { DocumentStatusTag } from "./status";
 
 import "./documents.css";
@@ -135,10 +135,7 @@ function Details({ doc }: { doc: EdsDocument }) {
         {
           label: t("panel.fields.amount"),
           value: doc.amount ? (
-            <MoneyText
-              value={doc.amount.amount}
-              {...(doc.amount.currency === "UZS" ? {} : { currency: doc.amount.currency })}
-            />
+            <MoneyText value={doc.amount.amount} currency={doc.amount.currency} />
           ) : null,
         },
         { label: t("panel.fields.due"), value: doc.due_date ? date(doc.due_date) : null },

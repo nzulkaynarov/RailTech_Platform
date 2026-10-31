@@ -162,10 +162,7 @@ function ActBody({
             {
               label: t("act.fields.total"),
               value: act.total ? (
-                <MoneyText
-                  value={act.total.amount}
-                  {...(act.total.currency === "UZS" ? {} : { currency: act.total.currency })}
-                />
+                <MoneyText value={act.total.amount} currency={act.total.currency} />
               ) : null,
             },
             { label: t("act.fields.issued"), value: act.issued_at ? date(act.issued_at) : null },

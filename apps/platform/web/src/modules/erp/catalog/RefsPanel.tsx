@@ -22,6 +22,7 @@ import {
   useUpdateManufacturer,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -84,7 +85,7 @@ function RatesView() {
       key: "source",
       title: t("refs.rates.columns.source"),
       render: (row) => (
-        <StatusTag tone={row.source === "MANUAL" ? "gold" : "blue"}>
+        <StatusTag kind="origin" status={row.source}>
           {t(`refs.rates.source.${row.source}`)}
         </StatusTag>
       ),
@@ -178,14 +179,11 @@ function RateForm({ onClose }: { onClose: () => void }) {
       onCancel={onClose}
     >
       <FormField id={ids.day} label={t("refs.rates.form.date")}>
-        <Input
+        <DateField
           id={ids.day}
-          type="date"
           value={day}
           status={fields.includes("rate_date") ? "error" : undefined}
-          onChange={(e) => {
-            setDay(e.target.value);
-          }}
+          onChange={setDay}
         />
       </FormField>
       <FormField
@@ -260,7 +258,7 @@ function HsView() {
       title: t("refs.hs.columns.state"),
       render: (row) => (
         <>
-          <StatusTag tone={row.is_active ? "green" : "default"}>
+          <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
             {row.is_active ? t("refs.hs.active") : t("refs.hs.closed")}
           </StatusTag>
           {row.valid_until ? (
@@ -447,14 +445,11 @@ function HsForm({ code, onClose }: { code?: HsCode | undefined; onClose: () => v
         </FormField>
       </div>
       <FormField id={ids.until} label={t("refs.hs.form.until")} hint={t("refs.hs.form.untilHint")}>
-        <Input
+        <DateField
           id={ids.until}
-          type="date"
           value={until}
           status={fields.includes("valid_until") ? "error" : undefined}
-          onChange={(e) => {
-            setUntil(e.target.value);
-          }}
+          onChange={setUntil}
         />
       </FormField>
     </FormModal>
@@ -509,7 +504,7 @@ function BrandsView() {
       key: "state",
       title: t("refs.brands.columns.state"),
       render: (row) => (
-        <StatusTag tone={row.is_active ? "green" : "default"}>
+        <StatusTag kind="activity" status={row.is_active ? "active" : "inactive"}>
           {row.is_active ? t("refs.brands.active") : t("refs.brands.inactive")}
         </StatusTag>
       ),

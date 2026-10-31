@@ -10,6 +10,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { chooseOption } from "./support/fields";
 
 // Admin · Ролевая матрица на MSW (R-2, ADR-0012): роли — данные. Админ создаёт роль «Менеджер и бухгалтер», выдаёт её
 // сотруднику, тот после входа видит ровно её модули и разделы; системные роли не редактируются; роль с сотрудниками
@@ -68,11 +69,11 @@ test.describe("Ролевая матрица: роли — данные", () => 
     const leads = matrix(page).getByRole("combobox", {
       name: `Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «${MIXED}»`,
     });
-    await leads.selectOption({ label: "Полный доступ" });
+    await chooseOption(leads, "Полный доступ");
     const payments = matrix(page).getByRole("combobox", {
       name: `Счета и оплаты · подтвердить оплату, запросить платёжку — роль «${MIXED}»`,
     });
-    await payments.selectOption({ label: "Полный доступ" });
+    await chooseOption(payments, "Полный доступ");
     const consequence = panel.getByRole("group", { name: "Что произойдёт" });
     await expect(consequence.getByText("Роль открывает модули: Клиенты, Документы.")).toBeVisible();
     await settledScreenshot(page, "roles-new");
@@ -152,7 +153,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     const summary = matrix(page).getByRole("combobox", {
       name: "Сводка по компании — роль «Менеджер»",
     });
-    await summary.selectOption({ label: "Только чтение" });
+    await chooseOption(summary, "Только чтение");
     const consequence = panel.getByRole("group", { name: "Что произойдёт" });
     await expect(
       consequence.getByText(/сотрудник\S* получат: Главная · Сводка по компании \(только чтение\)/),

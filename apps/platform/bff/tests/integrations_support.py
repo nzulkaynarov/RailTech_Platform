@@ -109,9 +109,17 @@ def bot_profile(**over: Any) -> dict[str, Any]:
 
 
 def offsite_status(**over: Any) -> dict[str, Any]:
-    """CRM `GET /integrations/offsite` (OPS-GDRIVE-2): ключа нет — только адрес и последние 4."""
+    """CRM `GET /integrations/offsite` (OPS-GDRIVE-2, OPS-YADISK): ключа и пароля нет — только
+    адрес,
+    последние 4 символа ID ключа, логин Яндекса и признак «пароль задан»."""
     return {
+        "provider": "gdrive",
         "configured": True,
+        "login": "",
+        "folder_path": "",
+        "app_password_configured": False,
+        "app_password_updated_at": None,
+        "default_folder_path": "RailTech-backups/prod",
         "folder_id": "0AbCdEfGhIjKlMnOpQrStUvWxYz",
         "client_email": "rt-offsite-backup@rt-backups.iam.gserviceaccount.com",
         "key_suffix": "1a2b",

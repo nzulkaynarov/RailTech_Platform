@@ -226,6 +226,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "offsite_folder_invalid",
         "offsite_not_configured",
         "offsite_delivery_failed",
+        "offsite_login_invalid",
+        "offsite_app_password_invalid",
         "lead_exists",
         "client_exists",
         "contact_required",

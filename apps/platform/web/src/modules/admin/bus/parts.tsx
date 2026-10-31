@@ -1,4 +1,4 @@
-import { Button } from "antd";
+import { Button, Select } from "antd";
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -9,10 +9,10 @@ import { domainName, troubledSources } from "./format";
 import "./bus.css";
 
 /**
- * Фильтр-список — родной `select` с подписью: доступен с клавиатуры и скринридеру без обходных путей, на телефоне
- * открывает системный список; вид — как у полей antd (32 px, рамка #d9d9d9, радиус 6).
+ * Фильтр-список — antd `Select` с подписью `label for={id}` (UX-2a: системных `select` в Платформе нет); поиск — когда
+ * вариантов больше семи; вид и высота — как у остальных полей фильтра.
  */
-export function NativeSelect<T extends string>({
+export function FilterSelect<T extends string>({
   id,
   value,
   onChange,
@@ -24,20 +24,18 @@ export function NativeSelect<T extends string>({
   options: readonly { value: T; label: string }[];
 }) {
   return (
-    <select
+    <Select<T>
       id={id}
       className="pf-bus-select"
       value={value}
-      onChange={(event) => {
-        onChange(event.target.value as T);
+      showSearch={options.length > 7}
+      optionFilterProp="label"
+      popupMatchSelectWidth={false}
+      options={options.map((option) => ({ value: option.value, label: option.label }))}
+      onChange={(next) => {
+        onChange(next);
       }}
-    >
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>
-          {option.label}
-        </option>
-      ))}
-    </select>
+    />
   );
 }
 

@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
+import { fillDate } from "../../../test/fields";
 import { listSettled } from "../../../test/settled";
 
 setupCalcTests();
@@ -202,9 +203,7 @@ describe("Склад · заказы поставщикам", () => {
     const confirm = await screen.findByRole("dialog");
     const submit = within(confirm).getByRole("button", { name: "Подтвердить" });
     expect(submit).toBeDisabled();
-    fireEvent.change(within(confirm).getByLabelText("Подтверждённая дата поставки"), {
-      target: { value: "2099-01-15" },
-    });
+    fillDate(within(confirm).getByLabelText("Подтверждённая дата поставки"), "2099-01-15");
     fireEvent.click(submit);
     expect(await screen.findByText("Заказ подтверждён")).toBeVisible();
     await screen.findByRole("button", { name: "Принять товар" });
