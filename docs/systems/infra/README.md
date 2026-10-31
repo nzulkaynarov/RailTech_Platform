@@ -8,7 +8,7 @@
 | `ai/` | `litellm.config.yaml` (шлюз, бюджеты, fallbacks), `litellm.models.yaml` (алиасы CRM и ERP по умолчанию; засевает `litellm-seed`) | M0-INF-03 ✓, ADR-0005 |
 | `db/` | `init-databases.sh`: базы `crm`, `erp`, `eds`, `litellm`, `langfuse` на одной инстанции (ADR-0002), pgvector в `crm`; прод — роли `<база>_app` (`prod-init.sh`), бэкапы — M5-INF-01; `eds` — волна 12 | M0-INF-03 ✓ |
 | `deploy/` | скрипты деплоя и отката прода (`deploy.sh <тег>`) | M5-INF-01 |
-| `offsite/` | `gdrive-sync.sh` — внешняя копия архива WAL-G на корпоративный Google Drive (сервис `offsite-backup`, только прод); [`offsite-gdrive.md`](../../runbooks/offsite-gdrive.md) | OPS-GDRIVE |
+| `offsite/` | `offsite-sync.sh` — внешняя копия архива WAL-G на Яндекс Диск компании (WebDAV) или общий диск Google Workspace (сервис `offsite-backup`, только прод); [`offsite-gdrive.md`](../../runbooks/offsite-gdrive.md) | OPS-GDRIVE, OPS-YADISK |
 | CI | `.github/workflows/ci.yml` — пояснения в [`ci.md`](ci.md) | M0-INF-04 |
 
 Запуск и устройство стенда — `docs/runbooks/stand.md`. Секретов здесь нет: только `.env.example` в корне (ORCHESTRATOR §3.6).
