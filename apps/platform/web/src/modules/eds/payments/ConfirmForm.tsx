@@ -30,7 +30,7 @@ export interface ConfirmFormProps {
 export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProps) {
   const { t } = useTranslation("payments");
   const { message } = App.useApp();
-  const { money } = useFormat();
+  const { money, currency: currencyText } = useFormat();
   const refresh = useRefreshPayments();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
@@ -183,7 +183,7 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
           value={amount}
           inputMode="decimal"
           autoComplete="off"
-          suffix={currency}
+          suffix={currencyText(currency)}
           aria-describedby={`${id("amount")}-hint`}
           aria-invalid={normalized === null}
           onChange={(event) => {

@@ -35,13 +35,13 @@ function Items({ card }: { card: PaymentCard }) {
         <thead>
           <tr>
             <th scope="col">{t("items.columns.name")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("items.columns.quantity")}
             </th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("items.columns.price")}
             </th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("items.columns.total")}
             </th>
           </tr>
@@ -50,30 +50,30 @@ function Items({ card }: { card: PaymentCard }) {
           {card.items.map((item, index) => (
             <tr key={index}>
               <td>{item.description}</td>
-              <td className="pf-dec-right pf-num">{item.quantity}</td>
-              <td className="pf-dec-right">{money(item.unit_price)}</td>
-              <td className="pf-dec-right">{money(item.total)}</td>
+              <td className="pf-col-num">{item.quantity}</td>
+              <td className="pf-col-num">{money(item.unit_price)}</td>
+              <td className="pf-col-num">{money(item.total)}</td>
             </tr>
           ))}
         </tbody>
         <tfoot>
           <tr>
-            <td colSpan={3} className="pf-dec-right">
+            <td colSpan={3} className="pf-col-num">
               {t("items.subtotal")}
             </td>
-            <td className="pf-dec-right">{money(card.subtotal)}</td>
+            <td className="pf-col-num">{money(card.subtotal)}</td>
           </tr>
           <tr>
-            <td colSpan={3} className="pf-dec-right">
+            <td colSpan={3} className="pf-col-num">
               {t("items.vat")}
             </td>
-            <td className="pf-dec-right">{money(card.vat)}</td>
+            <td className="pf-col-num">{money(card.vat)}</td>
           </tr>
           <tr>
-            <td colSpan={3} className="pf-dec-right">
+            <td colSpan={3} className="pf-col-num">
               <strong>{t("items.total")}</strong>
             </td>
-            <td className="pf-dec-right">
+            <td className="pf-col-num">
               <MoneyText strong {...moneyProps(card.amount)} />
             </td>
           </tr>
@@ -94,7 +94,7 @@ function Payments({ card }: { card: PaymentCard }) {
         <thead>
           <tr>
             <th scope="col">{t("payments.columns.date")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("payments.columns.amount")}
             </th>
             <th scope="col">{t("payments.columns.reference")}</th>
@@ -105,7 +105,7 @@ function Payments({ card }: { card: PaymentCard }) {
           {card.payments.map((payment) => (
             <tr key={payment.id}>
               <td className="pf-num">{date(payment.paid_at)}</td>
-              <td className="pf-dec-right">
+              <td className="pf-col-num">
                 <MoneyText
                   {...moneyProps({ amount: payment.amount, currency: card.amount.currency })}
                 />

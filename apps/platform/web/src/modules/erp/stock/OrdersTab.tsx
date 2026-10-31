@@ -13,8 +13,9 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { ORDER_STATUSES, ORDER_TONE, useStateLabels } from "./api";
+import { ORDER_STATUSES, useStateLabels } from "./api";
 import { OrderCreateModal } from "./OrderCreateModal";
+import { MoneyText } from "../../../shared/ui/MoneyText";
 
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
 const colsOf = (prices: boolean) =>
@@ -24,7 +25,11 @@ const colsOf = (prices: boolean) =>
 
 export function OrderStatusTag({ status }: { status: SupplierOrderStatus }) {
   const { t } = useTranslation("stock");
-  return <StatusTag tone={ORDER_TONE[status]}>{t(`orders.status.${status}`)}</StatusTag>;
+  return (
+    <StatusTag kind="supplierOrder" status={status}>
+      {t(`orders.status.${status}`)}
+    </StatusTag>
+  );
 }
 
 function Expected({ row }: { row: SupplierOrderRow }) {
@@ -75,7 +80,6 @@ function Requests({ row }: { row: SupplierOrderRow }) {
 
 function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: boolean }) {
   const { t } = useTranslation("stock");
-  const { money } = useFormat();
   const { mobile } = useViewport();
   if (mobile) {
     return (
@@ -123,7 +127,11 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
             <th scope="col">{t("orders.columns.expected")}</th>
             <th scope="col">{t("orders.columns.status")}</th>
             <th scope="col">{t("orders.columns.receipt")}</th>
-            {prices ? <th scope="col">{t("orders.columns.total")}</th> : null}
+            {prices ? (
+              <th scope="col" className="pf-col-num">
+                {t("orders.columns.total")}
+              </th>
+            ) : null}
             <th scope="col">
               <span className="pf-sr-only">{t("orders.columns.action")}</span>
             </th>
@@ -152,7 +160,11 @@ function Rows({ items, prices }: { items: readonly SupplierOrderRow[]; prices: b
               <td>
                 <Receipt row={row} />
               </td>
-              {prices ? <td className="pf-num">{row.total ? money(row.total) : "—"}</td> : null}
+              {prices ? (
+                <td className="pf-col-num">
+                  <MoneyText value={row.total} currency={row.currency} />
+                </td>
+              ) : null}
               <td>
                 <LinkButton
                   size="small"

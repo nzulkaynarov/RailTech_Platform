@@ -21,7 +21,6 @@ import { DateRangeField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
-  DELIVERY_TONE,
   DOMAINS,
   busErrorText,
   deliveryKey,
@@ -184,7 +183,9 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
                   >
                     {shortType(d.event_type)}
                   </button>
-                  <StatusTag tone={DELIVERY_TONE[word]}>{t(`delivery.${word}`)}</StatusTag>
+                  <StatusTag kind="busDelivery" status={word}>
+                    {t(`delivery.${word}`)}
+                  </StatusTag>
                 </div>
                 <span className="pf-hint">
                   {t("deliveries.line", {
@@ -256,7 +257,11 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
               key: "status",
               render: (_, d) => {
                 const word = deliveryWord(d);
-                return <StatusTag tone={DELIVERY_TONE[word]}>{t(`delivery.${word}`)}</StatusTag>;
+                return (
+                  <StatusTag kind="busDelivery" status={word}>
+                    {t(`delivery.${word}`)}
+                  </StatusTag>
+                );
               },
             },
             {

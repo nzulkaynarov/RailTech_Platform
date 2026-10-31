@@ -108,9 +108,7 @@
   outline-offset: -2px;
 }
 /* Номера, даты и суммы: цифры одной ширины. */
-.pf-fixed-table .pf-num,
-.pf-fixed-table .num,
-.pf-fixed-table .pf-dec-right {
+.pf-fixed-table .pf-num {
   font-variant-numeric: tabular-nums;
 }
 

@@ -20,6 +20,18 @@
   white-space: nowrap;
 }
 
+/*
+ * Числовая колонка таблицы (UX-2b, platform-frontend.md §5): количество, суммы, проценты — вправо, цифры одной ширины.
+ * Один класс на все таблицы (вместо `num`, `pf-dec-right`); ставится и на `th`, и на `td`. Даты и номера — без него.
+ * `tr >` поднимает вес выше `.pf-*-table td { text-align: left }` модулей.
+ */
+tr > th.pf-col-num,
+tr > td.pf-col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 .pf-hint {
   color: #6e6e6e;
   font-size: 12px;

@@ -318,3 +318,13 @@
     padding: 12px 16px;
   }
 }
+
+/* Суммы и количество в строках расчёта — вправо (UX-2b, CalcCell platform-frontend.md §5). */
+.pf-calc-input input {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.pf-col-num > .pf-calc-qty,
+.pf-col-num > .pf-calc-crew {
+  align-items: flex-end;
+}

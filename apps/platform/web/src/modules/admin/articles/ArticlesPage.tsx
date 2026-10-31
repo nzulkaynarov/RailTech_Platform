@@ -188,7 +188,7 @@ export function ArticlesPage() {
   };
 
   const statusTag = (article: CompanyArticle) => (
-    <StatusTag tone={article.status === "published" ? "green" : "gold"}>
+    <StatusTag kind="article" status={article.status}>
       {t(`admin.status_${article.status}`)}
     </StatusTag>
   );

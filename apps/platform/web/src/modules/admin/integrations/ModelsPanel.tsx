@@ -10,7 +10,6 @@ import {
   useTestAiModel,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { type StatusTone } from "../../../shared/lib/statuses";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { hasFailedField } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
@@ -20,11 +19,6 @@ import { useRefreshIntegrations } from "./refresh";
 
 const PROVIDERS = ["anthropic", "gemini", "openai"] as const;
 type Provider = (typeof PROVIDERS)[number];
-const HEALTH_TONE: Record<AiModel["health"], StatusTone> = {
-  ok: "green",
-  problem: "red",
-  unknown: "blue",
-};
 
 function ChangeResult({ result }: { result: AiModelChange }) {
   const { t } = useTranslation("integrations");
@@ -209,7 +203,9 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
     <li>
       <div className="pf-int-item-head">
         <span className="pf-int-item-title">{title}</span>
-        <StatusTag tone={HEALTH_TONE[model.health]}>{t(`models.health.${model.health}`)}</StatusTag>
+        <StatusTag kind="modelHealth" status={model.health}>
+          {t(`models.health.${model.health}`)}
+        </StatusTag>
       </div>
       <p className="pf-int-sub">
         {model.provider

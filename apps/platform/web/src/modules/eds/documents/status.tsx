@@ -13,5 +13,9 @@ export function DocumentStatusTag({ kind, status }: { kind: EdsRegistryKind; sta
     return <ProjectStatusTag kind={kind} status={status} />;
   }
   const entry = statusEntry(kind, status);
-  return <StatusTag tone={entry?.tone ?? "default"}>{entry ? t(entry.key) : status}</StatusTag>;
+  return (
+    <StatusTag kind={entry.kind} status={status}>
+      {entry.key ? t(entry.key) : status}
+    </StatusTag>
+  );
 }

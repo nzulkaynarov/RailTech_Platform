@@ -8,7 +8,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
 import { canTake } from "./logic";
-import { PRIORITY_TONE, reasonLabels } from "./labels";
+import { reasonLabels } from "./labels";
 import { SlaTimer } from "./SlaTimer";
 import { useNow } from "./sla";
 
@@ -63,7 +63,7 @@ function Row({
       </Link>
       <span className="pf-msg-row-meta">
         {item.handoff ? (
-          <StatusTag tone={PRIORITY_TONE[item.handoff.priority]}>
+          <StatusTag kind="handoffPriority" status={item.handoff.priority}>
             {t(`priority.${item.handoff.priority}`)}
           </StatusTag>
         ) : null}

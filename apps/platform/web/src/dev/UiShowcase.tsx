@@ -2,7 +2,7 @@ import { Button, Select } from "antd";
 import { type ReactNode, useState } from "react";
 
 import { companyToday } from "../shared/lib/dates";
-import { STATUS_KINDS, STATUS_TONE, STATUS_TONES } from "../shared/lib/statuses";
+import { MEANING_TONE, STATUS_KINDS, STATUS_TONE, STATUS_TONES } from "../shared/lib/statuses";
 import { formatDocNumber } from "../shared/lib/docNumber";
 import { useFormat } from "../shared/lib/useFormat";
 import { Checklist } from "../shared/ui/Checklist";
@@ -46,11 +46,21 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 function Statuses() {
   return (
-    <Section id="status" title="StatusTag: карты статусов SPEC-v3 §2.4">
+    <Section
+      id="status"
+      title="StatusTag: единая карта статусов STATUS_TONE (SPEC-v3 §2.4, §5.2; UX-2b)"
+    >
       <div className="dev-tones" aria-label="Цвета тегов">
         {STATUS_TONES.map((tone) => (
           <StatusTag key={tone} tone={tone}>
             {tone}
+          </StatusTag>
+        ))}
+      </div>
+      <div className="dev-tones" aria-label="Смысл статуса и цвет">
+        {Object.entries(MEANING_TONE).map(([meaning, tone]) => (
+          <StatusTag key={meaning} tone={tone}>
+            {meaning} · {tone}
           </StatusTag>
         ))}
       </div>

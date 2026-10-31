@@ -44,7 +44,9 @@ export function MemoStatus({ status }: { status: PaymentMemoCard["status"] }) {
   const { t } = useTranslation("payments");
   if (status === "other") return null;
   return (
-    <StatusTag tone={status === "paid" ? "green" : "blue"}>{t(`memo.status.${status}`)}</StatusTag>
+    <StatusTag kind="memo" status={status}>
+      {t(`memo.status.${status}`)}
+    </StatusTag>
   );
 }
 

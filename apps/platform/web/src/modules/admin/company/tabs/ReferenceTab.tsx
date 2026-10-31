@@ -200,7 +200,7 @@ function ReferenceList({ kind }: { kind: ReferenceKind }) {
                     title: t("status"),
                     dataIndex: "is_active",
                     render: (value: boolean) => (
-                      <StatusTag tone={value ? "green" : "default"}>
+                      <StatusTag kind="activity" status={value ? "active" : "inactive"}>
                         {value ? t("active") : t("inactive")}
                       </StatusTag>
                     ),

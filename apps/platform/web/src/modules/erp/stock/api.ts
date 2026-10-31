@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../../shared/api/errors";
 import type { SupplierOrderStatus } from "../../../shared/api/generated/model";
 import type { QueryStateLabels } from "../../../shared/ui/FormParts";
-import type { StatusTone } from "../../../shared/lib/statuses";
 
 /** Всё, что меняют склад и закупки: остатки, заказы, расчёт (колонка «Склад»), очередь и счётчики. */
 const PREFIXES = [
@@ -34,14 +33,6 @@ export function useRefreshStock(): () => void {
 export function orderPath(number: string): string {
   return `/erp/stock/${encodeURIComponent(number)}`;
 }
-
-export const ORDER_TONE: Record<SupplierOrderStatus, StatusTone> = {
-  draft: "default",
-  sent: "blue",
-  confirmed: "purple",
-  received: "green",
-  cancelled: "red",
-};
 
 export const ORDER_STATUSES: readonly SupplierOrderStatus[] = [
   "draft",

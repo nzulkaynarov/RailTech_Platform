@@ -169,18 +169,18 @@ export function SetupWizardPage() {
       <div className="pf-setup-stack">
         <StepCard
           title={t("admin.setup.adminTitle")}
-          status={<StatusTag tone="green">{t("admin.setup.state.done")}</StatusTag>}
+          status={
+            <StatusTag kind="setupStep" status="done">
+              {t("admin.setup.state.done")}
+            </StatusTag>
+          }
         >
           <p style={{ margin: 0 }}>{t("admin.setup.adminDone", { name: me.name })}</p>
         </StepCard>
         <StepCard
           title={t("admin.setup.erpTitle")}
           status={
-            <StatusTag
-              tone={
-                erpStep?.state === "done" ? "green" : erpStep?.state === "todo" ? "gold" : "default"
-              }
-            >
+            <StatusTag kind="setupStep" status={erpStep?.state ?? "unknown"}>
               {t(`admin.setup.state.${erpStep?.state ?? "unknown"}`)}
             </StatusTag>
           }
@@ -191,7 +191,7 @@ export function SetupWizardPage() {
           title={t("admin.setup.companyTitle")}
           status={
             data.company === null ? (
-              <StatusTag tone="default">
+              <StatusTag kind="setupStep" status="unknown">
                 {t(
                   data.company_blocker === "erp_not_connected"
                     ? "admin.setup.state.waitingErp"
@@ -199,7 +199,7 @@ export function SetupWizardPage() {
                 )}
               </StatusTag>
             ) : (
-              <StatusTag tone={data.company.required ? "gold" : "green"}>
+              <StatusTag kind="setupStep" status={data.company.required ? "todo" : "done"}>
                 {t(data.company.required ? "admin.setup.state.todo" : "admin.setup.state.done")}
               </StatusTag>
             )

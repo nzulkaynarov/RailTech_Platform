@@ -52,23 +52,21 @@ function RowStatus({ row }: { row: MemoApprovalRow }) {
   const { t } = useTranslation("approvals");
   if (row.status === "open") {
     return (
-      <StatusTag tone="gold">
+      <StatusTag kind="memo" status="open">
         {row.step_label ? t("list.waiting", { label: row.step_label }) : t("list.status.open")}
       </StatusTag>
     );
   }
-  const tone = row.status === "approved" ? "green" : row.status === "rejected" ? "red" : "gold";
-  return <StatusTag tone={tone}>{t(`list.status.${row.status}`)}</StatusTag>;
+  return (
+    <StatusTag kind="memo" status={row.status}>
+      {t(`list.status.${row.status}`)}
+    </StatusTag>
+  );
 }
 
 function Amount({ row }: { row: MemoApprovalRow }) {
   if (!row.amount) return <>—</>;
-  return (
-    <MoneyText
-      value={row.amount.amount}
-      {...(row.amount.currency === "UZS" ? {} : { currency: row.amount.currency })}
-    />
-  );
+  return <MoneyText value={row.amount.amount} currency={row.amount.currency} />;
 }
 
 function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected: string | null }) {
@@ -130,7 +128,7 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.subject")}</th>
             <th scope="col">{t("list.columns.author")}</th>
-            <th scope="col" className="pf-dec-right">
+            <th scope="col" className="pf-col-num">
               {t("list.columns.amount")}
             </th>
             <th scope="col">{t("list.columns.due")}</th>
@@ -168,7 +166,7 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
               <td className="pf-ell" title={row.author?.full_name ?? undefined}>
                 {row.author?.full_name ?? "—"}
               </td>
-              <td className="pf-dec-right">
+              <td className="pf-col-num">
                 <Amount row={row} />
               </td>
               <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>

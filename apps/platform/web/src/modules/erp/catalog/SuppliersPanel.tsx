@@ -36,6 +36,7 @@ import {
 import { errorFields } from "./errors";
 import { useDebounced } from "./useDebounced";
 import { queryLabels } from "./labels";
+import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 
 /** Расчёт · Поставщики: квоты, сроки действия цен и, с правом на цены поставщиков, сами цены (D2-3). */
 export function SuppliersPanel() {
@@ -96,15 +97,19 @@ export function SuppliersPanel() {
       render: (row) => (
         <>
           {row.expired_count > 0 ? (
-            <StatusTag tone="red">{t("suppliers.expired", { count: row.expired_count })}</StatusTag>
+            <StatusTag kind="validity" status="expired">
+              {t("suppliers.expired", { count: row.expired_count })}
+            </StatusTag>
           ) : null}{" "}
           {row.expiring_count > 0 ? (
-            <StatusTag tone="gold">
+            <StatusTag kind="validity" status="expiring">
               {t("suppliers.expiring", { count: row.expiring_count })}
             </StatusTag>
           ) : null}
           {row.expired_count === 0 && row.expiring_count === 0 ? (
-            <StatusTag tone="green">{t("suppliers.allValid")}</StatusTag>
+            <StatusTag kind="validity" status="ok">
+              {t("suppliers.allValid")}
+            </StatusTag>
           ) : null}
           {row.nearest_valid_until ? (
             <span className="pf-cat-sub">
@@ -304,7 +309,7 @@ function OfferForm({
   pricesVisible: boolean;
   onClose: () => void;
 }) {
-  const { t } = useTranslation("catalog");
+  const { t, i18n } = useTranslation("catalog");
   const queryClient = useQueryClient();
   const lookups = useGetCatalogLookups();
   const [amount, setAmount] = useState(offer.price?.amount ?? "");
@@ -343,7 +348,7 @@ function OfferForm({
   const valid =
     [quota, stockLead, orderLead].every((v) => /^\d+$/.test(v.trim())) &&
     /^[1-9]\d*$/.test(min.trim());
-  const currency = offer.price?.currency ?? lookups.data?.currencies[0]?.code ?? "UZS";
+  const currency = offer.price?.currency ?? lookups.data?.currencies[0]?.code ?? HOME_CURRENCY;
   const submit = () => {
     const price = pricesVisible && amount.trim() !== (offer.price?.amount ?? "");
     mutation.mutate({
@@ -373,7 +378,10 @@ function OfferForm({
       onCancel={onClose}
     >
       {pricesVisible ? (
-        <FormField id={ids.amount} label={t("offers.form.price", { currency })}>
+        <FormField
+          id={ids.amount}
+          label={t("offers.form.price", { currency: currencyLabel(currency, i18n.language) })}
+        >
           <Input
             id={ids.amount}
             inputMode="decimal"

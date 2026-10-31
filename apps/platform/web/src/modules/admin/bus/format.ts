@@ -8,9 +8,7 @@ import type {
   BusInboxEntry,
   BusSourceState,
   BusSources,
-  BusSubscriberState,
 } from "../../../shared/api/generated/model";
-import type { StatusTone } from "../../../shared/lib/statuses";
 
 /** Домены журнала в порядке экрана (как в ответе BFF). */
 export const DOMAINS: readonly BusDomain[] = ["crm", "erp", "eds"];
@@ -42,16 +40,6 @@ export function domainName(t: TFunction, domain: BusDomain): string {
   return t(`bus:domains.${domain}`);
 }
 
-/** Состояние подписчика → цвет тега; слово есть всегда (SPEC-v3 §5.2). */
-export const STATE_TONE: Record<BusSubscriberState, StatusTone> = {
-  ok: "green",
-  failing: "gold",
-  paused: "red",
-  dead_letters: "red",
-  disabled: "default",
-  removed: "default",
-};
-
 export type DeliveryWord = "pending" | "retrying" | "in_flight" | "delivered" | "dead";
 
 /** Ждущая доставка после неудачной попытки — «Ждёт повтора», а не «Ждёт отправки». */
@@ -60,28 +48,12 @@ export function deliveryWord(delivery: BusDelivery): DeliveryWord {
   return delivery.status;
 }
 
-export const DELIVERY_TONE: Record<DeliveryWord, StatusTone> = {
-  pending: "blue",
-  retrying: "gold",
-  in_flight: "blue",
-  delivered: "green",
-  dead: "red",
-};
-
 export type InboxWord = "received" | "retrying" | "processed" | "failed" | "skipped";
 
 export function inboxWord(entry: BusInboxEntry): InboxWord {
   if (entry.status === "received" && entry.error) return "retrying";
   return entry.status;
 }
-
-export const INBOX_TONE: Record<InboxWord, StatusTone> = {
-  received: "blue",
-  retrying: "gold",
-  processed: "green",
-  failed: "red",
-  skipped: "default",
-};
 
 /** Возраст «самого старого недоставленного» словами: секунды, минуты, часы, дни. */
 export function ageText(t: TFunction, seconds: number | null): string | null {

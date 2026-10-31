@@ -93,7 +93,7 @@ export function MatchModal({
                   .filter(Boolean)
                   .join(" · ")}
               </span>
-              <StatusTag tone={item.kind === "service" ? "cyan" : "blue"}>
+              <StatusTag kind="itemKind" status={item.kind === "service" ? "service" : "goods"}>
                 {t(`lines.kind.${item.kind === "service" ? "service" : "goods"}`)}
               </StatusTag>
             </div>

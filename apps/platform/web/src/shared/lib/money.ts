@@ -11,6 +11,9 @@ export type NumberInput = number | string | null | undefined;
 /** Слово валюты по языку интерфейса: «сум» (ru), «so‘m» (uz), код ISO для en. */
 export const CURRENCY: Record<string, string> = { ru: "сум", uz: "so‘m", en: "UZS" };
 
+/** Код валюты компании: суммы в ней подписываются словом языка (`CURRENCY`), а не кодом (UX-2b). */
+export const HOME_CURRENCY = "UZS";
+
 function baseLanguage(language: string | undefined): string {
   const base = (language ?? "ru").slice(0, 2).toLowerCase();
   return base in CURRENCY ? base : "ru";
@@ -86,15 +89,30 @@ export function formatNumber(value: NumberInput, options: NumberFormatOptions = 
 }
 
 export interface MoneyFormatOptions extends NumberFormatOptions {
-  /** Своя подпись валюты; `false` — только число (колонка таблицы с «Сумма, сум» в заголовке) */
-  currency?: string | false;
+  /**
+   * Код валюты ISO 4217 из ответа (`"UZS"`, `"USD"`); без кода и для `UZS` — слово языка («сум», «so‘m», «UZS» в en),
+   * другая валюта — её код. `false` — только число (колонка таблицы с «Сумма, сум» в заголовке).
+   */
+  currency?: string | false | null;
+}
+
+/**
+ * Подпись валюты для суммы, поля и заголовка колонки: `UZS` и пустой код — «сум» / «so‘m» / «UZS» (en), другая валюта —
+ * код как есть (`USD`). Одно правило для всего интерфейса (UX-2b): модули не подменяют `UZS` сами.
+ */
+export function currencyLabel(code?: string | null, language?: string): string {
+  const trimmed = code?.trim() ?? "";
+  if (trimmed === "" || trimmed.toUpperCase() === HOME_CURRENCY) {
+    return CURRENCY[baseLanguage(language)] ?? "сум";
+  }
+  return trimmed.toUpperCase();
 }
 
 /** `1 234 567 сум`; пустое значение → «—». */
 export function formatMoney(value: NumberInput, options: MoneyFormatOptions = {}): string {
   const number = formatNumber(value, options);
   if (number === EM_DASH || options.currency === false) return number;
-  return `${number}${NBSP}${options.currency ?? CURRENCY[baseLanguage(options.language)] ?? "сум"}`;
+  return `${number}${NBSP}${currencyLabel(options.currency, options.language)}`;
 }
 
 /** `30,0 %` — процент с неразрывным пробелом; по умолчанию один знак после запятой. */

@@ -35,10 +35,7 @@ function Brief({ memo }: { memo: MemoApprovalCard }) {
           {
             label: t("panel.brief.amount"),
             value: memo.amount ? (
-              <MoneyText
-                value={memo.amount.amount}
-                {...(memo.amount.currency === "UZS" ? {} : { currency: memo.amount.currency })}
-              />
+              <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
             ) : null,
           },
           { label: t("panel.brief.due"), value: memo.due_date ? date(memo.due_date) : null },

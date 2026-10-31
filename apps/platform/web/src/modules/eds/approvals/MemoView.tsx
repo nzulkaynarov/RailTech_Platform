@@ -182,12 +182,7 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
                 {
                   label: t("card.fields.amount"),
                   value: memo.amount ? (
-                    <MoneyText
-                      value={memo.amount.amount}
-                      {...(memo.amount.currency === "UZS"
-                        ? {}
-                        : { currency: memo.amount.currency })}
-                    />
+                    <MoneyText value={memo.amount.amount} currency={memo.amount.currency} />
                   ) : null,
                 },
                 { label: t("card.fields.due"), value: memo.due_date ? date(memo.due_date) : null },

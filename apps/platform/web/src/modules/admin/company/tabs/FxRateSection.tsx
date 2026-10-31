@@ -92,7 +92,7 @@ function CurrentRate({ current, maxAgeDays }: { current: FxRate | null; maxAgeDa
 function SourceTag({ source }: { source: "auto" | "manual" }) {
   const { t } = useTranslation("company");
   return (
-    <StatusTag tone={source === "manual" ? "gold" : "blue"}>
+    <StatusTag kind="origin" status={source}>
       {t(`platform.fx.sources.${source}`)}
     </StatusTag>
   );
@@ -220,7 +220,9 @@ function FxJournal({ rows }: { rows: readonly FxRateJournalEntry[] }) {
       key: "kind",
       render: (_v, row) =>
         row.kind === "manual" ? (
-          <StatusTag tone="gold">{t("platform.fx.journal.manual")}</StatusTag>
+          <StatusTag kind="origin" status="manual">
+            {t("platform.fx.journal.manual")}
+          </StatusTag>
         ) : (
           <StatusTag tone="default">{t("platform.fx.journal.autoSkipped")}</StatusTag>
         ),

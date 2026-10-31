@@ -17,7 +17,6 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
   DOMAINS,
-  INBOX_TONE,
   busErrorText,
   domainName,
   mergeSources,
@@ -132,7 +131,9 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
                   >
                     {shortType(e.type)}
                   </button>
-                  <StatusTag tone={INBOX_TONE[word]}>{t(`inbox.${word}`)}</StatusTag>
+                  <StatusTag kind="busInbox" status={word}>
+                    {t(`inbox.${word}`)}
+                  </StatusTag>
                 </div>
                 <span className="pf-hint">
                   {t("inboxView.line", {
@@ -204,7 +205,11 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
               key: "status",
               render: (_, e) => {
                 const word = inboxWord(e);
-                return <StatusTag tone={INBOX_TONE[word]}>{t(`inbox.${word}`)}</StatusTag>;
+                return (
+                  <StatusTag kind="busInbox" status={word}>
+                    {t(`inbox.${word}`)}
+                  </StatusTag>
+                );
               },
             },
             {
