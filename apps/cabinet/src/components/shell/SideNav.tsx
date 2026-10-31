@@ -275,6 +275,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
                   <button
                     type="button"
                     onClick={() => navigate(`/deals/${deal.id}`)}
+                    title={deal.title ? `${deal.number}: ${deal.title}` : deal.number}
                     className={cn(
                       'group relative flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs text-charcoal transition-colors hover:bg-ice-navy/60 hover:text-navy',
                       active && 'bg-ice-navy font-semibold text-navy',
@@ -283,7 +284,6 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
                     {active && <span className="absolute left-0 top-1.5 h-4 w-1 rounded-r-full bg-navy" />}
                     <span className="size-1.5 shrink-0 rounded-full bg-sand" />
                     <span className="font-mono text-xs">{deal.number}</span>
-                    {deal.title && <span className="truncate text-muted-foreground">{deal.title}</span>}
                   </button>
                 </li>
               );

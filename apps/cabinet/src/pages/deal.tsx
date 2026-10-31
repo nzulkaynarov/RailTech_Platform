@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Briefcase } from 'lucide-react';
+import { Briefcase, Check, FileText } from 'lucide-react';
 
 import type { DealRef } from '@/api/portal';
 import { useActs, useContracts, useDeliveries, useDocuments, useInvoices, useQuotes, useRequests } from '@/api/queries';
@@ -12,10 +12,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
+import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatMoney, formatQuantity } from '@/lib/format';
 import { invoiceView } from '@/lib/invoice';
+import { cn } from '@/lib/utils';
 
 /**
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
@@ -83,9 +85,65 @@ export function DealPage() {
     );
   }
 
+  // Определение текущего этапа сделки (1..5)
+  const currentStep = dealActs.length > 0 ? 5 : dealInvoices.length > 0 ? 4 : dealContracts.length > 0 ? 3 : dealQuotes.length > 0 ? 2 : 1;
+  const milestones = [
+    { step: 1, title: t('deal.step1', { defaultValue: '1. Запрос' }), active: dealRequests.length > 0 },
+    { step: 2, title: t('deal.step2', { defaultValue: '2. КП' }), active: dealQuotes.length > 0 },
+    { step: 3, title: t('deal.step3', { defaultValue: '3. Договор' }), active: dealContracts.length > 0 },
+    { step: 4, title: t('deal.step4', { defaultValue: '4. Счёт и Оплата' }), active: dealInvoices.length > 0 },
+    { step: 5, title: t('deal.step5', { defaultValue: '5. Исполнение и Акт' }), active: dealActs.length > 0 },
+  ];
+
   return (
     <>
-      <PageHeader title={title} subtitle={subtitle} actions={<ManagerButton dealId={dealId} />} />
+      <PageHeader
+        title={title}
+        subtitle={subtitle}
+        icon={Briefcase}
+        actions={<ManagerButton dealId={dealId} />}
+      />
+
+      {/* Сегментированный прогресс-бар этапов сделки в стиле Notion */}
+      <div className="mb-6 rounded-2xl border border-hairline bg-alabaster/60 p-4">
+        <div className="mb-2 flex items-center justify-between text-xs">
+          <span className="font-semibold text-navy uppercase tracking-wider">
+            {t('deal.milestones', { defaultValue: 'Этапы жизненного цикла сделки' })}
+          </span>
+          <span className="font-mono font-semibold tabular-nums text-navy">
+            {currentStep}/5
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {milestones.map((m) => {
+            const isDone = m.step < currentStep || (m.step === 5 && dealActs.some((a) => a.status === 'accepted'));
+            const isCurrent = m.step === currentStep;
+            return (
+              <div
+                key={m.step}
+                className={cn(
+                  'flex items-center gap-2 rounded-xl border p-2.5 text-xs transition-colors',
+                  isDone
+                    ? 'border-transparent bg-sage-bg text-sage font-medium'
+                    : isCurrent
+                      ? 'border-sand-border bg-sand-bg text-sand font-semibold shadow-2xs'
+                      : 'border-hairline bg-canvas text-muted-foreground',
+                )}
+              >
+                {isDone ? (
+                  <Check className="size-3.5 text-sage stroke-[3]" />
+                ) : (
+                  <span className="font-mono text-xs">{m.step}.</span>
+                )}
+                <span className="truncate">{m.title.replace(/^\d+\.\s*/, '')}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <ConsequenceCallout className="mb-6" />
+
       <div className="flex flex-col gap-6">
         <DealSection title={t('pages.deal.requests')} count={dealRequests.length}>
           {dealRequests.map((item) => (
@@ -136,8 +194,13 @@ export function DealPage() {
         </DealSection>
         <DealSection title={t('pages.deal.documents')} count={dealDocuments.length}>
           {dealDocuments.map((doc) => (
-            <li key={doc.id} className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 text-sm">
-              <span className="min-w-0 font-medium break-words">{doc.title}</span>
+            <li key={doc.id} className="notion-card flex min-w-0 flex-wrap items-center justify-between gap-2 p-3 text-sm">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-coral-bg text-coral">
+                  <FileText className="size-4 text-coral" />
+                </div>
+                <span className="min-w-0 font-medium break-words text-charcoal">{doc.title}</span>
+              </div>
               <DocumentButton documentId={doc.id} fileName={doc.file_name ?? `${doc.number}.pdf`} label={doc.title} variant="ghost" />
             </li>
           ))}
