@@ -66,27 +66,27 @@ export function ActionRequiredWidget() {
   return (
     <section role="region" aria-label={t('widgets.actionRequired.title')} className="mb-6 flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <h2 id="action-required-heading" className="text-sm font-semibold tracking-tight text-foreground">
+        <h2 id="action-required-heading" className="text-sm font-semibold tracking-tight text-navy">
           {t('widgets.actionRequired.title')}
         </h2>
         <ToneBadge tone="warning">{totalActions}</ToneBadge>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {pendingQuotes.map((quote) => (
           <Card
             key={`quote-${quote.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            className="notion-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-warning">
-                  <FileText className="size-3.5" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-sand">
+                  <FileText className="size-3.5 text-sand" aria-hidden="true" />
                   {t('widgets.actionRequired.quoteBadge')}
                 </span>
-                <span className="font-semibold text-foreground">{formatMoney(quote.total)}</span>
+                <span className="font-mono font-semibold tabular-nums text-charcoal">{formatMoney(quote.total)}</span>
               </div>
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-charcoal">
                 <Link
                   to={`/quotes/${quote.id}`}
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -102,17 +102,17 @@ export function ActionRequiredWidget() {
         {pendingContracts.map((contract) => (
           <Card
             key={`contract-${contract.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            className="notion-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-info">
-                  <FileSignature className="size-3.5" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-navy">
+                  <FileSignature className="size-3.5 text-navy" aria-hidden="true" />
                   {t('widgets.actionRequired.contractBadge')}
                 </span>
-                <AlertCircle className="size-3.5 text-info" aria-hidden="true" />
+                <AlertCircle className="size-3.5 text-navy" aria-hidden="true" />
               </div>
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-charcoal">
                 <Link
                   to="/contracts"
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -130,17 +130,17 @@ export function ActionRequiredWidget() {
           return (
             <Card
               key={`inv-${inv.id}`}
-              className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+              className="notion-card group relative border-border hover:border-silver"
             >
               <CardContent className="flex flex-col gap-1.5 p-3.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium text-warning">
-                    <Receipt className="size-3.5" aria-hidden="true" />
+                  <span className="flex items-center gap-1 font-medium text-sand">
+                    <Receipt className="size-3.5 text-sand" aria-hidden="true" />
                     {t('widgets.actionRequired.invoiceBadge')}
                   </span>
-                  <span className="font-semibold text-foreground">{formatMoney(view?.remaining)}</span>
+                  <span className="font-mono font-semibold tabular-nums text-charcoal">{formatMoney(view?.remaining)}</span>
                 </div>
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm font-medium text-charcoal">
                   <Link
                     to="/invoices"
                     className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
@@ -160,17 +160,17 @@ export function ActionRequiredWidget() {
         {pendingActs.map((act) => (
           <Card
             key={`act-${act.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            className="notion-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-info">
-                  <ClipboardCheck className="size-3.5" aria-hidden="true" />
+                <span className="flex items-center gap-1 font-medium text-navy">
+                  <ClipboardCheck className="size-3.5 text-navy" aria-hidden="true" />
                   {t('widgets.actionRequired.actBadge')}
                 </span>
-                <AlertCircle className="size-3.5 text-info" aria-hidden="true" />
+                <AlertCircle className="size-3.5 text-navy" aria-hidden="true" />
               </div>
-              <p className="text-sm font-medium text-foreground">
+              <p className="text-sm font-medium text-charcoal">
                 <Link
                   to="/acts"
                   className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"

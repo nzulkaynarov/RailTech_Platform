@@ -42,7 +42,7 @@ export function QuotesPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.quotes.title')} />
+      <PageHeader title={t('pages.quotes.title')} icon={FileText} />
       {quotes.isPending ? (
         <ListSkeleton />
       ) : quotes.isError ? (

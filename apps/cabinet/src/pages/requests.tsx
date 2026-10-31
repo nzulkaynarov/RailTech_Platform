@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -14,6 +14,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
+import { NotionDealCard } from '@/components/NotionDealCard';
+import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,10 +51,27 @@ function NewRequestButton() {
 export function RequestsPage() {
   const { t } = useTranslation();
   const requests = useRequests();
+  const [searchParams] = useSearchParams();
+  const viewMode = searchParams.get('view') || 'list';
+
+  // Разделение запросов для Канбана:
+  // Колонка 1: «Ждут решения» (запросы со статусом 'quoted' — по ним выставлено КП)
+  // Колонка 2: «В исполнении и работе» ('new', 'in_progress', 'done')
+  const waitingQuotes = (requests.data ?? []).filter((r) => r.status === 'quoted');
+  const inWorkRequests = (requests.data ?? []).filter((r) => r.status !== 'quoted');
 
   return (
     <>
-      <PageHeader title={t('pages.requests.title')} actions={<NewRequestButton />} />
+      <PageHeader
+        title={t('pages.requests.title')}
+        icon={Inbox}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <ViewSwitcher showDocumentsTab={false} />
+            <NewRequestButton />
+          </div>
+        }
+      />
       <ActionRequiredWidget />
       {requests.isPending ? (
         <ListSkeleton />
@@ -60,6 +79,76 @@ export function RequestsPage() {
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
       ) : requests.data.length === 0 ? (
         <EmptyState icon={Inbox} title={t('pages.requests.emptyTitle')} text={t('pages.requests.emptyText')} />
+      ) : viewMode === 'kanban' ? (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Колонка 1: Ждут решения (КП выставлено) */}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between rounded-xl border border-hairline bg-ice-navy/60 px-3.5 py-2">
+              <span className="flex items-center gap-2 font-semibold text-navy text-xs">
+                <span className="size-2 rounded-full bg-coral" />
+                {t('views.kanbanAwaiting', { defaultValue: 'Ждут вашего решения' })}
+              </span>
+              <span className="rounded-full bg-ice-navy px-2 py-0.5 font-mono text-xs font-semibold text-navy">
+                {waitingQuotes.length}
+              </span>
+            </div>
+            {waitingQuotes.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-hairline p-6 text-center text-xs text-muted-foreground">
+                {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов, требующих ответа' })}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {waitingQuotes.map((req) => (
+                  <NotionDealCard
+                    key={req.id}
+                    id={req.id}
+                    code={req.number}
+                    title={req.summary}
+                    href={`/requests/${req.id}`}
+                    step={2}
+                    dateLabel={formatDate(req.created_at)}
+                    statusEntity="request"
+                    statusCode={req.status}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Колонка 2: В исполнении и работе */}
+          <section className="flex flex-col gap-3">
+            <div className="flex items-center justify-between rounded-xl border border-sand-border bg-sand-bg/60 px-3.5 py-2">
+              <span className="flex items-center gap-2 font-semibold text-sand text-xs">
+                <span className="size-2 rounded-full bg-sand" />
+                {t('views.kanbanInProgress', { defaultValue: 'В исполнении и работе' })}
+              </span>
+              <span className="rounded-full bg-canvas px-2 py-0.5 font-mono text-xs font-semibold text-sand border border-sand-border">
+                {inWorkRequests.length}
+              </span>
+            </div>
+            {inWorkRequests.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-hairline p-6 text-center text-xs text-muted-foreground">
+                {t('views.kanbanEmptyColumn', { defaultValue: 'Нет запросов в работе' })}
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3">
+                {inWorkRequests.map((req) => (
+                  <NotionDealCard
+                    key={req.id}
+                    id={req.id}
+                    code={req.number}
+                    title={req.summary}
+                    href={`/requests/${req.id}`}
+                    step={req.status === 'closed' ? 5 : 1}
+                    dateLabel={formatDate(req.created_at)}
+                    statusEntity="request"
+                    statusCode={req.status}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
       ) : (
         <ResponsiveList<ClientRequest>
           label={t('pages.requests.title')}
@@ -70,7 +159,7 @@ export function RequestsPage() {
             header: t('pages.requests.columns.request'),
             cell: (row) => (
               <span className="flex flex-col gap-0.5">
-                <span>{row.number}</span>
+                <span className="font-semibold text-navy">{row.number}</span>
                 <span className="line-clamp-2 font-normal text-muted-foreground">{row.summary}</span>
               </span>
             ),
