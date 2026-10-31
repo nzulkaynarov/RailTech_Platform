@@ -1,6 +1,7 @@
-import { Button } from "antd";
+import { Button, Select } from "antd";
 import { type ReactNode, useState } from "react";
 
+import { companyToday } from "../shared/lib/dates";
 import { STATUS_KINDS, STATUS_TONE, STATUS_TONES } from "../shared/lib/statuses";
 import { formatDocNumber } from "../shared/lib/docNumber";
 import { useFormat } from "../shared/lib/useFormat";
@@ -8,10 +9,13 @@ import { Checklist } from "../shared/ui/Checklist";
 import { Consequence } from "../shared/ui/Consequence";
 import { ContextPanel } from "../shared/ui/ContextPanel";
 import { CounterCard, CounterGrid } from "../shared/ui/CounterCard";
+import { DateField, DateRangeField } from "../shared/ui/DateField";
 import { DefinitionList } from "../shared/ui/DefinitionList";
 import { DocNumber } from "../shared/ui/DocNumber";
 import { DocList, DocRow } from "../shared/ui/DocRow";
 import { EmptyState } from "../shared/ui/EmptyState";
+import { FileField } from "../shared/ui/FileField";
+import { FormField } from "../shared/ui/FormParts";
 import { Forbidden } from "../shared/ui/Forbidden";
 import { History } from "../shared/ui/History";
 import { MoneyText } from "../shared/ui/MoneyText";
@@ -339,6 +343,71 @@ function States() {
   );
 }
 
+const DEMO_FILE = new File([new Uint8Array(1_572_864)], "schet-demo.pdf", {
+  type: "application/pdf",
+});
+
+function Fields() {
+  const [due, setDue] = useState("2026-11-05");
+  const [range, setRange] = useState({ from: "2026-10-01", to: "2026-10-31" });
+  const [files, setFiles] = useState<File[]>([DEMO_FILE]);
+  const [level, setLevel] = useState("read");
+  return (
+    <Section id="fields" title="DateField, DateRangeField, FileField, Select (UX-2a)">
+      <div className="dev-stack">
+        <div className="pf-card dev-card dev-fields">
+          <FormField id="dev-due" label="Срок расчёта" hint="Не раньше сегодня по Ташкенту">
+            <DateField
+              id="dev-due"
+              value={due}
+              min={companyToday()}
+              aria-describedby="dev-due-hint"
+              onChange={setDue}
+            />
+          </FormField>
+          <div className="dev-row">
+            <DateRangeField
+              idFrom="dev-from"
+              idTo="dev-to"
+              labelFrom="С даты"
+              labelTo="По дату"
+              fieldClassName="pf-fp-field"
+              value={range}
+              onChange={setRange}
+            />
+          </div>
+          <FormField
+            id="dev-files"
+            label="Вложения"
+            hint="PDF, изображения, документы Office — до 25 МБ"
+          >
+            <FileField
+              id="dev-files"
+              multiple
+              maxSize={25 * 1024 * 1024}
+              value={files}
+              aria-describedby="dev-files-hint"
+              onChange={setFiles}
+            />
+          </FormField>
+          <FormField id="dev-level" label="Уровень доступа">
+            <Select
+              id="dev-level"
+              value={level}
+              onChange={setLevel}
+              options={[
+                { value: "full", label: "Полный доступ" },
+                { value: "read", label: "Только чтение" },
+                { value: "hidden", label: "Скрыто" },
+              ]}
+            />
+          </FormField>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
 export function Component() {
   return (
     <div className="dev-page">
@@ -354,6 +423,7 @@ export function Component() {
         <Lists />
         <Formats />
         <States />
+        <Fields />
       </main>
     </div>
   );

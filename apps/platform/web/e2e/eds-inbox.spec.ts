@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { chooseOption, fillDate } from "./support/fields";
 
 // EDS · Входящие письма и «Резолюция» директора на MSW (D1-3): сценарий директора целиком — Входящие → письмо → резолюция →
 // «Утвердить»; отдельно «Вернуть менеджеру» и «Отклонить»; ошибка резолюции со словами и сохранённым текстом; роли только для
@@ -89,16 +90,17 @@ test.describe("Входящие письма: директор", () => {
 
     // срок в прошлом отвергает EDS — текст остаётся в черновике
     await form.getByLabel("Текст резолюции").fill("Посчитать с запасом по складу, сроки уточнить.");
-    await form
-      .getByLabel("Сотрудник: Снабженец")
-      .selectOption({ label: "Демо Снабженцев · Специалист по снабжению" });
-    await form.getByLabel("Срок расчёта").fill("2020-01-01");
+    await chooseOption(
+      form.getByLabel("Сотрудник: Снабженец"),
+      "Демо Снабженцев · Специалист по снабжению",
+    );
+    await fillDate(form.getByLabel("Срок расчёта"), "2020-01-01");
     await form.getByRole("button", { name: SUBMIT }).click();
     await expect(form.getByText("Срок расчёта не может быть в прошлом.")).toBeVisible();
 
     // срок «сегодня плюс два дня» принимает и форма, и EDS
     const soon = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
-    await form.getByLabel("Срок расчёта").fill(soon);
+    await fillDate(form.getByLabel("Срок расчёта"), soon);
     await form.getByLabel("Маржа не ниже, %").fill("15");
     await form.getByRole("button", { name: SUBMIT }).click();
 
@@ -125,7 +127,10 @@ test.describe("Входящие письма: директор", () => {
     const form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
 
     await form.getByLabel("Текст резолюции").fill("Расчёт нужен срочно.");
-    await form.getByLabel("Сотрудник: Снабженец").selectOption("31");
+    await chooseOption(
+      form.getByLabel("Сотрудник: Снабженец"),
+      "Демо Снабженцев · Специалист по снабжению",
+    );
     // Другой директор уже решил письмо: EDS отвечает «не ждёт резолюции»
     await page.evaluate(`fetch("/api/v1/eds/letters/20000000-0000-4000-8000-000000000105/reject", {
       method: "POST", headers: { "content-type": "application/json", "x-csrf-token": "x" }, body: JSON.stringify({ reason: "дубль" })
@@ -251,7 +256,10 @@ test.describe("Входящие письма на телефоне @mobile", () 
 
     // решение с телефона
     await sheet.getByLabel("Текст резолюции").fill("Посчитать в первую очередь.");
-    await sheet.getByLabel("Сотрудник: Снабженец").selectOption("31");
+    await chooseOption(
+      sheet.getByLabel("Сотрудник: Снабженец"),
+      "Демо Снабженцев · Специалист по снабжению",
+    );
     await sheet.getByRole("button", { name: SUBMIT }).click();
     await expect(page.getByText("Резолюция наложена: задание ушло исполнителям")).toBeVisible();
     await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toHaveCount(0);
@@ -270,8 +278,11 @@ test.describe("Входящие письма на телефоне @mobile", () 
     await page.getByRole("button", { name: "Наложить резолюцию" }).click();
     const sheet = page.getByRole("dialog", { name: /^Резолюция/ });
     await sheet.getByLabel("Текст резолюции").fill("Нужен расчёт.");
-    await sheet.getByLabel("Сотрудник: Снабженец").selectOption("31");
-    await sheet.getByLabel("Срок расчёта").fill("2020-01-01");
+    await chooseOption(
+      sheet.getByLabel("Сотрудник: Снабженец"),
+      "Демо Снабженцев · Специалист по снабжению",
+    );
+    await fillDate(sheet.getByLabel("Срок расчёта"), "2020-01-01");
     await sheet.getByRole("button", { name: SUBMIT }).click();
     await expect(sheet.getByText("Срок расчёта не может быть в прошлом.")).toBeVisible();
     await settledScreenshot(page, "mobile-error");

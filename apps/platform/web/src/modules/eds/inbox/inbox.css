@@ -212,16 +212,6 @@
 }
 .pf-res-select {
   width: 100%;
-  min-height: 32px;
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  background: #fff;
-  color: #1f1f1f;
-  font: inherit;
-}
-.pf-res-select[aria-invalid="true"] {
-  border-color: #cf1322;
 }
 .pf-res-error {
   color: #cf1322;

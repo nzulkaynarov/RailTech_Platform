@@ -7,6 +7,7 @@ import type { PaymentCard } from "../../../shared/api/generated/model";
 import { confirmPayment } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate } from "../inbox/api";
 import { type InvoiceReason, invoiceReason, isStale, useRefreshPayments } from "./api";
@@ -192,15 +193,14 @@ export function ConfirmForm({ card, variant = "panel", onDone }: ConfirmFormProp
         />
       </FormField>
       <FormField id={id("date")} label={t("confirm.date.label")} hint={t("confirm.date.hint")}>
-        <Input
+        <DateField
           id={id("date")}
-          type="date"
           value={date}
           max={today}
           aria-describedby={`${id("date")}-hint`}
           aria-invalid={!dateValid}
-          onChange={(event) => {
-            setDate(event.target.value);
+          onChange={(next) => {
+            setDate(next);
             forget();
           }}
         />

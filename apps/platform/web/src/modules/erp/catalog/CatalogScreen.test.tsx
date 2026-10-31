@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { fillDate } from "../../../test/fields";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import {
@@ -195,18 +196,12 @@ describe("Номенклатура: поставщики", () => {
     fireEvent.change(await within(form).findByLabelText("Цена закупки, USD"), {
       target: { value: "13,75" },
     });
-    fireEvent.change(within(form).getByLabelText("Цена действует с"), {
-      target: { value: "2027-02-01" },
-    });
-    fireEvent.change(within(form).getByLabelText("Цена действует до"), {
-      target: { value: "2027-01-01" },
-    });
+    fillDate(within(form).getByLabelText("Цена действует с"), "2027-02-01");
+    fillDate(within(form).getByLabelText("Цена действует до"), "2027-01-01");
     fireEvent.click(await within(form).findByRole("button", { name: "Сохранить" }));
     expect(await within(form).findByRole("alert")).toHaveTextContent("не может быть раньше");
 
-    fireEvent.change(within(form).getByLabelText("Цена действует до"), {
-      target: { value: "2027-06-30" },
-    });
+    fillDate(within(form).getByLabelText("Цена действует до"), "2027-06-30");
     fireEvent.click(await within(form).findByRole("button", { name: /Сохранить$/ }));
     await modalClosed(/Предложение: Кабель/);
     expect(await within(drawer).findByText(/13,75\s*USD/)).toBeVisible();

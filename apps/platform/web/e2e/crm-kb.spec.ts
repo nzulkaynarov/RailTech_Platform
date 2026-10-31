@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // CRM · База знаний на MSW (W13-A5): каждое действие экрана — поиск «Что найдёт бот», карточка документа, выключение и включение,
 // переиндексация, загрузка файла (формат, размер, тип), ручной ввод, пробелы (создать документ, привязать, игнорировать, вернуть),
@@ -112,12 +113,14 @@ test.describe("База знаний: администратор", () => {
     await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await expect(form.getByRole("button", { name: "Загрузить документ" })).toBeDisabled();
 
-    await form
-      .getByLabel("Файл .md")
-      .setInputFiles({ name: "price.pdf", mimeType: "application/pdf", buffer: Buffer.from("x") });
+    await pickFiles(form.getByLabel("Файл .md"), {
+      name: "price.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("x"),
+    });
     await expect(form.getByRole("alert")).toContainText("Принимаются только файлы Markdown (.md).");
 
-    await form.getByLabel("Файл .md").setInputFiles({
+    await pickFiles(form.getByLabel("Файл .md"), {
       name: "bad-format.md",
       mimeType: "text/markdown",
       buffer: Buffer.from("# Без front matter\n"),
@@ -126,7 +129,7 @@ test.describe("База знаний: администратор", () => {
     await expect(form.getByRole("alert")).toContainText("В начале файла нет front matter");
     await settledScreenshot(page, "upload-format-error");
 
-    await form.getByLabel("Файл .md").setInputFiles({
+    await pickFiles(form.getByLabel("Файл .md"), {
       name: "garantiya.md",
       mimeType: "text/markdown",
       buffer: Buffer.from(

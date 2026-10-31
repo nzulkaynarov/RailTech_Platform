@@ -210,6 +210,16 @@ SPEC-v3 §10.1 предлагает обёртку над `ProLayout`. Двух�
 | `ListSkeleton rows` | скелетон первой загрузки списка | строки 44 px с полосой 14 px, рамка `#f0f0f0`, отступ 8/16; строк — размер страницы, не больше 10; `data-pf-skeleton` |
 | `TabsBar` | вкладки-фильтр списка | полоса antd `Tabs` (панели antd скрыты) и одна панель `tabpanel` `<id>-body` под ней: тело не размонтируется при смене вкладки |
 | `TableCols widths` + `pf-fixed-table` | ширины колонок таблиц списков | `table-layout: fixed`, `<colgroup>`; `null` — гибкая; `tableMinWidth` — ниже таблица прокручивается в `ScrollRegion`; `pf-ell` — многоточие с `title` |
+| `DateField value onChange min max` | поле даты вместо системного `input type="date"` (UX-2a) | antd `DatePicker`, показ `ДД.ММ.ГГГГ` на всех языках, плейсхолдер `ДД.ММ.ГГГГ` / `KK.OO.YYYY` / `DD.MM.YYYY`, календарь на языке интерфейса (узбекский — `uz-latn`, неделя с понедельника), ширина 100 %; ввод с клавиатуры — `31.10.2026`, `31102026`, `1.11.2026`; значение наружу — строка `YYYY-MM-DD` (как у системного поля), очистка — `""`; `min`/`max` (`companyToday()` из `shared/lib/dates` — «сегодня по Ташкенту») отключают дни в календаре, набранную дату вне диапазона поле отдаёт форме — ошибку пишет форма словами; `status`, `aria-invalid`, `aria-describedby`, подпись — `label for` |
+| `DateRangeField` | пара «с — по» (фильтры журнала, шины, выгрузок) | два `DateField` с подписями: «с» не позже «по», «по» не раньше «с»; обёртка поля — `fieldClassName` или `wrap` (например, `FormField`) |
+| `FileField value onChange accept multiple maxSize` | поле файла формы вместо системного `input type="file"` (UX-2a) | кнопка «Выбрать файл» / «Выбрать файлы» (после выбора одного — «Выбрать другой файл»), рядом «или перетащите сюда» (на < 768 скрыто), список выбранного: имя, размер (`shared/lib/fileSize`, основание 1024, «КБ», «МБ»), «Убрать»; без автозагрузки — форма получает `File[]`; больше `maxSize` и перетащенный файл не по `accept` не берутся, ошибка словами `role="alert"`; системное поле скрыто (`pf-sr-only`, `tabindex=-1`), к нему ведёт `label for` |
+| `FilePicker` | только кнопка выбора (поля со своим списком и загрузкой сразу: вложения документа, письмо директору, логотип, фото профиля, ключ JSON) | та же кнопка и скрытое поле, `inputLabel` — подпись поля без `label for`, `buttonLabel`, `loading`; файлы — в `onPick` |
+
+**Системных полей в экранах нет** (UX-2a): дата — `DateField`/`DateRangeField`, файл — `FileField`/`FilePicker`, выбор из списка —
+antd `Select` с подписью `label for` (поиск — когда вариантов больше 7). Правило `no-restricted-syntax` в `web/eslint.config.js`
+запрещает `<select>` и `input`/`Input` с `type="date|datetime-local|file"` во всём `src/` кроме самих `shared/ui/DateField.tsx` и
+`shared/ui/FileField.tsx`; e2e заполняет их помощниками `e2e/support/fields.ts` (`fillDate`, `pickFiles`, `chooseOption`), vitest —
+`src/test/fields.ts`. Витрина — `/dev/ui`, раздел «DateField, DateRangeField, FileField, Select».
 
 ### 5.1. Формы по схеме CRM, загрузка и выгрузка (W13-A5)
 

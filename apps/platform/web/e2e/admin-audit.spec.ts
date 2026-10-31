@@ -8,6 +8,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { fillDate } from "./support/fields";
 
 // W13-A6 на MSW: сброс пароля по почте, журнал аудита (кто, что, когда), вкладка «Журнал» роли, профиль и уведомления.
 // Каждое действие — сценарием глазами; axe 0 и снимки 1440 и 390 px.
@@ -60,9 +61,9 @@ test.describe("История действий", () => {
     await page.getByLabel("Объект").click();
     await page.getByTitle("Роль Платформы").click();
     await expect(page.getByText("Записей: 2")).toBeVisible();
-    await page.getByLabel("С даты").fill("2026-10-24");
+    await fillDate(page.getByLabel("С даты"), "2026-10-24");
     await expect(page.getByText("Записей: 1")).toBeVisible();
-    await page.getByLabel("С даты").fill("2026-12-01");
+    await fillDate(page.getByLabel("С даты"), "2026-12-01");
     await expect(page.getByText("По этим фильтрам записей нет")).toBeVisible();
     await page.getByRole("button", { name: "Сбросить фильтры" }).first().click();
     await expect(page.getByText("Записей: 13")).toBeVisible();

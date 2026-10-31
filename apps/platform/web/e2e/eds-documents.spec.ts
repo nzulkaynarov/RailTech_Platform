@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { fillDate, pickFiles } from "./support/fields";
 
 // EDS · Создать документ и «Мои документы» на MSW (D1-5): сотрудник создаёт служебную записку с суммой и вложением и отправляет
 // её на согласование — документ виден в «Мои» со статусом «На согласовании»; черновик → «Продолжить» → отправка; сбой сервера
@@ -68,8 +69,8 @@ test.describe("Создать документ: сотрудник", () => {
       "Прошу согласовать закупку трёх столов и десяти стульев.",
     );
     await page.getByLabel("Сумма, сум").fill("3 600 000");
-    await page.getByLabel("Нужно до").fill(inDays(7));
-    await page.getByLabel("Вложения").setInputFiles({
+    await fillDate(page.getByLabel("Нужно до"), inDays(7));
+    await pickFiles(page.getByLabel("Вложения"), {
       name: "schet-mebel.pdf",
       mimeType: "application/pdf",
       buffer: Buffer.from("%PDF-1.4 демонстрационный счёт"),
@@ -208,7 +209,7 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new");
 
-    await page.getByLabel("Вложения").setInputFiles({
+    await pickFiles(page.getByLabel("Вложения"), {
       name: "virus.exe",
       mimeType: "application/x-msdownload",
       buffer: Buffer.from("MZ"),

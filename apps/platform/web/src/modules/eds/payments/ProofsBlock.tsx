@@ -1,5 +1,5 @@
 import { App, Button, Select } from "antd";
-import { useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
@@ -14,6 +14,7 @@ import {
   useRequestPaymentDoc,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { FileField } from "../../../shared/ui/FileField";
 import { ActionToggle, ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { MAX_FILE_BYTES } from "../documents/fileSize";
@@ -86,7 +87,7 @@ function AttachForm({ card }: { card: PaymentCard }) {
   const refresh = useRefreshPayments();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
-  const fileRef = useRef<HTMLInputElement>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [source, setSource] = useState<PaymentProofSource>("EMAIL");
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +96,7 @@ function AttachForm({ card }: { card: PaymentCard }) {
       onSuccess: () => {
         void message.success(t("attach.done"));
         void refresh();
-        if (fileRef.current) fileRef.current.value = "";
+        setFiles([]);
         setNote("");
         setError(null);
       },
@@ -108,7 +109,7 @@ function AttachForm({ card }: { card: PaymentCard }) {
   });
 
   const submit = () => {
-    const file = fileRef.current?.files?.[0];
+    const file = files[0];
     if (!file) {
       setError(t("attach.needFile"));
       return;
@@ -135,12 +136,12 @@ function AttachForm({ card }: { card: PaymentCard }) {
       }}
     >
       <FormField id={id("file")} label={t("attach.file.label")} hint={t("attach.file.hint")}>
-        <input
+        <FileField
           id={id("file")}
-          ref={fileRef}
-          type="file"
+          value={files}
           aria-describedby={`${id("file")}-hint`}
-          onChange={() => {
+          onChange={(next) => {
+            setFiles(next);
             setError(null);
           }}
         />

@@ -3,6 +3,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, settledScreenshot, waitForMotionEnd } from "./support/app";
 import { demoPhoto } from "./support/demoPhoto";
+import { pickFiles } from "./support/fields";
 
 // W15-H6 на MSW: страница /me (фото, данные, Telegram сам, замещение) и «Забыли пароль?». Каждое действие — сценарием
 // глазами; axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR`).
@@ -86,7 +87,7 @@ test.describe("Профиль /me", () => {
     const rail = page.getByRole("button", { name: /профиль и настройки/ });
     await expect(rail.locator("img")).toHaveCount(0);
 
-    await page.locator('input[type="file"]').setInputFiles({
+    await pickFiles(page.locator('input[type="file"]'), {
       name: "demo.png",
       mimeType: "image/png",
       buffer: demoPhoto(),

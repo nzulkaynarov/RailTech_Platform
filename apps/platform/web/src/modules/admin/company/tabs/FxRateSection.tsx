@@ -14,6 +14,7 @@ import {
 import { companyDayKey } from "../../../../shared/lib/dates";
 import { useFormat } from "../../../../shared/lib/useFormat";
 import { Consequence } from "../../../../shared/ui/Consequence";
+import { DateField } from "../../../../shared/ui/DateField";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { ListTable, QueryGate, ReadOnlyFence } from "../common";
@@ -155,7 +156,7 @@ function FxForm() {
               },
             ]}
           >
-            <Input type="date" max={today} />
+            <DateField max={today} />
           </Form.Item>
           <Form.Item
             name="rate_to_uzs"

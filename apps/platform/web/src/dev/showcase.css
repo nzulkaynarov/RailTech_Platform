@@ -81,3 +81,15 @@
     padding: 12px;
   }
 }
+/* UX-2a: поля даты, файла и выбора */
+.dev-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+}
+.dev-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+}

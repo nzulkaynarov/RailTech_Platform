@@ -1,5 +1,5 @@
 import { App, Button, Collapse, Input, Modal, Select } from "antd";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -9,6 +9,7 @@ import {
   useUploadKbDocument,
 } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { FileField } from "../../../shared/ui/FileField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { kbErrorText } from "./errors";
 import {
@@ -136,7 +137,6 @@ function useCreated() {
 function UploadForm({ gapId }: { gapId: number | null }) {
   const { t, i18n } = useTranslation("kb");
   const created = useCreated();
-  const fileInput = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -188,15 +188,14 @@ function UploadForm({ gapId }: { gapId: number | null }) {
         label={t("create.upload.file")}
         hint={t("create.upload.fileHint")}
       >
-        <input
+        <FileField
           id="kb-upload-file"
-          ref={fileInput}
-          type="file"
+          value={file ? [file] : []}
           accept=".md,text/markdown"
           aria-invalid={fileError !== null || undefined}
           aria-describedby="kb-upload-file-hint"
-          onChange={(event) => {
-            const next = event.target.files?.[0] ?? null;
+          onChange={(files) => {
+            const next = files[0] ?? null;
             checkFile(next);
             if (next && title.trim() === "") setTitle(next.name.replace(/\.md$/i, ""));
           }}

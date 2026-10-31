@@ -1,4 +1,4 @@
-import { App, Button, Checkbox, Input } from "antd";
+import { App, Button, Checkbox, Input, Select } from "antd";
 import { type FormEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -13,6 +13,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
 import { type ResolutionDraft, type ZonePick, clearDraft, readDraft, writeDraft } from "./draft";
@@ -276,25 +277,26 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
                   <label className="pf-sr-only" htmlFor={id(`pick-${zone}`)}>
                     {t("form.assignees.employee", { zone: t(`form.zones.${zone}.name`) })}
                   </label>
-                  <select
+                  <Select
                     id={id(`pick-${zone}`)}
-                    className="pf-res-select pf-focusable"
-                    value={pick.userId}
+                    className="pf-res-select"
+                    value={pick.userId || undefined}
+                    placeholder={t("form.assignees.choose")}
+                    showSearch={candidates.length > 7}
+                    optionFilterProp="label"
+                    status={errors[zone] ? "error" : undefined}
                     aria-invalid={errors[zone] ? true : undefined}
                     aria-describedby={errors[zone] ? id(`pick-${zone}-error`) : undefined}
-                    onChange={(event) => {
-                      patchPick(zone, { userId: event.target.value });
+                    options={candidates.map((candidate) => ({
+                      value: candidate.id,
+                      label: candidate.position
+                        ? `${candidate.name} · ${candidate.position}`
+                        : candidate.name,
+                    }))}
+                    onChange={(value: string) => {
+                      patchPick(zone, { userId: value });
                     }}
-                  >
-                    <option value="">{t("form.assignees.choose")}</option>
-                    {candidates.map((candidate) => (
-                      <option key={candidate.id} value={candidate.id}>
-                        {candidate.position
-                          ? `${candidate.name} · ${candidate.position}`
-                          : candidate.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                   {errors[zone] ? (
                     <span className="pf-res-error" id={id(`pick-${zone}-error`)} role="alert">
                       {errors[zone]}
@@ -317,16 +319,15 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
         label={t("form.due.label")}
         hint={errors.due ? undefined : t("form.due.hint")}
       >
-        <Input
+        <DateField
           id={id("due")}
-          type="date"
           value={state.due}
           min={today}
           status={errors.due ? "error" : undefined}
           aria-invalid={errors.due ? true : undefined}
           aria-describedby={errors.due ? id("due-error") : id("due-hint")}
-          onChange={(event) => {
-            patch({ due: event.target.value }, ["due"]);
+          onChange={(next) => {
+            patch({ due: next }, ["due"]);
           }}
         />
         {errors.due ? (

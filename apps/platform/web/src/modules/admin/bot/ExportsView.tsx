@@ -7,6 +7,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { downloadFile } from "../../../shared/api/download";
 import { getDownloadCsvExportUrl } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { DateRangeField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { botErrorText } from "./errors";
 
@@ -139,28 +140,23 @@ function ExportCard({ entity, allowed }: { entity: Entity; allowed: boolean }) {
         ) : null}
         {entity !== "clients" ? (
           <div className="pf-fp-row">
-            <FormField id={`${id}-from`} label={t(`bot:exports.filters.from.${entity}`)}>
-              <Input
-                id={`${id}-from`}
-                type="date"
-                disabled={!allowed}
-                value={filters["from"] ?? ""}
-                onChange={(event) => {
-                  set("from", event.target.value);
-                }}
-              />
-            </FormField>
-            <FormField id={`${id}-to`} label={t(`bot:exports.filters.to.${entity}`)}>
-              <Input
-                id={`${id}-to`}
-                type="date"
-                disabled={!allowed}
-                value={filters["to"] ?? ""}
-                onChange={(event) => {
-                  set("to", event.target.value);
-                }}
-              />
-            </FormField>
+            <DateRangeField
+              idFrom={`${id}-from`}
+              idTo={`${id}-to`}
+              labelFrom={t(`bot:exports.filters.from.${entity}`)}
+              labelTo={t(`bot:exports.filters.to.${entity}`)}
+              disabled={!allowed}
+              value={{ from: filters["from"] ?? "", to: filters["to"] ?? "" }}
+              wrap={({ id: fieldId, label, children }) => (
+                <FormField id={fieldId} label={label}>
+                  {children}
+                </FormField>
+              )}
+              onChange={(range) => {
+                if (range.from !== (filters["from"] ?? "")) set("from", range.from);
+                if (range.to !== (filters["to"] ?? "")) set("to", range.to);
+              }}
+            />
           </div>
         ) : null}
         {allowed ? null : (

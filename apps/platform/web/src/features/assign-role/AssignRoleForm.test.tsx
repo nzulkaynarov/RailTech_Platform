@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { Employee, EmployeeUpdate } from "../../shared/api/generated/model";
+import { chooseOption } from "../../test/fields";
 import { ROLE_ID, ref, rolesHandler } from "../../test/roles";
 import { server } from "../../test/server";
 import { renderUi } from "../../test/renderUi";
@@ -219,8 +220,7 @@ describe("AssignRoleForm: выдача ролей", () => {
       expect(transfer).toBeDisabled();
     });
     const colleague = screen.getByLabelText("Кому передать лиды в работе");
-    await screen.findByRole("option", { name: "Борис Коллегин" });
-    fireEvent.change(colleague, { target: { value: "12" } });
+    await chooseOption(colleague, "Борис Коллегин");
     fireEvent.click(transfer);
 
     await waitFor(() => {

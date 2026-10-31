@@ -19,6 +19,7 @@ import {
   useUpdateSupplierOffer,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DateField } from "../../../shared/ui/DateField";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FormField, QueryState } from "../../../shared/ui/FormParts";
@@ -432,24 +433,14 @@ function OfferForm({
       </div>
       <div className="pf-cat-form-row">
         <FormField id={ids.from} label={t("offers.form.validFrom")}>
-          <Input
-            id={ids.from}
-            type="date"
-            value={from}
-            onChange={(e) => {
-              setFrom(e.target.value);
-            }}
-          />
+          <DateField id={ids.from} value={from} onChange={setFrom} />
         </FormField>
         <FormField id={ids.until} label={t("offers.form.validUntil")}>
-          <Input
+          <DateField
             id={ids.until}
-            type="date"
             value={until}
             status={fields.includes("valid_until") ? "error" : undefined}
-            onChange={(e) => {
-              setUntil(e.target.value);
-            }}
+            onChange={setUntil}
           />
         </FormField>
       </div>

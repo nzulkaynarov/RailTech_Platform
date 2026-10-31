@@ -33,9 +33,6 @@
   gap: 8px;
   margin-top: 16px;
 }
-.pf-newdoc input[type="file"] {
-  max-width: 100%;
-}
 /* Телефон: форма — лист на весь экран, кнопки прижаты к низу (над нижней панелью модулей) */
 @media (max-width: 767px) {
   .pf-newdoc-row {

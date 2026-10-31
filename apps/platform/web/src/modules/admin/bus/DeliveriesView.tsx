@@ -17,6 +17,7 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { useShownKey } from "../../../shared/lib/useShownKey";
 import { DataBlock, ListSkeleton } from "../../../shared/ui/DataBlock";
+import { DateRangeField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
@@ -30,7 +31,7 @@ import {
   shortType,
   subscriberName,
 } from "./format";
-import { BusSourcesNote, NativeSelect, ScrollRegion } from "./parts";
+import { BusSourcesNote, FilterSelect, ScrollRegion } from "./parts";
 
 const STATUSES: readonly BusDeliveryStatus[] = ["dead", "pending", "in_flight", "delivered"];
 const PAGE = 50;
@@ -289,7 +290,7 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
         <div className="pf-bus-filters" role="group" aria-label={t("filters.label")}>
           <div className="pf-bus-field">
             <label htmlFor={id("domain")}>{t("filters.domain")}</label>
-            <NativeSelect<BusDomain | "all">
+            <FilterSelect<BusDomain | "all">
               id={id("domain")}
               value={domain}
               onChange={setDomain}
@@ -302,7 +303,7 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
           {mode === "all" ? (
             <div className="pf-bus-field">
               <label htmlFor={id("status")}>{t("filters.status")}</label>
-              <NativeSelect<BusDeliveryStatus | "all">
+              <FilterSelect<BusDeliveryStatus | "all">
                 id={id("status")}
                 value={status}
                 onChange={setStatus}
@@ -315,7 +316,7 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
           ) : null}
           <div className="pf-bus-field">
             <label htmlFor={id("subscriber")}>{t("filters.subscriber")}</label>
-            <NativeSelect<string>
+            <FilterSelect<string>
               id={id("subscriber")}
               value={subscriber}
               onChange={setSubscriber}
@@ -339,30 +340,19 @@ export function DeliveriesView({ mode, subscribers, selectedKey, onOpen }: Deliv
               }}
             />
           </div>
-          <div className="pf-bus-field">
-            <label htmlFor={id("from")}>{t("filters.from")}</label>
-            <Input
-              id={id("from")}
-              type="date"
-              value={from}
-              style={{ width: 150 }}
-              onChange={(event) => {
-                setFrom(event.target.value);
-              }}
-            />
-          </div>
-          <div className="pf-bus-field">
-            <label htmlFor={id("to")}>{t("filters.to")}</label>
-            <Input
-              id={id("to")}
-              type="date"
-              value={to}
-              style={{ width: 150 }}
-              onChange={(event) => {
-                setTo(event.target.value);
-              }}
-            />
-          </div>
+          <DateRangeField
+            idFrom={id("from")}
+            idTo={id("to")}
+            labelFrom={t("filters.from")}
+            labelTo={t("filters.to")}
+            fieldClassName="pf-bus-field"
+            style={{ width: 150 }}
+            value={{ from, to }}
+            onChange={(range) => {
+              setFrom(range.from);
+              setTo(range.to);
+            }}
+          />
           {filtered ? (
             <Button type="link" onClick={reset} className="pf-bus-reset">
               {t("filters.reset")}

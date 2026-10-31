@@ -10,6 +10,7 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
+import { pickFiles } from "./support/fields";
 
 // Admin · Компания на MSW (W13-A3): каждое действие экрана, права, axe на 1440, 1280 и 390, снимки (`E2E_SCREENSHOT_DIR`).
 const WIDTHS = [1440, 1280, 390] as const;
@@ -139,7 +140,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
 
     // Тосты не накладываются на снимок: ждём, пока уйдёт «Сохранено», и только потом загружаем файл.
     await expect(page.locator(".ant-message-notice")).toHaveCount(0);
-    await page.getByLabel("Выбрать файл: Логотип компании").setInputFiles({
+    await pickFiles(page.getByLabel("Выбрать файл: Логотип компании"), {
       name: "logo.png",
       mimeType: "image/png",
       buffer: PNG,
@@ -186,7 +187,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await page.getByRole("button", { name: "Сохранить бланк" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
 
-    await page.getByLabel("Выбрать файл: Логотип бланка").setInputFiles({
+    await pickFiles(page.getByLabel("Выбрать файл: Логотип бланка"), {
       name: "brand.png",
       mimeType: "image/png",
       buffer: PNG,

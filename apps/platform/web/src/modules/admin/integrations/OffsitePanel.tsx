@@ -1,5 +1,5 @@
 import { Alert, Button, Input, Radio } from "antd";
-import { type ChangeEvent, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { OffsiteBackup, OffsiteBackupProvider } from "../../../shared/api/generated/model";
@@ -11,6 +11,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { FilePicker } from "../../../shared/ui/FileField";
 import { hasFailedField } from "./errors";
 import { ActionForm, ActionToggle, ErrorNote, Field, LevelTag, Masked, PanelState } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
@@ -138,8 +139,7 @@ function SetupForm({ offsite, onDone }: { offsite: OffsiteBackup; onDone: () => 
       },
     },
   });
-  const onFile = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const onFile = (file: File | undefined) => {
     setKeyText(null);
     setKeyProblem(null);
     setKeyName(file?.name ?? "");
@@ -286,13 +286,17 @@ function SetupForm({ offsite, onDone }: { offsite: OffsiteBackup; onDone: () => 
               needKey ? t("storage.offsite.form.keyHint") : t("storage.offsite.form.keyKeepHint")
             }
           >
-            <input
-              id="offsite-key"
-              type="file"
-              accept="application/json,.json"
-              aria-describedby="offsite-key-hint"
-              onChange={onFile}
-            />
+            <div>
+              <FilePicker
+                id="offsite-key"
+                accept="application/json,.json"
+                aria-describedby="offsite-key-hint"
+                buttonLabel={keyName ? t("ui:file.replace") : undefined}
+                onPick={(files) => {
+                  onFile(files[0]);
+                }}
+              />
+            </div>
           </Field>
           {keyProblem ? (
             <Alert type="error" showIcon role="alert" message={keyProblem} />

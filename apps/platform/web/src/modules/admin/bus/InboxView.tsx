@@ -26,7 +26,7 @@ import {
   shortType,
   subscriberName,
 } from "./format";
-import { BusSourcesNote, NativeSelect, ScrollRegion } from "./parts";
+import { BusSourcesNote, FilterSelect, ScrollRegion } from "./parts";
 
 const PAGE = 50;
 
@@ -238,7 +238,7 @@ export function InboxView({ selectedKey, onOpen }: InboxViewProps) {
         <div className="pf-bus-filters" role="group" aria-label={t("filters.label")}>
           <div className="pf-bus-field">
             <label htmlFor="pf-bus-inbox-domain">{t("filters.domain")}</label>
-            <NativeSelect<BusDomain | "all">
+            <FilterSelect<BusDomain | "all">
               id="pf-bus-inbox-domain"
               value={domain}
               onChange={setDomain}

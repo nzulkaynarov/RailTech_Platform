@@ -14,6 +14,7 @@ import { readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { endSession } from "../../../mocks/mockSession";
 import { companyDayKey } from "../../../shared/lib/dates";
 import i18n from "../../../shared/i18n";
+import { fillDate } from "../../../test/fields";
 import { renderApp, signInAs } from "../../../test/renderApp";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
@@ -836,7 +837,7 @@ describe("Курс USD → UZS: ручной ввод", () => {
     expect(journal.getByText("Автокурс ЦБ не применён")).toBeInTheDocument();
     expect(journal.getByText("Демо Директоров")).toBeInTheDocument();
     expect(journal.getByText("Автозагрузка")).toBeInTheDocument();
-    expect(screen.getByLabelText("Дата курса")).toHaveValue(today());
+    expect(screen.getByLabelText("Дата курса")).toHaveValue(today().split("-").reverse().join("."));
   });
 
   it("вводит курс запятой: курс, источник и журнал обновляются, поле очищается", async () => {
@@ -872,12 +873,25 @@ describe("Курс USD → UZS: ручной ввод", () => {
     },
   );
 
+  it("дата позже сегодняшней не выбирается: в календаре дни после сегодня отключены", async () => {
+    await openTab("platform", "admin@demo.example");
+    const date = await screen.findByLabelText("Дата курса");
+    fireEvent.mouseDown(date);
+    fireEvent.click(date);
+    const cell = (day: string) =>
+      document.querySelector<HTMLElement>(`.ant-picker-cell[title="${day}"]`);
+    await waitFor(() => {
+      expect(cell(today())).not.toHaveClass("ant-picker-cell-disabled");
+    });
+    const [y = 0, m = 1, d = 1] = today().split("-").map(Number);
+    const tomorrow = new Date(Date.UTC(y, m - 1, d + 1)).toISOString().slice(0, 10);
+    expect(cell(tomorrow)).toHaveClass("ant-picker-cell-disabled");
+  });
+
   it("дата позже сегодняшней — ошибка у поля даты, запись не создаётся", async () => {
     await openTab("platform", "admin@demo.example");
     const before = readCompanyMock().fx.journal.length;
-    fireEvent.change(await screen.findByLabelText("Дата курса"), {
-      target: { value: "2099-01-01" },
-    });
+    fillDate(await screen.findByLabelText("Дата курса"), "2099-01-01");
     fireEvent.change(screen.getByLabelText("Курс, сум за 1 USD"), { target: { value: "12700" } });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
     expect(
