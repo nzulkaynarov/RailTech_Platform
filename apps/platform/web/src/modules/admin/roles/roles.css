@@ -15,8 +15,12 @@
   gap: 6px;
 }
 .pf-matrix-scroll {
-  position: relative;
   overflow-x: auto;
+}
+/* Скрытые подписи уровня (`pf-sr-only`, absolute) — внутри своей ячейки: не выходят за полосу прокрутки и не растягивают
+   рабочую область на 390 (UX-2b). Не у полосы прокрутки: она — точка отсчёта прокрутки к выбранному столбцу. */
+.pf-matrix td {
+  position: relative;
 }
 .pf-matrix {
   width: 100%;
