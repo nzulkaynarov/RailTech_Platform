@@ -15,7 +15,7 @@ import { useTelegramBackButton } from './useTelegramBackButton';
 const SIDEBAR_STORAGE_KEY = 'rt-cab-sidebar-collapsed-v1';
 
 /**
- * Оболочка кабинета (Notion Floating Canvas):
+ * Оболочка кабинета (Floating Canvas):
  * - Внешний фон #F8F9FA (bg-alabaster).
  * - Слева сворачиваемый сайдбар SideNav (управление кнопкой и ⌘\ / Ctrl+\).
  * - Справа плавающий скругленный белый холст bg-canvas (rounded-2xl border border-silver/80).

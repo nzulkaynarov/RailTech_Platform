@@ -104,7 +104,7 @@ export function DealPage() {
         actions={<ManagerButton dealId={dealId} />}
       />
 
-      {/* Сегментированный прогресс-бар этапов сделки в стиле Notion */}
+      {/* Сегментированный прогресс-бар этапов сделки */}
       <div className="mb-6 rounded-2xl border border-hairline bg-alabaster/60 p-4">
         <div className="mb-2 flex items-center justify-between text-xs">
           <span className="font-semibold text-navy uppercase tracking-wider">
@@ -194,7 +194,7 @@ export function DealPage() {
         </DealSection>
         <DealSection title={t('pages.deal.documents')} count={dealDocuments.length}>
           {dealDocuments.map((doc) => (
-            <li key={doc.id} className="notion-card flex min-w-0 flex-wrap items-center justify-between gap-2 p-3 text-sm">
+            <li key={doc.id} className="portal-card flex min-w-0 flex-wrap items-center justify-between gap-2 p-3 text-sm">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-coral-bg text-coral">
                   <FileText className="size-4 text-coral" />

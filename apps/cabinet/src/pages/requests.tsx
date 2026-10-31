@@ -14,7 +14,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
-import { NotionDealCard } from '@/components/NotionDealCard';
+import { DealCard } from '@/components/DealCard';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
 import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
@@ -102,7 +102,7 @@ export function RequestsPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 {waitingQuotes.map((req) => (
-                  <NotionDealCard
+                  <DealCard
                     key={req.id}
                     id={req.id}
                     code={req.number}
@@ -136,7 +136,7 @@ export function RequestsPage() {
             ) : (
               <div className="flex flex-col gap-3">
                 {inWorkRequests.map((req) => (
-                  <NotionDealCard
+                  <DealCard
                     key={req.id}
                     id={req.id}
                     code={req.number}

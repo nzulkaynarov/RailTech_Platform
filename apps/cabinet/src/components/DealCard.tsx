@@ -7,7 +7,7 @@ import { formatMoney } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Schemas } from '@/api/portal';
 
-export type NotionDealCardStatus =
+export type DealCardStatus =
   | { statusEntity: 'request'; statusCode: Schemas['RequestStatus'] }
   | { statusEntity: 'quote'; statusCode: Schemas['QuoteStatus'] }
   | { statusEntity: 'contract'; statusCode: Schemas['ContractStatus'] }
@@ -16,7 +16,7 @@ export type NotionDealCardStatus =
   | { statusEntity: 'delivery'; statusCode: Schemas['DeliveryStatus'] }
   | { statusEntity?: undefined; statusCode?: undefined };
 
-export type NotionDealCardProps = {
+export type DealCardProps = {
   id: number | string;
   code: string;
   title: string;
@@ -32,7 +32,7 @@ export type NotionDealCardProps = {
   hasDocuments?: boolean;
   documentCount?: number;
   className?: string;
-} & NotionDealCardStatus;
+} & DealCardStatus;
 
 const MILESTONES = [
   'Запрос',
@@ -42,7 +42,7 @@ const MILESTONES = [
   'Исполнение и Акт',
 ];
 
-export function NotionDealCard(props: NotionDealCardProps) {
+export function DealCard(props: DealCardProps) {
   const {
     code,
     title,
@@ -62,7 +62,7 @@ export function NotionDealCard(props: NotionDealCardProps) {
   const content = (
     <article
       className={cn(
-        'notion-card group relative flex min-w-0 flex-col gap-3 p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        'portal-card group relative flex min-w-0 flex-col gap-3 p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
         className,
       )}
       onClick={onClick}

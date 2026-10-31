@@ -34,7 +34,7 @@ export type SidePeekStatus =
   | { statusEntity: 'delivery'; statusCode: Schemas['DeliveryStatus'] }
   | { statusEntity?: undefined; statusCode?: undefined };
 
-export type NotionSidePeekProps = {
+export type SidePeekProps = {
   open: boolean;
   onClose: () => void;
   code: string;
@@ -59,7 +59,7 @@ const DEFAULT_MILESTONES = [
   '5. Исполнение и Акт приёмки',
 ];
 
-export function NotionSidePeek(props: NotionSidePeekProps) {
+export function SidePeek(props: SidePeekProps) {
   const {
     open,
     onClose,

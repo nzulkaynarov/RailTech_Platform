@@ -28,7 +28,7 @@ import { scanProblem, type UploadProblem } from '@/lib/upload';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 
-/** Консолидированный таб-бар для финансового и договорного контура в стиле Notion. */
+/** Консолидированный таб-бар для финансового и договорного контура. */
 export function BillingNavTabs() {
   const { t } = useTranslation();
   const location = useLocation();

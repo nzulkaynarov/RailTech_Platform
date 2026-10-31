@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-/** Пустое состояние экрана в Notion-стиле: иконка (декоративная), заголовок, пояснение, действие. */
+/** Пустое состояние экрана: иконка (декоративная), заголовок, пояснение, действие. */
 export function EmptyState({
   icon: Icon,
   title,

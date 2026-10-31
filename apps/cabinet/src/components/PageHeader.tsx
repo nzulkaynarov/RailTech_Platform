@@ -12,7 +12,7 @@ export interface PageHeaderProps {
 }
 
 /**
- * Заголовок экрана в эстетике Notion:
+ * Заголовок экрана в эстетике минимализма:
  * крупная иконка в скругленном квадрате #1F2E4A, один h1, статус/роль, подзаголовок и действия справа.
  */
 export function PageHeader({ title, subtitle, actions, icon: Icon, badge }: PageHeaderProps) {

@@ -76,7 +76,7 @@ export function ActionRequiredWidget() {
         {pendingQuotes.map((quote) => (
           <Card
             key={`quote-${quote.id}`}
-            className="notion-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -102,7 +102,7 @@ export function ActionRequiredWidget() {
         {pendingContracts.map((contract) => (
           <Card
             key={`contract-${contract.id}`}
-            className="notion-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -130,7 +130,7 @@ export function ActionRequiredWidget() {
           return (
             <Card
               key={`inv-${inv.id}`}
-              className="notion-card group relative border-border hover:border-silver"
+              className="portal-card group relative border-border hover:border-silver"
             >
               <CardContent className="flex flex-col gap-1.5 p-3.5">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -160,7 +160,7 @@ export function ActionRequiredWidget() {
         {pendingActs.map((act) => (
           <Card
             key={`act-${act.id}`}
-            className="notion-card group relative border-border hover:border-silver"
+            className="portal-card group relative border-border hover:border-silver"
           >
             <CardContent className="flex flex-col gap-1.5 p-3.5">
               <div className="flex items-center justify-between text-xs text-muted-foreground">

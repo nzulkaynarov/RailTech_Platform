@@ -77,7 +77,7 @@
 }
 
 @layer utilities {
-  .notion-card {
+  .portal-card {
     @apply rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-silver hover:shadow-[0_8px_24px_-6px_rgba(31,46,74,0.07)];
   }
 
