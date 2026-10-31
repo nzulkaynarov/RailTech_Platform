@@ -15,6 +15,7 @@
   gap: 6px;
 }
 .pf-matrix-scroll {
+  position: relative;
   overflow-x: auto;
 }
 .pf-matrix {

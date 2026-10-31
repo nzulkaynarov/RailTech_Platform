@@ -119,3 +119,11 @@
 .pf-tabs-bar > .ant-tabs-nav {
   margin-bottom: 0;
 }
+/*
+ * На узком экране вкладки не прячутся в меню «…» (UX-2b, Склад на 390): лента прокручивается вбок свайпом, колесом и
+ * стрелками, край с тенью показывает, что дальше есть ещё — как у вкладок настроек (`SectionTabs`). Меню «…» antd ещё и
+ * кладёт кнопку внутрь `tablist` (axe `aria-required-children`).
+ */
+.pf-tabs-bar > .ant-tabs-nav > .ant-tabs-nav-operations {
+  display: none;
+}

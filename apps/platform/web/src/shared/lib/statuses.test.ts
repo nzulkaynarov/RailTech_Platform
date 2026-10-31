@@ -63,6 +63,23 @@ describe("карты статусов", () => {
     }
   });
 
+  it("каждое слово словаря `dictionary:status` и `dictionary:stage` показывается тегом по коду", () => {
+    const dictionary = resources.ru.dictionary as unknown as {
+      status: Record<string, Record<string, string>>;
+      stage: Record<string, string>;
+    };
+    const words: Record<string, readonly string[]> = DICTIONARY_STATUS;
+    for (const [kind, map] of Object.entries(dictionary.status)) {
+      expect([...(words[kind] ?? [])].sort(), kind).toEqual(Object.keys(map).sort());
+      for (const code of Object.keys(map)) {
+        expect(isKnownStatus(kind as keyof typeof DICTIONARY_STATUS, code), `${kind}.${code}`).toBe(
+          true,
+        );
+      }
+    }
+    expect([...DICTIONARY_STATUS.stage].sort()).toEqual(Object.keys(dictionary.stage).sort());
+  });
+
   it("слова статусов в одном документе не повторяются", () => {
     const words = Object.entries(resources.ru.dictionary.status).flatMap(([kind, map]) => {
       const values = Object.values(map);

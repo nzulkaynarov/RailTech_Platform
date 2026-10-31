@@ -129,7 +129,8 @@
   align-self: flex-start;
 }
 .pf-calc-input {
-  width: 104px;
+  /* «103 500 000» целиком: сумма до сотен миллионов без обрезки (UX-2b) */
+  width: 120px;
 }
 .pf-calc-qty {
   display: inline-flex;
@@ -151,7 +152,8 @@
   gap: 2px;
 }
 .pf-calc-crew-field .pf-calc-input {
-  width: 104px;
+  /* «103 500 000» целиком: сумма до сотен миллионов без обрезки (UX-2b) */
+  width: 120px;
 }
 .pf-calc-totals th,
 .pf-calc-totals td {
@@ -293,6 +295,19 @@
 .pf-calc-card-title {
   margin: 0;
   overflow-wrap: anywhere;
+}
+/* Длинное название в карточке переносится, тег справа не уходит за край (UX-2b, Склад на 390). */
+.pf-calc-card-head > .pf-calc-link {
+  min-width: 0;
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.pf-calc-card-head > .pf-calc-link > span {
+  white-space: normal;
+}
+.pf-calc-card-head > .ant-tag {
+  flex: none;
 }
 .pf-calc-cards p.pf-hint {
   margin: 0;

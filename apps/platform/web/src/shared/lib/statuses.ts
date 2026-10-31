@@ -259,6 +259,7 @@ export const DICTIONARY_STATUS = {
   invoice: ["issued", "proof_received", "partially_paid", "paid", "overdue"],
   act: ["draft", "issued", "signed", "returned"],
   memo: ["pending", "approved", "rejected", "returned", "passed_to_accountant", "paid"],
+  lead: ["new", "dialog", "wants_quote", "no_answer", "client", "lost"],
   stage: [...STAGES, "LOST"],
 } as const satisfies Partial<Record<StatusKind, readonly string[]>>;
 

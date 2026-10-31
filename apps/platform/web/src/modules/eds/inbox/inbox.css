@@ -273,3 +273,13 @@
     padding: 12px 16px;
   }
 }
+
+/* Фильтр статусов: на 390 не помещается — прокрутка вбок внутри своей полосы, страница не шире экрана (UX-2b). */
+.pf-letters-filter {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.pf-letters-filter > .ant-segmented {
+  display: inline-flex;
+}

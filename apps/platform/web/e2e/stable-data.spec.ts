@@ -11,12 +11,15 @@ import { loginAndWait, screenshot, settledScreenshot, waitForMotionEnd } from ".
 /** Ключ состояния первого запуска в моке (как в first-run.spec.ts). */
 const SETUP_KEY = "rt-pf-mock-setup";
 
-const SLOW_API = `(() => {
+/** Ответы API задержаны на 600 мс; чек-лист настройки — ещё на `setupExtra` (поздний ответ после показа экрана, UX-2b). */
+const slowApi = (setupExtra = 0) => `(() => {
   const original = window.fetch.bind(window);
   window.fetch = (input, init) => {
     const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-    if (new URL(url, location.href).pathname.startsWith("/api")) {
-      return new Promise((resolve) => setTimeout(resolve, 600)).then(() => original(input, init));
+    const path = new URL(url, location.href).pathname;
+    if (path.startsWith("/api")) {
+      const delay = 600 + (path.startsWith("/api/v1/setup/checklist") ? ${String(setupExtra)} : 0);
+      return new Promise((resolve) => setTimeout(resolve, delay)).then(() => original(input, init));
     }
     return original(input, init);
   };
@@ -25,6 +28,7 @@ const SLOW_API = `(() => {
     for (const entry of list.getEntries()) window.__shifts.push(entry.value);
   }).observe({ type: "layout-shift", buffered: true });
 })();`;
+const SLOW_API = slowApi();
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
@@ -169,4 +173,51 @@ test.describe("Данные без мигания", () => {
       await expectNoViolations(page, "Мои задачи администратора");
     });
   }
+
+  test("чек-лист ответил после показа экрана: баннер под экраном, готовый экран не сдвигается (UX-2b)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    const fresh = JSON.stringify({
+      needsAdmin: false,
+      code: "",
+      fresh: true,
+      companyCreated: false,
+      done: {},
+    });
+    await page.addInitScript(
+      `if (!window.localStorage.getItem(${JSON.stringify(SETUP_KEY)})) window.localStorage.setItem(${JSON.stringify(SETUP_KEY)}, ${JSON.stringify(fresh)});`,
+    );
+    // чек-лист отвечает через 2,1 с — позже предела ожидания 800 мс: экран уже показан
+    await page.addInitScript({ content: slowApi(1500) });
+    await page.goto("/login");
+    await page.getByLabel("Электронная почта").fill("all@demo.example");
+    await page.getByLabel("Пароль").fill("demo-pass-1");
+    const mark = await shiftCount(page);
+    await page.getByRole("button", { name: "Войти" }).click();
+    await expect(page).toHaveURL(/\/dashboard\/queue$/);
+    const banner = page.getByRole("region", { name: "Настройка Платформы" });
+    await expect(banner).toBeVisible({ timeout: 15_000 });
+    await page.waitForTimeout(500);
+    expect(await shiftsSince(page, mark)).toBeLessThanOrEqual(0.01);
+    // баннер — последним в рабочей области, после экрана
+    expect(
+      await page.evaluate(
+        `document.querySelector("#main-content > .pf-setup-banner") === document.querySelector("#main-content").lastElementChild`,
+      ),
+    ).toBe(true);
+    // со следующего перехода — на своём месте сверху
+    await page
+      .getByRole("navigation", { name: "Модули" })
+      .getByRole("link")
+      .filter({ hasText: "Документы" })
+      .click();
+    await expect(page).not.toHaveURL(/\/dashboard\/queue$/);
+    await expect(banner).toBeVisible();
+    expect(
+      await page.evaluate(
+        `document.querySelector("#main-content > .pf-setup-banner") === document.querySelector("#main-content").firstElementChild`,
+      ),
+    ).toBe(true);
+  });
 });
