@@ -31,10 +31,10 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; 
 | `src/session/` | сессия `GET /me` (`useMe`, `useCanAct`, `<CanAct>`, `useLogout`), режим `miniapp` / `web` |
 | `src/telegram/` | Telegram Web App SDK: `initData`, тема поверх переменных shadcn, `start_param` → маршрут |
 | `src/app/` | маршруты, guards, React Query, разделы навигации |
-| `src/components/shell/` | оболочка: нижняя навигация (телефон), боковая (десктоп), «Назад» Telegram |
+| `src/components/shell/` | оболочка: `AppShell` (Floating Canvas, сворачиваемый сайдбар `SideNav` ⌘\, мобильная нижняя навигация), «Назад» Telegram |
 | `src/pages/` | экраны по домену: `requests`, `quotes`, `billing` (договоры, счета, акты), `deliveries` (поставки, документы), `catalog`, `company` (компания, команда), `deal`; вход, magic-link, «Я новый клиент», профиль |
 | `src/api/queries.ts` | React Query-хуки экранов: ключи по эндпоинту, после действия — инвалидация связанных списков |
-| `src/components/` | общие части экранов: `ResponsiveList`, `StatusBadge`, `QueryStates`, `ActionDialog`, `ReasonDialog`, `DocumentButton`, `Details`, `TelegramLinkButton` / `ManagerButton` («Написать менеджеру» → `t.me/<бот>?start=deal_<id>`, в Mini App — `openTelegramLink`); `ui/` — shadcn из ERP |
+| `src/components/` | общие части экранов: `DealCard` (карточка сделки/запроса), `SidePeek` (боковая панель инспекции), `ViewSwitcher` (Таблица/Сетка/Канбан), `UnsavedChangesBar` (плавающая панель несохраненных правок), `ActionRequiredWidget` (виджет срочных действий), `ResponsiveList`, `StatusBadge`, `QueryStates`, `ActionDialog`, `ReasonDialog`, `DocumentButton`, `Details`, `TelegramLinkButton` / `ManagerButton` («Написать менеджеру» → `t.me/<бот>?start=deal_<id>`, в Mini App — `openTelegramLink`); `ui/` — shadcn из ERP |
 | `src/lib/` | `format.ts` (деньги, даты Asia/Tashkent, размеры), `status.ts`, `invoice.ts`, `quotes.ts`, `download.ts` (202 + Retry-After), `catalog.ts`, `company.ts`, `leadForm.ts` (проверка формы «Я новый клиент», тело для CRM, повтор с новым токеном) |
 | `src/i18n/locales/{ru,uz,en}.json` | словари; симметрия — `scripts/check_i18n_symmetry.py` |
 | `src/styles/tokens.generated.css` | копия `packages/ui-tokens/dist/shadcn.css` (`make tokens`), подключается в `src/index.css` |
@@ -43,10 +43,34 @@ make -C apps/cabinet gen-api-types  # src/api/portal.d.ts из erp-portal.yaml; 
 `/requests[/new|/:id]`, `/quotes[/:id]`, `/contracts`, `/invoices`, `/acts`, `/deliveries`, `/documents`,
 `/catalog[/:id]`, `/company`, `/team`, `/deals/:id`, `/profile`.
 
+## Архитектура Floating Canvas и дизайн-система Legal Eminence
+
+В Cabinet реализован визуальный слой в строгой премиальной эстетике B2B (Legal Eminence) с архитектурой Floating Canvas:
+
+1. **Floating Canvas (Плавающий холст)**:
+   - Внешний фон приложения — холодный нейтральный `#F8F9FA` (`bg-alabaster`).
+   - Контентная рабочая область — приподнятый плавающий белый холст `#FFFFFF` (`bg-canvas`) с мягким радиусом скругления (`rounded-2xl`) и тонкой рамкой (`border-silver/80`).
+   - Слева расположен сворачиваемый сайдбар `SideNav`: переключение кнопкой-пиктограммой и шорткатом `⌘\` / `Ctrl+\`, состояние сохраняется в `localStorage` (`rt-cab-sidebar-collapsed-v1`).
+   - В мобильном представлении (≤ 768 px) и Telegram Mini App сайдбар заменяется компактным нижним таб-баром.
+   - Плавные бесшовные переходы между экранами обеспечены CSS-анимацией `page-enter-fade` (180ms ease-out).
+
+2. **Палитра Legal Eminence (инвариант 85/15)**:
+   - **85% — Глубокий темно-синий / графит**: `#1F2E4A` (`--navy`), `#121A2A` (`--charcoal`), формирующий фундаментальную иерархию, контрастную типографику и структурные разделители.
+   - **15% — Благородное золото / песок**: `#C29B38` (`--sand`), мягкий фон `--sand-bg` и акцентная граница `--sand-border` для подсветки активных шагов, ключевых статусов и первичных CTA.
+   - Дополнительные семантические статусы: изумрудный (`--emerald`, успех/оплачено/доставлено), коралловый (`--coral`, отклонено/ошибки), серебряный (`--silver`, нейтральные разделители).
+
+3. **Ключевые компоненты**:
+   - `DealCard` — интерактивная карточка сделки / запроса с 5-сегментным прогресс-баром этапов, суммой, бейджем статуса и hover-эффектом `.portal-card` (`-translate-y-0.5`).
+   - `SidePeek` — боковая шторка инспекции (slide-over drawer) для мгновенного детального просмотра сделки, этапов жизненного цикла (1..5) и прикрепленных документов без перезагрузки контекста.
+   - `ViewSwitcher` — панель переключения представлений (Таблица / Карточки / Канбан) со счетчиками и настройкой отображения.
+   - `UnsavedChangesBar` — плавающая нижняя планка подтверждения несохраненных изменений формы с пружинной анимацией (`spring-transition`).
+   - `ActionRequiredWidget` — виджет срочных клиентских действий в верхней части дашборда (КП, требующие акцепта, договоры на подпись, счета к оплате, акты).
+   - `PageHeader` — унифицированная шапка экранов с иконкой в скругленном квадрате и статусным бейджем.
+
 ## Проверка в браузере (мок)
 
 1. `make -C apps/cabinet dev` → http://localhost:5175 — страница входа (DevTools → режим устройства 390 px).
-2. «Войти»: любой e-mail → «Письмо отправлено» → «Открыть ссылку из письма (мок)» (`/auth/magic#token=demo`) → «Запросы».
+2. «Войти»: в режиме dev/мок доступна кнопка быстрого входа в 1 клик **«Демо-вход в 1 клик (мок)»** (мгновенно авторизует под демо-клиентом) либо стандартный ввод любого e-mail → «Письмо отправлено» → «Открыть ссылку из письма (мок)» (`/auth/magic#token=demo`) → «Запросы».
 3. Ссылки мока: `/auth/magic#token=viewer` — контакт без права действовать (`can_act=false`: нет «Новый запрос», плашка
    «Только просмотр», язык контакта uz); `#token=expired` — «Ссылка не действует» (410); `#token=forbidden` — «Доступ
    закрыт» (403); `#token=throttled` — «Слишком много запросов, попробуйте через час» (429).

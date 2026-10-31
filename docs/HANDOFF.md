@@ -40,6 +40,7 @@
     ORCHESTRATOR §3 п. 18, [platform-frontend.md](architecture/platform-frontend.md) §4.1.
   - **2026-10-30/31:** [аудит интерфейса](audits/2026-10-30-platform-ui.md) (#334) и волна **UX-1 «Стабильная оболочка»**
     (#335, #336, #337, последовательно) — «скачки» оболочки, бара и таблиц устранены, контрольный замер — PROGRESS; на проде `aa6e8066`.
+  - **2026-10-31:** UI-редизайн Cabinet в ветке `feat/cabinet-notion-eminence-ui` (Floating Canvas, палитра Legal Eminence 85/15, компоненты `DealCard`, `SidePeek`, `ViewSwitcher`, `UnsavedChangesBar`, `ActionRequiredWidget`, демо-вход в 1 клик, удаление проприетарных наименований вроде Notion, 304 теста Vitest зеленые, `make contracts` 456 тестов и 0 breaking changes).
 - **Решение владельца — сокращённый пилот, цель ≈ 6–7 ноября 2026** ([runbook 18a](runbooks/wave18a-pilot-critical.md)).
   Команда пилота — 4 роли: **админ; директор; делопроизводитель** (канцелярия: вся входящая корреспонденция + лиды и клиенты);
   **менеджер-универсал** (продажи, расчёт — визы обеих зон, снабжение и закупки, финансы — подтверждение оплаты). Визу услуг
