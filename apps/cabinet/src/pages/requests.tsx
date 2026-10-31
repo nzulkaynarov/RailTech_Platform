@@ -16,6 +16,8 @@ import { ResponsiveList } from '@/components/ResponsiveList';
 import { StatusBadge } from '@/components/StatusBadge';
 import { NotionDealCard } from '@/components/NotionDealCard';
 import { ViewSwitcher } from '@/components/ViewSwitcher';
+import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
+import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -27,6 +29,7 @@ import { formatDate, formatDateTime, formatFileSize, formatMoney, formatQuantity
 import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/lib/requests';
 import { clearRequestDraft, loadRequestDraft, requestDraftKey, saveRequestDraft } from '@/lib/requestDraft';
 import { MAX_UPLOAD_BYTES } from '@/lib/upload';
+import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
 import { useMe } from '@/session/useMe';
 
@@ -451,9 +454,60 @@ function RequestForm() {
     );
   };
 
+  const isDirty = Boolean(summary.trim() || lines.some((l) => l.text.trim()));
+  const [inquiryType, setInquiryType] = useState<'products' | 'service' | 'routine' | 'partner'>('products');
+
+  const inquiryOptions = [
+    { id: 'products', title: t('inquiry.products', { defaultValue: '1. Покупка товаров / Каталог' }), hint: t('inquiry.productsHint', { defaultValue: 'Закупка материалов, оборудования и запчастей' }) },
+    { id: 'service', title: t('inquiry.service', { defaultValue: '2. Сервисное ТО и ремонт' }), hint: t('inquiry.serviceHint', { defaultValue: 'Техническое обслуживание и диагностика' }) },
+    { id: 'routine', title: t('inquiry.routine', { defaultValue: '3. Рутинные услуги' }), hint: t('inquiry.routineHint', { defaultValue: 'Логистика, погрузка, клининг, регламент' }) },
+    { id: 'partner', title: t('inquiry.partner', { defaultValue: '4. Партнёрство / Подряд' }), hint: t('inquiry.partnerHint', { defaultValue: 'Субподрядные работы и спецпредложения' }) },
+  ] as const;
+
+  const resetForm = () => {
+    setSummary('');
+    setLines([blankLine()]);
+    setAttachments([]);
+    if (draftKey) clearRequestDraft(draftKey);
+  };
+
   return (
     <>
+      <UnsavedChangesBar
+        dirty={isDirty && !submitted}
+        onSave={() => submit({ preventDefault: () => {} } as FormEvent)}
+        onReset={resetForm}
+        pending={create.isPending || isUploading}
+      />
       <form onSubmit={submit} noValidate className="flex flex-col gap-6">
+        {/* Классификатор направлений W-DOCS2 */}
+        <div className="flex flex-col gap-2">
+          <Label className="text-xs font-semibold text-navy uppercase tracking-wider">
+            {t('inquiry.directionLabel', { defaultValue: 'Направление обращения (W-DOCS2)' })}
+          </Label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {inquiryOptions.map((opt) => {
+              const active = inquiryType === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setInquiryType(opt.id)}
+                  className={cn(
+                    'flex flex-col gap-1 rounded-xl border p-3 text-left transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    active
+                      ? 'border-navy bg-ice-navy/70 text-navy shadow-2xs'
+                      : 'border-hairline bg-canvas hover:border-silver hover:bg-alabaster/50 text-charcoal',
+                  )}
+                >
+                  <span className="text-xs font-semibold">{opt.title}</span>
+                  <span className="text-xs text-muted-foreground">{opt.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-2">
           <Label htmlFor={summaryId}>{t('pages.requestNew.summary')}</Label>
           <p id={`${summaryId}-hint`} className="text-xs text-muted-foreground">
@@ -561,6 +615,8 @@ function RequestForm() {
             <AlertDescription>{t(apiErrorKey(create.error))}</AlertDescription>
           </Alert>
         ) : null}
+
+        <ConsequenceCallout action="submit_request" />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button asChild variant="outline">

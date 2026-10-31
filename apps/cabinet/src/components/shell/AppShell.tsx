@@ -5,7 +5,6 @@ import { Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { Button } from '@/components/ui/button';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { useAppMode } from '@/session/mode';
 import { useMe } from '@/session/useMe';
 import { BottomNav } from './BottomNav';
@@ -120,11 +119,8 @@ export function AppShell() {
                 </div>
               </div>
 
-              {/* Правая часть: переключатель языка и ссылка на профиль */}
+              {/* Правая часть: ссылка на профиль */}
               <div className="flex items-center gap-2">
-                <div className="hidden sm:inline-flex">
-                  <LanguageSwitcher />
-                </div>
                 <Link
                   to="/profile"
                   className="rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-ice-navy hover:text-navy focus-visible:ring-2 focus-visible:ring-ring"

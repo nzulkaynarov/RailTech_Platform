@@ -1,7 +1,7 @@
 import { useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Pencil, Save, UserPlus, Users } from 'lucide-react';
+import { Building2, Loader2, Pencil, Save, UserPlus, Users } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -11,6 +11,7 @@ import { ActionDialog } from '@/components/ActionDialog';
 import { DetailList } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
+import { UnsavedChangesBar } from '@/components/UnsavedChangesBar';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -41,6 +42,7 @@ export function CompanyPage() {
     <>
       <PageHeader
         title={t('pages.company.title')}
+        icon={Building2}
         actions={
           company.data && !editing ? (
             <CanAct>
@@ -124,10 +126,30 @@ function CompanyForm({ company, onDone }: { company: Company; onDone: () => void
     });
   };
 
+  const isDirty = Boolean(Object.keys(companyChanges(company, draft)).length);
+
+  const reset = () => {
+    setDraft({
+      name: company.name,
+      inn: company.inn ?? '',
+      legal_address: company.legal_address ?? '',
+      bank_details: company.bank_details ?? '',
+      language: company.language,
+    });
+    setNameMissing(false);
+  };
+
   return (
-    <Card>
-      <CardContent>
-        <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+    <>
+      <UnsavedChangesBar
+        dirty={isDirty}
+        onSave={() => submit({ preventDefault: () => {} } as FormEvent)}
+        onReset={reset}
+        pending={update.isPending}
+      />
+      <Card>
+        <CardContent>
+          <form onSubmit={submit} noValidate className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${id}-name`}>{t('pages.company.fields.name')}</Label>
             <Input
@@ -194,6 +216,7 @@ function CompanyForm({ company, onDone }: { company: Company; onDone: () => void
         </form>
       </CardContent>
     </Card>
+    </>
   );
 }
 
