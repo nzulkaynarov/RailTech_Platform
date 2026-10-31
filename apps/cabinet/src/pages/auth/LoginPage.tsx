@@ -2,11 +2,11 @@ import { useId, useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
-import { Mail, Send, UserPlus } from 'lucide-react';
+import { Eye, Mail, Send, Sparkles, UserCheck, UserPlus } from 'lucide-react';
 
 import { loginErrorText } from '@/api/errors';
 import { requestMagicLink } from '@/api/portal';
-import { botLink } from '@/app/links';
+import { botLink, isPortalMock } from '@/app/links';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +43,52 @@ export function LoginPage() {
 
   return (
     <AuthLayout title={t('auth.login.title')}>
+      {isPortalMock() ? (
+        <Card className="border-navy/20 bg-ice-navy/40 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-5 text-navy" aria-hidden="true" />
+              <CardTitle>
+                <span className="text-base font-semibold text-navy">
+                  {t('auth.login.demoTitle')}
+                </span>
+              </CardTitle>
+            </div>
+            <CardDescription>{t('auth.login.demoHint')}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2.5">
+            <Button
+              type="button"
+              className="w-full justify-start bg-navy text-primary-foreground hover:bg-navy/90"
+              onClick={() => {
+                sessionStorage.setItem(
+                  'cabinet.mock.session',
+                  JSON.stringify({ role: 'actor', auth_method: 'magic_link', dataset: 'demo' }),
+                );
+                window.location.href = '/requests';
+              }}
+            >
+              <UserCheck className="size-4 mr-2" aria-hidden="true" />
+              {t('auth.login.demoActor')}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-start bg-white hover:bg-muted/50 text-foreground"
+              onClick={() => {
+                sessionStorage.setItem(
+                  'cabinet.mock.session',
+                  JSON.stringify({ role: 'viewer', auth_method: 'magic_link', dataset: 'demo' }),
+                );
+                window.location.href = '/requests';
+              }}
+            >
+              <Eye className="size-4 mr-2 text-muted-foreground" aria-hidden="true" />
+              {t('auth.login.demoViewer')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card>
         <CardHeader>
           <CardTitle>

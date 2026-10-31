@@ -134,7 +134,11 @@
       "newClient": "Men yangi mijozman",
       "newClientHint": "Biz bilan hali ishlamaganmisiz? Soʻrov qoldiring — menejer siz bilan bogʻlanadi.",
       "telegram": "Telegram orqali kirish",
-      "telegramHint": "Bot ochiladi, kirish taklifnoma orqali."
+      "telegramHint": "Bot ochiladi, kirish taklifnoma orqali.",
+      "demoTitle": "Tezkor demo kirish (1 marta bosish)",
+      "demoHint": "Sinov maʼlumotlari bilan lokal stend. Parol talab qilinmaydi:",
+      "demoActor": "Buyurtmachi sifatida kirish (MChJ «Toshkent Logistik»)",
+      "demoViewer": "Kuzatuvchi sifatida kirish (faqat oʻqish)"
     },
     "sent": {
       "title": "Pochtangizni tekshiring",

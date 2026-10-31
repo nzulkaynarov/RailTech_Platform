@@ -134,7 +134,11 @@
       "newClient": "I am a new client",
       "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
       "telegram": "Sign in with Telegram",
-      "telegramHint": "The bot will open; sign-in is by invitation."
+      "telegramHint": "The bot will open; sign-in is by invitation.",
+      "demoTitle": "Quick demo sign-in (1 click)",
+      "demoHint": "Local test stand with mock data. No password required:",
+      "demoActor": "Sign in as Client (Toshkent Logistik LLC)",
+      "demoViewer": "Sign in as Viewer (read-only)"
     },
     "sent": {
       "title": "Check your e-mail",
