@@ -32,7 +32,7 @@
   "crumbs": {
     "request": "Soʻrov",
     "quote": "Tijorat taklifi",
-    "deal": "Bitim",
+    "deal": "Loyiha",
     "catalogItem": "Mahsulot"
   },
   "common": {
@@ -50,17 +50,15 @@
     "actions": "Amallar",
     "loadFailed": "Yuklab boʻlmadi",
     "reasonRequired": "Sababini koʻrsating — usiz ijrochi nimani tuzatishni tushunmaydi.",
-    "dealNumber": "Bitim № {{number}}",
-    "noDeal": "Hali bitimsiz",
+    "dealNumber": "Loyiha {{number}}",
+    "noDeal": "Hali loyihasiz",
     "crashTitle": "Nimadir xato ketdi",
     "crashText": "Sahifa xato tufayli ochilmadi. Uni yangilang; yordam bermasa, menejerga yozing.",
     "reload": "Yangilash",
-    "unsavedChanges": "Saqlanmagan oʻzgarishlar bor",
-    "saveCmdS": "Saqlash ⌘S",
-    "reset": "Qaytarish",
     "whatHappens": "Nima boʻladi",
     "copyLink": "Havolani nusxalash",
-    "linkCopied": "Havola nusxalandi"
+    "linkCopied": "Havola nusxalandi",
+    "copyLinkFailed": "Havolani nusxalab boʻlmadi — sahifa manzilini brauzer satridan nusxalang."
   },
   "access": {
     "canAct": "Vakolat tasdiqlangan",
@@ -235,7 +233,7 @@
   },
   "manager": {
     "write": "Menejerga yozish",
-    "aboutDeal": "Menejerga yozish: bitim № {{number}}",
+    "aboutDeal": "Menejerga yozish: loyiha {{number}}",
     "aboutQuote": "Menejerga yozish: {{number}} taklifi",
     "aboutContract": "Menejerga yozish: {{number}} shartnomasi",
     "aboutInvoice": "Menejerga yozish: {{number}} hisob-fakturasi",
@@ -269,7 +267,7 @@
         "request": "Soʻrov",
         "status": "Holat",
         "created": "Yaratilgan",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       }
     },
     "requestNew": {
@@ -305,7 +303,7 @@
       "title": "{{number}} soʻrovi",
       "created": "Yaratilgan",
       "source": "Qayerdan",
-      "deal": "Bitim",
+      "deal": "Loyiha",
       "quotes": "Soʻrov boʻyicha takliflar",
       "linesTitle": "Soʻrov elementlari",
       "attachmentsTitle": "Biriktirilgan fayllar",
@@ -339,7 +337,7 @@
         "total": "Summa",
         "validUntil": "Amal qiladi",
         "sent": "Yuborilgan",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       }
     },
     "quoteDetail": {
@@ -348,7 +346,7 @@
       "total": "Jami",
       "validUntil": "Amal qiladi",
       "sent": "Yuborilgan",
-      "deal": "Bitim",
+      "deal": "Loyiha",
       "lines": "Taklif tarkibi",
       "stage": "Bosqich",
       "grandTotal": "Jami",
@@ -407,7 +405,7 @@
         "status": "Holat",
         "client": "Sizning kelishuvingiz",
         "company": "Ijrochi imzosi",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       },
       "notSigned": "Hali yoʻq",
       "sign": "Kelishish",
@@ -437,7 +435,7 @@
         "paid": "Toʻlangan",
         "remaining": "Qoldiq",
         "due": "Toʻlov muddati",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       }
     },
     "acts": {
@@ -450,7 +448,7 @@
         "act": "Dalolatnoma",
         "status": "Holat",
         "issued": "Berilgan",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       },
       "returnedReason": "Qaytarilgan: {{reason}}",
       "accept": "Qabul qilish",
@@ -508,7 +506,7 @@
       "emptyKindText": "Boshqa turni tanlang yoki barcha hujjatlarni koʻrsating.",
       "showAll": "Hammasini koʻrsatish",
       "filter": "Hujjat turi",
-      "searchPlaceholder": "Raqam, nom, bitim…",
+      "searchPlaceholder": "Raqam, nom, loyiha…",
       "noMatchTitle": "Hech narsa topilmadi",
       "noMatchText": "«{{query}}» soʻrovi boʻyicha hujjat yoʻq. Raqam yoki nomni tekshiring yoki qidiruvni tozalang.",
       "clearSearch": "Qidiruvni tozalash",
@@ -518,7 +516,7 @@
         "kind": "Turi",
         "date": "Sana",
         "size": "Hajmi",
-        "deal": "Bitim"
+        "deal": "Loyiha"
       }
     },
     "catalog": {
@@ -577,7 +575,8 @@
         "legalAddress": "Yuridik manzil",
         "bankDetails": "Bank rekvizitlari",
         "language": "Hujjatlar va xatlar tili"
-      }
+      },
+      "closeEdit": "Yopish"
     },
     "team": {
       "title": "Jamoa",
@@ -631,9 +630,9 @@
       "deliveries": "Yetkazib berish",
       "documents": "Hujjatlar",
       "toRequests": "Soʻrovlarga",
-      "titleFallback": "Bitim",
+      "titleFallback": "Loyiha",
       "stages": {
-        "title": "Bosqichlar",
+        "title": "Loyiha bosqichlari",
         "request": "Soʻrov",
         "quote": "Taklif",
         "contract": "Shartnoma",
@@ -642,8 +641,9 @@
         "closed": "Soʻrov yopilgan",
         "state": {
           "done": "bajarildi",
-          "active": "jarayonda",
-          "upcoming": "oldinda"
+          "active": "boshlangan",
+          "upcoming": "oldinda",
+          "current": "joriy bosqich"
         }
       }
     }
@@ -691,7 +691,25 @@
       "invoiceBadge": "Hisob",
       "payInvoice": "Toʻlash",
       "actBadge": "Dalolatnoma",
-      "acceptAct": "Dalolatnomani qabul qilish"
+      "acceptAct": "Dalolatnomani qabul qilish",
+      "titleViewer": "Kompaniya qarorini kutmoqda",
+      "viewerHint": "Tasdiqlash huquqiga ega kontakt hal qiladi"
     }
+  },
+  "saveBar": {
+    "label": "Saqlanmagan oʻzgarishlar",
+    "message": "Saqlanmagan oʻzgarishlar bor",
+    "save": "Saqlash",
+    "reset": "Bekor qilish",
+    "resetTitle": "Oʻzgarishlar bekor qilinsinmi?",
+    "resetText": "Maydonlar saqlangan qiymatlarga qaytadi, kiritilganlar oʻchadi.",
+    "resetConfirm": "Bekor qilish",
+    "keepEditing": "Tahrirlashni davom ettirish"
+  },
+  "unsavedGuard": {
+    "title": "Saqlamasdan chiqilsinmi?",
+    "text": "Formadagi oʻzgarishlar saqlanmagan va yoʻqoladi.",
+    "leave": "Saqlamasdan chiqish",
+    "stay": "Qolish"
   }
 }

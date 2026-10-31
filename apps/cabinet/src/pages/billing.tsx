@@ -37,7 +37,7 @@ import { CanAct } from '@/session/CanAct';
 function RowDocument({ documentId, number }: { documentId: number | null | undefined; number: string }) {
   const { t } = useTranslation();
   if (documentId === null || documentId === undefined) {
-    return <span className="text-xs text-muted-foreground">{t('documents.notIssued')}</span>;
+    return <span className="max-w-32 text-xs whitespace-normal text-muted-foreground">{t('documents.notIssued')}</span>;
   }
   return <DocumentButton documentId={documentId} fileName={`${number}.pdf`} label={number} variant="ghost" />;
 }
@@ -165,7 +165,7 @@ export function InvoicesPage() {
                   <p className="text-sm text-muted-foreground">{t('pages.invoices.toPay')}</p>
                   {toPay.length ? (
                     toPay.map((money) => (
-                      <p key={money.currency} className="text-lg font-semibold wrap-break-word">
+                      <p key={money.currency} className="text-lg font-semibold tabular-nums wrap-break-word">
                         {formatMoney(money)}
                       </p>
                     ))
@@ -195,20 +195,24 @@ export function InvoicesPage() {
             label={t('pages.invoices.title')}
             rows={invoices.data}
             getRowId={(row) => row.id}
-            title={{ header: t('pages.invoices.columns.invoice'), cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span> }}
+            title={{
+              header: t('pages.invoices.columns.invoice'),
+              cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span>,
+              className: 'min-w-0',
+            }}
             columns={[
               {
                 id: 'status',
                 header: t('pages.invoices.columns.status'),
                 cell: (row) => <StatusBadge entity="invoice" code={views.get(row.id)?.displayStatus ?? row.status} />,
               },
-              { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right' },
-              { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right' },
+              { id: 'total', header: t('pages.invoices.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
+              { id: 'paid', header: t('pages.invoices.columns.paid'), cell: (row) => formatMoney(row.paid), className: 'text-right tabular-nums whitespace-nowrap' },
               {
                 id: 'remaining',
                 header: t('pages.invoices.columns.remaining'),
                 cell: (row) => <span className="font-medium">{formatMoney(views.get(row.id)?.remaining)}</span>,
-                className: 'text-right',
+                className: 'text-right tabular-nums whitespace-nowrap',
               },
               {
                 id: 'due',

@@ -86,14 +86,14 @@ describe('Счета', () => {
 
     const partial = card('Счета', 'S-2026-0118');
     expect(within(partial).getByText('Оплачен частично')).toBeInTheDocument();
-    expect(within(partial).getByText('27 500 000 UZS')).toBeInTheDocument();
-    expect(within(partial).getAllByText('13 750 000 UZS')).toHaveLength(2);
+    expect(within(partial).getByText('27 500 000 сум')).toBeInTheDocument();
+    expect(within(partial).getAllByText('13 750 000 сум')).toHaveLength(2);
     expect(within(partial).getByRole('button', { name: 'Скачать: S-2026-0118' })).toBeInTheDocument();
 
     expect(screen.getByText('1 счёт просрочен')).toBeInTheDocument();
     // К оплате — по валютам, без смешивания сумов и долларов.
-    expect(screen.getByText('23 550 000 UZS')).toBeInTheDocument();
-    expect(screen.getByText('12 500 $', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByText('23 550 000 сум')).toBeInTheDocument();
+    expect(screen.getByText('12 500 USD', { selector: 'p' })).toBeInTheDocument();
     await expectNoAxeViolations();
   });
 

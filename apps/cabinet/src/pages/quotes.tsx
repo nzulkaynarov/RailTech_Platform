@@ -14,7 +14,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge, ToneBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, ToneBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -62,8 +62,8 @@ export function QuotesPage() {
               cell: (row) => t('pages.quotes.numberVersion', { number: row.number, version: row.version }),
             }}
             columns={[
-              { id: 'status', header: t('pages.quotes.columns.status'), cell: (row) => <QuoteStatus quote={row} now={now} /> },
-              { id: 'total', header: t('pages.quotes.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right' },
+              { id: 'status', header: t('pages.quotes.columns.status'), cell: (row) => <QuoteStatusBadge quote={row} now={now} /> },
+              { id: 'total', header: t('pages.quotes.columns.total'), cell: (row) => formatMoney(row.total), className: 'text-right tabular-nums whitespace-nowrap' },
               { id: 'valid', header: t('pages.quotes.columns.validUntil'), cell: (row) => formatDate(row.valid_until) },
               { id: 'sent', header: t('pages.quotes.columns.sent'), cell: (row) => formatDate(row.sent_at) },
               { id: 'deal', header: t('pages.quotes.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
@@ -73,11 +73,6 @@ export function QuotesPage() {
       )}
     </>
   );
-}
-
-/** Статус КП; «ждёт решения» с прошедшим сроком показываем как «срок истёк». */
-function QuoteStatus({ quote, now }: { quote: Pick<QuoteListItem, 'status' | 'valid_until'>; now: number }) {
-  return quoteExpired(quote, now) ? <StatusBadge entity="quote" code="expired" /> : <StatusBadge entity="quote" code={quote.status} />;
 }
 
 export function QuoteDetailPage() {
@@ -147,7 +142,7 @@ function QuoteCard({ quote }: { quote: Quote }) {
         <Card>
           <CardContent className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center gap-2">
-              <QuoteStatus quote={quote} now={now} />
+              <QuoteStatusBadge quote={quote} now={now} />
               <span className="text-sm text-muted-foreground">{t('pages.quoteDetail.version', { version: quote.version })}</span>
             </div>
             <DetailList
@@ -237,9 +232,9 @@ function QuoteLines({
                   <td className="px-3 py-2">
                     <LineTitle line={line} />
                   </td>
-                  <td className="px-3 py-2 text-right">{formatQuantity(line.quantity, line.unit)}</td>
-                  <td className="px-3 py-2 text-right">{formatMoney(line.unit_price)}</td>
-                  <td className="px-3 py-2 text-right font-medium">{formatMoney(line.total)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatQuantity(line.quantity, line.unit)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatMoney(line.unit_price)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums font-medium">{formatMoney(line.total)}</td>
                   <td className="px-3 py-2">{formatDate(line.promised_date)}</td>
                 </tr>
               ),
@@ -250,21 +245,21 @@ function QuoteLines({
               <th scope="row" colSpan={3} className="px-3 pt-3 pb-1 text-right font-normal text-muted-foreground">
                 {t('pages.quoteDetail.subtotal')}
               </th>
-              <td className="px-3 pt-3 pb-1 text-right">{formatMoney(subtotal)}</td>
+              <td className="px-3 pt-3 pb-1 text-right tabular-nums">{formatMoney(subtotal)}</td>
               <td />
             </tr>
             <tr>
               <th scope="row" colSpan={3} className="px-3 py-1 text-right font-normal text-muted-foreground">
                 {t('pages.quoteDetail.vat')}
               </th>
-              <td className="px-3 py-1 text-right">{formatMoney(vat)}</td>
+              <td className="px-3 py-1 text-right tabular-nums">{formatMoney(vat)}</td>
               <td />
             </tr>
             <tr>
               <th scope="row" colSpan={3} className="px-3 pt-1 pb-3 text-right font-semibold">
                 {t('pages.quoteDetail.grandTotal')}
               </th>
-              <td className="px-3 pt-1 pb-3 text-right text-base font-semibold">{formatMoney(total)}</td>
+              <td className="px-3 pt-1 pb-3 text-right tabular-nums text-base font-semibold">{formatMoney(total)}</td>
               <td />
             </tr>
           </tfoot>
@@ -292,21 +287,21 @@ function QuoteLines({
                 {line.quantity ? (
                   <>
                     <dt className="text-muted-foreground">{t('pages.quoteDetail.columns.quantity')}</dt>
-                    <dd className="text-right">{formatQuantity(line.quantity, line.unit)}</dd>
+                    <dd className="text-right tabular-nums">{formatQuantity(line.quantity, line.unit)}</dd>
                   </>
                 ) : null}
                 {line.unit_price ? (
                   <>
                     <dt className="text-muted-foreground">{t('pages.quoteDetail.columns.price')}</dt>
-                    <dd className="text-right">{formatMoney(line.unit_price)}</dd>
+                    <dd className="text-right tabular-nums">{formatMoney(line.unit_price)}</dd>
                   </>
                 ) : null}
                 <dt className="text-muted-foreground">{t('pages.quoteDetail.columns.total')}</dt>
-                <dd className="text-right font-medium">{formatMoney(line.total)}</dd>
+                <dd className="text-right tabular-nums font-medium">{formatMoney(line.total)}</dd>
                 {line.promised_date ? (
                   <>
                     <dt className="text-muted-foreground">{t('pages.quoteDetail.columns.date')}</dt>
-                    <dd className="text-right">{formatDate(line.promised_date)}</dd>
+                    <dd className="text-right tabular-nums">{formatDate(line.promised_date)}</dd>
                   </>
                 ) : null}
               </dl>
@@ -317,11 +312,11 @@ function QuoteLines({
       <div role="group" aria-label={t('pages.quoteDetail.totals')}>
         <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 rounded-lg border bg-card p-3 text-sm">
           <dt className="text-muted-foreground">{t('pages.quoteDetail.subtotal')}</dt>
-          <dd className="text-right">{formatMoney(subtotal)}</dd>
+          <dd className="text-right tabular-nums">{formatMoney(subtotal)}</dd>
           <dt className="text-muted-foreground">{t('pages.quoteDetail.vat')}</dt>
-          <dd className="text-right">{formatMoney(vat)}</dd>
+          <dd className="text-right tabular-nums">{formatMoney(vat)}</dd>
           <dt className="font-semibold">{t('pages.quoteDetail.grandTotal')}</dt>
-          <dd className="text-right text-base font-semibold">{formatMoney(total)}</dd>
+          <dd className="text-right tabular-nums text-base font-semibold">{formatMoney(total)}</dd>
         </dl>
       </div>
     </div>

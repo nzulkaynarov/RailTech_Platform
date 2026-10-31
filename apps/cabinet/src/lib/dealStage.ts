@@ -1,7 +1,8 @@
 import type { Act, ClientRequest, Contract, DeliveryLine, Invoice, QuoteListItem } from '@/api/portal';
 
 /**
- * Этапы сделки глазами клиента: «Запрос — КП — Договор — Оплата — Поставка и акт» (CAB-FIX-1, аудит K5).
+ * Этапы проекта глазами клиента: «Запрос — КП — Договор — Оплата — Поставка и акт» (CAB-FIX-1, аудит K5; клиенту
+ * сделка — «проект», SPEC-v3 §2, CAB-FIX-3).
  *
  * Этап считается по **статусам** документов сделки из ответов портала, а не по их наличию. Каждый этап — сам по себе:
  * процесс не обязан быть линейным (счёт на предоплату может прийти раньше подписания договора), поэтому «в работе»
@@ -20,9 +21,12 @@ import type { Act, ClientRequest, Contract, DeliveryLine, Invoice, QuoteListItem
  * - **Поставка и акт** — выполнены, когда акты есть, все `accepted`, и каждая строка поставки `delivered` или
  *   `accepted`. В работе, если есть акт или строка поставки в другом состоянии. Иначе — впереди.
  *
+ * **Текущий этап** (`current`, CAB-FIX-3) — ровно один: первый невыполненный. Экран выделяет только его; остальные
+ * начатые (`active`) показываются спокойнее, как «начато».
+ *
  * **Закрытый запрос** (`closed`): ERP закрывает сделку и выигранной, и проигранной, а портал не говорит, какой из
  * двух. Поэтому догадки нет: показываются только выполненные этапы (запрос — всегда), ни один не «в работе»,
- * и экран пишет «Запрос закрыт».
+ * и экран пишет «Запрос закрыт»; текущего этапа нет.
  */
 export type DealStageId = 'request' | 'quote' | 'contract' | 'payment' | 'delivery';
 export type DealStageState = 'done' | 'active' | 'upcoming';
@@ -30,6 +34,8 @@ export type DealStageState = 'done' | 'active' | 'upcoming';
 export interface DealStage {
   id: DealStageId;
   state: DealStageState;
+  /** Текущий этап — первый невыполненный; у закрытого запроса текущего нет. */
+  current: boolean;
 }
 
 export interface DealProgress {
@@ -57,7 +63,7 @@ export function dealProgress(docs: DealDocuments): DealProgress {
   const contracts = docs.contracts.filter((contract) => contract.status !== 'cancelled');
   const invoices = docs.invoices.filter((invoice) => invoice.status !== 'cancelled');
 
-  const stages: DealStage[] = [];
+  const stages: Omit<DealStage, 'current'>[] = [];
   if (docs.requests.length > 0) {
     const quoted = docs.quotes.length > 0 || docs.requests.some((request) => request.status === 'quoted');
     stages.push({ id: 'request', state: state(quoted, true) });
@@ -87,11 +93,14 @@ export function dealProgress(docs: DealDocuments): DealProgress {
   );
 
   const closed = docs.requests.length > 0 && docs.requests.every((request) => request.status === 'closed');
-  if (!closed) return { closed, stages };
-  return {
-    closed,
-    stages: stages
-      .map((stage): DealStage => (stage.id === 'request' ? { id: 'request', state: 'done' } : stage))
-      .filter((stage) => stage.state === 'done'),
-  };
+  if (closed) {
+    return {
+      closed,
+      stages: stages
+        .map((stage): DealStage => ({ id: stage.id, state: stage.id === 'request' ? 'done' : stage.state, current: false }))
+        .filter((stage) => stage.state === 'done'),
+    };
+  }
+  const currentIndex = stages.findIndex((stage) => stage.state !== 'done');
+  return { closed, stages: stages.map((stage, index) => ({ ...stage, current: index === currentIndex })) };
 }

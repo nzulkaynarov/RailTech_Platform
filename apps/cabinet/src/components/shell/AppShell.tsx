@@ -5,6 +5,8 @@ import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'l
 import { toast } from '@/lib/toast';
 
 import { Button } from '@/components/ui/button';
+import { isSidebarToggle, shortcutLabel } from '@/lib/keyboard';
+import { copyText, shareableUrl } from '@/lib/shareLink';
 import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
 import { useMe } from '@/session/useMe';
@@ -50,12 +52,12 @@ export function AppShell() {
     });
   };
 
+  // ⌘\ / Ctrl+\ — по физической клавише (работает и в RU-раскладке), не в полях ввода (K12)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === '\\') {
-        event.preventDefault();
-        toggleSidebar();
-      }
+      if (!isSidebarToggle(event)) return;
+      event.preventDefault();
+      toggleSidebar();
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
@@ -114,6 +116,12 @@ export function AppShell() {
 
   const breadcrumbs = getBreadcrumbs();
 
+  // Ссылка для коллеги с правом действовать: адрес страницы без #… и служебных параметров (K15); в Mini App кнопки нет
+  const copyPageLink = async () => {
+    if (await copyText(shareableUrl(window.location))) toast.success(t('common.linkCopied'));
+    else toast.error(t('common.copyLinkFailed'));
+  };
+
   return (
     <SetCrumbContext.Provider value={setPageCrumb}>
       <div className="min-h-dvh bg-muted text-foreground md:flex">
@@ -144,7 +152,7 @@ export function AppShell() {
                     size="icon"
                     className="hidden size-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-primary md:inline-flex"
                     onClick={toggleSidebar}
-                    title={`${sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')} (⌘\\)`}
+                    title={`${sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')} (${shortcutLabel('\\')})`}
                     aria-label={sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
                   >
                     {sidebarCollapsed ? <PanelLeft className="size-4" aria-hidden="true" /> : <PanelLeftClose className="size-4" aria-hidden="true" />}
@@ -217,20 +225,17 @@ export function AppShell() {
                     <Eye className="size-4 shrink-0 text-primary" aria-hidden="true" />
                     <span className="font-medium">{t('common.viewOnly')}</span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="rounded-xl border-border bg-background text-xs text-primary hover:bg-accent"
-                    onClick={() => {
-                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                        navigator.clipboard.writeText(window.location.href);
-                        toast.success(t('common.linkCopied'));
-                      }
-                    }}
-                  >
-                    <Copy className="size-3.5" aria-hidden="true" />
-                    {t('common.copyLink')}
-                  </Button>
+                  {mode === 'web' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-xl border-border bg-background text-xs text-primary hover:bg-accent"
+                      onClick={() => void copyPageLink()}
+                    >
+                      <Copy className="size-3.5" aria-hidden="true" />
+                      {t('common.copyLink')}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
               <Outlet />

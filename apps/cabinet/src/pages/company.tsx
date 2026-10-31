@@ -1,7 +1,7 @@
-import { useId, useState, type FormEvent } from 'react';
+import { useEffect, useId, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building2, Loader2, Pencil, Save, UserPlus, Users } from 'lucide-react';
+import { Building2, Pencil, UserPlus, Users, X } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
@@ -37,6 +37,13 @@ export function CompanyPage() {
   const { t } = useTranslation();
   const company = useCompany();
   const [editing, setEditing] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const stopEditing = () => {
+    setConfirmClose(false);
+    setDirty(false);
+    setEditing(false);
+  };
 
   return (
     <>
@@ -44,14 +51,19 @@ export function CompanyPage() {
         title={t('pages.company.title')}
         icon={Building2}
         actions={
-          company.data && !editing ? (
+          !company.data ? null : editing ? (
+            <Button variant="outline" onClick={() => (dirty ? setConfirmClose(true) : stopEditing())}>
+              <X aria-hidden="true" />
+              {t('pages.company.closeEdit')}
+            </Button>
+          ) : (
             <CanAct>
               <Button variant="outline" onClick={() => setEditing(true)}>
                 <Pencil aria-hidden="true" />
                 {t('pages.company.edit')}
               </Button>
             </CanAct>
-          ) : null
+          )
         }
       />
       {company.isPending ? (
@@ -59,7 +71,7 @@ export function CompanyPage() {
       ) : company.isError ? (
         <ErrorState error={company.error} onRetry={() => void company.refetch()} />
       ) : editing ? (
-        <CompanyForm company={company.data} onDone={() => setEditing(false)} />
+        <CompanyForm company={company.data} onDone={stopEditing} onDirtyChange={setDirty} />
       ) : (
         <div className="flex flex-col gap-4">
           <Card>
@@ -87,11 +99,34 @@ export function CompanyPage() {
           </Button>
         </div>
       )}
+      <ActionDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title={t('unsavedGuard.title')}
+        description={t('unsavedGuard.text')}
+        confirmLabel={t('unsavedGuard.leave')}
+        confirmVariant="destructive"
+        cancelLabel={t('unsavedGuard.stay')}
+        pending={false}
+        onSubmit={stopEditing}
+      />
     </>
   );
 }
 
-function CompanyForm({ company, onDone }: { company: Company; onDone: () => void }) {
+/**
+ * Правка реквизитов: кнопка сохранения одна — в баре несохранённых изменений (`UnsavedChangesBar`, K9), бар — последний
+ * элемент формы, место под него зарезервировано. Enter в поле тоже сохраняет (обратимо: реквизиты можно поправить снова).
+ */
+function CompanyForm({
+  company,
+  onDone,
+  onDirtyChange,
+}: {
+  company: Company;
+  onDone: () => void;
+  onDirtyChange: (dirty: boolean) => void;
+}) {
   const { t } = useTranslation();
   const id = useId();
   const update = useUpdateCompany();
@@ -127,6 +162,7 @@ function CompanyForm({ company, onDone }: { company: Company; onDone: () => void
   };
 
   const isDirty = Boolean(Object.keys(companyChanges(company, draft)).length);
+  useEffect(() => onDirtyChange(isDirty), [isDirty, onDirtyChange]);
 
   const reset = () => {
     setDraft({
@@ -140,16 +176,9 @@ function CompanyForm({ company, onDone }: { company: Company; onDone: () => void
   };
 
   return (
-    <>
-      <UnsavedChangesBar
-        dirty={isDirty}
-        onSave={() => submit({ preventDefault: () => {} } as FormEvent)}
-        onReset={reset}
-        pending={update.isPending}
-      />
-      <Card>
-        <CardContent>
-          <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+    <Card>
+      <CardContent>
+        <form onSubmit={submit} noValidate className="flex flex-col gap-4 [&_:is(input,textarea,button)]:scroll-mb-40">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor={`${id}-name`}>{t('pages.company.fields.name')}</Label>
             <Input
@@ -204,19 +233,15 @@ function CompanyForm({ company, onDone }: { company: Company; onDone: () => void
               <AlertDescription>{t(apiErrorKey(update.error))}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="outline" onClick={onDone} disabled={update.isPending}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" disabled={update.isPending}>
-              {update.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}
-              {t('common.save')}
-            </Button>
-          </div>
+          <UnsavedChangesBar
+            dirty={isDirty}
+            onSave={() => submit({ preventDefault: () => {} } as FormEvent)}
+            onReset={reset}
+            pending={update.isPending}
+          />
         </form>
       </CardContent>
     </Card>
-    </>
   );
 }
 

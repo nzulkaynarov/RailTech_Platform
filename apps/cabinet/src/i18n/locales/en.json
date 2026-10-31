@@ -32,7 +32,7 @@
   "crumbs": {
     "request": "Request",
     "quote": "Quotation",
-    "deal": "Deal",
+    "deal": "Project",
     "catalogItem": "Product"
   },
   "common": {
@@ -50,17 +50,15 @@
     "actions": "Actions",
     "loadFailed": "Could not load",
     "reasonRequired": "Give a reason — without it the provider will not know what to fix.",
-    "dealNumber": "Deal № {{number}}",
-    "noDeal": "No deal yet",
+    "dealNumber": "Project {{number}}",
+    "noDeal": "No project yet",
     "crashTitle": "Something went wrong",
     "crashText": "The page failed to open because of an error. Reload it; if that does not help, contact your manager.",
     "reload": "Reload",
-    "unsavedChanges": "You have unsaved changes",
-    "saveCmdS": "Save ⌘S",
-    "reset": "Reset",
     "whatHappens": "What happens next",
     "copyLink": "Copy link",
-    "linkCopied": "Link copied"
+    "linkCopied": "Link copied",
+    "copyLinkFailed": "Could not copy the link — copy the page address from the browser bar."
   },
   "access": {
     "canAct": "Authorized to approve",
@@ -235,7 +233,7 @@
   },
   "manager": {
     "write": "Message the manager",
-    "aboutDeal": "Message the manager about deal № {{number}}",
+    "aboutDeal": "Message the manager about project {{number}}",
     "aboutQuote": "Message the manager about quote {{number}}",
     "aboutContract": "Message the manager about contract {{number}}",
     "aboutInvoice": "Message the manager about invoice {{number}}",
@@ -269,7 +267,7 @@
         "request": "Request",
         "status": "Status",
         "created": "Created",
-        "deal": "Deal"
+        "deal": "Project"
       }
     },
     "requestNew": {
@@ -305,7 +303,7 @@
       "title": "Request {{number}}",
       "created": "Created",
       "source": "Source",
-      "deal": "Deal",
+      "deal": "Project",
       "quotes": "Quotes for this request",
       "linesTitle": "Requested items",
       "attachmentsTitle": "Attachments",
@@ -339,7 +337,7 @@
         "total": "Total",
         "validUntil": "Valid until",
         "sent": "Sent",
-        "deal": "Deal"
+        "deal": "Project"
       }
     },
     "quoteDetail": {
@@ -348,7 +346,7 @@
       "total": "Total",
       "validUntil": "Valid until",
       "sent": "Sent",
-      "deal": "Deal",
+      "deal": "Project",
       "lines": "Quote contents",
       "stage": "Stage",
       "grandTotal": "Total",
@@ -407,7 +405,7 @@
         "status": "Status",
         "client": "Your agreement",
         "company": "Provider signature",
-        "deal": "Deal"
+        "deal": "Project"
       },
       "notSigned": "Not yet",
       "sign": "Agree",
@@ -437,7 +435,7 @@
         "paid": "Paid",
         "remaining": "Balance",
         "due": "Due date",
-        "deal": "Deal"
+        "deal": "Project"
       }
     },
     "acts": {
@@ -450,7 +448,7 @@
         "act": "Act",
         "status": "Status",
         "issued": "Issued",
-        "deal": "Deal"
+        "deal": "Project"
       },
       "returnedReason": "Returned: {{reason}}",
       "accept": "Accept",
@@ -508,7 +506,7 @@
       "emptyKindText": "Choose another kind or show all documents.",
       "showAll": "Show all",
       "filter": "Document kind",
-      "searchPlaceholder": "Number, title, deal…",
+      "searchPlaceholder": "Number, title, project…",
       "noMatchTitle": "Nothing found",
       "noMatchText": "No documents match “{{query}}”. Check the number or title, or clear the search.",
       "clearSearch": "Clear search",
@@ -518,7 +516,7 @@
         "kind": "Kind",
         "date": "Date",
         "size": "Size",
-        "deal": "Deal"
+        "deal": "Project"
       }
     },
     "catalog": {
@@ -577,7 +575,8 @@
         "legalAddress": "Legal address",
         "bankDetails": "Bank details",
         "language": "Language of documents and e-mails"
-      }
+      },
+      "closeEdit": "Close"
     },
     "team": {
       "title": "Team",
@@ -631,9 +630,9 @@
       "deliveries": "Delivery",
       "documents": "Documents",
       "toRequests": "Go to requests",
-      "titleFallback": "Deal",
+      "titleFallback": "Project",
       "stages": {
-        "title": "Stages",
+        "title": "Project stages",
         "request": "Request",
         "quote": "Quote",
         "contract": "Contract",
@@ -642,8 +641,9 @@
         "closed": "The request is closed",
         "state": {
           "done": "done",
-          "active": "in progress",
-          "upcoming": "upcoming"
+          "active": "started",
+          "upcoming": "upcoming",
+          "current": "current stage"
         }
       }
     }
@@ -691,7 +691,25 @@
       "invoiceBadge": "Invoice",
       "payInvoice": "Pay invoice",
       "actBadge": "Act",
-      "acceptAct": "Accept act"
+      "acceptAct": "Accept act",
+      "titleViewer": "Awaiting your company’s decision",
+      "viewerHint": "A contact with approval rights decides"
     }
+  },
+  "saveBar": {
+    "label": "Unsaved changes",
+    "message": "You have unsaved changes",
+    "save": "Save",
+    "reset": "Discard",
+    "resetTitle": "Discard changes?",
+    "resetText": "Fields will return to their saved values; what you entered will be lost.",
+    "resetConfirm": "Discard",
+    "keepEditing": "Keep editing"
+  },
+  "unsavedGuard": {
+    "title": "Leave without saving?",
+    "text": "Changes in the form are not saved and will be lost.",
+    "leave": "Leave without saving",
+    "stay": "Stay"
   }
 }

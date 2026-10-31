@@ -1,8 +1,8 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * CAB-FIX-2 · все экраны кабинета на dev-сборке с моком (MSW): роли actor и viewer, 1440 и 390 px, axe и горизонтальная
- * прокрутка на каждом; снимки ключевых экранов, uz / en и тема Mini App (светлая и тёмная) — в docs/screens/cab-fix-2
+ * CAB-FIX-2, CAB-FIX-3 · все экраны кабинета на dev-сборке с моком (MSW): роли actor и viewer, 1440 и 390 px, axe и горизонтальная
+ * прокрутка на каждом; снимки ключевых экранов, uz / en и тема Mini App (светлая и тёмная), CLS (CAB-FIX-3) — в docs/screens/cab-fix-3
  * (E2E_SCREENS_DIR), сводка — axe-summary.json там же. Без стенда. Запуск из apps/cabinet:
  *
  *   npm run test:e2e:screens

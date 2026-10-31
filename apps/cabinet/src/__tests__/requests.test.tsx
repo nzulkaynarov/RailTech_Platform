@@ -14,7 +14,7 @@ describe('Запросы', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
     expect(within(list).getByText('Новый')).toBeInTheDocument();
     expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
-    expect(within(list).getByText('Ещё без сделки')).toBeInTheDocument();
+    expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
 
     const link = within(list).getByRole('link', { name: /Z-2026-0042/ });
     link.focus();

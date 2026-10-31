@@ -18,7 +18,8 @@ export interface SideNavProps {
  * Боковая навигация десктопа (от `md`): марка RailTech Cabinet, компания и право действовать из `GET /me`, разделы.
  * Только данные контракта: ни переключателя ролей (поставщиков в кабинете нет — CONVENTIONS §2 п. 3), ни статуса
  * менеджера, ни своих запросов к спискам на каждой странице (CAB-FIX-1). Свёрнутый — только иконки, имя пункта —
- * в `aria-label` (CAB-FIX-2).
+ * в `aria-label` (CAB-FIX-2). Ширина меняется одним шагом, без анимации: анимация ширины пересчитывала холст на каждом
+ * кадре (K12).
  */
 export function SideNav({ companyName, collapsed = false, onToggleCollapse }: SideNavProps) {
   const { t } = useTranslation();
@@ -27,7 +28,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
   return (
     <aside
       className={cn(
-        'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-border/60 bg-muted transition-all duration-200 md:flex',
+        'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-border/60 bg-muted md:flex',
         collapsed ? 'w-16' : 'w-64',
       )}
     >

@@ -270,7 +270,7 @@ function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSen
               </Alert>
             ) : null}
             <Button type="submit" disabled={busy || !token.data}>
-              {busy || token.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
+              {busy || token.isPending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
               {busy ? t('newClient.form.sending') : t('newClient.form.submit')}
             </Button>
           </form>

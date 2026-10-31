@@ -54,7 +54,7 @@ export function DocumentButton({
         disabled={busy}
         aria-label={t('documents.downloadNamed', { name: label })}
       >
-        {busy ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
+        {busy ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Download aria-hidden="true" />}
         {state === 'pending' ? t('documents.preparing') : (text ?? t('documents.download'))}
       </Button>
       <span className="sr-only" role="status" aria-live="polite">

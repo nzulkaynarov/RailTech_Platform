@@ -10,7 +10,7 @@ import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
-import { StatusBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, StatusBadge } from '@/components/StatusBadge';
 import { ManagerButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
 import { useNow } from '@/hooks/useNow';
@@ -122,7 +122,7 @@ export function DealPage() {
               title={t('pages.quotes.numberVersion', { number: item.number, version: item.version })}
               meta={formatMoney(item.total)}
             >
-              <StatusBadge entity="quote" code={item.status} />
+              <QuoteStatusBadge quote={item} now={now} />
             </DealRow>
           ))}
         </DealSection>
@@ -191,7 +191,7 @@ function DealRow({ to, title, meta, children }: { to: string; title: string; met
       >
         <span className="min-w-0 font-medium break-words">{title}</span>
         <span className="flex flex-wrap items-center gap-2">
-          {meta ? <span className="text-muted-foreground">{meta}</span> : null}
+          {meta ? <span className="text-muted-foreground tabular-nums">{meta}</span> : null}
           {children}
         </span>
       </Link>
@@ -199,7 +199,10 @@ function DealRow({ to, title, meta, children }: { to: string; title: string; met
   );
 }
 
-/** Этапы сделки по статусам документов (`lib/dealStage`): выполнено, в работе, впереди; закрытый запрос — без «в работе». */
+/**
+ * Этапы проекта по статусам документов (`lib/dealStage`): выполнено; текущий этап — один, с акцентом (`aria-current`);
+ * остальные начатые — «начато», спокойно; впереди. Закрытый запрос — без текущего этапа.
+ */
 function DealStages({ progress }: { progress: DealProgress }) {
   const { t } = useTranslation();
   return (
@@ -211,30 +214,42 @@ function DealStages({ progress }: { progress: DealProgress }) {
         {progress.closed ? <span className="font-medium text-muted-foreground">{t('pages.deal.stages.closed')}</span> : null}
       </div>
       <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        {progress.stages.map((stage, index) => (
-          <li
-            key={stage.id}
-            aria-current={stage.state === 'active' ? 'step' : undefined}
-            className={cn(
-              'flex items-center gap-2 rounded-xl border p-2.5 text-xs',
-              stage.state === 'done'
-                ? 'border-success/30 bg-success/10 font-medium text-success'
-                : stage.state === 'active'
-                  ? 'border-warning/30 bg-warning/10 font-semibold text-warning shadow-2xs'
-                  : 'border-border/60 bg-background text-muted-foreground',
-            )}
-          >
-            {stage.state === 'done' ? (
-              <Check className="size-3.5 stroke-[3] text-success" aria-hidden="true" />
-            ) : (
-              <span className="font-mono text-xs" aria-hidden="true">
-                {index + 1}.
-              </span>
-            )}
-            <span className="truncate">{t(`pages.deal.stages.${stage.id}`)}</span>
-            <span className="sr-only">{`, ${t(`pages.deal.stages.state.${stage.state}`)}`}</span>
-          </li>
-        ))}
+        {progress.stages.map((stage, index) => {
+          const label = stage.current ? 'current' : stage.state;
+          return (
+            <li
+              key={stage.id}
+              aria-current={stage.current ? 'step' : undefined}
+              className={cn(
+                'flex items-center gap-2 rounded-xl border p-2.5 text-xs',
+                stage.state === 'done'
+                  ? 'border-success/30 bg-success/10 font-medium text-success'
+                  : stage.current
+                    ? 'border-warning/40 bg-warning/10 font-semibold text-warning shadow-2xs'
+                    : stage.state === 'active'
+                      ? 'border-border bg-background font-medium text-foreground'
+                      : 'border-border/60 bg-background text-muted-foreground',
+              )}
+            >
+              {stage.state === 'done' ? (
+                <Check className="size-3.5 stroke-[3] text-success" aria-hidden="true" />
+              ) : (
+                <span className="text-xs tabular-nums" aria-hidden="true">
+                  {index + 1}.
+                </span>
+              )}
+              <span className="min-w-0 break-words">{t(`pages.deal.stages.${stage.id}`)}</span>
+              {stage.state === 'active' && !stage.current ? (
+                <>
+                  <span className="sr-only">, </span>
+                  <span className="ml-auto shrink-0 font-normal text-muted-foreground">{t('pages.deal.stages.state.active')}</span>
+                </>
+              ) : (
+                <span className="sr-only">{`, ${t(`pages.deal.stages.state.${label}`)}`}</span>
+              )}
+            </li>
+          );
+        })}
       </ol>
     </section>
   );

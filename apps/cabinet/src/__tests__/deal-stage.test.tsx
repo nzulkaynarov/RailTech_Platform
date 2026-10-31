@@ -1,4 +1,8 @@
 import { screen, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+
+import * as fixtures from '@/mocks/fixtures';
+import { portalServer } from '@/mocks/server';
 
 import { dealProgress, type DealDocuments, type DealStageState } from '@/lib/dealStage';
 import { renderApp, signedIn } from '@/test/render';
@@ -18,7 +22,7 @@ function stateOf(input: DealDocuments, id: string): DealStageState | undefined {
   return dealProgress(input).stages.find((stage) => stage.id === id)?.state;
 }
 
-describe('Этапы сделки по статусам документов (lib/dealStage, CAB-FIX-1)', () => {
+describe('Этапы проекта по статусам документов (lib/dealStage, CAB-FIX-1)', () => {
   it('новый запрос без КП: запрос в работе, остальное впереди', () => {
     expect(states(docs({ requests: [{ status: 'new' }] }))).toEqual([
       'request:active',
@@ -96,31 +100,58 @@ describe('Этапы сделки по статусам документов (li
   it('закрытый запрос: только выполненные этапы, ни одного «в работе», флаг closed', () => {
     const lost = dealProgress(docs({ requests: [{ status: 'closed' }], quotes: [{ status: 'rejected' }] }));
     expect(lost.closed).toBe(true);
-    expect(lost.stages).toEqual([{ id: 'request', state: 'done' }]);
+    expect(lost.stages).toEqual([{ id: 'request', state: 'done', current: false }]);
 
     const partly = dealProgress(
       docs({ requests: [{ status: 'closed' }], contracts: [{ status: 'signed' }], invoices: [{ status: 'partially_paid' }], acts: [{ status: 'issued' }] }),
     );
     expect(partly.stages.map((stage) => stage.id)).toEqual(['request', 'contract']);
-    expect(partly.stages.some((stage) => stage.state !== 'done')).toBe(false);
+    expect(partly.stages.some((stage) => stage.state !== 'done' || stage.current)).toBe(false);
+  });
+
+  it('текущий этап — ровно один, первый невыполненный; остальные начатые — просто «в работе» (CAB-FIX-3)', () => {
+    const current = (input: DealDocuments) => dealProgress(input).stages.filter((stage) => stage.current).map((stage) => stage.id);
+    // D-48: договор ждёт согласования, счёт на предоплату и поставка уже идут — текущий только договор
+    const d48 = docs({
+      requests: [{ status: 'quoted' }],
+      quotes: [{ status: 'accepted' }],
+      contracts: [{ status: 'sent' }],
+      invoices: [{ status: 'issued' }],
+      deliveries: [{ status: 'in_transit' }],
+    });
+    expect(current(d48)).toEqual(['contract']);
+    expect(stateOf(d48, 'payment')).toBe('active');
+    expect(current(docs({ requests: [{ status: 'new' }] }))).toEqual(['request']);
+    // первый невыполненный — даже если он ещё не начат
+    expect(current(docs({ requests: [], quotes: [] }))).toEqual(['quote']);
+    // всё выполнено — текущего нет
+    const finished = docs({
+      requests: [{ status: 'quoted' }],
+      quotes: [{ status: 'accepted' }],
+      contracts: [{ status: 'signed' }],
+      invoices: [{ status: 'paid' }],
+      acts: [{ status: 'accepted' }],
+      deliveries: [{ status: 'accepted' }],
+    });
+    expect(current(finished)).toEqual([]);
   });
 });
 
-describe('Этапы на странице сделки', () => {
-  it('D-48: договор ждёт согласования — «Договор» в работе, а не выполнен', async () => {
+describe('Этапы на странице проекта', () => {
+  it('D-48: договор ждёт согласования — «Договор» текущий этап, оплата и поставка — «начато»', async () => {
     signedIn();
     renderApp('/deals/48');
-    await heading('Сделка № D-48');
-    const stages = await screen.findByRole('region', { name: 'Этапы' });
+    await heading('Проект D-48');
+    const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     const items = within(stages).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual([
       'Запрос, выполнено',
       'КП, выполнено',
-      '3.Договор, в работе',
-      '4.Оплата, в работе',
-      '5.Поставка и акт, в работе',
+      '3.Договор, текущий этап',
+      '4.Оплата, начато',
+      '5.Поставка и акт, начато',
     ]);
-    expect(items[2]).toHaveAttribute('aria-current', 'step');
+    expect(items.filter((item) => item.getAttribute('aria-current') === 'step')).toEqual([items[2]]);
     // «Что произойдёт» без действия на странице сделки нет.
     expect(screen.queryByText('Что произойдёт')).not.toBeInTheDocument();
   });
@@ -128,10 +159,21 @@ describe('Этапы на странице сделки', () => {
   it('D-35: закрытый запрос — «Запрос закрыт», без этапов «в работе» и без «исполнения»', async () => {
     signedIn();
     renderApp('/deals/35');
-    await heading('Сделка № D-35');
-    const stages = await screen.findByRole('region', { name: 'Этапы' });
+    await heading('Проект D-35');
+    const stages = await screen.findByRole('region', { name: 'Этапы проекта' });
     expect(within(stages).getByText('Запрос закрыт')).toBeInTheDocument();
-    expect(within(stages).queryByText(/в работе/)).not.toBeInTheDocument();
+    expect(within(stages).queryByText(/текущий этап|начато/)).not.toBeInTheDocument();
     expect(within(stages).queryByText('Поставка и акт')).not.toBeInTheDocument();
+  });
+
+  it('КП с прошедшим сроком в списке проекта — «Срок истёк», а не «Ждёт решения»', async () => {
+    signedIn();
+    const lapsed = { ...fixtures.quotes[0], id: 399, ...fixtures.dealOf(48), number: 'KP-LAPSED', status: 'sent' as const, valid_until: '2026-10-01' };
+    portalServer.use(http.get('*/api/portal/v1/quotes', () => HttpResponse.json([lapsed])));
+    renderApp('/deals/48');
+    await heading('Проект D-48');
+    const quotes = await screen.findByRole('region', { name: 'КП' });
+    expect(within(quotes).getByText('Срок истёк')).toBeInTheDocument();
+    expect(within(quotes).queryByText(/Ждёт/)).not.toBeInTheDocument();
   });
 });

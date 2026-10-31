@@ -23,11 +23,22 @@
 }
 
 @layer utilities {
+  /* Карточка: подъём при наведении — только если человек не просил меньше движения (K12) */
   .portal-card {
-    @apply rounded-2xl border border-border bg-card transition-all duration-200 hover:-translate-y-0.5 hover:border-ring/40 hover:shadow-lg hover:shadow-primary/5;
+    @apply rounded-2xl border border-border bg-card hover:border-ring/40 hover:shadow-lg hover:shadow-primary/5 motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 motion-safe:hover:-translate-y-0.5;
   }
+}
 
-  .spring-transition {
-    transition: all 220ms cubic-bezier(0.16, 1, 0.3, 1);
+/* «Уменьшить движение» в системе (K12, WCAG 2.3.3): переходы и анимации — мгновенно, спиннеры и скелетоны стоят.
+   Анимации кабинета: переходы цвета и тени, подъём карточки, спиннер загрузки, пульс скелетона — больше ничего
+   (классы tw-animate-css `animate-in`, `fade-*`, `slide-*`, `zoom-*` не подключены и удалены). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

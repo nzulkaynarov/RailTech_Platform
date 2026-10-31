@@ -236,7 +236,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (value: 
 function PriceText({ item, large = false }: { item: CatalogItem; large?: boolean }) {
   const { t } = useTranslation();
   return item.price ? (
-    <span className={cn('font-semibold', large ? 'text-2xl' : 'text-base')}>
+    <span className={cn('font-semibold tabular-nums', large ? 'text-2xl' : 'text-base')}>
       {formatMoney(item.price)}
       <span className="text-sm font-normal text-muted-foreground"> / {item.unit}</span>
     </span>

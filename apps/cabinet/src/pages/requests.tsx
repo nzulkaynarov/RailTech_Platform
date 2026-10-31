@@ -8,12 +8,14 @@ import { apiErrorKey } from '@/api/errors';
 import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';
 import { useCatalog, useCreateRequest, useQuotes, useRequest, useRequests, useUploadFile } from '@/api/queries';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
+import { useActionRequired } from '@/hooks/useActionRequired';
 import { DealLink, DetailList, SectionTitle } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, StatusBadge } from '@/components/StatusBadge';
+import { useNow } from '@/hooks/useNow';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -50,6 +52,8 @@ function NewRequestButton() {
 export function RequestsPage() {
   const { t } = useTranslation();
   const requests = useRequests();
+  // Список показывается вместе с виджетом «Требует вашего решения»: виджет не вставляется над готовым списком (K10).
+  const actionsPending = useActionRequired().isPending;
   const [searchParams] = useSearchParams();
 
   // Старые ссылки с `?view=…` (вид-переключатель убран, CAB-FIX-1) ведут на список без параметра.
@@ -58,8 +62,8 @@ export function RequestsPage() {
   return (
     <>
       <PageHeader title={t('pages.requests.title')} icon={Inbox} actions={<NewRequestButton />} />
-      <ActionRequiredWidget />
-      {requests.isPending ? (
+      <ActionRequiredWidget holdSkeleton={requests.isPending} />
+      {requests.isPending || actionsPending ? (
         <ListSkeleton />
       ) : requests.isError ? (
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
@@ -97,6 +101,7 @@ export function RequestDetailPage() {
   const requests = useRequests();
   const detailQuery = useRequest(id);
   const quotes = useQuotes();
+  const now = useNow();
   const request = detailQuery.data ?? requests.data?.find((item) => item.id === id);
 
   if (requests.isPending && detailQuery.isPending) return <ListSkeleton rows={2} />;
@@ -194,8 +199,8 @@ export function RequestDetailPage() {
                       {t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
-                      <span>{formatMoney(quote.total)}</span>
-                      <StatusBadge entity="quote" code={quote.status} />
+                      <span className="whitespace-nowrap tabular-nums">{formatMoney(quote.total)}</span>
+                      <QuoteStatusBadge quote={quote} now={now} />
                     </span>
                   </Link>
                 </li>
@@ -438,7 +443,7 @@ function RequestForm() {
               disabled={isUploading}
               onClick={() => document.getElementById(fileInputId)?.click()}
             >
-              {isUploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
+              {isUploading ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
               {isUploading ? t('pages.requestNew.uploading') : t('pages.requestNew.uploadButton')}
             </Button>
           </div>
@@ -494,7 +499,7 @@ function RequestForm() {
             </Link>
           </Button>
           <Button type="submit" disabled={create.isPending || isUploading}>
-            {create.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
+            {create.isPending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
             {t('pages.requestNew.submit')}
           </Button>
         </div>
@@ -541,7 +546,7 @@ function CatalogPickerDialog({
           />
           {catalogQuery.isPending ? (
             <div className="flex items-center justify-center p-6 text-muted-foreground">
-              <Loader2 className="size-6 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-6 motion-safe:animate-spin" aria-hidden="true" />
             </div>
           ) : (catalogQuery.data?.items ?? []).length === 0 ? (
             <p className="p-4 text-center text-sm text-muted-foreground">{t('pages.catalog.notFoundTitle')}</p>
