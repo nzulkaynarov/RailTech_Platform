@@ -76,6 +76,10 @@ export function ProofList({ card }: { card: PaymentCard }) {
               })}
             </span>
           ) : null}
+          {/* Комментарий клиента к платёжке из кабинета («Я оплатил», B-CABFIX-1) */}
+          {proof.source === "CABINET" && proof.note ? (
+            <span className="pf-hint">{t("proofs.note", { note: proof.note })}</span>
+          ) : null}
         </li>
       ))}
     </ul>

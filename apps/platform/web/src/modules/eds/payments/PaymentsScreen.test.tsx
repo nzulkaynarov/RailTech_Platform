@@ -235,6 +235,7 @@ describe("Подтвердить оплату", () => {
     const proof = within(form).getByRole("radio", { name: "платёжка-0127.pdf" });
     expect(proof).toBeChecked();
     expect(within(panel).getByText("Кабинет клиента", { exact: false })).toBeVisible();
+    expect(within(panel).getByText(/Комментарий клиента: Оплатили из двух счетов/)).toBeVisible();
     fireEvent.click(within(form).getByRole("button", { name: "Подтвердить оплату" }));
 
     expect(await screen.findByText(/Оплата подтверждена: 28/)).toBeVisible();

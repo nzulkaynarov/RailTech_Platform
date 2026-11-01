@@ -234,6 +234,7 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     checklist,
     steps: [step("Директор", "current")],
     channels: { contact_name: "Алия Демо", ...seed.channels },
+    client_comments: [],
     sources: { crm: "ok", erp: seed.erpDown ? "unavailable" : "ok" },
   };
 }
@@ -259,6 +260,15 @@ function approvedQuote(): QuoteApprovalCard {
     can_decide: false,
     allowed_decisions: [],
     outgoing_number: "ИСХ-027/26",
+    // КП отправлено клиенту, клиент спросил в кабинете (B-CABFIX-1)
+    client_comments: [
+      {
+        author: "client",
+        author_name: "Алия Демо",
+        text: "Можно разбить поставку щебня на две партии по 1000 т?",
+        created_at: "2026-10-28T06:15:00Z",
+      },
+    ],
     steps: [
       step("Директор", "approved", {
         decided_by: DIRECTOR_PERSON,

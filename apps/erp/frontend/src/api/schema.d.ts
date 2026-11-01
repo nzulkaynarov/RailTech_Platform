@@ -951,6 +951,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/invoices/{id}/proofs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /invoices/{id}/proofs — «Я оплатил»: платёжное поручение из `/uploads` к счёту (B-CABFIX-1).
+         *
+         *     Платёжка ложится в ту же `PaymentConfirmation`, что у менеджера (источник — кабинет), и ждёт подтверждения оплаты
+         *     в «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.
+         */
+        post: operations["api_portal_v1_invoices_proofs_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/invoices/{id}/proofs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /invoices/{id}/proofs — «Я оплатил»: платёжное поручение из `/uploads` к счёту (B-CABFIX-1).
+         *
+         *     Платёжка ложится в ту же `PaymentConfirmation`, что у менеджера (источник — кабинет), и ждёт подтверждения оплаты
+         *     в «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.
+         */
+        post: operations["api_portal_v1_invoices_proofs_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/me": {
         parameters: {
             query?: never;
@@ -1081,6 +1125,40 @@ export interface paths {
         put?: never;
         /** @description POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`. */
         post: operations["api_portal_v1_quotes_accept_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/quotes/{id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1). */
+        post: operations["api_portal_v1_quotes_comments_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/quotes/{id}/comments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1). */
+        post: operations["api_portal_v1_quotes_comments_create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15421,6 +15499,7 @@ export interface components {
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
             readonly approval_steps: unknown[];
+            readonly client_comments: components["schemas"]["QuoteClientComment"][];
             /**
              * Дата создания
              * Format: date-time
@@ -15555,6 +15634,15 @@ export interface components {
              * @description Если True — сумма вычитается из базы (скидка / бонус), а не добавляется
              */
             is_deduction?: boolean;
+        };
+        /** @description Комментарий к КП: автор `client` (контакт из кабинета) или `manager` (сотрудник), имя, текст, время. */
+        QuoteClientComment: {
+            readonly id: number;
+            readonly author: string;
+            readonly author_name: string;
+            readonly text: string;
+            /** Format: date-time */
+            readonly created_at: string;
         };
         /**
          * @description Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.
@@ -18197,6 +18285,46 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_invoices_proofs_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_invoices_proofs_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_me_retrieve: {
         parameters: {
             query?: never;
@@ -18330,6 +18458,46 @@ export interface operations {
         };
     };
     api_portal_v1_quotes_accept_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_quotes_comments_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_quotes_comments_create_2: {
         parameters: {
             query?: never;
             header?: never;

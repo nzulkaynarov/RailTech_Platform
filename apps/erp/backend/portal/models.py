@@ -2,6 +2,7 @@
 
 import uuid
 
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -227,3 +228,44 @@ class PortalRequestSummary(models.Model):
 
     def __str__(self):
         return f"PortalRequestSummary(deal={self.deal_id})"
+
+
+class QuoteComment(models.Model):
+    """Комментарий к КП (SPEC-v3 §8 «КП — принять / отклонить с причиной / комментарий», B-CABFIX-1).
+
+    Клиент пишет из кабинета (`POST /quotes/{id}/comments`, автор — контакт), лента отдаётся в `Quote.comments`.
+    Автор-сотрудник (`author_user`) заложен для ответа менеджера из Платформы; пока его пишет только клиент.
+    """
+
+    quote = models.ForeignKey(
+        "sales.Quote",
+        on_delete=models.CASCADE,
+        related_name="client_comments",
+        verbose_name=_("КП"),
+    )
+    author_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quote_comments",
+        verbose_name=_("Автор — контакт клиента"),
+    )
+    author_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="quote_comments",
+        verbose_name=_("Автор — сотрудник"),
+    )
+    text = models.TextField(verbose_name=_("Текст"))  # до 2000 знаков — `QuoteCommentCreate.text` контракта
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        verbose_name = _("Комментарий к КП")
+        verbose_name_plural = _("Комментарии к КП")
+        ordering = ["created_at", "id"]
+
+    def __str__(self):
+        return f"QuoteComment(quote={self.quote_id}, {self.created_at:%Y-%m-%d})"

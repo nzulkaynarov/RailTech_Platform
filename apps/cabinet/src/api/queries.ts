@@ -85,6 +85,10 @@ export const useRejectQuote = (id: number) =>
     (quote, client) => client.setQueryData(keys.quote(id), quote),
   );
 
+/** Комментарий к КП: карточка КП перечитывается у ERP (лента `comments`). */
+export const useAddQuoteComment = (id: number) =>
+  useInvalidatingMutation((text: string) => portal.addQuoteComment(id, text), [keys.quote(id)]);
+
 export const useSignContract = () => useInvalidatingMutation(portal.signContract, [keys.contracts, ['documents']]);
 /**
  * Приёмка акта: если приложен скан — сначала `POST /uploads`, затем `POST /acts/{id}/accept {upload_id}`;
@@ -97,6 +101,18 @@ export const useAcceptAct = () =>
       return portal.acceptAct(id, uploadId);
     },
     [keys.acts, ['documents']],
+  );
+/**
+ * «Я оплатил»: сначала файл в `POST /uploads`, затем `POST /invoices/{id}/proofs {upload_id, …}`. Ошибка любого шага —
+ * ошибка мутации; после успеха счета перечитываются (платёжка появится в `proofs` со статусом «на проверке»).
+ */
+export const useSubmitPaymentProof = () =>
+  useInvalidatingMutation(
+    async ({ id, file, ...rest }: { id: number; file: File } & Omit<portal.PaymentProofCreate, 'upload_id'>) => {
+      const { upload_id } = await portal.uploadFile(file);
+      return portal.submitPaymentProof(id, { upload_id, ...rest });
+    },
+    [keys.invoices],
   );
 export const useReturnAct = () =>
   useInvalidatingMutation(({ id, reason }: { id: number; reason: string }) => portal.returnAct(id, reason), [keys.acts]);

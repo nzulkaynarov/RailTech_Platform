@@ -276,6 +276,64 @@ describe('КП', () => {
     expect(await screen.findByText('КП пока нет')).toBeInTheDocument();
   });
 
+  it('комментарий к КП: текст обязателен, уходит в ERP, появляется в ленте; КП ждёт решения как прежде', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    const body = captureBody('/quotes/310/comments');
+    renderApp('/quotes/310');
+    await heading('КП KP-2026-0057');
+    const section = screen.getByRole('region', { name: 'Комментарии' });
+    expect(within(section).getByText('Комментариев пока нет.')).toBeInTheDocument();
+    expect(within(section).getByText(/КП при этом не меняется/)).toBeInTheDocument();
+
+    await user.click(within(section).getByRole('button', { name: 'Отправить комментарий' }));
+    expect(within(section).getByText('Напишите текст комментария.')).toBeInTheDocument();
+    expect(log).not.toContain('POST /quotes/310/comments');
+
+    await user.type(within(section).getByLabelText('Ваш комментарий'), '  Можно оплату в два этапа?  ');
+    await user.click(within(section).getByRole('button', { name: 'Отправить комментарий' }));
+    expect(await screen.findByText('Комментарий отправлен менеджеру')).toBeInTheDocument();
+    expect(body.current).toEqual({ text: 'Можно оплату в два этапа?' });
+    const feed = await within(section).findByRole('list', { name: 'Комментарии к КП KP-2026-0057' });
+    expect(within(feed).getByText('Можно оплату в два этапа?')).toBeInTheDocument();
+    expect(within(feed).getByText('Вы')).toBeInTheDocument();
+    expect(within(section).getByLabelText('Ваш комментарий')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Принять' })).toBeInTheDocument();
+    await expectNoAxeViolations();
+  });
+
+  it('решённое КП: лента с ответом менеджера, поля для комментария нет', async () => {
+    signedIn();
+    renderApp('/quotes/300');
+    await heading('КП KP-2026-0042');
+    const feed = await screen.findByRole('list', { name: 'Комментарии к КП KP-2026-0042' });
+    expect(within(feed).getByText('Менеджер · Дилноза Юсупова')).toBeInTheDocument();
+    expect(within(feed).getByText(/поставить ремни за 30 дней/)).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ваш комментарий')).not.toBeInTheDocument();
+  });
+
+  it('комментарий к КП с истёкшим сроком (409) — текст ошибки у поля', async () => {
+    signedIn();
+    failWith('post', '/quotes/310/comments', 409, 'QUOTE_EXPIRED');
+    const user = userEvent.setup();
+    renderApp('/quotes/310');
+    await heading('КП KP-2026-0057');
+    const section = screen.getByRole('region', { name: 'Комментарии' });
+    await user.type(within(section).getByLabelText('Ваш комментарий'), 'Вопрос');
+    await user.click(within(section).getByRole('button', { name: 'Отправить комментарий' }));
+    expect(await within(section).findByText(/Срок действия КП истёк/)).toBeInTheDocument();
+  });
+
+  it('can_act=false: комментировать нельзя', async () => {
+    signedIn('viewer');
+    window.localStorage.setItem('cabinet.language', 'ru');
+    renderApp('/quotes/310');
+    await heading('КП KP-2026-0057');
+    expect(screen.getByText('Комментариев пока нет.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ваш комментарий')).not.toBeInTheDocument();
+  });
+
   it('axe: карточка КП', async () => {
     signedIn();
     renderApp('/quotes/310');

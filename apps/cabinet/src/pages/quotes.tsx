@@ -1,12 +1,14 @@
 import { useId, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CheckCircle2, Clock, FileSignature, FileText, Mail, MessageCircle, RotateCw, SearchX, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, FileSignature, FileText, Loader2, Mail, MessageCircle, RotateCw, SearchX, Send, XCircle } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
-import { isPortalApiError, type AcceptanceCodeSent, type Quote, type QuoteLine, type QuoteListItem } from '@/api/portal';
-import { useAcceptQuote, useContracts, useQuote, useQuotes, useRejectQuote, useRequestQuoteCode } from '@/api/queries';
+import { apiErrorKey } from '@/api/errors';
+import { isPortalApiError, type AcceptanceCodeSent, type Quote, type QuoteComment, type QuoteLine, type QuoteListItem } from '@/api/portal';
+import { useAcceptQuote, useAddQuoteComment, useContracts, useQuote, useQuotes, useRejectQuote, useRequestQuoteCode } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
+import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { DealLink, DetailList, SectionTitle, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -21,12 +23,14 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useMediaQuery, DESKTOP_QUERY } from '@/hooks/useMediaQuery';
 import { useNow } from '@/hooks/useNow';
 import { formatDate, formatDateTime, formatMoney, formatQuantity } from '@/lib/format';
 import { ACCEPT_CODE_MAX, ACCEPT_CODE_MIN, normalizeAcceptCode, quoteAwaitsDecision, quoteExpired } from '@/lib/quotes';
 import { cn } from '@/lib/utils';
 import { CanAct } from '@/session/CanAct';
+import { useMe } from '@/session/useMe';
 
 /**
  * КП (B2B `QuotesPage`, `BuyerAcceptedPanel`, `RejectQuoteDialog`): список всех версий, карточка со
@@ -176,6 +180,8 @@ function QuoteCard({ quote }: { quote: Quote }) {
           </SectionTitle>
           <QuoteLines lines={quote.lines} subtotal={quote.subtotal} vat={quote.vat} total={quote.total} />
         </section>
+
+        <QuoteComments quote={quote} awaiting={awaiting} />
       </div>
 
       <AcceptDialog quote={quote} open={dialog === 'accept'} onOpenChange={(open) => setDialog(open ? 'accept' : null)} />
@@ -516,5 +522,112 @@ function RejectDialog({ quote, open, onOpenChange }: { quote: Quote; open: boole
         })
       }
     />
+  );
+}
+
+const COMMENT_MAX = 2000;
+
+/**
+ * Комментарии к КП (SPEC-v3 §8 «КП — принять / отклонить с причиной / комментарий»): лента `Quote.comments` и поле,
+ * пока КП ждёт решения. Комментарий получает менеджер (карточка КП в Платформе и уведомление); КП он не меняет.
+ */
+function QuoteComments({ quote, awaiting }: { quote: Quote; awaiting: boolean }) {
+  const { t } = useTranslation();
+  const id = useId();
+  const add = useAddQuoteComment(quote.id);
+  const [text, setText] = useState('');
+  const [missing, setMissing] = useState(false);
+
+  const send = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (add.isPending) return;
+    const value = text.trim();
+    if (!value) {
+      setMissing(true);
+      return;
+    }
+    add.mutate(value, {
+      onSuccess: () => {
+        setText('');
+        toast.success(t('pages.quoteDetail.commentSent'));
+      },
+    });
+  };
+  const problem = missing ? t('pages.quoteDetail.commentRequired') : add.error ? t(apiErrorKey(add.error)) : null;
+
+  return (
+    <section aria-labelledby={`${id}-title`}>
+      <SectionTitle>
+        <span id={`${id}-title`}>{t('pages.quoteDetail.comments')}</span>
+      </SectionTitle>
+      <Card>
+        <CardContent className="flex flex-col gap-4">
+          {quote.comments.length ? (
+            <ol className="flex flex-col gap-3" aria-label={t('pages.quoteDetail.commentsListLabel', { number: quote.number })}>
+              {quote.comments.map((comment) => (
+                <CommentItem key={comment.id} comment={comment} />
+              ))}
+            </ol>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t('pages.quoteDetail.commentsEmpty')}</p>
+          )}
+          {awaiting ? (
+            <CanAct>
+              <form className="flex flex-col gap-3 border-t pt-4" onSubmit={send} noValidate>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={`${id}-text`}>{t('pages.quoteDetail.commentLabel')}</Label>
+                  <Textarea
+                    id={`${id}-text`}
+                    rows={3}
+                    maxLength={COMMENT_MAX}
+                    value={text}
+                    placeholder={t('pages.quoteDetail.commentPlaceholder')}
+                    aria-invalid={missing ? true : undefined}
+                    aria-describedby={problem ? `${id}-problem` : undefined}
+                    onChange={(event) => {
+                      setText(event.target.value);
+                      setMissing(false);
+                      add.reset();
+                    }}
+                  />
+                  {problem ? (
+                    <p id={`${id}-problem`} role="alert" className="text-sm text-destructive">
+                      {problem}
+                    </p>
+                  ) : null}
+                </div>
+                <ConsequenceCallout text={t('pages.quoteDetail.commentConsequence')} />
+                <Button type="submit" variant="outline" className="self-start" disabled={add.isPending}>
+                  {add.isPending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Send aria-hidden="true" />}
+                  {t('pages.quoteDetail.commentSend')}
+                </Button>
+              </form>
+            </CanAct>
+          ) : null}
+        </CardContent>
+      </Card>
+    </section>
+  );
+}
+
+function CommentItem({ comment }: { comment: QuoteComment }) {
+  const { t } = useTranslation();
+  const me = useMe();
+  const author =
+    comment.author === 'manager'
+      ? [t('pages.quoteDetail.commentAuthorManager'), comment.author_name].filter(Boolean).join(' · ')
+      : comment.author_name && comment.author_name === me.data?.contact.name
+        ? t('pages.quoteDetail.commentAuthorYou')
+        : (comment.author_name ?? t('pages.quoteDetail.commentAuthorClient'));
+  return (
+    <li className={cn('flex min-w-0 flex-col gap-1 rounded-lg border p-3 text-sm', comment.author === 'manager' ? 'bg-muted' : 'bg-card')}>
+      <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <span className="font-medium">{author}</span>
+        <time className="text-xs text-muted-foreground" dateTime={comment.created_at}>
+          {formatDateTime(comment.created_at)}
+        </time>
+      </span>
+      <p className="whitespace-pre-line break-words">{comment.text}</p>
+    </li>
   );
 }

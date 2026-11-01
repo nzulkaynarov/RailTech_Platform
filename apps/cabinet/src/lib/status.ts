@@ -12,6 +12,7 @@ type StatusMaps = {
   quote: Schemas['QuoteStatus'];
   contract: Schemas['ContractStatus'];
   invoice: Schemas['InvoiceStatus'];
+  proof: Schemas['PaymentProofStatus'];
   act: Schemas['ActStatus'];
   delivery: Schemas['DeliveryStatus'];
   availability: Schemas['Availability'];
@@ -33,6 +34,7 @@ const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
     cancelled: 'neutral',
   },
   invoice: { issued: 'info', partially_paid: 'warning', paid: 'success', overdue: 'danger', cancelled: 'neutral' },
+  proof: { pending: 'info', confirmed: 'success', rejected: 'danger' },
   act: { issued: 'warning', accepted: 'success', returned: 'danger' },
   delivery: {
     assembling: 'neutral',

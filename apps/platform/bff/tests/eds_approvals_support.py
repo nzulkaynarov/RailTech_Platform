@@ -193,6 +193,22 @@ def erp_quote(**over: Any) -> dict[str, Any]:
         "margin_percent": "17.60",
         "charges_total": "100.00",
         "economics": {"cost": "103000000.00"},
+        "client_comments": [
+            {
+                "id": 1,
+                "author": "client",
+                "author_name": "Алия Демо",
+                "text": "Можно срок 30 дней?",
+                "created_at": "2026-10-20T10:00:00+05:00",
+            },
+            {
+                "id": 2,
+                "author": "manager",
+                "author_name": "",
+                "text": "Уточним",
+                "created_at": "bad",
+            },
+        ],
         "items": [
             {
                 "display_type": "SECTION",

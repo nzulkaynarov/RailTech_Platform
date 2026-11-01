@@ -64,6 +64,20 @@ const railtechPlugin = {
   },
 };
 
+// Системных полей браузера в экранах кабинета нет (B-CABFIX-1, как UX-2a Платформы): дата `mm/dd/yyyy`, «Choose File» и
+// родной `select` на языке браузера выбиваются из интерфейса клиента. Дата — `components/DateField`, файл —
+// `components/FileField`, выбор — shadcn `Select`. Исключение — сам `FileField` (системное поле за своей кнопкой).
+const NATIVE_FIELD_RULES = [
+  {
+    selector: 'JSXOpeningElement[name.name="select"]',
+    message: 'Родной <select> запрещён: shadcn Select (components/ui/select) с подписью Label.',
+  },
+  {
+    selector: 'JSXOpeningElement[name.name=/^(input|Input)$/] > JSXAttribute[name.name="type"][value.value=/^(date|datetime-local|file)$/]',
+    message: 'Системное поле даты или файла запрещено: components/DateField или components/FileField.',
+  },
+];
+
 export default tseslint.config(
   { ignores: ['dist', 'public', 'src/api/portal.d.ts', 'src/api/crm-form.d.ts'] },
   {
@@ -84,7 +98,12 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       'railtech/no-hardcoded-colors': 'error',
       'railtech/no-arbitrary-text-size': 'error',
+      'no-restricted-syntax': ['error', ...NATIVE_FIELD_RULES],
     },
+  },
+  {
+    files: ['src/components/FileField.tsx'],
+    rules: { 'no-restricted-syntax': 'off' },
   },
   {
     // Vendored-примитивы shadcn/ui экспортируют варианты рядом с компонентом — контракт реестра.

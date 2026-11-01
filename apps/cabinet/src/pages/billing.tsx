@@ -1,15 +1,18 @@
 import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Wallet } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ClipboardCheck, FileSignature, PenLine, Receipt, Undo2, Upload, Wallet } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
-import type { Act, Contract, Invoice } from '@/api/portal';
-import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract } from '@/api/queries';
+import type { Act, Contract, Invoice, PaymentProof } from '@/api/portal';
+import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSignContract, useSubmitPaymentProof } from '@/api/queries';
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
+import { ConsequenceCallout } from '@/components/ConsequenceCallout';
+import { DateField } from '@/components/DateField';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
+import { FileField } from '@/components/FileField';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
@@ -20,9 +23,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useNow } from '@/hooks/useNow';
-import { formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
-import { invoiceView } from '@/lib/invoice';
+import { businessToday, currencyLabel, formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
+import { invoiceOpen, invoiceView, parseAmount, PROOF_COMMENT_MAX } from '@/lib/invoice';
 import { contractAwaitsClient } from '@/lib/status';
 import { scanProblem, type UploadProblem } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
@@ -144,6 +148,7 @@ export function InvoicesPage() {
   const open = (invoices.data ?? []).filter((invoice) => invoice.status !== 'paid' && invoice.status !== 'cancelled');
   const toPay = sumByCurrency(open.map((invoice) => views.get(invoice.id)?.remaining).filter((money) => money !== null && money !== undefined));
   const overdue = open.filter((invoice) => views.get(invoice.id)?.overdueDays).length;
+  const [paying, setPaying] = useState<Invoice | null>(null);
 
   return (
     <>
@@ -197,7 +202,12 @@ export function InvoicesPage() {
             getRowId={(row) => row.id}
             title={{
               header: t('pages.invoices.columns.invoice'),
-              cell: (row) => <span className="font-medium whitespace-nowrap">{row.number}</span>,
+              cell: (row) => (
+                <span className="flex min-w-0 flex-col gap-1">
+                  <span className="font-medium whitespace-nowrap">{row.number}</span>
+                  <ProofList invoice={row} />
+                </span>
+              ),
               className: 'min-w-0',
             }}
             columns={[
@@ -235,13 +245,208 @@ export function InvoicesPage() {
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
                   <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutInvoice', { number: row.number })} />
+                  {invoiceOpen(row) ? (
+                    <CanAct>
+                      <Button size="sm" onClick={() => setPaying(row)} aria-label={t('pages.invoices.payNamed', { number: row.number })}>
+                        <Upload aria-hidden="true" />
+                        {t('pages.invoices.payButton')}
+                      </Button>
+                    </CanAct>
+                  ) : null}
                 </>
               ),
             }}
           />
         </>
       )}
+      <PaymentProofDialog invoice={paying} remaining={paying ? views.get(paying.id)?.remaining : null} onClose={() => setPaying(null)} />
     </>
+  );
+}
+
+/** Платёжки счёта со статусом проверки (`Invoice.proofs`): что клиент отправил и что с ней сделал менеджер. */
+function ProofList({ invoice }: { invoice: Invoice }) {
+  const { t } = useTranslation();
+  if (!invoice.proofs.length) return null;
+  return (
+    <ul className="flex flex-col gap-1.5 text-xs font-normal" aria-label={t('pages.invoices.proofsLabel', { number: invoice.number })}>
+      {invoice.proofs.map((proof) => (
+        <li key={proof.id} className="flex min-w-0 flex-col gap-0.5">
+          <span className="flex flex-wrap items-center gap-1.5">
+            <StatusBadge entity="proof" code={proof.status} />
+            <span className="break-all text-muted-foreground">
+              {t('pages.invoices.proofLine', { name: proof.file_name, date: formatDateTime(proof.submitted_at) })}
+            </span>
+          </span>
+          <ProofClaim proof={proof} />
+          {proof.status === 'rejected' && proof.reject_reason ? (
+            <span className="text-muted-foreground">{t('pages.invoices.proofRejected', { reason: proof.reject_reason })}</span>
+          ) : null}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function ProofClaim({ proof }: { proof: PaymentProof }) {
+  const { t } = useTranslation();
+  if (proof.amount) {
+    const amount = formatMoney(proof.amount);
+    const text = proof.paid_on
+      ? t('pages.invoices.proofClaimedDate', { amount, date: formatDate(proof.paid_on) })
+      : t('pages.invoices.proofClaimed', { amount });
+    return <span className="text-muted-foreground">{text}</span>;
+  }
+  if (proof.paid_on) return <span className="text-muted-foreground">{t('pages.invoices.proofPaidOn', { date: formatDate(proof.paid_on) })}</span>;
+  return null;
+}
+
+type ProofProblem = 'fileMissing' | UploadProblem | 'amount' | 'future' | 'dateInvalid';
+
+/**
+ * «Я оплатил» (SPEC-v3 §3.1 шаг 8, §8): файл платёжного поручения обязателен, дата, сумма и комментарий — по желанию.
+ * Файл — `POST /uploads`, затем `POST /invoices/{id}/proofs`. Платёжка не деньги: статус счёта меняет менеджер, когда
+ * сверит поступление с выпиской (так и написано в «Что произойдёт»).
+ */
+function PaymentProofDialog({
+  invoice,
+  remaining,
+  onClose,
+}: {
+  invoice: Invoice | null;
+  remaining: Invoice['total'] | null | undefined;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const id = useId();
+  const now = useNow();
+  const submit = useSubmitPaymentProof();
+  const [file, setFile] = useState<File | null>(null);
+  const [paidOn, setPaidOn] = useState<string | null>('');
+  const [amount, setAmount] = useState('');
+  const [comment, setComment] = useState('');
+  const [problem, setProblem] = useState<ProofProblem | null>(null);
+  const today = businessToday(now);
+
+  const close = () => {
+    setFile(null);
+    setPaidOn('');
+    setAmount('');
+    setComment('');
+    setProblem(null);
+    submit.reset();
+    onClose();
+  };
+
+  const choose = (picked: File | null) => {
+    submit.reset();
+    if (!picked) {
+      setFile(null);
+      setProblem(null);
+      return;
+    }
+    const found = scanProblem(picked);
+    setProblem(found);
+    setFile(found ? null : picked);
+  };
+
+  const send = () => {
+    if (!invoice) return;
+    if (!file) return setProblem(problem === 'tooLarge' || problem === 'badType' ? problem : 'fileMissing');
+    const parsed = parseAmount(amount);
+    if (parsed === 'invalid') return setProblem('amount');
+    if (paidOn === null) return setProblem('dateInvalid');
+    if (paidOn && paidOn > today) return setProblem('future');
+    setProblem(null);
+    submit.mutate(
+      { id: invoice.id, file, paid_on: paidOn || null, amount: parsed, comment: comment.trim() || null },
+      {
+        onSuccess: () => {
+          toast.success(t('pages.invoices.proofDialog.sent', { number: invoice.number }));
+          close();
+        },
+      },
+    );
+  };
+
+  const optional = <span className="font-normal text-muted-foreground">({t('pages.invoices.proofDialog.optional')})</span>;
+  return (
+    <ActionDialog
+      open={invoice !== null}
+      onOpenChange={(open) => !open && close()}
+      title={t('pages.invoices.proofDialog.title', { number: invoice?.number ?? '' })}
+      description={t('pages.invoices.proofDialog.text', { remaining: formatMoney(remaining) })}
+      confirmLabel={t('pages.invoices.proofDialog.confirm')}
+      pending={submit.isPending}
+      error={submit.error}
+      message={problem ? t(`pages.invoices.proofDialog.problem.${problem}`) : null}
+      onSubmit={send}
+    >
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-file`}>{t('pages.invoices.proofDialog.file')}</Label>
+          <FileField
+            id={`${id}-file`}
+            value={file}
+            accept=".pdf,image/*"
+            describedBy={`${id}-file-hint`}
+            invalid={problem === 'fileMissing' || problem === 'tooLarge' || problem === 'badType'}
+            onChange={choose}
+          />
+          <p id={`${id}-file-hint`} className="text-xs text-muted-foreground">
+            {t('pages.invoices.proofDialog.fileHint')}
+          </p>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${id}-date`}>
+              {t('pages.invoices.proofDialog.paidOn')} {optional}
+            </Label>
+            <DateField
+              id={`${id}-date`}
+              value={paidOn}
+              describedBy={`${id}-date-hint`}
+              invalid={problem === 'future' || problem === 'dateInvalid'}
+              onChange={setPaidOn}
+            />
+            <p id={`${id}-date-hint`} className="text-xs text-muted-foreground">
+              {t('pages.invoices.proofDialog.paidOnHint')}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor={`${id}-amount`}>
+              {t('pages.invoices.proofDialog.amount', { currency: invoice ? currencyLabel(invoice.total.currency) : '' })} {optional}
+            </Label>
+            <Input
+              id={`${id}-amount`}
+              inputMode="decimal"
+              autoComplete="off"
+              value={amount}
+              aria-describedby={`${id}-amount-hint`}
+              aria-invalid={problem === 'amount' ? true : undefined}
+              onChange={(event) => setAmount(event.target.value)}
+            />
+            <p id={`${id}-amount-hint`} className="text-xs text-muted-foreground">
+              {t('pages.invoices.proofDialog.amountHint')}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor={`${id}-comment`}>
+            {t('pages.invoices.proofDialog.comment')} {optional}
+          </Label>
+          <Textarea
+            id={`${id}-comment`}
+            rows={3}
+            maxLength={PROOF_COMMENT_MAX}
+            value={comment}
+            placeholder={t('pages.invoices.proofDialog.commentPlaceholder')}
+            onChange={(event) => setComment(event.target.value)}
+          />
+        </div>
+        <ConsequenceCallout text={t('pages.invoices.proofDialog.consequence')} />
+      </div>
+    </ActionDialog>
   );
 }
 
@@ -379,7 +584,7 @@ function AcceptActDialog({ act, onClose }: { act: Act | null; onClose: () => voi
     onClose();
   };
 
-  const choose = (file: File | undefined) => {
+  const choose = (file: File | null) => {
     accept.reset();
     if (!file) {
       setScan(null);
@@ -417,14 +622,7 @@ function AcceptActDialog({ act, onClose }: { act: Act | null; onClose: () => voi
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor={id}>{t('pages.acts.scanLabel')}</Label>
-        <Input
-          id={id}
-          type="file"
-          accept=".pdf,image/*"
-          aria-describedby={`${id}-hint`}
-          aria-invalid={problem ? true : undefined}
-          onChange={(event) => choose(event.target.files?.[0])}
-        />
+        <FileField id={id} value={scan} accept=".pdf,image/*" describedBy={`${id}-hint`} invalid={Boolean(problem)} onChange={choose} />
         <p id={`${id}-hint`} className="text-xs text-muted-foreground">
           {t('pages.acts.scanHint')}
         </p>

@@ -13,6 +13,9 @@ from rest_framework import serializers
 #: Лимиты контракта (`erp-portal.yaml`): `ClientRequestCreate.summary` и `Reason.reason`.
 SUMMARY_MAX_LENGTH = 5000
 REASON_MAX_LENGTH = 2000
+#: `QuoteCommentCreate.text` и `PaymentProofCreate.comment` (последнее — длина `PaymentConfirmation.note`).
+COMMENT_MAX_LENGTH = 2000
+PROOF_COMMENT_MAX_LENGTH = 500
 
 _DATETIME = serializers.DateTimeField()
 
@@ -285,6 +288,7 @@ class QuoteSerializer(QuoteListItemSerializer):
     public_url = serializers.SerializerMethodField()
     pdf_document_id = serializers.SerializerMethodField()
     rejected_reason = serializers.SerializerMethodField()
+    comments = serializers.SerializerMethodField()
     subtotal = serializers.SerializerMethodField()
     vat = serializers.SerializerMethodField()
 
@@ -305,6 +309,41 @@ class QuoteSerializer(QuoteListItemSerializer):
 
     def get_rejected_reason(self, quote) -> Optional[str]:
         return projections.quote_rejected_reason(quote)
+
+    def get_comments(self, quote) -> list:
+        return QuoteCommentSerializer(
+            quote.client_comments.select_related("author_contact", "author_user"), many=True
+        ).data
+
+
+class QuoteCommentSerializer(serializers.Serializer):
+    """`QuoteComment`: автор — `client` (контакт клиента) или `manager` (сотрудник продавца)."""
+
+    id = serializers.IntegerField(read_only=True)
+    author = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+    text = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_author(self, comment) -> str:
+        return "manager" if comment.author_user_id else "client"
+
+    def get_author_name(self, comment) -> Optional[str]:
+        if comment.author_user_id:
+            user = comment.author_user
+            return projections.blank_to_none(user.get_full_name() or "")
+        return projections.blank_to_none(comment.author_contact.name if comment.author_contact_id else "")
+
+
+class QuoteCommentCreateSerializer(serializers.Serializer):
+    """`QuoteCommentCreate`: текст 1…2000 знаков, лишних ключей нет."""
+
+    text = StrictCharField(max_length=COMMENT_MAX_LENGTH, allow_blank=True, trim_whitespace=True)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return super().to_internal_value(data)
 
 
 class QuoteAcceptSerializer(serializers.Serializer):
@@ -361,6 +400,7 @@ class InvoiceSerializer(DealLinkedSerializer):
     paid = serializers.SerializerMethodField()
     due_date = serializers.SerializerMethodField()
     document_id = serializers.SerializerMethodField()
+    proofs = serializers.SerializerMethodField()
 
     def _days_by_seller(self) -> dict:
         # Общий на запрос кэш срока оплаты по продавцу: список счетов не ходит за настройками на каждый счёт.
@@ -381,6 +421,85 @@ class InvoiceSerializer(DealLinkedSerializer):
 
     def get_document_id(self, invoice) -> Optional[int]:
         return portal_documents.document_id_for("invoice", invoice)
+
+    def get_proofs(self, invoice) -> list:
+        currency = projections.currency_code(invoice.currency)
+        return PaymentProofSerializer(invoice.confirmations.all(), many=True, context={"currency": currency}).data
+
+
+#: `PaymentProof.source` контракта ← `PaymentConfirmation.Source`.
+PROOF_SOURCES = {"CABINET": "cabinet", "BOT": "bot", "EMAIL": "email", "MANUAL": "manager"}
+#: `PaymentProofStatus` ← `PaymentConfirmation.Status`; отклонения в ERP пока нет (B-D24-7).
+PROOF_STATUSES = {"PENDING": "pending", "CONFIRMED": "confirmed", "REJECTED": "rejected"}
+
+
+class PaymentProofSerializer(serializers.Serializer):
+    """`PaymentProof`: платёжка счёта глазами клиента. Заметку сотрудника (`note` платёжки не из кабинета) не отдаём."""
+
+    id = serializers.IntegerField(read_only=True)
+    status = serializers.SerializerMethodField()
+    source = serializers.SerializerMethodField()
+    file_name = serializers.SerializerMethodField()
+    submitted_at = serializers.DateTimeField(source="received_at", read_only=True)
+    paid_on = serializers.DateField(source="claimed_date", read_only=True, allow_null=True)
+    amount = serializers.SerializerMethodField()
+    comment = serializers.SerializerMethodField()
+    confirmed_at = serializers.DateTimeField(read_only=True, allow_null=True)
+    reject_reason = serializers.SerializerMethodField()
+
+    def get_status(self, proof) -> str:
+        return PROOF_STATUSES[proof.status]
+
+    def get_source(self, proof) -> str:
+        return PROOF_SOURCES[proof.source]
+
+    def get_file_name(self, proof) -> str:
+        return proof.original_name or "payment"
+
+    def get_amount(self, proof) -> Optional[dict]:
+        if proof.claimed_amount is None:
+            return None
+        return projections.money(proof.claimed_amount, self.context.get("currency"))
+
+    def get_comment(self, proof) -> Optional[str]:
+        return projections.blank_to_none(proof.note) if proof.source == "CABINET" else None
+
+    def get_reject_reason(self, proof) -> Optional[str]:
+        return None  # отклонения платёжки в ERP ещё нет (BACKLOG B-D24-7)
+
+
+_AMOUNT_PATTERN = re.compile(r"\d{1,12}\.\d{2}", flags=re.ASCII)
+
+
+class PaymentProofCreateSerializer(serializers.Serializer):
+    """`PaymentProofCreate`: `upload_id` обязателен; дата не в будущем, сумма больше нуля, комментарий до 500 знаков."""
+
+    upload_id = StrictCharField()
+    paid_on = serializers.DateField(required=False, allow_null=True)
+    amount = serializers.CharField(required=False, allow_null=True)
+    comment = StrictCharField(required=False, allow_null=True, allow_blank=True, max_length=PROOF_COMMENT_MAX_LENGTH)
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return super().to_internal_value(data)
+
+    def validate_paid_on(self, value):
+        from django.utils import timezone
+
+        if value is not None and value > timezone.localdate():
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return value
+
+    def validate_amount(self, value):
+        if value is None:
+            return None
+        if not isinstance(self.initial_data.get("amount"), str) or not _AMOUNT_PATTERN.fullmatch(value):
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        amount = Decimal(value)
+        if amount <= 0:
+            raise serializers.ValidationError("VALIDATION_ERROR")
+        return amount
 
 
 class ActSerializer(DealLinkedSerializer):
