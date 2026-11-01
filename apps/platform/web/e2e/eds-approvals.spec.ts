@@ -118,6 +118,26 @@ test.describe("КП на одобрение: директор", () => {
     await expect(row(page, "КП-2026/115").getByText("Одобрено")).toBeVisible();
   });
 
+  test("отправленное КП: комментарий клиента из кабинета виден в карточке (B-CABFIX-1)", async ({ page }) => {
+    await loginAndWait(page, "director@demo.example");
+    await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/113")}`);
+    await expect(page.getByRole("heading", { level: 1, name: "КП-2026/113" })).toBeVisible();
+    const comments = page.getByRole("list", { name: "Комментарии клиента к КП" });
+    await expect(comments).toContainText("Можно разбить поставку щебня на две партии по 1000 т?");
+    await expect(comments).toContainText("Алия Демо");
+    // боковое окно «Одобрение» закрывает правую колонку карточки — скрываем его, чтобы блок был в кадре
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
+    await comments.scrollIntoViewIfNeeded();
+    await expect(comments).toBeInViewport();
+    await settledScreenshot(page, "quote-client-comments");
+    await expectNoViolations(page, "карточка КП с комментарием клиента");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await comments.scrollIntoViewIfNeeded();
+    await expect(comments).toBeInViewport();
+    await settledScreenshot(page, "quote-client-comments");
+    await expectNoViolations(page, "карточка КП с комментарием клиента, 390 px");
+  });
+
   test("КП с незелёным чек-листом: «Одобрить» неактивна и подписана, какой пункт не зелёный; «Вернуть на доработку» с комментарием", async ({
     page,
   }) => {

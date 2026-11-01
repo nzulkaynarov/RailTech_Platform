@@ -223,6 +223,15 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
         "email": True,
     }
     assert card["steps"][0]["label"] == "Директор"
+    # комментарий клиента из кабинета (B-CABFIX-1); запись с битой датой пропущена
+    assert card["client_comments"] == [
+        {
+            "author": "client",
+            "author_name": "Алия Демо",
+            "text": "Можно срок 30 дней?",
+            "created_at": "2026-10-20T10:00:00+05:00",
+        }
+    ]
     assert card["sources"] == {"crm": "ok", "erp": "ok"}
     # адреса и идентификаторы контакта наружу не уходят
     assert "aliya@example.org" not in response.text

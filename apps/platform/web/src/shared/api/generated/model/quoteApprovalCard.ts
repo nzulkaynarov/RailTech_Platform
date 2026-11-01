@@ -10,6 +10,7 @@ import type { LetterRequest } from "./letterRequest";
 import type { QuoteCalculator } from "./quoteCalculator";
 import type { QuoteChannels } from "./quoteChannels";
 import type { QuoteChecklistLine } from "./quoteChecklistLine";
+import type { QuoteClientComment } from "./quoteClientComment";
 import type { QuoteInternal } from "./quoteInternal";
 import type { QuoteLetterRef } from "./quoteLetterRef";
 import type { QuoteLine } from "./quoteLine";
@@ -68,5 +69,7 @@ export interface QuoteApprovalCard {
   steps: EdsRouteStep[];
   /** `null` — контакт клиента не получен из ERP */
   channels: QuoteChannels | null;
+  /** Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
+  client_comments: QuoteClientComment[];
   sources: Sources;
 }

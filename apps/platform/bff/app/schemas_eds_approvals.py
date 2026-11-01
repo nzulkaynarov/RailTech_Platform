@@ -100,6 +100,15 @@ class QuoteChannels(BaseModel):
     email: bool
 
 
+class QuoteClientComment(BaseModel):
+    """Комментарий к КП из кабинета клиента или ответ менеджера (ERP `client_comments`, B-CABFIX-1)."""
+
+    author: Literal["client", "manager"]
+    author_name: str | None
+    text: str
+    created_at: dt.datetime
+
+
 class QuoteLetterRef(BaseModel):
     number: str
     path: str
@@ -143,6 +152,7 @@ class QuoteApprovalCard(BaseModel):
     checklist: list[QuoteChecklistLine]
     steps: list[EdsRouteStep]
     channels: QuoteChannels | None
+    client_comments: list[QuoteClientComment]
     sources: Sources
 
 
