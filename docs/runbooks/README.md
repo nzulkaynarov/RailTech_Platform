@@ -32,7 +32,7 @@ Runbook волны — промпт лида, раунды, задачи с «г
 | Волна | Этап | Состояние (HANDOFF §3) |
 |---|---|---|
 | [`wave16-d1-work-screens.md`](wave16-d1-work-screens.md) | D1 — рабочие экраны директора и менеджера | задачи влиты, гейт D1-7 не проведён |
-| [`wave17-d2-costing-accounting.md`](wave17-d2-costing-accounting.md) | D2 — расчёт, склад, бухгалтер, D-DOC1 | влиты, кроме D2-8 и B-086; гейт D2-6 не проведён |
+| [`wave17-d2-costing-accounting.md`](wave17-d2-costing-accounting.md) | D2 — расчёт, склад, бухгалтер, D-DOC1 | влиты, кроме D2-8 и B-D24-5; гейт D2-6 не проведён |
 | [`wave18a-pilot-critical.md`](wave18a-pilot-critical.md) | необходимое к сокращённому пилоту | раунд 1 влит, остальное не начато |
 
 Волна закрыта (гейт пройден, задачи влиты) — runbook переносится в `../history/runbooks/` с баннером «История», строка
