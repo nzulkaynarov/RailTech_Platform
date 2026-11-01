@@ -12,3 +12,4 @@
 | 2026-10-27 | Шаблоны документов и бланк | [`README`](2026-10-27-document-templates/README.md) | ADR-0020, `architecture/rt-docs.md` |
 | 2026-10-27 | UX-аудит Платформы | [`README`](2026-10-27-ux-audit/README.md) | волны 15–17 (BACKLOG, раздел UX-оценки) |
 | 2026-11-01 | Кабинет контрагента: порталы поставщиков, партнёров, клиентов; подключаемые опции | [`README`](2026-11-01-counterparty-cabinet/README.md) | концепция [`product/COUNTERPARTY-CABINET.md`](../product/COUNTERPARTY-CABINET.md) |
+| 2026-11-01 | Входящая корреспонденция: карточка, резолюция, контроль исполнения, ответ (СЭД РФ, нормы РФ и Узбекистана, ISO 15489) | [`README`](2026-11-01-incoming-correspondence/README.md) | SPEC-v3 §3.2a (план 2026-11-01 §7 п. 5), P8, P2, P4 |
