@@ -16,7 +16,15 @@ import type { ModuleCode, Role, RoleRef } from "../../shared/api/generated/model
  * в Admin · Ролевая матрица. Хранятся в `localStorage` страницы (как сессия мока), без хранилища — в памяти.
  * `demo` — какой набор демо-данных Dashboard показывать роли (только для моков: интерфейс на коды не опирается).
  */
-export type PresetCode = "ADMIN" | "DIRECTOR" | "MANAGER" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT";
+export type PresetCode =
+  | "ADMIN"
+  | "DIRECTOR"
+  | "MANAGER"
+  | "SUPPLY"
+  | "ENGINEER"
+  | "ACCOUNTANT"
+  | "REGISTRAR"
+  | "MANAGER_ALL";
 
 export const ROLE_ID: Record<PresetCode, string> = {
   ADMIN: "1",
@@ -25,6 +33,9 @@ export const ROLE_ID: Record<PresetCode, string> = {
   SUPPLY: "4",
   ENGINEER: "5",
   ACCOUNTANT: "6",
+  // P8: шаблоны пилота (делопроизводитель, менеджер-универсал)
+  REGISTRAR: "7",
+  MANAGER_ALL: "8",
 };
 
 export interface MockRole {
@@ -51,7 +62,12 @@ const DESCRIPTIONS: Partial<Record<PresetCode, string>> = {
   SUPPLY: "Расчёт товаров, склад и поставщики.",
   ENGINEER: "Расчёт услуг, склад и документация.",
   ACCOUNTANT: "Счета, оплаты, акты и сканы договоров.",
+  REGISTRAR: "Входящая корреспонденция без резолюции; первая линия по лидам.",
+  MANAGER_ALL: "Продажи, расчёт обеих зон, снабжение, договор, акт, счета и оплаты.",
 };
+
+/** Шаблоны пилота своих демо-наборов не имеют: их очередь — строки всех наборов, положенные матрице. */
+const NO_DEMO: ReadonlySet<PresetCode> = new Set(["REGISTRAR", "MANAGER_ALL"]);
 
 function fromCatalog(code: PresetCode, role: CatalogRole, system: boolean): MockRole {
   return {
@@ -64,7 +80,7 @@ function fromCatalog(code: PresetCode, role: CatalogRole, system: boolean): Mock
     access: { ...role.access },
     restricted_fields: [...role.restricted_fields],
     updated_at: SEEDED_AT,
-    demo: code,
+    ...(NO_DEMO.has(code) ? {} : { demo: code }),
   };
 }
 
@@ -76,6 +92,8 @@ export function seedRoles(): MockRole[] {
     fromCatalog("SUPPLY", TEMPLATES.SUPPLY, false),
     fromCatalog("ENGINEER", TEMPLATES.ENGINEER, false),
     fromCatalog("ACCOUNTANT", TEMPLATES.ACCOUNTANT, false),
+    fromCatalog("REGISTRAR", TEMPLATES.REGISTRAR, false),
+    fromCatalog("MANAGER_ALL", TEMPLATES.MANAGER_ALL, false),
   ];
 }
 

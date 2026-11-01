@@ -19,6 +19,8 @@ TEMPLATE_ROLE_CODES: Final[tuple[str, ...]] = (
     "SUPPLY",
     "ENGINEER",
     "ACCOUNTANT",
+    "REGISTRAR",
+    "MANAGER_ALL",
 )
 
 # Разделы каталога в порядке файла.
@@ -28,6 +30,7 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "crm.leads",
     "crm.clients",
     "eds.inbox",
+    "eds.inbox.register",
     "eds.drafts",
     "eds.projects",
     "eds.payments",
@@ -65,6 +68,7 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "read",
         "full",
     ),
+    "eds.inbox.register": ("full",),
     "eds.drafts": (
         "read",
         "full",
@@ -159,6 +163,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         ),
     },
     "eds.inbox": {},
+    "eds.inbox.register": {},
     "eds.drafts": {},
     "eds.projects": {},
     "eds.payments": {
@@ -243,6 +248,7 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.inbox": {
         "full": ("deal.assign",),
     },
+    "eds.inbox.register": {},
     "eds.drafts": {
         "full": ("quote.review",),
     },
@@ -322,8 +328,14 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         "full": (
             "letters.read",
             "registry.read",
-            "letters.register",
             "letters.resolve",
+        ),
+    },
+    "eds.inbox.register": {
+        "full": (
+            "letters.read",
+            "registry.read",
+            "letters.register",
         ),
     },
     "eds.drafts": {
@@ -400,6 +412,16 @@ ROLE_NAMES: Final[dict[str, dict[str, str]]] = {
         "uz": "Buxgalter",
         "en": "Accountant",
     },
+    "REGISTRAR": {
+        "ru": "Делопроизводитель",
+        "uz": "Ish yurituvchi",
+        "en": "Office clerk",
+    },
+    "MANAGER_ALL": {
+        "ru": "Менеджер-универсал",
+        "uz": "Universal menejer",
+        "en": "All-round manager",
+    },
 }
 
 # Матрица системных ролей и шаблонов: раздел -> full|read (скрытые не хранятся).
@@ -417,6 +439,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "crm.leads": "read",
         "crm.clients": "full",
         "eds.inbox": "full",
+        "eds.inbox.register": "full",
         "eds.drafts": "full",
         "eds.projects": "full",
         "eds.payments": "read",
@@ -477,6 +500,33 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "chats.internal": "full",
         "chats.external": "full",
     },
+    "REGISTRAR": {
+        "dashboard.queue": "full",
+        "crm.leads": "full",
+        "crm.clients": "read",
+        "eds.inbox": "read",
+        "eds.inbox.register": "full",
+        "eds.projects": "read",
+        "eds.memo.create": "full",
+        "chats.internal": "full",
+        "chats.external": "read",
+    },
+    "MANAGER_ALL": {
+        "dashboard.queue": "full",
+        "crm.leads": "full",
+        "crm.clients": "full",
+        "eds.inbox": "read",
+        "eds.drafts": "read",
+        "eds.projects": "full",
+        "eds.payments": "full",
+        "eds.memo.create": "full",
+        "erp.calc": "full",
+        "erp.calc.goods": "full",
+        "erp.calc.services": "full",
+        "erp.stock": "full",
+        "chats.internal": "full",
+        "chats.external": "full",
+    },
 }
 
 # Поля с ограничением, которые видит системная роль или шаблон.
@@ -493,6 +543,11 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
     ),
     "ENGINEER": (),
     "ACCOUNTANT": ("totals_only",),
+    "REGISTRAR": (),
+    "MANAGER_ALL": (
+        "cost_margin",
+        "supplier_prices",
+    ),
 }
 
 # Роли версии 1 (порядок — прежние шесть); признак базовой роли они не задают (D1-8).

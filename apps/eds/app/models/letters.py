@@ -11,6 +11,7 @@ from sqlalchemy import (
     CheckConstraint,
     Date,
     DateTime,
+    ForeignKey,
     Index,
     Numeric,
     String,
@@ -24,6 +25,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 LETTER_STATUSES = ("awaiting_resolution", "resolved", "returned", "rejected")
+# Способ получения (SPEC-v3 §3.2a п. 1, P8): почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail.
+RECEIPT_METHODS = ("post", "paper", "taxpayer_cabinet", "courier", "email")
 
 
 class Letter(Base):
@@ -41,6 +44,16 @@ class Letter(Base):
         Index("ix_letters_erp_deal_id", "erp_deal_id"),
         Index("ix_letters_registered_at_id", "registered_at", "id"),
         Index("ix_letters_status", "status"),
+        CheckConstraint(
+            "receipt_method IS NULL OR receipt_method IN ('post', 'paper', 'taxpayer_cabinet', 'courier', 'email')",
+            name="receipt_method",
+        ),
+        # Проверка дубля при регистрации (P8): корреспондент + исх. № отправителя.
+        Index(
+            "ix_letters_sender_ref_number",
+            "sender_ref_number",
+            postgresql_where=text("sender_ref_number IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -72,4 +85,17 @@ class Letter(Base):
     resolution_min_margin_pct: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
     resolution_decided_by: Mapped[int | None] = mapped_column(BigInteger)
     resolution_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Карточка делопроизводства (SPEC-v3 §3.2a п. 1, P8); у писем по заявке ERP — пусто.
+    doc_kind: Mapped[str | None] = mapped_column(String(32))  # код справочника `services/letter_kinds.py`
+    receipt_method: Mapped[str | None] = mapped_column(String(24))
+    signed_by: Mapped[str | None] = mapped_column(String(255))
+    document_due: Mapped[date | None] = mapped_column(Date)  # срок по документу (у отправителя)
+    related_letter_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("letters.id", ondelete="SET NULL")
+    )  # предыдущий ВХ
+    related_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        # `documents.in_reply_to` ссылается на письма: внешний ключ отдельным ALTER, без цикла при сортировке таблиц
+        Uuid,
+        ForeignKey("documents.id", ondelete="SET NULL", use_alter=True),
+    )  # наш ИСХ
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

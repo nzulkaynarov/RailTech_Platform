@@ -124,15 +124,16 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
             ("erp_provision_user", {"user_id": ids[name]})
             for name in ("mgr_acc", "admin", "dir_sup", "dir_sup")
         ]
-        # Директор: лиды и внешние чаты — чтение (0038), «Счета и оплаты» — чтение (0049, D2-4);
-        # версия роли выросла дважды.
+        # Директор: лиды и внешние чаты — чтение (0038), «Счета и оплаты» — чтение (0049, D2-4),
+        # регистрация входящих отдельным разделом (P8); версия роли выросла трижды.
         director = conn.execute(
             "SELECT access, version FROM platform_roles WHERE code = 'DIRECTOR'"
         ).fetchone()
         assert director is not None
         assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
         assert director[0]["eds.payments"] == "read"
-        assert director[1] == 3
+        assert director[0]["eds.inbox.register"] == "full"
+        assert director[1] == 4
         # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1).
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles "
@@ -275,8 +276,58 @@ def test_director_reads_payments_and_downgrade_returns_full(
     level, version = director()
     assert level == "full"
 
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, "0049_director_payments_read")
     assert director() == ("read", version + 1)
 
-    command.upgrade(alembic_config, "head")  # повтор — без изменений
-    assert director() == ("read", version + 1)
+    command.upgrade(alembic_config, "head")  # дальше 0049 раздел не меняется (P8 растит версию)
+    assert director()[0] == "read"
+
+
+def test_pilot_roles_appear_and_the_resolution_holders_keep_registering(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """P8: шаблоны пилота вставлены как обычные роли; держатели `eds.inbox: full` получили
+    `eds.inbox.register: full`; роль, заведённая администратором с тем же именем, не трогается;
+    downgrade снимает раздел и удаляет невыданные роли пилота."""
+    before = "ac71231f330f"
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, before)
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM platform_roles WHERE code IN ('tpl:REGISTRAR', 'tpl:MANAGER_ALL')"
+        ).fetchone() == (0,)
+        # Своя роль администратора с резолюцией и своя «Менеджер-универсал» без кода.
+        conn.execute(
+            "INSERT INTO platform_roles (name, access) VALUES "
+            "('Канцелярия и резолюция', '{\"eds.inbox\": \"full\"}'::jsonb), "
+            "('Менеджер-универсал', '{\"crm.leads\": \"full\"}'::jsonb)"
+        )
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        rows = dict(
+            conn.execute("SELECT coalesce(code, name), access FROM platform_roles").fetchall()
+        )
+        assert rows["tpl:REGISTRAR"]["eds.inbox"] == "read"
+        assert rows["tpl:REGISTRAR"]["eds.inbox.register"] == "full"
+        assert "tpl:MANAGER_ALL" not in rows  # имя занято ролью администратора — пропуск
+        assert rows["Менеджер-универсал"] == {"crm.leads": "full"}
+        assert rows["Канцелярия и резолюция"]["eds.inbox.register"] == "full"
+        assert rows["DIRECTOR"]["eds.inbox.register"] == "full"
+        conn.execute("DELETE FROM platform_roles WHERE code IS NULL")
+
+    command.downgrade(alembic_config, before)
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        director = conn.execute(
+            "SELECT access FROM platform_roles WHERE code = 'DIRECTOR'"
+        ).fetchone()
+        assert director is not None
+        assert "eds.inbox.register" not in director[0]
+        assert conn.execute(
+            "SELECT count(*) FROM platform_roles WHERE code = 'tpl:REGISTRAR'"
+        ).fetchone() == (0,)
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        codes = {r[0] for r in conn.execute("SELECT code FROM platform_roles").fetchall()}
+        assert {"tpl:REGISTRAR", "tpl:MANAGER_ALL"} <= codes

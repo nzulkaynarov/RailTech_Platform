@@ -2,6 +2,7 @@ import type { ModuleConfig } from "../types";
 
 const EDS_ANY = [
   "eds.inbox",
+  "eds.inbox.register",
   "eds.drafts",
   "eds.projects",
   "eds.payments",
@@ -23,7 +24,7 @@ export const eds: ModuleConfig = {
       key: "inbox",
       path: "/eds/inbox",
       detail: "/eds/inbox/:id",
-      access: { resource: "eds.inbox" },
+      access: { anyOf: ["eds.inbox", "eds.inbox.register"] },
       tabs: [{ key: "resolution" }, { key: "chat" }, { key: "documents" }],
       actionTo: "/eds/documents",
     },
@@ -65,6 +66,16 @@ export const eds: ModuleConfig = {
       access: { resource: "eds.payments" },
       tabs: [{ key: "payment" }, { key: "chat" }, { key: "documents" }],
       actionTo: "/eds/projects",
+    },
+    {
+      // P8: «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1) — кнопка во «Входящих письмах»; регистрация ≠ резолюция.
+      key: "register",
+      path: "/eds/register",
+      access: { resource: "eds.inbox.register", level: "full" },
+      hidden: true,
+      parent: "inbox",
+      defaults: { panelOpen: false },
+      actionTo: "/eds/inbox",
     },
     {
       key: "new",

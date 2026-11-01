@@ -45,6 +45,7 @@ import {
   Language,
   LeadOwnerMode,
   LeadPlatformStatus,
+  LetterReceiptMethod,
   LetterStatus,
   LetterZone,
   ModuleCode,
@@ -173,7 +174,10 @@ import type {
   LeadPage,
   LetterCard,
   LetterClient,
+  LetterDuplicateList,
+  LetterKindList,
   LetterPage,
+  LetterRelated,
   LetterRequest,
   LetterResolution,
   MailLog,
@@ -9455,11 +9459,208 @@ export const getListLettersResponseMock = (
     status: faker.helpers.arrayElement(Object.values(LetterStatus)),
     urgent: faker.datatype.boolean(),
     due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   })),
   next_cursor: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponseLetterClientMock = (
+  overrideResponse: Partial<LetterClient> = {},
+): LetterClient => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponseLetterResolutionMock = (
+  overrideResponse: Partial<LetterResolution> = {},
+): LetterResolution => ({
+  ...{
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        person: {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+        },
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+      }),
+    ),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    decided_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRegisterLetterResponseMock = (
+  overrideResponse: Partial<Extract<LetterCard, object>> = {},
+): LetterCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(LetterStatus)),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  summary: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  urgent: faker.datatype.boolean(),
+  received_at: faker.date.past().toISOString().slice(0, 10),
+  registered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  registered_by: faker.helpers.arrayElement([
+    { ...getRegisterLetterResponsePersonRefMock() },
+    null,
+  ]),
+  addressee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  manager: faker.helpers.arrayElement([{ ...getRegisterLetterResponsePersonRefMock() }, null]),
+  sender: {
+    name: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    contact: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  sender_ref: {
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  client: faker.helpers.arrayElement([{ ...getRegisterLetterResponseLetterClientMock() }, null]),
+  request: faker.helpers.arrayElement([{ ...getRegisterLetterResponseLetterRequestMock() }, null]),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  lost_at_step: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 7 }), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  resolution: faker.helpers.arrayElement([
+    { ...getRegisterLetterResponseLetterResolutionMock() },
+    null,
+  ]),
+  return_comment: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  reject_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      by: faker.helpers.arrayElement([{ ...getRegisterLetterResponsePersonRefMock() }, null]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getRegisterLetterResponseLetterRelatedMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getListLetterKindsResponseMock = (
+  overrideResponse: Partial<Extract<LetterKindList, object>> = {},
+): LetterKindList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    urgent: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
+export const getFindLetterDuplicatesResponseMock = (
+  overrideResponse: Partial<Extract<LetterDuplicateList, object>> = {},
+): LetterDuplicateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 5 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    received_at: faker.date.past().toISOString().slice(0, 10),
+    status: faker.helpers.arrayElement(Object.values(LetterStatus)),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
   ...overrideResponse,
 });
 
@@ -9523,6 +9724,17 @@ export const getGetLetterResponseLetterResolutionMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getGetLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -9599,6 +9811,17 @@ export const getGetLetterResponseMock = (
       undefined,
     ]),
   },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getGetLetterResponseLetterRelatedMock() }, null]),
   ...overrideResponse,
 });
 
@@ -9662,6 +9885,17 @@ export const getResolveLetterResponseLetterResolutionMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getResolveLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -9741,6 +9975,17 @@ export const getResolveLetterResponseMock = (
       undefined,
     ]),
   },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getResolveLetterResponseLetterRelatedMock() }, null]),
   ...overrideResponse,
 });
 
@@ -9804,6 +10049,17 @@ export const getReturnLetterResponseLetterResolutionMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReturnLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -9883,6 +10139,17 @@ export const getReturnLetterResponseMock = (
       undefined,
     ]),
   },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getReturnLetterResponseLetterRelatedMock() }, null]),
   ...overrideResponse,
 });
 
@@ -9946,6 +10213,17 @@ export const getRejectLetterResponseLetterResolutionMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getRejectLetterResponseLetterRelatedMock = (
+  overrideResponse: Partial<LetterRelated> = {},
+): LetterRelated => ({
+  ...{
+    kind: faker.helpers.arrayElement(["letter_in", "letter_out"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   ...overrideResponse,
 });
@@ -10025,6 +10303,17 @@ export const getRejectLetterResponseMock = (
       undefined,
     ]),
   },
+  kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  receipt_method: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    null,
+  ]),
+  signed_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  related: faker.helpers.arrayElement([{ ...getRejectLetterResponseLetterRelatedMock() }, null]),
   ...overrideResponse,
 });
 
@@ -20414,6 +20703,76 @@ export const getListLettersMockHandler = (
   );
 };
 
+export const getRegisterLetterMockHandler = (
+  overrideResponse?:
+    | LetterCard
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<LetterCard> | LetterCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letters",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRegisterLetterResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListLetterKindsMockHandler = (
+  overrideResponse?:
+    | LetterKindList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LetterKindList> | LetterKindList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/letter-kinds",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListLetterKindsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getFindLetterDuplicatesMockHandler = (
+  overrideResponse?:
+    | LetterDuplicateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LetterDuplicateList> | LetterDuplicateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/letter-duplicates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getFindLetterDuplicatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetLetterMockHandler = (
   overrideResponse?:
     | LetterCard
@@ -22620,6 +22979,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDeleteReplyTemplateMockHandler(),
   getDownloadCsvExportMockHandler(),
   getListLettersMockHandler(),
+  getRegisterLetterMockHandler(),
+  getListLetterKindsMockHandler(),
+  getFindLetterDuplicatesMockHandler(),
   getGetLetterMockHandler(),
   getResolveLetterMockHandler(),
   getReturnLetterMockHandler(),

@@ -19,7 +19,7 @@ const spec = parse(
 ) as { system_roles: Record<string, CatalogRole>; templates: Record<string, CatalogRole> };
 
 describe("роли MSW = системные роли и шаблоны каталога (как CRM при первом запуске)", () => {
-  it("шесть ролей с id 1–6: две системные с кодом, четыре из шаблонов `tpl:`", () => {
+  it("восемь ролей с id 1–8: две системные с кодом, шесть из шаблонов `tpl:` (с P8 — роли пилота)", () => {
     const roles = seedRoles();
     expect(roles.map((r) => [r.id, r.code, r.system])).toEqual([
       ["1", "ADMIN", true],
@@ -28,13 +28,15 @@ describe("роли MSW = системные роли и шаблоны ката�
       ["4", "tpl:SUPPLY", false],
       ["5", "tpl:ENGINEER", false],
       ["6", "tpl:ACCOUNTANT", false],
+      ["7", "tpl:REGISTRAR", false],
+      ["8", "tpl:MANAGER_ALL", false],
     ]);
     expect(ROLE_ID.ACCOUNTANT).toBe("6");
   });
 
   it("матрицы, поля и названия — из platform-rbac.yaml", () => {
     for (const role of seedRoles()) {
-      const code = role.demo ?? "";
+      const code = role.code?.replace("tpl:", "") ?? "";
       const source = spec.system_roles[code] ?? spec.templates[code];
       expect(role.access, code).toEqual(source?.access);
       expect([...role.restricted_fields].sort(), code).toEqual(

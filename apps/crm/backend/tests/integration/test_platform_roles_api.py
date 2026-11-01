@@ -128,7 +128,7 @@ async def test_admin_manages_roles_a_director_only_reads_and_others_have_no_acce
             response = client.request(method, path, json=body, headers=who)
             assert response.status_code == 403, (method, path, response.text)
     assert client.get(ROLES).status_code == 401
-    assert len(client.get(ROLES, headers=reader).json()) == 6
+    assert len(client.get(ROLES, headers=reader).json()) == 8  # 2 системные + 6 шаблонов (P8)
 
 
 # --- создание и проверка ввода ------------------------------------------------------------------
@@ -199,7 +199,7 @@ async def test_create_rejects_unknown_sections_levels_fields_and_names(
 
     assert response.status_code == 422, response.text
     assert response.json()["details"]["field"] == field
-    assert len(client.get(ROLES, headers=boss).json()) == 6
+    assert len(client.get(ROLES, headers=boss).json()) == 8
 
 
 async def test_role_names_are_unique_ignoring_case(

@@ -7,7 +7,15 @@ import { parse } from "yaml";
  * Ожидания e2e строятся прямо из `packages/contracts/platform-rbac.yaml` (каталог версии 2: системные роли и шаблоны),
  * а не из фикстур MSW: если каталог и моки разойдутся, сценарии смены роли упадут.
  */
-export type Role = "MANAGER" | "DIRECTOR" | "SUPPLY" | "ENGINEER" | "ACCOUNTANT" | "ADMIN";
+export type Role =
+  | "MANAGER"
+  | "DIRECTOR"
+  | "SUPPLY"
+  | "ENGINEER"
+  | "ACCOUNTANT"
+  | "ADMIN"
+  | "REGISTRAR"
+  | "MANAGER_ALL";
 export const ROLES: readonly Role[] = [
   "MANAGER",
   "DIRECTOR",
@@ -16,6 +24,8 @@ export const ROLES: readonly Role[] = [
   "ACCOUNTANT",
   "ADMIN",
 ];
+/** Роли пилота (P8, DECISIONS 2026-10-29 W-2): две системные и два шаблона пилота. */
+export const PILOT_ROLES: readonly Role[] = ["ADMIN", "DIRECTOR", "REGISTRAR", "MANAGER_ALL"];
 export const ROLE_NAMES: Record<Role, string> = {
   MANAGER: "Менеджер",
   DIRECTOR: "Директор",
@@ -23,6 +33,8 @@ export const ROLE_NAMES: Record<Role, string> = {
   ENGINEER: "Гл. инженер",
   ACCOUNTANT: "Бухгалтер",
   ADMIN: "Администратор",
+  REGISTRAR: "Делопроизводитель",
+  MANAGER_ALL: "Менеджер-универсал",
 };
 
 /** Подпись роли под аватаром — название роли из данных (ADR-0012), без сокращений по коду. */
@@ -77,6 +89,7 @@ const ROUTE_OF: Record<string, string> = {
   "crm.leads": "/crm/leads",
   "crm.clients": "/crm/clients",
   "eds.inbox": "/eds/inbox",
+  "eds.inbox.register": "/eds/register",
   "eds.drafts": "/eds/drafts",
   "eds.projects": "/eds/projects",
   "eds.payments": "/eds/payments",

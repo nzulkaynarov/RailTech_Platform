@@ -136,6 +136,22 @@ class EdsLetters:
                 return found if isinstance(found, str) else None
         return None
 
+    async def register(self, body: dict[str, Any], idempotency_key: str | None) -> dict[str, Any]:
+        """Регистрация входящего (P8): EDS `POST /letters`; ключ повтора — как есть."""
+        headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+        letter: dict[str, Any] = await self._json(
+            "POST", "/api/v1/letters", ok=201, json=body, headers=headers
+        )
+        return letter
+
+    async def kinds(self) -> dict[str, Any]:
+        kinds: dict[str, Any] = await self._json("GET", "/api/v1/letter-kinds")
+        return kinds
+
+    async def duplicates(self, params: dict[str, Any]) -> dict[str, Any]:
+        found: dict[str, Any] = await self._json("GET", "/api/v1/letter-duplicates", params=params)
+        return found
+
     async def resolve(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
         letter: dict[str, Any] = await self._json(
             "POST", f"/api/v1/letters/{letter_id}/resolution", json=body

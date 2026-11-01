@@ -132,7 +132,8 @@
       "drafts": "Tasdiqlash uchun TT",
       "approvals": "Kelishuvda",
       "payments": "Hisoblar va to‘lovlar",
-      "new": "Hujjat yaratish"
+      "new": "Hujjat yaratish",
+      "register": "Kiruvchi hujjatni ro‘yxatga olish"
     },
     "action": "Hujjat yaratish"
   },

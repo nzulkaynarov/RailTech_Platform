@@ -45,7 +45,7 @@ describe("EDS · Входящие письма: список", () => {
     expect(
       screen.queryByRole("link", { name: "Показать письмо ВХ-101/26 в боковом окне" }),
     ).toBeNull();
-    expect(screen.getAllByRole("row")).toHaveLength(1 + 4);
+    expect(screen.getAllByRole("row")).toHaveLength(1 + 5); // 4 по заявкам + требование ГНК (P8)
   });
 
   it("фильтр по статусу: «Резолюция наложена», «Возвращено», «Отклонено» и «Все»", async () => {
@@ -68,7 +68,7 @@ describe("EDS · Входящие письма: список", () => {
 
     fireEvent.click(within(filter).getByText("Все"));
     await waitFor(() => {
-      expect(screen.getAllByRole("row")).toHaveLength(1 + 7);
+      expect(screen.getAllByRole("row")).toHaveLength(1 + 8);
     });
   });
 

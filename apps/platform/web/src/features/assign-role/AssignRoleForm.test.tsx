@@ -47,7 +47,7 @@ const save = () => screen.getByRole("button", { name: "Сохранить рол
 describe("AssignRoleForm: выдача ролей", () => {
   it("кнопка неактивна, пока ничего не менялось; роли — из списка ролей компании", async () => {
     setup();
-    expect(await screen.findByRole("checkbox", { name: /^Менеджер/ })).toBeChecked();
+    expect(await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ })).toBeChecked();
     expect(save()).toBeDisabled();
     // Системные роли подписаны словами.
     expect(screen.getByRole("checkbox", { name: /^Директор.*системная роль/ })).not.toBeChecked();
@@ -115,7 +115,7 @@ describe("AssignRoleForm: выдача ролей", () => {
 
   it("должность: обрезается, пустая очищает, в блоке — что изменится", async () => {
     setup();
-    await screen.findByRole("checkbox", { name: /^Менеджер/ });
+    await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ });
     const input = screen.getByLabelText("Должность");
 
     fireEvent.change(input, { target: { value: "" } });
@@ -132,7 +132,7 @@ describe("AssignRoleForm: выдача ролей", () => {
   it("без ролей сохранить нельзя: подсказка про отключение", async () => {
     setup();
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ }));
 
     expect(save()).toBeDisabled();
     expect(screen.getByText(/Выберите хотя бы одну роль/)).toBeVisible();
@@ -145,7 +145,7 @@ describe("AssignRoleForm: выдача ролей", () => {
       otherActiveAdmins: 0,
     });
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /^Администратор/ }));
 
     expect(screen.getByText(/Вы единственный администратор/)).toBeVisible();
@@ -174,7 +174,7 @@ describe("AssignRoleForm: выдача ролей", () => {
     );
     setup({ employee: { ...employee, id: "7", roles: [ref("ADMIN")] }, otherActiveAdmins: 1 });
 
-    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /^Администратор/ }));
     fireEvent.click(save());
 
@@ -211,7 +211,7 @@ describe("AssignRoleForm: выдача ролей", () => {
     setup();
 
     fireEvent.click(await screen.findByRole("checkbox", { name: /^Снабженец/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер(?!-)/ }));
     fireEvent.click(save());
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/лиды в работе/);

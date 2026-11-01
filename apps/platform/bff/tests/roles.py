@@ -16,6 +16,8 @@ NAMES: dict[str, str] = {
     "SUPPLY": "Снабженец",
     "ENGINEER": "Гл. инженер",
     "ACCOUNTANT": "Бухгалтер",
+    "REGISTRAR": "Делопроизводитель",
+    "MANAGER_ALL": "Менеджер-универсал",
 }
 
 Role = str | dict[str, Any]

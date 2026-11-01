@@ -9,6 +9,7 @@ BFF не решает: статус письма, права `letters.*`, сро
 
 import datetime as dt
 import re
+import uuid
 from typing import Any, Literal
 from urllib.parse import quote
 
@@ -21,6 +22,10 @@ from app.schemas import initials_of
 
 LetterStatus = Literal["awaiting_resolution", "resolved", "returned", "rejected"]
 LetterZone = Literal["goods", "services", "payment_terms"]
+# P8 (SPEC-v3 §3.2a п. 1): способ получения входящего.
+ReceiptMethod = Literal["post", "paper", "taxpayer_cabinet", "courier", "email"]
+RelatedKind = Literal["letter_in", "letter_out"]
+_KIND_CODE = r"^[a-z][a-z_]{0,31}$"
 ZONES: tuple[LetterZone, ...] = ("goods", "services", "payment_terms")
 
 _MARGIN = r"^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$"
@@ -60,6 +65,7 @@ class LetterRow(BaseModel):
     status: LetterStatus
     urgent: bool
     due: dt.date | None
+    kind: str | None = None
 
 
 class LetterPage(BaseModel):
@@ -110,6 +116,12 @@ class LetterJournalEntry(BaseModel):
     comment: str | None
 
 
+class LetterRelated(BaseModel):
+    kind: RelatedKind
+    number: str
+    path: str
+
+
 class LetterCard(BaseModel):
     id: str
     number: str
@@ -134,6 +146,41 @@ class LetterCard(BaseModel):
     reject_reason: str | None
     journal: list[LetterJournalEntry]
     sources: Sources
+    # Карточка делопроизводства (P8); у писем по заявкам — `null`.
+    kind: str | None = None
+    receipt_method: ReceiptMethod | None = None
+    signed_by: str | None = None
+    document_due: dt.date | None = None
+    related: LetterRelated | None = None
+
+
+class LetterKindName(BaseModel):
+    ru: str
+    uz: str
+    en: str
+
+
+class LetterKind(BaseModel):
+    code: str
+    name: LetterKindName
+    urgent: bool
+
+
+class LetterKindList(BaseModel):
+    items: list[LetterKind]
+
+
+class LetterDuplicate(BaseModel):
+    id: str
+    number: str
+    subject: str
+    received_at: dt.date
+    status: LetterStatus
+    path: str
+
+
+class LetterDuplicateList(BaseModel):
+    items: list[LetterDuplicate]
 
 
 class ResolutionCandidate(BaseModel):
@@ -187,6 +234,73 @@ class ResolutionIn(BaseModel):
             "due": self.due.isoformat(),
             "min_margin_pct": self.min_margin_pct,
         }
+
+
+class LetterRegisterIn(BaseModel):
+    """Форма «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); решения — в EDS (вид, связь)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str = Field(pattern=_KIND_CODE)
+    receipt_method: ReceiptMethod
+    sender_name: str = Field(min_length=1, max_length=255)
+    sender_inn: str | None = Field(default=None, pattern=r"^\d{9,14}$")
+    received_at: dt.date
+    subject: str = Field(min_length=1, max_length=300)
+    summary: str | None = Field(default=None, max_length=10000)
+    sender_ref_number: str | None = Field(default=None, max_length=64)
+    sender_ref_date: dt.date | None = None
+    signed_by: str | None = Field(default=None, max_length=255)
+    document_due: dt.date | None = None
+    urgent: bool = False
+    erp_deal_id: int | None = Field(default=None, ge=1)
+    deal_number: str | None = Field(default=None, max_length=64)
+    crm_client_id: int | None = Field(default=None, ge=1)
+    related_number: str | None = Field(default=None, min_length=1, max_length=32)
+    file_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+
+    _sender = field_validator("sender_name")(_not_blank)
+    _subject = field_validator("subject")(_not_blank)
+
+    def for_eds(self) -> dict[str, Any]:
+        """Тело EDS `LetterCreate`: пустые строки — `null`, связи — `links`."""
+
+        def text(value: str | None) -> str | None:
+            return value.strip() or None if value is not None else None
+
+        ref_number = text(self.sender_ref_number)
+        links = {
+            key: value
+            for key, value in (
+                ("erp_deal_id", self.erp_deal_id),
+                ("deal_number", text(self.deal_number)),
+                ("crm_client_id", self.crm_client_id),
+            )
+            if value is not None
+        }
+        body: dict[str, Any] = {
+            "kind": self.kind,
+            "receipt_method": self.receipt_method,
+            "subject": self.subject,
+            "sender": {"name": self.sender_name, "inn": self.sender_inn},
+            "received_at": self.received_at.isoformat(),
+            "urgent": self.urgent,
+            "file_ids": [str(f) for f in dict.fromkeys(self.file_ids)],
+            "signed_by": text(self.signed_by),
+            "document_due": self.document_due.isoformat() if self.document_due else None,
+            "related_number": text(self.related_number),
+        }
+        summary = text(self.summary)
+        if summary is not None:
+            body["summary"] = summary
+        if ref_number is not None or self.sender_ref_date is not None:
+            body["sender_ref"] = {
+                "number": ref_number,
+                "date": self.sender_ref_date.isoformat() if self.sender_ref_date else None,
+            }
+        if links:
+            body["links"] = links
+        return body
 
 
 class LetterReturnIn(BaseModel):
@@ -255,6 +369,12 @@ class _Resolution(BaseModel):
     decided_at: dt.datetime
 
 
+class _Related(BaseModel):
+    kind: RelatedKind
+    id: str
+    number: str
+
+
 class _Journal(BaseModel):
     at: dt.datetime
     action: str
@@ -284,6 +404,11 @@ class EdsLetter(BaseModel):
     return_comment: str | None = None
     reject_reason: str | None = None
     journal: list[_Journal] = []
+    kind: str | None = None
+    receipt_method: ReceiptMethod | None = None
+    signed_by: str | None = None
+    document_due: dt.date | None = None
+    related: _Related | None = None
 
 
 class _EdsRow(BaseModel):
@@ -296,6 +421,7 @@ class _EdsRow(BaseModel):
     links: _Links
     urgent: bool = False
     due: dt.date | None = None
+    kind: str | None = None
 
 
 class _EdsPage(BaseModel):
@@ -327,6 +453,7 @@ def to_page(raw: Any) -> LetterPage:
                 status=row.status,
                 urgent=row.urgent,
                 due=row.due,
+                kind=row.kind,
             )
             for row in page.items
         ],
@@ -335,6 +462,22 @@ def to_page(raw: Any) -> LetterPage:
 
 
 # --- карточка ----------------------------------------------------------------------------------
+
+
+def letter_path(number: str) -> str:
+    """Карточка ВХ в SPA по номеру (`/eds/inbox/ВХ-104%2F26`)."""
+    return f"/eds/inbox/{quote(number, safe='')}"
+
+
+def _related(related: _Related | None) -> LetterRelated | None:
+    if related is None:
+        return None
+    path = (
+        letter_path(related.number)
+        if related.kind == "letter_in"
+        else f"/eds/documents?scope=all&doc={quote(related.id, safe='')}&panel=open"
+    )
+    return LetterRelated(kind=related.kind, number=related.number, path=path)
 
 
 def person(p: _Person) -> PersonRef:
@@ -470,6 +613,11 @@ def to_card(
             for j in letter.journal
         ],
         sources=sources,
+        kind=letter.kind,
+        receipt_method=letter.receipt_method,
+        signed_by=letter.signed_by,
+        document_due=letter.document_due,
+        related=_related(letter.related),
     )
 
 

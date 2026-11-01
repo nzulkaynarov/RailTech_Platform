@@ -140,6 +140,7 @@ import type {
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
+  FindLetterDuplicatesParams,
   ForbiddenResponse,
   ForgotPasswordAccepted,
   ForgotPasswordIn,
@@ -176,7 +177,10 @@ import type {
   LeadPage,
   LetterCard,
   LetterConflictResponse,
+  LetterDuplicateList,
+  LetterKindList,
   LetterPage,
+  LetterRegisterIn,
   LetterRejectIn,
   LetterReturnIn,
   ListAuditParams,
@@ -25706,6 +25710,421 @@ export function useListLetters<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListLettersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRegisterLetterUrl = () => {
+  return `/api/v1/eds/letters`;
+};
+
+/**
+ * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть.
+ * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
+ */
+export const registerLetter = async (
+  letterRegisterIn: LetterRegisterIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getRegisterLetterUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterRegisterIn),
+  });
+};
+
+export const getRegisterLetterMutationKey = () => ["registerLetter"] as const;
+
+export const getRegisterLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registerLetter>>,
+    TError,
+    RegisterLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registerLetter>>,
+  TError,
+  RegisterLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRegisterLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registerLetter>>,
+    RegisterLetterMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return registerLetter(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegisterLetterMutationResult = NonNullable<Awaited<ReturnType<typeof registerLetter>>>;
+export type RegisterLetterMutationBody = LetterRegisterIn;
+export type RegisterLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RegisterLetterMutationVariables = { data: LetterRegisterIn };
+
+/**
+ * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
+ */
+export const useRegisterLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof registerLetter>>,
+      TError,
+      RegisterLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof registerLetter>>,
+  TError,
+  RegisterLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getRegisterLetterMutationOptions(options), queryClient);
+};
+
+export const getListLetterKindsUrl = () => {
+  return `/api/v1/eds/letter-kinds`;
+};
+
+/**
+ * EDS `GET /letter-kinds`: код, названия на трёх языках и `urgent` (вид сразу ставит «срочно»). Типы — данные: список экран берёт отсюда. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+ * @summary EDS · Справочник «Вид документа» входящего
+ */
+export const listLetterKinds = async (
+  options?: Parameters<typeof http>[1],
+): Promise<LetterKindList> => {
+  return http<LetterKindList>(getListLetterKindsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLetterKindsQueryKey = () => {
+  return [`/api/v1/eds/letter-kinds`] as const;
+};
+
+export const getListLetterKindsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLetterKinds>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetterKinds>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLetterKindsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLetterKinds>>> = ({ signal }) =>
+    listLetterKinds({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLetterKinds>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLetterKindsQueryResult = NonNullable<Awaited<ReturnType<typeof listLetterKinds>>>;
+export type ListLetterKindsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListLetterKinds<
+  TData = Awaited<ReturnType<typeof listLetterKinds>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetterKinds>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLetterKinds>>,
+          TError,
+          Awaited<ReturnType<typeof listLetterKinds>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLetterKinds<
+  TData = Awaited<ReturnType<typeof listLetterKinds>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetterKinds>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLetterKinds>>,
+          TError,
+          Awaited<ReturnType<typeof listLetterKinds>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLetterKinds<
+  TData = Awaited<ReturnType<typeof listLetterKinds>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetterKinds>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Справочник «Вид документа» входящего
+ */
+
+export function useListLetterKinds<
+  TData = Awaited<ReturnType<typeof listLetterKinds>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetterKinds>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListLetterKindsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getFindLetterDuplicatesUrl = (params: FindLetterDuplicatesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/letter-duplicates?${stringifiedParams}`
+    : `/api/v1/eds/letter-duplicates`;
+};
+
+/**
+ * EDS `GET /letter-duplicates`: зарегистрированные письма с тем же исходящим номером и тем же корреспондентом (название без учёта регистра или клиент CRM), до пяти. Экран показывает предупреждение со ссылкой на ВХ; регистрировать не мешает. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+ * @summary EDS · Проверка дубля входящего (корреспондент + исх. №)
+ */
+export const findLetterDuplicates = async (
+  params: FindLetterDuplicatesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterDuplicateList> => {
+  return http<LetterDuplicateList>(getFindLetterDuplicatesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getFindLetterDuplicatesQueryKey = (params?: FindLetterDuplicatesParams) => {
+  return [`/api/v1/eds/letter-duplicates`, ...(params ? [params] : [])] as const;
+};
+
+export const getFindLetterDuplicatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof findLetterDuplicates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: FindLetterDuplicatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof findLetterDuplicates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getFindLetterDuplicatesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof findLetterDuplicates>>> = ({ signal }) =>
+    findLetterDuplicates(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof findLetterDuplicates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type FindLetterDuplicatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof findLetterDuplicates>>
+>;
+export type FindLetterDuplicatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useFindLetterDuplicates<
+  TData = Awaited<ReturnType<typeof findLetterDuplicates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: FindLetterDuplicatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof findLetterDuplicates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof findLetterDuplicates>>,
+          TError,
+          Awaited<ReturnType<typeof findLetterDuplicates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFindLetterDuplicates<
+  TData = Awaited<ReturnType<typeof findLetterDuplicates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: FindLetterDuplicatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof findLetterDuplicates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof findLetterDuplicates>>,
+          TError,
+          Awaited<ReturnType<typeof findLetterDuplicates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useFindLetterDuplicates<
+  TData = Awaited<ReturnType<typeof findLetterDuplicates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: FindLetterDuplicatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof findLetterDuplicates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Проверка дубля входящего (корреспондент + исх. №)
+ */
+
+export function useFindLetterDuplicates<
+  TData = Awaited<ReturnType<typeof findLetterDuplicates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: FindLetterDuplicatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof findLetterDuplicates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getFindLetterDuplicatesQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

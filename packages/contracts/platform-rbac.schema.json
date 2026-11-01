@@ -278,7 +278,9 @@
         "MANAGER",
         "SUPPLY",
         "ENGINEER",
-        "ACCOUNTANT"
+        "ACCOUNTANT",
+        "REGISTRAR",
+        "MANAGER_ALL"
       ],
       "properties": {
         "MANAGER": {
@@ -291,6 +293,12 @@
           "$ref": "#/$defs/role"
         },
         "ACCOUNTANT": {
+          "$ref": "#/$defs/role"
+        },
+        "REGISTRAR": {
+          "$ref": "#/$defs/role"
+        },
+        "MANAGER_ALL": {
           "$ref": "#/$defs/role"
         }
       }

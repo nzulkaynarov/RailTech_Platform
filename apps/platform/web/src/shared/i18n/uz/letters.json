@@ -1,6 +1,6 @@
 {
   "list": {
-    "subtitle": "Direktor qaror qabul qiladigan mijoz xatlari",
+    "subtitle": "Mijozlar xatlari va boshqa kiruvchi hujjatlar: ro‘yxatga olish va direktor rezolyutsiyasi",
     "caption": "Kiruvchi xatlar",
     "filter": {
       "label": "Xat holati",
@@ -24,7 +24,7 @@
     "empty": {
       "awaiting": {
         "title": "Sizdan hozircha qaror talab qilinmaydi",
-        "text": "Yangi xatlar ariza yaratilgach CRMdan keladi. Qarori qabul qilingan xatlar «Hammasi» filtrida.",
+        "text": "Yangi xatlar ariza yaratilgach CRMdan va ro‘yxatga olingach ish yurituvchidan keladi. Qarori qabul qilingan xatlar «Hammasi» filtrida.",
         "action": "Barcha xatlarni ko'rsatish"
       },
       "other": {
@@ -34,7 +34,7 @@
       },
       "all": {
         "title": "Kiruvchi xatlar hozircha yo'q",
-        "text": "Mijoz xatlari ariza yaratilgach CRMdan keladi. Direktor bu yerda rezolyutsiya qo'yadi.",
+        "text": "Mijoz xatlari ariza yaratilgach CRMdan keladi, qolganlarini ish yurituvchi ro‘yxatga oladi. Direktor bu yerda rezolyutsiya qo'yadi.",
         "action": "Yangilash"
       }
     }
@@ -75,7 +75,12 @@
       "addressee": "Kimning nomiga",
       "contact": "Aloqa shaxsi",
       "received": "Qabul qilingan",
-      "urgency": "Shoshilinchlik"
+      "urgency": "Shoshilinchlik",
+      "kind": "Hujjat turi",
+      "receiptMethod": "Qabul qilish usuli",
+      "signedBy": "Imzolagan",
+      "documentDue": "Hujjat bo‘yicha muddat",
+      "related": "Bog‘liq hujjat"
     },
     "urgent": "Shoshilinch",
     "regular": "Oddiy",
@@ -235,6 +240,97 @@
       "resolve": "Rezolyutsiya saqlanmadi: {{reason}}.",
       "return": "Xat qaytarilmadi: {{reason}}.",
       "reject": "Xat rad etilmadi: {{reason}}."
+    }
+  },
+  "register": {
+    "action": "Kiruvchi hujjatni ro‘yxatga olish",
+    "subtitle": "Soliq, bank, yetkazib beruvchi yoki davlat organi xati — qog‘ozda, soliq to‘lovchi kabinetidan yoki pochtadan. Rezolyutsiyani direktor qo‘yadi.",
+    "formLabel": "Kiruvchi hujjatni ro‘yxatga olish",
+    "choose": "Tanlang",
+    "kind": {
+      "label": "Hujjat turi",
+      "unavailable": "Turlar ro‘yxati yuklanmadi. Sahifani yangilang."
+    },
+    "method": {
+      "label": "Qabul qilish usuli",
+      "post": "Pochta",
+      "paper": "Qog‘oz (shaxsan olib kelingan)",
+      "taxpayer_cabinet": "Soliq to‘lovchi kabineti my.soliq",
+      "courier": "Kuryer",
+      "email": "E-mail"
+    },
+    "sender": {
+      "label": "Korrespondent",
+      "hint": "Xat kimdan kelgan: tashkilot yoki shaxs"
+    },
+    "inn": {
+      "label": "Korrespondent STIRi"
+    },
+    "refNumber": {
+      "label": "Jo‘natuvchining chiquvchi raqami"
+    },
+    "refDate": {
+      "label": "Jo‘natuvchidagi sana"
+    },
+    "signedBy": {
+      "label": "Imzolagan"
+    },
+    "receivedAt": {
+      "label": "Kelib tushgan sana"
+    },
+    "subject": {
+      "label": "Mavzu"
+    },
+    "summary": {
+      "label": "Qisqa mazmuni",
+      "hint": "Ixtiyoriy. Bo‘sh bo‘lsa, kartochkada mavzu ko‘rsatiladi."
+    },
+    "documentDue": {
+      "label": "Hujjat bo‘yicha muddat",
+      "hint": "Jo‘natuvchi ko‘rsatgan javob yoki ijro muddati"
+    },
+    "addressee": {
+      "label": "Adresat",
+      "hint": "Rezolyutsiyani direktor qo‘yadi"
+    },
+    "urgent": "Shoshilinch",
+    "files": {
+      "label": "Hujjat fayli",
+      "hint": "Xat skani yoki fayli majburiy. PDF, rasmlar, Office hujjatlari, 25 MB gacha."
+    },
+    "deal": {
+      "label": "Ariza yoki loyiha bilan bog‘lash",
+      "hint": "Ixtiyoriy: raqam, nom yoki kompaniya"
+    },
+    "related": {
+      "label": "Bog‘liq hujjat",
+      "hint": "Ixtiyoriy: oldingi kiruvchi (ВХ) yoki bizning chiquvchi (ИСХ) raqami"
+    },
+    "duplicate": {
+      "title": "Bu xat allaqachon ro‘yxatga olingan bo‘lishi mumkin: korrespondent va chiquvchi raqam bir xil",
+      "item": "· {{subject}} · {{date}}"
+    },
+    "consequence": [
+      "Xat ВХ raqamini va «Rezolyutsiya kutilmoqda» holatini oladi.",
+      "Direktor uni «Mening vazifalarim»da ko‘radi va rezolyutsiya qo‘yadi.",
+      "Kartochka «Kiruvchi xatlar»da ochiladi; fayl hujjatlarda saqlanadi."
+    ],
+    "submit": "Ro‘yxatga olish",
+    "cancel": "Bekor qilish",
+    "toast": "Ro‘yxatga olindi: {{number}}",
+    "notRegistered": "Ro‘yxatga olinmadi: {{reason}}",
+    "summaryError": "Belgilangan maydonlarni to‘ldiring.",
+    "errors": {
+      "kind": "Hujjat turini tanlang.",
+      "receipt_method": "Xat qanday kelganini tanlang.",
+      "sender_name": "Korrespondentni kiriting.",
+      "sender_inn": "STIR — 9 dan 14 gacha raqam.",
+      "received_at": "Kelib tushgan sanani kiriting — bugundan kech emas.",
+      "subject": "Mavzuni kiriting.",
+      "file_ids": "Xat faylini biriktiring va yuklanishini kuting.",
+      "related_number": "Bunday raqamli hujjat yo‘q. ВХ yoki ИСХ raqamini tekshiring.",
+      "forbidden": "kiruvchi hujjatlarni ro‘yxatga olish rolingizga berilmagan",
+      "server": "server ma’lumotni qabul qilmadi, bir daqiqadan so‘ng qayta urining"
     }
   }
 }

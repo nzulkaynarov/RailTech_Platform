@@ -7,7 +7,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard } from "../../../shared/api/generated/model";
-import { useGetLetter } from "../../../shared/api/generated/platform-bff";
+import { useGetLetter, useListLetterKinds } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
@@ -141,6 +141,36 @@ function Links({ letter }: { letter: LetterCard }) {
   );
 }
 
+/** Реквизиты делопроизводства (P8, SPEC-v3 §3.2a п. 1): вид, способ получения, подписал, срок по документу, связь. */
+function useRegistryItems(letter: LetterCard) {
+  const { t, i18n } = useTranslation("letters");
+  const { date } = useFormat();
+  const kinds = useListLetterKinds({ query: { enabled: Boolean(letter.kind), staleTime: 5 * 60_000 } });
+  if (!letter.kind && !letter.receipt_method) return [];
+  const lang = i18n.language.slice(0, 2) as "ru" | "uz" | "en";
+  const kind = kinds.data?.items.find((item) => item.code === letter.kind);
+  return [
+    { label: t("card.fields.kind"), value: kind ? kind.name[lang] || kind.name.ru : letter.kind },
+    {
+      label: t("card.fields.receiptMethod"),
+      value: letter.receipt_method ? t(`register.method.${letter.receipt_method}`) : null,
+    },
+    { label: t("card.fields.signedBy"), value: letter.signed_by },
+    {
+      label: t("card.fields.documentDue"),
+      value: letter.document_due ? date(letter.document_due) : null,
+    },
+    {
+      label: t("card.fields.related"),
+      value: letter.related ? (
+        <Link className="pf-focusable" to={letter.related.path}>
+          {letter.related.number}
+        </Link>
+      ) : null,
+    },
+  ];
+}
+
 function Content({
   letter,
   refKey,
@@ -157,6 +187,7 @@ function Content({
   const [, setParams] = useSearchParams();
   const canResolve = canEdit(me, "eds.inbox");
   const awaiting = letter.status === "awaiting_resolution";
+  const registry = useRegistryItems(letter);
 
   const openResolution = () => {
     setParams(
@@ -213,6 +244,7 @@ function Content({
           <Card size="small" title={<h2 className="pf-letters-title">{t("card.details")}</h2>}>
             <DefinitionList
               items={[
+                ...registry,
                 { label: t("card.fields.client"), value: letter.sender.name },
                 { label: t("card.fields.inn"), value: letter.sender.inn },
                 { label: t("card.fields.contact"), value: letter.sender.contact },

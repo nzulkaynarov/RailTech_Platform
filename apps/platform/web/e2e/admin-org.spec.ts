@@ -63,7 +63,7 @@ test.describe("Оргструктура: выдача ролей", () => {
 
     await openCard(page, "Демо Менеджеров");
     const panel = page.locator(PANEL);
-    await panel.getByRole("checkbox", { name: /^Менеджер/ }).uncheck();
+    await panel.getByRole("checkbox", { name: /^Менеджер(?!-)/ }).uncheck();
     await panel.getByRole("checkbox", { name: /^Снабженец/ }).check();
     // «Что произойдёт» строится из сгенерированной матрицы, а не из текста в коде
     const modules = visibleModules("SUPPLY").join(", ");
@@ -206,7 +206,7 @@ test.describe("Оргструктура: приглашение", () => {
     const panel = page.locator(PANEL);
     await panel.getByLabel("Имя и фамилия").fill("Дубль Почты");
     await panel.getByLabel("Электронная почта").fill("manager@demo.example");
-    await panel.getByRole("checkbox", { name: /^Менеджер/ }).check();
+    await panel.getByRole("checkbox", { name: /^Менеджер(?!-)/ }).check();
     await panel.getByRole("button", { name: "Отправить приглашение" }).click();
     await expect(panel.getByText("Сотрудник с такой почтой уже есть.")).toBeVisible();
 

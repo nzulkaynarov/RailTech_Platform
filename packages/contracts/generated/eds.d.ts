@@ -67,6 +67,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letter-kinds": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочник «Вид документа» входящего письма (P8)
+     * @description Виды документа для карточки делопроизводства (SPEC-v3 §3.2a п. 1): код, названия на трёх языках и признак `urgent` —
+     *     регистрация этим видом сразу ставит «срочно» (требование или уведомление ГНК). Типы — данные (DECISIONS 2026-10-28):
+     *     экран берёт список отсюда; новый вид не меняет контракт.
+     */
+    get: operations["listLetterKinds"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letter-duplicates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Проверка дубля перед регистрацией (корреспондент + исх. №)
+     * @description P8 (SPEC-v3 §3.2a п. 1): письма с тем же исходящим номером отправителя и тем же корреспондентом — по названию (без
+     *     учёта регистра и лишних пробелов) или по клиенту CRM. Не больше пяти, новые первыми. Это предупреждение: регистрация
+     *     дубля не запрещена. Без названия и без клиента — пустой список.
+     */
+    get: operations["findLetterDuplicates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/letters": {
     parameters: {
       query?: never;
@@ -82,6 +126,11 @@ export interface paths {
      * @description Ручная регистрация. Письмо по заявке из CRM EDS регистрирует сам по событию `uz.railtech.erp.request.created.v1`
      *     (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
      *     публикуется `letter.registered`.
+     *
+     *     Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — код из `GET /letter-kinds` (иначе 422,
+     *     в `details.fields` — поле `kind` с `unknown_kind`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
+     *     номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
+     *     берётся тема.
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -904,14 +953,63 @@ export interface components {
       /** Format: date */
       date?: string | null;
     };
+    /**
+     * @description Способ получения (P8) — почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail
+     * @enum {string}
+     */
+    ReceiptMethod: "post" | "paper" | "taxpayer_cabinet" | "courier" | "email";
+    /** @description Код вида документа из `GET /letter-kinds` */
+    LetterKindCode: string;
+    LetterKindItem: {
+      code: components["schemas"]["LetterKindCode"];
+      name: {
+        ru: string;
+        uz: string;
+        en: string;
+      };
+      /** @description Регистрация этим видом сразу ставит «срочно» */
+      urgent: boolean;
+    };
+    LetterKindList: {
+      items: components["schemas"]["LetterKindItem"][];
+    };
+    LetterDuplicate: {
+      id: components["schemas"]["Uuid"];
+      number: components["schemas"]["LetterNumber"];
+      subject: string;
+      /** Format: date */
+      received_at: string;
+      status: components["schemas"]["LetterStatus"];
+    };
+    LetterDuplicateList: {
+      items: components["schemas"]["LetterDuplicate"][];
+    };
+    /** @description Связанный документ карточки — предыдущий ВХ (`letter_in`) или наш ИСХ (`letter_out`) */
+    LetterRelatedRef: {
+      /** @enum {string} */
+      kind: "letter_in" | "letter_out";
+      id: components["schemas"]["Uuid"];
+      number: string;
+    };
     LetterCreate: {
       subject: string;
-      /** @description Суть документа */
-      summary: string;
+      /** @description Суть документа (краткое содержание); не задана — тема */
+      summary?: string;
       sender: components["schemas"]["IncomingLetterSender"];
       sender_ref?: components["schemas"]["SenderRef"];
       /** Format: date */
       received_at: string;
+      kind?: components["schemas"]["LetterKindCode"] | null;
+      receipt_method?: components["schemas"]["ReceiptMethod"] | null;
+      /** @description Кто подписал у отправителя */
+      signed_by?: string | null;
+      /**
+       * Format: date
+       * @description Срок по документу (срок ответа или исполнения, указанный отправителем)
+       */
+      document_due?: string | null;
+      /** @description Номер предыдущего ВХ или нашего ИСХ, на который ссылается письмо */
+      related_number?: string | null;
       /** @description На чьё имя; нет — директор */
       addressee_crm_user_id?: number | null;
       /** @description Ответственный менеджер */
@@ -936,6 +1034,8 @@ export interface components {
        * @description Срок расчёта по резолюции
        */
       due?: string | null;
+      /** @description Код вида документа (P8); у писем по заявкам — `null` */
+      kind?: string | null;
     };
     LetterPage: {
       items: components["schemas"]["LetterListItem"][];
@@ -964,6 +1064,13 @@ export interface components {
       return_comment: string | null;
       reject_reason: string | null;
       journal: components["schemas"]["JournalEntry"][];
+      /** @description Код вида документа (P8); у писем по заявкам — `null` */
+      kind?: string | null;
+      receipt_method?: components["schemas"]["ReceiptMethod"] | null;
+      signed_by?: string | null;
+      /** Format: date */
+      document_due?: string | null;
+      related?: components["schemas"]["LetterRelatedRef"] | null;
     };
     /**
      * @description Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), исходящее письмо (ИСХ)
@@ -1491,6 +1598,55 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+    };
+  };
+  listLetterKinds: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Виды документа в порядке показа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterKindList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  findLetterDuplicates: {
+    parameters: {
+      query: {
+        ref_number: string;
+        sender_name?: string;
+        crm_client_id?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Возможные дубли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterDuplicateList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listLetters: {

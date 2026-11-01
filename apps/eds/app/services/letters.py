@@ -14,16 +14,23 @@ from typing import Any
 
 import structlog
 from rt_bus.sqlalchemy import AsyncBus
-from sqlalchemy import select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
 from app.errors import EdsError, conflict, invalid_fields, not_found
-from app.models import Letter
+from app.models import Document, Letter
 from app.schemas.common import ErpLinksIn
-from app.schemas.letters import LetterCreate, LetterStatus, LetterSubmitIn, ResolutionIn
-from app.services import events, files, journal, numbering
+from app.schemas.letters import (
+    LetterCreate,
+    LetterDuplicate,
+    LetterDuplicateList,
+    LetterStatus,
+    LetterSubmitIn,
+    ResolutionIn,
+)
+from app.services import events, files, journal, letter_kinds, numbering
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -157,11 +164,67 @@ def _link_values(links: ErpLinksIn | None) -> dict[str, Any]:
     }
 
 
+async def _related(session: AsyncSession, number: str | None) -> dict[str, uuid.UUID | None]:
+    """Связь с предыдущим ВХ или нашим ИСХ по номеру (P8); номера нет в реестре — 422 `related_number`."""
+    if number is None:
+        return {"related_letter_id": None, "related_document_id": None}
+    letter_id = (await session.execute(select(Letter.id).where(Letter.number == number))).scalar_one_or_none()
+    if letter_id is not None:
+        return {"related_letter_id": letter_id, "related_document_id": None}
+    stmt = select(Document.id).where(Document.number == number, Document.kind == "letter_out")
+    document_id = (await session.execute(stmt)).scalar_one_or_none()
+    if document_id is None:
+        raise invalid_fields("Документ с таким номером не найден.", related_number="not_found")
+    return {"related_letter_id": None, "related_document_id": document_id}
+
+
+def _sender_key(name: str | None) -> str:
+    return " ".join((name or "").split()).casefold()
+
+
+async def find_duplicates(
+    session: AsyncSession, *, sender_name: str | None, crm_client_id: int | None, ref_number: str
+) -> LetterDuplicateList:
+    """Проверка дубля перед регистрацией (P8, SPEC-v3 §3.2a п. 1): тот же исх. № отправителя и тот же корреспондент —
+    по названию без учёта регистра и лишних пробелов или по клиенту CRM. Предупреждение, не запрет."""
+    ref = ref_number.strip()
+    name = _sender_key(sender_name)
+    if not ref or (not name and crm_client_id is None):
+        return LetterDuplicateList(items=[])
+    same_sender = []
+    if name:
+        same_sender.append(func.lower(func.regexp_replace(func.trim(Letter.sender_name), r"\s+", " ", "g")) == name)
+    if crm_client_id is not None:
+        same_sender.append(Letter.crm_client_id == crm_client_id)
+    stmt = (
+        select(Letter)
+        .where(func.trim(Letter.sender_ref_number) == ref, or_(*same_sender))
+        .order_by(Letter.registered_at.desc())
+        .limit(5)
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+    return LetterDuplicateList(
+        items=[
+            LetterDuplicate(
+                id=r.id, number=r.number, subject=r.subject, received_at=r.received_at, status=LetterStatus(r.status)
+            )
+            for r in rows
+        ]
+    )
+
+
 async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data: LetterCreate) -> Letter:
-    """Ручная регистрация (`POST /letters`). Нужен отправитель по имени или клиент CRM в `links`."""
+    """Ручная регистрация (`POST /letters`). Нужен отправитель по имени или клиент CRM в `links`.
+
+    Карточка делопроизводства (P8): вид документа — код справочника (`letter_kinds`); вид со «срочно» (требование ГНК)
+    ставит «срочно» сам; связь с предыдущим ВХ или нашим ИСХ — по номеру.
+    """
     links = data.links or ErpLinksIn()
     if not data.sender.name and links.crm_client_id is None:
         raise invalid_fields("Укажите отправителя или клиента.", sender="name_or_client_required")
+    kind = letter_kinds.BY_CODE.get(data.kind) if data.kind is not None else None
+    if data.kind is not None and kind is None:
+        raise invalid_fields("Такого вида документа нет в справочнике.", kind="unknown_kind")
     if links.erp_request_id is not None and await find_by_request(session, links.erp_request_id) is not None:
         raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.")
     await _validate_staff(
@@ -170,7 +233,7 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
     ref = data.sender_ref
     values: dict[str, Any] = {
         "subject": data.subject,
-        "summary": data.summary,
+        "summary": (data.summary or "").strip() or data.subject,
         "sender_name": data.sender.name,
         "sender_inn": data.sender.inn,
         "sender_contact": data.sender.contact,
@@ -179,7 +242,12 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         "received_at": data.received_at,
         "addressee_crm_user_id": data.addressee_crm_user_id,
         "manager_crm_user_id": data.manager_crm_user_id,
-        "urgent": data.urgent,
+        "urgent": data.urgent or (kind is not None and kind.urgent),
+        "doc_kind": data.kind,
+        "receipt_method": data.receipt_method.value if data.receipt_method else None,
+        "signed_by": (data.signed_by or "").strip() or None,
+        "document_due": data.document_due,
+        **await _related(session, data.related_number),
         **_link_values(data.links),
     }
     try:

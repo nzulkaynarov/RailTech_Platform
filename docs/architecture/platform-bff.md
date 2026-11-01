@@ -93,6 +93,10 @@ SPA  POST /api/v1/auth/login {email, password}
   Ошибки EDS переводятся в `Error` с `source = eds` и сохранённым `details.reason` / `details.fields` (`due_in_past`, `not_active_employee`,
   `invalid_state`); `eds_not_granted` — как выше. Данные заявки (название, стадия сделки) приходят из ERP по `erp_deal_id` письма: ERP не
   ответил — карточка 200 с `sources.erp = unavailable`. Поле «Маржа не ниже» (`min_margin_pct`) отдаётся только ролям с группой `cost_margin`.
+  **Регистрация входящих (P8, SPEC-v3 §3.2a п. 1).** `POST /eds/letters` («Зарегистрировать входящее»: вид документа, способ получения,
+  корреспондент, даты, тема, файл, исх. №, подписал, срок по документу, связи) → EDS `POST /letters`; раздел `eds.inbox.register`
+  (полный), отдельный от резолюции (`eds.inbox: full`). Справочник видов — `GET /eds/letter-kinds` (EDS, типы — данные), проверка дубля
+  (корреспондент + исх. №) — `GET /eds/letter-duplicates`; чтение писем — `eds.inbox` или `eds.inbox.register`.
 
 ### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
 

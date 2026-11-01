@@ -48,9 +48,11 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
       "Снабженец",
       "Гл. инженер",
       "Бухгалтер",
+      "Делопроизводитель",
+      "Менеджер-универсал",
     ]);
     const row = within(table()).getByRole("row", { name: /Сводка по компании/ });
-    expect(within(row).getAllByText("Скрыто")).toHaveLength(4);
+    expect(within(row).getAllByText("Скрыто")).toHaveLength(6);
     expect(within(row).getAllByText("Полный доступ")).toHaveLength(1);
     expect(within(row).getAllByText("Только чтение")).toHaveLength(1);
   });
@@ -152,7 +154,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     signInAs("director@demo.example");
     renderApp("/admin/roles");
 
-    expect(await screen.findByRole("button", { name: /^Менеджер/ })).toBeVisible();
+    expect(await screen.findByRole("button", { name: /^Менеджер(?!-)/ })).toBeVisible();
     expect(screen.queryByText("Ролевую матрицу ведёт администратор")).toBeNull();
     expect(screen.getByText("Только просмотр")).toBeVisible();
     expect(screen.queryByRole("button", { name: "Создать роль" })).toBeNull();

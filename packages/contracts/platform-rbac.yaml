@@ -32,6 +32,7 @@ system_roles:
       crm.leads: read
       crm.clients: full
       eds.inbox: full
+      eds.inbox.register: full  # P8: регистрация входящих отдельно от резолюции; права EDS директора не меняются
       eds.drafts: full
       eds.projects: full
       eds.payments: read  # SPEC-v3 §4.2: оплату подтверждает бухгалтер, директор видит (решение архитектора, Q-D2-4-1 п. 1)
@@ -49,7 +50,8 @@ system_roles:
     # R-1b (уточнение ADR-0012 п. 2): директор видит воронку и переписку (`crm.leads`, `chats.external` — read), но не
     # берёт лиды и не отвечает клиентам; директору, который сам ведёт лиды, администратор выдаёт вторую роль (объединение).
 
-# Шаблоны — строки матрицы SPEC-v3 §4.2 (колонки MANAGER, SUPPLY, ENGINEER, ACCOUNTANT) + два новых раздела расчёта.
+# Шаблоны — строки матрицы SPEC-v3 §4.2 (колонки MANAGER, SUPPLY, ENGINEER, ACCOUNTANT) + два новых раздела расчёта;
+# с P8 (DECISIONS 2026-10-29 W-2, SPEC-v3 §4.1) — два шаблона пилота: REGISTRAR и MANAGER_ALL.
 templates:
   MANAGER:
     name: { ru: Менеджер, uz: Menejer, en: Manager }
@@ -107,6 +109,44 @@ templates:
     # Решение архитектора 2026-10-28 (Q-D2-1-4): бухгалтер видит цены клиенту, итоги и НДС — без цен поставщиков,
     # себестоимости и маржи.
     restricted_fields: [totals_only]
+  # P8, пилот (DECISIONS 2026-10-29 W-2; 2026-11-01 п. 1 — граница по лидам). Делопроизводитель: вся входящая
+  # корреспонденция — регистрация без резолюции (`eds.inbox` — чтение, `eds.inbox.register` — полный; SPEC-v3 §3.2a п. 1);
+  # лиды — первая линия: разбор, тип, регистрация, передача (`crm.leads` — полный: передать лида нельзя без `leads:work`);
+  # клиенты и заявки — чтение («Создать заявку» и ответ клиенту — менеджер-универсал); документы — реестр и проекты (чтение).
+  REGISTRAR:
+    name: { ru: Делопроизводитель, uz: Ish yurituvchi, en: Office clerk }
+    access:
+      dashboard.queue: full
+      crm.leads: full
+      crm.clients: read
+      eds.inbox: read
+      eds.inbox.register: full
+      eds.projects: read
+      eds.memo.create: full
+      chats.internal: full
+      chats.external: read
+    restricted_fields: []
+  # P8, пилот (DECISIONS 2026-10-29 W-1, W-2; 2026-11-01 п. 1). Менеджер-универсал: продажи («Забрать», ответ, «Создать
+  # заявку»), расчёт с визами обеих зон (товары и услуги — W-1: визу услуг на пилоте ставит он), снабжение и закупки, счета и
+  # подтверждение оплаты, договор, акт, сканы. Резолюция, одобрение КП и согласование служебок — у директора (чтение).
+  MANAGER_ALL:
+    name: { ru: Менеджер-универсал, uz: Universal menejer, en: All-round manager }
+    access:
+      dashboard.queue: full
+      crm.leads: full
+      crm.clients: full
+      eds.inbox: read
+      eds.drafts: read
+      eds.projects: full
+      eds.payments: full
+      eds.memo.create: full
+      erp.calc: full
+      erp.calc.goods: full
+      erp.calc.services: full
+      erp.stock: full
+      chats.internal: full
+      chats.external: full
+    restricted_fields: [cost_margin, supplier_prices]
 
 # Базовая роль CRM (admin|manager|viewer) — признак, прав она не даёт (D1-8, B-014): права CRM сотрудника с ролями
 # Платформы — только из матриц его ролей. Признак нужен там, где считают людей, а не права: «последний администратор»,
@@ -160,9 +200,20 @@ resources:
     label: { ru: "Документы · Входящие письма · резолюция", uz: "Hujjatlar · Kiruvchi xatlar · rezolyutsiya", en: "Documents · Incoming letters · resolution" }
     backend:
       erp: { full: [deal.assign] }
+      # P8 (аудит UI 2026-10-30 R1, SPEC-v3 §3.2a «Права»): «регистрировать входящие» ≠ «резолюция». Полный уровень —
+      # резолюция, возврат, отказ (`letters.resolve`); регистрация — раздел `eds.inbox.register`.
       eds:
         read: [letters.read, registry.read]
-        full: [letters.read, registry.read, letters.register, letters.resolve]
+        full: [letters.read, registry.read, letters.resolve]
+  # P8: регистрация входящих (вручную, «Зарегистрировать входящее») и исходящих писем — без резолюции. Миграция CRM дала
+  # раздел каждой роли с `eds.inbox: full`, поэтому права её держателей не изменились.
+  - key: eds.inbox.register
+    module: eds
+    levels: [full]
+    label: { ru: "Документы · Входящие письма · регистрация", uz: "Hujjatlar · Kiruvchi xatlar · ro‘yxatga olish", en: "Documents · Incoming letters · registration" }
+    backend:
+      eds:
+        full: [letters.read, registry.read, letters.register]
   - key: eds.drafts
     module: eds
     label: { ru: "Документы · КП на одобрение, Исходящие · одобрение и отправка", uz: "Hujjatlar · Tasdiqlash uchun TT, chiquvchi · tasdiqlash va yuborish", en: "Documents · Quotes to approve, outgoing · approval and sending" }
@@ -307,8 +358,8 @@ menu:
     # в неё из Настроек · Telegram-бот, адрес /crm/kb для него открыт (`access` раздела в apps/platform/web/src/modules/crm/module.ts).
     kb: [crm.leads]
   eds:
-    documents: [eds.inbox, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
-    inbox: [eds.inbox]
+    documents: [eds.inbox, eds.inbox.register, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
+    inbox: [eds.inbox, eds.inbox.register]
     outbox: [eds.drafts]
     projects: [eds.projects]
     drafts: [eds.drafts]

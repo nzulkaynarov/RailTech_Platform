@@ -3564,6 +3564,50 @@ export interface paths {
      */
     get: operations["listLetters"];
     put?: never;
+    /**
+     * EDS · Зарегистрировать входящее (делопроизводитель, P8)
+     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть.
+     */
+    post: operations["registerLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letter-kinds": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Справочник «Вид документа» входящего
+     * @description EDS `GET /letter-kinds`: код, названия на трёх языках и `urgent` (вид сразу ставит «срочно»). Типы — данные: список экран берёт отсюда. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+     */
+    get: operations["listLetterKinds"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letter-duplicates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Проверка дубля входящего (корреспондент + исх. №)
+     * @description EDS `GET /letter-duplicates`: зарегистрированные письма с тем же исходящим номером и тем же корреспондентом (название без учёта регистра или клиент CRM), до пяти. Экран показывает предупреждение со ссылкой на ВХ; регистрировать не мешает. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+     */
+    get: operations["findLetterDuplicates"];
+    put?: never;
     post?: never;
     delete?: never;
     options?: never;
@@ -8769,6 +8813,8 @@ export interface components {
        * @description Срок расчёта из резолюции
        */
       due: string | null;
+      /** @description Код вида документа (P8, `GET /eds/letter-kinds`); у писем по заявкам — `null` */
+      kind?: string | null;
     };
     LetterPage: {
       items: components["schemas"]["LetterRow"][];
@@ -8858,6 +8904,101 @@ export interface components {
       reject_reason: string | null;
       journal: components["schemas"]["LetterJournalEntry"][];
       sources: components["schemas"]["Sources"];
+      /** @description Код вида документа (P8); у писем по заявкам — `null` */
+      kind?: string | null;
+      receipt_method?: components["schemas"]["LetterReceiptMethod"] | null;
+      /** @description Кто подписал у отправителя */
+      signed_by?: string | null;
+      /**
+       * Format: date
+       * @description Срок по документу
+       */
+      document_due?: string | null;
+      related?: components["schemas"]["LetterRelated"] | null;
+    };
+    /**
+     * @description Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
+     * @enum {string}
+     */
+    LetterReceiptMethod: "post" | "paper" | "taxpayer_cabinet" | "courier" | "email";
+    /** @description Связанный документ — предыдущий ВХ (`letter_in`) или наш ИСХ (`letter_out`) */
+    LetterRelated: {
+      /** @enum {string} */
+      kind: "letter_in" | "letter_out";
+      /**
+       * @example ВХ-101/26
+       * @example ИСХ-012/26
+       */
+      number: string;
+      /** @description Путь в SPA */
+      path: string;
+    };
+    LetterKind: {
+      /** @example tax_notice */
+      code: string;
+      name: {
+        ru: string;
+        uz: string;
+        en: string;
+      };
+      /** @description Регистрация этим видом сразу ставит «срочно» */
+      urgent: boolean;
+    };
+    LetterKindList: {
+      items: components["schemas"]["LetterKind"][];
+    };
+    LetterDuplicate: {
+      /** Format: uuid */
+      id: string;
+      /** @example ВХ-104/26 */
+      number: string;
+      subject: string;
+      /** Format: date */
+      received_at: string;
+      status: components["schemas"]["LetterStatus"];
+      /** @description Карточка в SPA, `/eds/inbox/{номер}` */
+      path: string;
+    };
+    LetterDuplicateList: {
+      items: components["schemas"]["LetterDuplicate"][];
+    };
+    /** @description Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию */
+    LetterRegisterIn: {
+      /** @description Код из `GET /eds/letter-kinds` */
+      kind: string;
+      receipt_method: components["schemas"]["LetterReceiptMethod"];
+      /** @description Корреспондент (организация или человек) */
+      sender_name: string;
+      sender_inn?: string | null;
+      /**
+       * Format: date
+       * @description Дата поступления
+       */
+      received_at: string;
+      subject: string;
+      /** @description Краткое содержание; пусто — тема */
+      summary?: string | null;
+      /** @description Исходящий номер отправителя */
+      sender_ref_number?: string | null;
+      /** Format: date */
+      sender_ref_date?: string | null;
+      signed_by?: string | null;
+      /**
+       * Format: date
+       * @description Срок по документу
+       */
+      document_due?: string | null;
+      /** @default false */
+      urgent: boolean;
+      /** @description Связанная заявка или проект (ERP) */
+      erp_deal_id?: number | null;
+      /** @description Номер заявки (из выбора) для ссылки в карточке */
+      deal_number?: string | null;
+      /** @description Клиент CRM — корреспондент-контрагент */
+      crm_client_id?: number | null;
+      /** @description Номер предыдущего ВХ или нашего ИСХ */
+      related_number?: string | null;
+      file_ids: string[];
     };
     ResolutionAssigneeIn: {
       /** @description `crm_user_id` сотрудника */
@@ -17394,6 +17535,91 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["LetterPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  registerLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+        /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+        "Idempotency-Key"?: components["parameters"]["EdsIdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterRegisterIn"];
+      };
+    };
+    responses: {
+      /** @description Зарегистрировано — карточка ВХ */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listLetterKinds: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Виды документа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterKindList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  findLetterDuplicates: {
+    parameters: {
+      query: {
+        ref_number: string;
+        sender_name?: string;
+        crm_client_id?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Возможные дубли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterDuplicateList"];
         };
       };
       401: components["responses"]["SessionExpired"];
