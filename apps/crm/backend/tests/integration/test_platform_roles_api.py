@@ -87,6 +87,8 @@ async def test_list_has_system_roles_and_templates_with_employee_counts(
         ("tpl:SUPPLY", False),
         ("tpl:ENGINEER", False),
         ("tpl:ACCOUNTANT", False),
+        ("tpl:REGISTRAR", False),  # P8: роли пилота
+        ("tpl:MANAGER_ALL", False),
     ]
     assert {r["code"]: r["employees"] for r in roles}["tpl:MANAGER"] == 1
     director = roles[1]
