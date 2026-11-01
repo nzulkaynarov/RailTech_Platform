@@ -27,4 +27,9 @@ export interface LetterRow {
    * @nullable
    */
   due: string | null;
+  /**
+   * Код вида документа (P8, `GET /eds/letter-kinds`); у писем по заявкам — `null`
+   * @nullable
+   */
+  kind?: string | null;
 }

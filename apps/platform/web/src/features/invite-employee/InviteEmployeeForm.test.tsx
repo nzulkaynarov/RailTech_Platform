@@ -44,7 +44,7 @@ async function setup() {
   renderUi(
     <InviteEmployeeForm onInvited={onInvited} onOpenCard={onOpenCard} onCancel={onCancel} />,
   );
-  await screen.findByRole("checkbox", { name: /^Менеджер/ });
+  await screen.findByRole("checkbox", { name: /^Менеджер(?!-)/ });
 }
 
 function fill(label: string, value: string) {
@@ -94,7 +94,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
     fill("Электронная почта", "new@demo.example");
     fill("Должность (необязательно)", " Инженер ");
     fireEvent.click(screen.getByRole("checkbox", { name: /^Снабженец/ }));
-    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Менеджер(?!-)/ }));
 
     submit();
 

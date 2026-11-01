@@ -32,6 +32,20 @@ class LetterStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class ReceiptMethod(StrEnum):
+    """Способ получения (SPEC-v3 §3.2a п. 1)."""
+
+    POST = "post"
+    PAPER = "paper"
+    TAXPAYER_CABINET = "taxpayer_cabinet"
+    COURIER = "courier"
+    EMAIL = "email"
+
+
+KindCode = Annotated[str, Field(pattern=r"^[a-z][a-z_]{0,31}$")]
+RelatedNumber = Annotated[str, Field(min_length=1, max_length=32)]
+
+
 class Zone(StrEnum):
     GOODS = "goods"
     SERVICES = "services"
@@ -83,7 +97,7 @@ class LetterSubmitIn(Strict):
 
 class LetterCreate(Strict):
     subject: Subject
-    summary: LongText
+    summary: LongText | None = None  # P8: нет — тема (краткое содержание необязательно)
     sender: IncomingLetterSender
     sender_ref: SenderRef | None = None
     received_at: dt.date
@@ -92,6 +106,40 @@ class LetterCreate(Strict):
     urgent: bool = False
     links: ErpLinksIn | None = None
     file_ids: FileIds = Field(default_factory=list)
+    # Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1)
+    kind: KindCode | None = None
+    receipt_method: ReceiptMethod | None = None
+    signed_by: Annotated[str | None, Field(max_length=255)] = None
+    document_due: dt.date | None = None
+    related_number: RelatedNumber | None = None  # предыдущий ВХ или наш ИСХ
+
+
+class RelatedRef(BaseModel):  # eds.yaml LetterRelatedRef
+    kind: str  # letter_in | letter_out
+    id: uuid.UUID
+    number: str
+
+
+class LetterKindItem(BaseModel):
+    code: str
+    name: dict[str, str]
+    urgent: bool
+
+
+class LetterKindList(BaseModel):
+    items: list[LetterKindItem]
+
+
+class LetterDuplicate(BaseModel):
+    id: uuid.UUID
+    number: str
+    subject: str
+    received_at: dt.date
+    status: LetterStatus
+
+
+class LetterDuplicateList(BaseModel):
+    items: list[LetterDuplicate]
 
 
 class LetterListItem(BaseModel):
@@ -104,6 +152,7 @@ class LetterListItem(BaseModel):
     links: ErpLinks
     urgent: bool
     due: dt.date | None
+    kind: str | None = None
 
 
 class LetterPage(BaseModel):
@@ -131,3 +180,8 @@ class Letter(BaseModel):
     return_comment: str | None
     reject_reason: str | None
     journal: list[JournalEntry]
+    kind: str | None = None
+    receipt_method: ReceiptMethod | None = None
+    signed_by: str | None = None
+    document_due: dt.date | None = None
+    related: RelatedRef | None = None

@@ -81,7 +81,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     expect(router.state.location.search).toContain("employee=u-demo-manager");
     expect(router.state.location.search).toContain("panel=open");
     expect(
-      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер/ }),
+      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер(?!-)/ }),
     ).toBeChecked();
   });
 
@@ -90,7 +90,9 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     renderAt("/admin/org?employee=u-demo-manager&panel=open");
     await within(await panelEl()).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
 
-    fireEvent.click(await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер/ }));
+    fireEvent.click(
+      await within(await panelEl()).findByRole("checkbox", { name: /^Менеджер(?!-)/ }),
+    );
     fireEvent.click(within(await panelEl()).getByRole("checkbox", { name: /^Директор/ }));
     fireEvent.click(within(await panelEl()).getByRole("button", { name: "Сохранить роли" }));
 

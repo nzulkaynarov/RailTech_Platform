@@ -12,6 +12,9 @@ from app.models import Employee
 from app.schemas.letters import (
     Letter,
     LetterCreate,
+    LetterDuplicateList,
+    LetterKindItem,
+    LetterKindList,
     LetterPage,
     LetterRejectIn,
     LetterReturnIn,
@@ -21,7 +24,7 @@ from app.schemas.letters import (
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import idempotency, letters, letters_read
+from app.services import idempotency, letter_kinds, letters, letters_read
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -29,8 +32,30 @@ IdemKey = Annotated[str | None, Header(alias="Idempotency-Key", min_length=8, ma
 Reader = Annotated[Employee, Depends(require_permission(P.LETTERS_READ))]
 Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
 Resolver = Annotated[Employee, Depends(require_permission(P.LETTERS_RESOLVE))]
+# Справочник видов и проверка дубля — тем, кто читает или регистрирует письма (P8).
+Clerk = Annotated[Employee, Depends(require_permission(P.LETTERS_READ, P.LETTERS_REGISTER))]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Bus = Annotated[AsyncBus, Depends(get_bus)]
+
+
+@router.get("/letter-kinds", response_model=LetterKindList, operation_id="listLetterKinds")
+async def list_letter_kinds(_: Clerk) -> LetterKindList:
+    return LetterKindList(
+        items=[LetterKindItem(code=k.code, name=k.names(), urgent=k.urgent) for k in letter_kinds.KINDS]
+    )
+
+
+@router.get("/letter-duplicates", response_model=LetterDuplicateList, operation_id="findLetterDuplicates")
+async def find_letter_duplicates(
+    _: Clerk,
+    session: Session,
+    ref_number: Annotated[str, Query(min_length=1, max_length=64)],
+    sender_name: Annotated[str | None, Query(max_length=255)] = None,
+    crm_client_id: Annotated[int | None, Query()] = None,
+) -> LetterDuplicateList:
+    return await letters.find_duplicates(
+        session, sender_name=sender_name, crm_client_id=crm_client_id, ref_number=ref_number
+    )
 
 
 @router.get("/letters", response_model=LetterPage, operation_id="listLetters")

@@ -6951,6 +6951,105 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [letters]
+      operationId: registerLetter
+      summary: 'EDS · Зарегистрировать входящее (делопроизводитель, P8)'
+      description: >-
+        Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел
+        `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не
+        накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата
+        поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит
+        «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает
+        директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`):
+        дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields =
+        [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterRegisterIn'
+      responses:
+        '201':
+          description: Зарегистрировано — карточка ВХ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letter-kinds:
+    get:
+      tags: [letters]
+      operationId: listLetterKinds
+      summary: 'EDS · Справочник «Вид документа» входящего'
+      description: >-
+        EDS `GET /letter-kinds`: код, названия на трёх языках и `urgent` (вид сразу ставит «срочно»). Типы — данные: список
+        экран берёт отсюда. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+      responses:
+        '200':
+          description: Виды документа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterKindList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letter-duplicates:
+    get:
+      tags: [letters]
+      operationId: findLetterDuplicates
+      summary: 'EDS · Проверка дубля входящего (корреспондент + исх. №)'
+      description: >-
+        EDS `GET /letter-duplicates`: зарегистрированные письма с тем же исходящим номером и тем же корреспондентом (название без
+        учёта регистра или клиент CRM), до пяти. Экран показывает предупреждение со ссылкой на ВХ; регистрировать не мешает.
+        Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+      parameters:
+        - name: ref_number
+          in: query
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 64}
+        - name: sender_name
+          in: query
+          required: false
+          schema: {type: string, maxLength: 255}
+        - name: crm_client_id
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Возможные дубли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterDuplicateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /eds/letters/{ref}:
     get:
@@ -15832,6 +15931,9 @@ components:
           type: [string, 'null']
           format: date
           description: Срок расчёта из резолюции
+        kind:
+          type: [string, 'null']
+          description: Код вида документа (P8, `GET /eds/letter-kinds`); у писем по заявкам — `null`
 
     LetterPage:
       type: object
@@ -15997,6 +16099,112 @@ components:
           items: {$ref: '#/components/schemas/LetterJournalEntry'}
         sources:
           $ref: '#/components/schemas/Sources'
+        kind:
+          type: [string, 'null']
+          description: Код вида документа (P8); у писем по заявкам — `null`
+        receipt_method:
+          oneOf:
+            - $ref: '#/components/schemas/LetterReceiptMethod'
+            - type: 'null'
+        signed_by: {type: [string, 'null'], description: Кто подписал у отправителя}
+        document_due: {type: [string, 'null'], format: date, description: Срок по документу}
+        related:
+          oneOf:
+            - $ref: '#/components/schemas/LetterRelated'
+            - type: 'null'
+
+    LetterReceiptMethod:
+      type: string
+      enum: [post, paper, taxpayer_cabinet, courier, email]
+      description: >-
+        Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет
+        налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
+
+    LetterRelated:
+      type: object
+      additionalProperties: false
+      required: [kind, number, path]
+      description: Связанный документ — предыдущий ВХ (`letter_in`) или наш ИСХ (`letter_out`)
+      properties:
+        kind: {type: string, enum: [letter_in, letter_out]}
+        number: {type: string, examples: [ВХ-101/26, ИСХ-012/26]}
+        path: {type: string, description: Путь в SPA}
+
+    LetterKind:
+      type: object
+      additionalProperties: false
+      required: [code, name, urgent]
+      properties:
+        code: {type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [tax_notice]}
+        name:
+          type: object
+          additionalProperties: false
+          required: [ru, uz, en]
+          properties:
+            ru: {type: string}
+            uz: {type: string}
+            en: {type: string}
+        urgent: {type: boolean, description: Регистрация этим видом сразу ставит «срочно»}
+
+    LetterKindList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/LetterKind'}
+
+    LetterDuplicate:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, received_at, status, path]
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: string, examples: [ВХ-104/26]}
+        subject: {type: string}
+        received_at: {type: string, format: date}
+        status: {$ref: '#/components/schemas/LetterStatus'}
+        path: {type: string, description: 'Карточка в SPA, `/eds/inbox/{номер}`'}
+
+    LetterDuplicateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          items: {$ref: '#/components/schemas/LetterDuplicate'}
+
+    LetterRegisterIn:
+      type: object
+      additionalProperties: false
+      required: [kind, receipt_method, sender_name, received_at, subject, file_ids]
+      description: Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию
+      properties:
+        kind: {type: string, pattern: '^[a-z][a-z_]{0,31}$', description: Код из `GET /eds/letter-kinds`}
+        receipt_method: {$ref: '#/components/schemas/LetterReceiptMethod'}
+        sender_name: {type: string, minLength: 1, maxLength: 255, description: Корреспондент (организация или человек)}
+        sender_inn: {type: [string, 'null'], pattern: '^\d{9,14}$'}
+        received_at: {type: string, format: date, description: Дата поступления}
+        subject: {type: string, minLength: 1, maxLength: 300}
+        summary: {type: [string, 'null'], maxLength: 10000, description: Краткое содержание; пусто — тема}
+        sender_ref_number: {type: [string, 'null'], maxLength: 64, description: Исходящий номер отправителя}
+        sender_ref_date: {type: [string, 'null'], format: date}
+        signed_by: {type: [string, 'null'], maxLength: 255}
+        document_due: {type: [string, 'null'], format: date, description: Срок по документу}
+        urgent: {type: boolean, default: false}
+        erp_deal_id: {type: [integer, 'null'], minimum: 1, description: Связанная заявка или проект (ERP)}
+        deal_number: {type: [string, 'null'], maxLength: 64, description: Номер заявки (из выбора) для ссылки в карточке}
+        crm_client_id: {type: [integer, 'null'], minimum: 1, description: Клиент CRM — корреспондент-контрагент}
+        related_number: {type: [string, 'null'], minLength: 1, maxLength: 32, description: Номер предыдущего ВХ или нашего ИСХ}
+        file_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items: {type: string, format: uuid}
 
     ResolutionAssigneeIn:
       type: object

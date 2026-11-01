@@ -49,7 +49,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
       const panel = page.locator(PANEL);
       await expect(panel.getByRole("heading", { level: 3, name: "Демо Менеджеров" })).toBeVisible();
 
-      await panel.getByRole("checkbox", { name: /^Менеджер/ }).uncheck();
+      await panel.getByRole("checkbox", { name: /^Менеджер(?!-)/ }).uncheck();
       await expect(panel.getByText(/Выберите хотя бы одну роль/)).toBeVisible();
       await expect(panel.getByRole("button", { name: "Сохранить роли" })).toBeDisabled();
       await expectNoViolations(page, `no roles ${String(width)}`);
@@ -70,7 +70,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
       })()`);
       expect(refused).toEqual({ status: 422, code: "ROLES_REQUIRED" });
       await page.reload();
-      await expect(panel.getByRole("checkbox", { name: /^Менеджер/ })).toBeChecked();
+      await expect(panel.getByRole("checkbox", { name: /^Менеджер(?!-)/ })).toBeChecked();
     });
   }
 

@@ -118,7 +118,8 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
   const navigate = useNavigate();
   const { mobile } = useViewport();
   const refresh = useRefreshDocuments();
-  const canLetter = canEdit(me, "eds.inbox");
+  // P8: исходящее письмо регистрирует тот, кто регистрирует входящие (`eds.inbox.register`), а не держатель резолюции.
+  const canLetter = canEdit(me, "eds.inbox.register");
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
   const [values, setValues] = useState<FormValues>(() => ({
     ...initial,

@@ -3,6 +3,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterRow, LetterStatus } from "../../../shared/api/generated/model";
@@ -168,8 +170,10 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
 /** EDS · Входящие письма (SPEC-v3 §7.3): список со статусом словами, фильтр (по умолчанию «Ждёт резолюции»), письмо — в боковом окне. */
 export function InboxList() {
   const { t } = useTranslation(["letters", "modules", "dictionary"]);
+  const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
+  const canRegister = canEdit(me, "eds.inbox.register");
   const filter = filterOf(params.get("status"));
   const selected = params.get("letter");
   const title = t("modules:eds.sections.inbox");
@@ -270,7 +274,17 @@ export function InboxList() {
 
   return (
     <div className="pf-letters">
-      <PageHeader title={title} subtitle={t("letters:list.subtitle")} />
+      <PageHeader
+        title={title}
+        subtitle={t("letters:list.subtitle")}
+        extra={
+          canRegister ? (
+            <LinkButton type="primary" to="/eds/register">
+              {t("letters:register.action")}
+            </LinkButton>
+          ) : undefined
+        }
+      />
       {/* На узком экране фильтр прокручивается вбок, обрезанный край виден — все варианты доступны (UX-2b) */}
       <div className="pf-letters-filter">
         <Segmented

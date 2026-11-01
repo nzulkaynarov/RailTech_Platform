@@ -1,6 +1,6 @@
 {
   "list": {
-    "subtitle": "Client letters waiting for the director's decision",
+    "subtitle": "Client letters and other incoming mail: registration and the director's resolution",
     "caption": "Incoming letters",
     "filter": {
       "label": "Letter status",
@@ -24,7 +24,7 @@
     "empty": {
       "awaiting": {
         "title": "Nothing needs your decision yet",
-        "text": "New letters arrive from CRM once a request is created. Letters that are already decided are under the \"All\" filter.",
+        "text": "New letters arrive from CRM once a request is created and from the office clerk once registered. Letters that are already decided are under the \"All\" filter.",
         "action": "Show all letters"
       },
       "other": {
@@ -34,7 +34,7 @@
       },
       "all": {
         "title": "No incoming letters yet",
-        "text": "Client letters arrive from CRM once a request is created. This is where the director adds a resolution.",
+        "text": "Client letters arrive from CRM once a request is created; the office clerk registers the rest. This is where the director adds a resolution.",
         "action": "Refresh"
       }
     }
@@ -75,7 +75,12 @@
       "addressee": "Addressed to",
       "contact": "Contact person",
       "received": "Received",
-      "urgency": "Urgency"
+      "urgency": "Urgency",
+      "kind": "Document type",
+      "receiptMethod": "Received via",
+      "signedBy": "Signed by",
+      "documentDue": "Deadline in the document",
+      "related": "Related document"
     },
     "urgent": "Urgent",
     "regular": "Regular",
@@ -235,6 +240,97 @@
       "resolve": "Resolution not saved: {{reason}}.",
       "return": "Letter not returned: {{reason}}.",
       "reject": "Letter not rejected: {{reason}}."
+    }
+  },
+  "register": {
+    "action": "Register incoming",
+    "subtitle": "A letter from the tax authority, a bank, a supplier or a government body — on paper, from the taxpayer cabinet or by email. The director adds the resolution.",
+    "formLabel": "Register an incoming document",
+    "choose": "Select",
+    "kind": {
+      "label": "Document type",
+      "unavailable": "The list of types did not load. Refresh the page."
+    },
+    "method": {
+      "label": "Received via",
+      "post": "Post",
+      "paper": "Paper (handed in)",
+      "taxpayer_cabinet": "Taxpayer cabinet my.soliq",
+      "courier": "Courier",
+      "email": "Email"
+    },
+    "sender": {
+      "label": "Correspondent",
+      "hint": "The organisation or person the letter came from"
+    },
+    "inn": {
+      "label": "Correspondent TIN"
+    },
+    "refNumber": {
+      "label": "Sender's outgoing number"
+    },
+    "refDate": {
+      "label": "Sender's date"
+    },
+    "signedBy": {
+      "label": "Signed by"
+    },
+    "receivedAt": {
+      "label": "Date received"
+    },
+    "subject": {
+      "label": "Subject"
+    },
+    "summary": {
+      "label": "Summary",
+      "hint": "Optional. If empty, the card shows the subject."
+    },
+    "documentDue": {
+      "label": "Deadline in the document",
+      "hint": "Reply or action deadline set by the sender"
+    },
+    "addressee": {
+      "label": "Addressee",
+      "hint": "The director adds the resolution"
+    },
+    "urgent": "Urgent",
+    "files": {
+      "label": "Document file",
+      "hint": "A scan or file of the letter is required. PDF, images, Office documents, up to 25 MB."
+    },
+    "deal": {
+      "label": "Link to a request or project",
+      "hint": "Optional: number, title or company"
+    },
+    "related": {
+      "label": "Related document",
+      "hint": "Optional: number of a previous incoming (ВХ) or our outgoing (ИСХ)"
+    },
+    "duplicate": {
+      "title": "This letter may already be registered: same correspondent and outgoing number",
+      "item": "· {{subject}} · {{date}}"
+    },
+    "consequence": [
+      "The letter gets a ВХ number and the status “Awaiting resolution”.",
+      "The director sees it in “My tasks” and adds the resolution.",
+      "The card opens in “Incoming letters”; the file is kept with the documents."
+    ],
+    "submit": "Register",
+    "cancel": "Cancel",
+    "toast": "Registered: {{number}}",
+    "notRegistered": "Not registered: {{reason}}",
+    "summaryError": "Fill in the highlighted fields.",
+    "errors": {
+      "kind": "Select the document type.",
+      "receipt_method": "Select how the letter was received.",
+      "sender_name": "Enter the correspondent.",
+      "sender_inn": "TIN is 9 to 14 digits.",
+      "received_at": "Enter the date received — not later than today.",
+      "subject": "Enter the subject.",
+      "file_ids": "Attach the letter file and wait for the upload.",
+      "related_number": "No document with this number. Check the ВХ or ИСХ number.",
+      "forbidden": "registering incoming letters is not part of your role",
+      "server": "the server did not accept the data, try again in a minute"
     }
   }
 }

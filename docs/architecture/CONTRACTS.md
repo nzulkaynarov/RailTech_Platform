@@ -729,7 +729,8 @@ ERP применяет события EDS (E5) — §10.6.
 
 | Раздел | `read` | `full` |
 |---|---|---|
-| `eds.inbox` | `letters.read`, `registry.read` | + `letters.register`, `letters.resolve` |
+| `eds.inbox` | `letters.read`, `registry.read` | + `letters.resolve` (резолюция; регистрация с P8 — отдельный раздел) |
+| `eds.inbox.register` (только `full`, P8) | — | `letters.read`, `registry.read`, `letters.register` (регистрация входящих и исходящих писем без резолюции) |
 | `eds.drafts` | — | `approvals.decide` |
 | `eds.projects` | `registry.read` | `registry.read` |
 | `eds.payments` | `registry.read` | `registry.read`, `registry.export` (ERP `data.export` этого раздела), `payments.confirm` |
@@ -740,7 +741,8 @@ ERP применяет события EDS (E5) — §10.6.
 
 Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все коды документов и `files.upload` (без
 `bus.manage`: у директора `admin` — только чтение); «Менеджер» — `letters.read`,
-`registry.read`, `memos.create`, `files.upload`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
+`registry.read`, `memos.create`, `files.upload`; «Делопроизводитель» (P8) — `letters.read`, `letters.register`, `registry.read`,
+`memos.create`; «Менеджер-универсал» (P8) — коды «Бухгалтера» и `files.upload`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
 `registry.read`, `registry.export`, `payments.confirm`, `memos.create`; «Менеджер и бухгалтер» гейта R-3 (лиды и «Счета и
 оплаты» — полный доступ) — `registry.read`, `registry.export`, `payments.confirm`; «Администратор» — `memos.create` (свои
 служебные записки; писем, реестра и маршрутов не видит — R3-D-2; допустимо, решено архитектором) и `bus.manage` (метаданные

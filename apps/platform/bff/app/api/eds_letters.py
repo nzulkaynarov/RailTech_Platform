@@ -23,13 +23,14 @@ from typing import Annotated, Any, Literal
 import anyio
 import httpx
 import structlog
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Header, Path, Query
 from fastapi.responses import StreamingResponse
+from pydantic import ValidationError
 from starlette.types import Send
 
 from app.clients.eds import EdsLetters, eds_error
-from app.deps import Authed, require
-from app.errors import PlatformError
+from app.deps import Authed, require, require_any
+from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
@@ -38,7 +39,11 @@ from app.schemas_eds_letters import (
     UUID_RE,
     ZONES,
     LetterCard,
+    LetterDuplicate,
+    LetterDuplicateList,
+    LetterKindList,
     LetterPage,
+    LetterRegisterIn,
     LetterRejectIn,
     LetterReturnIn,
     LetterStatus,
@@ -47,6 +52,7 @@ from app.schemas_eds_letters import (
     ResolutionCandidate,
     ResolutionIn,
     ResolutionZone,
+    letter_path,
     parse_letter,
     to_card,
     to_page,
@@ -56,7 +62,12 @@ log = structlog.get_logger()
 
 router = APIRouter(prefix="/eds", tags=["letters"])
 
-Reader = Annotated[Authed, Depends(require("eds.inbox", "read"))]
+# P8: регистрация (`eds.inbox.register`) отдельно от резолюции (`eds.inbox: full`); читать письма
+# может и тот, у кого только регистрация (как пункт меню `inbox` каталога).
+Reader = Annotated[
+    Authed, Depends(require_any(("eds.inbox", "read"), ("eds.inbox.register", "full")))
+]
+Registrar = Annotated[Authed, Depends(require("eds.inbox.register", "full"))]
 Resolver = Annotated[Authed, Depends(require("eds.inbox", "full"))]
 LetterId = Annotated[uuid.UUID, Path()]
 
@@ -130,6 +141,63 @@ async def list_letters(
     if cursor:
         params["cursor"] = cursor
     return to_page(await _letters(authed).page(params))
+
+
+@router.post(
+    "/letters",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    status_code=201,
+    operation_id="registerLetter",
+)
+async def register_letter(
+    body: LetterRegisterIn,
+    authed: Registrar,
+    idempotency_key: Annotated[
+        str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
+    ] = None,
+) -> LetterCard:
+    """«Зарегистрировать входящее» (P8, SPEC-v3 §3.2a): ВХ, «Ждёт резолюции», строка директору."""
+    raw = await _letters(authed).register(body.for_eds(), idempotency_key)
+    return await _card(authed, raw)
+
+
+@router.get("/letter-kinds", response_model=LetterKindList, operation_id="listLetterKinds")
+async def list_letter_kinds(authed: Reader) -> LetterKindList:
+    raw = await _letters(authed).kinds()
+    try:
+        return LetterKindList.model_validate(raw)
+    except ValidationError as exc:
+        raise backend_unavailable("eds", "bad_kinds") from exc
+
+
+@router.get(
+    "/letter-duplicates", response_model=LetterDuplicateList, operation_id="findLetterDuplicates"
+)
+async def find_letter_duplicates(
+    authed: Reader,
+    ref_number: Annotated[str, Query(min_length=1, max_length=64)],
+    sender_name: Annotated[str | None, Query(max_length=255)] = None,
+    crm_client_id: Annotated[int | None, Query(ge=1)] = None,
+) -> LetterDuplicateList:
+    params: dict[str, Any] = {"ref_number": ref_number.strip() or ref_number}
+    if sender_name and sender_name.strip():
+        params["sender_name"] = sender_name.strip()
+    if crm_client_id is not None:
+        params["crm_client_id"] = crm_client_id
+    raw = await _letters(authed).duplicates(params)
+    items = raw.get("items") if isinstance(raw, dict) else None
+    found: list[LetterDuplicate] = []
+    for item in items if isinstance(items, list) else []:
+        try:
+            found.append(
+                LetterDuplicate.model_validate(
+                    {**item, "path": letter_path(str(item.get("number", "")))}
+                )
+            )
+        except (ValidationError, AttributeError) as exc:
+            raise backend_unavailable("eds", "bad_duplicates") from exc
+    return LetterDuplicateList(items=found)
 
 
 @router.get(

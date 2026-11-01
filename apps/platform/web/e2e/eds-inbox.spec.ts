@@ -49,7 +49,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(first.getByText("ООО «Демо-Рейл»")).toBeVisible();
     await expect(first.getByText("ЗВ-2026-104")).toBeVisible();
     await expect(first.getByText("Ждёт резолюции")).toBeVisible();
-    await expect(page.getByRole("row")).toHaveCount(1 + 4);
+    await expect(page.getByRole("row")).toHaveCount(1 + 5); // + ВХ-108/26 от делопроизводителя (P8)
     await settledScreenshot(page, "list");
     await expectNoViolations(page, "список");
 
@@ -113,7 +113,7 @@ test.describe("Входящие письма: директор", () => {
 
     // письма больше нет в «Ждёт резолюции», зато есть в «Резолюция наложена»
     await openInbox(page);
-    await expect(page.getByRole("row")).toHaveCount(1 + 3);
+    await expect(page.getByRole("row")).toHaveCount(1 + 4);
     await page
       .getByRole("radiogroup", { name: "Статус письма" })
       .getByText("Резолюция наложена")

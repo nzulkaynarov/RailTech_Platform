@@ -132,7 +132,8 @@
       "drafts": "Quotes to approve",
       "approvals": "Awaiting approval",
       "payments": "Invoices & payments",
-      "new": "New document"
+      "new": "New document",
+      "register": "Register incoming"
     },
     "action": "New document"
   },

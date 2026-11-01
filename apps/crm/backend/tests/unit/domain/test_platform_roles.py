@@ -216,6 +216,7 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage", "quote.send"}),
     ("eds.inbox", "read"): NOTHING,
     ("eds.inbox", "full"): (set(), {"deal.assign"}),
+    ("eds.inbox.register", "full"): NOTHING,  # P8: только код EDS `letters.register`
     ("eds.drafts", "read"): NOTHING,
     ("eds.drafts", "full"): (set(), {"quote.review"}),
     ("eds.projects", "read"): NOTHING,
@@ -338,6 +339,31 @@ ROLE_ERP: dict[str, set[str]] = {
         "data.export",
     },
     "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
+    # P8, пилот: делопроизводитель в ERP ничего не делает (резолюция и «Создать заявку» — не его).
+    "REGISTRAR": set(),
+    # P8, пилот: менеджер-универсал — продажи, расчёт обеих зон, снабжение, договор, акт,
+    # счета и оплаты.
+    "MANAGER_ALL": {
+        "deal.manage",
+        "quote.send",
+        "quote.build",
+        "quote.edit_pricing",
+        "quote.view_cost_margin",
+        "quote.visa_goods",
+        "quote.visa_services",
+        "contract.manage",
+        "contract.sign",
+        "catalog.manage",
+        "catalog.publish",
+        "supply.manage",
+        "fulfillment.manage",
+        "fulfillment.act",
+        "finance.view",
+        "finance.invoice",
+        "finance.payment",
+        "finance.rates",
+        "data.export",
+    },
 }
 # Базовая роль CRM — признак по матрице (D1-8, B-014): «Бухгалтер» без `crm.leads` — viewer, а не
 # manager, как в версии 1 каталога (по коду роли).
@@ -348,6 +374,8 @@ ROLE_BASE = {
     "ENGINEER": "viewer",
     "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
+    "REGISTRAR": "manager",  # `crm.leads: full` — первая линия по лидам
+    "MANAGER_ALL": "manager",
 }
 
 
@@ -392,6 +420,8 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
         "tpl:SUPPLY",
         "tpl:ENGINEER",
         "tpl:ACCOUNTANT",
+        "tpl:REGISTRAR",
+        "tpl:MANAGER_ALL",
     ]
 
 
@@ -459,7 +489,13 @@ def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() ->
     raised = {k for k in v1 if v1[k] != v2[k]}
     # D2-4: `eds.payments` у директора остаётся на чтении, как в v1
     assert raised == {"crm.clients"}
-    assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
+    # P8: `eds.inbox.register` — регистрация, выделенная из `eds.inbox: full` (права EDS те же)
+    assert set(v2) - set(v1) == {
+        "erp.calc.goods",
+        "erp.calc.services",
+        "company.settings",
+        "eds.inbox.register",
+    }
 
 
 # --- объединение ролей --------------------------------------------------------------------------

@@ -37,9 +37,10 @@ def roles(*codes: str | dict[str, Any]) -> list[SessionRole]:
     return [role(c) for c in codes]
 
 
-def test_catalog_has_eighteen_sections_in_oracle_order() -> None:
+def test_catalog_has_nineteen_sections_in_oracle_order() -> None:
+    # P8: + `eds.inbox.register`; восемь ролей каталога (с шаблонами пилота)
     assert list(RESOURCE_MODULE) == list(MATRIX)
-    assert len(CELLS) == 108
+    assert len(CELLS) == 19 * 8
     assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
 
 
@@ -47,7 +48,7 @@ def test_contract_equals_oracle() -> None:
     """Системные роли и шаблоны каталога — эталон версии 2 (матрица и поля)."""
     data = spec()
     catalog = {**data["system_roles"], **data["templates"]}
-    assert list(catalog) == ["ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"]
+    assert list(catalog) == list(ROLES)
     for code, body in catalog.items():
         assert body["access"] == access_of(code), code
         assert sorted(body["restricted_fields"]) == sorted(FIELDS[code]), code

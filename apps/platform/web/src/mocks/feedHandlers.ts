@@ -10,6 +10,7 @@ import {
   searchIndex,
 } from "./fixtures/feeds";
 import { reworkQueueItems } from "./edsRework";
+import { registeredQueueItems } from "./edsLetters";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
@@ -166,6 +167,7 @@ export const feedHandlers = [
       ...queueForView(roles.view),
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
       ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
+      ...registeredQueueItems(roles.view), // P8: входящие, зарегистрированные делопроизводителем
     ].filter((i) =>
       i.kind.endsWith("_lead") || i.kind === "ticket"
         ? !crmDown()

@@ -6,13 +6,15 @@ from sqlalchemy import String, cast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import not_found
-from app.models import Letter
+from app.models import Document, Letter
 from app.schemas.common import ErpLinks, IncomingLetterSender, SenderRef
 from app.schemas.letters import (
     Assignee,
     LetterListItem,
     LetterPage,
     LetterStatus,
+    ReceiptMethod,
+    RelatedRef,
     Resolution,
 )
 from app.schemas.letters import Letter as LetterOut
@@ -63,6 +65,23 @@ async def get_letter(session: AsyncSession, letter_id: uuid.UUID) -> Letter:
     return letter
 
 
+async def _related(session: AsyncSession, letter: Letter) -> RelatedRef | None:
+    """Связанный документ карточки (P8): предыдущий ВХ или наш ИСХ."""
+    if letter.related_letter_id is not None:
+        number = (
+            await session.execute(select(Letter.number).where(Letter.id == letter.related_letter_id))
+        ).scalar_one_or_none()
+        if number is not None:
+            return RelatedRef(kind="letter_in", id=letter.related_letter_id, number=number)
+    if letter.related_document_id is not None:
+        number = (
+            await session.execute(select(Document.number).where(Document.id == letter.related_document_id))
+        ).scalar_one_or_none()
+        if number is not None:
+            return RelatedRef(kind="letter_out", id=letter.related_document_id, number=number)
+    return None
+
+
 async def present(session: AsyncSession, letter: Letter) -> LetterOut:
     """Карточка письма: резолюция, вложения (последние версии) и журнал."""
     ids = [
@@ -96,6 +115,11 @@ async def present(session: AsyncSession, letter: Letter) -> LetterOut:
         return_comment=letter.return_comment,
         reject_reason=letter.reject_reason,
         journal=entries,
+        kind=letter.doc_kind,
+        receipt_method=ReceiptMethod(letter.receipt_method) if letter.receipt_method else None,
+        signed_by=letter.signed_by,
+        document_due=letter.document_due,
+        related=await _related(session, letter),
     )
 
 
@@ -130,6 +154,7 @@ async def list_page(
             links=links_of(r),
             urgent=r.urgent,
             due=r.resolution_due,
+            kind=r.doc_kind,
         )
         for r in page
     ]

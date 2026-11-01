@@ -26,7 +26,9 @@ CONTRACTS = REPO / "packages" / "contracts"
 # (раздел, уровень) -> коды EDS. Раздел без записи на уровне не даёт ничего.
 EXPECTED: dict[tuple[str, str], set[str]] = {
     ("eds.inbox", "read"): {"letters.read", "registry.read"},
-    ("eds.inbox", "full"): {"letters.read", "registry.read", "letters.register", "letters.resolve"},
+    # P8: резолюция отдельно от регистрации (`eds.inbox.register`, только `full`).
+    ("eds.inbox", "full"): {"letters.read", "registry.read", "letters.resolve"},
+    ("eds.inbox.register", "full"): {"letters.read", "registry.read", "letters.register"},
     ("eds.drafts", "read"): set(),
     ("eds.drafts", "full"): {"approvals.decide"},
     ("eds.projects", "read"): {"registry.read"},
@@ -57,6 +59,10 @@ ROLE_EDS: dict[str, set[str]] = {
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
     "ACCOUNTANT": ACCOUNTANT,
+    # P8, роли пилота: делопроизводитель регистрирует без резолюции;
+    # менеджер-универсал — бэк-офис бухгалтера.
+    "REGISTRAR": {"letters.read", "letters.register", "registry.read", "memos.create"},
+    "MANAGER_ALL": ACCOUNTANT | {UPLOAD},
 }
 
 
@@ -135,7 +141,6 @@ def test_union_takes_the_maximum_level_and_is_independent_of_order() -> None:
     expected = {
         "letters.read",
         "registry.read",
-        "letters.register",
         "letters.resolve",
         "payments.confirm",
     }

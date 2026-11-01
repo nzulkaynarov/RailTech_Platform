@@ -85,6 +85,7 @@ async def test_list_maps_rows_and_passes_filters_with_the_eds_token(
         "status": "awaiting_resolution",
         "urgent": True,
         "due": None,
+        "kind": None,
     }
     assert body["items"][1]["due"] == "2026-10-30"
     [call] = eds.made("GET", "letters")

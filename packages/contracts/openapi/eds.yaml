@@ -196,6 +196,71 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/letter-kinds:
+    get:
+      tags: [letters]
+      operationId: listLetterKinds
+      summary: Справочник «Вид документа» входящего письма (P8)
+      description: |
+        Виды документа для карточки делопроизводства (SPEC-v3 §3.2a п. 1): код, названия на трёх языках и признак `urgent` —
+        регистрация этим видом сразу ставит «срочно» (требование или уведомление ГНК). Типы — данные (DECISIONS 2026-10-28):
+        экран берёт список отсюда; новый вид не меняет контракт.
+      x-rt-permissions: [letters.read, letters.register]
+      responses:
+        '200':
+          description: Виды документа в порядке показа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterKindList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/letter-duplicates:
+    get:
+      tags: [letters]
+      operationId: findLetterDuplicates
+      summary: Проверка дубля перед регистрацией (корреспондент + исх. №)
+      description: |
+        P8 (SPEC-v3 §3.2a п. 1): письма с тем же исходящим номером отправителя и тем же корреспондентом — по названию (без
+        учёта регистра и лишних пробелов) или по клиенту CRM. Не больше пяти, новые первыми. Это предупреждение: регистрация
+        дубля не запрещена. Без названия и без клиента — пустой список.
+      x-rt-permissions: [letters.read, letters.register]
+      parameters:
+        - name: ref_number
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+        - name: sender_name
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 255
+        - name: crm_client_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Возможные дубли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterDuplicateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
   /api/v1/letters:
     get:
       tags: [letters]
@@ -243,6 +308,11 @@ paths:
         Ручная регистрация. Письмо по заявке из CRM EDS регистрирует сам по событию `uz.railtech.erp.request.created.v1`
         (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
         публикуется `letter.registered`.
+
+        Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — код из `GET /letter-kinds` (иначе 422,
+        в `details.fields` — поле `kind` с `unknown_kind`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
+        номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
+        берётся тема.
       x-rt-permissions: [letters.register]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -1950,10 +2020,84 @@ components:
         date:
           type: [string, 'null']
           format: date
+    ReceiptMethod:
+      type: string
+      enum: [post, paper, taxpayer_cabinet, courier, email]
+      description: Способ получения (P8) — почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail
+    LetterKindCode:
+      type: string
+      pattern: '^[a-z][a-z_]{0,31}$'
+      description: Код вида документа из `GET /letter-kinds`
+    LetterKindItem:
+      type: object
+      additionalProperties: false
+      required: [code, name, urgent]
+      properties:
+        code:
+          $ref: '#/components/schemas/LetterKindCode'
+        name:
+          type: object
+          additionalProperties: false
+          required: [ru, uz, en]
+          properties:
+            ru: { type: string }
+            uz: { type: string }
+            en: { type: string }
+        urgent:
+          type: boolean
+          description: Регистрация этим видом сразу ставит «срочно»
+    LetterKindList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LetterKindItem'
+    LetterDuplicate:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, received_at, status]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
+        subject:
+          type: string
+        received_at:
+          type: string
+          format: date
+        status:
+          $ref: '#/components/schemas/LetterStatus'
+    LetterDuplicateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          items:
+            $ref: '#/components/schemas/LetterDuplicate'
+    LetterRelatedRef:
+      type: object
+      additionalProperties: false
+      required: [kind, id, number]
+      description: Связанный документ карточки — предыдущий ВХ (`letter_in`) или наш ИСХ (`letter_out`)
+      properties:
+        kind:
+          type: string
+          enum: [letter_in, letter_out]
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          type: string
     LetterCreate:
       type: object
       additionalProperties: false
-      required: [subject, summary, sender, received_at]
+      required: [subject, sender, received_at]
       properties:
         subject:
           type: string
@@ -1963,7 +2107,7 @@ components:
           type: string
           minLength: 1
           maxLength: 10000
-          description: Суть документа
+          description: Суть документа (краткое содержание); не задана — тема
         sender:
           $ref: '#/components/schemas/IncomingLetterSender'
         sender_ref:
@@ -1971,6 +2115,27 @@ components:
         received_at:
           type: string
           format: date
+        kind:
+          oneOf:
+            - $ref: '#/components/schemas/LetterKindCode'
+            - type: 'null'
+        receipt_method:
+          oneOf:
+            - $ref: '#/components/schemas/ReceiptMethod'
+            - type: 'null'
+        signed_by:
+          type: [string, 'null']
+          maxLength: 255
+          description: Кто подписал у отправителя
+        document_due:
+          type: [string, 'null']
+          format: date
+          description: Срок по документу (срок ответа или исполнения, указанный отправителем)
+        related_number:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 32
+          description: Номер предыдущего ВХ или нашего ИСХ, на который ссылается письмо
         addressee_crm_user_id:
           type: [integer, 'null']
           description: На чьё имя; нет — директор
@@ -2014,6 +2179,9 @@ components:
           type: [string, 'null']
           format: date
           description: Срок расчёта по резолюции
+        kind:
+          type: [string, 'null']
+          description: Код вида документа (P8); у писем по заявкам — `null`
     LetterPage:
       type: object
       additionalProperties: false
@@ -2099,6 +2267,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/JournalEntry'
+        kind:
+          type: [string, 'null']
+          description: Код вида документа (P8); у писем по заявкам — `null`
+        receipt_method:
+          oneOf:
+            - $ref: '#/components/schemas/ReceiptMethod'
+            - type: 'null'
+        signed_by:
+          type: [string, 'null']
+        document_due:
+          type: [string, 'null']
+          format: date
+        related:
+          oneOf:
+            - $ref: '#/components/schemas/LetterRelatedRef'
+            - type: 'null'
 
     DocumentKind:
       type: string

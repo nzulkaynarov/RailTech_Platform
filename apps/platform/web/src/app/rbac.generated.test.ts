@@ -26,8 +26,8 @@ import {
 
 /**
  * Каталог возможностей версии 2 (ADR-0012): сгенерированный файл = `packages/contracts/platform-rbac.yaml`, а функции
- * доступа считают по матрицам ролей (данным), а не по кодам. Эталон шести предустановок — отдельно, дословно (как
- * tests/rbac_oracle.py в BFF): колонки ADMIN, DIRECTOR, MANAGER, SUPPLY, ENGINEER, ACCOUNTANT; F — full, R — read, H — скрыто.
+ * доступа считают по матрицам ролей (данным), а не по кодам. Эталон восьми предустановок — отдельно, дословно (как
+ * tests/rbac_oracle.py в BFF): колонки ADMIN, DIRECTOR, MANAGER, SUPPLY, ENGINEER, ACCOUNTANT, REGISTRAR, MANAGER_ALL; F — full, R — read, H — скрыто.
  */
 interface Yaml {
   version: number;
@@ -46,26 +46,37 @@ const spec = parse(
 ) as Yaml;
 
 const ORACLE: Record<string, string> = {
-  "dashboard.queue": "FFFFFF",
-  "dashboard.summary": "HFHHHR",
-  "crm.leads": "HRFHHH",
-  "crm.clients": "HFFRRR",
-  "eds.inbox": "HFRHHR",
-  "eds.drafts": "HFRHHH",
-  "eds.projects": "HFRRRF",
-  "eds.payments": "HRRHHF",
-  "eds.memo.create": "FFFFFF",
-  "eds.memo.approve": "HFHHHH",
-  "erp.calc": "HFHFFR",
-  "erp.calc.goods": "HFHFHH",
-  "erp.calc.services": "HFHHFH",
-  "erp.stock": "HFRFFR",
-  "chats.internal": "FFFFFF",
-  "chats.external": "HRFHHF",
-  admin: "FRHHHH",
-  "company.settings": "FFHHHH",
+  "dashboard.queue": "FFFFFFFF",
+  "dashboard.summary": "HFHHHRHH",
+  "crm.leads": "HRFHHHFF",
+  "crm.clients": "HFFRRRRF",
+  "eds.inbox": "HFRHHRRR",
+  // P8: регистрация входящих отдельно от резолюции
+  "eds.inbox.register": "HFHHHHFH",
+  "eds.drafts": "HFRHHHHR",
+  "eds.projects": "HFRRRFRF",
+  "eds.payments": "HRRHHFHF",
+  "eds.memo.create": "FFFFFFFF",
+  "eds.memo.approve": "HFHHHHHH",
+  "erp.calc": "HFHFFRHF",
+  "erp.calc.goods": "HFHFHHHF",
+  "erp.calc.services": "HFHHFHHF",
+  "erp.stock": "HFRFFRHF",
+  "chats.internal": "FFFFFFFF",
+  "chats.external": "HRFHHFRF",
+  admin: "FRHHHHHH",
+  "company.settings": "FFHHHHHH",
 };
-const COLUMNS = ["ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"] as const;
+const COLUMNS = [
+  "ADMIN",
+  "DIRECTOR",
+  "MANAGER",
+  "SUPPLY",
+  "ENGINEER",
+  "ACCOUNTANT",
+  "REGISTRAR",
+  "MANAGER_ALL",
+] as const;
 type Column = (typeof COLUMNS)[number];
 
 function oracleAccess(code: Column): Access {
@@ -104,7 +115,14 @@ describe("rbac.generated: каталог = контракт", () => {
 
   it("системные роли и шаблоны = эталон (матрица каталога версии 2)", () => {
     expect(Object.keys(SYSTEM_ROLES)).toEqual(["ADMIN", "DIRECTOR"]);
-    expect(Object.keys(TEMPLATES)).toEqual(["MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"]);
+    expect(Object.keys(TEMPLATES)).toEqual([
+      "MANAGER",
+      "SUPPLY",
+      "ENGINEER",
+      "ACCOUNTANT",
+      "REGISTRAR",
+      "MANAGER_ALL",
+    ]);
     for (const code of COLUMNS) {
       expect(catalog[code].access, code).toEqual(oracleAccess(code));
       const source = spec.system_roles[code] ?? spec.templates[code];

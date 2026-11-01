@@ -195,7 +195,7 @@ test.describe("Ролевая матрица: директор — только 
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin/roles");
       await expect(page.getByRole("heading", { level: 1, name: "Роли и права" })).toBeVisible();
-      await expect(page.getByRole("button", { name: /^Менеджер/ })).toBeVisible();
+      await expect(page.getByRole("button", { name: /^Менеджер(?!-)/ })).toBeVisible();
       await expect(page.getByText("Ролевую матрицу ведёт администратор")).toHaveCount(0);
       await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: "Создать роль" })).toHaveCount(0);

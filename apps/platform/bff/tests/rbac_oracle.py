@@ -1,37 +1,48 @@
 """Каталог версии 2 дословно — независимый от YAML эталон для тестов (не генерируется).
 
-Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и четыре шаблона (MANAGER, SUPPLY,
-ENGINEER, ACCOUNTANT); F — full, R — read, H — скрыто. Менять вместе с `platform-rbac.yaml`: тесты
-падают, пока файл и эталон расходятся. Роли в Платформе — данные; эти шесть — только
-предустановки (ADR-0012).
+Колонки — роли каталога: две системные (ADMIN, DIRECTOR) и шесть шаблонов (MANAGER, SUPPLY,
+ENGINEER, ACCOUNTANT; с P8 — роли пилота REGISTRAR и MANAGER_ALL); F — full, R — read,
+H — скрыто. Менять вместе с `platform-rbac.yaml`: тесты падают, пока файл и эталон расходятся.
+Роли в Платформе — данные; эти восемь — только предустановки (ADR-0012).
 """
 
 from typing import Final
 
-ROLES: Final = ("ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT")
+ROLES: Final = (
+    "ADMIN",
+    "DIRECTOR",
+    "MANAGER",
+    "SUPPLY",
+    "ENGINEER",
+    "ACCOUNTANT",
+    "REGISTRAR",
+    "MANAGER_ALL",
+)
 SYSTEM: Final = ("ADMIN", "DIRECTOR")
 LEVELS: Final = {"F": "full", "R": "read", "H": "hidden"}
 RANK: Final = {"hidden": 0, "read": 1, "full": 2}
 
 MATRIX: Final[dict[str, str]] = {
-    "dashboard.queue": "FFFFFF",
-    "dashboard.summary": "HFHHHR",
-    "crm.leads": "HRFHHH",
-    "crm.clients": "HFFRRR",
-    "eds.inbox": "HFRHHR",
-    "eds.drafts": "HFRHHH",
-    "eds.projects": "HFRRRF",
-    "eds.payments": "HRRHHF",
-    "eds.memo.create": "FFFFFF",
-    "eds.memo.approve": "HFHHHH",
-    "erp.calc": "HFHFFR",
-    "erp.calc.goods": "HFHFHH",
-    "erp.calc.services": "HFHHFH",
-    "erp.stock": "HFRFFR",
-    "chats.internal": "FFFFFF",
-    "chats.external": "HRFHHF",
-    "admin": "FRHHHH",
-    "company.settings": "FFHHHH",
+    "dashboard.queue": "FFFFFFFF",
+    "dashboard.summary": "HFHHHRHH",
+    "crm.leads": "HRFHHHFF",
+    "crm.clients": "HFFRRRRF",
+    "eds.inbox": "HFRHHRRR",
+    # P8: регистрация входящих отдельно от резолюции — директор (системная) и делопроизводитель.
+    "eds.inbox.register": "HFHHHHFH",
+    "eds.drafts": "HFRHHHHR",
+    "eds.projects": "HFRRRFRF",
+    "eds.payments": "HRRHHFHF",
+    "eds.memo.create": "FFFFFFFF",
+    "eds.memo.approve": "HFHHHHHH",
+    "erp.calc": "HFHFFRHF",
+    "erp.calc.goods": "HFHFHHHF",
+    "erp.calc.services": "HFHHFHHF",
+    "erp.stock": "HFRFFRHF",
+    "chats.internal": "FFFFFFFF",
+    "chats.external": "HRFHHFRF",
+    "admin": "FRHHHHHH",
+    "company.settings": "FFHHHHHH",
 }
 
 MODULE_OF: Final[dict[str, str]] = {
@@ -46,6 +57,8 @@ FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "SUPPLY": ("cost_margin", "supplier_prices"),
     "ENGINEER": (),
     "ACCOUNTANT": ("totals_only",),
+    "REGISTRAR": (),
+    "MANAGER_ALL": ("cost_margin", "supplier_prices"),
 }
 
 

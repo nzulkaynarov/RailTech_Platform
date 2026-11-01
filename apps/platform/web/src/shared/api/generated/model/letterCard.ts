@@ -5,6 +5,8 @@
 import type { LetterClient } from "./letterClient";
 import type { LetterFile } from "./letterFile";
 import type { LetterJournalEntry } from "./letterJournalEntry";
+import type { LetterReceiptMethod } from "./letterReceiptMethod";
+import type { LetterRelated } from "./letterRelated";
 import type { LetterRequest } from "./letterRequest";
 import type { LetterResolution } from "./letterResolution";
 import type { LetterSender } from "./letterSender";
@@ -48,4 +50,21 @@ export interface LetterCard {
   reject_reason: string | null;
   journal: LetterJournalEntry[];
   sources: Sources;
+  /**
+   * Код вида документа (P8); у писем по заявкам — `null`
+   * @nullable
+   */
+  kind?: string | null;
+  receipt_method?: LetterReceiptMethod | null;
+  /**
+   * Кто подписал у отправителя
+   * @nullable
+   */
+  signed_by?: string | null;
+  /**
+   * Срок по документу
+   * @nullable
+   */
+  document_due?: string | null;
+  related?: LetterRelated | null;
 }

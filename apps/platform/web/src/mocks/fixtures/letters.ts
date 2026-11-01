@@ -39,6 +39,52 @@ const person = (id: string, name: string) => ({
 });
 export const DIRECTOR = person("1", "Демо Директоров");
 const MANAGER = person("2", "Демо Менеджеров");
+/** Делопроизводитель (P8): регистрирует некоммерческие входящие. */
+export const REGISTRAR = person("7", "Демо Канцелярова");
+
+const TAX_FILE: LetterFile = {
+  id: "30000000-0000-4000-8000-000000000108",
+  name: "требование-гни.pdf",
+  content_type: "application/pdf",
+  size: 96_256,
+  uploaded_at: "2026-10-29T10:02:00Z",
+};
+
+/** Требование налоговой из кабинета налогоплательщика (SPEC-v3 §3.2a п. 1): зарегистрировано вручную, ждёт резолюции. */
+function taxNotice(): LetterCard {
+  return {
+    id: "20000000-0000-4000-8000-000000000108",
+    number: "ВХ-108/26",
+    status: "awaiting_resolution",
+    subject: "Требование о представлении пояснений по НДС за III квартал",
+    summary: "Пояснить расхождение между декларацией и счетами-фактурами за III квартал.",
+    urgent: true,
+    received_at: "2026-10-29",
+    registered_at: "2026-10-29T10:05:00Z",
+    registered_by: REGISTRAR,
+    addressee: DIRECTOR,
+    manager: null,
+    sender: { name: "ГНИ Демо-района", inn: null, contact: null },
+    sender_ref: { number: "04-12/3456", date: "2026-10-28" },
+    client: null,
+    request: null,
+    stage: "RESOLUTION",
+    lost_at_step: null,
+    files: [TAX_FILE],
+    resolution: null,
+    return_comment: null,
+    reject_reason: null,
+    journal: [
+      { at: "2026-10-29T10:05:00Z", action: "letter.registered", by: REGISTRAR, comment: null },
+    ],
+    sources: { crm: "ok", erp: "ok" },
+    kind: "tax_notice",
+    receipt_method: "taxpayer_cabinet",
+    signed_by: "Начальник инспекции Демо Налогов",
+    document_due: "2026-11-05",
+    related: null,
+  };
+}
 
 interface Seed {
   n: number;
@@ -194,6 +240,7 @@ function seedLetters(): LetterCard[] {
       subject: "Предложение сотрудничества от агентства",
       reject_reason: "Не наш профиль.",
     }),
+    taxNotice(),
   ];
 }
 

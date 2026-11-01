@@ -71,6 +71,13 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
         ("ACCOUNTANT", {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"}),
+        # P8: делопроизводитель регистрирует входящие, резолюции не накладывает.
+        ("REGISTRAR", {"letters.read", "letters.register", "registry.read", "memos.create"}),
+        # P8: менеджер-универсал — договор, счёт, акт, сканы, оплаты; письма только читает.
+        (
+            "MANAGER_ALL",
+            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", UPLOAD},
+        ),
     ],
 )
 def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: set[str]) -> None:
@@ -269,3 +276,62 @@ def test_quote_send_comes_only_from_crm_clients_full() -> None:
     assert holders == {("crm.clients", "full")}
     drafts = next(r for r in CATALOG["resources"] if r["key"] == "eds.drafts")
     assert drafts["backend"]["erp"] == {"full": ["quote.review"]}
+
+
+# ─── P8: регистрация входящих отдельно от резолюции; роли пилота ─────────────────────────────────────
+
+
+def test_registering_letters_is_a_separate_section_from_the_resolution() -> None:
+    """P8 (аудит UI 2026-10-30 R1, SPEC-v3 §3.2a): `letters.register` даёт только `eds.inbox.register`,
+    `letters.resolve` — только `eds.inbox` уровня `full`."""
+    givers = {
+        code: {
+            r["key"]
+            for r in CATALOG["resources"]
+            for codes in ((r.get("backend") or {}).get("eds") or {}).values()
+            if code in codes
+        }
+        for code in ("letters.register", "letters.resolve")
+    }
+    assert givers == {"letters.register": {"eds.inbox.register"}, "letters.resolve": {"eds.inbox"}}
+    assert eds_permissions({"eds.inbox.register": "full"}) == {"letters.read", "letters.register", "registry.read"}
+    assert "letters.resolve" not in eds_permissions({"eds.inbox": "read", "eds.inbox.register": "full"})
+
+
+def test_every_role_with_the_resolution_also_registers() -> None:
+    """P8: кто держал `eds.inbox: full` до разделения, сохраняет регистрацию (каталог и миграция CRM)."""
+    for code in {**CATALOG["system_roles"], **CATALOG["templates"]}:
+        if role(code).get("eds.inbox") == "full":
+            assert role(code).get("eds.inbox.register") == "full", code
+
+
+def test_pilot_roles_are_four_templates_and_system_roles() -> None:
+    """DECISIONS 2026-10-29 W-2: пилот — администратор, директор (системные), делопроизводитель, менеджер-универсал."""
+    assert {"REGISTRAR", "MANAGER_ALL"} <= set(CATALOG["templates"])
+    assert set(CATALOG["system_roles"]) == {"ADMIN", "DIRECTOR"}
+    assert CATALOG["templates"]["REGISTRAR"]["name"]["ru"] == "Делопроизводитель"
+    assert CATALOG["templates"]["MANAGER_ALL"]["name"]["ru"] == "Менеджер-универсал"
+
+
+def test_registrar_is_the_first_line_and_the_all_round_manager_covers_the_back_office() -> None:
+    """P8: граница по лидам (DECISIONS 2026-11-01 п. 1) и состав менеджера-универсала (runbook 18a, P8; W-1)."""
+    registrar = role("REGISTRAR")
+    assert registrar["crm.leads"] == "full"  # разбор и передача лида
+    assert registrar["crm.clients"] == "read"  # «Создать заявку» — менеджер-универсал
+    assert registrar["eds.inbox"] == "read" and registrar["eds.inbox.register"] == "full"
+    assert not {"eds.drafts", "eds.payments", "erp.calc", "admin"} & set(registrar)
+    manager = role("MANAGER_ALL")
+    for key in (
+        "crm.leads",
+        "crm.clients",
+        "eds.projects",
+        "eds.payments",
+        "erp.calc",
+        "erp.calc.goods",
+        "erp.calc.services",
+        "erp.stock",
+        "chats.external",
+    ):
+        assert manager[key] == "full", key
+    assert manager["eds.inbox"] == "read" and "eds.inbox.register" not in manager
+    assert manager.get("eds.drafts") == "read" and "eds.memo.approve" not in manager
