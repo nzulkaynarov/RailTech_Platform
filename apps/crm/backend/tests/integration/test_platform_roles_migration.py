@@ -305,7 +305,7 @@ def test_pilot_roles_appear_and_the_resolution_holders_keep_registering(
 
     command.upgrade(alembic_config, "head")
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
-        rows = dict(
+        rows: dict[str, dict[str, str]] = dict(
             conn.execute("SELECT coalesce(code, name), access FROM platform_roles").fetchall()
         )
         assert rows["tpl:REGISTRAR"]["eds.inbox"] == "read"

@@ -145,7 +145,9 @@ function Links({ letter }: { letter: LetterCard }) {
 function useRegistryItems(letter: LetterCard) {
   const { t, i18n } = useTranslation("letters");
   const { date } = useFormat();
-  const kinds = useListLetterKinds({ query: { enabled: Boolean(letter.kind), staleTime: 5 * 60_000 } });
+  const kinds = useListLetterKinds({
+    query: { enabled: Boolean(letter.kind), staleTime: 5 * 60_000 },
+  });
   if (!letter.kind && !letter.receipt_method) return [];
   const lang = i18n.language.slice(0, 2) as "ru" | "uz" | "en";
   const kind = kinds.data?.items.find((item) => item.code === letter.kind);

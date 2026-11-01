@@ -57,9 +57,7 @@ async function at(page: Page, width: number): Promise<void> {
 async function signInAt(page: Page, role: Role, width: number): Promise<void> {
   await at(page, width);
   if (page.url().startsWith("http")) {
-    await page.evaluate(() => {
-      window.localStorage.removeItem("rt-pf-mock-session");
-    });
+    await page.evaluate(`window.localStorage.removeItem("rt-pf-mock-session")`);
   }
   await loginAndWait(page, EMAIL[role]);
 }

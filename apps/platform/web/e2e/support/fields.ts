@@ -38,26 +38,33 @@ export async function pickFiles(field: Locator, files: FilePayload): Promise<voi
  */
 export async function chooseOption(field: Locator, label: string): Promise<void> {
   const page = field.page();
-  await field.focus();
-  await field.press("ArrowDown");
-  // свой список — по `aria-controls` поля: закрывающийся список соседнего поля ещё в DOM, пока идёт анимация
-  const listId = await field.getAttribute("aria-controls");
-  expect(listId, "у поля antd Select есть aria-controls").toBeTruthy();
-  const dropdown = page.locator(".ant-select-dropdown").filter({
-    has: page.locator(`[id="${listId ?? ""}"]`),
-  });
-  await expect(dropdown).toBeVisible();
-  const active = dropdown.locator(".ant-select-item-option-active");
-  // список виртуальный: в DOM не все пункты — шагов не больше полусотни
-  for (let step = 0; step < 50; step += 1) {
-    if ((await active.getAttribute("title")) === label) break;
+  const selected = field
+    .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' ant-select ')][1]")
+    .locator(".ant-select-selection-item");
+  // Поле может перерисоваться посреди выбора (черновик роли в матрице меняет подписи столбца) — тогда Enter уходит мимо.
+  // Выбор целиком повторяется, пока подпись выбранного не станет нужной.
+  await expect(async () => {
+    // пустое поле (подсказка вместо выбранного) — подписи нет; `getAttribute` ждал бы её до конца теста
+    if ((await selected.count()) > 0 && (await selected.first().getAttribute("title")) === label) {
+      return;
+    }
+    await field.focus();
     await field.press("ArrowDown");
-  }
-  await expect(active).toHaveAttribute("title", label);
-  await field.press("Enter");
-  await expect(
-    field
-      .locator("xpath=ancestor::div[contains(concat(' ', @class, ' '), ' ant-select ')][1]")
-      .locator(".ant-select-selection-item"),
-  ).toHaveAttribute("title", label);
+    // свой список — по `aria-controls` поля: закрывающийся список соседнего поля ещё в DOM, пока идёт анимация
+    const listId = await field.getAttribute("aria-controls");
+    expect(listId, "у поля antd Select есть aria-controls").toBeTruthy();
+    const dropdown = page.locator(".ant-select-dropdown").filter({
+      has: page.locator(`[id="${listId ?? ""}"]`),
+    });
+    await expect(dropdown).toBeVisible({ timeout: 3_000 });
+    const active = dropdown.locator(".ant-select-item-option-active");
+    // список виртуальный: в DOM не все пункты — шагов не больше полусотни
+    for (let step = 0; step < 50; step += 1) {
+      if ((await active.getAttribute("title")) === label) break;
+      await field.press("ArrowDown");
+    }
+    await expect(active).toHaveAttribute("title", label, { timeout: 1_000 });
+    await field.press("Enter");
+    await expect(selected).toHaveAttribute("title", label, { timeout: 2_000 });
+  }).toPass({ timeout: 30_000 });
 }

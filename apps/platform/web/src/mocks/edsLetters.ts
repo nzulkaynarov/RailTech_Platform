@@ -78,9 +78,7 @@ function guardRegister() {
 function guard(need: Level) {
   const held = access();
   if (!held) return { error: failure(401, "SESSION_EXPIRED", "Сессия истекла") };
-  const ok =
-    held.level === "full" ||
-    (need === "read" && (held.level === "read" || held.register));
+  const ok = held.level === "full" || (need === "read" && (held.level === "read" || held.register));
   if (!ok) {
     return {
       error: failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "bff", {
@@ -134,7 +132,11 @@ export const LETTER_KINDS: LetterKindList = {
       },
       urgent: true,
     },
-    { code: "bank", name: { ru: "Письмо банка", uz: "Bank xati", en: "Bank letter" }, urgent: false },
+    {
+      code: "bank",
+      name: { ru: "Письмо банка", uz: "Bank xati", en: "Bank letter" },
+      urgent: false,
+    },
     {
       code: "supplier",
       name: { ru: "Письмо поставщика", uz: "Yetkazib beruvchi xati", en: "Supplier letter" },
