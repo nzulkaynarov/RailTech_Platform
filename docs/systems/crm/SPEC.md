@@ -289,7 +289,8 @@ reply_templates(id, title VARCHAR(120), text JSONB {ru,uz,en}, created_by NULL, 
 qualifier_runs(id, lead_id, trigger_message_id, output JSONB, proposed_stage, applied_stage, rejected_reason NULL,
                triggers_fired TEXT[], score_before, score_after, escalated BOOL, trace_id, model, cost_usd)
 escalations(id, lead_id, reason_codes TEXT[], reason_text, priority 'hot'|'warm'|'info', status 'open'|'taken'|'snoozed'|'returned'|'closed',
-            taken_by_user_id NULL, taken_at NULL, channel_message_id NULL, resolved_at NULL, outcome NULL)
+            taken_by_user_id NULL, taken_at NULL, channel_message_id NULL, resolved_at NULL, outcome NULL,
+            handed_by_user_id NULL, request_type NULL)  -- «Передать менеджеру» первой линией (D17G-1): причина `handed_over`
 stage_transitions(id, lead_id, from_stage, to_stage, source 'qualifier'|'trigger'|'user'|'timer', actor_user_id NULL, reason)
 ```
 
