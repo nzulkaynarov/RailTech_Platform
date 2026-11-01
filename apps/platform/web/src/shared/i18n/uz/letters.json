@@ -18,8 +18,7 @@
       "action": "Amal",
       "executor": "Ijrochi",
       "due": "Muddat",
-      "correspondent": "Korrespondent",
-      "clientOrCorrespondent": "Mijoz yoki korrespondent"
+      "correspondent": "Korrespondent"
     },
     "select": "{{number}} xatni yon oynada ko'rsatish",
     "open": "Ochish",

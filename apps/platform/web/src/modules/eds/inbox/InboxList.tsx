@@ -86,14 +86,6 @@ function useSelect() {
     });
 }
 
-/** Заголовок колонки отправителя: «Клиент» у заявок, «Корреспондент» у делопроизводства (путь — `track` от сервера). */
-function senderColumn(items: readonly LetterRow[]): string {
-  const office = items.some((row) => row.track === "office");
-  const calc = items.some((row) => row.track === "calc");
-  if (office && calc) return "list.columns.clientOrCorrespondent";
-  return office ? "list.columns.correspondent" : "list.columns.client";
-}
-
 function Rows({ items, selected }: { items: readonly LetterRow[]; selected: string | null }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
@@ -156,7 +148,7 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.subject")}</th>
-            <th scope="col">{t(senderColumn(items))}</th>
+            <th scope="col">{t("list.columns.correspondent")}</th>
             <th scope="col">{t("list.columns.request")}</th>
             <th scope="col">{t("list.columns.executor")}</th>
             <th scope="col">{t("list.columns.due")}</th>

@@ -18,8 +18,7 @@
       "action": "Action",
       "executor": "Executor",
       "due": "Due",
-      "correspondent": "Correspondent",
-      "clientOrCorrespondent": "Client or correspondent"
+      "correspondent": "Correspondent"
     },
     "select": "Show letter {{number}} in the side panel",
     "open": "Open",

@@ -18,8 +18,7 @@
       "action": "Действие",
       "executor": "Исполнитель",
       "due": "Срок",
-      "correspondent": "Корреспондент",
-      "clientOrCorrespondent": "Клиент или корреспондент"
+      "correspondent": "Корреспондент"
     },
     "select": "Показать письмо {{number}} в боковом окне",
     "open": "Открыть",
