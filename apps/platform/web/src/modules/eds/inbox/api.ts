@@ -20,6 +20,14 @@ export function letterPath(number: string): string {
   return `/eds/inbox/${encodeURIComponent(number)}`;
 }
 
+/**
+ * Рабочий экран поручения по письму (P8b): исполнитель, «ознакомить», автор резолюции — по UUID письма
+ * (`/eds/tasks/<uuid>`): по номеру BFF ищет письмо через реестр, которого у исполнителя может не быть.
+ */
+export function tasksPath(letterId: string): string {
+  return `/eds/tasks/${encodeURIComponent(letterId)}`;
+}
+
 export const STATUS_FILTERS: readonly LetterStatus[] = [
   "awaiting_resolution",
   "resolved",
@@ -48,6 +56,15 @@ export type Reason =
   | "duplicate"
   | "invalid_state"
   | "eds_not_granted"
+  | "track_mismatch"
+  | "not_allowed_for_info"
+  | "urgent_not_extendable"
+  | "extension_pending"
+  | "not_executor"
+  | "not_resolution_author"
+  | "no_pending_extension"
+  | "report_required"
+  | "not_found"
   | "forbidden"
   | "unavailable"
   | "validation"
@@ -59,6 +76,16 @@ const KNOWN: ReadonlySet<string> = new Set<Reason>([
   "duplicate",
   "invalid_state",
   "eds_not_granted",
+  // P8b: поручения по входящим
+  "track_mismatch",
+  "not_allowed_for_info",
+  "urgent_not_extendable",
+  "extension_pending",
+  "not_executor",
+  "not_resolution_author",
+  "no_pending_extension",
+  "report_required",
+  "not_found",
 ]);
 
 /** Причина отказа словарным ключом: подкод EDS (`details.reason`), иначе по статусу ответа. */

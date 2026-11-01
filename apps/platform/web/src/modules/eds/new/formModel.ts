@@ -50,6 +50,8 @@ export interface FormValues {
   recipientInn: string;
   deal: DealChoice | null;
   attachments: Attachment[];
+  /** Только письмо (P8b): «в ответ на» — номер входящего ВХ; регистрация закрывает поручение «Подготовить ответ» */
+  inReplyTo: string;
 }
 
 export const EMPTY_FORM: FormValues = {
@@ -62,6 +64,7 @@ export const EMPTY_FORM: FormValues = {
   recipientInn: "",
   deal: null,
   attachments: [],
+  inReplyTo: "",
 };
 
 /** Сегодня в часовом поясе компании (`YYYY-MM-DD`): «нужно до» не раньше этой даты. */
@@ -117,6 +120,7 @@ export const FIELD_ORDER: readonly FieldKey[] = [
   "amount",
   "due_date",
   "erp_deal_id",
+  "in_reply_to_number",
 ];
 
 export function fieldElementId(field: FieldKey): string {
@@ -158,7 +162,12 @@ export function toPayload(values: FormValues, submit: boolean): Payload {
 }
 
 export function toCreateBody(values: FormValues, submit: boolean): EdsDocumentIn {
-  return { kind: values.kind, ...toPayload(values, submit) };
+  const reply = values.inReplyTo.trim();
+  return {
+    kind: values.kind,
+    ...toPayload(values, submit),
+    ...(isLetter(values.kind) && reply ? { in_reply_to_number: reply } : {}),
+  };
 }
 
 export function toUpdateBody(values: FormValues, submit: boolean): EdsDocumentUpdateIn {
@@ -189,6 +198,7 @@ export function fromDocument(doc: EdsDocument): FormValues {
       id: file.id,
       existing: true,
     })),
+    inReplyTo: "",
   };
 }
 

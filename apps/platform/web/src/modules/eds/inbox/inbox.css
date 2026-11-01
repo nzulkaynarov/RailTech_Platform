@@ -283,3 +283,52 @@
 .pf-letters-filter > .ant-segmented {
   display: inline-flex;
 }
+
+/* P8b: резолюция трёх типов, поручения, ознакомление (SPEC-v3 §3.2a) */
+.pf-res-kinds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-instr-list,
+.pf-instr-acq {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-instr + .pf-instr {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-instr-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.pf-instr-tags {
+  display: inline-flex;
+  gap: 4px;
+  margin-left: auto;
+}
+.pf-instr-due {
+  margin: 4px 0 8px;
+}
+/* Просрочка: красный текст плюс слово «Просрочено» — цвет не единственный признак */
+.pf-instr-due--overdue {
+  color: #cf1322;
+}
+.pf-instr-decide {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #ffe58f;
+  border-radius: 8px;
+  background: #fffbe6;
+}
+.pf-instr-reply {
+  margin-bottom: 12px;
+}
+.pf-letters-due--overdue {
+  color: #cf1322;
+}

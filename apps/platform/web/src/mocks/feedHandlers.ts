@@ -11,6 +11,7 @@ import {
 } from "./fixtures/feeds";
 import { reworkQueueItems } from "./edsRework";
 import { registeredQueueItems } from "./edsLetters";
+import { letterNotificationsOf, letterTaskQueueItems, markLetterNoteRead } from "./edsInstructions";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
@@ -84,7 +85,14 @@ function edsDown(): boolean {
 }
 
 /** Работа, которую даёт только EDS (письма, служебки): КП в очереди ведёт ERP. */
-const EDS_KINDS: readonly QueueItem["kind"][] = ["resolve_letter", "approve_memo", "pay_memo"];
+const EDS_KINDS: readonly QueueItem["kind"][] = [
+  "resolve_letter",
+  "approve_memo",
+  "pay_memo",
+  "instruction",
+  "instruction_extension",
+  "acquaint",
+];
 
 const sources = (): Sources => ({
   crm: crmDown() ? "unavailable" : "ok",
@@ -168,6 +176,7 @@ export const feedHandlers = [
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
       ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
       ...registeredQueueItems(roles.view), // P8: входящие, зарегистрированные делопроизводителем
+      ...letterTaskQueueItems(roles.view), // P8b: поручения, переносы, ознакомления
     ].filter((i) =>
       i.kind.endsWith("_lead") || i.kind === "ticket"
         ? !crmDown()
@@ -201,7 +210,9 @@ export const feedHandlers = [
       items: [
         ...menuCountersFor(
           queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length +
-            (edsDown() ? 0 : reworkQueueItems(roles.view).length),
+            (edsDown()
+              ? 0
+              : reworkQueueItems(roles.view).length + letterTaskQueueItems(roles.view).length),
         )
           .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
           .filter(
@@ -241,7 +252,7 @@ export const feedHandlers = [
     // Лента CRM (W15-H7): ответы на обращения, привязка Telegram; не зависит от недоступности ERP.
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
-    const crm = userId ? crmNotificationsOf(userId) : [];
+    const crm = userId ? [...crmNotificationsOf(userId), ...letterNotificationsOf(userId)] : [];
     const all = [...mine, ...crm].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const items = all.filter((n) => tab === "all" || n.tab === tab);
     return HttpResponse.json({
@@ -256,7 +267,10 @@ export const feedHandlers = [
     readAllAt = Date.now();
     const session = readSession();
     const user = session ? sessionRoles(session)?.user : undefined;
-    if (user) markCrmNoteRead(user.id, "all");
+    if (user) {
+      markCrmNoteRead(user.id, "all");
+      markLetterNoteRead(user.id, "all");
+    }
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -265,7 +279,7 @@ export const feedHandlers = [
     if (id.startsWith("crm:")) {
       const session = readSession();
       const user = session ? sessionRoles(session)?.user : undefined;
-      if (!user || !markCrmNoteRead(user.id, id)) {
+      if (!user || !(markCrmNoteRead(user.id, id) || markLetterNoteRead(user.id, id))) {
         return HttpResponse.json(
           { code: "NOT_FOUND", message: "Не найдено.", source: "bff" },
           { status: 404 },

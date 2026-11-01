@@ -207,6 +207,7 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
     due: fieldElementId("due_date"),
     recipient: fieldElementId("recipient"),
     deal: fieldElementId("erp_deal_id"),
+    replyTo: fieldElementId("in_reply_to_number"),
     files: "doc-files",
   };
   const route = routeKind(values);
@@ -320,6 +321,34 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
                     }}
                   />
                 </Field>
+                {draft ? null : (
+                  <Field
+                    id={ids.replyTo}
+                    label={t("documents:form.replyTo.label")}
+                    hint={t("documents:form.replyTo.hint")}
+                    error={
+                      errors.in_reply_to_number ? fieldText(t, "in_reply_to_number") : undefined
+                    }
+                  >
+                    <Input
+                      id={ids.replyTo}
+                      value={values.inReplyTo}
+                      maxLength={32}
+                      autoComplete="off"
+                      placeholder="ВХ-112/26"
+                      status={errors.in_reply_to_number ? "error" : undefined}
+                      aria-invalid={errors.in_reply_to_number || undefined}
+                      aria-describedby={describedBy(
+                        ids.replyTo,
+                        true,
+                        Boolean(errors.in_reply_to_number),
+                      )}
+                      onChange={(event) => {
+                        set("inReplyTo", event.target.value);
+                      }}
+                    />
+                  </Field>
+                )}
               </>
             ) : (
               <Field
@@ -534,7 +563,12 @@ export function NewDocumentPage() {
   return (
     <DocumentForm
       key={params.get("type") ?? "memo"}
-      initial={{ ...EMPTY_FORM, kind: kindFromParam(params.get("type")) }}
+      initial={{
+        ...EMPTY_FORM,
+        kind: kindFromParam(params.get("type")),
+        // «Подготовить ответ» с рабочего экрана поручения (P8b): `?type=letter&reply_to=ВХ-112/26`
+        inReplyTo: params.get("reply_to")?.trim().slice(0, 32) ?? "",
+      }}
       draft={null}
     />
   );

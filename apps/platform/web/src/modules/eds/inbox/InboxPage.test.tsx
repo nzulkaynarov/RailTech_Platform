@@ -68,7 +68,7 @@ describe("EDS · Входящие письма: список", () => {
 
     fireEvent.click(within(filter).getByText("Все"));
     await waitFor(() => {
-      expect(screen.getAllByRole("row")).toHaveLength(1 + 8);
+      expect(screen.getAllByRole("row")).toHaveLength(1 + 9); // + ВХ-100/26 «Принято к сведению» (P8b)
     });
   });
 
