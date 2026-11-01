@@ -33,7 +33,12 @@ function Brief({ letter }: { letter: LetterCard }) {
       <p className="pf-res-subject">{letter.subject}</p>
       <DefinitionList
         items={[
-          { label: t("panel.brief.client"), value: letter.sender.name },
+          {
+            label: t(
+              letter.track === "office" ? "panel.brief.correspondent" : "panel.brief.client",
+            ),
+            value: letter.sender.name,
+          },
           { label: t("panel.brief.request"), value: letter.request?.number },
           { label: t("panel.brief.received"), value: date(letter.received_at) },
         ]}

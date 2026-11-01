@@ -190,7 +190,8 @@ function Content({
   const [, setParams] = useSearchParams();
   const canResolve = canEdit(me, "eds.inbox");
   // Делопроизводитель готовит проект резолюции письма делопроизводства (P8b) в том же боковом окне.
-  const canDraft = canEdit(me, "eds.inbox.register") && letter.track === "office";
+  const office = letter.track === "office";
+  const canDraft = canEdit(me, "eds.inbox.register") && office;
   const awaiting = letter.status === "awaiting_resolution";
   const registry = useRegistryItems(letter);
 
@@ -254,8 +255,15 @@ function Content({
             <DefinitionList
               items={[
                 ...registry,
-                { label: t("card.fields.client"), value: letter.sender.name },
-                { label: t("card.fields.inn"), value: letter.sender.inn },
+                // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент».
+                {
+                  label: t(office ? "card.fields.correspondent" : "card.fields.client"),
+                  value: letter.sender.name,
+                },
+                {
+                  label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
+                  value: letter.sender.inn,
+                },
                 { label: t("card.fields.contact"), value: letter.sender.contact },
                 {
                   label: t("card.fields.senderRef"),

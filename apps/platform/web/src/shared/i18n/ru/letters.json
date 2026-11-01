@@ -17,7 +17,9 @@
       "status": "Статус",
       "action": "Действие",
       "executor": "Исполнитель",
-      "due": "Срок"
+      "due": "Срок",
+      "correspondent": "Корреспондент",
+      "clientOrCorrespondent": "Клиент или корреспондент"
     },
     "select": "Показать письмо {{number}} в боковом окне",
     "open": "Открыть",
@@ -86,7 +88,9 @@
       "receiptMethod": "Способ получения",
       "signedBy": "Подписал",
       "documentDue": "Срок по документу",
-      "related": "Связанный документ"
+      "related": "Связанный документ",
+      "correspondent": "Корреспондент",
+      "correspondentInn": "ИНН корреспондента"
     },
     "urgent": "Срочное",
     "regular": "Обычное",
@@ -154,7 +158,8 @@
       "request": "Заявка",
       "received": "Получено",
       "summary": "Суть документа",
-      "files": "Вложения"
+      "files": "Вложения",
+      "correspondent": "Корреспондент"
     },
     "sheetTitle": "Резолюция на письмо {{number}}",
     "sheetClose": "Закрыть",

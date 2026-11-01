@@ -17,7 +17,9 @@
       "status": "Holati",
       "action": "Amal",
       "executor": "Ijrochi",
-      "due": "Muddat"
+      "due": "Muddat",
+      "correspondent": "Korrespondent",
+      "clientOrCorrespondent": "Mijoz yoki korrespondent"
     },
     "select": "{{number}} xatni yon oynada ko'rsatish",
     "open": "Ochish",
@@ -86,7 +88,9 @@
       "receiptMethod": "Qabul qilish usuli",
       "signedBy": "Imzolagan",
       "documentDue": "Hujjat bo‘yicha muddat",
-      "related": "Bog‘liq hujjat"
+      "related": "Bog‘liq hujjat",
+      "correspondent": "Korrespondent",
+      "correspondentInn": "Korrespondent STIR"
     },
     "urgent": "Shoshilinch",
     "regular": "Oddiy",
@@ -154,7 +158,8 @@
       "request": "Ariza",
       "received": "Qabul qilingan",
       "summary": "Hujjat mazmuni",
-      "files": "Ilovalar"
+      "files": "Ilovalar",
+      "correspondent": "Korrespondent"
     },
     "sheetTitle": "{{number}} xatga rezolyutsiya",
     "sheetClose": "Yopish",

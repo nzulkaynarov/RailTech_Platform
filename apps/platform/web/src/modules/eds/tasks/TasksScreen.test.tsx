@@ -74,6 +74,9 @@ describe("Рабочий экран поручения (P8b, SPEC-v3 §3.2a п. 
     ).toBeVisible();
     const mine = screen.getByRole("form", { name: "Отметить исполнение" });
     expect(screen.getAllByText(/Срок 10\.01\.2030/).length).toBeGreaterThan(0);
+    // Делопроизводство: отправитель — «Корреспондент» (ГОСТ Р 7.0.97), не «Клиент».
+    expect(screen.getByText("Корреспондент")).toBeVisible();
+    expect(screen.queryByText("Клиент")).toBeNull();
 
     fireEvent.click(within(mine).getByRole("button", { name: "Исполнено" }));
     expect(

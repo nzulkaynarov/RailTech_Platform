@@ -17,7 +17,9 @@
       "status": "Status",
       "action": "Action",
       "executor": "Executor",
-      "due": "Due"
+      "due": "Due",
+      "correspondent": "Correspondent",
+      "clientOrCorrespondent": "Client or correspondent"
     },
     "select": "Show letter {{number}} in the side panel",
     "open": "Open",
@@ -86,7 +88,9 @@
       "receiptMethod": "Received via",
       "signedBy": "Signed by",
       "documentDue": "Deadline in the document",
-      "related": "Related document"
+      "related": "Related document",
+      "correspondent": "Correspondent",
+      "correspondentInn": "Correspondent tax ID"
     },
     "urgent": "Urgent",
     "regular": "Regular",
@@ -154,7 +158,8 @@
       "request": "Request",
       "received": "Received",
       "summary": "Document summary",
-      "files": "Attachments"
+      "files": "Attachments",
+      "correspondent": "Correspondent"
     },
     "sheetTitle": "Resolution for letter {{number}}",
     "sheetClose": "Close",

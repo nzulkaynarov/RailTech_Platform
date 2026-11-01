@@ -70,7 +70,12 @@ function Content({ letter }: { letter: LetterCard }) {
           <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.letter")}</h2>}>
             <DefinitionList
               items={[
-                { label: t("card.fields.client"), value: letter.sender.name },
+                {
+                  label: t(
+                    letter.track === "office" ? "card.fields.correspondent" : "card.fields.client",
+                  ),
+                  value: letter.sender.name,
+                },
                 { label: t("card.fields.received"), value: date(letter.received_at) },
                 {
                   label: t("card.fields.documentDue"),
