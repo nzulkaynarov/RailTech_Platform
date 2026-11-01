@@ -24,7 +24,8 @@ DOMAIN: Final = "crm"
 
 # Каталог прав, который видит фронт (`GET /me/permissions`).
 CATALOG: Final[dict[str, tuple[str, ...]]] = {
-    "leads": ("read", "take", "work", "reply", "note", "assist", "create"),
+    # `triage` — первая линия: разобрать лида и передать менеджеру с запиской, не забирая (D17G-1).
+    "leads": ("read", "take", "work", "reply", "note", "assist", "create", "triage"),
     "stream": ("read",),
     "dashboard": ("read",),
     "clients": ("read", "write"),

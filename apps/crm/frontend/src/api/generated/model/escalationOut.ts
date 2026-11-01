@@ -5,11 +5,14 @@
 
 export interface EscalationOut {
   created_at: string;
+  handed_by_user_id?: number | null;
+  handed_by_user_name?: string | null;
   id: number;
   priority: string;
   reason_codes: string[];
   reason_text: string | null;
   recommendation: string | null;
+  request_type?: string | null;
   sla_due_at: string | null;
   snoozed_until: string | null;
   status: string;

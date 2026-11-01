@@ -91,6 +91,7 @@ import type {
   GetAiSpendParams,
   GetDashboardParams,
   GetSpendParams,
+  HandOver,
   HealthResponse,
   InboxParams,
   InboxResponse,
@@ -10697,6 +10698,120 @@ export const useCreateLead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
   return useMutation(getCreateLeadMutationOptions(options), queryClient);
 };
 
+export const getHandoverTargetsUrl = () => {
+  return `/api/v1/leads/handover_targets`;
+};
+
+/**
+ * Кому передать лида (D17G-1): активные сотрудники с работой с клиентом (`crm.leads: full`).
+ * @summary Handover Targets
+ */
+export const handoverTargets = async (
+  options?: Parameters<typeof http>[1],
+): Promise<TeamMember[]> => {
+  return http<TeamMember[]>(getHandoverTargetsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getHandoverTargetsQueryKey = () => {
+  return [`/api/v1/leads/handover_targets`] as const;
+};
+
+export const getHandoverTargetsQueryOptions = <
+  TData = Awaited<ReturnType<typeof handoverTargets>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof handoverTargets>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getHandoverTargetsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof handoverTargets>>> = ({ signal }) =>
+    handoverTargets({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof handoverTargets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type HandoverTargetsQueryResult = NonNullable<Awaited<ReturnType<typeof handoverTargets>>>;
+export type HandoverTargetsQueryError = ErrorType<ErrorOut>;
+
+export function useHandoverTargets<
+  TData = Awaited<ReturnType<typeof handoverTargets>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof handoverTargets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof handoverTargets>>,
+          TError,
+          Awaited<ReturnType<typeof handoverTargets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useHandoverTargets<
+  TData = Awaited<ReturnType<typeof handoverTargets>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof handoverTargets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof handoverTargets>>,
+          TError,
+          Awaited<ReturnType<typeof handoverTargets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useHandoverTargets<
+  TData = Awaited<ReturnType<typeof handoverTargets>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof handoverTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Handover Targets
+ */
+
+export function useHandoverTargets<
+  TData = Awaited<ReturnType<typeof handoverTargets>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof handoverTargets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getHandoverTargetsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getWebLeadUrl = () => {
   return `/api/v1/leads/web`;
 };
@@ -11554,6 +11669,113 @@ export const useCreateRequestFromLead = <TError = ErrorType<ErrorOut>, TContext 
   TContext
 > => {
   return useMutation(getCreateRequestFromLeadMutationOptions(options), queryClient);
+};
+
+export const getHandOverUrl = (leadId: number) => {
+  return `/api/v1/leads/${leadId}/actions/hand_over`;
+};
+
+/**
+ * «Передать менеджеру» с запиской (D17G-1): лид у ответственного, клиенту ничего не уходит.
+ * Лида ведёт сотрудник — 409 `lead_taken`; адресат не ведёт лидов — 422 `inactive_colleague`.
+ * @summary Hand Over
+ */
+export const handOver = async (
+  leadId: number,
+  handOverBody: HandOver,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionResult>(getHandOverUrl(leadId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(handOverBody),
+  });
+};
+
+export const getHandOverMutationKey = () => ["handOver"] as const;
+
+export const getHandOverMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handOver>>,
+    TError,
+    HandOverMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handOver>>,
+  TError,
+  HandOverMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHandOverMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handOver>>,
+    HandOverMutationVariables
+  > = (props) => {
+    const { leadId, data } = props ?? {};
+
+    return handOver(leadId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandOverMutationResult = NonNullable<Awaited<ReturnType<typeof handOver>>>;
+export type HandOverMutationBody = HandOver;
+export type HandOverMutationError = ErrorType<ErrorOut>;
+export type HandOverMutationVariables = { leadId: number; data: HandOver };
+
+/**
+ * @summary Hand Over
+ */
+export const useHandOver = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof handOver>>,
+      TError,
+      HandOverMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof handOver>>,
+  TError,
+  HandOverMutationVariables,
+  TContext
+> => {
+  return useMutation(getHandOverMutationOptions(options), queryClient);
 };
 
 export const getMakeCustomerUrl = (leadId: number) => {

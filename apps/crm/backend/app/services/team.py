@@ -61,6 +61,25 @@ def member_of(full_name: str, email: str, user_id: int, position: str | None) ->
     )
 
 
+LEADS_WORK: tuple[str, Level] = ("crm.leads", "full")
+
+
+async def lead_workers(session: AsyncSession) -> list[TeamMember]:
+    """Кому первая линия передаёт лида (D17G-1): работа с клиентом — `crm.leads: full`."""
+    return await by_section(session, *LEADS_WORK)
+
+
+async def works_leads(session: AsyncSession, user_id: int) -> bool:
+    """Активный сотрудник с `crm.leads: full` — может «Забрать» и ответить клиенту."""
+    user = await users_repo.get(session, user_id)
+    if user is None or not user.is_active:
+        return False
+    held = await prepo.roles_by_user(session)
+    access = merge_access(RoleGrant(ref.access) for ref in role_refs(held.get(user_id, [])))
+    section, level = LEADS_WORK
+    return _RANK.get(access.get(section, ""), 0) >= _RANK[level]
+
+
 async def workers(session: AsyncSession) -> list[TeamMember]:
     """Активные менеджеры и админы (базовая роль CRM — признак «ведёт лидов»): кому передать."""
     users = await users_repo.list_users(session)
