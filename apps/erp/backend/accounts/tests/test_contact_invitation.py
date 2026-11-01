@@ -36,7 +36,10 @@ def seller_company(db):
 
 @pytest.fixture
 def client_company(db):
-    return Company.objects.create(name="Tashkent Metro LLC", is_registered=False)
+    company = Company.objects.create(name="Tashkent Metro LLC", is_registered=False)
+    # В кабинет приглашаются только клиенты (K0): у настоящего клиента тип CLIENT есть.
+    company.types.add(CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})[0])
+    return company
 
 
 @pytest.fixture
@@ -259,6 +262,23 @@ class TestContactInvitation:
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert response.json()["detail"] == "COMPANY_ARCHIVED"
+        assert mail.outbox == []
+        assert not MagicLinkToken.objects.filter(contact=client_contact).exists()
+
+    def test_invite_contact_of_company_without_client_type_is_refused(
+        self, client_contact, client_company, seller_user
+    ):
+        """K0: поставщику (компании без типа CLIENT) приглашение не уходит — ни письма, ни токена."""
+        client_company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик"})[0])
+        client_company.types.remove(CompanyType.objects.get(code="CLIENT"))
+        mail.outbox.clear()
+        client = APIClient()
+        client.force_authenticate(user=seller_user)
+
+        response = client.post(f"/api/v1/accounts/contacts/{client_contact.id}/invite/")
+
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.json()["detail"] == "COMPANY_NOT_CLIENT"
         assert mail.outbox == []
         assert not MagicLinkToken.objects.filter(contact=client_contact).exists()
 

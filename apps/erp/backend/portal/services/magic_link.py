@@ -15,10 +15,10 @@ from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from kombu.exceptions import KombuError
-from parties.models import Contact, active_company_q, active_contact_q
+from parties.models import Contact, active_contact_q
 from portal.exceptions import PortalGone, PortalTooManyRequests
 from portal.models import MagicLinkToken, PortalSession
-from portal.services.access import company_in_circulation
+from portal.services.access import cabinet_company_q, company_has_cabinet_access
 from portal.services.tokens import generate_token, hash_token, issue_portal_session, token_prefix
 from portal.tasks import send_magic_link
 from rest_framework.exceptions import PermissionDenied
@@ -60,13 +60,14 @@ def _check_address_rate_limit(clean_email: str) -> None:
 
 
 def find_login_contact(clean_email: str) -> Optional[Contact]:
-    """Контакт, которому можно отправить ссылку входа; ``None`` — нельзя (нет, архив или адрес неоднозначен).
+    """Контакт, которому можно отправить ссылку входа; ``None`` — нельзя (нет, архив, не клиент или адрес неоднозначен).
 
-    Архивные компании не входят. Если адрес указан у активных контактов РАЗНЫХ компаний, письмо
+    Архивные компании и компании без типа CLIENT не входят (K0): поставщик с адресом в базе получает тот же
+    ответ, что и неизвестный адрес. Если адрес указан у активных контактов РАЗНЫХ допущенных компаний, письмо
     не отправляется: ссылка открыла бы чужую компанию.
     """
     contacts = Contact.objects.filter(
-        active_company_q("company"), active_contact_q(), email__iexact=clean_email
+        cabinet_company_q("company"), active_contact_q(), email__iexact=clean_email
     ).select_related("company")
     company_ids = list(contacts.order_by().values_list("company_id", flat=True).distinct()[:2])
     if not company_ids:
@@ -88,7 +89,7 @@ def request_magic_link(email: str) -> bool:
 
     contact = find_login_contact(clean_email)
     if contact is None:
-        logger.info("Magic link requested for an unknown, archived or ambiguous e-mail")
+        logger.info("Magic link requested for an unknown, archived, non-client or ambiguous e-mail")
         return True
 
     # Ссылку выпускает и отправляет задача Celery (portal.tasks.send_magic_link): письмо уходит вне потока запроса,
@@ -108,10 +109,10 @@ def deliver_login_link(contact_id: int) -> bool:
     """Выпускает одноразовую ссылку входа на 15 минут и отправляет письмо; ``False`` — слать некому.
 
     Вызывается задачей `portal.tasks.send_magic_link`. Контакт и компания проверяются заново: между запросом
-    и выполнением задачи компанию могли отправить в архив.
+    и выполнением задачи компанию могли отправить в архив или снять с неё тип CLIENT.
     """
     contact = (
-        Contact.objects.filter(active_company_q("company"), active_contact_q(), pk=contact_id)
+        Contact.objects.filter(cabinet_company_q("company"), active_contact_q(), pk=contact_id)
         .select_related("company")
         .first()
     )
@@ -169,8 +170,8 @@ def exchange_magic_link(
             logger.info("Magic link token invalid or expired (%s…)", token_prefix(token_hash))
             raise PortalGone("MAGIC_LINK_EXPIRED")
 
-        if not company_in_circulation(token_obj.contact.company_id):
-            logger.info("Magic link for archived company rejected (contact %s)", token_obj.contact_id)
+        if not company_has_cabinet_access(token_obj.contact.company_id):
+            logger.info("Magic link for a company without cabinet access rejected (contact %s)", token_obj.contact_id)
             raise PermissionDenied("FORBIDDEN")
 
         if token_obj.contact.is_archived:

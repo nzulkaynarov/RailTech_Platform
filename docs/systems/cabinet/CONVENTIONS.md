@@ -107,6 +107,7 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 ## 7. Чего здесь нет — не ищи и не воссоздавай
 
 - Регистрации, KYC, подписок, тарифов, «продавец/покупатель» — вход только по приглашению.
+- Входа для поставщиков и своей компании: до волны K1 («кабинет контрагента») в Cabinet входят только компании с типом CLIENT (K0, решение владельца 2026-11-01; проверяет ERP — `docs/systems/erp/CONVENTIONS.md`, «Защита портала»). Cabinet это не проверяет и ничего для этого не умеет: 401 на `/me` — «войдите заново».
 - Страниц бэк-офиса и администратора: `Dashboard`, `DealsPage`, `DealQuotePage`, `QuoteBuilder`, `Admin*`, `PlatformAdminShell`, `PaymentsPage` как регистр, `CounterpartiesPage`, `CatalogImportPage`, `HSDirectoryPage`, `MyProductsPage`.
 - Чата и поддержки (`ChatDrawer`, `SupportButton`, `Message`) — их заменяет бот CRM.
 - Уведомлений в приложении как системы (`NotificationCenter` B2B) — сообщает бот и письма ERP; в Cabinet — только статусы на экранах (решение об ином — ADR).

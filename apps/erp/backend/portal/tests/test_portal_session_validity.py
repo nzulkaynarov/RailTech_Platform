@@ -69,9 +69,15 @@ class TestLiveSessionValidity:
 def test_archive_check_uses_the_common_predicate():
     """Архив снимает компанию со всех поверхностей одним предикатом (`parties.models.core.active_company_q`)."""
     assert "active_company_q" in (PORTAL / "services/access.py").read_text(encoding="utf-8")
+    assert "cabinet_company_q" in (PORTAL / "authentication.py").read_text(encoding="utf-8")  # K0: плюс тип CLIENT
     for name in ("authentication.py", "services/magic_link.py", "services/telegram_auth.py", "services/invitation.py"):
         source = (PORTAL / name).read_text(encoding="utf-8")
-        assert "active_company_q" in source or "company_in_circulation" in source, name
+        assert (
+            any(
+                predicate in source for predicate in ("active_company_q", "company_in_circulation", "cabinet_company_q")
+            )
+            or "company_has_cabinet_access" in source
+        ), name
         assert "company.is_active" not in source, name
         assert "company__is_active" not in source, name
 
