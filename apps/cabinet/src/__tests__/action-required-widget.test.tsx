@@ -75,4 +75,50 @@ describe('виджет «Требует вашего решения»', () => {
     renderApp('/requests');
     expect(await screen.findByText('Все документы обработаны — сейчас от вас ничего не требуется.')).toBeInTheDocument();
   });
+
+  it('пока списки грузятся — скелетон на месте виджета, список запросов не показывается раньше виджета (K10)', async () => {
+    signedIn();
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    portalServer.use(
+      http.get('*/api/portal/v1/acts', async () => {
+        await gate;
+        return HttpResponse.json([]);
+      }),
+    );
+    renderApp('/requests');
+    await heading('Запросы');
+    expect(await screen.findByTestId('action-required-loading')).toBeInTheDocument();
+    // запросы уже пришли, но список ждёт виджет: иначе виджет вставился бы над готовым списком
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.queryByRole('table', { name: 'Запросы' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Запросы' })).not.toBeInTheDocument();
+    release();
+    expect(await screen.findByRole('region', { name: 'Требует вашего решения' })).toBeInTheDocument();
+    expect(screen.queryByTestId('action-required-loading')).not.toBeInTheDocument();
+    expect(await screen.findByText('Z-2026-0042')).toBeInTheDocument();
+  });
+
+  it('наблюдатель: «Ждут решения компании», без призыва к действию', async () => {
+    signedIn('viewer');
+    window.localStorage.setItem('cabinet.language', 'ru');
+    renderApp('/requests');
+    const region = await screen.findByRole('region', { name: 'Ждут решения компании' });
+    expect(within(region).queryByText('Оплатить')).not.toBeInTheDocument();
+    expect(within(region).queryByText('Посмотреть КП')).not.toBeInTheDocument();
+    expect(within(region).getAllByText('Решает контакт с правом подтверждать').length).toBeGreaterThan(0);
+    expect(screen.queryByRole('region', { name: 'Требует вашего решения' })).not.toBeInTheDocument();
+  });
+
+  it('суммы — по правилу Платформы: «сум», пробелы разрядов, без моноширинного шрифта', async () => {
+    const region = await widget();
+    const link = within(region).getByRole('link', { name: 'KP-2026-0042 · версия 2' });
+    const card = link.closest('[data-slot="card"]') ?? link.parentElement?.parentElement;
+    const amount = within(card as HTMLElement).getByText(/сум$/);
+    expect(amount.textContent).toMatch(/^\d{1,3}(\u00a0\d{3})*(,\d{2})?\u00a0сум$/);
+    expect(amount).toHaveClass('tabular-nums');
+    expect(amount.className).not.toMatch(/font-mono/);
+  });
 });

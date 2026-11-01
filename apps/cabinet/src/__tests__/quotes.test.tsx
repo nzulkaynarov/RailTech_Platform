@@ -19,7 +19,7 @@ describe('КП', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
     const first = within(list).getAllByRole('listitem')[0];
     expect(within(first).getByRole('link', { name: 'KP-2026-0042 · версия 2' })).toHaveAttribute('href', '/quotes/301');
-    expect(within(first).getByText('54 432 000 UZS')).toBeInTheDocument();
+    expect(within(first).getByText('54 432 000 сум')).toBeInTheDocument();
     expect(within(first).getByText('25 окт. 2026 г.')).toBeInTheDocument();
     expect(within(list).getAllByText('Срок истёк')).toHaveLength(1);
     await expectNoAxeViolations();
@@ -33,10 +33,10 @@ describe('КП', () => {
     expect(within(lines).getByText('Товары')).toBeInTheDocument();
     expect(within(lines).getByText('Подшипник 6205-2RS')).toBeInTheDocument();
     expect(within(lines).getByText('200 шт')).toBeInTheDocument();
-    expect(within(lines).getByText('165 000 UZS')).toBeInTheDocument();
+    expect(within(lines).getByText('165 000 сум')).toBeInTheDocument();
     expect(within(lines).getByText('5 нояб. 2026 г.')).toBeInTheDocument();
     expect(within(lines).getByText('Доставка до склада клиента в Ташкенте включена')).toBeInTheDocument();
-    expect(screen.getAllByText('54 432 000 UZS').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('54 432 000 сум').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('button', { name: 'Скачать: KP-2026-0042' })).toBeInTheDocument();
   });
 
@@ -46,11 +46,11 @@ describe('КП', () => {
     await heading('КП KP-2026-0042');
     const totals = screen.getByRole('group', { name: 'Состав итога' });
     expect(within(totals).getByText('Итого без НДС')).toBeInTheDocument();
-    expect(within(totals).getByText('48 600 000 UZS')).toBeInTheDocument();
+    expect(within(totals).getByText('48 600 000 сум')).toBeInTheDocument();
     expect(within(totals).getByText('НДС')).toBeInTheDocument();
-    expect(within(totals).getByText('5 832 000 UZS')).toBeInTheDocument();
+    expect(within(totals).getByText('5 832 000 сум')).toBeInTheDocument();
     expect(within(totals).getByText('Итого')).toBeInTheDocument();
-    expect(within(totals).getByText('54 432 000 UZS')).toBeInTheDocument();
+    expect(within(totals).getByText('54 432 000 сум')).toBeInTheDocument();
     await expectNoAxeViolations();
   });
 
@@ -74,7 +74,7 @@ describe('КП', () => {
     await heading('КП KP-2026-0057');
     expect(screen.getByText('Этап 1. Обследование площадки и проект')).toBeInTheDocument();
     expect(screen.getAllByText('Этап')).toHaveLength(3);
-    expect(screen.getAllByText('21 000 000,56 UZS').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('21 000 000,56 сум').length).toBeGreaterThanOrEqual(1);
   });
 
   it('принять: «Получить код» → канал → неверный код → верный → «договор формируется»', async () => {

@@ -79,7 +79,7 @@ export function CatalogPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.catalog.title')} />
+      <PageHeader title={t('pages.catalog.title')} icon={Package} />
       <SearchForm key={q} initial={q} onSearch={(value) => update({ q: value || null, page: null })} />
       {categories.length > 0 ? (
         <div role="group" aria-label={t('pages.catalog.categories')} className="mb-4 flex flex-wrap gap-2">
@@ -236,7 +236,7 @@ function SearchForm({ initial, onSearch }: { initial: string; onSearch: (value: 
 function PriceText({ item, large = false }: { item: CatalogItem; large?: boolean }) {
   const { t } = useTranslation();
   return item.price ? (
-    <span className={cn('font-semibold', large ? 'text-2xl' : 'text-base')}>
+    <span className={cn('font-semibold tabular-nums', large ? 'text-2xl' : 'text-base')}>
       {formatMoney(item.price)}
       <span className="text-sm font-normal text-muted-foreground"> / {item.unit}</span>
     </span>
@@ -346,7 +346,7 @@ export function CatalogItemPage() {
 
   return (
     <>
-      <PageHeader title={item.name} />
+      <PageHeader title={item.name} crumb={item.name} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
           {item.images?.length ? (

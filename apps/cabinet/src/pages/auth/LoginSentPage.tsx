@@ -31,7 +31,17 @@ export function LoginSentPage() {
           <p className="text-sm text-muted-foreground">{t('auth.sent.noLetter')}</p>
           {isPortalMock() ? (
             <Button asChild variant="secondary">
-              <Link to={{ pathname: '/auth/magic', hash: '#token=demo-token-mock-link' }}>{t('auth.sent.mockLink')}</Link>
+              <Link
+                to={{ pathname: '/auth/magic', hash: '#token=demo-token-mock-link' }}
+                onClick={() => {
+                  sessionStorage.setItem(
+                    'cabinet.mock.session',
+                    JSON.stringify({ role: 'actor', auth_method: 'magic_link', dataset: 'demo' }),
+                  );
+                }}
+              >
+                {t('auth.sent.mockLink')}
+              </Link>
             </Button>
           ) : null}
           <Button asChild variant="outline">

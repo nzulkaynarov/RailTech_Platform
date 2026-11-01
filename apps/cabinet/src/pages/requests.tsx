@@ -1,5 +1,5 @@
 import { useEffect, useId, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { BookOpen, FilePlus2, Inbox, Loader2, Lock, Paperclip, Plus, SearchX, Trash2, Upload } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -8,12 +8,15 @@ import { apiErrorKey } from '@/api/errors';
 import type { AttachmentRef, ClientRequest, RequestLineIn } from '@/api/portal';
 import { useCatalog, useCreateRequest, useQuotes, useRequest, useRequests, useUploadFile } from '@/api/queries';
 import { ActionRequiredWidget } from '@/components/ActionRequiredWidget';
+import { useActionRequired } from '@/hooks/useActionRequired';
 import { DealLink, DetailList, SectionTitle } from '@/components/Details';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ResponsiveList } from '@/components/ResponsiveList';
-import { StatusBadge } from '@/components/StatusBadge';
+import { QuoteStatusBadge, StatusBadge } from '@/components/StatusBadge';
+import { useNow } from '@/hooks/useNow';
+import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -49,12 +52,18 @@ function NewRequestButton() {
 export function RequestsPage() {
   const { t } = useTranslation();
   const requests = useRequests();
+  // Список показывается вместе с виджетом «Требует вашего решения»: виджет не вставляется над готовым списком (K10).
+  const actionsPending = useActionRequired().isPending;
+  const [searchParams] = useSearchParams();
+
+  // Старые ссылки с `?view=…` (вид-переключатель убран, CAB-FIX-1) ведут на список без параметра.
+  if (searchParams.has('view')) return <Navigate to="/requests" replace />;
 
   return (
     <>
-      <PageHeader title={t('pages.requests.title')} actions={<NewRequestButton />} />
-      <ActionRequiredWidget />
-      {requests.isPending ? (
+      <PageHeader title={t('pages.requests.title')} icon={Inbox} actions={<NewRequestButton />} />
+      <ActionRequiredWidget holdSkeleton={requests.isPending} />
+      {requests.isPending || actionsPending ? (
         <ListSkeleton />
       ) : requests.isError ? (
         <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />
@@ -70,7 +79,7 @@ export function RequestsPage() {
             header: t('pages.requests.columns.request'),
             cell: (row) => (
               <span className="flex flex-col gap-0.5">
-                <span>{row.number}</span>
+                <span className="font-semibold text-primary">{row.number}</span>
                 <span className="line-clamp-2 font-normal text-muted-foreground">{row.summary}</span>
               </span>
             ),
@@ -92,6 +101,7 @@ export function RequestDetailPage() {
   const requests = useRequests();
   const detailQuery = useRequest(id);
   const quotes = useQuotes();
+  const now = useNow();
   const request = detailQuery.data ?? requests.data?.find((item) => item.id === id);
 
   if (requests.isPending && detailQuery.isPending) return <ListSkeleton rows={2} />;
@@ -114,7 +124,7 @@ export function RequestDetailPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.requestDetail.title', { number: request.number })} />
+      <PageHeader title={t('pages.requestDetail.title', { number: request.number })} crumb={request.number} />
       <div className="flex flex-col gap-4">
         <Card>
           <CardContent className="flex flex-col gap-4">
@@ -189,8 +199,8 @@ export function RequestDetailPage() {
                       {t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
                     </span>
                     <span className="flex flex-wrap items-center gap-2">
-                      <span>{formatMoney(quote.total)}</span>
-                      <StatusBadge entity="quote" code={quote.status} />
+                      <span className="whitespace-nowrap tabular-nums">{formatMoney(quote.total)}</span>
+                      <QuoteStatusBadge quote={quote} now={now} />
                     </span>
                   </Link>
                 </li>
@@ -433,7 +443,7 @@ function RequestForm() {
               disabled={isUploading}
               onClick={() => document.getElementById(fileInputId)?.click()}
             >
-              {isUploading ? <Loader2 className="animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
+              {isUploading ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
               {isUploading ? t('pages.requestNew.uploading') : t('pages.requestNew.uploadButton')}
             </Button>
           </div>
@@ -473,6 +483,8 @@ function RequestForm() {
           </Alert>
         ) : null}
 
+        <ConsequenceCallout text={t('pages.requestNew.consequence')} />
+
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button asChild variant="outline">
             <Link
@@ -487,7 +499,7 @@ function RequestForm() {
             </Link>
           </Button>
           <Button type="submit" disabled={create.isPending || isUploading}>
-            {create.isPending ? <Loader2 className="animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
+            {create.isPending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
             {t('pages.requestNew.submit')}
           </Button>
         </div>
@@ -534,7 +546,7 @@ function CatalogPickerDialog({
           />
           {catalogQuery.isPending ? (
             <div className="flex items-center justify-center p-6 text-muted-foreground">
-              <Loader2 className="size-6 animate-spin" aria-hidden="true" />
+              <Loader2 className="size-6 motion-safe:animate-spin" aria-hidden="true" />
             </div>
           ) : (catalogQuery.data?.items ?? []).length === 0 ? (
             <p className="p-4 text-center text-sm text-muted-foreground">{t('pages.catalog.notFoundTitle')}</p>

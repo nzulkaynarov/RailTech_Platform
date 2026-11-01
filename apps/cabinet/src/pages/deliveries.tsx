@@ -56,7 +56,7 @@ export function DeliveriesPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.deliveries.title')} />
+      <PageHeader title={t('pages.deliveries.title')} icon={Truck} />
       {deliveries.isPending ? (
         <ListSkeleton />
       ) : deliveries.isError ? (
@@ -120,7 +120,7 @@ export function DeliveriesPage() {
                                 onClick={() => acceptLine(line)}
                                 aria-label={t('pages.deliveries.acceptLineNamed', { name: line.title })}
                               >
-                                {acceptingId === line.id ? <Loader2 className="animate-spin" aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
+                                {acceptingId === line.id ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <CheckCircle2 aria-hidden="true" />}
                                 {t('pages.deliveries.acceptLine')}
                               </Button>
                               <Button
@@ -208,7 +208,7 @@ export function DocumentsPage() {
 
   return (
     <>
-      <PageHeader title={t('pages.documents.title')} />
+      <PageHeader title={t('pages.documents.title')} icon={FolderOpen} />
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div role="group" aria-label={t('pages.documents.filter')} className="flex flex-wrap gap-2">
           {[undefined, ...DOCUMENT_KINDS].map((option) => (

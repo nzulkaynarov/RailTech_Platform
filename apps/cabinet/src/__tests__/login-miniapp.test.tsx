@@ -32,7 +32,7 @@ describe('Mini App', () => {
   it('start_param=deal_<id> открывает сделку, на вложенном экране — «Назад» Telegram', async () => {
     const webApp = asMiniApp({ startParam: 'deal_42' });
     const { router } = renderApp('/');
-    expect(await screen.findByRole('heading', { level: 1, name: 'Сделка № D-42' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Проект D-42' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/deals/42');
     await waitFor(() => expect(webApp.BackButton?.show).toHaveBeenCalled());
   });
@@ -45,17 +45,26 @@ describe('Mini App', () => {
     expect(screen.getByRole('button', { name: 'Попробовать снова' })).toBeInTheDocument();
   });
 
-  it('тема Telegram ложится на переменные shadcn, тёмная схема включает .dark', () => {
+  it('тема Telegram ложится на переменные shadcn, если пары проходят AA; тёмная схема включает .dark', () => {
     const webApp = asMiniApp({
       colorScheme: 'dark',
-      themeParams: { bg_color: '#17212b', text_color: '#f5f5f5', button_color: '#5288c1', button_text_color: '#ffffff' },
+      themeParams: {
+        bg_color: '#17212b',
+        secondary_bg_color: '#232e3c',
+        text_color: '#f5f5f5',
+        button_color: '#5288c1',
+        button_text_color: '#ffffff',
+      },
     });
     applyTelegramTheme(webApp);
     const style = document.documentElement.style;
     expect(style.getPropertyValue('--background')).toBe('#17212b');
     expect(style.getPropertyValue('--foreground')).toBe('#f5f5f5');
-    expect(style.getPropertyValue('--primary')).toBe('#5288c1');
-    expect(style.getPropertyValue('--primary-foreground')).toBe('#ffffff');
+    // Холст кабинета (CAB-FIX-2): лист --background на рамке --muted — из темы Telegram
+    expect(style.getPropertyValue('--muted')).toBe('#232e3c');
+    // Белый на #5288c1 — 3,6:1 < 4.5: кнопка Telegram не берётся, основной цвет — наш токен .dark (CAB-FIX-3)
+    expect(style.getPropertyValue('--primary')).toBe('');
+    expect(style.getPropertyValue('--primary-foreground')).toBe('');
     expect(document.documentElement).toHaveClass('dark');
   });
 

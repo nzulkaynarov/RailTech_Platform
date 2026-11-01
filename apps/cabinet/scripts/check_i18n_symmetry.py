@@ -3,13 +3,15 @@
 i18n integrity check for Cabinet: ru.json (source) / uz.json / en.json and their usage in code.
 Copied from apps/erp/scripts/check_i18n_symmetry.py (M2-CAB-01); paths and allow-list adapted.
 
-Three checks (any failure → non-zero exit, details printed):
+Checks (any failure → non-zero exit, details printed):
   1. Duplicate keys within a single locale file (JSON silently keeps the last,
      which SHADOWS earlier keys — this is how the onboarding banner once rendered
      raw keys: two "onboarding" objects, the second hid the first).
   2. Key-set symmetry between ru.json and en.json (pluralization-aware).
   3. Static t('...') / i18n.t('...') keys used in frontend/src that are MISSING
      from the locales (would render the raw key on screen).
+  4. `defaultValue` inside t(...) is FORBIDDEN (CAB-FIX-2): a fallback text in code hides a key that is
+     missing from the dictionaries, and uz/en users see Russian. Every text lives in ru/uz/en.
 
 Usage:
     python3 scripts/check_i18n_symmetry.py
@@ -66,23 +68,59 @@ def flatten(d, path='', out=None, namespaces=None):
     return out, namespaces
 
 
+# Any t( / i18n.t( call, static or dynamic key — for the defaultValue ban.
+_T_OPEN_RE = re.compile(r"""(?:\bi18n\.t|(?<![\w.$])t)\(""")
+
+
+def call_args(text, open_paren):
+    """Text of the call from `(` to its matching `)` (parentheses counted, strings are not special-cased)."""
+    depth = 0
+    for i in range(open_paren, min(len(text), open_paren + 2000)):
+        if text[i] == '(':
+            depth += 1
+        elif text[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return text[open_paren:i + 1]
+    return text[open_paren:open_paren + 2000]
+
+
+def find_default_values(text):
+    """1-based line numbers of t(...) / i18n.t(...) calls that pass `defaultValue`."""
+    lines = []
+    for m in _T_OPEN_RE.finditer(text):
+        if re.search(r'\bdefaultValue\b', call_args(text, m.end() - 1)):
+            lines.append(text.count('\n', 0, m.start()) + 1)
+    return lines
+
+
+def source_files():
+    return list(SRC_DIR.rglob('*.ts')) + list(SRC_DIR.rglob('*.tsx'))
+
+
 def collect_used_keys():
     used = {}  # key -> first "file:line"
-    for f in list(SRC_DIR.rglob('*.ts')) + list(SRC_DIR.rglob('*.tsx')):
+    for f in source_files():
         try:
             text = f.read_text(encoding='utf-8')
         except Exception:
             continue
         for m in _T_CALL_RE.finditer(text):
-            # Skip calls that pass an explicit defaultValue (intentional fallback),
-            # checking a window after the key since the call may span lines.
-            window = text[m.start():m.start() + 220]
-            if 'defaultValue' in window:
-                continue
             key = m.group(1)
             line_no = text.count('\n', 0, m.start()) + 1
             used.setdefault(key, f'{f.relative_to(ROOT)}:{line_no}')
     return used
+
+
+def collect_default_values():
+    found = []  # "file:line"
+    for f in source_files():
+        try:
+            text = f.read_text(encoding='utf-8')
+        except Exception:
+            continue
+        found.extend(f'{f.relative_to(ROOT)}:{line}' for line in find_default_values(text))
+    return found
 
 
 _CYRILLIC_RE = re.compile(r'[А-Яа-яЁё]')
@@ -197,10 +235,18 @@ def main() -> int:
         for k in missing:
             print(f'  - {k}   (e.g. {used[k]})')
 
+    # 5. defaultValue in t() — text outside the dictionaries
+    defaults = collect_default_values()
+    if defaults:
+        problems = 1
+        print(f'\ndefaultValue in t() ({len(defaults)}) — move the text to ru/uz/en and drop defaultValue:')
+        for where in defaults:
+            print(f'  - {where}')
+
     if not problems:
         sizes = ', '.join(f'{code}={len(flatten(data)[0])}' for code, (data, _d) in sorted(targets.items()))
         print(f'OK: {SOURCE_LOCALE}={len(ru_keys)} keys, {sizes} — symmetric, no duplicates, '
-              f'{len(used)} static t() keys all resolve.')
+              f'{len(used)} static t() keys all resolve, no defaultValue.')
         return 0
     return 1
 

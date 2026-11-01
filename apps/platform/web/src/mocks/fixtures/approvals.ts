@@ -6,6 +6,8 @@ import type {
   QuoteChecklistLine,
 } from "../../shared/api/generated/model";
 
+import { companyDayIn } from "./dates";
+
 /**
  * Вымышленные КП на одобрение и документы на согласовании для MSW (D1-4, BFF 0.24.0): те же формы, что вернёт BFF по
  * `platform-bff.yaml`. Названия компаний и имена выдуманы (репозиторий публичный). Состояние живёт в памяти страницы: решение
@@ -289,7 +291,7 @@ const MEMO_SEEDS: readonly MemoSeed[] = [
     text: "Прошу согласовать оплату аренды склада за ноябрь.\nСчёт арендодателя приложен, реквизиты не менялись.",
     author: MANAGER_PERSON,
     amount: "8500000.00",
-    due: "2026-10-31",
+    due: companyDayIn(7),
     file: true,
   },
   {

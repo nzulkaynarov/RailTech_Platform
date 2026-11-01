@@ -17,7 +17,7 @@ describe('Каталог', () => {
     expect(screen.getByText('Найдено 24 позиции')).toBeInTheDocument();
     expect(within(list).getAllByRole('listitem')).toHaveLength(12);
     const bearing = within(list).getByRole('link', { name: 'Подшипник 6205-2RS' }).closest('article') as HTMLElement;
-    expect(within(bearing).getByText('165 000 UZS')).toBeInTheDocument();
+    expect(within(bearing).getByText('165 000 сум')).toBeInTheDocument();
     expect(within(bearing).getByText('В наличии')).toBeInTheDocument();
     expect(within(bearing).getByText('срок 2 дня')).toBeInTheDocument();
     const service = within(list).getByRole('link', { name: 'Пусконаладка насосного оборудования' }).closest('article') as HTMLElement;
@@ -89,7 +89,7 @@ describe('Каталог', () => {
     await heading('Подшипник 6205-2RS');
     expect(screen.getByText('Внутренний диаметр')).toBeInTheDocument();
     expect(screen.getByText('25 мм')).toBeInTheDocument();
-    expect(screen.getByText('165 000 UZS')).toBeInTheDocument();
+    expect(screen.getByText('165 000 сум')).toBeInTheDocument();
     await expectNoAxeViolations();
     await user.click(screen.getByRole('button', { name: 'Запросить' }));
     await heading('Новый запрос');

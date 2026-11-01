@@ -9,6 +9,7 @@ import type {
   EdsRegistryKind,
 } from "../../shared/api/generated/model";
 import { MOCK_USER_CRM_ID } from "./approvals";
+import { companyDayIn } from "./dates";
 import { DEMO_USERS } from "./users";
 
 /**
@@ -140,7 +141,7 @@ function initial(): EdsMock {
         text: "Прошу согласовать закупку канцтоваров для отдела продаж на IV квартал. Счёт поставщика приложен.",
         status: "on_approval",
         amount: { amount: "4800000.00", currency: "UZS" },
-        due_date: "2026-11-05",
+        due_date: companyDayIn(7),
         file_ids: [documentId(901)],
         created_at: "2026-10-26T08:30:00Z",
       }),

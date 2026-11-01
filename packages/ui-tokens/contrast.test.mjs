@@ -161,6 +161,61 @@ const pairs = [
   ]),
 ];
 
+// ─── Тема кабинета (dist/cabinet.css, CAB-FIX-2): светлая :root и тёмная .dark поверх неё ──────────────────
+const cabinetCss = readFileSync(join(here, "dist", "cabinet.css"), "utf8");
+const cssVars = (block) => Object.fromEntries([...block.matchAll(/--([\w-]+):\s*([^;]+);/g)].map((m) => [m[1], m[2].trim()]));
+const cabLight = cssVars(/:root\s*\{([^}]*)\}/.exec(cabinetCss)?.[1] ?? "");
+const cabDark = { ...cabLight, ...cssVars(/\.dark\s*\{([^}]*)\}/.exec(cabinetCss)?.[1] ?? "") };
+
+/** Пары кабинета для одной темы: холст (--background) лежит на рамке и сайдбаре (--muted), активный пункт — --accent. */
+const cabinetPairs = (theme, t) => {
+  const surfaces = { "холст background": t["background"], "рамка и сайдбар muted": t["muted"], "card": t["card"], "accent (активный пункт)": t["accent"] };
+  const rows = [];
+  for (const [surface, bg] of Object.entries(surfaces)) {
+    rows.push([`кабинет ${theme}: foreground на ${surface}`, t["foreground"], bg]);
+    rows.push([`кабинет ${theme}: muted-foreground (подписи, группы сайдбара) на ${surface}`, t["muted-foreground"], bg]);
+    rows.push([`кабинет ${theme}: text-primary (заголовки, активный пункт) на ${surface}`, t["primary"], bg]);
+  }
+  rows.push(
+    [`кабинет ${theme}: muted-foreground на secondary`, t["muted-foreground"], t["secondary"]],
+    [`кабинет ${theme}: muted-foreground на hover пункта bg-accent/60 поверх muted`, t["muted-foreground"], over(t["accent"], 0.6, t["muted"])],
+    [`кабинет ${theme}: primary на hover пункта bg-accent/60 поверх muted`, t["primary"], over(t["accent"], 0.6, t["muted"])],
+    [`кабинет ${theme}: primary-foreground на primary (кнопка, иконка заголовка и бара)`, t["primary-foreground"], t["primary"]],
+    [`кабинет ${theme}: primary-foreground на primary-hover`, t["primary-foreground"], t["primary-hover"]],
+    [`кабинет ${theme}: accent-foreground на accent`, t["accent-foreground"], t["accent"]],
+    [`кабинет ${theme}: secondary-foreground на secondary`, t["secondary-foreground"], t["secondary"]],
+    [`кабинет ${theme}: card-foreground на card`, t["card-foreground"], t["card"]],
+    [`кабинет ${theme}: popover-foreground на popover`, t["popover-foreground"], t["popover"]],
+  );
+  // Статусы: заливка кнопки с текстом -foreground и бейдж StatusBadge «border-X/30 bg-X/10 text-X» на холсте и на рамке
+  for (const name of ["destructive", "success", "warning", "info"]) {
+    rows.push(
+      [`кабинет ${theme}: ${name}-foreground на ${name}`, t[`${name}-foreground`], t[name]],
+      [`кабинет ${theme}: text-${name} на холсте`, t[name], t["background"]],
+      [`кабинет ${theme}: text-${name} на card`, t[name], t["card"]],
+      [`кабинет ${theme}: бейдж text-${name} на bg-${name}/10 поверх холста`, t[name], over(t[name], 0.1, t["background"])],
+      [`кабинет ${theme}: бейдж text-${name} на bg-${name}/10 поверх card`, t[name], over(t[name], 0.1, t["card"])],
+      [`кабинет ${theme}: бейдж text-${name} на bg-${name}/10 поверх рамки muted`, t[name], over(t[name], 0.1, t["muted"])],
+    );
+  }
+  // Бейдж neutral: text-muted-foreground на bg-muted
+  rows.push([`кабинет ${theme}: бейдж neutral muted-foreground на muted`, t["muted-foreground"], t["muted"]]);
+  return rows;
+};
+pairs.push(...cabinetPairs("светлая", cabLight), ...cabinetPairs("тёмная", cabDark));
+
+/** Не текст (WCAG 1.4.11, ≥ 3:1): значки и точки статуса, иконка на заливке. [название, цвет, фон] */
+const cabinetNonText = [cabLight, cabDark].flatMap((t, i) => {
+  const theme = i ? "тёмная" : "светлая";
+  return [
+    [`кабинет ${theme}: точка «полномочия подтверждены» bg-success на сайдбаре muted`, t["success"], t["muted"]],
+    [`кабинет ${theme}: точка «только чтение» bg-warning на сайдбаре muted`, t["warning"], t["muted"]],
+    [`кабинет ${theme}: иконка text-primary-foreground в плитке bg-primary`, t["primary-foreground"], t["primary"]],
+    [`кабинет ${theme}: кольцо фокуса ring на холсте`, t["ring"], t["background"]],
+    [`кабинет ${theme}: кольцо фокуса ring на рамке muted`, t["ring"], t["muted"]],
+  ];
+});
+
 // Пары ниже 4.5:1, которые фиксирует SPEC-v3 §5.2 или действующие компоненты. Вопросы — docs/QUESTIONS.md, Q-INF-P0-2-*.
 const KNOWN_BELOW_AA = [
   ["white на shadcn bg-primary/90 (hover кнопок Cabinet/ERP до перехода на bg-primary-hover, 4.36:1, Q-INF-P0-2-1)", v["primary-foreground"], over(v["primary"], 0.9, v["background"])],
@@ -208,10 +263,24 @@ test("затравочные цвета статусов не попадают �
   assert.equal(v["warning"], c.warning.text);
 });
 
+test("тема кабинета только переопределяет переменные shadcn и не трогает shadcn.css (ERP)", () => {
+  assert.deepEqual(Object.keys(cabLight).sort(), Object.keys(v).sort());
+  assert.equal(v["primary"], c.primary.default);
+  assert.equal(cabLight["primary"], tokens.shadcnThemes.cabinet.light.primary);
+  for (const key of Object.keys(cabDark)) assert.ok(key in v, `.dark: --${key} нет в shadcn.css`);
+});
+
 for (const [name, fg, bg] of pairs) {
   test(`${name} ≥ 4.5:1`, () => {
     const ratio = contrast(fg, bg);
     assert.ok(ratio >= 4.5, `${name}: ${fg} на ${bg} = ${ratio.toFixed(2)}:1`);
+  });
+}
+
+for (const [name, fg, bg] of cabinetNonText) {
+  test(`${name} ≥ 3:1`, () => {
+    const ratio = contrast(fg, bg);
+    assert.ok(ratio >= 3, `${name}: ${fg} на ${bg} = ${ratio.toFixed(2)}:1`);
   });
 }
 
