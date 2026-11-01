@@ -133,7 +133,8 @@
       "approvals": "Kelishuvda",
       "payments": "Hisoblar va to‘lovlar",
       "new": "Hujjat yaratish",
-      "register": "Kiruvchi hujjatni ro‘yxatga olish"
+      "register": "Kiruvchi hujjatni ro‘yxatga olish",
+      "tasks": "Topshiriq"
     },
     "action": "Hujjat yaratish"
   },

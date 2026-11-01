@@ -7,7 +7,11 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterRow, LetterStatus } from "../../../shared/api/generated/model";
+import type {
+  LetterRow,
+  LetterStatus,
+  ListLettersParams,
+} from "../../../shared/api/generated/model";
 import { getListLettersQueryKey, listLetters } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -24,13 +28,49 @@ import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 
 const PAGE = 25;
-/** Ширины колонок: номер, тема (гибкая), клиент, заявка, получено, статус, действие (UX-1c, S9) */
-const COLS = [120, null, 180, 120, 110, 170, 110] as const;
-type Filter = LetterStatus | "all";
+/** Ширины колонок: номер, тема (гибкая), клиент, заявка, исполнитель, срок, получено, статус, действие (UX-1c, S9) */
+const COLS = [120, null, 170, 120, 160, 110, 110, 170, 110] as const;
+/** Фильтры журнала (P8b, SPEC-v3 §3.2a п. 6): «На контроле» и «Просрочено» — признаки EDS, не статусы. */
+type Flag = "on_control" | "overdue";
+type Filter = LetterStatus | Flag | "all";
+/** Порядок фильтров: что ждёт решения и контроля — первым (делопроизводитель и директор), затем остальные статусы. */
+const FILTERS: readonly Filter[] = [
+  "awaiting_resolution",
+  "on_control",
+  "overdue",
+  "executed",
+  "noted",
+  ...STATUS_FILTERS.filter((s) => s !== "awaiting_resolution"),
+  "all",
+];
 
 function filterOf(value: string | null): Filter {
-  if (value === "all") return "all";
-  return STATUS_FILTERS.find((s) => s === value) ?? "awaiting_resolution";
+  return FILTERS.find((s) => s === value) ?? "awaiting_resolution";
+}
+
+function paramsOf(filter: Filter): ListLettersParams {
+  if (filter === "all") return {};
+  if (filter === "on_control") return { on_control: true };
+  if (filter === "overdue") return { overdue: true };
+  return { status: [filter] };
+}
+
+function filterLabel(filter: Filter, t: (key: string) => string): string {
+  if (filter === "all") return t("letters:list.filter.all");
+  if (filter === "on_control" || filter === "overdue") return t(`letters:list.filter.${filter}`);
+  return t(`dictionary:status.incoming.${filter}`);
+}
+
+/** Срок по резолюции: просрочка — красным и словом (признак EDS `overdue`). */
+function Due({ row }: { row: LetterRow }) {
+  const { t } = useTranslation("letters");
+  const { date } = useFormat();
+  if (!row.due) return <>—</>;
+  return row.overdue ? (
+    <span className="pf-letters-due--overdue">{t("list.dueOverdue", { date: date(row.due) })}</span>
+  ) : (
+    <>{date(row.due)}</>
+  );
 }
 
 function useSelect() {
@@ -72,6 +112,12 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
             <p className="pf-hint">
               {[row.client_name, row.request_number].filter(Boolean).join(" · ")}
             </p>
+            {row.executor || row.due ? (
+              <p className="pf-hint">
+                {row.executor ? `${row.executor.name} · ` : ""}
+                <Due row={row} />
+              </p>
+            ) : null}
             <div className="pf-letters-card-foot">
               <span className="pf-hint">
                 {date(row.received_at)}
@@ -102,8 +148,10 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.subject")}</th>
-            <th scope="col">{t("list.columns.client")}</th>
+            <th scope="col">{t("list.columns.correspondent")}</th>
             <th scope="col">{t("list.columns.request")}</th>
+            <th scope="col">{t("list.columns.executor")}</th>
+            <th scope="col">{t("list.columns.due")}</th>
             <th scope="col">{t("list.columns.received")}</th>
             <th scope="col">{t("list.columns.status")}</th>
             <th scope="col">
@@ -146,6 +194,12 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
                 {row.client_name ?? "—"}
               </td>
               <td className="pf-num">{row.request_number ?? "—"}</td>
+              <td className="pf-ell" title={row.executor?.name ?? undefined}>
+                {row.executor?.name ?? "—"}
+              </td>
+              <td className="pf-num">
+                <Due row={row} />
+              </td>
               <td className="pf-num">{date(row.received_at)}</td>
               <td>
                 <StatusTag kind="incoming" status={row.status} />
@@ -179,7 +233,7 @@ export function InboxList() {
   const title = t("modules:eds.sections.inbox");
   useDocumentTitle(title);
 
-  const listParams = { ...(filter === "all" ? {} : { status: [filter] }), limit: PAGE };
+  const listParams: ListLettersParams = { ...paramsOf(filter), limit: PAGE };
   const query = useInfiniteQuery({
     queryKey: getListLettersQueryKey(listParams),
     queryFn: ({ pageParam }) =>
@@ -290,15 +344,9 @@ export function InboxList() {
         <Segmented
           aria-label={t("letters:list.filter.label")}
           value={filter}
-          options={[
-            ...STATUS_FILTERS.map((value) => ({
-              value,
-              label: t(`dictionary:status.incoming.${value}`),
-            })),
-            { value: "all", label: t("letters:list.filter.all") },
-          ]}
+          options={FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
           onChange={(value) => {
-            setFilter(value as Filter);
+            setFilter(value);
           }}
         />
       </div>

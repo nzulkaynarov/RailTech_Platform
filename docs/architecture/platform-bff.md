@@ -97,6 +97,19 @@ SPA  POST /api/v1/auth/login {email, password}
   корреспондент, даты, тема, файл, исх. №, подписал, срок по документу, связи) → EDS `POST /letters`; раздел `eds.inbox.register`
   (полный), отдельный от резолюции (`eds.inbox: full`). Справочник видов — `GET /eds/letter-kinds` (EDS, типы — данные), проверка дубля
   (корреспондент + исх. №) — `GET /eds/letter-duplicates`; чтение писем — `eds.inbox` или `eds.inbox.register`.
+  **Поручения по входящим (P8b, SPEC-v3 §3.2a п. 2–6).** Путь резолюции письма решает EDS (`LetterCard.track`: `calc` — «расчёт по
+  зонам», `office` — делопроизводство); старый EDS без поля — то же правило в BFF (`erp_request_id` или нет вида и есть сделка — `calc`).
+  `PUT /eds/letters/{id}/resolution-draft` (проект; `eds.inbox.register` или `eds.inbox` — полный), `POST …/office-resolution` и
+  `POST /eds/instructions/{id}/extension/decision` (`eds.inbox: full`), `GET /eds/staff` (активные сотрудники EDS для адресата, исполнителя
+  и «ознакомить»; права — как у проекта). Карточка `GET /eds/letters/{ref}`, вложения `GET /eds/letter-files/{id}`, `POST …/acquaint`,
+  `POST /eds/instructions/{id}/complete|extension` — любому вошедшему (раздел любой): исполнитель видит письмо своего поручения без
+  `eds.inbox`, кто участник — решает EDS (иначе 403/404 с `source = eds`). Журнал — фильтры `on_control`, `overdue`; строка — `track`,
+  `on_control`, `overdue`, `executor`. «Создать документ → Письмо»: `in_reply_to_number` (номер ВХ) BFF переводит в id по реестру
+  (`GET /registry?number=`) и передаёт EDS `in_reply_to` — отправка такого ИСХ закрывает поручения «Подготовить ответ» (EDS).
+  «Мои задачи»: EDS `GET /letter-tasks` по токену сотрудника → строки `instruction` («Исполнить поручение» / «Подготовить ответ», срок,
+  просрочка — `overdue`), `instruction_extension` (перенос срока у автора резолюции, `eds.inbox: full`), `acquaint` («Ознакомиться»);
+  объект — рабочий экран письма `/eds/tasks/ВХ-…`; EDS не ответил — строк нет, `sources.eds = unavailable`. Колокольчик: уведомления EDS
+  доставляет CRM (`eds.notice.requested` → `staff_notifications`), объект `letter` ведёт на `/eds/tasks/ВХ-…`.
 
 ### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
 

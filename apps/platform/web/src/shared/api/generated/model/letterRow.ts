@@ -3,6 +3,8 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { LetterStatus } from "./letterStatus";
+import type { LetterTrack } from "./letterTrack";
+import type { PersonRef } from "./personRef";
 
 export interface LetterRow {
   id: string;
@@ -32,4 +34,11 @@ export interface LetterRow {
    * @nullable
    */
   kind?: string | null;
+  track?: LetterTrack;
+  /** На контроле — поручения в работе (P8b) */
+  on_control?: boolean;
+  /** Есть просроченное поручение (P8b) */
+  overdue?: boolean;
+  /** Ответственный исполнитель поручения (P8b); `due` — его срок */
+  executor?: PersonRef | null;
 }

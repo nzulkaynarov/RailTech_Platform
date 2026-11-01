@@ -20,7 +20,23 @@ from app.feeds.models import PersonRef, Sources, StepCode
 from app.feeds.numbers import deal_kind, deal_step
 from app.schemas import initials_of
 
-LetterStatus = Literal["awaiting_resolution", "resolved", "returned", "rejected"]
+LetterStatus = Literal[
+    "awaiting_resolution",
+    "resolved",
+    "returned",
+    "rejected",
+    # P8b (SPEC-v3 §3.2a): путь делопроизводства
+    "in_execution",
+    "executed",
+    "noted",
+]
+# P8b: путь резолюции (решает EDS) и тип резолюции делопроизводства.
+LetterTrack = Literal["calc", "office"]
+ResolutionKind = Literal["execute", "reply", "info"]
+InstructionRole = Literal["responsible", "co_executor"]
+InstructionStatus = Literal["in_work", "executed"]
+ExtensionStatus = Literal["pending", "approved", "rejected"]
+_USER_ID = r"^[1-9][0-9]*$"
 LetterZone = Literal["goods", "services", "payment_terms"]
 # P8 (SPEC-v3 §3.2a п. 1): способ получения входящего.
 ReceiptMethod = Literal["post", "paper", "taxpayer_cabinet", "courier", "email"]
@@ -66,6 +82,10 @@ class LetterRow(BaseModel):
     urgent: bool
     due: dt.date | None
     kind: str | None = None
+    track: LetterTrack = "calc"
+    on_control: bool = False
+    overdue: bool = False
+    executor: PersonRef | None = None
 
 
 class LetterPage(BaseModel):
@@ -122,6 +142,67 @@ class LetterRelated(BaseModel):
     path: str
 
 
+class LetterResolutionDraft(BaseModel):
+    kind: ResolutionKind | None
+    responsible: PersonRef | None
+    due: dt.date | None
+    text: str | None
+    co_executors: list[PersonRef]
+    acquaint: list[PersonRef]
+    drafted_by: PersonRef
+    drafted_at: dt.datetime
+
+
+class LetterOfficeResolution(BaseModel):
+    kind: ResolutionKind
+    text: str
+    due: dt.date | None
+    responsible: PersonRef | None
+    co_executors: list[PersonRef]
+    acquaint: list[PersonRef]
+    decided_by: PersonRef
+    decided_at: dt.datetime
+
+
+class LetterInstructionExtension(BaseModel):
+    id: str
+    old_due: dt.date
+    new_due: dt.date
+    reason: str
+    status: ExtensionStatus
+    requested_by: PersonRef
+    requested_at: dt.datetime
+    decided_by: PersonRef | None
+    decided_at: dt.datetime | None
+    comment: str | None
+
+
+class LetterInstructionOutgoing(BaseModel):
+    number: str
+    path: str
+
+
+class LetterInstruction(BaseModel):
+    id: str
+    kind: ResolutionKind
+    role: InstructionRole
+    person: PersonRef
+    due: dt.date
+    text: str
+    status: InstructionStatus
+    overdue: bool
+    report: str | None
+    files: list[LetterFile]
+    outgoing: LetterInstructionOutgoing | None
+    executed_at: dt.datetime | None
+    extensions: list[LetterInstructionExtension]
+
+
+class LetterAcquaintance(BaseModel):
+    person: PersonRef
+    acknowledged_at: dt.datetime | None
+
+
 class LetterCard(BaseModel):
     id: str
     number: str
@@ -152,6 +233,15 @@ class LetterCard(BaseModel):
     signed_by: str | None = None
     document_due: dt.date | None = None
     related: LetterRelated | None = None
+    # P8b: путь резолюции, проект, резолюция делопроизводства, поручения и ознакомление.
+    track: LetterTrack = "calc"
+    on_control: bool = False
+    suggested_due: dt.date | None = None
+    resolution_draft: LetterResolutionDraft | None = None
+    office_resolution: LetterOfficeResolution | None = None
+    instructions: list[LetterInstruction] = []
+    acquaintances: list[LetterAcquaintance] = []
+    executed_at: dt.datetime | None = None
 
 
 class LetterKindName(BaseModel):
@@ -200,6 +290,16 @@ class ResolutionAssignees(BaseModel):
     directory: Literal["ok", "forbidden", "unavailable"]
 
 
+class EdsStaffMember(BaseModel):
+    id: str
+    name: str
+    position: str | None
+
+
+class EdsStaffList(BaseModel):
+    items: list[EdsStaffMember]
+
+
 # --- запросы (форма; решения — в EDS) ---------------------------------------------------------
 
 
@@ -236,6 +336,113 @@ class ResolutionIn(BaseModel):
         }
 
 
+def _check_ids(value: list[str]) -> list[str]:
+    for item in value:
+        if not re.fullmatch(_USER_ID, item):
+            raise ValueError("ожидается crm_user_id")
+    return value
+
+
+def _ids(values: list[str]) -> list[int]:
+    return [int(v) for v in dict.fromkeys(values)]
+
+
+def _user(value: str | None) -> int | None:
+    return int(value) if value is not None else None
+
+
+class ResolutionDraftIn(BaseModel):
+    """Проект резолюции делопроизводителя (P8b); все поля необязательны, решения — в EDS."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ResolutionKind | None = None
+    responsible_id: str | None = Field(default=None, pattern=_USER_ID)
+    due: dt.date | None = None
+    text: str | None = Field(default=None, max_length=4000)
+    co_executor_ids: list[str] = Field(default_factory=list, max_length=20)
+    acquaint_ids: list[str] = Field(default_factory=list, max_length=50)
+
+    _lists = field_validator("co_executor_ids", "acquaint_ids")(_check_ids)
+
+    def for_eds(self) -> dict[str, Any]:
+        text = self.text.strip() if self.text is not None else None
+        return {
+            "kind": self.kind,
+            "responsible_crm_user_id": _user(self.responsible_id),
+            "due": self.due.isoformat() if self.due else None,
+            "text": text or None,
+            "co_executor_ids": _ids(self.co_executor_ids),
+            "acquaint_ids": _ids(self.acquaint_ids),
+        }
+
+
+class OfficeResolutionIn(BaseModel):
+    """Резолюция делопроизводства (P8b): тип, ответственный, срок, текст и люди."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    kind: ResolutionKind
+    responsible_id: str | None = Field(default=None, pattern=_USER_ID)
+    due: dt.date | None = None
+    text: str = Field(min_length=1, max_length=4000)
+    co_executor_ids: list[str] = Field(default_factory=list, max_length=20)
+    acquaint_ids: list[str] = Field(default_factory=list, max_length=50)
+
+    _text = field_validator("text")(_not_blank)
+    _lists = field_validator("co_executor_ids", "acquaint_ids")(_check_ids)
+
+    def for_eds(self) -> dict[str, Any]:
+        return {
+            "kind": self.kind,
+            "responsible_crm_user_id": _user(self.responsible_id),
+            "due": self.due.isoformat() if self.due else None,
+            "text": self.text,
+            "co_executor_ids": _ids(self.co_executor_ids),
+            "acquaint_ids": _ids(self.acquaint_ids),
+        }
+
+
+class InstructionCompleteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    report: str | None = Field(default=None, max_length=10000)
+    file_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    outgoing_number: str | None = Field(default=None, min_length=1, max_length=32)
+
+    def for_eds(self) -> dict[str, Any]:
+        report = self.report.strip() if self.report is not None else None
+        number = self.outgoing_number.strip() if self.outgoing_number is not None else None
+        return {
+            "report": report or None,
+            "file_ids": [str(f) for f in dict.fromkeys(self.file_ids)],
+            "outgoing_number": number or None,
+        }
+
+
+class InstructionExtensionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    new_due: dt.date
+    reason: str = Field(min_length=1, max_length=2000)
+
+    _reason = field_validator("reason")(_not_blank)
+
+    def for_eds(self) -> dict[str, Any]:
+        return {"new_due": self.new_due.isoformat(), "reason": self.reason}
+
+
+class InstructionExtensionDecisionIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    decision: Literal["approve", "reject"]
+    comment: str | None = Field(default=None, max_length=2000)
+
+    def for_eds(self) -> dict[str, Any]:
+        comment = self.comment.strip() if self.comment is not None else None
+        return {"decision": self.decision, "comment": comment or None}
+
+
 class LetterRegisterIn(BaseModel):
     """Форма «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); решения — в EDS (вид, связь)."""
 
@@ -257,6 +464,9 @@ class LetterRegisterIn(BaseModel):
     deal_number: str | None = Field(default=None, max_length=64)
     crm_client_id: int | None = Field(default=None, ge=1)
     related_number: str | None = Field(default=None, min_length=1, max_length=32)
+    # P8b: адресат (нет — директор) и проект резолюции делопроизводителя.
+    addressee_id: str | None = Field(default=None, pattern=_USER_ID)
+    resolution_draft: ResolutionDraftIn | None = None
     file_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
 
     _sender = field_validator("sender_name")(_not_blank)
@@ -300,6 +510,10 @@ class LetterRegisterIn(BaseModel):
             }
         if links:
             body["links"] = links
+        if self.addressee_id is not None:
+            body["addressee_crm_user_id"] = int(self.addressee_id)
+        if self.resolution_draft is not None:
+            body["resolution_draft"] = self.resolution_draft.for_eds()
         return body
 
 
@@ -375,6 +589,67 @@ class _Related(BaseModel):
     number: str
 
 
+class _Draft(BaseModel):
+    kind: ResolutionKind | None = None
+    responsible: _Person | None = None
+    due: dt.date | None = None
+    text: str | None = None
+    co_executors: list[_Person] = []
+    acquaint: list[_Person] = []
+    drafted_by: _Person
+    drafted_at: dt.datetime
+
+
+class _OfficeResolution(BaseModel):
+    kind: ResolutionKind
+    text: str
+    due: dt.date | None = None
+    responsible: _Person | None = None
+    co_executors: list[_Person] = []
+    acquaint: list[_Person] = []
+    decided_by: _Person
+    decided_at: dt.datetime
+
+
+class _Outgoing(BaseModel):
+    id: str
+    number: str
+
+
+class _Extension(BaseModel):
+    id: str
+    old_due: dt.date
+    new_due: dt.date
+    reason: str
+    status: ExtensionStatus
+    requested_by: _Person
+    requested_at: dt.datetime
+    decided_by: _Person | None = None
+    decided_at: dt.datetime | None = None
+    comment: str | None = None
+
+
+class _Instruction(BaseModel):
+    id: str
+    kind: ResolutionKind
+    role: InstructionRole
+    person: _Person
+    due: dt.date
+    text: str
+    status: InstructionStatus
+    overdue: bool = False
+    report: str | None = None
+    files: list[_File] = []
+    outgoing: _Outgoing | None = None
+    executed_at: dt.datetime | None = None
+    extensions: list[_Extension] = []
+
+
+class _Acquaintance(BaseModel):
+    person: _Person
+    acknowledged_at: dt.datetime | None = None
+
+
 class _Journal(BaseModel):
     at: dt.datetime
     action: str
@@ -409,6 +684,14 @@ class EdsLetter(BaseModel):
     signed_by: str | None = None
     document_due: dt.date | None = None
     related: _Related | None = None
+    track: LetterTrack | None = None
+    on_control: bool = False
+    suggested_due: dt.date | None = None
+    resolution_draft: _Draft | None = None
+    office_resolution: _OfficeResolution | None = None
+    instructions: list[_Instruction] = []
+    acquaintances: list[_Acquaintance] = []
+    executed_at: dt.datetime | None = None
 
 
 class _EdsRow(BaseModel):
@@ -422,11 +705,24 @@ class _EdsRow(BaseModel):
     urgent: bool = False
     due: dt.date | None = None
     kind: str | None = None
+    track: LetterTrack | None = None
+    on_control: bool = False
+    overdue: bool = False
+    executor: _Person | None = None
 
 
 class _EdsPage(BaseModel):
     items: list[_EdsRow]
     next_cursor: str | None = None
+
+
+def track_of(track: LetterTrack | None, links: _Links, kind: str | None) -> LetterTrack:
+    """Путь резолюции: решает EDS; старый EDS без поля — то же правило (SPEC-v3 §3.2a)."""
+    if track is not None:
+        return track
+    if links.erp_request_id is not None or (kind is None and links.erp_deal_id is not None):
+        return "calc"
+    return "office"
 
 
 def parse_letter(raw: Any) -> EdsLetter:
@@ -454,6 +750,10 @@ def to_page(raw: Any) -> LetterPage:
                 urgent=row.urgent,
                 due=row.due,
                 kind=row.kind,
+                track=track_of(row.track, row.links, row.kind),
+                on_control=row.on_control,
+                overdue=row.overdue,
+                executor=person(row.executor) if row.executor else None,
             )
             for row in page.items
         ],
@@ -469,14 +769,15 @@ def letter_path(number: str) -> str:
     return f"/eds/inbox/{quote(number, safe='')}"
 
 
+def outgoing_path(document_id: str) -> str:
+    """Наш ИСХ в реестре «Все документы» с открытой карточкой."""
+    return f"/eds/documents?scope=all&doc={quote(document_id, safe='')}&panel=open"
+
+
 def _related(related: _Related | None) -> LetterRelated | None:
     if related is None:
         return None
-    path = (
-        letter_path(related.number)
-        if related.kind == "letter_in"
-        else f"/eds/documents?scope=all&doc={quote(related.id, safe='')}&panel=open"
-    )
+    path = letter_path(related.number) if related.kind == "letter_in" else outgoing_path(related.id)
     return LetterRelated(kind=related.kind, number=related.number, path=path)
 
 
@@ -503,6 +804,9 @@ def letter_stage(status: LetterStatus, deal: dict[str, Any] | None) -> tuple[Ste
         return "RESOLUTION", None
     if status == "returned":
         return "REQUEST", None
+    if status in ("in_execution", "executed", "noted"):
+        # Путь делопроизводства (P8b): расчёта нет, шкала заявки не применяется.
+        return "RESOLUTION", None
     if deal is not None:
         step = deal_step(deal)
         if step in _ORDER and _ORDER.index(step) > _ORDER.index("CALCULATION"):
@@ -522,6 +826,82 @@ def _request_path(number: str, deal: dict[str, Any] | None) -> str:
 def _deal_title(deal: dict[str, Any] | None) -> str | None:
     title = deal.get("title") if deal is not None else None
     return title.strip() if isinstance(title, str) and title.strip() else None
+
+
+def _file(f: _File) -> LetterFile:
+    return LetterFile(
+        id=f.id, name=f.name, content_type=f.content_type, size=f.size, uploaded_at=f.uploaded_at
+    )
+
+
+def _people(items: list[_Person]) -> list[PersonRef]:
+    return [person(p) for p in items]
+
+
+def _draft(d: _Draft | None) -> LetterResolutionDraft | None:
+    if d is None:
+        return None
+    return LetterResolutionDraft(
+        kind=d.kind,
+        responsible=person(d.responsible) if d.responsible else None,
+        due=d.due,
+        text=d.text,
+        co_executors=_people(d.co_executors),
+        acquaint=_people(d.acquaint),
+        drafted_by=person(d.drafted_by),
+        drafted_at=d.drafted_at,
+    )
+
+
+def _office(r: _OfficeResolution | None) -> LetterOfficeResolution | None:
+    if r is None:
+        return None
+    return LetterOfficeResolution(
+        kind=r.kind,
+        text=r.text,
+        due=r.due,
+        responsible=person(r.responsible) if r.responsible else None,
+        co_executors=_people(r.co_executors),
+        acquaint=_people(r.acquaint),
+        decided_by=person(r.decided_by),
+        decided_at=r.decided_at,
+    )
+
+
+def _instruction(i: _Instruction) -> LetterInstruction:
+    return LetterInstruction(
+        id=i.id,
+        kind=i.kind,
+        role=i.role,
+        person=person(i.person),
+        due=i.due,
+        text=i.text,
+        status=i.status,
+        overdue=i.overdue,
+        report=i.report,
+        files=[_file(f) for f in i.files],
+        outgoing=(
+            LetterInstructionOutgoing(number=i.outgoing.number, path=outgoing_path(i.outgoing.id))
+            if i.outgoing
+            else None
+        ),
+        executed_at=i.executed_at,
+        extensions=[
+            LetterInstructionExtension(
+                id=e.id,
+                old_due=e.old_due,
+                new_due=e.new_due,
+                reason=e.reason,
+                status=e.status,
+                requested_by=person(e.requested_by),
+                requested_at=e.requested_at,
+                decided_by=person(e.decided_by) if e.decided_by else None,
+                decided_at=e.decided_at,
+                comment=e.comment,
+            )
+            for e in i.extensions
+        ],
+    )
 
 
 def to_card(
@@ -590,16 +970,7 @@ def to_card(
         request=request,
         stage=stage,
         lost_at_step=lost_at,
-        files=[
-            LetterFile(
-                id=f.id,
-                name=f.name,
-                content_type=f.content_type,
-                size=f.size,
-                uploaded_at=f.uploaded_at,
-            )
-            for f in letter.files
-        ],
+        files=[_file(f) for f in letter.files],
         resolution=resolution,
         return_comment=letter.return_comment,
         reject_reason=letter.reject_reason,
@@ -618,6 +989,17 @@ def to_card(
         signed_by=letter.signed_by,
         document_due=letter.document_due,
         related=_related(letter.related),
+        track=track_of(letter.track, links, letter.kind),
+        on_control=letter.on_control,
+        suggested_due=letter.suggested_due,
+        resolution_draft=_draft(letter.resolution_draft),
+        office_resolution=_office(letter.office_resolution),
+        instructions=[_instruction(i) for i in letter.instructions],
+        acquaintances=[
+            LetterAcquaintance(person=person(a.person), acknowledged_at=a.acknowledged_at)
+            for a in letter.acquaintances
+        ],
+        executed_at=letter.executed_at,
     )
 
 

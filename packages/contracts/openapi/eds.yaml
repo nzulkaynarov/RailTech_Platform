@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.7.0
+  version: 0.8.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -84,8 +84,17 @@ info:
     | `awaiting_resolution` | `POST …/return` | `returned` (письмо у регистратора) | `letters.resolve` | `letter.returned` |
     | `awaiting_resolution` | `POST …/reject` | `rejected` | `letters.resolve` | `letter.rejected` |
     | `returned` | `POST …/submit` (повторная подача, правки) | `awaiting_resolution` | `letters.register` | — (запись журнала `letter.resubmitted`) |
+    | `awaiting_resolution` (путь `office`) | `POST …/office-resolution`, `execute` или `reply` | `in_execution`, на контроле | `letters.resolve` | `notice.requested` |
+    | `awaiting_resolution` (путь `office`) | `POST …/office-resolution`, `info` | `noted` | `letters.resolve` | `notice.requested` («ознакомить») |
+    | `in_execution` | последнее поручение исполнено (`POST /instructions/{id}/complete` или ИСХ «в ответ на») | `executed`, контроль снят | исполнитель | `notice.requested` |
 
-    `resolved` и `rejected` — конечные. Операция не из своего статуса — 409 `CONFLICT`, `details.reason = invalid_state`.
+    `resolved`, `rejected`, `executed` и `noted` — конечные. **Путь резолюции** (`Letter.track`, P8b): `calc` — письмо по
+    заявке клиента (`links.erp_request_id`, или нет вида документа и есть `links.erp_deal_id`), резолюция «расчёт по
+    зонам»; `office` — остальное, резолюция трёх типов с поручениями (SPEC-v3 §3.2a). **Поручения** (P8b): исполнитель
+    отмечает «Исполнено» с отчётом или ИСХ, просит перенос, автор резолюции решает перенос (срочные не продлеваются);
+    исходящее письмо (`letter_out`) с `in_reply_to` при отправке закрывает поручения «Подготовить ответ» этого письма.
+    Напоминания исполнителю — за рабочий день до срока и в день срока (срок больше 10 дней — ещё за 3 дня), после срока —
+    «Просрочено» исполнителю и автору резолюции: `notice.requested` задачей EDS по расписанию. Операция не из своего статуса — 409 `CONFLICT`, `details.reason = invalid_state`.
 servers:
   - url: http://eds-api:8000
     description: внутренняя сеть compose (только BFF Платформы); снаружи маршрута нет
@@ -285,6 +294,18 @@ paths:
           schema:
             type: string
             maxLength: 200
+        - name: on_control
+          in: query
+          required: false
+          description: Только письма на контроле (`true`) — фильтр журнала «На контроле» (P8b)
+          schema:
+            type: boolean
+        - name: overdue
+          in: query
+          required: false
+          description: Только письма с просроченным поручением (`true`) — фильтр «Просрочено» (P8b)
+          schema:
+            type: boolean
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -343,7 +364,11 @@ paths:
       tags: [letters]
       operationId: getLetter
       summary: Карточка входящего письма
-      x-rt-permissions: [letters.read]
+      description: |
+        Держатель `letters.read` видит любое письмо. Без него (P8b, SPEC-v3 §3.2a «Права») — только письмо, где сотрудник
+        исполнитель поручения, в списке «ознакомить» или автор резолюции; иначе 403 `FORBIDDEN`
+        (`details.permission = [letters.read]`). Файлы такого письма и отчётов поручений он скачивает так же.
+      x-rt-permissions: []
       parameters:
         - $ref: '#/components/parameters/LetterId'
       responses:
@@ -373,7 +398,8 @@ paths:
         `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
         `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
         `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
-        2026-10-26, C1-G-1).
+        2026-10-26, C1-G-1). Письмо пути делопроизводства (`Letter.track = office`) — 409, `details.reason = track_mismatch`:
+        его резолюция — `POST …/office-resolution` (P8b).
       x-rt-permissions: [letters.resolve]
       parameters:
         - $ref: '#/components/parameters/LetterId'
@@ -443,7 +469,8 @@ paths:
       summary: Отклонить письмо с причиной
       description: |
         Только из `awaiting_resolution`; статус → `rejected`; публикуется `letter.rejected` — ERP переводит сделку в `LOST`
-        с причиной.
+        с причиной. Письмо пути делопроизводства (`track = office`, P8b) отклоняется без события: отказ по такому письму
+        сделку не закрывает.
       x-rt-permissions: [letters.resolve]
       parameters:
         - $ref: '#/components/parameters/LetterId'
@@ -505,6 +532,268 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/resolution-draft:
+    put:
+      tags: [letters]
+      operationId: saveResolutionDraft
+      summary: Проект резолюции делопроизводителя (P8b)
+      description: |
+        Делопроизводитель (или директор) заполняет проект резолюции пути делопроизводства (SPEC-v3 §3.2a п. 1–2): тип,
+        ответственный, срок, текст, соисполнители, «ознакомить». Проект заменяется целиком; `null`-тело не принимается —
+        пустой проект задаётся `{"kind": null}`. Директор утверждает его одним действием (`POST …/office-resolution` с теми
+        же полями) или правит. Только письмо пути `office` (`Letter.track`; иначе 409, `details.reason = track_mismatch`) в
+        статусе `awaiting_resolution` (иначе 409 `invalid_state`). Сотрудники — активные в проекции (иначе 422,
+        `details.fields.<поле> = not_active_employee`); срок в прошлом — 422 `details.fields.due = due_in_past`. Журнал —
+        `letter.draft_saved`; событий шины нет.
+      x-rt-permissions: [letters.register, letters.resolve]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionDraftIn'
+      responses:
+        '200':
+          description: Проект сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/office-resolution:
+    post:
+      tags: [letters]
+      operationId: resolveOfficeLetter
+      summary: Резолюция пути делопроизводства — К исполнению · Подготовить ответ · Для сведения (P8b)
+      description: |
+        SPEC-v3 §3.2a п. 2. Только письмо пути `office` (иначе 409, `details.reason = track_mismatch`) в статусе
+        `awaiting_resolution` (иначе 409 `invalid_state`). `execute` и `reply`: обязательны ответственный и срок (не раньше
+        сегодняшней даты по `Asia/Tashkent`; иначе 422 `details.fields.due = due_in_past`), создаются поручения
+        ответственному и соисполнителям (статус `in_work`, общий срок), письмо → `in_execution`, `on_control = true`.
+        `info`: ответственного и срока нет (переданные — 422 `details.fields.<поле> = not_allowed_for_info`), поручений нет,
+        письмо → `noted`. «Ознакомить» — строки ознакомления у любого типа. Ответственный, соисполнители, «ознакомить» —
+        любые активные сотрудники проекции без проверки зоны (иначе 422 `not_active_employee`); один человек дважды —
+        422 `duplicate`. Проект резолюции очищается. Журнал `letter.resolved`. `letter.resolved` **не** публикуется (он
+        для расчёта ERP по зонам); исполнители и «ознакомить» получают `notice.requested` (колокольчик и Telegram).
+      x-rt-permissions: [letters.resolve]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OfficeResolutionIn'
+      responses:
+        '200':
+          description: Резолюция наложена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/acquaint:
+    post:
+      tags: [letters]
+      operationId: acknowledgeLetter
+      summary: «Ознакомлен» (P8b)
+      description: |
+        Сотрудник из списка «ознакомить» отмечает, что ознакомился: строка получает дату. Повтор — без изменений (200).
+        Сотрудника нет в списке — 404 `NOT_FOUND`. Журнал `letter.acknowledged`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      responses:
+        '200':
+          description: Отмечено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/instructions/{instruction_id}/complete:
+    post:
+      tags: [letters]
+      operationId: completeInstruction
+      summary: Поручение исполнено (P8b)
+      description: |
+        Исполнитель поручения отмечает «Исполнено» (SPEC-v3 §3.2a п. 3): нужен отчёт (`report`, `file_ids`) или ссылка на
+        отправленный ИСХ (`outgoing_number`), иначе 422 `details.fields.report = report_required`; ИСХ не найден или не
+        отправлен — 422 `details.fields.outgoing_number = not_found`. Только сам исполнитель (иначе 403,
+        `details.reason = not_executor`), только поручение `in_work` (иначе 409 `invalid_state`). Когда исполнены все
+        поручения письма — письмо `executed`, `on_control = false`, `notice.requested` автору резолюции и регистратору.
+        Журнал `instruction.executed` (и `letter.executed`).
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionCompleteIn'
+      responses:
+        '200':
+          description: Исполнено — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/instructions/{instruction_id}/extension:
+    post:
+      tags: [letters]
+      operationId: requestInstructionExtension
+      summary: Запросить перенос срока поручения (P8b)
+      description: |
+        Исполнитель просит новый срок с причиной (SPEC-v3 §3.2a п. 3–4). Срок срочного письма не продлевается (Росархив
+        5.14): запросить можно, автор резолюции может только отклонить; уже есть запрос без решения — 409
+        `extension_pending`; новый срок не позже
+        текущего — 422 `details.fields.new_due = not_later`. Только исполнитель поручения `in_work` (403 `not_executor`, 409
+        `invalid_state`). Статус поручения не меняется; автору резолюции — строка «Перенос срока» и `notice.requested`.
+        Журнал `instruction.extension_requested`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtensionRequestIn'
+      responses:
+        '200':
+          description: Запрос отправлен — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/instructions/{instruction_id}/extension/decision:
+    post:
+      tags: [letters]
+      operationId: decideInstructionExtension
+      summary: Одобрить или отклонить перенос срока (P8b)
+      description: |
+        Решает автор резолюции (иначе 403, `details.reason = not_resolution_author`). Нет запроса без решения — 409
+        `no_pending_extension`. `approve` — срок поручения меняется (напоминания считаются заново), `reject` — срок прежний.
+        Срочное письмо — `approve` отклоняется: 409, `details.reason = urgent_not_extendable` (срочные не продлеваются).
+        Исполнителю — `notice.requested`; история переносов — в поручении. Журнал `instruction.extension_approved` или
+        `instruction.extension_rejected`.
+      x-rt-permissions: []
+      parameters:
+        - $ref: '#/components/parameters/InstructionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtensionDecisionIn'
+      responses:
+        '200':
+          description: Решение принято — карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letter-tasks:
+    get:
+      tags: [letters]
+      operationId: listMyLetterTasks
+      summary: Мои поручения, переносы на решение и ознакомления (P8b)
+      description: |
+        Строки «Моих задач» сотрудника по входящим (SPEC-v3 §3.2a п. 3–5): поручения в работе, где он исполнитель (со
+        сроком и признаком просрочки); запросы переноса без решения, где он автор резолюции; ознакомления без отметки.
+        Не больше 100 строк каждого вида, раньше — ближайший срок.
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Задачи сотрудника
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterTasks'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/employees:
+    get:
+      tags: [letters]
+      operationId: listActiveEmployees
+      summary: Активные сотрудники — адресат, исполнитель, «ознакомить» (P8b)
+      description: |
+        Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
+        пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+      x-rt-permissions: [letters.register, letters.resolve]
+      responses:
+        '200':
+          description: Сотрудники
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/documents:
     get:
@@ -1260,6 +1549,12 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/Uuid'
+    InstructionId:
+      name: instruction_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
     DocumentId:
       name: document_id
       in: path
@@ -1866,11 +2161,13 @@ components:
 
     LetterStatus:
       type: string
-      enum: [awaiting_resolution, resolved, returned, rejected]
+      enum: [awaiting_resolution, resolved, returned, rejected, in_execution, executed, noted]
       description: |
         SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
-        резолюции директора; `resolved` — резолюция наложена; `returned` — возвращено, письмо у регистратора; `rejected` —
-        отклонено. Переходы — таблица в описании API.
+        резолюции директора; `resolved` — резолюция «расчёт» наложена (путь `calc`); `returned` — возвращено, письмо у
+        регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
+        (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
+        «Принято к сведению». Переходы — таблица в описании API.
     Zone:
       type: string
       enum: [goods, services, payment_terms]
@@ -2138,7 +2435,12 @@ components:
           description: Номер предыдущего ВХ или нашего ИСХ, на который ссылается письмо
         addressee_crm_user_id:
           type: [integer, 'null']
-          description: На чьё имя; нет — директор
+          description: На чьё имя (активный сотрудник); нет — директор
+        resolution_draft:
+          oneOf:
+            - $ref: '#/components/schemas/ResolutionDraftIn'
+            - type: 'null'
+          description: Проект резолюции делопроизводителя (P8b) — те же правила, что у `PUT …/resolution-draft`
         manager_crm_user_id:
           type: [integer, 'null']
           description: Ответственный менеджер
@@ -2178,10 +2480,23 @@ components:
         due:
           type: [string, 'null']
           format: date
-          description: Срок расчёта по резолюции
+          description: Срок по резолюции — расчёта (путь `calc`) или ответственного (путь `office`)
         kind:
           type: [string, 'null']
           description: Код вида документа (P8); у писем по заявкам — `null`
+        track:
+          $ref: '#/components/schemas/LetterTrack'
+        on_control:
+          type: boolean
+          description: На контроле — поручения в работе (P8b)
+        overdue:
+          type: boolean
+          description: Есть просроченное поручение (P8b)
+        executor:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: Ответственный исполнитель поручения (P8b); у пути `calc` — `null`
     LetterPage:
       type: object
       additionalProperties: false
@@ -2283,6 +2598,441 @@ components:
           oneOf:
             - $ref: '#/components/schemas/LetterRelatedRef'
             - type: 'null'
+        track:
+          $ref: '#/components/schemas/LetterTrack'
+        on_control:
+          type: boolean
+          description: На контроле (P8b) — есть поручения в работе
+        suggested_due:
+          type: [string, 'null']
+          format: date
+          description: |
+            Подсказка срока резолюции пути `office` (P8b, бенчмарк СЭД §6.4): срок по документу минус рабочий день; без
+            него — дата регистрации плюс 3 дня («срочно») или 10 дней; выходной (сб, вс) переносится на понедельник; не
+            раньше сегодня. У пути `calc` — `null`.
+        resolution_draft:
+          oneOf:
+            - $ref: '#/components/schemas/ResolutionDraft'
+            - type: 'null'
+        office_resolution:
+          oneOf:
+            - $ref: '#/components/schemas/OfficeResolution'
+            - type: 'null'
+          description: Резолюция пути делопроизводства; у пути `calc` — `resolution`
+        instructions:
+          type: array
+          description: Поручения (ответственный первым)
+          items:
+            $ref: '#/components/schemas/Instruction'
+        acquaintances:
+          type: array
+          items:
+            $ref: '#/components/schemas/Acquaintance'
+        executed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Когда исполнены все поручения
+
+    LetterTrack:
+      type: string
+      enum: [calc, office]
+      description: |
+        Путь резолюции (P8b, SPEC-v3 §3.2a). `calc` — письмо по заявке клиента: есть `links.erp_request_id`, или вид
+        документа не задан и есть `links.erp_deal_id` (письма «Создать заявку» и до P8); резолюция «расчёт по зонам»
+        (`POST …/resolution`). `office` — остальное, в том числе письмо с видом документа, связанное с заявкой как контекст;
+        резолюция трёх типов (`POST …/office-resolution`). Путь вычисляет EDS, экран его не выбирает.
+    ResolutionKind:
+      type: string
+      enum: [execute, reply, info]
+      description: Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения»
+    ResolutionDraftIn:
+      type: object
+      additionalProperties: false
+      description: Проект резолюции делопроизводителя; все поля необязательны, `kind = null` — проекта нет
+      properties:
+        kind:
+          oneOf:
+            - $ref: '#/components/schemas/ResolutionKind'
+            - type: 'null'
+        responsible_crm_user_id:
+          type: [integer, 'null']
+        due:
+          type: [string, 'null']
+          format: date
+        text:
+          type: [string, 'null']
+          maxLength: 4000
+        co_executor_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 20
+          items:
+            type: integer
+        acquaint_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            type: integer
+    ResolutionDraft:
+      type: object
+      additionalProperties: false
+      required: [kind, responsible, due, text, co_executors, acquaint, drafted_by, drafted_at]
+      properties:
+        kind:
+          oneOf:
+            - $ref: '#/components/schemas/ResolutionKind'
+            - type: 'null'
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        due:
+          type: [string, 'null']
+          format: date
+        text:
+          type: [string, 'null']
+        co_executors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+        acquaint:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+        drafted_by:
+          $ref: '#/components/schemas/PersonRef'
+        drafted_at:
+          type: string
+          format: date-time
+    OfficeResolutionIn:
+      type: object
+      additionalProperties: false
+      required: [kind, text]
+      properties:
+        kind:
+          $ref: '#/components/schemas/ResolutionKind'
+        responsible_crm_user_id:
+          type: [integer, 'null']
+          description: Обязателен для `execute` и `reply`
+        due:
+          type: [string, 'null']
+          format: date
+          description: Обязателен для `execute` и `reply`; подсказка — `Letter.suggested_due`
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        co_executor_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 20
+          items:
+            type: integer
+        acquaint_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            type: integer
+    OfficeResolution:
+      type: object
+      additionalProperties: false
+      required: [kind, text, due, responsible, co_executors, acquaint, decided_by, decided_at]
+      properties:
+        kind:
+          $ref: '#/components/schemas/ResolutionKind'
+        text:
+          type: string
+        due:
+          type: [string, 'null']
+          format: date
+          description: Срок ответственного (после одобренного переноса — новый)
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        co_executors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+        acquaint:
+          type: array
+          items:
+            $ref: '#/components/schemas/PersonRef'
+        decided_by:
+          $ref: '#/components/schemas/PersonRef'
+        decided_at:
+          type: string
+          format: date-time
+    InstructionStatus:
+      type: string
+      enum: [in_work, executed]
+      description: Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус
+    InstructionRole:
+      type: string
+      enum: [responsible, co_executor]
+    OutgoingRef:
+      type: object
+      additionalProperties: false
+      required: [id, number]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/OutgoingNumber'
+    ExtensionStatus:
+      type: string
+      enum: [pending, approved, rejected]
+    InstructionExtension:
+      type: object
+      additionalProperties: false
+      required: [id, old_due, new_due, reason, status, requested_by, requested_at, decided_by, decided_at, comment]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        old_due:
+          type: string
+          format: date
+        new_due:
+          type: string
+          format: date
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/ExtensionStatus'
+        requested_by:
+          $ref: '#/components/schemas/PersonRef'
+        requested_at:
+          type: string
+          format: date-time
+        decided_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        decided_at:
+          type: [string, 'null']
+          format: date-time
+        comment:
+          type: [string, 'null']
+    Instruction:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - role
+        - person
+        - due
+        - text
+        - status
+        - overdue
+        - report
+        - files
+        - outgoing
+        - executed_at
+        - extensions
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        kind:
+          $ref: '#/components/schemas/ResolutionKind'
+        role:
+          $ref: '#/components/schemas/InstructionRole'
+        person:
+          $ref: '#/components/schemas/PersonRef'
+        due:
+          type: string
+          format: date
+        text:
+          type: string
+        status:
+          $ref: '#/components/schemas/InstructionStatus'
+        overdue:
+          type: boolean
+          description: Срок прошёл (по `Asia/Tashkent`), поручение не исполнено
+        report:
+          type: [string, 'null']
+          description: Отчёт исполнителя
+        files:
+          type: array
+          description: Файлы отчёта
+          items:
+            $ref: '#/components/schemas/FileRef'
+        outgoing:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingRef'
+            - type: 'null'
+          description: Ответ — наш ИСХ
+        executed_at:
+          type: [string, 'null']
+          format: date-time
+        extensions:
+          type: array
+          description: История переносов, старые первыми
+          items:
+            $ref: '#/components/schemas/InstructionExtension'
+    Acquaintance:
+      type: object
+      additionalProperties: false
+      required: [person, acknowledged_at]
+      properties:
+        person:
+          $ref: '#/components/schemas/PersonRef'
+        acknowledged_at:
+          type: [string, 'null']
+          format: date-time
+          description: '«Ознакомлен»; `null` — ждёт'
+    InstructionCompleteIn:
+      type: object
+      additionalProperties: false
+      properties:
+        report:
+          type: [string, 'null']
+          maxLength: 10000
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/Uuid'
+        outgoing_number:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 32
+          description: Номер нашего отправленного ИСХ — ответ на письмо
+    ExtensionRequestIn:
+      type: object
+      additionalProperties: false
+      required: [new_due, reason]
+      properties:
+        new_due:
+          type: string
+          format: date
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 2000
+    ExtensionDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
+        comment:
+          type: [string, 'null']
+          maxLength: 2000
+    LetterTaskLetter:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, sender_name, urgent]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
+        subject:
+          type: string
+        sender_name:
+          type: [string, 'null']
+        urgent:
+          type: boolean
+    InstructionTask:
+      type: object
+      additionalProperties: false
+      required: [id, letter, kind, role, due, overdue, extension_pending, created_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        letter:
+          $ref: '#/components/schemas/LetterTaskLetter'
+        kind:
+          $ref: '#/components/schemas/ResolutionKind'
+        role:
+          $ref: '#/components/schemas/InstructionRole'
+        due:
+          type: string
+          format: date
+        overdue:
+          type: boolean
+        extension_pending:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    ExtensionTask:
+      type: object
+      additionalProperties: false
+      required: [id, instruction_id, letter, executor, old_due, new_due, reason, requested_at]
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        instruction_id:
+          $ref: '#/components/schemas/Uuid'
+        letter:
+          $ref: '#/components/schemas/LetterTaskLetter'
+        executor:
+          $ref: '#/components/schemas/PersonRef'
+        old_due:
+          type: string
+          format: date
+        new_due:
+          type: string
+          format: date
+        reason:
+          type: string
+        requested_at:
+          type: string
+          format: date-time
+    AcquaintanceTask:
+      type: object
+      additionalProperties: false
+      required: [letter, created_at]
+      properties:
+        letter:
+          $ref: '#/components/schemas/LetterTaskLetter'
+        created_at:
+          type: string
+          format: date-time
+    LetterTasks:
+      type: object
+      additionalProperties: false
+      required: [instructions, extensions, acquaintances]
+      properties:
+        instructions:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstructionTask'
+        extensions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtensionTask'
+        acquaintances:
+          type: array
+          items:
+            $ref: '#/components/schemas/AcquaintanceTask'
+    EmployeeChoice:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, full_name, position]
+      properties:
+        crm_user_id:
+          type: integer
+        full_name:
+          type: string
+        position:
+          type: [string, 'null']
+    EmployeeList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/EmployeeChoice'
 
     DocumentKind:
       type: string

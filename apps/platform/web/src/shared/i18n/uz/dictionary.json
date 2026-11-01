@@ -15,7 +15,10 @@
       "awaiting_resolution": "Rezolyutsiya kutilmoqda",
       "resolved": "Rezolyutsiya qo‘yilgan",
       "returned": "Qaytarilgan",
-      "rejected": "Rad etilgan"
+      "rejected": "Rad etilgan",
+      "in_execution": "Ijroda",
+      "executed": "Bajarildi",
+      "noted": "Ma’lumot uchun qabul qilindi"
     },
     "quote": {
       "draft": "Qoralama",

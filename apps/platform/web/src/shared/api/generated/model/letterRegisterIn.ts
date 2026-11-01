@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { LetterReceiptMethod } from "./letterReceiptMethod";
+import type { ResolutionDraftIn } from "./resolutionDraftIn";
 
 /**
  * Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию
@@ -82,6 +83,14 @@ export interface LetterRegisterIn {
    * @nullable
    */
   related_number?: string | null;
+  /**
+   * Адресат — `crm_user_id` активного сотрудника (`GET /eds/staff`); нет — директор (P8b)
+   * @nullable
+   * @pattern ^[1-9][0-9]*$
+   */
+  addressee_id?: string | null;
+  /** Проект резолюции делопроизводителя (P8b) */
+  resolution_draft?: ResolutionDraftIn | null;
   /**
    * @minItems 1
    * @maxItems 50

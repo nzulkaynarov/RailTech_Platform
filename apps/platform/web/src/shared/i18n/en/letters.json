@@ -4,7 +4,9 @@
     "caption": "Incoming letters",
     "filter": {
       "label": "Letter status",
-      "all": "All"
+      "all": "All",
+      "on_control": "Under control",
+      "overdue": "Overdue"
     },
     "columns": {
       "number": "Number",
@@ -13,7 +15,10 @@
       "request": "Request",
       "received": "Received",
       "status": "Status",
-      "action": "Action"
+      "action": "Action",
+      "executor": "Executor",
+      "due": "Due",
+      "correspondent": "Correspondent"
     },
     "select": "Show letter {{number}} in the side panel",
     "open": "Open",
@@ -37,7 +42,9 @@
         "text": "Client letters arrive from CRM once a request is created; the office clerk registers the rest. This is where the director adds a resolution.",
         "action": "Refresh"
       }
-    }
+    },
+    "overdue": "overdue",
+    "dueOverdue": "{{date}}, overdue"
   },
   "state": {
     "loadError": {
@@ -80,7 +87,9 @@
       "receiptMethod": "Received via",
       "signedBy": "Signed by",
       "documentDue": "Deadline in the document",
-      "related": "Related document"
+      "related": "Related document",
+      "correspondent": "Correspondent",
+      "correspondentInn": "Correspondent tax ID"
     },
     "urgent": "Urgent",
     "regular": "Regular",
@@ -118,12 +127,20 @@
       "letter_resolved": "Resolution added",
       "letter_returned": "Returned to the manager",
       "letter_rejected": "Rejected",
-      "letter_resubmitted": "Submitted for resolution again"
+      "letter_resubmitted": "Submitted for resolution again",
+      "letter_draft_saved": "Draft resolution saved",
+      "instruction_executed": "Instruction executed",
+      "instruction_extension_requested": "Deadline extension requested",
+      "instruction_extension_approved": "Deadline extension approved",
+      "instruction_extension_rejected": "Deadline extension rejected",
+      "letter_executed": "All instructions executed",
+      "letter_acknowledged": "Acknowledged the letter"
     },
     "readOnly": "View only",
     "readOnlyHint": "The director decides on the letter.",
     "resolve": "Add resolution",
-    "partial": "Request data is unavailable: the step is shown from the letter itself."
+    "partial": "Request data is unavailable: the step is shown from the letter itself.",
+    "onControl": "Under control"
   },
   "panel": {
     "awaitingReadOnly": {
@@ -140,11 +157,17 @@
       "request": "Request",
       "received": "Received",
       "summary": "Document summary",
-      "files": "Attachments"
+      "files": "Attachments",
+      "correspondent": "Correspondent"
     },
     "sheetTitle": "Resolution for letter {{number}}",
     "sheetClose": "Close",
-    "sheetLabel": "Resolution"
+    "sheetLabel": "Resolution",
+    "decidedOffice": {
+      "title": "Resolution given",
+      "text": "Instructions, deadlines and progress are in the letter card, under \"Instructions\"."
+    },
+    "openTask": "Open the instruction work screen"
   },
   "form": {
     "name": "Director's resolution",
@@ -228,7 +251,16 @@
       "forbidden": "this action is not allowed for your role",
       "unavailable": "document flow is not responding",
       "validation": "check the fields",
-      "unknown": "unexpected error"
+      "unknown": "unexpected error",
+      "track_mismatch": "the letter has a different resolution path, refresh the card",
+      "not_allowed_for_info": "\"For information\" has no responsible employee or deadline",
+      "urgent_not_extendable": "urgent letters cannot be extended",
+      "extension_pending": "an extension request is already awaiting a decision",
+      "not_executor": "this instruction is not yours",
+      "not_resolution_author": "the resolution author decides on extensions",
+      "no_pending_extension": "there is no extension request any more, refresh the card",
+      "report_required": "a report, a file or an outgoing number is required",
+      "not_found": "no document with this number"
     },
     "done": {
       "resolve": "Resolution added: the task went to the assignees",
@@ -291,7 +323,8 @@
     },
     "addressee": {
       "label": "Addressee",
-      "hint": "The director adds the resolution"
+      "hint": "Who the letter goes to for resolution. Empty — the director.",
+      "default": "Director (default)"
     },
     "urgent": "Urgent",
     "files": {
@@ -331,6 +364,207 @@
       "related_number": "No document with this number. Check the ВХ or ИСХ number.",
       "forbidden": "registering incoming letters is not part of your role",
       "server": "the server did not accept the data, try again in a minute"
+    },
+    "draft": {
+      "legend": "Draft resolution (optional)",
+      "hint": "The director approves the draft in one click or edits it.",
+      "kind": "Resolution type",
+      "none": "No draft"
     }
+  },
+  "office": {
+    "name": "Director's resolution",
+    "draftName": "Draft resolution",
+    "draftIntro": "Prepare a draft: the director approves it in one click or edits it.",
+    "kind": {
+      "legend": "Resolution type",
+      "execute": "For execution",
+      "reply": "Prepare a reply",
+      "info": "For information"
+    },
+    "kindHint": {
+      "execute": "The executor does it and reports in \"My tasks\".",
+      "reply": "The executor prepares a reply: registering an outgoing letter \"in reply to\" closes the instruction.",
+      "info": "No instruction: the letter becomes \"Noted\"."
+    },
+    "template": {
+      "execute": "Please execute and report on time.",
+      "reply": "Please prepare a reply on time.",
+      "info": "For information."
+    },
+    "responsible": {
+      "label": "Responsible",
+      "hint": "Any company employee",
+      "choose": "Choose an employee"
+    },
+    "due": {
+      "label": "Deadline",
+      "hint": "Suggested — {{date}}: by the document deadline and urgency; weekends move to Monday.",
+      "hintNone": "Not earlier than today."
+    },
+    "text": {
+      "label": "Resolution text",
+      "hint": "Template by type — you can edit it."
+    },
+    "co": {
+      "label": "Co-executors",
+      "hint": "Optional: they get the same instruction with the same deadline."
+    },
+    "acquaint": {
+      "label": "Acquaint",
+      "hint": "Optional: they get an \"Acknowledge\" task."
+    },
+    "choosePeople": "Choose employees",
+    "draftBy": "Draft prepared by {{name}}, {{date}}.",
+    "approve": "Approve draft",
+    "submit": "Give resolution",
+    "saveDraft": "Save draft",
+    "consequence": {
+      "title": "What happens",
+      "execute": [
+        "The letter becomes \"In execution\" and goes under control.",
+        "Executors get the instruction in \"My tasks\", the bell and Telegram.",
+        "Reminders: one working day before the deadline and on the day; after it — \"Overdue\".",
+        "When everyone is done, the letter becomes \"Executed\" and you are notified."
+      ],
+      "info": [
+        "The letter becomes \"Noted\", no instruction.",
+        "People in \"Acquaint\" get an \"Acknowledge\" task."
+      ],
+      "draft": [
+        "The letter stays \"Awaiting resolution\".",
+        "The director sees the draft in the resolution form and approves it in one click or edits it."
+      ]
+    },
+    "staff": {
+      "unavailable": "The employee list did not load.",
+      "retry": "Retry"
+    },
+    "other": {
+      "title": "If no resolution is needed",
+      "comment": "Comment",
+      "commentHint": "Required: the registrar sees it in the card.",
+      "return": "Return to registrar",
+      "reject": "Reject",
+      "disabled": "Buttons are disabled until there is a comment: write what to fix or why you reject.",
+      "returnHelp": "Return — the letter goes back to the registrar (registration error).",
+      "rejectHelp": "Reject — the letter is closed with this reason."
+    },
+    "errors": {
+      "kind": "Choose the resolution type.",
+      "responsible": "Choose the responsible employee.",
+      "due": "Set the deadline.",
+      "duePast": "The deadline cannot be in the past.",
+      "text": "Write the resolution text."
+    },
+    "done": {
+      "resolve": "Resolution given: the instruction went to executors",
+      "info": "Letter noted",
+      "draft": "Draft resolution saved",
+      "return": "Letter returned to the registrar",
+      "reject": "Letter rejected"
+    },
+    "failed": "Not saved: {{reason}}."
+  },
+  "instr": {
+    "title": "Instructions",
+    "resolution": "Director's resolution",
+    "fields": {
+      "kind": "Type",
+      "responsible": "Responsible",
+      "co": "Co-executors",
+      "acquaint": "Acquaint",
+      "due": "Deadline",
+      "text": "Text",
+      "decidedBy": "Decided by"
+    },
+    "role": {
+      "responsible": "responsible",
+      "co_executor": "co-executor"
+    },
+    "status": {
+      "in_work": "In progress",
+      "executed": "Executed"
+    },
+    "overdue": "Overdue",
+    "due": "Due {{date}}",
+    "report": "Report",
+    "files": "Report files",
+    "outgoing": "Reply",
+    "executedAt": "Executed {{date}}",
+    "history": "Extension history",
+    "ext": {
+      "item": "{{old}} → {{new}}: {{reason}}",
+      "by": "requested by {{name}}, {{date}}",
+      "status": {
+        "pending": "awaiting decision",
+        "approved": "approved",
+        "rejected": "rejected"
+      },
+      "decidedBy": "decided by {{name}}, {{date}}"
+    },
+    "decide": {
+      "title": "Deadline extension: your decision is needed",
+      "text": "{{name}} asks to move the deadline from {{old}} to {{new}}.",
+      "reason": "Reason: {{reason}}",
+      "comment": "Comment (optional)",
+      "approve": "Approve extension",
+      "reject": "Reject extension",
+      "done": {
+        "approve": "Extension approved: new deadline {{date}}",
+        "reject": "Extension rejected: deadline unchanged"
+      },
+      "urgent": "The letter is urgent: the deadline cannot be extended — you can only reject the request."
+    },
+    "acq": {
+      "title": "Acquaintance",
+      "waiting": "waiting",
+      "done": "acknowledged {{date}}"
+    },
+    "none": "No instructions."
+  },
+  "tasks": {
+    "title": "Instruction on letter {{number}}",
+    "subtitle": "The letter, your instruction and actions on it",
+    "letter": "Letter",
+    "openCard": "Open the letter card",
+    "mine": "My instruction",
+    "noTask": {
+      "title": "Nothing is expected from you on this letter",
+      "text": "The instruction is executed or assigned to someone else. Progress is under \"Instructions\"."
+    },
+    "complete": {
+      "title": "Mark as executed",
+      "report": "Report",
+      "reportHint": "What was done. A report, a file or an outgoing number is required.",
+      "files": "Report files",
+      "outgoing": "Reply — our outgoing number",
+      "outgoingHint": "If you replied with a letter: its number from \"Documents\", e.g. ИСХ-014/26.",
+      "submit": "Executed",
+      "done": "Instruction executed",
+      "error": "Write a report, attach a file or enter the outgoing number."
+    },
+    "reply": {
+      "prepare": "Prepare a reply",
+      "hint": "\"New document → Letter\" \"in reply to {{number}}\": registering the letter closes the instruction."
+    },
+    "ext": {
+      "title": "Running late? Request an extension",
+      "newDue": "New deadline",
+      "reason": "Reason",
+      "submit": "Request extension",
+      "urgent": "The letter is urgent: the deadline cannot be extended, the director can only reject the request.",
+      "pending": "The request to move the deadline to {{date}} is awaiting the director's decision.",
+      "errorDue": "The new deadline must be after the current one ({{date}}).",
+      "errorReason": "Write the reason.",
+      "done": "Extension request sent to the director"
+    },
+    "acq": {
+      "title": "Acknowledge",
+      "text": "The director added you to \"Acquaint\". Read the letter and mark it.",
+      "submit": "Acknowledged",
+      "done": "Marked: acknowledged"
+    },
+    "failed": "Not saved: {{reason}}."
   }
 }

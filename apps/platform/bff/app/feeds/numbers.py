@@ -152,6 +152,19 @@ def letter_ref(number: str, title: str | None) -> ObjectRef:
     )
 
 
+def letter_task_ref(letter_id: str, number: str, title: str | None) -> ObjectRef:
+    """Рабочий экран письма (P8b): поручение, перенос, «Ознакомиться» — `/eds/tasks/<id письма>`.
+
+    Адрес — по UUID, не по номеру: номер BFF находит через реестр EDS (`registry.read`), а у
+    исполнителя без раздела «Входящие» этого права может не быть; карточку по UUID EDS отдаёт
+    участнику поручения."""
+    return ObjectRef(kind="letter", number=number, title=title, path=letter_task_path(letter_id))
+
+
+def letter_task_path(letter_id: str) -> str:
+    return f"/eds/tasks/{segment(letter_id)}"
+
+
 def memo_ref(number: str, title: str | None) -> ObjectRef:
     """Служебная записка, заявление, отчёт — «На согласовании», вкладка «Согласование»."""
     return ObjectRef(

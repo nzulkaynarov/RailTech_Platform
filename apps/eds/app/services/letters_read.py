@@ -1,25 +1,35 @@
 """Чтение писем: карточка с резолюцией и журналом, страница списка с фильтрами и поиском."""
 
 import uuid
+from datetime import date
+from typing import Any
 
 from sqlalchemy import String, cast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import clock
 from app.errors import not_found
-from app.models import Document, Letter
+from app.models import Acquaintance, Document, Instruction, InstructionExtension, Letter
 from app.schemas.common import ErpLinks, IncomingLetterSender, SenderRef
 from app.schemas.letters import (
+    AcquaintanceOut,
     Assignee,
+    InstructionExtensionOut,
+    InstructionOut,
     LetterListItem,
     LetterPage,
     LetterStatus,
+    OfficeResolution,
+    OutgoingRef,
     ReceiptMethod,
     RelatedRef,
     Resolution,
+    ResolutionDraft,
+    ResolutionKind,
 )
 from app.schemas.letters import Letter as LetterOut
 from app.schemas.pagination import decode_cursor
-from app.services import files, journal, paging
+from app.services import files, instructions, journal, paging
 from app.services.letters import fmt_pct
 from app.services.people import Directory, default_director, load_directory
 
@@ -43,6 +53,8 @@ def sender_of(letter: Letter) -> IncomingLetterSender:
 
 
 def _resolution(letter: Letter, directory: Directory) -> Resolution | None:
+    if letter.resolution_kind is not None:  # резолюция делопроизводства — `office_resolution`
+        return None
     if letter.resolution_decided_by is None or letter.resolution_due is None or letter.resolution_decided_at is None:
         return None
     return Resolution(
@@ -82,19 +94,102 @@ async def _related(session: AsyncSession, letter: Letter) -> RelatedRef | None:
     return None
 
 
+def _draft(letter: Letter, directory: Directory) -> ResolutionDraft | None:
+    raw: dict[str, Any] | None = letter.resolution_draft
+    if not raw:
+        return None
+    return ResolutionDraft(
+        kind=ResolutionKind(raw["kind"]) if raw.get("kind") else None,
+        responsible=directory.person_or_none(raw.get("responsible")),
+        due=date.fromisoformat(raw["due"]) if raw.get("due") else None,
+        text=raw.get("text"),
+        co_executors=[directory.person(uid) for uid in raw.get("co_executors") or []],
+        acquaint=[directory.person(uid) for uid in raw.get("acquaint") or []],
+        drafted_by=directory.person(int(raw["by"])),
+        drafted_at=raw["at"],
+    )
+
+
+def _draft_people(letter: Letter) -> list[int | None]:
+    raw: dict[str, Any] = letter.resolution_draft or {}
+    return [raw.get("responsible"), raw.get("by"), *(raw.get("co_executors") or []), *(raw.get("acquaint") or [])]
+
+
+async def _work(
+    session: AsyncSession, letter: Letter
+) -> tuple[list[Instruction], dict[uuid.UUID, list[InstructionExtension]], list[Acquaintance], dict[uuid.UUID, str]]:
+    """Поручения (ответственный первым), их переносы, ознакомление и номера ИСХ-ответов."""
+    rows = list(
+        (
+            await session.execute(
+                select(Instruction)
+                .where(Instruction.letter_id == letter.id)
+                .order_by(Instruction.role.desc(), Instruction.created_at, Instruction.crm_user_id)
+            )
+        ).scalars()
+    )
+    extensions: dict[uuid.UUID, list[InstructionExtension]] = {r.id: [] for r in rows}
+    if rows:
+        found = await session.execute(
+            select(InstructionExtension)
+            .where(InstructionExtension.instruction_id.in_(list(extensions)))
+            .order_by(InstructionExtension.requested_at)
+        )
+        for ext in found.scalars():
+            extensions[ext.instruction_id].append(ext)
+    acquaint = list(
+        (
+            await session.execute(
+                select(Acquaintance).where(Acquaintance.letter_id == letter.id).order_by(Acquaintance.created_at)
+            )
+        ).scalars()
+    )
+    outgoing_ids = {r.outgoing_document_id for r in rows if r.outgoing_document_id}
+    numbers: dict[uuid.UUID, str] = {}
+    if outgoing_ids:
+        found_numbers = await session.execute(select(Document.id, Document.number).where(Document.id.in_(outgoing_ids)))
+        numbers = {doc_id: number for doc_id, number in found_numbers.all() if number}
+    return rows, extensions, acquaint, numbers
+
+
+def _office_resolution(
+    letter: Letter, rows: list[Instruction], acquaint: list[Acquaintance], directory: Directory
+) -> OfficeResolution | None:
+    if letter.resolution_kind is None or letter.resolution_decided_by is None or letter.resolution_decided_at is None:
+        return None
+    responsible = next((r.crm_user_id for r in rows if r.role == "responsible"), None)
+    return OfficeResolution(
+        kind=ResolutionKind(letter.resolution_kind),
+        text=letter.resolution_text or "",
+        due=letter.resolution_due,
+        responsible=directory.person_or_none(responsible),
+        co_executors=[directory.person(r.crm_user_id) for r in rows if r.role == "co_executor"],
+        acquaint=[directory.person(a.crm_user_id) for a in acquaint],
+        decided_by=directory.person(letter.resolution_decided_by),
+        decided_at=letter.resolution_decided_at,
+    )
+
+
 async def present(session: AsyncSession, letter: Letter) -> LetterOut:
-    """Карточка письма: резолюция, вложения (последние версии) и журнал."""
+    """Карточка письма: резолюция, поручения, вложения (последние версии) и журнал."""
+    rows, extensions, acquaint, numbers = await _work(session, letter)
+    ext_people = [p for exts in extensions.values() for e in exts for p in (e.requested_by, e.decided_by)]
     ids = [
         letter.registered_by,
         letter.manager_crm_user_id,
         letter.addressee_crm_user_id,
         letter.resolution_decided_by,
         *(a["crm_user_id"] for a in letter.resolution_assignees or []),
+        *(r.crm_user_id for r in rows),
+        *(a.crm_user_id for a in acquaint),
+        *ext_people,
+        *_draft_people(letter),
     ]
     director = None if letter.addressee_crm_user_id else await default_director(session)
     directory = await load_directory(session, [*ids, director])
     entries = await journal.entries(session, "letter", letter.id)
     addressee = letter.addressee_crm_user_id or director
+    today = clock.company_date(clock.now())
     return LetterOut(
         id=letter.id,
         number=letter.number,
@@ -120,15 +215,71 @@ async def present(session: AsyncSession, letter: Letter) -> LetterOut:
         signed_by=letter.signed_by,
         document_due=letter.document_due,
         related=await _related(session, letter),
+        track=instructions.track_of(letter),
+        on_control=letter.on_control,
+        suggested_due=instructions.suggested_due(letter, today) if letter.status == "awaiting_resolution" else None,
+        resolution_draft=_draft(letter, directory),
+        office_resolution=_office_resolution(letter, rows, acquaint, directory),
+        instructions=[
+            InstructionOut(
+                id=r.id,
+                kind=ResolutionKind(r.kind),
+                role=r.role,
+                person=directory.person(r.crm_user_id),
+                due=r.due,
+                text=r.text,
+                status=r.status,
+                overdue=r.status == instructions.IN_WORK and r.due < today,
+                report=r.report,
+                files=await files.refs_for(session, instruction_id=r.id),
+                outgoing=OutgoingRef(id=r.outgoing_document_id, number=numbers[r.outgoing_document_id])
+                if r.outgoing_document_id in numbers
+                else None,
+                executed_at=r.executed_at,
+                extensions=[
+                    InstructionExtensionOut(
+                        id=e.id,
+                        old_due=e.old_due,
+                        new_due=e.new_due,
+                        reason=e.reason,
+                        status=e.status,
+                        requested_by=directory.person(e.requested_by),
+                        requested_at=e.requested_at,
+                        decided_by=directory.person_or_none(e.decided_by),
+                        decided_at=e.decided_at,
+                        comment=e.comment,
+                    )
+                    for e in extensions[r.id]
+                ],
+            )
+            for r in rows
+        ],
+        acquaintances=[
+            AcquaintanceOut(person=directory.person(a.crm_user_id), acknowledged_at=a.acknowledged_at) for a in acquaint
+        ],
+        executed_at=letter.executed_at,
     )
 
 
 async def list_page(
-    session: AsyncSession, *, statuses: list[LetterStatus] | None, q: str | None, cursor: str | None, limit: int
+    session: AsyncSession,
+    *,
+    statuses: list[LetterStatus] | None,
+    q: str | None,
+    cursor: str | None,
+    limit: int,
+    on_control: bool | None = None,
+    overdue: bool | None = None,
 ) -> LetterPage:
+    today = clock.company_date(clock.now())
     stmt = select(Letter)
     if statuses:
         stmt = stmt.where(Letter.status.in_([s.value for s in statuses]))
+    if on_control is not None:
+        stmt = stmt.where(Letter.on_control.is_(on_control))
+    if overdue is not None:
+        clause = instructions.overdue_clause(today)
+        stmt = stmt.where(clause if overdue else ~clause)
     if q and q.strip():
         like = f"%{escape_like(q.strip())}%"
         stmt = stmt.where(
@@ -143,6 +294,20 @@ async def list_page(
     stmt = paging.apply(stmt, Letter.registered_at, Letter.id, decode_cursor(cursor), limit)
     rows = list((await session.execute(stmt)).scalars().all())
     page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
+    executors: dict[uuid.UUID, int] = {}
+    late: set[uuid.UUID] = set()
+    if page:
+        work = await session.execute(
+            select(
+                Instruction.letter_id, Instruction.crm_user_id, Instruction.role, Instruction.status, Instruction.due
+            ).where(Instruction.letter_id.in_([r.id for r in page]))
+        )
+        for letter_id, uid, role, status, due in work.all():
+            if role == "responsible":
+                executors[letter_id] = uid
+            if status == instructions.IN_WORK and due < today:
+                late.add(letter_id)
+    directory = await load_directory(session, executors.values())
     items = [
         LetterListItem(
             id=r.id,
@@ -155,6 +320,10 @@ async def list_page(
             urgent=r.urgent,
             due=r.resolution_due,
             kind=r.doc_kind,
+            track=instructions.track_of(r),
+            on_control=r.on_control,
+            overdue=r.id in late,
+            executor=directory.person(executors[r.id]) if r.id in executors else None,
         )
         for r in page
     ]

@@ -176,11 +176,13 @@ EDS_EVENTS = {
     "approval.decided",
     # W18A-P1: письмо EDS (письмо на бланке, P4) отправляет почтовый сервис CRM.
     "mail.requested",
+    # P8b: уведомления сотрудникам по поручениям входящих доставляет CRM (колокольчик и Telegram).
+    "notice.requested",
 }
 
 
 def test_eds_types_are_those_of_the_runbook() -> None:
-    """Волна 12 §2.4: восемь типов uz.railtech.eds.*.v1 и запрос письма (W18A-P1), издатель rt://eds."""
+    """Волна 12 §2.4: восемь типов uz.railtech.eds.*.v1, запрос письма (W18A-P1) и уведомления (P8b), издатель rt://eds."""
     eds = [t for t in TYPES if t.domain == "eds"]
     assert {f"{t.entity}.{t.action}" for t in eds} == EDS_EVENTS
     assert {t.source for t in eds} == {"rt://eds"}
@@ -412,8 +414,8 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
         "uz.railtech.erp.quote.ready_for_approval.v1",
         "uz.railtech.erp.contract.status_changed.v1",
     }
-    # от EDS — только запрос письма (W18A-P1)
-    assert _gets(crm) - erp_got == {"uz.railtech.eds.mail.requested.v1"}
+    # от EDS — запрос письма (W18A-P1) и уведомления сотрудникам (P8b)
+    assert _gets(crm) - erp_got == {"uz.railtech.eds.mail.requested.v1", "uz.railtech.eds.notice.requested.v1"}
 
 
 def test_eds_subscription_c1() -> None:

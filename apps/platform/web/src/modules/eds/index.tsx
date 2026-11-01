@@ -11,6 +11,7 @@ import { NewDocumentPage } from "./new/NewDocumentPage";
 import { PaymentsScreen } from "./payments/PaymentsScreen";
 import { ProjectsScreen } from "./projects/ProjectsScreen";
 import { RegisterLetterPage } from "./register/RegisterLetterPage";
+import { TasksScreen } from "./tasks/TasksScreen";
 
 /**
  * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5), «КП на одобрение»
@@ -65,6 +66,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <RegisterLetterPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "tasks") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <TasksScreen objectId={match.objectId} />
       </RequireAccess>
     );
   }

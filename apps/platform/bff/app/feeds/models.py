@@ -51,6 +51,10 @@ QueueItemKind = Literal[
     "overdue_invoice",
     "ticket",
     "integration_issue",
+    # P8b (SPEC-v3 §3.2a): поручение по входящему, перенос срока у автора резолюции, «Ознакомиться»
+    "instruction",
+    "instruction_extension",
+    "acquaint",
 ]
 DueLabel = Literal["overdue", "today", "tomorrow", "later", "memo"]
 NotificationTab = Literal["all", "decisions", "clients", "system"]

@@ -117,6 +117,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "eds.documents",
   "eds.new",
   "eds.register",
+  "eds.tasks",
   "eds.inbox",
   "erp.requests",
   "erp.calc",

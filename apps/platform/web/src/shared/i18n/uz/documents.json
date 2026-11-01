@@ -271,7 +271,8 @@
       "amount": "Summa noldan katta bo‘lishi kerak, masalan 1 500 000.",
       "due": "«Muddat» o‘tmishda bo‘lishi mumkin emas.",
       "recipient": "Xat manzilini kiriting.",
-      "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang."
+      "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang.",
+      "replyTo": "Bunday raqamli kiruvchi xat yo‘q. ВХ raqamini tekshiring."
     },
     "toast": {
       "draft": "Qoralama saqlandi",
@@ -307,6 +308,10 @@
       "text": "Qoralamani va qayta ishlashga qaytarilgan hujjatni tahrirlash mumkin. Yuborilgan hujjat qarorni kutmoqda."
     },
     "toDocuments": "Mening hujjatlarim",
-    "forbiddenTitle": "Hujjat yaratib bo‘lmaydi"
+    "forbiddenTitle": "Hujjat yaratib bo‘lmaydi",
+    "replyTo": {
+      "label": "Kiruvchi xatga javoban",
+      "hint": "ВХ raqami, masalan ВХ-112/26: xat ro‘yxatga olinsa, «Javob tayyorlash» topshirig‘i yopiladi."
+    }
   }
 }

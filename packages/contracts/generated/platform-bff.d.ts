@@ -811,6 +811,12 @@ export interface paths {
      *     Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
      *     его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
      *     действие.
+     *
+     *     Входящие делопроизводства (P8b, SPEC-v3 §3.2a; EDS `GET /letter-tasks`): `instruction` — «Исполнить поручение» по
+     *     письму со сроком (просрочено — `due_label = overdue`), `instruction_extension` — «Перенос срока» у автора резолюции,
+     *     `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
+     *     реестре, которого у исполнителя может не быть); одна строка на поручение,
+     *     перенос и ознакомление — без дублей.
      */
     get: operations["getQueue"];
     put?: never;
@@ -3688,7 +3694,7 @@ export interface paths {
     };
     /**
      * EDS · Карточка входящего письма (по id или по номеру ВХ)
-     * @description EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение.
+     * @description EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение; без него (P8b, SPEC-v3 §3.2a «Права») карточку получает исполнитель поручения, сотрудник из «ознакомить» и автор резолюции — решает EDS (иначе 403). Путь делопроизводства: шаг пути не применяется (`stage` — по статусу письма: ждёт резолюции — «Резолюция», дальше — «Резолюция» пройдена).
      */
     get: operations["getLetter"];
     put?: never;
@@ -3788,9 +3794,149 @@ export interface paths {
     };
     /**
      * EDS · Скачать вложение письма
-     * @description EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение. Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
+     * @description EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение; файлы письма и отчётов поручений скачивает и участник поручения без него (решает EDS, P8b). Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
      */
     get: operations["downloadLetterFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/resolution-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * EDS · Проект резолюции делопроизводителя (P8b)
+     * @description EDS `PUT /letters/{id}/resolution-draft` (права `letters.register` или `letters.resolve`). Раздел `eds.inbox.register` или `eds.inbox` — полный. Только письмо пути делопроизводства (`LetterCard.track = office`, иначе 409, `details.reason = track_mismatch`), ждущее резолюции (иначе 409 `invalid_state`). Проект заменяется целиком; директор утверждает его одним действием (`POST /eds/letters/{id}/office-resolution` с теми же полями) или правит. Сотрудник не найден или отключён — 422 `VALIDATION_FAILED` с полем; срок в прошлом — `details.fields = [due]`. Ответ — карточка.
+     */
+    put: operations["saveResolutionDraft"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/office-resolution": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Резолюция: К исполнению · Подготовить ответ · Для сведения (P8b)
+     * @description EDS `POST /letters/{id}/office-resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный. Путь резолюции письма решает EDS (`LetterCard.track`): `office` — эта операция, `calc` (письмо по заявке клиента) — по-прежнему `POST /eds/letters/{id}/resolution`; не тот путь — 409, `details.reason = track_mismatch`. «К исполнению» и «Подготовить ответ» — ответственный (любой активный сотрудник) и срок обязательны, поручения создаются, письмо «На исполнении» и на контроле; «Для сведения» — без ответственного и срока, письмо «Принято к сведению»; «ознакомить» — у любого типа. Ошибки полей — 422 `VALIDATION_FAILED` (`due_in_past`, `not_active_employee`, `duplicate`, `not_allowed_for_info`). Исполнители получают уведомление (колокольчик и Telegram). Ответ — карточка.
+     */
+    post: operations["resolveOfficeLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/acquaint": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · «Ознакомлен» (P8b)
+     * @description EDS `POST /letters/{id}/acquaint`. Любой сотрудник; отметку ставит только тот, кто в списке «ознакомить» (решает EDS, иначе 404). Повтор — без изменений. Ответ — карточка.
+     */
+    post: operations["acknowledgeLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/instructions/{id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Поручение исполнено (P8b)
+     * @description EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+     */
+    post: operations["completeInstruction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/instructions/{id}/extension": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Запросить перенос срока поручения (P8b)
+     * @description EDS `POST /instructions/{id}/extension`. Любой сотрудник; просит только исполнитель (403 `not_executor`). Срок срочного письма не продлевается: запросить можно, автор резолюции может только отклонить; запрос уже ждёт решения — 409 `extension_pending`; новый срок не позже текущего — 422, `details.fields = [new_due]`. Автор резолюции получает строку «Перенос срока» в «Моих задачах» и уведомление. Ответ — карточка.
+     */
+    post: operations["requestInstructionExtension"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/instructions/{id}/extension/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Одобрить или отклонить перенос срока (P8b)
+     * @description EDS `POST /instructions/{id}/extension/decision`. Раздел `eds.inbox` — полный; решает только автор резолюции (иначе 403, `details.reason = not_resolution_author`); запроса без решения нет — 409 `no_pending_extension`; одобрить перенос срочного письма — 409 `urgent_not_extendable` (срочные не продлеваются). Одобрено — срок меняется; исполнитель получает уведомление в обоих случаях. Ответ — карточка.
+     */
+    post: operations["decideInstructionExtension"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/staff": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
+     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     */
+    get: operations["listEdsStaff"];
     put?: never;
     post?: never;
     delete?: never;
@@ -6803,7 +6949,10 @@ export interface components {
       | "pay_memo"
       | "overdue_invoice"
       | "ticket"
-      | "integration_issue";
+      | "integration_issue"
+      | "instruction"
+      | "instruction_extension"
+      | "acquaint";
     /**
      * @description Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
      * @enum {string}
@@ -7433,6 +7582,11 @@ export interface components {
       erp_deal_id?: number | null;
       /** @description Только `letter_out` */
       recipient?: components["schemas"]["EdsRecipient"] | null;
+      /**
+       * @description Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
+       * @example ВХ-112/26
+       */
+      in_reply_to_number?: string | null;
       /**
        * @description `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик
        * @default false
@@ -8940,10 +9094,17 @@ export interface components {
       text: components["schemas"]["LocalizedText"];
     };
     /**
-     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено». Слова — в словаре интерфейса, не в API.
+     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению». Слова — в словаре интерфейса, не в API.
      * @enum {string}
      */
-    LetterStatus: "awaiting_resolution" | "resolved" | "returned" | "rejected";
+    LetterStatus:
+      | "awaiting_resolution"
+      | "resolved"
+      | "returned"
+      | "rejected"
+      | "in_execution"
+      | "executed"
+      | "noted";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец), `services` — услуги, ТЗ, бригада (гл. инженер), `payment_terms` — условия оплаты (бухгалтер).
      * @enum {string}
@@ -8986,6 +9147,13 @@ export interface components {
       due: string | null;
       /** @description Код вида документа (P8, `GET /eds/letter-kinds`); у писем по заявкам — `null` */
       kind?: string | null;
+      track?: components["schemas"]["LetterTrack"];
+      /** @description На контроле — поручения в работе (P8b) */
+      on_control?: boolean;
+      /** @description Есть просроченное поручение (P8b) */
+      overdue?: boolean;
+      /** @description Ответственный исполнитель поручения (P8b); `due` — его срок */
+      executor?: components["schemas"]["PersonRef"] | null;
     };
     LetterPage: {
       items: components["schemas"]["LetterRow"][];
@@ -9086,6 +9254,170 @@ export interface components {
        */
       document_due?: string | null;
       related?: components["schemas"]["LetterRelated"] | null;
+      track?: components["schemas"]["LetterTrack"];
+      /** @description На контроле (P8b) */
+      on_control?: boolean;
+      /**
+       * Format: date
+       * @description Подсказка срока резолюции делопроизводства (считает EDS, бенчмарк СЭД §6.4): срок по документу минус рабочий день; без него — 3 дня «срочно» или 10 дней от регистрации; выходной переносится на понедельник. У пути `calc` — `null`.
+       */
+      suggested_due?: string | null;
+      resolution_draft?: components["schemas"]["LetterResolutionDraft"] | null;
+      office_resolution?: components["schemas"]["LetterOfficeResolution"] | null;
+      /** @description Поручения (ответственный первым), P8b */
+      instructions?: components["schemas"]["LetterInstruction"][];
+      acquaintances?: components["schemas"]["LetterAcquaintance"][];
+      /**
+       * Format: date-time
+       * @description Когда исполнены все поручения
+       */
+      executed_at?: string | null;
+    };
+    /**
+     * @description Путь резолюции письма (P8b, SPEC-v3 §3.2a; решает EDS): `calc` — письмо по заявке клиента, резолюция «расчёт по зонам» (`POST /eds/letters/{id}/resolution`); `office` — делопроизводство, резолюция трёх типов (`POST /eds/letters/{id}/office-resolution`).
+     * @enum {string}
+     */
+    LetterTrack: "calc" | "office";
+    /**
+     * @description `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.
+     * @enum {string}
+     */
+    LetterResolutionKind: "execute" | "reply" | "info";
+    /** @description Проект резолюции делопроизводителя; директор утверждает его одним действием или правит */
+    LetterResolutionDraft: {
+      kind: components["schemas"]["LetterResolutionKind"] | null;
+      responsible: components["schemas"]["PersonRef"] | null;
+      /** Format: date */
+      due: string | null;
+      text: string | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      drafted_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      drafted_at: string;
+    };
+    LetterOfficeResolution: {
+      kind: components["schemas"]["LetterResolutionKind"];
+      text: string;
+      /**
+       * Format: date
+       * @description Срок ответственного (после одобренного переноса — новый)
+       */
+      due: string | null;
+      responsible: components["schemas"]["PersonRef"] | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      decided_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      decided_at: string;
+    };
+    /** @description Строка истории переносов срока */
+    LetterInstructionExtension: {
+      /** Format: uuid */
+      id: string;
+      /** Format: date */
+      old_due: string;
+      /** Format: date */
+      new_due: string;
+      reason: string;
+      /** @enum {string} */
+      status: "pending" | "approved" | "rejected";
+      requested_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      requested_at: string;
+      decided_by: components["schemas"]["PersonRef"] | null;
+      /** Format: date-time */
+      decided_at: string | null;
+      comment: string | null;
+    };
+    /** @description Поручение по письму (P8b) */
+    LetterInstruction: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["LetterResolutionKind"];
+      /** @enum {string} */
+      role: "responsible" | "co_executor";
+      person: components["schemas"]["PersonRef"];
+      /** Format: date */
+      due: string;
+      text: string;
+      /**
+       * @description «В работе» → «Исполнено»
+       * @enum {string}
+       */
+      status: "in_work" | "executed";
+      /** @description Срок прошёл, не исполнено */
+      overdue: boolean;
+      report: string | null;
+      files: components["schemas"]["LetterFile"][];
+      /** @description Ответ — наш ИСХ */
+      outgoing: {
+        /** @example ИСХ-014/26 */
+        number: string;
+        /** @description Путь документа в SPA */
+        path: string;
+      } | null;
+      /** Format: date-time */
+      executed_at: string | null;
+      extensions: components["schemas"]["LetterInstructionExtension"][];
+    };
+    LetterAcquaintance: {
+      person: components["schemas"]["PersonRef"];
+      /**
+       * Format: date-time
+       * @description «Ознакомлен»; `null` — ждёт
+       */
+      acknowledged_at: string | null;
+    };
+    /** @description Проект резолюции (P8b); все поля необязательны, `kind = null` — проекта нет */
+    ResolutionDraftIn: {
+      kind?: components["schemas"]["LetterResolutionKind"] | null;
+      /** @description `crm_user_id` */
+      responsible_id?: string | null;
+      /** Format: date */
+      due?: string | null;
+      text?: string | null;
+      co_executor_ids?: string[];
+      acquaint_ids?: string[];
+    };
+    OfficeResolutionIn: {
+      kind: components["schemas"]["LetterResolutionKind"];
+      /** @description Обязателен для `execute` и `reply` */
+      responsible_id?: string | null;
+      /**
+       * Format: date
+       * @description Обязателен для `execute` и `reply`; подсказка — `LetterCard.suggested_due`
+       */
+      due?: string | null;
+      text: string;
+      co_executor_ids?: string[];
+      acquaint_ids?: string[];
+    };
+    /** @description Отчёт (текст, файлы) или номер отправленного ИСХ — хотя бы что-то одно */
+    InstructionCompleteIn: {
+      report?: string | null;
+      file_ids?: string[];
+      /** @example ИСХ-014/26 */
+      outgoing_number?: string | null;
+    };
+    InstructionExtensionIn: {
+      /** Format: date */
+      new_due: string;
+      reason: string;
+    };
+    InstructionExtensionDecisionIn: {
+      /** @enum {string} */
+      decision: "approve" | "reject";
+      comment?: string | null;
+    };
+    EdsStaffMember: {
+      /** @description `crm_user_id` */
+      id: string;
+      name: string;
+      position: string | null;
+    };
+    EdsStaffList: {
+      items: components["schemas"]["EdsStaffMember"][];
     };
     /**
      * @description Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
@@ -9169,6 +9501,10 @@ export interface components {
       crm_client_id?: number | null;
       /** @description Номер предыдущего ВХ или нашего ИСХ */
       related_number?: string | null;
+      /** @description Адресат — `crm_user_id` активного сотрудника (`GET /eds/staff`); нет — директор (P8b) */
+      addressee_id?: string | null;
+      /** @description Проект резолюции делопроизводителя (P8b) */
+      resolution_draft?: components["schemas"]["ResolutionDraftIn"] | null;
       file_ids: string[];
     };
     ResolutionAssigneeIn: {
@@ -11071,6 +11407,8 @@ export interface components {
     CompanyItemId: components["schemas"]["CompanyItemRef"];
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
+    /** @description UUID поручения (EDS, P8b) */
+    InstructionIdPath: string;
     /** @description UUID входящего письма (EDS) */
     LetterIdPath: string;
     /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
@@ -17817,6 +18155,10 @@ export interface operations {
         status?: components["schemas"]["LetterStatus"][];
         /** @description Поиск по номеру, теме, отправителю и номеру заявки */
         q?: string;
+        /** @description Только письма на контроле (поручения в работе) — фильтр журнала «На контроле» (P8b) */
+        on_control?: boolean;
+        /** @description Только письма с просроченным поручением — фильтр «Просрочено» (P8b) */
+        overdue?: boolean;
         /** @description Непрозрачный курсор из `next_cursor` */
         cursor?: string;
         /** @description Размер страницы */
@@ -18111,6 +18453,238 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveResolutionDraft: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionDraftIn"];
+      };
+    };
+    responses: {
+      /** @description Проект сохранён — карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resolveOfficeLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OfficeResolutionIn"];
+      };
+    };
+    responses: {
+      /** @description Резолюция наложена — карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  acknowledgeLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отмечено — карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  completeInstruction: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID поручения (EDS, P8b) */
+        id: components["parameters"]["InstructionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionCompleteIn"];
+      };
+    };
+    responses: {
+      /** @description Исполнено — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestInstructionExtension: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID поручения (EDS, P8b) */
+        id: components["parameters"]["InstructionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionExtensionIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос отправлен — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decideInstructionExtension: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID поручения (EDS, P8b) */
+        id: components["parameters"]["InstructionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionExtensionDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение принято — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsStaff: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сотрудники */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsStaffList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

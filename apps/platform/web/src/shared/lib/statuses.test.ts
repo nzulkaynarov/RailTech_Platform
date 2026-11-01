@@ -36,7 +36,16 @@ describe("карты статусов", () => {
 
   it("SPEC-v3 §2.4: у каждого документа есть все статусы, у каждого статуса — слово на трёх языках", () => {
     const expected = {
-      incoming: ["registered", "awaiting_resolution", "resolved", "returned", "rejected"],
+      incoming: [
+        "registered",
+        "awaiting_resolution",
+        "resolved",
+        "returned",
+        "rejected",
+        "in_execution",
+        "executed",
+        "noted",
+      ],
       quote: ["draft", "revision", "approved", "sent", "accepted", "declined", "expired"],
       contract: ["draft", "agreed", "issued", "signed", "rejected"],
       invoice: ["issued", "proof_received", "partially_paid", "paid", "overdue"],

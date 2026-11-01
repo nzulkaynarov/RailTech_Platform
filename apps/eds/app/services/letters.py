@@ -28,9 +28,10 @@ from app.schemas.letters import (
     LetterDuplicateList,
     LetterStatus,
     LetterSubmitIn,
+    LetterTrack,
     ResolutionIn,
 )
-from app.services import events, files, journal, letter_kinds, numbering
+from app.services import events, files, instructions, journal, letter_kinds, numbering
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -250,6 +251,14 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         **await _related(session, data.related_number),
         **_link_values(data.links),
     }
+    if data.resolution_draft is not None and data.resolution_draft.kind is not None:
+        # Проект резолюции делопроизводителя (P8b) — только у письма пути делопроизводства.
+        probe = Letter(doc_kind=data.kind, erp_request_id=links.erp_request_id, erp_deal_id=links.erp_deal_id)
+        if instructions.track_of(probe) is not LetterTrack.OFFICE:
+            raise conflict("track_mismatch", "Проект резолюции — только у письма делопроизводства.")
+        values["resolution_draft"] = instructions.stamp_draft(
+            await instructions.validate_draft(session, data.resolution_draft), actor_id
+        )
     try:
         return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids)
     except IntegrityError as exc:  # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
@@ -329,6 +338,11 @@ async def resolve(
     """Резолюция директора: исполнители, срок, мин. маржа → `resolved` и `letter.resolved` (ERP создаёт задание)."""
     letter = await get_for_update(session, letter_id)
     _require(letter, LetterStatus.AWAITING_RESOLUTION)
+    if instructions.track_of(letter) is not LetterTrack.CALC:  # P8b: делопроизводство — резолюция трёх типов
+        raise conflict(
+            "track_mismatch",
+            "Письмо не по заявке клиента: резолюция — К исполнению, Подготовить ответ или Для сведения.",
+        )
     if data.due < clock.company_date(clock.now()):  # C1-G-1: срок в прошлом сразу делает КП опоздавшим
         raise invalid_fields("Срок расчёта не может быть в прошлом.", due="due_in_past")
     pairs = [(a.crm_user_id, a.zone.value) for a in data.assignees]
@@ -385,6 +399,8 @@ async def reject(session: AsyncSession, bus: AsyncBus, *, actor_id: int, letter_
     _require(letter, LetterStatus.AWAITING_RESOLUTION)
     letter.status, letter.reject_reason, letter.updated_at = LetterStatus.REJECTED.value, reason, clock.now()
     await journal.record(session, "letter.rejected", by=actor_id, letter_id=letter.id, comment=reason)
+    if instructions.track_of(letter) is LetterTrack.OFFICE:
+        return letter  # P8b: отказ по письму делопроизводства сделку не закрывает — `letter.rejected` только для заявок
     payload = {"letter": _ref(letter), "links": _links(letter), "reason": reason, "actor": events.actor(actor_id)}
     await events.publish(bus, session, "letter.rejected", payload, subject=letter.number)
     return letter

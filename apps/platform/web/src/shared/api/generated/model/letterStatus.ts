@@ -4,7 +4,7 @@
  */
 
 /**
- * Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено». Слова — в словаре интерфейса, не в API.
+ * Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению». Слова — в словаре интерфейса, не в API.
  */
 export type LetterStatus = (typeof LetterStatus)[keyof typeof LetterStatus];
 
@@ -13,4 +13,7 @@ export const LetterStatus = {
   resolved: "resolved",
   returned: "returned",
   rejected: "rejected",
+  in_execution: "in_execution",
+  executed: "executed",
+  noted: "noted",
 } as const;

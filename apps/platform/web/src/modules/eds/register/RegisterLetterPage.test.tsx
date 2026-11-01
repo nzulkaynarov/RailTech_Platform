@@ -81,7 +81,8 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     type("Корреспондент", "ГНИ Мирабадского района");
     type("Исходящий номер отправителя", "04-12/9999");
     type("Тема", "Требование о пояснениях");
-    expect(screen.getByLabelText("Адресат")).toHaveValue("Директор");
+    // P8b: адресат — выбор сотрудника; пусто — директор по умолчанию (назначает EDS)
+    expect(screen.getByText("Директор (по умолчанию)")).toBeVisible();
     await attach();
 
     fireEvent.click(screen.getByRole("button", { name: "Зарегистрировать" }));
@@ -140,8 +141,8 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
   });
 });
 
-describe("Карточка ВХ: делопроизводитель без резолюции, директор с резолюцией (P8)", () => {
-  it("делопроизводитель видит реквизиты делопроизводства и «Только просмотр», кнопки резолюции нет", async () => {
+describe("Карточка ВХ: делопроизводитель готовит проект, директор накладывает резолюцию (P8, P8b)", () => {
+  it("делопроизводитель видит реквизиты делопроизводства и «Только просмотр»; вместо резолюции — проект", async () => {
     signIn("registrar@demo.example");
     renderAt("/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
 
@@ -149,20 +150,30 @@ describe("Карточка ВХ: делопроизводитель без ре�
     expect(await screen.findByText("Требование или уведомление ГНК")).toBeVisible();
     expect(screen.getByText("Кабинет налогоплательщика my.soliq")).toBeVisible();
     expect(screen.getByText("Только просмотр")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Наложить резолюцию" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Утвердить резолюцию/ })).toBeNull();
-    expect(await screen.findByText("Письмо ждёт резолюции директора")).toBeVisible();
+    // P8b: письмо делопроизводства — делопроизводитель готовит проект, резолюцию не накладывает
+    expect(
+      await screen.findByRole("button", { name: "Сохранить проект" }, { timeout: 3000 }),
+    ).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Утвердить проект" })).toBeNull();
   });
 
-  it("директор видит то же письмо с формой резолюции", async () => {
+  it("директор видит то же письмо с резолюцией трёх типов (путь делопроизводства)", async () => {
     signIn("director@demo.example");
     renderAt("/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution");
 
     expect(await screen.findByRole("heading", { level: 1, name: /ВХ-108\/26/ })).toBeVisible();
     expect(screen.queryByText("Только просмотр")).toBeNull();
-    expect(
-      await screen.findByRole("button", { name: /Утвердить резолюцию/ }, { timeout: 3000 }),
-    ).toBeVisible();
+    const form = await screen.findByRole(
+      "form",
+      { name: "Резолюция директора" },
+      { timeout: 3000 },
+    );
+    expect(within(form).getByRole("radio", { name: /К исполнению/ })).toBeChecked();
+    expect(within(form).getByRole("radio", { name: /Подготовить ответ/ })).not.toBeChecked();
+    expect(within(form).getByRole("radio", { name: /Для сведения/ })).not.toBeChecked();
+    expect(within(form).getByRole("button", { name: "Наложить резолюцию" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Утвердить резолюцию/ })).toBeNull();
   });
 });
 

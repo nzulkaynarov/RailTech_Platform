@@ -410,3 +410,123 @@ async def test_card_says_not_fewer_when_eds_has_another_page(web: Web, fb: FeedB
 
     assert cards["letters_without_resolution"]["hint"] == "Документы · Входящие письма · не меньше"
     assert cards["memos_to_approve"]["hint"] == "Документы · На согласовании"
+
+
+# --- P8b: поручения, переносы срока, ознакомление ------------------------------------------------
+
+
+def task_letter(number: str = "ВХ-112/26") -> dict[str, Any]:
+    return {
+        "id": "40000000-0000-4000-8000-000000000112",
+        "number": number,
+        "subject": "Требование ГНК о пояснениях",
+        "sender_name": "ГНК Мирабадского района",
+        "urgent": True,
+    }
+
+
+def instruction_task(task_id: str, *, kind: str = "execute", **over: Any) -> dict[str, Any]:
+    return {
+        "id": task_id,
+        "letter": task_letter(),
+        "kind": kind,
+        "role": "responsible",
+        "due": "2027-01-20",
+        "overdue": False,
+        "extension_pending": False,
+        "created_at": "2027-01-14T04:00:00Z",
+        **over,
+    }
+
+
+INSTR_A = "50000000-0000-4000-8000-0000000000a1"
+INSTR_B = "50000000-0000-4000-8000-0000000000b1"
+
+
+async def test_executor_sees_instructions_and_acquaintance_rows_without_duplicates(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    fb.state["letter_tasks"] = {
+        "instructions": [
+            instruction_task(INSTR_A, due="2027-01-10", overdue=True, extension_pending=True),
+            instruction_task(INSTR_B, kind="reply"),
+            instruction_task(INSTR_B, kind="reply"),  # повтор EDS — одна строка
+        ],
+        "extensions": [],
+        "acquaintances": [{"letter": task_letter(), "created_at": "2027-01-14T04:00:00Z"}],
+    }
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/queue")
+
+    check(response, "/queue", "get")
+    items = {i["id"]: i for i in response.json()["items"]}
+    assert set(items) == {
+        f"instruction:{INSTR_A}",
+        f"instruction:{INSTR_B}",
+        "acquaint:40000000-0000-4000-8000-000000000112",
+    }
+    late = items[f"instruction:{INSTR_A}"]
+    assert (late["kind"], late["due_label"]) == ("instruction", "overdue")
+    assert late["title"] == "Исполнить поручение по письму ВХ-112/26"
+    assert "запрошен перенос" in late["subtitle"]
+    assert late["object"] == {
+        "kind": "letter",
+        "number": "ВХ-112/26",
+        "title": "Требование ГНК о пояснениях",
+        "path": "/eds/tasks/40000000-0000-4000-8000-000000000112",
+    }
+    reply = items[f"instruction:{INSTR_B}"]
+    assert reply["title"] == "Подготовить ответ на письмо ВХ-112/26"
+    assert reply["due_label"] == "later"
+    acquaint = items["acquaint:40000000-0000-4000-8000-000000000112"]
+    assert (acquaint["kind"], acquaint["title"]) == ("acquaint", "Ознакомиться с письмом ВХ-112/26")
+    # просроченное поручение — первым
+    assert response.json()["items"][0]["id"] == f"instruction:{INSTR_A}"
+
+
+async def test_director_sees_the_extension_request_and_others_do_not(
+    web: Web, fb: FeedBackends
+) -> None:
+    fb.state["letter_tasks"] = {
+        "instructions": [],
+        "extensions": [
+            {
+                "id": "60000000-0000-4000-8000-000000000001",
+                "instruction_id": INSTR_A,
+                "letter": task_letter(),
+                "executor": {"crm_user_id": 7, "full_name": "Иван Исполнитель"},
+                "old_due": "2027-01-16",
+                "new_due": "2027-01-22",
+                "reason": "Ждём выписку банка.",
+                "requested_at": "2027-01-14T04:00:00Z",
+            }
+        ],
+        "acquaintances": [],
+    }
+    await web.login(["DIRECTOR"])
+    [row] = [
+        i
+        for i in (await web.client.get("/api/v1/queue")).json()["items"]
+        if i["kind"] == "instruction_extension"
+    ]
+    assert row["title"] == "Решить перенос срока по ВХ-112/26"
+    assert row["subtitle"].startswith("Иван Исполнитель · новый срок 22.01")
+    assert row["due_label"] == "today"
+    assert row["role_id"] == rid("DIRECTOR")
+
+    # строку переноса видит только держатель резолюции (`eds.inbox: full`)
+    await web.login(["SUPPLY"])
+    kinds = {i["kind"] for i in (await web.client.get("/api/v1/queue")).json()["items"]}
+    assert "instruction_extension" not in kinds
+
+
+async def test_eds_down_leaves_the_rest_of_the_queue(web: Web, fb: FeedBackends) -> None:
+    fb.eds_down = 503
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/queue")
+
+    assert response.status_code == 200
+    assert not [i for i in response.json()["items"] if i["kind"] == "instruction"]
+    assert response.json()["sources"]["eds"] == "unavailable"

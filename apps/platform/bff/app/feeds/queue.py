@@ -30,6 +30,7 @@ from app.feeds.numbers import (
     lead_number,
     lead_ref,
     letter_ref,
+    letter_task_ref,
     memo_ref,
     quote_number,
     quote_ref,
@@ -42,6 +43,7 @@ from app.feeds.snapshot import (
     Snapshot,
     wants_approvals,
     wants_inbox,
+    wants_letter_tasks,
     wants_letters,
     wants_memos,
     wants_projects,
@@ -283,6 +285,119 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def _task_letter(entry: dict[str, Any]) -> tuple[str, str, str | None, str | None] | None:
+    """Письмо строки задач EDS: (id, номер, отправитель, тема) или `None` — строка битая."""
+    letter = _dict(entry.get("letter"))
+    number, letter_id = letter.get("number"), letter.get("id")
+    if not isinstance(number, str) or not number or not isinstance(letter_id, str):
+        return None
+    return letter_id, number, _text(letter.get("sender_name")), short(letter.get("subject"), 80)
+
+
+def _ddmm(value: Any) -> str | None:
+    day = parse_deadline(value)
+    return f"{day.astimezone(COMPANY_TZ):%d.%m}" if day else None
+
+
+def letter_task_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Входящие делопроизводства (P8b, EDS `GET /letter-tasks`): мои поручения со сроком, переносы
+    срока у автора резолюции, «Ознакомиться». Что вернул EDS, то и строки; одна строка на
+    поручение, перенос и ознакомление (id объекта EDS) — без дублей."""
+    tasks = snap.letter_tasks
+    if tasks is None:
+        return []
+    out: list[Row] = []
+    seen: set[str] = set()
+
+    def add(row: Row) -> None:
+        if row.item.id not in seen:
+            seen.add(row.item.id)
+            out.append(row)
+
+    if view.wants("instruction"):
+        role_id = _role_id(view, "instruction")
+        for entry in tasks.get("instructions", []):
+            letter = _task_letter(entry)
+            if letter is None or not isinstance(entry.get("id"), str):
+                continue
+            letter_id, number, sender, subject = letter
+            due_at = parse_deadline(entry.get("due"))
+            action = (
+                "Подготовить ответ на письмо"
+                if entry.get("kind") == "reply"
+                else "Исполнить поручение по письму"
+            )
+            label = "overdue" if entry.get("overdue") is True else due_label(due_at, now)
+            add(
+                Row(
+                    QueueItem(
+                        id=f"instruction:{entry['id']}",
+                        role_id=role_id,
+                        kind="instruction",
+                        title=f"{action} {number}",
+                        subtitle=join(
+                            sender,
+                            subject,
+                            "запрошен перенос" if entry.get("extension_pending") is True else None,
+                        ),
+                        due_label=label,
+                        due_at=due_at,
+                        object=letter_task_ref(letter_id, number, subject or None),
+                    ),
+                    parse_dt(entry.get("created_at")),
+                )
+            )
+    if view.wants("instruction_extension"):
+        role_id = _role_id(view, "instruction_extension")
+        for entry in tasks.get("extensions", []):
+            letter = _task_letter(entry)
+            if letter is None or not isinstance(entry.get("id"), str):
+                continue
+            letter_id, number, _sender, subject = letter
+            executor = _dict(entry.get("executor"))
+            new_due = _ddmm(entry.get("new_due"))
+            add(
+                Row(
+                    QueueItem(
+                        id=f"instruction_extension:{entry['id']}",
+                        role_id=role_id,
+                        kind="instruction_extension",
+                        title=f"Решить перенос срока по {number}",
+                        subtitle=join(
+                            _text(executor.get("full_name")),
+                            f"новый срок {new_due}" if new_due else None,
+                            short(entry.get("reason"), 80),
+                        ),
+                        due_label="today",
+                        object=letter_task_ref(letter_id, number, subject or None),
+                    ),
+                    parse_dt(entry.get("requested_at")),
+                )
+            )
+    if view.wants("acquaint"):
+        role_id = _role_id(view, "acquaint")
+        for entry in tasks.get("acquaintances", []):
+            letter = _task_letter(entry)
+            if letter is None:
+                continue
+            letter_id, number, sender, subject = letter
+            add(
+                Row(
+                    QueueItem(
+                        id=f"acquaint:{letter_id}",
+                        role_id=role_id,
+                        kind="acquaint",
+                        title=f"Ознакомиться с письмом {number}",
+                        subtitle=join(sender, subject),
+                        due_label="later",
+                        object=letter_task_ref(letter_id, number, subject or None),
+                    ),
+                    parse_dt(entry.get("created_at")),
+                )
+            )
+    return out
+
+
 _MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}
 
 
@@ -418,6 +533,8 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     rows_ += rework_rows(snap, now, view)
     if wants_letters(view):
         rows_ += letter_rows(snap, now, view)
+    if wants_letter_tasks(view):
+        rows_ += letter_task_rows(snap, now, view)
     if wants_memos(view):
         rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):

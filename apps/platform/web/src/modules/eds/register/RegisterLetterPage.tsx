@@ -7,10 +7,11 @@ import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterKind } from "../../../shared/api/generated/model";
+import type { LetterKind, LetterResolutionKind } from "../../../shared/api/generated/model";
 import {
   registerLetter,
   useFindLetterDuplicates,
+  useListEdsStaff,
   useListLetterKinds,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
@@ -20,6 +21,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { letterPath, useRefreshLetters } from "../inbox/api";
+import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
 import type { Attachment } from "../new/formModel";
@@ -170,6 +172,11 @@ export function RegisterLetterPage() {
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
   const kinds = useListLetterKinds({ query: { staleTime: 5 * 60_000 } });
+  const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
+  const people = (staff.data?.items ?? []).map((person) => ({
+    value: person.id,
+    label: person.position ? `${person.name} · ${person.position}` : person.name,
+  }));
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
   const uploading = values.attachments.some((a) => a.status === "uploading");
   const title = t("modules:eds.sections.register");
@@ -462,11 +469,20 @@ export function RegisterLetterPage() {
                 label={t("letters:register.addressee.label")}
                 hint={t("letters:register.addressee.hint")}
               >
-                <Input
+                {/* P8b: адресат — любой активный сотрудник; пусто — директор (его назначает EDS) */}
+                <Select
                   id="reg-addressee"
-                  value={t("documents:form.to.director")}
-                  readOnly
+                  value={values.addresseeId || undefined}
+                  placeholder={t("letters:register.addressee.default")}
+                  allowClear
+                  showSearch
+                  optionFilterProp="label"
+                  loading={staff.isPending}
+                  options={people}
                   aria-describedby="reg-addressee-hint"
+                  onChange={(value: string | undefined) => {
+                    set("addresseeId", value ?? "");
+                  }}
                 />
               </Field>
             </div>
@@ -531,6 +547,90 @@ export function RegisterLetterPage() {
                 }}
               />
             </Field>
+            <fieldset className="pf-reg-draft" aria-describedby="reg-draft-hint">
+              <legend>{t("letters:register.draft.legend")}</legend>
+              <p className="pf-hint" id="reg-draft-hint">
+                {t("letters:register.draft.hint")}
+              </p>
+              <div className="pf-newdoc-row">
+                <Field id="reg-draft-kind" label={t("letters:register.draft.kind")}>
+                  <Select
+                    id="reg-draft-kind"
+                    value={values.draftKind || ""}
+                    options={[
+                      { value: "", label: t("letters:register.draft.none") },
+                      ...RESOLUTION_KINDS.map((kind) => ({
+                        value: kind,
+                        label: t(`letters:office.kind.${kind}`),
+                      })),
+                    ]}
+                    onChange={(kind: LetterResolutionKind | "") => {
+                      setValues((prev) => ({
+                        ...prev,
+                        draftKind: kind,
+                        // шаблон текста по типу, пока текст не правили (как в форме резолюции)
+                        draftText:
+                          kind &&
+                          (prev.draftText === "" ||
+                            RESOLUTION_KINDS.some(
+                              (k) => t(`letters:office.template.${k}`) === prev.draftText,
+                            ))
+                            ? t(`letters:office.template.${kind}`)
+                            : prev.draftText,
+                      }));
+                    }}
+                  />
+                </Field>
+                {values.draftKind && values.draftKind !== "info" ? (
+                  <Field
+                    id="reg-draft-responsible"
+                    label={t("letters:office.responsible.label")}
+                    hint={t("letters:office.responsible.hint")}
+                  >
+                    <Select
+                      id="reg-draft-responsible"
+                      value={values.draftResponsibleId || undefined}
+                      placeholder={t("letters:office.responsible.choose")}
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      options={people}
+                      aria-describedby="reg-draft-responsible-hint"
+                      onChange={(value: string | undefined) => {
+                        set("draftResponsibleId", value ?? "");
+                      }}
+                    />
+                  </Field>
+                ) : null}
+              </div>
+              {values.draftKind ? (
+                <div className="pf-newdoc-row">
+                  {values.draftKind !== "info" ? (
+                    <Field id="reg-draft-due" label={t("letters:office.due.label")}>
+                      <DateField
+                        id="reg-draft-due"
+                        value={values.draftDue}
+                        min={today}
+                        onChange={(next) => {
+                          set("draftDue", next);
+                        }}
+                      />
+                    </Field>
+                  ) : null}
+                  <Field id="reg-draft-text" label={t("letters:office.text.label")}>
+                    <Input.TextArea
+                      id="reg-draft-text"
+                      value={values.draftText}
+                      maxLength={4000}
+                      autoSize={{ minRows: 2, maxRows: 6 }}
+                      onChange={(event) => {
+                        set("draftText", event.target.value);
+                      }}
+                    />
+                  </Field>
+                </div>
+              ) : null}
+            </fieldset>
             <Consequence
               items={t("letters:register.consequence", { returnObjects: true }) as string[]}
             />

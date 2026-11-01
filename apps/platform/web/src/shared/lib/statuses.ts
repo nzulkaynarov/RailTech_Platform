@@ -83,7 +83,17 @@ const NONE = MEANING_TONE.neutral;
  */
 export const STATUS_TONE = {
   /** Входящее письмо */
-  incoming: { registered: GO, awaiting_resolution: W, resolved: OK, returned: W, rejected: NO },
+  incoming: {
+    registered: GO,
+    awaiting_resolution: W,
+    resolved: OK,
+    returned: W,
+    rejected: NO,
+    // P8b, SPEC-v3 §3.2a: путь делопроизводства — на исполнении, исполнено, принято к сведению
+    in_execution: GO,
+    executed: OK,
+    noted: OK,
+  },
   /**
    * КП — одна карта для EDS («КП на одобрение», реестр, проект) и ERP (состояние КП в расчёте): «у директора» и «черновик ·
    * отправка заблокирована» — ждут решения, «одобрено» — зелёное везде.
@@ -239,6 +249,8 @@ export const STATUS_TONE = {
   due: { overdue: NO, today: NO, tomorrow: W, memo: MEMO, later: NONE },
   /** Значок вкладки уведомления: решения, клиенты (внешний канал), система */
   notification: { all: GO, decisions: W, clients: EXT, system: NO },
+  /** Поручение по входящему (P8b): в работе, исполнено; просрочка — отдельный тег `due.overdue` */
+  instruction: { in_work: GO, executed: OK },
   /** Пункт чек-листа одобрения КП */
   check: { ok: OK, fail: NO, pending: W },
 } as const satisfies Record<string, Record<string, StatusTone>>;
@@ -253,7 +265,16 @@ export const STATUS_KINDS = Object.keys(STATUS_TONE) as StatusKind[];
  * кодов слово даёт модуль (`children` у `StatusTag`).
  */
 export const DICTIONARY_STATUS = {
-  incoming: ["registered", "awaiting_resolution", "resolved", "returned", "rejected"],
+  incoming: [
+    "registered",
+    "awaiting_resolution",
+    "resolved",
+    "returned",
+    "rejected",
+    "in_execution",
+    "executed",
+    "noted",
+  ],
   quote: ["draft", "revision", "approved", "sent", "accepted", "declined", "expired"],
   contract: ["draft", "agreed", "issued", "signed", "rejected"],
   invoice: ["issued", "proof_received", "partially_paid", "paid", "overdue"],

@@ -29,6 +29,8 @@ describe("EDS · Входящие письма: список", () => {
     await openInbox("director@demo.example");
 
     expect(await screen.findByRole("table")).toBeVisible();
+    // Журнал входящих (ГОСТ Р 7.0.97): отправитель — всегда «Корреспондент», подпись не зависит от строк.
+    expect(screen.getByRole("columnheader", { name: "Корреспондент" })).toBeVisible();
     const first = row("ВХ-104/26");
     expect(
       within(first).getByText("Запрос коммерческого предложения на стрелочные приводы"),
@@ -68,7 +70,7 @@ describe("EDS · Входящие письма: список", () => {
 
     fireEvent.click(within(filter).getByText("Все"));
     await waitFor(() => {
-      expect(screen.getAllByRole("row")).toHaveLength(1 + 8);
+      expect(screen.getAllByRole("row")).toHaveLength(1 + 9); // + ВХ-100/26 «Принято к сведению» (P8b)
     });
   });
 

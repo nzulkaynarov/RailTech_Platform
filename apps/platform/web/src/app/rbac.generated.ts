@@ -373,6 +373,18 @@ export const QUEUE = {
     resource: "admin",
     level: "full",
   },
+  instruction: {
+    resource: "dashboard.queue",
+    level: "full",
+  },
+  instruction_extension: {
+    resource: "eds.inbox",
+    level: "full",
+  },
+  acquaint: {
+    resource: "dashboard.queue",
+    level: "full",
+  },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;
 
 /** Роль каталога: название, матрица и поля с ограничением. */

@@ -69,6 +69,8 @@ class FeedBackends:
             "letters": {"items": [], "next_cursor": None},
             "memos": {"items": [], "next_cursor": None},
             "registry": {"items": [], "next_cursor": None},
+            # EDS (P8b): мои поручения, переносы на решение и ознакомления
+            "letter_tasks": {"instructions": [], "extensions": [], "acquaintances": []},
         }
         self.mark_read_status = 200
         self.mark_all_status = 200
@@ -115,6 +117,7 @@ class FeedBackends:
             "letters": self._eds("letters", router.get(f"{EDS_URL}/api/v1/letters")),
             "approvals": self._eds("memos", router.get(f"{EDS_URL}/api/v1/approvals")),
             "registry": self._eds("registry", router.get(f"{EDS_URL}/api/v1/registry")),
+            "letter_tasks": self._eds("letter_tasks", router.get(f"{EDS_URL}/api/v1/letter-tasks")),
         }
         self.eds_exchange = router.post(f"{EDS_URL}/api/v1/auth/sso/exchange").mock(
             side_effect=self._eds_exchange

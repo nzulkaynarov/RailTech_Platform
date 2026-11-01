@@ -1,0 +1,29 @@
+{
+  "specversion": "1.0",
+  "id": "5d1b8f2e-7c4a-5e39-9b1f-2a6c8d0e4f71",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.notice.requested.v1",
+  "time": "2026-11-02T04:10:00Z",
+  "subject": "ВХ-112/26",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/notice.requested/v1",
+  "tenant": "railtech",
+  "correlationid": "8f3e0c1a-2b4d-5f6e-9a7b-1c2d3e4f5a6b",
+  "data": {
+    "notice_key": "instruction:7b9e2c4a-1d3f-4e5a-8b6c-9d0e1f2a3b4c:assigned",
+    "kind": "instruction_assigned",
+    "recipients": [7],
+    "title": "Поручение по письму ВХ-112/26",
+    "subtitle": "Требование ГНК о пояснениях · срок 05.11.2026",
+    "letter": {
+      "eds_letter_id": "e2b7a5e9-37c3-5a33-948a-7a999c5e7ec9",
+      "number": "ВХ-112/26",
+      "subject": "Требование ГНК о пояснениях"
+    },
+    "due": "2026-11-05",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 3
+    }
+  }
+}
