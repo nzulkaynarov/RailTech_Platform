@@ -29,8 +29,11 @@ export interface ResponsiveListProps<T> {
   label: string;
   rows: T[];
   getRowId: (row: T) => string | number;
-  /** Заголовок строки: первая колонка таблицы и шапка карточки. */
-  title: { header: string; cell: (row: T) => ReactNode };
+  /**
+   * Заголовок строки: первая колонка таблицы и шапка карточки. `className` — классы ячейки таблицы (по умолчанию
+   * `min-w-48` под суть запроса; короткому номеру счёта столько не нужно — таблица на 1280 без прокрутки вбок).
+   */
+  title: { header: string; cell: (row: T) => ReactNode; className?: string };
   /** Куда ведёт строка; без него строка не кликабельна. */
   rowHref?: (row: T) => string;
   columns: ListColumn<T>[];
@@ -92,7 +95,7 @@ function DesktopTable<T>({ label, rows, getRowId, title, rowHref, columns, actio
                 className={cn(href && 'cursor-pointer', rowClassName?.(row))}
                 onClick={href ? (event) => !fromControl(event) && navigate(href) : undefined}
               >
-                <TableCell className="min-w-48 whitespace-normal">
+                <TableCell className={cn('min-w-48 whitespace-normal', title.className)}>
                   <TitleLink href={href}>{title.cell(row)}</TitleLink>
                 </TableCell>
                 {columns.map((column) => (

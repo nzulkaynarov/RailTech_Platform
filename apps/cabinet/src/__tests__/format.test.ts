@@ -25,21 +25,27 @@ import * as fixtures from '@/mocks/fixtures';
 const plain = (text: string) => text.replace(/[\u00a0\u202f]/g, " ");
 const NOW = Date.parse('2026-10-14T12:00:00+05:00');
 
-describe('formatMoney — строка API + валюта → формат по локали', () => {
+describe('formatMoney — одна функция сумм кабинета, правило Платформы (CAB-FIX-3)', () => {
   it.each([
-    ['ru', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 UZS'],
-    ['ru', { amount: '18750000.50', currency: 'UZS' }, '18 750 000,50 UZS'],
-    ['ru', { amount: '1234.05', currency: 'USD' }, '1 234,05 $'],
-    ['ru', { amount: '-500.00', currency: 'UZS' }, '-500 UZS'],
-    ['ru', { amount: '0.00', currency: 'UZS' }, '0 UZS'],
-    ['uz', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 soʻm'],
-    ['uz', { amount: '12500.00', currency: 'USD' }, '12 500 US$'],
-    ['en', { amount: '48600000.00', currency: 'UZS' }, 'UZS 48,600,000'],
-    ['en', { amount: '1234.50', currency: 'USD' }, '$1,234.50'],
-    // Точность больших сумм: строка уходит в Intl без потери копеек.
-    ['ru', { amount: '90071992547409.99', currency: 'UZS' }, '90 071 992 547 409,99 UZS'],
+    ['ru', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 сум'],
+    ['ru', { amount: '18750000.50', currency: 'UZS' }, '18 750 000,50 сум'],
+    ['ru', { amount: '21000000.56', currency: 'UZS' }, '21 000 000,56 сум'],
+    ['ru', { amount: '1234.05', currency: 'USD' }, '1 234,05 USD'],
+    ['ru', { amount: '-500.00', currency: 'UZS' }, '−500 сум'],
+    ['ru', { amount: '0.00', currency: 'UZS' }, '0 сум'],
+    ['ru', { amount: '-0.00', currency: 'UZS' }, '0 сум'],
+    ['uz', { amount: '48600000.00', currency: 'UZS' }, '48 600 000 so‘m'],
+    ['uz', { amount: '12500.00', currency: 'USD' }, '12 500 USD'],
+    ['en', { amount: '48600000.00', currency: 'UZS' }, '48,600,000 UZS'],
+    ['en', { amount: '1234.50', currency: 'USD' }, '1,234.50 USD'],
+    // Точность больших сумм: строка не проходит через number.
+    ['ru', { amount: '90071992547409.99', currency: 'UZS' }, '90 071 992 547 409,99 сум'],
   ] as const)('%s %j → %s', (language, money, expected) => {
     expect(plain(formatMoney(money, language))).toBe(expected);
+  });
+
+  it('разряды и валюта — неразрывным пробелом: сумма не рвётся по строкам', () => {
+    expect(formatMoney({ amount: '1234567.00', currency: 'UZS' }, 'ru')).toBe('1\u00a0234\u00a0567\u00a0сум');
   });
 
   it.each([
@@ -51,14 +57,24 @@ describe('formatMoney — строка API + валюта → формат по 
     expect(formatMoney(money, 'ru')).toBe(expected);
   });
 
-  it('неизвестный код валюты — число и код как есть', () => {
-    expect(plain(formatMoney({ amount: '10.00', currency: 'ZZ1' }, 'ru'))).toBe('10 ZZ1');
+  it('другая валюта — её код как есть', () => {
+    expect(plain(formatMoney({ amount: '10.00', currency: 'zz1' }, 'ru'))).toBe('10 ZZ1');
   });
 
   it('без явного языка — язык интерфейса', async () => {
     await i18n.changeLanguage('en');
-    expect(formatMoney({ amount: '1000.00', currency: 'USD' })).toBe('$1,000');
+    expect(formatMoney({ amount: '1000.00', currency: 'USD' })).toBe('1,000\u00a0USD');
     await i18n.changeLanguage('ru');
+  });
+
+  it('суммы на экранах — только через formatMoney, без моноширинного шрифта', () => {
+    const sources = import.meta.glob('../{components,pages}/**/*.tsx', { query: '?raw', import: 'default', eager: true }) as Record<string, string>;
+    for (const [file, text] of Object.entries(sources)) {
+      expect(text, `${file}: Intl.NumberFormat вне lib/format`).not.toMatch(/Intl\.NumberFormat/);
+      for (const line of text.split('\n').filter((row) => row.includes('formatMoney('))) {
+        expect(line, `${file}: сумма моноширинным шрифтом`).not.toMatch(/font-mono/);
+      }
+    }
   });
 });
 

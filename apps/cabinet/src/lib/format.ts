@@ -21,23 +21,40 @@ function formatLocaleOf(language?: string): string {
   return localeFor(language ?? i18n.resolvedLanguage ?? i18n.language).formatLocale;
 }
 
-/** Строковая сумма для `Intl` (ES2023 принимает строку как точное десятичное; старые движки — как Number). */
+/** Строковое десятичное для `Intl` (ES2023 принимает строку как точное десятичное; старые движки — как Number). */
 type NumberFormatInput = Parameters<Intl.NumberFormat['format']>[0];
 
+/** Неразрывный пробел: сумма не рвётся по строкам. */
+const NBSP = '\u00a0';
+const MINUS = '−';
+
+/** Подпись валюты компании по языку (правило Платформы, `apps/platform/web/src/shared/lib/money.ts`). */
+const HOME_CURRENCY = 'UZS';
+const CURRENCY_WORD: Record<string, string> = { ru: 'сум', uz: 'so‘m', en: 'UZS' };
+
+/** `UZS` — слово языка («сум», «so‘m», «UZS» в en), другая валюта — её код ISO как есть (`USD`). */
+export function currencyLabel(code: string, language?: string): string {
+  const upper = code.trim().toUpperCase();
+  if (upper === '' || upper === HOME_CURRENCY) return CURRENCY_WORD[localeFor(language ?? i18n.resolvedLanguage ?? i18n.language).code] ?? 'сум';
+  return upper;
+}
+
+/**
+ * Сумма из API — одна функция для всего кабинета (CAB-FIX-3, правило Платформы SPEC-v3 §5.3): `48 600 000 сум`,
+ * `18 750 000,50 сум`, `1 234,05 USD`; en — `48,600,000 UZS`. Разряды — неразрывным пробелом (ru, uz), копейки — только
+ * ненулевые и всегда две цифры, минус — «−». Строка не проходит через `number`: большие суммы без потери копеек.
+ * Показ — с `tabular-nums` и обычным шрифтом (не моноширинным), в таблицах — по правому краю.
+ */
 export function formatMoney(money: Money | null | undefined, language?: string): string {
-  if (!money || !AMOUNT_RE.test(money.amount)) return EMPTY;
-  const hasCents = !money.amount.endsWith('.00');
-  try {
-    return new Intl.NumberFormat(formatLocaleOf(language), {
-      style: 'currency',
-      currency: money.currency,
-      minimumFractionDigits: hasCents ? 2 : 0,
-      maximumFractionDigits: 2,
-    }).format(money.amount as unknown as NumberFormatInput);
-  } catch {
-    // Неизвестный код валюты — число и код как есть.
-    return `${formatDecimal(money.amount, language)} ${money.currency}`;
-  }
+  const match = money ? AMOUNT_RE.exec(money.amount) : null;
+  if (!money || !match) return EMPTY;
+  const english = localeFor(language ?? i18n.resolvedLanguage ?? i18n.language).code === 'en';
+  const whole = match[2].replace(/^0+(?=\d)/, '');
+  const grouped = whole.replace(/\B(?=(\d{3})+(?!\d))/g, english ? ',' : NBSP);
+  const cents = match[3] === '00' ? '' : `${english ? '.' : ','}${match[3]}`;
+  const zero = /^0+$/.test(whole) && match[3] === '00';
+  const sign = match[1] && !zero ? MINUS : '';
+  return `${sign}${grouped}${cents}${NBSP}${currencyLabel(money.currency, language)}`;
 }
 
 /** Количество/десятичная строка из API (`"200"`, `"12.5"`) — с разделителями по локали. */

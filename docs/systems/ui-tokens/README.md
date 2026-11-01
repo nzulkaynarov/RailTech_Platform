@@ -11,7 +11,8 @@ SPEC-v3 §5.2 (`docs/architecture/platform-frontend.md` §3); значения 0
 |---|---|
 | `tokens.json` | **источник**, правится только он |
 | `dist/antd.ts` → копия `apps/crm/frontend/src/app/tokens.generated.ts` | AntD-тема CRM и Платформы: `RT_TOKENS` (`theme.token`), `RT_TAG_TEXT`, `RT_TABLE_CELL_PADDING` (плотность таблиц CRM), `RT_COMPONENTS` (`theme.components` Платформы; CRM не подключает). Копия нужна, потому что фронтенд CRM собирается в контейнере без доступа к `packages/`; Платформа (`apps/platform/web`) возьмёт файл тем же способом (INF-P0-3) |
-| `dist/shadcn.css` | ERP и Cabinet — переменные shadcn (`--primary`, `--destructive`, `--success`…) и `@theme inline` для Tailwind 4. Копии `apps/cabinet/src/styles/tokens.generated.css` и `apps/erp/frontend/src/styles/tokens.generated.css` (образы собираются без `packages/`) |
+| `dist/shadcn.css` | ERP — переменные shadcn (`--primary`, `--destructive`, `--success`…) и `@theme inline` для Tailwind 4. Копия `apps/erp/frontend/src/styles/tokens.generated.css` (образ собирается без `packages/`) |
+| `dist/cabinet.css` | Cabinet — те же переменные shadcn со значениями темы `shadcnThemes.cabinet` (светлая `:root` и тёмная `.dark` Mini App). Копия `apps/cabinet/src/styles/tokens.generated.css` |
 | `dist/tokens.css` | CSS-переменные `--rt-*` для любого другого потребителя (письма, PDF-шаблоны) |
 
 ```
@@ -21,7 +22,14 @@ make -C packages/ui-tokens check   # CI: контраст + сгенериров
 ```
 
 Правило: меняется `tokens.json` → в том же PR перегенерированы `dist/` и копии `tokens.generated.*`, тест контраста пакета
-и CRM зелёный. Тёмная тема — не здесь: приложения задают `.dark` поверх (решение при появлении потребности).
+и CRM зелёный.
+
+**Темы shadcn (`shadcnThemes`, CAB-FIX-2).** Тема приложения задаёт только значения уже существующих переменных shadcn
+(ключ без такой переменной — ошибка сборки), светлые (`light`) и тёмные (`dark` → `.dark`). Первая — `cabinet` («Legal
+Eminence» кабинета клиента: navy `--primary`, холст `--background` на рамке `--muted`); выход `dist/cabinet.css`.
+`dist/shadcn.css`, `dist/antd.ts` и копии ERP и CRM от темы не меняются (тест «тема кабинета только переопределяет…»).
+Контраст пар темы (текст на холсте, рамке, `card`, `accent`; бейджи `text-X` на `bg-X/10`; `X-foreground` на `X`)
+≥ 4.5:1 и не-текст (точки статуса, кольцо фокуса) ≥ 3:1 — в `contrast.test.mjs` для обеих тем.
 
 ## Что нового в 0.2.0
 

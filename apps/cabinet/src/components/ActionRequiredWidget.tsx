@@ -1,60 +1,46 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, ClipboardCheck, FileSignature, FileText, Receipt } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ClipboardCheck, FileSignature, FileText, Receipt, type LucideIcon } from 'lucide-react';
 
-import { useActs, useContracts, useInvoices, useQuotes } from '@/api/queries';
 import { ErrorState } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
-import { useNow } from '@/hooks/useNow';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useActionRequired } from '@/hooks/useActionRequired';
 import { formatMoney } from '@/lib/format';
-import { invoiceViews } from '@/lib/invoice';
-import { quoteAwaitsDecision } from '@/lib/quotes';
+import { cn } from '@/lib/utils';
+import { useCanAct } from '@/session/useMe';
 
 /**
  * Виджет «Требует вашего решения» (M2-CAB-04, бенчмарк Odoo/ERPNext: клиент видит «что от меня ждут»).
- * Агрегирует:
+ * Агрегирует (`useActionRequired`):
  *   - КП, которые ждут решения: `sent` и `viewed` (просмотренное КП — всё ещё без ответа), срок не истёк;
  *   - Договоры, ждущие подписи клиента;
  *   - Счета — только просроченные (`overdue` или срок оплаты прошёл при неоплате): остальные счёта — не решение;
  *   - Акты issued, требующие приёмки или возврата.
+ * Пока списки грузятся — скелетон на месте виджета, а не пустота: виджет не вставляется над готовым списком (K10).
  * Ошибка загрузки любого из четырёх списков — видимое состояние с повтором: тихое «ничего не требуется» было бы ложью.
+ * Наблюдателю (без права действовать) виджет не призывает к действию: «Ждут решения компании» и кто решает.
  */
-export function ActionRequiredWidget() {
+export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: boolean }) {
   const { t } = useTranslation();
-  const now = useNow();
-  const quotesQuery = useQuotes();
-  const contractsQuery = useContracts();
-  const invoicesQuery = useInvoices();
-  const actsQuery = useActs();
+  const canAct = useCanAct();
+  const actions = useActionRequired();
 
-  const isPending =
-    quotesQuery.isPending || contractsQuery.isPending || invoicesQuery.isPending || actsQuery.isPending;
-  const isError =
-    quotesQuery.isError || contractsQuery.isError || invoicesQuery.isError || actsQuery.isError;
-
-  if (isError) {
-    const failed = [quotesQuery, contractsQuery, invoicesQuery, actsQuery].filter((query) => query.isError);
+  // `holdSkeleton` — экран ещё грузит свой список: виджет и список появляются в одном кадре, скелетон списка под
+  // виджетом не сдвигается, когда виджет дорисовался раньше (K10).
+  if (actions.isPending || holdSkeleton) return <ActionRequiredSkeleton />;
+  if (actions.error) {
     return (
       <div className="mb-6" data-testid="action-required-error">
-        <ErrorState error={failed[0].error} onRetry={() => failed.forEach((query) => void query.refetch())} />
+        <ErrorState error={actions.error} onRetry={actions.retry} />
       </div>
     );
   }
-  if (isPending) return null;
 
-  const pendingQuotes = (quotesQuery.data ?? []).filter((q) => quoteAwaitsDecision(q, now));
-  const pendingContracts = (contractsQuery.data ?? []).filter(
-    (c) => (c.status === 'sent' || c.status === 'signed_by_company') && !c.signed_by_client_at,
-  );
-  const views = invoiceViews(invoicesQuery.data ?? [], now);
-  const pendingInvoices = (invoicesQuery.data ?? []).filter((inv) => Boolean(views.get(inv.id)?.overdueDays));
-  const pendingActs = (actsQuery.data ?? []).filter((a) => a.status === 'issued');
-
-  const totalActions =
-    pendingQuotes.length + pendingContracts.length + pendingInvoices.length + pendingActs.length;
-
-  if (totalActions === 0) {
+  const total = actions.quotes.length + actions.contracts.length + actions.invoices.length + actions.acts.length;
+  if (total === 0) {
     return (
       <div className="mb-6 flex items-center gap-3 rounded-lg border border-dashed bg-card/60 p-3.5 text-sm text-muted-foreground">
         <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden="true" />
@@ -63,126 +49,148 @@ export function ActionRequiredWidget() {
     );
   }
 
+  const title = canAct ? t('widgets.actionRequired.title') : t('widgets.actionRequired.titleViewer');
+  const hint = (key: string) => (canAct ? t(`widgets.actionRequired.${key}`) : t('widgets.actionRequired.viewerHint'));
+
   return (
-    <section role="region" aria-label={t('widgets.actionRequired.title')} className="mb-6 flex flex-col gap-3">
+    <section role="region" aria-label={title} className="mb-6 flex flex-col gap-3">
       <div className="flex items-center gap-2">
-        <h2 id="action-required-heading" className="text-sm font-semibold tracking-tight text-foreground">
-          {t('widgets.actionRequired.title')}
-        </h2>
-        <ToneBadge tone="warning">{totalActions}</ToneBadge>
+        <h2 className="text-sm font-semibold tracking-tight text-primary">{title}</h2>
+        <ToneBadge tone={canAct ? 'warning' : 'neutral'}>{total}</ToneBadge>
       </div>
 
-      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        {pendingQuotes.map((quote) => (
-          <Card
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {actions.quotes.map((quote) => (
+          <ActionCard
             key={`quote-${quote.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            icon={FileText}
+            tone="warning"
+            badge={t('widgets.actionRequired.quoteBadge')}
+            aside={<Amount>{formatMoney(quote.total)}</Amount>}
+            to={`/quotes/${quote.id}`}
+            label={t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
           >
-            <CardContent className="flex flex-col gap-1.5 p-3.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-warning">
-                  <FileText className="size-3.5" aria-hidden="true" />
-                  {t('widgets.actionRequired.quoteBadge')}
-                </span>
-                <span className="font-semibold text-foreground">{formatMoney(quote.total)}</span>
-              </div>
-              <p className="text-sm font-medium text-foreground">
-                <Link
-                  to={`/quotes/${quote.id}`}
-                  className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
-                >
-                  {t('pages.quotes.numberVersion', { number: quote.number, version: quote.version })}
-                </Link>
-              </p>
-              <span className="text-xs text-muted-foreground">{t('widgets.actionRequired.reviewQuote')}</span>
-            </CardContent>
-          </Card>
+            {hint('reviewQuote')}
+          </ActionCard>
         ))}
 
-        {pendingContracts.map((contract) => (
-          <Card
+        {actions.contracts.map((contract) => (
+          <ActionCard
             key={`contract-${contract.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            icon={FileSignature}
+            tone="primary"
+            badge={t('widgets.actionRequired.contractBadge')}
+            aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
+            to="/contracts"
+            label={contract.number}
           >
-            <CardContent className="flex flex-col gap-1.5 p-3.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-info">
-                  <FileSignature className="size-3.5" aria-hidden="true" />
-                  {t('widgets.actionRequired.contractBadge')}
-                </span>
-                <AlertCircle className="size-3.5 text-info" aria-hidden="true" />
-              </div>
-              <p className="text-sm font-medium text-foreground">
-                <Link
-                  to="/contracts"
-                  className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
-                >
-                  {contract.number}
-                </Link>
-              </p>
-              <span className="text-xs text-muted-foreground">{t('widgets.actionRequired.signContract')}</span>
-            </CardContent>
-          </Card>
+            {hint('signContract')}
+          </ActionCard>
         ))}
 
-        {pendingInvoices.map((inv) => {
-          const view = views.get(inv.id);
+        {actions.invoices.map((invoice) => {
+          const view = actions.views.get(invoice.id);
           return (
-            <Card
-              key={`inv-${inv.id}`}
-              className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            <ActionCard
+              key={`inv-${invoice.id}`}
+              icon={Receipt}
+              tone="warning"
+              badge={t('widgets.actionRequired.invoiceBadge')}
+              aside={<Amount>{formatMoney(view?.remaining)}</Amount>}
+              to="/invoices"
+              label={invoice.number}
             >
-              <CardContent className="flex flex-col gap-1.5 p-3.5">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-medium text-warning">
-                    <Receipt className="size-3.5" aria-hidden="true" />
-                    {t('widgets.actionRequired.invoiceBadge')}
-                  </span>
-                  <span className="font-semibold text-foreground">{formatMoney(view?.remaining)}</span>
-                </div>
-                <p className="text-sm font-medium text-foreground">
-                  <Link
-                    to="/invoices"
-                    className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
-                  >
-                    {inv.number}
-                  </Link>
-                </p>
-                <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                  {t('widgets.actionRequired.payInvoice')}
-                  <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}</ToneBadge>
-                </span>
-              </CardContent>
-            </Card>
+              <span className="flex flex-wrap items-center gap-1.5">
+                {hint('payInvoice')}
+                <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}</ToneBadge>
+              </span>
+            </ActionCard>
           );
         })}
 
-        {pendingActs.map((act) => (
-          <Card
+        {actions.acts.map((act) => (
+          <ActionCard
             key={`act-${act.id}`}
-            className="group relative border-border bg-card transition-colors hover:border-primary/50 hover:bg-accent/40"
+            icon={ClipboardCheck}
+            tone="primary"
+            badge={t('widgets.actionRequired.actBadge')}
+            aside={<AlertCircle className="size-3.5 text-primary" aria-hidden="true" />}
+            to="/acts"
+            label={act.number}
           >
-            <CardContent className="flex flex-col gap-1.5 p-3.5">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span className="flex items-center gap-1 font-medium text-info">
-                  <ClipboardCheck className="size-3.5" aria-hidden="true" />
-                  {t('widgets.actionRequired.actBadge')}
-                </span>
-                <AlertCircle className="size-3.5 text-info" aria-hidden="true" />
-              </div>
-              <p className="text-sm font-medium text-foreground">
-                <Link
-                  to="/acts"
-                  className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
-                >
-                  {act.number}
-                </Link>
-              </p>
-              <span className="text-xs text-muted-foreground">{t('widgets.actionRequired.acceptAct')}</span>
-            </CardContent>
-          </Card>
+            {hint('acceptAct')}
+          </ActionCard>
         ))}
       </div>
     </section>
+  );
+}
+
+/** Сумма в карточке: обычный шрифт с табличными цифрами (не моноширинный). */
+function Amount({ children }: { children: ReactNode }) {
+  return <span className="font-semibold whitespace-nowrap text-foreground tabular-nums">{children}</span>;
+}
+
+function ActionCard({
+  icon: Icon,
+  tone,
+  badge,
+  aside,
+  to,
+  label,
+  children,
+}: {
+  icon: LucideIcon;
+  tone: 'warning' | 'primary';
+  badge: string;
+  aside: ReactNode;
+  to: string;
+  label: string;
+  children: ReactNode;
+}) {
+  const color = tone === 'warning' ? 'text-warning' : 'text-primary';
+  return (
+    <Card className="portal-card group relative border-border hover:border-ring/40">
+      <CardContent className="flex flex-col gap-1.5 p-3.5">
+        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+          <span className={cn('flex items-center gap-1 font-medium', color)}>
+            <Icon className={cn('size-3.5', color)} aria-hidden="true" />
+            {badge}
+          </span>
+          {aside}
+        </div>
+        <p className="text-sm font-medium text-foreground">
+          <Link
+            to={to}
+            className="rounded-sm outline-none after:absolute after:inset-0 hover:underline focus-visible:after:ring-2 focus-visible:after:ring-ring"
+          >
+            {label}
+          </Link>
+        </p>
+        <span className="text-xs text-muted-foreground">{children}</span>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Место виджета, пока списки грузятся: заголовок и строка карточек той же высоты (на телефоне — одна, на десктопе — до
+ * четырёх). Экран «Запросы» показывает свой список одновременно с виджетом, поэтому готовый список не сдвигается.
+ */
+function ActionRequiredSkeleton() {
+  const { t } = useTranslation();
+  return (
+    <div role="status" aria-busy="true" className="mb-6 flex flex-col gap-3" data-testid="action-required-loading">
+      <span className="sr-only">{t('common.loading')}</span>
+      <Skeleton className="h-5 w-48" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((index) => (
+          <Skeleton
+            key={index}
+            className={cn('h-[5.75rem] rounded-2xl', index > 0 && 'hidden sm:block', index > 1 && 'sm:hidden lg:block')}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

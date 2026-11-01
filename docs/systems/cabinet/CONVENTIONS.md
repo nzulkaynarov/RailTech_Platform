@@ -1,5 +1,5 @@
 # Конвенции кода Cabinet (кабинет клиента), `apps/cabinet`
-Статус: действует · Владелец: лид · Обновлено: 2026-10-29
+Статус: действует · Владелец: лид · Обновлено: 2026-10-31
 
 Ты работаешь над **Cabinet** ансамбля RailTech Platform: одно окно клиента — запросы, КП, договоры,
 счета, акты, поставки, документы, опубликованный каталог. Один главный пользователь — **клиент**
@@ -46,8 +46,8 @@ openapi-typescript (типы из packages/contracts/openapi/erp-portal.yaml; ф
 Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton — где уместно)
 ```
 
-- Версии — как в `apps/erp/frontend` (`package.json`): React 18.3, Vite 7, Tailwind 4.3, React Query 5, i18next 25, TypeScript 5.6, Vitest 4; плюс react-router-dom 7, MSW 2, vitest-axe. shadcn-примитивы `src/components/ui/` скопированы из ERP без правок.
-- Токены дизайна — копия `packages/ui-tokens/dist/shadcn.css` в `src/styles/tokens.generated.css` (`make tokens` из корня пишет её сама; `make check` сверяет). В Mini App цвета `themeParams` Telegram ложатся на те же переменные (`src/telegram/theme.ts`), не на компоненты.
+- Версии — как в `apps/erp/frontend` (`package.json`): React 18.3, Vite 7, Tailwind 4.3, React Query 5, i18next 25, TypeScript 5.6, Vitest 4; плюс react-router-dom 7, MSW 2, vitest-axe. shadcn-примитивы `src/components/ui/` скопированы из ERP; правки — только удалённые классы `tw-animate-css` (`animate-in`, `fade-*`, `slide-*`, `zoom-*`: плагин не подключён, классы ничего не делали) и пульс скелетона под `motion-safe:` (CAB-FIX-3).
+- Токены дизайна — копия `packages/ui-tokens/dist/cabinet.css` (тема `shadcnThemes.cabinet`, светлая и `.dark`) в `src/styles/tokens.generated.css` (`make tokens` из корня пишет её сама; `make check` сверяет); цвета правятся только в `tokens.json`, в `src/index.css` их нет (CAB-FIX-2). В Mini App цвета `themeParams` Telegram ложатся на те же переменные (`src/telegram/theme.ts`), не на компоненты, и только если с ними все пары проходят AA (текст ≥ 4.5:1, значки и кольцо фокуса ≥ 3:1; иначе остаётся наш токен — CAB-FIX-3).
 - Глобальное состояние минимально: сессия (`GET /me`: контакт, компания, `can_act`), язык, тема. Данные — только React Query над портальным API.
 - Маршрутизатор — react-router 7 (`src/app/routes.tsx`). Deep-link Mini App: `start_param=deal_<id>` → `/deals/<id>`, `quote_<id>` → `/quotes/<id>` (`src/telegram/start-param.ts`), разрешается до создания маршрутизатора; на вложенных экранах — системная «Назад» Telegram.
 - Деплой: сервис `cabinet-web` (Vite → nginx, `/health`) за Caddy на `cabinet.localhost` / `cabinet.railtech.uz`; `/api/portal/*` Caddy ведёт с того же домена на ERP (cookie same-origin, CORS не нужен).
@@ -82,7 +82,9 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 - **Типы API только сгенерированные** из `erp-portal.yaml` (`make -C apps/cabinet gen-api-types` → `src/api/portal.d.ts`); форма лида — `src/api/crm-form.d.ts` из `packages/contracts/openapi/crm.yaml` (только пути `/api/v1/leads/web*` и их схемы, `scripts/gen-crm-form-types.mjs`); ручных типов и «временных» интерфейсов ответа нет. Статусы сравниваются по `code`, показываются по `name`.
 - Ошибки API — `{"detail": "<CODE>"}`; код → ключ i18n, показ toast'ом; 401 → повторный вход (в Mini App — повторный `POST /auth/telegram`), 404 — «не найдено», без утечки существования чужих сущностей. Форма лида — формат CRM `{"code", "message", "details": {"reason", "field"}}` → `newClient.errors.<reason>`.
 - Правила React Compiler включены; `useDraftState` / `useNow` / `useLatestRef` из B2B вместо самоделок; хелперы и константы — вне файлов компонентов.
-- Деньги — строка из API с валютой; форматирование — одной утилитой по локали, не вручную. Даты — ISO из API, показ в Asia/Tashkent.
+- Деньги — строка из API с валютой; форматирование — одной функцией `formatMoney` (`lib/format.ts`) по правилу Платформы: `UZS` — «сум» / «so‘m» / `UZS` (en), другая валюта — кодом, разряды — неразрывным пробелом; на экране — `tabular-nums` обычным шрифтом (не `font-mono`), в таблицах — вправо (CAB-FIX-3).
+- Движение: переходов и анимаций ширины нет; то, что анимируется (цвет, тень, подъём карточки, спиннер, скелетон), уважает `prefers-reduced-motion` (`motion-safe:` и правило в `index.css`). Сочетания клавиш — по `event.code` (работают в RU-раскладке) и не в полях ввода (`lib/keyboard.ts`).
+- Бар несохранённых изменений (`UnsavedChangesBar`) — только для обратимого сохранения; последний элемент формы, место зарезервировано, одна кнопка «Сохранить», «Сбросить» с подтверждением, уход с правками — вопрос (`useBlocker`) и `beforeunload` (DECISIONS 2026-10-30 п. 5). Даты — ISO из API, показ в Asia/Tashkent.
 - Доступность: фокус-состояния, `aria-label` на иконках, контраст темы Telegram проверяется axe так же, как светлая/тёмная веб-тема.
 - Проверяй на телефоне: Mini App в тестовом боте (DevTools Telegram Desktop) и браузер на 390 px; виртуальная клавиатура не должна прятать кнопку действия.
 
@@ -127,7 +129,7 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 - Сессия портала — **решено (M2-CAB-01, по рекомендации, DECISIONS):** `/api/portal/*` проксируется Caddy с домена Cabinet на ERP, cookie same-origin (`SameSite=Lax` по контракту), CORS не нужен. ERP в M2-ERP-01 должен принимать Host `cabinet.*` (`ALLOWED_HOSTS`) и не требовать CSRF-токен Django для портальной сессии (или выдать его способом, доступным SPA).
 - Коды ошибок `detail` портала — перечень `ErrorCode` контракта (Q-17); у каждого кода есть текст `apiErrors.*` на ru/uz/en, при входе 403/429 — `auth.errors.*` (`loginErrorKey`). Новый код в контракте → ключ в трёх словарях в том же PR.
 - Недостающее в контракте после M2-CAB-02 (агенту ERP, обходы — в QUESTIONS): загрузка файлов для вложений запроса (Q-14), id и справочник категорий каталога (Q-15), строки запроса и номер сделки для клиента (Q-16). Снять обходы сразу после правки контракта.
-- Тёмная тема Mini App: статусные токены переопределены в `src/index.css` (`.dark`) до тёмных токенов в `packages/ui-tokens`; контраст `button_color` самого Telegram проверяется на M2-QA-01.
+- Тёмная тема Mini App — `.dark` темы кабинета в `packages/ui-tokens` (CAB-FIX-2, контраст пар — `contrast.test.mjs`). Палитры самого Telegram (`button_color` с белым текстом, `hint_color`) AA не держат: 3,6–4,4:1 в стандартных темах — **решено CAB-FIX-3:** такие цвета не берутся (`telegram/theme.ts` проверяет пары в рантайме), axe Mini App со стандартными темами Telegram блокирует в `npm run test:e2e:screens`.
 - Скачивание в Mini App: файл сохраняется через `<a download>` (blob); поведение в webview Telegram на iOS/Android проверить на M2-QA-01 (при проблеме — `WebApp.downloadFile`, Bot API 8.0, но ему нужна ссылка без cookie).
 - Имя бота — `VITE_BOT_USERNAME` (в ансамбле `TELEGRAM_BOT_USERNAME`). URL CRM для формы лида — `VITE_CRM_URL` (в ансамбле `CABINET_CRM_URL`, по умолчанию `http://crm.localhost:${HTTP_PORT}`); CRM пускает origin из `CABINET_ORIGIN` (по умолчанию `http://cabinet.localhost`, вариант с `HTTP_PORT` и `https://${CABINET_DOMAIN}`) — **решено M2-CAB-03**.
 - Бот CRM пока не разбирает параметр `/start` (`deal_<id>`, `web`) — отвечает приветствием. Контекст сделки в диалоге (лента, сервисный режим «где мой счёт») — M3-CRM-04 / M3-CRM-07 (`deal_<id>` — `erp_deal_id`, сопоставление — `deals.erp_deal_id` из M3-CRM-03).

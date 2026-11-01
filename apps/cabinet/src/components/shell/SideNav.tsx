@@ -1,38 +1,137 @@
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
-import { NAV_ITEMS } from '@/app/nav';
+import { PRIMARY_NAV, SECONDARY_NAV, type NavItem } from '@/app/nav';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useMe } from '@/session/useMe';
+import { BrandMark } from './BrandMark';
 
-/** Боковая навигация десктопа (от `md`): все разделы, активный — `aria-current="page"` (NavLink). */
-export function SideNav({ companyName }: { companyName?: string }) {
+export interface SideNavProps {
+  companyName?: string;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+/**
+ * Боковая навигация десктопа (от `md`): марка RailTech Cabinet, компания и право действовать из `GET /me`, разделы.
+ * Только данные контракта: ни переключателя ролей (поставщиков в кабинете нет — CONVENTIONS §2 п. 3), ни статуса
+ * менеджера, ни своих запросов к спискам на каждой странице (CAB-FIX-1). Свёрнутый — только иконки, имя пункта —
+ * в `aria-label` (CAB-FIX-2). Ширина меняется одним шагом, без анимации: анимация ширины пересчитывала холст на каждом
+ * кадре (K12).
+ */
+export function SideNav({ companyName, collapsed = false, onToggleCollapse }: SideNavProps) {
   const { t } = useTranslation();
+  const me = useMe().data;
+
   return (
-    <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r bg-card md:flex">
-      <div className="border-b px-4 py-4">
-        <p className="text-sm font-semibold">{t('app.name')}</p>
-        {companyName ? <p className="truncate text-xs text-muted-foreground">{companyName}</p> : null}
-      </div>
-      <nav aria-label={t('app.sideNav')} className="flex-1 overflow-y-auto p-2">
-        <ul className="flex flex-col gap-1">
-          {NAV_ITEMS.map((item) => (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center gap-3 rounded-md px-3 py-2 text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring',
-                    isActive && 'bg-accent font-medium text-accent-foreground',
-                  )
-                }
+    <aside
+      className={cn(
+        'sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden border-r border-border/60 bg-muted md:flex',
+        collapsed ? 'w-16' : 'w-64',
+      )}
+    >
+      {/* Марка, компания и право действовать */}
+      <div className="border-b border-border/60 p-3">
+        {collapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <BrandMark label={companyName ? `${t('app.name')} · ${companyName}` : t('app.name')} />
+            {onToggleCollapse && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8 rounded-lg text-muted-foreground hover:bg-accent hover:text-primary"
+                onClick={onToggleCollapse}
+                aria-label={t('nav.expandSidebar')}
               >
-                <item.icon className="size-4" aria-hidden="true" />
-                {t(item.labelKey)}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
+                <PanelLeft className="size-4" aria-hidden="true" />
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5 p-1.5">
+                <BrandMark />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-primary">{t('app.name')}</p>
+                  {companyName ? <p className="truncate text-xs text-muted-foreground">{companyName}</p> : null}
+                </div>
+              </div>
+
+              {onToggleCollapse && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-7 shrink-0 rounded-lg text-muted-foreground hover:bg-accent hover:text-primary"
+                  onClick={onToggleCollapse}
+                  aria-label={t('nav.collapseSidebar')}
+                >
+                  <PanelLeftClose className="size-4" aria-hidden="true" />
+                </Button>
+              )}
+            </div>
+
+            {/* Право действовать: подпись текстом, точка — только украшение */}
+            {me ? (
+              <p className="flex items-center gap-1.5 px-1.5 text-xs text-muted-foreground">
+                <span
+                  className={cn('inline-block size-1.5 shrink-0 rounded-full', me.can_act ? 'bg-success' : 'bg-warning')}
+                  aria-hidden="true"
+                />
+                {me.can_act ? t('access.canAct') : t('access.viewOnly')}
+              </p>
+            ) : null}
+          </div>
+        )}
+      </div>
+
+      <nav aria-label={t('app.sideNav')} className="flex-1 overflow-y-auto px-2 py-3">
+        {!collapsed && (
+          <p className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            {t('nav.sectionMain')}
+          </p>
+        )}
+        <NavList items={PRIMARY_NAV} collapsed={collapsed} />
+
+        {!collapsed && (
+          <p className="mt-4 px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+            {t('nav.sectionDocumentsAndTeam')}
+          </p>
+        )}
+        <NavList items={SECONDARY_NAV} collapsed={collapsed} className={cn(collapsed && 'mt-2 border-t border-border/60 pt-2')} />
       </nav>
     </aside>
+  );
+}
+
+function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed: boolean; className?: string }) {
+  const { t } = useTranslation();
+  return (
+    <ul className={cn('flex flex-col gap-1', className)}>
+      {items.map((item) => {
+        const label = t(item.labelKey);
+        return (
+          <li key={item.to}>
+            <NavLink
+              to={item.to}
+              aria-label={collapsed ? label : undefined}
+              title={collapsed ? label : undefined}
+              className={({ isActive }) =>
+                cn(
+                  'group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm text-foreground outline-none transition-colors hover:bg-accent/60 hover:text-primary focus-visible:ring-2 focus-visible:ring-ring',
+                  isActive && 'bg-accent font-semibold text-primary',
+                  collapsed && 'justify-center px-0',
+                )
+              }
+            >
+              <item.icon className="size-4 shrink-0" aria-hidden="true" />
+              {!collapsed && <span className="truncate">{label}</span>}
+            </NavLink>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

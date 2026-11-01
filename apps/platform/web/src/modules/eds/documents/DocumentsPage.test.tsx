@@ -6,6 +6,8 @@ import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 import { panelEl, renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 import { listSettled } from "../../../test/settled";
+import { companyDayIn } from "../../../mocks/fixtures/dates";
+import { formatDate } from "../../../shared/lib/dates";
 
 setupEdsTests();
 
@@ -34,7 +36,9 @@ describe("EDS · Документы: список", () => {
       within(row("Закупка канцтоваров на квартал")).getByText("На согласовании"),
     ).toBeVisible();
     expect(within(row("Закупка канцтоваров на квартал")).getByText("4 800 000 сум")).toBeVisible();
-    expect(within(row("Закупка канцтоваров на квартал")).getByText("05.11.2026")).toBeVisible();
+    expect(
+      within(row("Закупка канцтоваров на квартал")).getByText(formatDate(companyDayIn(7))),
+    ).toBeVisible();
     expect(
       within(row("Командировка в Самарканд")).getByText("Возвращена на доработку"),
     ).toBeVisible();

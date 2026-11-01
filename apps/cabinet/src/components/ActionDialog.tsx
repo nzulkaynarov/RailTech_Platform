@@ -27,6 +27,7 @@ export function ActionDialog({
   description,
   confirmLabel,
   confirmVariant = 'default',
+  cancelLabel,
   pending,
   error,
   message,
@@ -39,6 +40,8 @@ export function ActionDialog({
   description: ReactNode;
   confirmLabel: string;
   confirmVariant?: 'default' | 'destructive';
+  /** Подпись отказа; по умолчанию «Отмена» («Остаться», «Продолжить правку» — в вопросах о несохранённом). */
+  cancelLabel?: string;
   pending: boolean;
   /** Ошибка последней попытки (ответ ERP) — показывается текстом внутри диалога. */
   error?: unknown;
@@ -50,6 +53,8 @@ export function ActionDialog({
   const { t } = useTranslation();
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    // Портал диалога всплывает по дереву React: без этого отправка диалога внутри формы (бар «Компании») отправила бы и её.
+    event.stopPropagation();
     if (!pending) onSubmit();
   };
   const problem = message || (error ? t(apiErrorKey(error)) : null);
@@ -71,11 +76,11 @@ export function ActionDialog({
           <DialogFooter>
             <DialogClose asChild>
               <Button type="button" variant="outline" disabled={pending}>
-                {t('common.cancel')}
+                {cancelLabel ?? t('common.cancel')}
               </Button>
             </DialogClose>
             <Button type="submit" variant={confirmVariant} disabled={pending}>
-              {pending ? <Loader2 className="animate-spin" aria-hidden="true" /> : null}
+              {pending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : null}
               {confirmLabel}
             </Button>
           </DialogFooter>
