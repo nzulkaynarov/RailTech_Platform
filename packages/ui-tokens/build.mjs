@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // Генератор из tokens.json (единственный источник) в потребляемые форматы:
 //   dist/tokens.css   — CSS-переменные --rt-* (любой фронтенд)
-//   dist/shadcn.css   — переменные shadcn/ui (--primary, --destructive, --radius…) + @theme для Tailwind 4 (ERP, Cabinet)
+//   dist/shadcn.css   — переменные shadcn/ui (--primary, --destructive, --radius…) + @theme для Tailwind 4 (ERP)
+//   dist/cabinet.css  — те же переменные со значениями темы shadcnThemes.cabinet (светлая и .dark) — Cabinet
 //   dist/antd.ts      — token и components для ThemeConfig AntD (CRM, Платформа); копия — apps/crm/frontend/src/app/tokens.generated.ts
 // Без зависимостей: node ≥ 20. Запуск: make tokens (корень) или make -C packages/ui-tokens build.
 // Вывод TS намеренно в формате prettier (двойные кавычки, запятые в конце), чтобы проходить prettier --check в CRM.
@@ -78,16 +79,11 @@ const shadcnVars = {
   "--font-sans": tokens.font.family,
   "--font-mono": tokens.font.familyMono,
 };
-const shadcnCss = `${banner}
-/* Подключение (ERP, Cabinet): @import "tailwindcss"; @import "../../../packages/ui-tokens/dist/shadcn.css";
-   Тёмная тема (.dark) задаётся приложением поверх; здесь — токены светлой темы. */
-:root {
-${Object.entries(shadcnVars)
-  .map(([k, v]) => `  ${k}: ${v};`)
-  .join("\n")}
-}
-
-@theme inline {
+const cssBlock = (selector, vars) =>
+  `${selector} {\n${Object.entries(vars)
+    .map(([k, v]) => `  ${k}: ${v};`)
+    .join("\n")}\n}`;
+const themeInline = `@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -122,6 +118,34 @@ ${Object.entries(shadcnVars)
   --font-mono: var(--font-mono);
 }
 `;
+const shadcnCss = `${banner}
+/* Подключение (ERP, Cabinet): @import "tailwindcss"; @import "../../../packages/ui-tokens/dist/shadcn.css";
+   Тёмная тема (.dark) задаётся приложением поверх; здесь — токены светлой темы. */
+${cssBlock(":root", shadcnVars)}
+
+${themeInline}`;
+
+// ─── dist/cabinet.css: тема кабинета клиента (shadcnThemes.cabinet) ─────────────────────────
+// Тема только переопределяет значения переменных shadcn: ключ, которого нет в shadcnVars, — ошибка сборки
+// (своих имён вроде --navy у приложения нет, компоненты пишут bg-primary, text-muted-foreground…).
+const themeVars = (name, mode) => {
+  const values = tokens.shadcnThemes?.[name]?.[mode] ?? {};
+  return Object.fromEntries(
+    Object.entries(values).map(([key, value]) => {
+      if (!(`--${key}` in shadcnVars)) throw new Error(`shadcnThemes.${name}.${mode}.${key}: нет такой переменной shadcn`);
+      return [`--${key}`, value];
+    }),
+  );
+};
+const cabinetCss = `${banner}
+/* Тема кабинета клиента (shadcnThemes.cabinet): переменные shadcn со значениями темы; только Cabinet
+   (копия apps/cabinet/src/styles/tokens.generated.css). .dark — тёмная тема Mini App (src/telegram/theme.ts);
+   цвета themeParams Telegram ложатся поверх тех же переменных inline-стилем. */
+${cssBlock(":root", { ...shadcnVars, ...themeVars("cabinet", "light") })}
+
+${cssBlock(".dark", themeVars("cabinet", "dark"))}
+
+${themeInline}`;
 
 // ─── dist/antd.ts ─────────────────────────────────────────────────────────────────────────
 const antd = {
@@ -207,6 +231,7 @@ const dist = join(here, "dist");
 mkdirSync(dist, { recursive: true });
 writeFileSync(join(dist, "tokens.css"), tokensCss);
 writeFileSync(join(dist, "shadcn.css"), shadcnCss);
+writeFileSync(join(dist, "cabinet.css"), cabinetCss);
 writeFileSync(join(dist, "antd.ts"), antdTs);
 
 // Копия для CRM: фронтенд CRM собирается в контейнере, куда packages/ не монтируется, поэтому файл коммитится рядом с кодом.
@@ -219,9 +244,10 @@ if (process.argv.includes("--no-crm")) {
 }
 
 // Копия для Cabinet (M2-CAB-01): образ cabinet-web собирается с контекстом apps/cabinet, без packages/.
+// С CAB-FIX-2 — тема кабинета (dist/cabinet.css), а не общий shadcn.css.
 const cabinetTarget = resolve(here, "../../apps/cabinet/src/styles/tokens.generated.css");
 if (!process.argv.includes("--no-cabinet")) {
-  writeFileSync(cabinetTarget, shadcnCss);
+  writeFileSync(cabinetTarget, cabinetCss);
   console.log(`Cabinet: ${cabinetTarget}`);
 }
 

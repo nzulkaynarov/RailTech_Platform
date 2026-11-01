@@ -1,11 +1,15 @@
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
+import type { QuoteListItem } from '@/api/portal';
+import { quoteExpired } from '@/lib/quotes';
 import { cn } from '@/lib/utils';
-import { statusLabelKey, statusTone, type StatusEntity, type StatusTone } from '@/lib/status';
-import type { Schemas } from '@/api/portal';
+import { statusLabelKey, statusTone, type StatusCode, type StatusEntity, type StatusTone } from '@/lib/status';
 
-/** Тон → семантические токены (как `StatusBadge` B2B/ERP): цвет несёт смысл, подпись — всегда текстом. */
+/**
+ * Тон → семантические токены темы кабинета (`packages/ui-tokens`, shadcnThemes.cabinet): текст статуса на его 10 %
+ * заливке — пары «text-X на bg-X/10» поверх холста и рамки проверяет `contrast.test.mjs` (≥ 4.5:1, светлая и тёмная).
+ */
 const TONE_CLASS: Record<StatusTone, string> = {
   success: 'border-success/30 bg-success/10 text-success',
   warning: 'border-warning/30 bg-warning/10 text-warning',
@@ -16,24 +20,22 @@ const TONE_CLASS: Record<StatusTone, string> = {
 
 export function ToneBadge({ tone, children, className }: { tone: StatusTone; children: React.ReactNode; className?: string }) {
   return (
-    <Badge variant="outline" className={cn('rounded-md whitespace-normal', TONE_CLASS[tone], className)}>
+    <Badge variant="outline" className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium whitespace-normal', TONE_CLASS[tone], className)}>
       {children}
     </Badge>
   );
 }
 
-type Codes = {
-  request: Schemas['RequestStatus'];
-  quote: Schemas['QuoteStatus'];
-  contract: Schemas['ContractStatus'];
-  invoice: Schemas['InvoiceStatus'];
-  act: Schemas['ActStatus'];
-  delivery: Schemas['DeliveryStatus'];
-  availability: Schemas['Availability'];
-};
-
 /** Бейдж статуса сущности контракта: подпись из `status.<entity>.<code>`, тон из `lib/status`. */
-export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: E; code: Codes[E] }) {
+export function StatusBadge<E extends StatusEntity>({ entity, code }: { entity: E; code: StatusCode<E> }) {
   const { t } = useTranslation();
   return <ToneBadge tone={statusTone(entity, code)}>{t(statusLabelKey(entity, code))}</ToneBadge>;
+}
+
+/**
+ * Статус КП в любом списке (КП, запрос, проект): «ждёт решения» с прошедшим сроком `valid_until` — «Срок истёк»
+ * (ERP переводит в `expired` не сразу, а принять такое КП уже нельзя).
+ */
+export function QuoteStatusBadge({ quote, now }: { quote: Pick<QuoteListItem, 'status' | 'valid_until'>; now: number }) {
+  return <StatusBadge entity="quote" code={quoteExpired(quote, now) ? 'expired' : quote.status} />;
 }

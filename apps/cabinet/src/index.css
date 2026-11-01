@@ -1,6 +1,9 @@
 @import "tailwindcss";
-/* Токены ансамбля: копия packages/ui-tokens/dist/shadcn.css (make tokens; сверка — make -C apps/cabinet tokens-check).
-   Копия, а не путь в packages/: образ Cabinet собирается с контекстом apps/cabinet. */
+/* Токены кабинета: копия packages/ui-tokens/dist/cabinet.css — тема «Legal Eminence» (shadcnThemes.cabinet в tokens.json)
+   поверх переменных shadcn, светлая и .dark (make tokens; сверка — make -C apps/cabinet tokens-check). Копия, а не путь
+   в packages/: образ Cabinet собирается с контекстом apps/cabinet. Цветов здесь нет: правятся только в tokens.json,
+   контраст пар — packages/ui-tokens/contrast.test.mjs. В Mini App themeParams Telegram ложатся на те же переменные
+   (src/telegram/theme.ts). */
 @import "./styles/tokens.generated.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -19,16 +22,23 @@
   }
 }
 
-/* Тёмная тема Mini App (`colorScheme: dark`, src/telegram/theme.ts): статусные токены светлой темы на тёмном
-   фоне Telegram не держат контраст AA. Светлые оттенки той же палитры — до тёмных токенов в packages/ui-tokens
-   (M2-CAB-02, DECISIONS). `--destructive` Telegram перекрывает своим `destructive_text_color`, если он есть. */
-.dark {
-  --success: #73d13d;
-  --success-foreground: #141414;
-  --warning: #ffc53d;
-  --warning-foreground: #141414;
-  --info: #69b1ff;
-  --info-foreground: #141414;
-  --destructive: #ff7875;
-  --destructive-foreground: #141414;
+@layer utilities {
+  /* Карточка: подъём при наведении — только если человек не просил меньше движения (K12) */
+  .portal-card {
+    @apply rounded-2xl border border-border bg-card hover:border-ring/40 hover:shadow-lg hover:shadow-primary/5 motion-safe:transition-[transform,box-shadow,border-color] motion-safe:duration-200 motion-safe:hover:-translate-y-0.5;
+  }
+}
+
+/* «Уменьшить движение» в системе (K12, WCAG 2.3.3): переходы и анимации — мгновенно, спиннеры и скелетоны стоят.
+   Анимации кабинета: переходы цвета и тени, подъём карточки, спиннер загрузки, пульс скелетона — больше ничего
+   (классы tw-animate-css `animate-in`, `fade-*`, `slide-*`, `zoom-*` не подключены и удалены). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

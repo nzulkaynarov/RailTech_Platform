@@ -22,8 +22,9 @@ typecheck: ## tsc -b
 	npm run typecheck
 
 .PHONY: i18n-check
-i18n-check: ## Симметрия ru / uz / en, дубли ключей, кириллица в латинских локалях, t() без ключа
+i18n-check: ## Симметрия ru / uz / en, дубли ключей, кириллица в латинских локалях, t() без ключа, запрет defaultValue (+ тест правила)
 	python3 scripts/check_i18n_symmetry.py
+	python3 -m unittest discover -s scripts -p 'test_*.py' -q
 
 .PHONY: tokens-check
 tokens-check: ## Копия токенов совпадает с генерацией из packages/ui-tokens/tokens.json (dist/ не коммитится — собираем)

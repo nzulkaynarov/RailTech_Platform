@@ -14,7 +14,7 @@ describe('Запросы', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
     expect(within(list).getByText('Новый')).toBeInTheDocument();
     expect(within(list).getAllByText('Есть КП')).toHaveLength(2);
-    expect(within(list).getByText('Ещё без сделки')).toBeInTheDocument();
+    expect(within(list).getByText('Ещё без проекта')).toBeInTheDocument();
 
     const link = within(list).getByRole('link', { name: /Z-2026-0042/ });
     link.focus();
@@ -78,6 +78,49 @@ describe('Запросы', () => {
       ],
     });
     expect(await screen.findByText('Запрос Z-2026-0106 отправлен')).toBeInTheDocument();
+  });
+
+  it('Ctrl+S / ⌘S не отправляет запрос и не перехватывается: отправка — только кнопкой рядом с «Что произойдёт»', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    const body = captureBody('/requests');
+    const { router } = renderApp('/requests/new');
+    await heading('Новый запрос');
+    await user.type(screen.getByLabelText('Что нужно'), 'Кабель для цеха');
+
+    for (const modifier of ['ctrlKey', 'metaKey'] as const) {
+      const event = new KeyboardEvent('keydown', { key: 's', [modifier]: true, bubbles: true, cancelable: true });
+      window.dispatchEvent(event);
+      // Сочетание остаётся браузеру: кабинет его не гасит.
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(screen.queryByRole('region', { name: /несохранённые изменения/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Сохранить/ })).not.toBeInTheDocument();
+    expect(log).not.toContain('POST /requests');
+    expect(router.state.location.pathname).toBe('/requests/new');
+
+    // «Что произойдёт» — только настоящий процесс: номер, менеджер, КП в разделе «КП», без сроков.
+    const note = screen.getByRole('note');
+    expect(note).toHaveTextContent('Что произойдёт');
+    expect(note).toHaveTextContent('Запрос получит номер и уйдёт менеджеру RailTech');
+    expect(note).not.toHaveTextContent(/\d|час|рабоч/i);
+    // Выбора «Направление обращения» нет: в контракте такого поля нет.
+    expect(screen.queryByText(/Направление обращения/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Отправить запрос' }));
+    await heading(/^Запрос Z-/);
+    // Тело POST — ровно поля ClientRequestCreate, ничего лишнего.
+    expect(body.current).toEqual({ summary: 'Кабель для цеха', lines: [] });
+  });
+
+  it('старая ссылка ?view=… ведёт на список запросов, а не в 404', async () => {
+    signedIn();
+    const { router } = renderApp('/requests?view=kanban');
+    await heading('Запросы');
+    expect(await screen.findByRole('list', { name: 'Запросы' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/requests');
+    expect(router.state.location.search).toBe('');
   });
 
   it('подсказки по контракту: суть до 5000 символов, файл до 10 МБ', async () => {

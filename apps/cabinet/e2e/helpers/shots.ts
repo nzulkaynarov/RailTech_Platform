@@ -61,7 +61,7 @@ function writeReport(entry: ScreenReport): void {
 async function settle(page: Page): Promise<void> {
   await page.waitForLoadState('networkidle', { timeout: 3000 }).catch(() => undefined);
   await page.evaluate(() => document.fonts.ready);
-  await page.locator('[aria-busy="true"], .animate-pulse').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => undefined);
+  await page.locator('[aria-busy="true"], [data-slot="skeleton"]').first().waitFor({ state: 'detached', timeout: 5000 }).catch(() => undefined);
   // уведомление (sonner) появляется и гаснет с анимацией прозрачности: axe на полпути даёт ложный color-contrast —
   // ждём, пока оно уйдёт само (по умолчанию ~4 с), и снимаем экран без него
   await page.locator('[data-sonner-toast]').first().waitFor({ state: 'detached', timeout: 7000 }).catch(() => undefined);
@@ -82,26 +82,39 @@ async function runAxe(page: Page): Promise<{ violations: AxeViolation[]; passes:
 
 /**
  * Скриншот текущего экрана на 1440 и 390 px (`<экран>-<ширина>.png` в docs/screens/fix-51b/), axe в браузере и
- * проверка горизонтальной прокрутки на каждой ширине. Нарушения serious/critical и прокрутка — `expect.soft`:
+ * проверка горизонтальной прокрутки на каждой ширине; `screenshot: false` — только axe и прокрутка (CAB-FIX-2). Нарушения serious/critical и прокрутка — `expect.soft`:
  * прогон не обрывается, дефекты видны в итоге и в `axe-summary.json`.
  */
-export async function snap(page: Page, screen: string, options: { axe?: boolean; blocking?: boolean } = {}): Promise<void> {
+export async function snap(
+  page: Page,
+  screen: string,
+  options: {
+    axe?: boolean;
+    blocking?: boolean;
+    screenshot?: boolean;
+    /** Ширины прогона; по умолчанию 1440 и 390 (CAB-FIX-3 добавляет 1280 для таблиц). */
+    widths?: ReadonlyArray<{ width: number; height: number }>;
+  } = {},
+): Promise<void> {
   const withAxe = options.axe ?? true;
+  const withScreenshot = options.screenshot ?? true;
   fs.mkdirSync(SCREENS_DIR, { recursive: true });
   const original = page.viewportSize() ?? WIDTHS[0];
   try {
-    for (const size of WIDTHS) {
+    for (const size of options.widths ?? WIDTHS) {
       await page.setViewportSize(size);
       await settle(page);
       // Вся страница: окно растягивается по высоте документа (fullPage размазывал бы фиксированную нижнюю навигацию
       // телефона посреди экрана), снимок — обычный, как увидел бы человек с очень высоким экраном.
-      const tall = await page.evaluate(() => document.documentElement.scrollHeight);
-      if (tall > size.height) {
-        await page.setViewportSize({ width: size.width, height: Math.min(tall, 3200) });
-        await page.waitForTimeout(150);
+      if (withScreenshot) {
+        const tall = await page.evaluate(() => document.documentElement.scrollHeight);
+        if (tall > size.height) {
+          await page.setViewportSize({ width: size.width, height: Math.min(tall, 3200) });
+          await page.waitForTimeout(150);
+        }
+        await page.screenshot({ path: path.join(SCREENS_DIR, `${screen}-${size.width}.png`) });
+        await page.setViewportSize(size);
       }
-      await page.screenshot({ path: path.join(SCREENS_DIR, `${screen}-${size.width}.png`) });
-      await page.setViewportSize(size);
       const axe = withAxe ? await runAxe(page) : { violations: [], passes: 0 };
       const violations = axe.violations;
       const overflowPx = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
