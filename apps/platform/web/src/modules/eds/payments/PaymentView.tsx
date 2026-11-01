@@ -140,6 +140,8 @@ function Content({ card }: { card: PaymentCard }) {
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
   const mayAct = me.resources["eds.payments"] === "full" && card.can_confirm;
+  // Черновик выставляют там же, в окне «Оплата» (B-D24-4): на узком экране окно открывает кнопка
+  const mayIssue = me.resources["eds.payments"] === "full" && card.status === "draft";
   const openPanel = () => {
     setParams(
       (prev) => {
@@ -164,10 +166,10 @@ function Content({ card }: { card: PaymentCard }) {
           </div>
         }
       />
-      {mayAct && !wide ? (
+      {(mayAct || mayIssue) && !wide ? (
         <div>
           <Button type="primary" onClick={openPanel}>
-            {t("confirm.name")}
+            {mayIssue ? t("issue.submit") : t("confirm.name")}
           </Button>
         </div>
       ) : null}

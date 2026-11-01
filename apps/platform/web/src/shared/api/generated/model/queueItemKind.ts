@@ -24,6 +24,7 @@ export const QueueItemKind = {
   issue_invoice: "issue_invoice",
   issue_contract: "issue_contract",
   attach_scan: "attach_scan",
+  issue_act: "issue_act",
   pay_memo: "pay_memo",
   overdue_invoice: "overdue_invoice",
   ticket: "ticket",

@@ -5446,6 +5446,17 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
  * `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
  * реестре, которого у исполнителя может не быть); одна строка на поручение,
  * перенос и ознакомление — без дублей.
+ *
+ * Работа ERP (D2-8; что ждёт и чья очередь — решает ERP, BFF только показывает):
+ * `calc_task` — мои задания на расчёт (ERP `GET /calc/tasks/?mine=1`, стадии расчёта): «Начать расчёт», «Завизировать
+ * строки» (ждут визы зоны, которую даёт раздел `erp.calc.goods` или `erp.calc.services`), «Отправить расчёт директору»
+ * (все визы собраны), «Доработать расчёт» (директор вернул); строка открывает расчёт `/erp/calc/{ЗВ}`.
+ * `confirm_payment` — платёжки клиентов на подтверждение, `issue_invoice` — счета-черновики к выставлению (ERP
+ * `GET /finance/receivables/?tab=proofs|to_issue`); строка открывает счёт `/eds/payments/{id}?panel=open&tab=payment`.
+ * `issue_contract` — сформировать, отправить клиенту, подписать или доработать договор, `attach_scan` — приложить скан
+ * подписанного договора, `issue_act` — выпустить акт (счета оплачены, акта нет) или выпустить заново (заказчик вернул)
+ * (ERP `GET /crm/projects/?step=CONTRACT|PAYMENT`); строка открывает проект `/eds/projects/{ПР}` на вкладке «Договор» или
+ * «Акт». Один объект — одна строка: у роли, совмещающей несколько видов, дублей нет.
  * @summary «Моя очередь» — что сделать сейчас
  */
 export const getQueue = async (
@@ -10563,6 +10574,111 @@ export const useRequestPaymentDoc = <
   TContext
 > => {
   return useMutation(getRequestPaymentDocMutationOptions(options), queryClient);
+};
+
+export const getIssuePaymentUrl = (id: number) => {
+  return `/api/v1/eds/payments/${id}/issue`;
+};
+
+/**
+ * ERP `POST /crm/invoices/{id}/issue/` (право ERP `finance.invoice`): дата выставления — сегодня, срок оплаты отсчитывается от неё (если не задан вручную), реквизиты продавца фиксируются в счёте, ERP формирует PDF, клиент видит счёт в кабинете, получает сообщение бота и письмо (события `invoice.issued`). Ответ — карточка счёта после выставления. Счёт уже выставлен — 409 `already_issued`; у компании не заполнены расчётный счёт и МФО — 409 `bank_details_required`. Раздел `eds.payments` — полный.
+ * @summary EDS · Выставить счёт (черновик → «Выставлен»)
+ */
+export const issuePayment = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentCard> => {
+  return http<PaymentCard>(getIssuePaymentUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getIssuePaymentMutationKey = () => ["issuePayment"] as const;
+
+export const getIssuePaymentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof issuePayment>>,
+    TError,
+    IssuePaymentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof issuePayment>>,
+  TError,
+  IssuePaymentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getIssuePaymentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof issuePayment>>,
+    IssuePaymentMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return issuePayment(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type IssuePaymentMutationResult = NonNullable<Awaited<ReturnType<typeof issuePayment>>>;
+
+export type IssuePaymentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | PaymentConflictResponse
+  | BackendUnavailableResponse
+>;
+export type IssuePaymentMutationVariables = { id: number };
+
+/**
+ * @summary EDS · Выставить счёт (черновик → «Выставлен»)
+ */
+export const useIssuePayment = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof issuePayment>>,
+      TError,
+      IssuePaymentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof issuePayment>>,
+  TError,
+  IssuePaymentMutationVariables,
+  TContext
+> => {
+  return useMutation(getIssuePaymentMutationOptions(options), queryClient);
 };
 
 export const getListEdsDealOptionsUrl = (params?: ListEdsDealOptionsParams) => {

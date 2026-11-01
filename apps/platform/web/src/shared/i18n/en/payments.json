@@ -137,7 +137,7 @@
       },
       "draft": {
         "title": "Invoice not issued yet",
-        "text": "A payment can only be confirmed for an issued invoice."
+        "text": "Payments are confirmed against an issued invoice. It is issued by an employee with full access to “Invoices & payments”."
       },
       "cancelled": {
         "title": "Invoice cancelled",
@@ -427,6 +427,26 @@
       "document_paid": "Paid",
       "document_archived": "Moved to archive",
       "file_attached": "File attached"
+    }
+  },
+  "issue": {
+    "name": "Issue invoice",
+    "submit": "Issue invoice",
+    "lead": "Invoice {{number}} is a draft: the client cannot see it yet.",
+    "consequence": {
+      "step1": "The invoice becomes “Issued” with today as the issue date; the payment term counts from it unless it was set manually.",
+      "step2": "ERP renders a PDF with the company's bank details; the invoice amounts no longer change.",
+      "step3": "{{client}} sees the invoice in the client portal and gets a Telegram bot message and an email.",
+      "step4": "The invoice moves to “Awaiting payment”; you can confirm the payment right here."
+    },
+    "done": "Invoice {{number}} issued.",
+    "reasons": {
+      "already_issued": "The invoice is already issued. The card has been refreshed.",
+      "bank_details_required": "An invoice cannot be issued without the company's bank account and MFO: fill them in “Settings · Company & letterhead”.",
+      "forbidden": "Your role may not issue invoices.",
+      "not_found": "Invoice not found. Refresh the list.",
+      "unavailable": "ERP is not responding. Try again shortly.",
+      "unknown": "Could not issue the invoice. Try again."
     }
   }
 }

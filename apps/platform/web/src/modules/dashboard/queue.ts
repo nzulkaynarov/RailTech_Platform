@@ -43,7 +43,7 @@ export function pluralForm(language: string, count: number): "one" | "few" | "ma
 
 /** Чей пустой экран показывать: набор текстов `modules:dashboard.queue.empty.<вид>` (UX-оценка P0-3). */
 export type QueueEmptyKind =
-  "director" | "accountant" | "supply" | "engineer" | "manager" | "admin" | "default";
+  "director" | "universal" | "accountant" | "supply" | "engineer" | "manager" | "admin" | "default";
 
 /**
  * Вид пустого состояния «Моих задач» по разделам каталога, которые дают роли «вида» (`Me.resources`), а не по кодам ролей
@@ -54,6 +54,8 @@ export type QueueEmptyKind =
 export function queueEmptyKind(me: Me): QueueEmptyKind {
   const full = (resource: string) => levelOf(me, resource) === "full";
   if (full("eds.inbox") || full("eds.drafts") || full("eds.memo.approve")) return "director";
+  // Совмещённая роль (продажи, расчёт, счета и оплаты, D2-8): пустой экран перечисляет всю её работу, а не только платёжки
+  if (full("eds.payments") && full("crm.leads") && full("erp.calc")) return "universal";
   if (full("eds.payments")) return "accountant";
   if (full("erp.calc.goods")) return "supply";
   if (full("erp.calc.services")) return "engineer";

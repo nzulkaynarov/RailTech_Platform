@@ -13,6 +13,7 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 import { DecisionSlot } from "../decision/DecisionSlot";
 import { ConfirmForm } from "./ConfirmForm";
 import { InvoiceStatus } from "./InvoiceStatus";
+import { IssueForm } from "./IssueForm";
 import { ProofsBlock } from "./ProofsBlock";
 import { useStateLabels } from "./labels";
 import { invoicePath, isOpen, moneyProps } from "./model";
@@ -78,7 +79,10 @@ function Body({
   const { me } = useAuth();
   const mayAct = me.resources["eds.payments"] === "full";
   let action: ReactNode;
-  if (!isOpen(card.status)) {
+  if (card.status === "draft" && mayAct) {
+    // Черновик к выставлению (B-D24-4): выставляет держатель раздела «Счета и оплаты», право решает ERP
+    action = <IssueForm card={card} variant={variant} {...(onDone ? { onDone } : {})} />;
+  } else if (!isOpen(card.status)) {
     const closed =
       card.status === "paid" ? "paid" : card.status === "draft" ? "draft" : "cancelled";
     action = (

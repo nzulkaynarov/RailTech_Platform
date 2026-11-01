@@ -180,18 +180,18 @@
     }
   },
   "accountant": {
-    "submit": "Accept for payment",
+    "submit": "Pay in “Invoices & payments”",
     "return": "Return",
     "consequence": {
-      "step1": "The memo is accepted for payment and appears in \"Invoices and payments\" as \"to pay\".",
-      "step2": "The author gets a notification with your comment.",
-      "step3": "The document stays in the registry with your visa, date and comment."
+      "step1": "This memo opens in “Invoices & payments” on the “Memos to pay” tab.",
+      "step2": "There you mark it “Paid” — date, amount and payment order; this closes the accountant step and the route.",
+      "step3": "The author is notified; the document stays in the registry marked as paid."
     },
     "done": {
       "approve": "Document accepted for payment",
       "return": "Document returned",
       "reject": "Document rejected"
     },
-    "hint": "It is the accountant's step: accept the document for payment or return it with a comment."
+    "hint": "No separate “accept for payment” is needed: “Paid” closes the accountant step. You can return the document here with a comment."
   }
 }

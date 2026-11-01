@@ -380,7 +380,7 @@ test.describe("На согласовании: служебные записки"
 test.describe("На согласовании: бухгалтер", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе");
 
-  test("служебка на шаге бухгалтера: «Принять к оплате» и «Вернуть»; чужие шаги не показываются", async ({
+  test("служебка на шаге бухгалтера: «Оплатить в «Счета и оплаты»» (EDS 0.5.0+, B-D24-5) и «Вернуть»; чужие шаги не показываются", async ({
     page,
   }) => {
     await loginAndWait(page, "accountant@demo.example");
@@ -394,17 +394,20 @@ test.describe("На согласовании: бухгалтер", () => {
     await expect(page.getByRole("heading", { level: 1, name: "СЗ-2026/015" })).toBeVisible();
 
     const form = memoForm(page);
-    await expect(form.getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+    // «Принять к оплате» больше нет: шаг закрывает «Оплачено» — кнопка ведёт туда и объясняет почему
+    await expect(form.getByRole("button", { name: "Принять к оплате" })).toHaveCount(0);
+    const pay = form.getByRole("link", { name: "Оплатить в «Счета и оплаты»" });
+    await expect(pay).toBeVisible();
+    await expect(form.getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
     await expect(form.getByRole("button", { name: "Вернуть", exact: true })).toBeDisabled();
     await expect(form.getByRole("button", { name: "Согласовать" })).toHaveCount(0);
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText(
-      "появится в «Счета и оплаты»",
-    );
+    await expect(form.getByRole("group", { name: "Что произойдёт" })).toContainText("«Оплачено»");
     await settledScreenshot(page, "accountant-agree");
     await expectNoViolations(page, "бухгалтер: «Согласование»");
 
-    await form.getByRole("button", { name: "Принять к оплате" }).click();
-    await expect(page.getByText("Документ принят к оплате", { exact: true }).first()).toBeVisible();
+    await pay.click();
+    await expect(page).toHaveURL(/\/eds\/payments\?show=memos&memo=/);
+    await expect(page.getByRole("form", { name: "Оплата служебной записки" })).toBeVisible();
   });
 });
 

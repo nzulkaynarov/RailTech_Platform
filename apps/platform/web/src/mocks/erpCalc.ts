@@ -358,6 +358,17 @@ function mine(calc: MockCalc, user: Me): boolean {
   return calc.assignees.some((a) => a.name !== null && a.name === user.name);
 }
 
+/**
+ * «Мои задачи» (D2-8): мои задания на расчёт в стадии расчёта — как ERP `GET /calc/tasks/?mine=1` для BFF. Строки очереди из
+ * них строит `erpWork.ts` по тем же правилам, что BFF (`feeds/erp_work.py`).
+ */
+export function myCalcRows(userName: string): CalcRequestRow[] {
+  return read()
+    .filter((calc) => calc.stage === "CALCULATION")
+    .filter((calc) => calc.assignees.some((a) => a.name !== null && a.name === userName))
+    .map(row);
+}
+
 export const erpCalcHandlers = [
   http.get("*/api/v1/erp/calc/requests", ({ request }) => {
     const held = guard("erp.calc", "read");

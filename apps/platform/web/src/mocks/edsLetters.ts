@@ -350,7 +350,7 @@ export const edsLettersHandlers = [
         ? {
             number: body.deal_number,
             title: null,
-            path: `/crm/requests?request=${encodeURIComponent(body.deal_number)}&panel=open&tab=card`,
+            path: `/erp/requests?request=${encodeURIComponent(body.deal_number)}&panel=open&tab=task`,
           }
         : null,
       stage: "RESOLUTION",

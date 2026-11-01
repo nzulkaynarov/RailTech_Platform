@@ -6119,6 +6119,103 @@ export const getRequestPaymentDocResponseMock = (
   ...overrideResponse,
 });
 
+export const getIssuePaymentResponseMock = (
+  overrideResponse: Partial<Extract<PaymentCard, object>> = {},
+): PaymentCard => ({
+  id: faker.number.int(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  project_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  deal_id: faker.number.int(),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  amount: {
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  paid: {
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  balance: {
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  status: faker.helpers.arrayElement(Object.values(PaymentDisplayStatus)),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  has_pending_proof: faker.datatype.boolean(),
+  proof_received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  subtotal: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  vat: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  notes: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  has_pdf: faker.datatype.boolean(),
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    total: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  payments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      amount: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      paid_at: faker.date.past().toISOString().slice(0, 10),
+      method: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      reference: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      receipt_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      has_proof: faker.datatype.boolean(),
+      recorded_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  proofs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      source: faker.helpers.arrayElement(Object.values(PaymentProofSource)),
+      status: faker.helpers.arrayElement(["PENDING", "CONFIRMED"] as const),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      claimed_amount: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      claimed_date: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+      note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      recorded_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_id: faker.helpers.arrayElement([faker.number.int(), null]),
+    }),
+  ),
+  history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    }),
+  ),
+  payment_doc_requested_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  can_confirm: faker.datatype.boolean(),
+  can_attach_proof: faker.datatype.boolean(),
+  can_request_proof: faker.datatype.boolean(),
+  replayed: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
 export const getListEdsDealOptionsResponseMock = (
   overrideResponse: Partial<Extract<EdsDealOptions, object>> = {},
 ): EdsDealOptions => ({
@@ -20779,6 +20876,30 @@ export const getRequestPaymentDocMockHandler = (
   );
 };
 
+export const getIssuePaymentMockHandler = (
+  overrideResponse?:
+    | PaymentCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PaymentCard> | PaymentCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/payments/:id/issue",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getIssuePaymentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEdsDealOptionsMockHandler = (
   overrideResponse?:
     | EdsDealOptions
@@ -26041,6 +26162,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getAttachPaymentProofMockHandler(),
   getDownloadPaymentProofMockHandler(),
   getRequestPaymentDocMockHandler(),
+  getIssuePaymentMockHandler(),
   getListEdsDealOptionsMockHandler(),
   getGetIntegrationsOverviewMockHandler(),
   getGetErpConnectorMockHandler(),

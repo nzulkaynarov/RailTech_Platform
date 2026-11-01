@@ -151,7 +151,7 @@ test.describe("панели", () => {
       "aria-current",
       "page",
     );
-    await expect(menu.getByRole("link", { name: "Мои задачи 3, требует действия" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Мои задачи 8, требует действия" })).toBeVisible();
     await expect(
       menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
     ).toBeVisible();

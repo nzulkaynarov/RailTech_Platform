@@ -187,7 +187,7 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     request: {
       number: requestNumber,
       title: seed.title,
-      path: `/crm/requests?request=${encodeURIComponent(requestNumber)}&panel=open&tab=card`,
+      path: `/erp/requests?request=${encodeURIComponent(requestNumber)}&panel=open&tab=task`,
     },
     letter: {
       number: `ВХ-${String(seed.request)}/26`,

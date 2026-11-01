@@ -119,26 +119,28 @@ describe("Согласование: форма", () => {
 });
 
 describe("Согласование: шаг бухгалтера", () => {
-  it("бухгалтер на своём шаге: «Принять к оплате» и «Вернуть», без текстов директора", async () => {
+  const PAY = "Оплатить в «Счета и оплаты»";
+
+  it("бухгалтер на своём шаге: «Оплатить в «Счета и оплаты»» и «Вернуть», без «Принять к оплате» (EDS 0.5.0+, B-D24-5)", async () => {
     const { form } = await openForm("СЗ-2026/015", "accountant@demo.example");
 
-    expect(within(form).getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+    const pay = within(form).getByRole("link", { name: PAY });
+    expect(pay.getAttribute("href")).toMatch(
+      /^\/eds\/payments\?show=memos&memo=[0-9a-f-]+&panel=open&tab=payment$/,
+    );
+    expect(within(form).queryByRole("button", { name: "Принять к оплате" })).toBeNull();
     expect(within(form).getByRole("button", { name: "Вернуть" })).toBeDisabled();
     expect(within(form).queryByRole("button", { name: "Согласовать" })).toBeNull();
     expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
-      "появится в «Счета и оплаты»",
+      "«Оплачено»",
     );
+    expect(within(form).getByText(/шаг бухгалтера закрывает «Оплачено»/)).toBeVisible();
   });
 
-  it("«Принять к оплате» решает шаг и закрывает маршрут", async () => {
-    const { form, panel } = await openForm("СЗ-2026/015", "accountant@demo.example");
-
-    fireEvent.click(within(form).getByRole("button", { name: "Принять к оплате" }));
-
-    expect((await screen.findAllByText("Документ принят к оплате")).length).toBeGreaterThan(0);
-    expect(
-      await within(panel).findByRole("heading", { name: "Документ согласован" }),
-    ).toBeVisible();
+  it("Enter в комментарии не отправляет решение «Принять»: на шаге бухгалтера его нет", async () => {
+    const { form } = await openForm("СЗ-2026/015", "accountant@demo.example");
+    fireEvent.submit(form);
+    expect(screen.queryByText("Документ принят к оплате")).toBeNull();
   });
 
   it("бухгалтер до своей очереди: формы нет, шаг у директора", async () => {
@@ -152,9 +154,9 @@ describe("Согласование: шаг бухгалтера", () => {
     expect(within(panel).queryByRole("form")).toBeNull();
   });
 
-  it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера «Принять к оплате», у директора (только чтение счетов, D2-4) формы нет", async () => {
+  it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера переход к оплате, у директора (только чтение счетов, D2-4) формы нет", async () => {
     const { form } = await openForm("СЗ-2026/015", "accountant@demo.example");
-    expect(within(form).getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+    expect(within(form).getByRole("link", { name: PAY })).toBeVisible();
     cleanup();
 
     signIn("director@demo.example");
