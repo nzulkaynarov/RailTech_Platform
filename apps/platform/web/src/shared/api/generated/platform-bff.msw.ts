@@ -60,6 +60,9 @@ import {
   PaymentProofSource,
   PaymentTab,
   QueueItemKind,
+  QuoteDeliveryReason,
+  QuoteDeliveryStatus,
+  QuoteSendChannel,
   RestrictedField,
   ServiceAction,
   ServiceOwner,
@@ -233,6 +236,7 @@ import type {
   QuoteApprovalPage,
   QuoteChannels,
   QuoteDefaults,
+  QuoteDelivery,
   QuoteLetterRef,
   QuoteTotals,
   ReferenceItem,
@@ -249,6 +253,8 @@ import type {
   SearchResult,
   SentMessage,
   Session,
+  SetupCabinet,
+  SetupCabinetCheck,
   SetupChecklist,
   SetupCompanyCreated,
   SetupCompanyStatus,
@@ -475,6 +481,39 @@ export const getGetSetupChecklistResponseMock = (
     faker.helpers.arrayElement(Object.values(SetupCompanyBlocker)),
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetSetupCabinetResponseMock = (
+  overrideResponse: Partial<Extract<SetupCabinet, object>> = {},
+): SetupCabinet => ({
+  url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  source: faker.helpers.arrayElement(["saved", "env", "none"] as const),
+  env_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
+export const getSaveSetupCabinetResponseMock = (
+  overrideResponse: Partial<Extract<SetupCabinet, object>> = {},
+): SetupCabinet => ({
+  url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  source: faker.helpers.arrayElement(["saved", "env", "none"] as const),
+  env_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  ...overrideResponse,
+});
+
+export const getCheckSetupCabinetResponseMock = (
+  overrideResponse: Partial<Extract<SetupCabinetCheck, object>> = {},
+): SetupCabinetCheck => ({
+  result: faker.helpers.arrayElement([
+    "ok",
+    "not_set",
+    "unreachable",
+    "bad_status",
+    "not_cabinet",
+  ] as const),
+  url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status_code: faker.helpers.arrayElement([faker.number.int(), null]),
   ...overrideResponse,
 });
 
@@ -4777,6 +4816,44 @@ export const getGetQuoteApprovalResponseQuoteChannelsMock = (
     telegram: faker.datatype.boolean(),
     cabinet: faker.datatype.boolean(),
     email: faker.datatype.boolean(),
+    reasons: {
+      telegram: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      cabinet: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseQuoteDeliveryMock = (
+  overrideResponse: Partial<QuoteDelivery> = {},
+): QuoteDelivery => ({
+  ...{
+    state: faker.helpers.arrayElement(["ready", "sent", "closed"] as const),
+    lines: Array.from({ length: faker.number.int({ min: 3, max: 3 }) }, (_, i) => i + 1).map(
+      () => ({
+        channel: faker.helpers.arrayElement(Object.values(QuoteSendChannel)),
+        status: faker.helpers.arrayElement(Object.values(QuoteDeliveryStatus)),
+        reason: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+          null,
+        ]),
+        can_send: faker.datatype.boolean(),
+      }),
+    ),
+    error: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -4907,6 +4984,10 @@ export const getGetQuoteApprovalResponseMock = (
     { ...getGetQuoteApprovalResponseQuoteChannelsMock() },
     null,
   ]),
+  delivery: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseQuoteDeliveryMock() },
+    null,
+  ]),
   client_comments: Array.from(
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
@@ -4998,6 +5079,44 @@ export const getDecideQuoteApprovalResponseQuoteChannelsMock = (
     telegram: faker.datatype.boolean(),
     cabinet: faker.datatype.boolean(),
     email: faker.datatype.boolean(),
+    reasons: {
+      telegram: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      cabinet: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseQuoteDeliveryMock = (
+  overrideResponse: Partial<QuoteDelivery> = {},
+): QuoteDelivery => ({
+  ...{
+    state: faker.helpers.arrayElement(["ready", "sent", "closed"] as const),
+    lines: Array.from({ length: faker.number.int({ min: 3, max: 3 }) }, (_, i) => i + 1).map(
+      () => ({
+        channel: faker.helpers.arrayElement(Object.values(QuoteSendChannel)),
+        status: faker.helpers.arrayElement(Object.values(QuoteDeliveryStatus)),
+        reason: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+          null,
+        ]),
+        can_send: faker.datatype.boolean(),
+      }),
+    ),
+    error: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5129,6 +5248,273 @@ export const getDecideQuoteApprovalResponseMock = (
   })),
   channels: faker.helpers.arrayElement([
     { ...getDecideQuoteApprovalResponseQuoteChannelsMock() },
+    null,
+  ]),
+  delivery: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteDeliveryMock() },
+    null,
+  ]),
+  client_comments: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    author: faker.helpers.arrayElement(["client", "manager"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseQuoteLetterRefMock = (
+  overrideResponse: Partial<QuoteLetterRef> = {},
+): QuoteLetterRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseQuoteTotalsMock = (
+  overrideResponse: Partial<QuoteTotals> = {},
+): QuoteTotals => ({
+  ...{
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+    subtotal: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseQuoteChannelsMock = (
+  overrideResponse: Partial<QuoteChannels> = {},
+): QuoteChannels => ({
+  ...{
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    telegram: faker.datatype.boolean(),
+    cabinet: faker.datatype.boolean(),
+    email: faker.datatype.boolean(),
+    reasons: {
+      telegram: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      cabinet: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseQuoteDeliveryMock = (
+  overrideResponse: Partial<QuoteDelivery> = {},
+): QuoteDelivery => ({
+  ...{
+    state: faker.helpers.arrayElement(["ready", "sent", "closed"] as const),
+    lines: Array.from({ length: faker.number.int({ min: 3, max: 3 }) }, (_, i) => i + 1).map(
+      () => ({
+        channel: faker.helpers.arrayElement(Object.values(QuoteSendChannel)),
+        status: faker.helpers.arrayElement(Object.values(QuoteDeliveryStatus)),
+        reason: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+          null,
+        ]),
+        can_send: faker.datatype.boolean(),
+      }),
+    ),
+    error: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
+): QuoteApprovalCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  version: faker.number.int({ min: 1 }),
+  round: faker.number.int({ min: 1 }),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  approved_late: faker.datatype.boolean(),
+  outgoing_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseLetterRequestMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseQuoteLetterRefMock() },
+    null,
+  ]),
+  calculated_by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      zone: faker.helpers.arrayElement(["goods", "services"] as const),
+    }),
+  ),
+  snapshot_total: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseEdsMoneyMock() },
+    null,
+  ]),
+  totals_mismatch: faker.datatype.boolean(),
+  lines: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      position: faker.number.int({ min: 1 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      quantity: faker.number.int({ min: 0 }),
+      unit: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      unit_price: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      amount: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      lead_time_days: faker.helpers.arrayElement([faker.number.int(), null]),
+      optional: faker.datatype.boolean(),
+    })),
+    null,
+  ]),
+  totals: faker.helpers.arrayElement([{ ...getSendQuoteByChannelResponseQuoteTotalsMock() }, null]),
+  internal: faker.helpers.arrayElement([
+    {
+      cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+      margin_amount: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+        null,
+      ]),
+      margin_pct: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      min_margin_pct: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_terms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      supplier_price_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
+  checklist: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement(Object.values(ChecklistCode)),
+      ok: faker.datatype.boolean(),
+      blocking: faker.datatype.boolean(),
+      by_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      value: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getSendQuoteByChannelResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  channels: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseQuoteChannelsMock() },
+    null,
+  ]),
+  delivery: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseQuoteDeliveryMock() },
     null,
   ]),
   client_comments: Array.from(
@@ -19123,6 +19509,78 @@ export const getGetSetupChecklistMockHandler = (
   );
 };
 
+export const getGetSetupCabinetMockHandler = (
+  overrideResponse?:
+    | SetupCabinet
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SetupCabinet> | SetupCabinet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/cabinet",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSetupCabinetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveSetupCabinetMockHandler = (
+  overrideResponse?:
+    | SetupCabinet
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<SetupCabinet> | SetupCabinet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/setup/cabinet",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveSetupCabinetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckSetupCabinetMockHandler = (
+  overrideResponse?:
+    | SetupCabinetCheck
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SetupCabinetCheck> | SetupCabinetCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/setup/cabinet/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckSetupCabinetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getCreateOwnCompanyMockHandler = (
   overrideResponse?:
     | SetupCompanyCreated
@@ -20504,6 +20962,30 @@ export const getDecideQuoteApprovalMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getDecideQuoteApprovalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendQuoteByChannelMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<QuoteApprovalCard> | QuoteApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/quotes/:id/send",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendQuoteByChannelResponseMock(),
         { status: 200 },
       );
     },
@@ -26051,6 +26533,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetSetupStateMockHandler(),
   getCreateFirstAdminMockHandler(),
   getGetSetupChecklistMockHandler(),
+  getGetSetupCabinetMockHandler(),
+  getSaveSetupCabinetMockHandler(),
+  getCheckSetupCabinetMockHandler(),
   getCreateOwnCompanyMockHandler(),
   getGetBridgeMockHandler(),
   getCreateBridgeErpSsoMockHandler(),
@@ -26113,6 +26598,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListQuoteApprovalsMockHandler(),
   getGetQuoteApprovalMockHandler(),
   getDecideQuoteApprovalMockHandler(),
+  getSendQuoteByChannelMockHandler(),
   getListMemoApprovalsMockHandler(),
   getGetMemoApprovalMockHandler(),
   getDecideMemoApprovalMockHandler(),

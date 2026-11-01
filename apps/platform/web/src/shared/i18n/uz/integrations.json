@@ -31,7 +31,10 @@
       "title": "ERP",
       "purpose": "Back-ofis: arizalar, tijoriy takliflar, ombor. CRM bilan juftlash va almashinuv kalitlari."
     },
-    "telegram": { "title": "Telegram", "purpose": "Mijozlar boti, jamoa kanali va bot profili." },
+    "telegram": {
+      "title": "Telegram",
+      "purpose": "Mijozlar boti, jamoa kanali va bot profili."
+    },
     "mail": {
       "title": "Pochta",
       "purpose": "Butun tizim uchun bitta jo‘natuvchi: xodimlarga, kabinet mijozlariga xatlar, ERP dan TK va hujjatlar, EDS xatlari."
@@ -78,7 +81,11 @@
     "title": "Diqqat talab qiladi",
     "empty": "Hammasi joyida: nosozliklar va ulanmagan xizmatlar yo‘q.",
     "openAria": "Ochish: {{subject}}",
-    "severity": { "fail": "Nosozlik", "warn": "Diqqat", "setup": "Ulanmagan" },
+    "severity": {
+      "fail": "Nosozlik",
+      "warn": "Diqqat",
+      "setup": "Ulanmagan"
+    },
     "notConfigured": {
       "erp": "ERP ulanmagan: xodimlar back-ofisga kira olmaydi, arizalar ERPga tushmaydi.",
       "telegram": "Bot tokeni kiritilmagan: mijozlar Telegramda yoza olmaydi.",
@@ -217,7 +224,11 @@
     },
     "profile": {
       "title": "Bot profili",
-      "lang": { "ru": "Rus tili", "uz": "O‘zbek tili", "en": "Ingliz tili" },
+      "lang": {
+        "ru": "Rus tili",
+        "uz": "O‘zbek tili",
+        "en": "Ingliz tili"
+      },
       "fields": {
         "name": "Bot nomi",
         "short_description": "Qisqa tavsif",
@@ -237,7 +248,10 @@
   },
   "mail": {
     "state": "Holat",
-    "stateValue": { "configured": "Sozlangan", "none": "Sozlanmagan" },
+    "stateValue": {
+      "configured": "Sozlangan",
+      "none": "Sozlanmagan"
+    },
     "server": "Server",
     "check": {
       "button": "Aloqani tekshirish",
@@ -258,7 +272,11 @@
       "host": "Server (host)",
       "port": "Port",
       "security": "Shifrlash",
-      "securityValue": { "starttls": "STARTTLS", "ssl": "SSL/TLS", "none": "Shifrlashsiz" },
+      "securityValue": {
+        "starttls": "STARTTLS",
+        "ssl": "SSL/TLS",
+        "none": "Shifrlashsiz"
+      },
       "fromEmail": "Jo‘natuvchi manzili",
       "fromName": "Jo‘natuvchi nomi",
       "username": "Login",
@@ -282,7 +300,11 @@
       },
       "empty": "Jurnalda hozircha xatlar yo‘q.",
       "error": "Sabab: {{error}}",
-      "source": { "crm": "CRM", "erp": "ERP", "eds": "Hujjat aylanishi" },
+      "source": {
+        "crm": "CRM",
+        "erp": "ERP",
+        "eds": "Hujjat aylanishi"
+      },
       "attachments_one": "ilova: {{count}}",
       "attachments_other": "ilovalar: {{count}}"
     },
@@ -368,7 +390,11 @@
       "draft-model": "ERP: taklif qoralamasi",
       "enrich-model": "ERP: kartani boyitish"
     },
-    "health": { "ok": "Ishlayapti", "problem": "Nosozlik", "unknown": "Ma’lumot yo‘q" },
+    "health": {
+      "ok": "Ishlayapti",
+      "problem": "Nosozlik",
+      "unknown": "Ma’lumot yo‘q"
+    },
     "provider": {
       "anthropic": "Anthropic (Claude)",
       "gemini": "Google Gemini",
@@ -475,7 +501,12 @@
       "title": "Butun tizim",
       "text": "CRM va ERPdan barcha model chaqiruvlari shlyuz jurnali bo‘yicha.",
       "groupBy": "Guruhlash",
-      "group": { "day": "Kun", "system": "Tizim", "feature": "Funksiya", "model": "Model" },
+      "group": {
+        "day": "Kun",
+        "system": "Tizim",
+        "feature": "Funksiya",
+        "model": "Model"
+      },
       "range": "Davr: {{from}} — {{to}} ({{zone}})",
       "calls": "Chaqiruvlar",
       "failed": "Muvaffaqiyatsiz",
@@ -591,7 +622,10 @@
     "backups": {
       "title": "Zaxira nusxalar",
       "source": "Nusxalar qayerda saqlanadi",
-      "sourceValue": { "volume": "server tomi", "rustfs": "RustFS saqlanishi" },
+      "sourceValue": {
+        "volume": "server tomi",
+        "rustfs": "RustFS saqlanishi"
+      },
       "last": "Oxirgi nusxa",
       "none": "yo‘q",
       "state": "Yangilik",
@@ -602,7 +636,10 @@
         "unavailable": "mavjud emas"
       },
       "daemon": "Zaxira xizmati",
-      "daemonValue": { "alive": "javob beryapti", "down": "javob bermayapti" },
+      "daemonValue": {
+        "alive": "javob beryapti",
+        "down": "javob bermayapti"
+      },
       "error": {
         "bucket_missing": "Zaxira nusxalar bakeri topilmadi.",
         "access_denied": "Zaxira nusxalar saqlanishiga ruxsat yo‘q.",
@@ -777,5 +814,28 @@
       "problem": "«{{alias}}» roli javob bermayapti: provayderdagi kalit va balansni tekshiring."
     },
     "setupUnchecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing"
+  },
+  "cabinet": {
+    "title": "Mijoz kabineti manzili",
+    "lead": "Mijozlar kabinetni shu manzil orqali ochadi: bot xabarlaridagi «Kabinetni ochish» tugmasi va kabinetga taklifnomalar. Manzilsiz taklifnomalar mijozga yuborilmaydi.",
+    "current": {
+      "saved": "Hozir: {{url}} (shu yerda berilgan).",
+      "env": "Hozir: {{url}} (server sozlamalaridan).",
+      "none": "Manzil berilmagan — kabinetga taklifnomalar va «Kabinetni ochish» tugmasi mijozga yuborilmaydi."
+    },
+    "label": "Kabinet manzili",
+    "hint": "Masalan https://cabinet.railtech.uz. Bo'sh — server sozlamalaridagi manzil, agar u berilgan bo'lsa.",
+    "check": "Ochilishini tekshirish",
+    "save": "Manzilni saqlash",
+    "saved": "Kabinet manzili saqlandi",
+    "invalid": "https://cabinet.example.com ko'rinishidagi manzil kerak.",
+    "failed": "Saqlanmadi: xizmat javob bermadi. Keyinroq takrorlang.",
+    "result": {
+      "ok": "Kabinet ochilmoqda: {{url}}.",
+      "not_set": "Manzil berilmagan — tekshiradigan narsa yo'q.",
+      "unreachable": "Manzil serverdan ochilmadi: manzil, DNS va sertifikatni tekshiring.",
+      "bad_status": "Kabinet {{code}} kodi bilan javob berdi — manzilni tekshiring.",
+      "not_cabinet": "Manzilda mijoz kabineti emas, boshqa narsa javob bermoqda — manzilni tekshiring."
+    }
   }
 }

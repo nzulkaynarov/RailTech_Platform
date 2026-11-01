@@ -2,7 +2,8 @@
 
 EDS — по `eds.yaml` (`Approval`, `ApprovalPage`, `Document`, `DecisionIn`): принимает только свой
 токен доступа (обмен SSO-токена CRM `aud=eds`, как в `eds_letters_support`); ответы выдуманы. ERP
-отдаёт КП (`/crm/quotes/{id}/`), заявку и контакт клиента; решения ведёт `ApprovalsFake`.
+отдаёт КП (`/crm/quotes/{id}/`: состав, доступность каналов, итог отправки) и заявку, принимает
+«Отправить по каналу» (`deliver`); CRM — «почта настроена»; решения ведёт `ApprovalsFake`.
 """
 
 import json
@@ -12,7 +13,7 @@ from typing import Any
 import httpx
 
 from tests.backends import Backends
-from tests.consts import ERP_URL
+from tests.consts import CRM_URL, ERP_URL
 from tests.eds_letters_support import EdsFake, person
 
 QUOTE_ROUTE = "40000000-0000-4000-8000-000000000115"
@@ -193,6 +194,10 @@ def erp_quote(**over: Any) -> dict[str, Any]:
         "margin_percent": "17.60",
         "charges_total": "100.00",
         "economics": {"cost": "103000000.00"},
+        "status_code": "PENDING_APPROVAL",
+        "can_send": True,
+        "send_report": {},
+        "channel_availability": availability(),
         "client_comments": [
             {
                 "id": 1,
@@ -255,14 +260,16 @@ def erp_deal(**over: Any) -> dict[str, Any]:
     }
 
 
-def erp_contact(**over: Any) -> dict[str, Any]:
+def availability(
+    *, telegram: str | None = None, cabinet: str | None = None, email: str | None = None
+) -> dict[str, Any]:
+    """ERP `channel_availability` КП (D17G-2): аргумент — код причины недоступного канала."""
+    reasons = {"telegram": telegram, "cabinet": cabinet, "email": email}
     return {
-        "id": 77,
-        "name": "Алия Демо",
-        "email": "aliya@example.org",
-        "telegram_user_id": 9001,
-        "company_is_registered": True,
-        **over,
+        "contact_name": "Алия Демо",
+        "channels": [
+            {"channel": c, "available": r is None, "reason": r} for c, r in reasons.items()
+        ],
     }
 
 
@@ -301,15 +308,41 @@ class ApprovalsFake(EdsFake):
             },
         ]
         self.erp_quote: dict[str, Any] | int | Exception | None = erp_quote()
-        self.erp_contact: dict[str, Any] | int | Exception | None = erp_contact()
         self.erp_paths: list[str] = []
+        self.smtp_ready: dict[str, Any] | int = {"configured": True}
+        # Ответ ERP на `deliver`: None — 200 (КП отправлено), иначе (статус, код ERP).
+        self.deliver_error: tuple[int, str] | None = None
+        self.delivered: list[dict[str, Any]] = []
         be.router.get(url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/$").mock(
             side_effect=lambda r: self._erp(r, self.erp_quote)
         )
-        be.router.get(url__regex=rf"^{re.escape(ERP_URL)}/api/v1/accounts/contacts/\d+/$").mock(
-            side_effect=lambda r: self._erp(r, self.erp_contact)
+        be.router.post(url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/deliver/$").mock(
+            side_effect=self._deliver
+        )
+        be.router.get(f"{CRM_URL}/api/v1/integrations/smtp/ready").mock(
+            side_effect=lambda r: (
+                httpx.Response(self.smtp_ready, json={"code": "forbidden"})
+                if isinstance(self.smtp_ready, int)
+                else httpx.Response(200, json=self.smtp_ready)
+            )
         )
         self.deal = erp_deal()
+
+    def _deliver(self, request: httpx.Request) -> httpx.Response:
+        self.erp_paths.append(request.url.path)
+        if self.deliver_error is not None:
+            status, code = self.deliver_error
+            return httpx.Response(status, json={"detail": code})
+        body = json.loads(request.content)
+        self.delivered.append(body)
+        if isinstance(self.erp_quote, dict):
+            report = dict(self.erp_quote.get("send_report") or {})
+            report["sent_via"] = [*report.get("sent_via", []), body["channel"]]
+            report["skipped"] = [
+                s for s in report.get("skipped", []) if s["channel"] != body["channel"]
+            ]
+            self.erp_quote = {**self.erp_quote, "status_code": "SENT", "send_report": report}
+        return httpx.Response(200, json={"id": 1203})
 
     def _erp(self, request: httpx.Request, value: Any) -> httpx.Response:
         self.erp_paths.append(request.url.path)

@@ -11847,6 +11847,66 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/quotes/{id}/deliver/:
+    post:
+      operationId: crm_quotes_deliver_create
+      description: 'Для того, кто отправляет КП (менеджер заявки или директор, `quote.send`), когда канал не сработал или
+        не был выбран при одобрении. Канал проверяется по контактам клиента теми же правилами, что автоотправка (ERP-11).
+        КП «Готово к отправке» отправляется только по этому каналу; уже отправленное — повторно по каналу (письмо заново,
+        Telegram — новое `quote.sent`). Кабинет не отправляется: отправленное КП клиент видит в кабинете всегда. Ошибки 400:
+        причина недоступности канала (CONTACT_EMAIL_REQUIRED, CONTACT_TELEGRAM_REQUIRED, CLIENT_NOT_IN_CRM), гейт отправки
+        (QUOTE_BELOW_COST, FX_RATE_MISSING…), INVALID_STATUS, UNKNOWN_CHANNEL.'
+      summary: Отправить одобренное КП клиенту по одному каналу (D17G-2)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Коммерческое предложение.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteDeliverRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/QuoteDeliverRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteDeliverRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
+        '400':
+          description: Канал недоступен, гейт отправки или статус КП (код в `detail`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: QUOTE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/quotes/{id}/download-pdf/:
     get:
       operationId: crm_quotes_download_pdf_retrieve
@@ -28468,6 +28528,15 @@ components:
           readOnly: true
           description: 'Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}],
             error; пусто — автоотправки не было'
+        channel_availability:
+          allOf:
+          - $ref: '#/components/schemas/QuoteChannelAvailability'
+          nullable: true
+          readOnly: true
+        can_send:
+          type: boolean
+          nullable: true
+          readOnly: true
         items:
           type: array
           items:
@@ -28506,6 +28575,8 @@ components:
       - approval_steps
       - approved_at
       - approved_by
+      - can_send
+      - channel_availability
       - charges
       - charges_total
       - client_comments
@@ -28563,6 +28634,48 @@ components:
       - status
       - valid_until
       - version
+    QuoteChannelAvailability:
+      type: object
+      description: Доступность каналов отправки КП по фактическим контактам клиента (D17G-2).
+      properties:
+        contact_name:
+          type: string
+          nullable: true
+          description: 'Кому уйдёт КП: контакт сделки или клиента'
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteChannelState'
+      required:
+      - channels
+      - contact_name
+    QuoteChannelState:
+      type: object
+      description: Канал отправки КП клиенту и его доступность по контактам клиента (D17G-2, `quote_auto_send._CHECKS`).
+      properties:
+        channel:
+          $ref: '#/components/schemas/QuoteChannelStateChannelEnum'
+        available:
+          type: boolean
+        reason:
+          type: string
+          nullable: true
+          description: 'Почему канал недоступен: CONTACT_TELEGRAM_REQUIRED, CLIENT_NOT_IN_CRM, CABINET_NOT_INVITED, CONTACT_EMAIL_REQUIRED;
+            null — доступен'
+      required:
+      - available
+      - channel
+      - reason
+    QuoteChannelStateChannelEnum:
+      enum:
+      - telegram
+      - cabinet
+      - email
+      type: string
+      description: |-
+        * `telegram` - telegram
+        * `cabinet` - cabinet
+        * `email` - email
     QuoteCharge:
       type: object
       description: КП-level expense item / discount (UBL document AllowanceCharge).
@@ -28727,6 +28840,21 @@ components:
       - created_at
       - id
       - text
+    QuoteDeliverRequestChannelEnum:
+      enum:
+      - telegram
+      - email
+      type: string
+      description: |-
+        * `telegram` - telegram
+        * `email` - email
+    QuoteDeliverRequestRequest:
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/QuoteDeliverRequestChannelEnum'
+      required:
+      - channel
     QuoteEconomics:
       type: object
       description: |-

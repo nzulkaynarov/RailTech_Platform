@@ -1066,6 +1066,84 @@ components:
       - last_error
       title: BusSubscriberOut
       type: object
+    CabinetCheckIn:
+      properties:
+        url:
+          anyOf:
+          - maxLength: 500
+            type: string
+          - type: 'null'
+          description: Проверить этот адрес (ещё не сохранённый); нет — действующий
+          title: Url
+      title: CabinetCheckIn
+      type: object
+    CabinetCheckOut:
+      description: 'Итог `GET <адрес>/health` с сервера CRM: кабинет отвечает `200 healthy`.'
+      properties:
+        result:
+          enum:
+          - ok
+          - not_set
+          - unreachable
+          - bad_status
+          - not_cabinet
+          title: Result
+          type: string
+        status_code:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Status Code
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Url
+      required:
+      - result
+      - url
+      title: CabinetCheckOut
+      type: object
+    CabinetUrlIn:
+      properties:
+        url:
+          description: Адрес кабинета https://…; пустая строка — вернуть адрес из окружения
+          maxLength: 500
+          title: Url
+          type: string
+      required:
+      - url
+      title: CabinetUrlIn
+      type: object
+    CabinetUrlOut:
+      description: 'Адрес кабинета клиента (D17G-3): действующий адрес и откуда он взят.'
+      properties:
+        env_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Адрес из окружения сервера (значение по умолчанию)
+          title: Env Url
+        source:
+          description: '`saved` — задан администратором, `env` — из окружения сервера (CABINET_DOMAIN), `none` — нет'
+          enum:
+          - saved
+          - env
+          - none
+          title: Source
+          type: string
+        url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Действующий адрес; null — не задан ни в настройках, ни в окружении
+          title: Url
+      required:
+      - url
+      - source
+      - env_url
+      title: CabinetUrlOut
+      type: object
     ChangePasswordRequest:
       properties:
         current_password:
@@ -7054,6 +7132,16 @@ components:
       - password
       title: SmtpConnectorIn
       type: object
+    SmtpReadyOut:
+      description: 'Почта настроена (D17G-2): только признак, без адреса сервера и логина — любому сотруднику.'
+      properties:
+        configured:
+          title: Configured
+          type: boolean
+      required:
+      - configured
+      title: SmtpReadyOut
+      type: object
     SmtpStatusOut:
       description: 'Коннектор «Почта» (M3-CRM-08): пароль не возвращается — только «задан» и `last4`.'
       properties:
@@ -10920,6 +11008,32 @@ paths:
       summary: List Email Log
       tags:
       - integrations
+  /api/v1/integrations/smtp/ready:
+    get:
+      description: 'Настроена ли почта — любому сотруднику, без адреса и логина (D17G-2): панель одобрения КП
+
+        честно выключает канал «Почта», пока почта не настроена. Сами настройки — `GET /smtp` (право
+
+        `integrations:read`).'
+      operationId: get_smtp_ready
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpReadyOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Smtp Ready
+      tags:
+      - integrations
   /api/v1/integrations/smtp/test-send:
     post:
       description: 'Тестовое письмо на адрес самого администратора — через журнал и очередь, как настоящее.
@@ -13709,6 +13823,88 @@ paths:
                 $ref: '#/components/schemas/ErrorOut'
           description: Ошибка валидации
       summary: Create First Admin
+      tags:
+      - setup
+  /api/v1/setup/cabinet:
+    get:
+      description: Адрес кабинета клиента для мастера «Первый запуск» и «Подключений» (D17G-3).
+      operationId: get_cabinet_url
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CabinetUrlOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Cabinet Url
+      tags:
+      - setup
+    put:
+      description: 'Сохранить адрес кабинета (меняется только `company.cabinet_url`); пусто — адрес из окружения.
+
+
+        Не `http(s)://…` — 422 `validation_failed` с полем `url`.'
+      operationId: put_cabinet_url
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CabinetUrlIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CabinetUrlOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Put Cabinet Url
+      tags:
+      - setup
+  /api/v1/setup/cabinet/check:
+    post:
+      description: 'Открывается ли кабинет: `GET <адрес>/health` с сервера CRM (5 с). Ответ кабинета наружу не
+
+        отдаётся.'
+      operationId: check_cabinet_url
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CabinetCheckIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CabinetCheckOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Check Cabinet Url
       tags:
       - setup
   /api/v1/setup/checklist:

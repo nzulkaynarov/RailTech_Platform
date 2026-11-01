@@ -230,6 +230,35 @@ class BotProfileSettings(BaseModel):
     """
 
 
+class CabinetCheckOut(BaseModel):
+    """
+    Итог `GET <адрес>/health` с сервера CRM: кабинет отвечает `200 healthy`.
+    """
+
+    result: Annotated[Result, Field(title="Result")]
+    status_code: Annotated[int | None, Field(title="Status Code")] = None
+    url: Annotated[str | None, Field(title="Url")]
+
+
+class CabinetUrlOut(BaseModel):
+    """
+    Адрес кабинета клиента (D17G-3): действующий адрес и откуда он взят.
+    """
+
+    env_url: Annotated[str | None, Field(title="Env Url")]
+    """
+    Адрес из окружения сервера (значение по умолчанию)
+    """
+    source: Annotated[Source1, Field(title="Source")]
+    """
+    `saved` — задан администратором, `env` — из окружения сервера (CABINET_DOMAIN), `none` — нет
+    """
+    url: Annotated[str | None, Field(title="Url")]
+    """
+    Действующий адрес; null — не задан ни в настройках, ни в окружении
+    """
+
+
 class Channel(StrEnum):
     telegram = "telegram"
     email = "email"
@@ -357,7 +386,7 @@ class EmailLogItem(BaseModel):
     purpose: Annotated[str | None, Field(title="Purpose")]
     requested_by: Annotated[int | None, Field(title="Requested By")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
-    source: Annotated[Source1, Field(title="Source")]
+    source: Annotated[Source2, Field(title="Source")]
     status: Annotated[Status1, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     template: Annotated[str, Field(title="Template")]
@@ -552,7 +581,7 @@ class ExternalServiceOut(BaseModel):
     """
     Когда впервые обнаружено (не в порядке с …)
     """
-    source: Annotated[Source2, Field(title="Source")]
+    source: Annotated[Source3, Field(title="Source")]
     """
     Кто проверяет: CRM сама или передаёт ERP
     """
@@ -1057,6 +1086,14 @@ class ReplyTemplateOut(BaseModel):
     updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
 
 
+class Result(StrEnum):
+    ok = "ok"
+    not_set = "not_set"
+    unreachable = "unreachable"
+    bad_status = "bad_status"
+    not_cabinet = "not_cabinet"
+
+
 class SandboxReply(BaseModel):
     buttons: Annotated[list[str], Field(title="Buttons")]
     text: Annotated[str, Field(title="Text")]
@@ -1215,6 +1252,14 @@ class SmtpCheckOut(BaseModel):
     server: Annotated[str, Field(title="Server")]
 
 
+class SmtpReadyOut(BaseModel):
+    """
+    Почта настроена (D17G-2): только признак, без адреса сервера и логина — любому сотруднику.
+    """
+
+    configured: Annotated[bool, Field(title="Configured")]
+
+
 class SmtpStatusOut(BaseModel):
     """
     Коннектор «Почта» (M3-CRM-08): пароль не возвращается — только «задан» и `last4`.
@@ -1248,12 +1293,22 @@ class Source(StrEnum):
 
 
 class Source1(StrEnum):
+    """
+    `saved` — задан администратором, `env` — из окружения сервера (CABINET_DOMAIN), `none` — нет
+    """
+
+    saved = "saved"
+    env = "env"
+    none = "none"
+
+
+class Source2(StrEnum):
     crm = "crm"
     erp = "erp"
     eds = "eds"
 
 
-class Source2(StrEnum):
+class Source3(StrEnum):
     """
     Кто проверяет: CRM сама или передаёт ERP
     """
@@ -1262,7 +1317,7 @@ class Source2(StrEnum):
     erp = "erp"
 
 
-class Source3(StrEnum):
+class Source4(StrEnum):
     db = "db"
     env = "env"
     none = "none"
@@ -1417,7 +1472,7 @@ class TelegramStatusOut(BaseModel):
     mode: Annotated[str, Field(title="Mode")]
     running: Annotated[bool, Field(title="Running")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
-    source: Annotated[Source3, Field(title="Source")]
+    source: Annotated[Source4, Field(title="Source")]
     updated_at: Annotated[AwareDatetime | None, Field(title="Updated At")]
     username: Annotated[str | None, Field(title="Username")]
 

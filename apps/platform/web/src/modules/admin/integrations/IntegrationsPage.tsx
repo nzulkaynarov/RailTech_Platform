@@ -28,6 +28,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { LockIcon } from "../../../shared/ui/icons";
 import { AttentionGroupRow } from "./AttentionGroup";
+import { CabinetAddress } from "./CabinetAddress";
 import { integrationErrorText } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
 import { ErpPanel } from "./ErpPanel";
@@ -426,6 +427,11 @@ export function IntegrationsPage() {
             ))}
           </div>
         </section>
+        {editable ? (
+          <Card>
+            <CabinetAddress />
+          </Card>
+        ) : null}
       </>
     );
   }

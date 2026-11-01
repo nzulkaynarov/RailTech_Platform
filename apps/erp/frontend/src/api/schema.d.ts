@@ -6454,6 +6454,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/deliver/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить одобренное КП клиенту по одному каналу (D17G-2)
+         * @description Для того, кто отправляет КП (менеджер заявки или директор, `quote.send`), когда канал не сработал или не был выбран при одобрении. Канал проверяется по контактам клиента теми же правилами, что автоотправка (ERP-11). КП «Готово к отправке» отправляется только по этому каналу; уже отправленное — повторно по каналу (письмо заново, Telegram — новое `quote.sent`). Кабинет не отправляется: отправленное КП клиент видит в кабинете всегда. Ошибки 400: причина недоступности канала (CONTACT_EMAIL_REQUIRED, CONTACT_TELEGRAM_REQUIRED, CLIENT_NOT_IN_CRM), гейт отправки (QUOTE_BELOW_COST, FX_RATE_MISSING…), INVALID_STATUS, UNKNOWN_CHANNEL.
+         */
+        post: operations["crm_quotes_deliver_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/download-pdf/": {
         parameters: {
             query?: never;
@@ -15495,6 +15515,8 @@ export interface components {
             readonly send_channels: string[];
             /** @description Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], error; пусто — автоотправки не было */
             readonly send_report: unknown;
+            readonly channel_availability: components["schemas"]["QuoteChannelAvailability"] | null;
+            readonly can_send: boolean | null;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
@@ -15521,6 +15543,26 @@ export interface components {
             /** Format: date */
             valid_until: string | null;
         };
+        /** @description Доступность каналов отправки КП по фактическим контактам клиента (D17G-2). */
+        QuoteChannelAvailability: {
+            /** @description Кому уйдёт КП: контакт сделки или клиента */
+            contact_name: string | null;
+            channels: components["schemas"]["QuoteChannelState"][];
+        };
+        /** @description Канал отправки КП клиенту и его доступность по контактам клиента (D17G-2, `quote_auto_send._CHECKS`). */
+        QuoteChannelState: {
+            channel: components["schemas"]["QuoteChannelStateChannelEnum"];
+            available: boolean;
+            /** @description Почему канал недоступен: CONTACT_TELEGRAM_REQUIRED, CLIENT_NOT_IN_CRM, CABINET_NOT_INVITED, CONTACT_EMAIL_REQUIRED; null — доступен */
+            reason: string | null;
+        };
+        /**
+         * @description * `telegram` - telegram
+         *     * `cabinet` - cabinet
+         *     * `email` - email
+         * @enum {string}
+         */
+        QuoteChannelStateChannelEnum: "telegram" | "cabinet" | "email";
         /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
         QuoteCharge: {
             readonly id: number;
@@ -15643,6 +15685,15 @@ export interface components {
             readonly text: string;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        /**
+         * @description * `telegram` - telegram
+         *     * `email` - email
+         * @enum {string}
+         */
+        QuoteDeliverRequestChannelEnum: "telegram" | "email";
+        QuoteDeliverRequestRequest: {
+            channel: components["schemas"]["QuoteDeliverRequestChannelEnum"];
         };
         /**
          * @description Documentation-only shape of ``compute_quote_economics()`` as it lands in the API.
@@ -28997,6 +29048,62 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_quotes_deliver_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteDeliverRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["QuoteDeliverRequestRequest"];
+                "multipart/form-data": components["schemas"]["QuoteDeliverRequestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            /** @description Канал недоступен, гейт отправки или статус КП (код в `detail`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description QUOTE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     crm_quotes_download_pdf_retrieve: {

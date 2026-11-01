@@ -24,6 +24,7 @@ from app.eds_approvals import (
     quote_card,
     quote_page,
     quote_route_id,
+    send_quote,
 )
 from app.eds_documents import API, EdsProxy
 from app.errors import backend_unavailable
@@ -34,6 +35,7 @@ from app.schemas_eds_approvals import (
     QuoteApprovalCard,
     QuoteApprovalPage,
     QuoteDecisionIn,
+    QuoteSendIn,
     RouteStatus,
 )
 
@@ -41,6 +43,9 @@ router = APIRouter(prefix="/eds", tags=["eds-approvals"])
 
 QuoteReader = Annotated[Authed, Depends(require("eds.drafts", "read"))]
 QuoteDecider = Annotated[Authed, Depends(require("eds.drafts", "full"))]
+# Отправляет КП клиенту тот, у кого `quote.send` ERP — раздел «Клиенты» полный (C1-G-4, D17G-2);
+# кому из них можно именно это КП (своя заявка или `quote.review`), решает ERP.
+QuoteSender = Annotated[Authed, Depends(require("crm.clients", "full"))]
 MemoReader = Annotated[
     Authed, Depends(require_any(("eds.memo.approve", "read"), ("eds.memo.create", "read")))
 ]
@@ -113,6 +118,20 @@ async def decide_quote(
 ) -> QuoteApprovalCard:
     proxy = _proxy(authed)
     return await quote_card(authed, proxy, await _decide(proxy, id, body.for_eds()))
+
+
+@router.post(
+    "/quotes/{id}/send",
+    response_model=QuoteApprovalCard,
+    response_model_exclude_unset=True,
+    operation_id="sendQuoteByChannel",
+)
+async def send_quote_by_channel(
+    id: ApprovalId, body: QuoteSendIn, authed: QuoteSender
+) -> QuoteApprovalCard:
+    proxy = _proxy(authed)
+    route = await send_quote(authed, proxy, str(id), body.channel)
+    return await quote_card(authed, proxy, route)
 
 
 # --- служебные записки, заявления, отчёты ---------------------------------------------------------

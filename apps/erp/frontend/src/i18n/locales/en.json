@@ -2932,6 +2932,10 @@
         "title": "Quote sent to the client after the director's approval",
         "detail": "Channels: {{sent_via}}"
       },
+      "delivered": {
+        "title": "Quote sent to the client manually",
+        "detail": "Channel: {{channel}}"
+      },
       "auto_send_skipped": {
         "title": "Quote was not sent automatically — the request manager will send it",
         "detail": "Unavailable channels and reasons are on the quote card"

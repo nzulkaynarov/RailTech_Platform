@@ -800,3 +800,93 @@ async def test_company_body_is_validated(web: Web, crm: SetupCrm, body: dict[str
     assert response.status_code == 422
     assert response.json()["code"] == "VALIDATION_FAILED"
     assert crm.erp_company.call_count == 0
+
+
+# --- адрес кабинета клиента (D17G-3) -------------------------------------------------------------
+
+
+@pytest.fixture
+def cabinet(be: Backends) -> dict[str, Any]:
+    """CRM `/setup/cabinet*`: адрес из окружения, сохранение, проверка; журнал тел запросов."""
+    state: dict[str, Any] = {
+        "address": {
+            "url": "https://cabinet.example.org",
+            "source": "env",
+            "env_url": "https://cabinet.example.org",
+        },
+        "check": {"result": "ok", "url": "https://cabinet.example.org", "status_code": 200},
+        "bodies": [],
+    }
+
+    def save(request: httpx.Request) -> httpx.Response:
+        body = json.loads(request.content)
+        state["bodies"].append(body)
+        if not body["url"].startswith("https://"):
+            return crm_error(422, "validation_failed", field="url")
+        state["address"] = {**state["address"], "url": body["url"], "source": "saved"}
+        return httpx.Response(200, json=state["address"])
+
+    def check(request: httpx.Request) -> httpx.Response:
+        state["bodies"].append(json.loads(request.content))
+        return httpx.Response(200, json=state["check"])
+
+    be.router.get(f"{CRM_URL}/api/v1/setup/cabinet").mock(
+        side_effect=lambda _r: httpx.Response(200, json=state["address"])
+    )
+    be.router.put(f"{CRM_URL}/api/v1/setup/cabinet").mock(side_effect=save)
+    be.router.post(f"{CRM_URL}/api/v1/setup/cabinet/check").mock(side_effect=check)
+    return state
+
+
+async def test_cabinet_address_comes_from_crm_and_is_saved(
+    web: Web, crm: SetupCrm, cabinet: dict[str, Any], check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+
+    got = await web.client.get("/api/v1/setup/cabinet")
+    check(got, "/setup/cabinet", "get")
+    assert got.json() == {
+        "url": "https://cabinet.example.org",
+        "source": "env",
+        "env_url": "https://cabinet.example.org",
+    }
+
+    saved = await web.send("PUT", "/api/v1/setup/cabinet", json={"url": "https://lk.example.org"})
+    check(saved, "/setup/cabinet", "put")
+    assert saved.json()["source"] == "saved"
+    assert saved.json()["url"] == "https://lk.example.org"
+
+    bad = await web.send("PUT", "/api/v1/setup/cabinet", json={"url": "lk.example.org"})
+    check(bad, "/setup/cabinet", "put")
+    assert bad.status_code == 422
+    assert bad.json()["details"]["fields"] == ["url"]
+
+
+async def test_cabinet_check_reports_the_crm_result(
+    web: Web, crm: SetupCrm, cabinet: dict[str, Any], check: ContractChecker
+) -> None:
+    cabinet["check"] = {"result": "bad_status", "url": "https://lk.example.org", "status_code": 404}
+    await web.login(["ADMIN"])
+
+    response = await web.send(
+        "POST", "/api/v1/setup/cabinet/check", json={"url": "https://lk.example.org"}
+    )
+
+    check(response, "/setup/cabinet/check", "post")
+    assert response.json() == {
+        "result": "bad_status",
+        "url": "https://lk.example.org",
+        "status_code": 404,
+    }
+    assert cabinet["bodies"] == [{"url": "https://lk.example.org"}]
+
+
+async def test_cabinet_address_needs_the_full_admin_section(
+    web: Web, crm: SetupCrm, cabinet: dict[str, Any]
+) -> None:
+    await web.login(["DIRECTOR"])
+
+    assert (await web.client.get("/api/v1/setup/cabinet")).status_code == 403
+    denied = await web.send("PUT", "/api/v1/setup/cabinet", json={"url": "https://x.example"})
+    assert denied.status_code == 403
+    assert cabinet["bodies"] == []

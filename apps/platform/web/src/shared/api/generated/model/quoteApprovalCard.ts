@@ -11,6 +11,7 @@ import type { QuoteCalculator } from "./quoteCalculator";
 import type { QuoteChannels } from "./quoteChannels";
 import type { QuoteChecklistLine } from "./quoteChecklistLine";
 import type { QuoteClientComment } from "./quoteClientComment";
+import type { QuoteDelivery } from "./quoteDelivery";
 import type { QuoteInternal } from "./quoteInternal";
 import type { QuoteLetterRef } from "./quoteLetterRef";
 import type { QuoteLine } from "./quoteLine";
@@ -67,8 +68,10 @@ export interface QuoteApprovalCard {
   internal?: QuoteInternal;
   checklist: QuoteChecklistLine[];
   steps: EdsRouteStep[];
-  /** `null` — контакт клиента не получен из ERP */
+  /** `null` — ERP не ответила или у неё другая редакция КП */
   channels: QuoteChannels | null;
+  /** Отчёт об отправке клиенту по каналам (D17G-2); `null` — КП ещё не одобрено или ERP не ответила */
+  delivery: QuoteDelivery | null;
   /** Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
   client_comments: QuoteClientComment[];
   sources: Sources;

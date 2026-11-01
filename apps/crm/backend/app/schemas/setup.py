@@ -47,6 +47,48 @@ class SetupChecklist(BaseModel):
     total: int
 
 
+CabinetUrlSource = Literal["saved", "env", "none"]
+CabinetCheckResult = Literal["ok", "not_set", "unreachable", "bad_status", "not_cabinet"]
+
+
+class CabinetUrlOut(BaseModel):
+    """Адрес кабинета клиента (D17G-3): действующий адрес и откуда он взят."""
+
+    url: str | None = Field(
+        description="Действующий адрес; null — не задан ни в настройках, ни в окружении"
+    )
+    source: CabinetUrlSource = Field(
+        description=(
+            "`saved` — задан администратором, `env` — из окружения сервера (CABINET_DOMAIN), "
+            "`none` — нет"
+        )
+    )
+    env_url: str | None = Field(description="Адрес из окружения сервера (значение по умолчанию)")
+
+
+class CabinetUrlIn(BaseModel):
+    url: str = Field(
+        max_length=500,
+        description="Адрес кабинета https://…; пустая строка — вернуть адрес из окружения",
+    )
+
+
+class CabinetCheckIn(BaseModel):
+    url: str | None = Field(
+        default=None,
+        max_length=500,
+        description="Проверить этот адрес (ещё не сохранённый); нет — действующий",
+    )
+
+
+class CabinetCheckOut(BaseModel):
+    """Итог `GET <адрес>/health` с сервера CRM: кабинет отвечает `200 healthy`."""
+
+    result: CabinetCheckResult
+    url: str | None
+    status_code: int | None = None
+
+
 class BackupItem(BaseModel):
     name: str
     at: datetime

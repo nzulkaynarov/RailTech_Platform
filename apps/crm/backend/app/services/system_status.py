@@ -151,7 +151,7 @@ class SystemStatusService:
             rules.budget(alerts, now),
             rules.queue(facts, now),
             rules.channel(cfg.notifications.channel_id, now),
-            rules.crm_url(cfg.company.crm_base_url, now, platform),
+            rules.crm_url(cfg.company.crm_base_url, now, platform, cfg.company.cabinet_url),
         ]
 
     async def _backup_components(self, now: datetime) -> list[Component]:
