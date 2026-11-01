@@ -64,7 +64,7 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
   });
 
   it("требование ГНК: «срочно» и кабинет налогоплательщика подставляются; ВХ-номер и переход во «Входящие»", async () => {
-    let body: LetterRegisterIn | null = null;
+    let body = null as LetterRegisterIn | null;
     server.use(
       http.post("*/eds/letters", async ({ request }) => {
         body = (await request.clone().json()) as LetterRegisterIn;

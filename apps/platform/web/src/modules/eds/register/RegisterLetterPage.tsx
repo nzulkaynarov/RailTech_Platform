@@ -90,10 +90,12 @@ function serverFields(error: unknown): RegisterField[] {
   if (!(error instanceof ApiError)) return [];
   const raw = error.details["fields"];
   if (!Array.isArray(raw)) return [];
-  return raw.flatMap((item) => {
+  const known = (name: string): name is RegisterField =>
+    (REGISTER_ORDER as readonly string[]).includes(name);
+  return raw.flatMap((item): RegisterField[] => {
     if (typeof item !== "string") return [];
     const name = item.split(".").filter((part) => part !== "body")[0] ?? "";
-    return (REGISTER_ORDER as readonly string[]).includes(name) ? [name] : [];
+    return known(name) ? [name] : [];
   });
 }
 
