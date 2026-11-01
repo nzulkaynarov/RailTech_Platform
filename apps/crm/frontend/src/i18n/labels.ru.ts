@@ -102,6 +102,7 @@ export const labelsRu = {
     "lead.consent_recorded": "Отметил согласие лида",
     "lead.new_deal": "Новая сделка",
     "lead.assign": "Передал коллеге",
+    "lead.hand_over": "Передал менеджеру с запиской",
     "lead.acknowledge": "Принял к сведению",
     "lead.unsnooze": "Вернул из отложенных",
     "lead.assist": "ИИ-помощь с ответом",
