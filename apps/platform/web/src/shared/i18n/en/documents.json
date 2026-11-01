@@ -271,7 +271,8 @@
       "amount": "The amount must be greater than zero, for example 1,500,000.",
       "due": "“Needed by” cannot be in the past.",
       "recipient": "Enter the addressee of the letter.",
-      "deal": "Project not found — pick another or remove the link."
+      "deal": "Project not found — pick another or remove the link.",
+      "replyTo": "No incoming letter with this number. Check the number."
     },
     "toast": {
       "draft": "Draft saved",
@@ -307,6 +308,10 @@
       "text": "A draft and a document returned for rework can be edited. A sent document is waiting for a decision."
     },
     "toDocuments": "My documents",
-    "forbiddenTitle": "You cannot create documents"
+    "forbiddenTitle": "You cannot create documents",
+    "replyTo": {
+      "label": "In reply to incoming",
+      "hint": "Incoming number, e.g. ВХ-112/26: registering the letter closes the \"Prepare a reply\" instruction."
+    }
   }
 }

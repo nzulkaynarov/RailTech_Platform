@@ -34,6 +34,13 @@ export interface EdsDocumentIn {
   erp_deal_id?: number | null;
   /** Только `letter_out` */
   recipient?: EdsRecipient | null;
+  /**
+   * Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
+   * @minLength 1
+   * @maxLength 32
+   * @nullable
+   */
+  in_reply_to_number?: string | null;
   /** `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик */
   submit?: boolean;
 }

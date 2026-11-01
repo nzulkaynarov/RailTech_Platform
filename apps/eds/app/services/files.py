@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
 from app.errors import EdsError, conflict, forbidden_reason, invalid_fields, not_found
-from app.models import Document, Employee, FileVersion, Letter, StoredFile
+from app.models import Document, Employee, FileVersion, Instruction, Letter, StoredFile
 from app.schemas.common import FileRef
 from app.security.permissions import EdsPermission as P
 from app.services import access, journal
@@ -125,11 +125,23 @@ class Upload:
     version_of: uuid.UUID | None = None
 
 
+async def _letter_participant(session: AsyncSession, employee: Employee, letter_id: uuid.UUID) -> bool:
+    """Участник поручений письма (P8b): исполнитель, «ознакомить», автор резолюции — видит файлы письма и отчётов."""
+    from app.services.instructions import is_participant
+
+    letter = await session.get(Letter, letter_id)
+    return letter is not None and await is_participant(session, employee.crm_user_id, letter)
+
+
 async def can_view_file(session: AsyncSession, employee: Employee, stored: StoredFile) -> bool:
     if stored.created_by == employee.crm_user_id:
         return True
     if stored.letter_id is not None:
-        return access.can_read_letters(employee)
+        return access.can_read_letters(employee) or await _letter_participant(session, employee, stored.letter_id)
+    if stored.instruction_id is not None:
+        found = await session.execute(select(Instruction.letter_id).where(Instruction.id == stored.instruction_id))
+        letter_id = found.scalar_one()
+        return access.can_read_letters(employee) or await _letter_participant(session, employee, letter_id)
     if stored.document_id is not None:
         return await access.can_view_document(session, employee, stored.document_id)
     return False
@@ -144,7 +156,7 @@ async def can_add_version(session: AsyncSession, employee: Employee, stored: Sto
     if stored.document_id is not None:
         owner = await session.execute(select(Document.author_crm_user_id).where(Document.id == stored.document_id))
         return owner.scalar_one_or_none() == employee.crm_user_id
-    return False
+    return False  # отчёт поручения — только загрузивший (первая проверка)
 
 
 async def require_editable_owner(session: AsyncSession, stored: StoredFile) -> None:
@@ -156,6 +168,9 @@ async def require_editable_owner(session: AsyncSession, stored: StoredFile) -> N
     elif stored.letter_id is not None:
         found = await session.execute(select(Letter.status).where(Letter.id == stored.letter_id))
         editable = {"awaiting_resolution", "returned"}
+    elif stored.instruction_id is not None:
+        found = await session.execute(select(Instruction.status).where(Instruction.id == stored.instruction_id))
+        editable = {"in_work"}
     else:
         return
     status = found.scalar_one()
@@ -249,8 +264,10 @@ async def attach(
     actor_id: int,
     letter_id: uuid.UUID | None = None,
     document_id: uuid.UUID | None = None,
+    instruction_id: uuid.UUID | None = None,
 ) -> None:
-    """Привязать файлы к письму или документу. Чужой, несуществующий или уже привязанный к другому — 422 `file_ids`."""
+    """Привязать файлы к письму, документу или поручению (отчёт, P8b). Чужой, несуществующий или уже привязанный к
+    другому — 422 `file_ids`."""
     wanted = list(dict.fromkeys(file_ids))
     if not wanted:
         return
@@ -265,19 +282,28 @@ async def attach(
         same_owner = stored is not None and (
             (letter_id is not None and stored.letter_id == letter_id)
             or (document_id is not None and stored.document_id == document_id)
+            or (instruction_id is not None and stored.instruction_id == instruction_id)
         )
-        free = stored is not None and stored.created_by == actor_id and not (stored.letter_id or stored.document_id)
+        free = (
+            stored is not None
+            and stored.created_by == actor_id
+            and not (stored.letter_id or stored.document_id or stored.instruction_id)
+        )
         if stored is None or not (free or same_owner):
             raise invalid_fields("Файл недоступен для привязки.", file_ids=f"{file_id}: not_attachable")
         if same_owner:
             continue
-        stored.letter_id, stored.document_id = letter_id, document_id
+        stored.letter_id, stored.document_id, stored.instruction_id = letter_id, document_id, instruction_id
         latest = await get_version(session, file_id, None)
+        journal_letter = letter_id
+        if instruction_id is not None:  # отчёт поручения пишется в журнал письма
+            found = await session.execute(select(Instruction.letter_id).where(Instruction.id == instruction_id))
+            journal_letter = found.scalar_one()
         await journal.record(
             session,
             "file.attached",
             by=actor_id,
-            letter_id=letter_id,
+            letter_id=journal_letter,
             document_id=document_id,
             file_id=file_id,
             version=latest.version,
@@ -290,9 +316,15 @@ async def refs_for(
     *,
     letter_id: uuid.UUID | None = None,
     document_id: uuid.UUID | None = None,
+    instruction_id: uuid.UUID | None = None,
 ) -> list[FileRef]:
     """Последние версии файлов объекта по порядку привязки."""
-    owner = StoredFile.letter_id == letter_id if letter_id else StoredFile.document_id == document_id
+    if letter_id:
+        owner = StoredFile.letter_id == letter_id
+    elif instruction_id:
+        owner = StoredFile.instruction_id == instruction_id
+    else:
+        owner = StoredFile.document_id == document_id
     latest = (
         select(FileVersion.file_id, func.max(FileVersion.version).label("v")).group_by(FileVersion.file_id).subquery()
     )

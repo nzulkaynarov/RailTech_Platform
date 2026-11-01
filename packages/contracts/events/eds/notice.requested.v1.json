@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/notice.requested.v1.json",
+  "title": "Запрошено уведомление сотрудникам",
+  "description": "Тип uz.railtech.eds.notice.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Уведомления сотрудникам по поручениям входящих писем (P8b, SPEC-v3 §3.2a п. 2–5): поручение выдано, напоминание о сроке, «Просрочено», запрос переноса и решение по нему, «Ознакомиться», письмо исполнено. EDS сама сотрудникам не пишет: текст (RU) готовит EDS, доставляет CRM — строка колокольчика (`staff_notifications`, лента `crm:<id>` Платформы) и сообщение в Telegram тем, у кого он привязан (как сообщения сотрудникам по событиям ERP). EDS публикует уведомление с данным notice_key один раз (напоминания — по одному на срок); повтор доставки того же события — один эффект (inbox CRM). Подписчики v1: crm (доставка), platform-bff (подсказка).",
+  "type": "object",
+  "required": [
+    "notice_key",
+    "kind",
+    "recipients",
+    "title",
+    "letter",
+    "actor"
+  ],
+  "properties": {
+    "notice_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+      "description": "Ключ отправителя: EDS публикует уведомление с этим ключом один раз; для журнала и разбора"
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "instruction_assigned",
+        "instruction_reminder",
+        "instruction_overdue",
+        "extension_requested",
+        "extension_decided",
+        "acquaint_requested",
+        "letter_executed"
+      ],
+      "description": "Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены"
+    },
+    "recipients": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "integer"
+      },
+      "description": "crm_user_id получателей"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "Заголовок уведомления (RU), без персональных данных сверх номера и темы письма"
+    },
+    "subtitle": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200,
+      "description": "Вторая строка: тема письма, срок, причина"
+    },
+    "letter": {
+      "$ref": "_defs.v1.json#/$defs/LetterRef"
+    },
+    "due": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date",
+      "description": "Срок поручения, если уведомление о нём"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

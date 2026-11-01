@@ -20,6 +20,7 @@ import { edsProjectsHandlers } from "./edsProjects";
 import { erpCatalogHandlers } from "./erpCatalog";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { bridgeHandlers } from "./bridgeHandlers";
+import { edsInstructionsHandlers } from "./edsInstructions";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
@@ -168,6 +169,7 @@ export const handlers = [
   // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,
+  ...edsInstructionsHandlers, // P8b: до писем — `*/eds/letters/*` иначе перехватил бы POST-пути
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,

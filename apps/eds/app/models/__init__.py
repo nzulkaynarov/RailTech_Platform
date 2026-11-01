@@ -6,12 +6,14 @@ from app.models.documents import Document, DocumentPayment, DocumentVersion
 from app.models.employee import Employee, SsoJti
 from app.models.files import FileVersion, StoredFile
 from app.models.idempotency import IdempotencyKey
+from app.models.instructions import Acquaintance, Instruction, InstructionExtension
 from app.models.journal import JournalEntry
 from app.models.letters import Letter
 from app.models.numbering import NumberCounter
 from app.models.project_documents import ProjectDocument
 
 __all__ = [
+    "Acquaintance",
     "ApprovalRoute",
     "ApprovalStep",
     "Base",
@@ -21,6 +23,8 @@ __all__ = [
     "Employee",
     "FileVersion",
     "IdempotencyKey",
+    "Instruction",
+    "InstructionExtension",
     "JournalEntry",
     "Letter",
     "NumberCounter",

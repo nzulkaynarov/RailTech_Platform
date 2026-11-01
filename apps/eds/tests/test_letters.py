@@ -138,10 +138,11 @@ async def test_resolution_publishes_assignees_due_margin_and_links(
 async def test_resolution_without_margin_and_with_fractional_margin(
     client: httpx.AsyncClient, staff: dict[str, Person]
 ) -> None:
-    a = await register(client, staff["registrar"], links={})
+    # Без заявки, со сделкой и без вида документа — письмо по заявке (путь `calc`, P8b); заявку занимает одно письмо.
+    a = await register(client, staff["registrar"], links={"erp_deal_id": 905})
     r1 = await act(client, staff["director"], a["id"], "resolution", {**RESOLUTION, "min_margin_pct": None})
     assert r1.json()["resolution"]["min_margin_pct"] is None
-    b = await register(client, staff["registrar"], links={})
+    b = await register(client, staff["registrar"], links={"erp_deal_id": 906})
     r2 = await act(client, staff["director"], b["id"], "resolution", {**RESOLUTION, "min_margin_pct": "12.50"})
     assert r2.json()["resolution"]["min_margin_pct"] == "12.5"
 
@@ -165,7 +166,8 @@ async def test_resolution_assignees_must_be_active_unique_employees(
 async def _resolve_with(
     client: httpx.AsyncClient, staff: dict[str, Person], assignees: list[dict[str, Any]]
 ) -> tuple[dict[str, Any], httpx.Response]:
-    letter = await register(client, staff["registrar"], links={})
+    # Письмо по заявке (сделка без вида документа — путь `calc`, P8b), чтобы проверялась только зона исполнителя.
+    letter = await register(client, staff["registrar"], links={"erp_deal_id": 905})
     response = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "assignees": assignees})
     return letter, response
 

@@ -44,6 +44,7 @@ if TYPE_CHECKING:
     from app.services.clients import ClientService
     from app.services.company_articles import CompanyArticleService
     from app.services.documents import DocumentService
+    from app.services.eds_notices import EdsNoticeService
     from app.services.erp_access import ErpAccessService
     from app.services.erp_client_card import ErpClientCardService
     from app.services.erp_connector import ErpConnectorService
@@ -516,6 +517,13 @@ class Container:
         return ErpEventNotices(
             self.session_factory, self.telegram_bot, self.settings, mail=self.mail_service
         )
+
+    @cached_property
+    def eds_notices(self) -> "EdsNoticeService":
+        """Уведомления сотрудникам по поручениям входящих EDS (P8b): колокольчик и Telegram."""
+        from app.services.eds_notices import EdsNoticeService
+
+        return EdsNoticeService(self.erp_notices, self.settings.platform_base_url)
 
     @cached_property
     def erp_events_service(self) -> "ErpEventsService":

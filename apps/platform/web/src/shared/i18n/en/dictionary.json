@@ -15,7 +15,10 @@
       "awaiting_resolution": "Awaiting resolution",
       "resolved": "Resolution given",
       "returned": "Returned",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "in_execution": "In execution",
+      "executed": "Executed",
+      "noted": "Noted"
     },
     "quote": {
       "draft": "Draft",

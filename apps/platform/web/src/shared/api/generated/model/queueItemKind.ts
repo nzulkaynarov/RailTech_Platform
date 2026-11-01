@@ -28,4 +28,7 @@ export const QueueItemKind = {
   overdue_invoice: "overdue_invoice",
   ticket: "ticket",
   integration_issue: "integration_issue",
+  instruction: "instruction",
+  instruction_extension: "instruction_extension",
+  acquaint: "acquaint",
 } as const;

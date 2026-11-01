@@ -260,3 +260,37 @@ async def test_manager_does_not_see_staff_tickets_in_the_queue(web: Web, fb: Fee
         c["section"] == "tickets"
         for c in (await web.client.get("/api/v1/menu-counters")).json()["items"]
     )
+
+
+async def test_letter_notice_opens_the_work_screen_of_the_letter(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """P8b: уведомление о поручении (EDS `notice.requested` → CRM) ведёт на рабочий экран письма."""
+    fb.state["crm_notifications"] = {
+        "items": [
+            crm_note(
+                9,
+                "eds.instruction_assigned",
+                fb.m.ago(minutes=1),
+                tab="decisions",
+                title="Поручение по письму ВХ-112/26",
+                subtitle="Требование ГНК о пояснениях · срок 05.11.2026",
+                object_kind="letter",
+                object_id="40000000-0000-4000-8000-000000000112",
+                object_number="ВХ-112/26",
+            )
+        ],
+        "unread_count": 1,
+    }
+    await web.login(["SUPPLY"])
+
+    response = await web.client.get("/api/v1/notifications")
+
+    check(response, "/notifications", "get")
+    [note] = response.json()["items"]
+    assert note["tab"] == "decisions"
+    assert note["object"] == {
+        "kind": "letter",
+        "number": "ВХ-112/26",
+        "path": "/eds/tasks/40000000-0000-4000-8000-000000000112",
+    }

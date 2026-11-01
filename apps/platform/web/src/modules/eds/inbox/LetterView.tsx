@@ -21,6 +21,7 @@ import { SourceBanner } from "../../../shared/ui/SourceBanner";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { letterRef } from "./api";
 import { useStateLabels } from "./labels";
+import { InstructionsCard, OfficeDecision } from "./Instructions";
 import { Attachments } from "./Parts";
 import { ResolutionSlot } from "./ResolutionPanel";
 
@@ -188,6 +189,9 @@ function Content({
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
   const canResolve = canEdit(me, "eds.inbox");
+  // Делопроизводитель готовит проект резолюции письма делопроизводства (P8b) в том же боковом окне.
+  const office = letter.track === "office";
+  const canDraft = canEdit(me, "eds.inbox.register") && office;
   const awaiting = letter.status === "awaiting_resolution";
   const registry = useRegistryItems(letter);
 
@@ -214,6 +218,7 @@ function Content({
           <div className="pf-fp-row">
             {letter.urgent ? <StatusTag tone="red">{t("card.urgent")}</StatusTag> : null}
             <StatusTag kind="incoming" status={letter.status} />
+            {letter.on_control ? <StatusTag tone="blue">{t("card.onControl")}</StatusTag> : null}
             {canResolve ? null : (
               <StatusTag tone="default">
                 <span className="pf-letters-lock">
@@ -226,17 +231,20 @@ function Content({
         }
       />
       <SourceBanner sources={letter.sources} onRetry={refetch} />
-      <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>
-        <RequestSteps
-          stage={letter.stage}
-          {...(letter.lost_at_step ? { step: letter.lost_at_step } : {})}
-          {...(letter.request ? { number: letter.request.number } : {})}
-        />
-      </section>
-      {awaiting && canResolve && !wide ? (
+      {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
+      {letter.track === "office" ? null : (
+        <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>
+          <RequestSteps
+            stage={letter.stage}
+            {...(letter.lost_at_step ? { step: letter.lost_at_step } : {})}
+            {...(letter.request ? { number: letter.request.number } : {})}
+          />
+        </section>
+      )}
+      {awaiting && (canResolve || canDraft) && !wide ? (
         <div>
           <Button type="primary" onClick={openResolution}>
-            {t("card.resolve")}
+            {canResolve ? t("card.resolve") : t("office.draftName")}
           </Button>
         </div>
       ) : null}
@@ -247,8 +255,15 @@ function Content({
             <DefinitionList
               items={[
                 ...registry,
-                { label: t("card.fields.client"), value: letter.sender.name },
-                { label: t("card.fields.inn"), value: letter.sender.inn },
+                // Делопроизводство (ГОСТ Р 7.0.97, SPEC-v3 §3.2a) — «корреспондент», заявка клиента — «клиент».
+                {
+                  label: t(office ? "card.fields.correspondent" : "card.fields.client"),
+                  value: letter.sender.name,
+                },
+                {
+                  label: t(office ? "card.fields.correspondentInn" : "card.fields.inn"),
+                  value: letter.sender.inn,
+                },
                 { label: t("card.fields.contact"), value: letter.sender.contact },
                 {
                   label: t("card.fields.senderRef"),
@@ -279,6 +294,8 @@ function Content({
             )}
           </Card>
           <Decision letter={letter} />
+          <OfficeDecision letter={letter} />
+          <InstructionsCard letter={letter} />
           <Journal letter={letter} />
         </div>
         <aside className="pf-letters-side" aria-label={t("card.links")}>

@@ -133,7 +133,8 @@
       "approvals": "Awaiting approval",
       "payments": "Invoices & payments",
       "new": "New document",
-      "register": "Register incoming"
+      "register": "Register incoming",
+      "tasks": "Instruction"
     },
     "action": "New document"
   },

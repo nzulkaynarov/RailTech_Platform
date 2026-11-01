@@ -10,6 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_bus, get_session, require_permission
 from app.models import Employee
 from app.schemas.letters import (
+    EmployeeList,
+    ExtensionDecisionIn,
+    ExtensionRequestIn,
+    InstructionCompleteIn,
     Letter,
     LetterCreate,
     LetterDuplicateList,
@@ -20,11 +24,14 @@ from app.schemas.letters import (
     LetterReturnIn,
     LetterStatus,
     LetterSubmitIn,
+    LetterTasks,
+    OfficeResolutionIn,
+    ResolutionDraftIn,
     ResolutionIn,
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import idempotency, letter_kinds, letters, letters_read
+from app.services import idempotency, instructions, letter_kinds, letters, letters_read
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -34,6 +41,10 @@ Registrar = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER))]
 Resolver = Annotated[Employee, Depends(require_permission(P.LETTERS_RESOLVE))]
 # Справочник видов и проверка дубля — тем, кто читает или регистрирует письма (P8).
 Clerk = Annotated[Employee, Depends(require_permission(P.LETTERS_READ, P.LETTERS_REGISTER))]
+# Проект резолюции и выбор сотрудников — делопроизводителю и директору (P8b).
+Drafter = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE))]
+# Любой активный сотрудник; сужение — в сервисе (исполнитель, «ознакомить», автор резолюции; P8b).
+Anyone = Annotated[Employee, Depends(require_permission())]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Bus = Annotated[AsyncBus, Depends(get_bus)]
 
@@ -64,10 +75,14 @@ async def list_letters(
     session: Session,
     status: Annotated[list[LetterStatus] | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
+    on_control: Annotated[bool | None, Query()] = None,
+    overdue: Annotated[bool | None, Query()] = None,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> LetterPage:
-    return await letters_read.list_page(session, statuses=status, q=q, cursor=cursor, limit=limit)
+    return await letters_read.list_page(
+        session, statuses=status, q=q, cursor=cursor, limit=limit, on_control=on_control, overdue=overdue
+    )
 
 
 @router.post("/letters", response_model=Letter, status_code=201, operation_id="registerLetter")
@@ -92,8 +107,10 @@ async def register_letter(
 
 
 @router.get("/letters/{letter_id}", response_model=Letter, operation_id="getLetter")
-async def get_letter(letter_id: uuid.UUID, _: Reader, session: Session) -> Letter:
-    return await letters_read.present(session, await letters_read.get_letter(session, letter_id))
+async def get_letter(letter_id: uuid.UUID, employee: Anyone, session: Session) -> Letter:
+    letter = await letters_read.get_letter(session, letter_id)
+    await instructions.require_readable(session, employee, letter)
+    return await letters_read.present(session, letter)
 
 
 @router.post("/letters/{letter_id}/resolution", response_model=Letter, operation_id="resolveLetter")
@@ -137,3 +154,82 @@ async def resubmit_letter(
     async with session.begin():
         letter = await letters.resubmit(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
         return await letters_read.present(session, letter)
+
+
+# --- путь делопроизводства (P8b, SPEC-v3 §3.2a) -------------------------------------------------------------------
+
+
+@router.put("/letters/{letter_id}/resolution-draft", response_model=Letter, operation_id="saveResolutionDraft")
+async def save_resolution_draft(
+    letter_id: uuid.UUID, body: ResolutionDraftIn, employee: Drafter, session: Session
+) -> Letter:
+    async with session.begin():
+        letter = await instructions.save_draft(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
+        return await letters_read.present(session, letter)
+
+
+@router.post("/letters/{letter_id}/office-resolution", response_model=Letter, operation_id="resolveOfficeLetter")
+async def resolve_office_letter(
+    letter_id: uuid.UUID, body: OfficeResolutionIn, employee: Resolver, session: Session, bus: Bus
+) -> Letter:
+    async with session.begin():
+        letter = await instructions.resolve_office(
+            session, bus, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
+        )
+        return await letters_read.present(session, letter)
+
+
+@router.post("/letters/{letter_id}/acquaint", response_model=Letter, operation_id="acknowledgeLetter")
+async def acknowledge_letter(letter_id: uuid.UUID, employee: Anyone, session: Session) -> Letter:
+    async with session.begin():
+        letter = await instructions.acknowledge(session, actor_id=employee.crm_user_id, letter_id=letter_id)
+        return await letters_read.present(session, letter)
+
+
+@router.post("/instructions/{instruction_id}/complete", response_model=Letter, operation_id="completeInstruction")
+async def complete_instruction(
+    instruction_id: uuid.UUID, body: InstructionCompleteIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    async with session.begin():
+        letter = await instructions.complete(
+            session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
+        )
+        return await letters_read.present(session, letter)
+
+
+@router.post(
+    "/instructions/{instruction_id}/extension", response_model=Letter, operation_id="requestInstructionExtension"
+)
+async def request_instruction_extension(
+    instruction_id: uuid.UUID, body: ExtensionRequestIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    async with session.begin():
+        letter = await instructions.request_extension(
+            session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
+        )
+        return await letters_read.present(session, letter)
+
+
+@router.post(
+    "/instructions/{instruction_id}/extension/decision",
+    response_model=Letter,
+    operation_id="decideInstructionExtension",
+)
+async def decide_instruction_extension(
+    instruction_id: uuid.UUID, body: ExtensionDecisionIn, employee: Anyone, session: Session, bus: Bus
+) -> Letter:
+    async with session.begin():
+        letter = await instructions.decide_extension(
+            session, bus, actor_id=employee.crm_user_id, instruction_id=instruction_id, data=body
+        )
+        return await letters_read.present(session, letter)
+
+
+@router.get("/letter-tasks", response_model=LetterTasks, operation_id="listMyLetterTasks")
+async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTasks:
+    return await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
+
+
+@router.get("/employees", response_model=EmployeeList, operation_id="listActiveEmployees")
+async def list_active_employees(_: Drafter, session: Session) -> EmployeeList:
+    return await instructions.active_employees(session)

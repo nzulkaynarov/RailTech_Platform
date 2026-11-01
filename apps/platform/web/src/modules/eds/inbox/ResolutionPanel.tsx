@@ -15,8 +15,9 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { Attachments } from "./Parts";
-import { letterPath, letterRef } from "./api";
+import { letterPath, letterRef, tasksPath } from "./api";
 import { clearDraft } from "./draft";
+import { OfficeResolutionForm } from "./OfficeResolutionForm";
 import { ResolutionForm } from "./ResolutionForm";
 import { useStateLabels } from "./labels";
 
@@ -32,7 +33,12 @@ function Brief({ letter }: { letter: LetterCard }) {
       <p className="pf-res-subject">{letter.subject}</p>
       <DefinitionList
         items={[
-          { label: t("panel.brief.client"), value: letter.sender.name },
+          {
+            label: t(
+              letter.track === "office" ? "panel.brief.correspondent" : "panel.brief.client",
+            ),
+            value: letter.sender.name,
+          },
           { label: t("panel.brief.request"), value: letter.request?.number },
           { label: t("panel.brief.received"), value: date(letter.received_at) },
         ]}
@@ -66,13 +72,22 @@ function PanelBody({
   const { t } = useTranslation("letters");
   const { me } = useAuth();
   const canResolve = canEdit(me, "eds.inbox");
+  const canDraft = canEdit(me, "eds.inbox.register");
+  // Путь резолюции решает EDS (P8b): письмо по заявке клиента — «расчёт по зонам», остальное — три типа с поручениями.
+  const office = letter.track === "office";
   // Письмо уже решено, возвращено или отклонено (в том числе другим): черновик ему не нужен.
   useEffect(() => {
     if (letter.status !== "awaiting_resolution") clearDraft(me.id, letter.id);
   }, [letter.status, letter.id, me.id]);
+  const done = onDone ? { onDone } : {};
   let body: ReactNode;
-  if (letter.status === "awaiting_resolution" && canResolve) {
-    body = <ResolutionForm letter={letter} variant={variant} {...(onDone ? { onDone } : {})} />;
+  if (letter.status === "awaiting_resolution" && canResolve && office) {
+    body = <OfficeResolutionForm letter={letter} mode="resolve" variant={variant} {...done} />;
+  } else if (letter.status === "awaiting_resolution" && canResolve) {
+    body = <ResolutionForm letter={letter} variant={variant} {...done} />;
+  } else if (letter.status === "awaiting_resolution" && canDraft && office) {
+    // Делопроизводитель готовит проект резолюции: директор утвердит его одним нажатием (SPEC-v3 §3.2a п. 1).
+    body = <OfficeResolutionForm letter={letter} mode="draft" variant={variant} {...done} />;
   } else if (letter.status === "awaiting_resolution") {
     body = (
       <EmptyState
@@ -80,6 +95,20 @@ function PanelBody({
         compact
         title={t("panel.awaitingReadOnly.title")}
         text={t("panel.awaitingReadOnly.text")}
+      />
+    );
+  } else if (office && letter.office_resolution) {
+    body = (
+      <EmptyState
+        level={3}
+        compact
+        title={t("panel.decidedOffice.title")}
+        text={t("panel.decidedOffice.text")}
+        action={
+          <Link className="pf-focusable" to={tasksPath(letter.id)}>
+            {t("panel.openTask")}
+          </Link>
+        }
       />
     );
   } else {

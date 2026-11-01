@@ -2,6 +2,7 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, beforeEach, expect } from "vitest";
 
 import { usePanelsStore } from "../app/shell/panelsStore";
+import { resetInstructionsMock } from "../mocks/edsInstructions";
 import { resetLetters } from "../mocks/fixtures/letters";
 import { endSession } from "../mocks/mockSession";
 import i18n from "../shared/i18n";
@@ -17,6 +18,7 @@ export function setupLetterTests(width = 1440): void {
     window.localStorage.clear();
     window.sessionStorage.clear();
     resetLetters();
+    resetInstructionsMock();
     usePanelsStore.setState({ entries: {} });
     setViewportWidth(width);
     missing.length = 0;

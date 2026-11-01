@@ -15,7 +15,10 @@
       "awaiting_resolution": "Ждёт резолюции",
       "resolved": "Резолюция наложена",
       "returned": "Возвращено",
-      "rejected": "Отклонено"
+      "rejected": "Отклонено",
+      "in_execution": "На исполнении",
+      "executed": "Исполнено",
+      "noted": "Принято к сведению"
     },
     "quote": {
       "draft": "Черновик",

@@ -117,6 +117,7 @@ import type {
   EdsFile,
   EdsFileUpload,
   EdsPayloadTooLargeResponse,
+  EdsStaffList,
   EdsUnsupportedMediaResponse,
   EmailTemplate,
   EmailTemplateIn,
@@ -157,6 +158,9 @@ import type {
   HsCodeCreate,
   HsCodePage,
   HsCodeUpdate,
+  InstructionCompleteIn,
+  InstructionExtensionDecisionIn,
+  InstructionExtensionIn,
   IntegrationConflictResponse,
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
@@ -243,6 +247,7 @@ import type {
   NumberingPreviewIn,
   NumberingScheme,
   NumberingUpdate,
+  OfficeResolutionIn,
   OffsiteBackup,
   OffsiteBackupIn,
   OffsiteCheck,
@@ -294,6 +299,7 @@ import type {
   RequestRetriedView,
   ResetPasswordIn,
   ResolutionAssignees,
+  ResolutionDraftIn,
   ResolutionIn,
   ReturnToBotIn,
   Role,
@@ -5434,6 +5440,12 @@ export const getGetQueueUrl = (params?: GetQueueParams) => {
  * Какие виды работы попадают в очередь — секция `queue` каталога `platform-rbac.yaml`: вид виден, если у ролей «вида» есть
  * его раздел с уровнем не ниже нужного. Порядок: просроченные → сегодня → по сроку (SPEC-v3 §7.1). Одна строка — одно
  * действие.
+ *
+ * Входящие делопроизводства (P8b, SPEC-v3 §3.2a; EDS `GET /letter-tasks`): `instruction` — «Исполнить поручение» по
+ * письму со сроком (просрочено — `due_label = overdue`), `instruction_extension` — «Перенос срока» у автора резолюции,
+ * `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
+ * реестре, которого у исполнителя может не быть); одна строка на поручение,
+ * перенос и ознакомление — без дублей.
  * @summary «Моя очередь» — что сделать сейчас
  */
 export const getQueue = async (
@@ -26138,7 +26150,7 @@ export const getGetLetterUrl = (ref: string) => {
 };
 
 /**
- * EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение.
+ * EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение; без него (P8b, SPEC-v3 §3.2a «Права») карточку получает исполнитель поручения, сотрудник из «ознакомить» и автор резолюции — решает EDS (иначе 403). Путь делопроизводства: шаг пути не применяется (`stage` — по статусу письма: ждёт резолюции — «Резолюция», дальше — «Резолюция» пройдена).
  * @summary EDS · Карточка входящего письма (по id или по номеру ВХ)
  */
 export const getLetter = async (
@@ -26794,7 +26806,7 @@ export const getDownloadLetterFileUrl = (fileId: string) => {
 };
 
 /**
- * EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение. Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
+ * EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение; файлы письма и отчётов поручений скачивает и участник поручения без него (решает EDS, P8b). Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
  * @summary EDS · Скачать вложение письма
  */
 export const downloadLetterFile = async (
@@ -26922,6 +26934,879 @@ export function useDownloadLetterFile<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getDownloadLetterFileQueryOptions(fileId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSaveResolutionDraftUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/resolution-draft`;
+};
+
+/**
+ * EDS `PUT /letters/{id}/resolution-draft` (права `letters.register` или `letters.resolve`). Раздел `eds.inbox.register` или `eds.inbox` — полный. Только письмо пути делопроизводства (`LetterCard.track = office`, иначе 409, `details.reason = track_mismatch`), ждущее резолюции (иначе 409 `invalid_state`). Проект заменяется целиком; директор утверждает его одним действием (`POST /eds/letters/{id}/office-resolution` с теми же полями) или правит. Сотрудник не найден или отключён — 422 `VALIDATION_FAILED` с полем; срок в прошлом — `details.fields = [due]`. Ответ — карточка.
+ * @summary EDS · Проект резолюции делопроизводителя (P8b)
+ */
+export const saveResolutionDraft = async (
+  id: string,
+  resolutionDraftIn: ResolutionDraftIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getSaveResolutionDraftUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionDraftIn),
+  });
+};
+
+export const getSaveResolutionDraftMutationKey = () => ["saveResolutionDraft"] as const;
+
+export const getSaveResolutionDraftMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveResolutionDraft>>,
+    TError,
+    SaveResolutionDraftMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveResolutionDraft>>,
+  TError,
+  SaveResolutionDraftMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveResolutionDraftMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveResolutionDraft>>,
+    SaveResolutionDraftMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return saveResolutionDraft(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveResolutionDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveResolutionDraft>>
+>;
+export type SaveResolutionDraftMutationBody = ResolutionDraftIn;
+export type SaveResolutionDraftMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SaveResolutionDraftMutationVariables = { id: string; data: ResolutionDraftIn };
+
+/**
+ * @summary EDS · Проект резолюции делопроизводителя (P8b)
+ */
+export const useSaveResolutionDraft = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveResolutionDraft>>,
+      TError,
+      SaveResolutionDraftMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveResolutionDraft>>,
+  TError,
+  SaveResolutionDraftMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveResolutionDraftMutationOptions(options), queryClient);
+};
+
+export const getResolveOfficeLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/office-resolution`;
+};
+
+/**
+ * EDS `POST /letters/{id}/office-resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный. Путь резолюции письма решает EDS (`LetterCard.track`): `office` — эта операция, `calc` (письмо по заявке клиента) — по-прежнему `POST /eds/letters/{id}/resolution`; не тот путь — 409, `details.reason = track_mismatch`. «К исполнению» и «Подготовить ответ» — ответственный (любой активный сотрудник) и срок обязательны, поручения создаются, письмо «На исполнении» и на контроле; «Для сведения» — без ответственного и срока, письмо «Принято к сведению»; «ознакомить» — у любого типа. Ошибки полей — 422 `VALIDATION_FAILED` (`due_in_past`, `not_active_employee`, `duplicate`, `not_allowed_for_info`). Исполнители получают уведомление (колокольчик и Telegram). Ответ — карточка.
+ * @summary EDS · Резолюция: К исполнению · Подготовить ответ · Для сведения (P8b)
+ */
+export const resolveOfficeLetter = async (
+  id: string,
+  officeResolutionIn: OfficeResolutionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getResolveOfficeLetterUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(officeResolutionIn),
+  });
+};
+
+export const getResolveOfficeLetterMutationKey = () => ["resolveOfficeLetter"] as const;
+
+export const getResolveOfficeLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveOfficeLetter>>,
+    TError,
+    ResolveOfficeLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveOfficeLetter>>,
+  TError,
+  ResolveOfficeLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveOfficeLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveOfficeLetter>>,
+    ResolveOfficeLetterMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resolveOfficeLetter(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveOfficeLetterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof resolveOfficeLetter>>
+>;
+export type ResolveOfficeLetterMutationBody = OfficeResolutionIn;
+export type ResolveOfficeLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ResolveOfficeLetterMutationVariables = { id: string; data: OfficeResolutionIn };
+
+/**
+ * @summary EDS · Резолюция: К исполнению · Подготовить ответ · Для сведения (P8b)
+ */
+export const useResolveOfficeLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveOfficeLetter>>,
+      TError,
+      ResolveOfficeLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveOfficeLetter>>,
+  TError,
+  ResolveOfficeLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getResolveOfficeLetterMutationOptions(options), queryClient);
+};
+
+export const getAcknowledgeLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/acquaint`;
+};
+
+/**
+ * EDS `POST /letters/{id}/acquaint`. Любой сотрудник; отметку ставит только тот, кто в списке «ознакомить» (решает EDS, иначе 404). Повтор — без изменений. Ответ — карточка.
+ * @summary EDS · «Ознакомлен» (P8b)
+ */
+export const acknowledgeLetter = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  return http<LetterCard>(getAcknowledgeLetterUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcknowledgeLetterMutationKey = () => ["acknowledgeLetter"] as const;
+
+export const getAcknowledgeLetterMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acknowledgeLetter>>,
+    TError,
+    AcknowledgeLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acknowledgeLetter>>,
+  TError,
+  AcknowledgeLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAcknowledgeLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acknowledgeLetter>>,
+    AcknowledgeLetterMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return acknowledgeLetter(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcknowledgeLetterMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acknowledgeLetter>>
+>;
+
+export type AcknowledgeLetterMutationError = ErrorType<
+  SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type AcknowledgeLetterMutationVariables = { id: string };
+
+/**
+ * @summary EDS · «Ознакомлен» (P8b)
+ */
+export const useAcknowledgeLetter = <
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acknowledgeLetter>>,
+      TError,
+      AcknowledgeLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof acknowledgeLetter>>,
+  TError,
+  AcknowledgeLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getAcknowledgeLetterMutationOptions(options), queryClient);
+};
+
+export const getCompleteInstructionUrl = (id: string) => {
+  return `/api/v1/eds/instructions/${id}/complete`;
+};
+
+/**
+ * EDS `POST /instructions/{id}/complete`. Любой сотрудник; отмечает только исполнитель поручения (решает EDS: чужое — 403, `details.reason = not_executor`; не в работе — 409 `invalid_state`). Нужен отчёт (текст или файлы — загрузка `POST /eds/document-files`) или номер отправленного ИСХ (`outgoing_number`); иначе 422, `details.fields = [report]`; ИСХ не найден — `details.fields = [outgoing_number]`. Все поручения письма исполнены — письмо «Исполнено», контроль снят, директор и делопроизводитель получают уведомление. Ответ — карточка.
+ * @summary EDS · Поручение исполнено (P8b)
+ */
+export const completeInstruction = async (
+  id: string,
+  instructionCompleteIn: InstructionCompleteIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getCompleteInstructionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(instructionCompleteIn),
+  });
+};
+
+export const getCompleteInstructionMutationKey = () => ["completeInstruction"] as const;
+
+export const getCompleteInstructionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeInstruction>>,
+    TError,
+    CompleteInstructionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeInstruction>>,
+  TError,
+  CompleteInstructionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteInstructionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeInstruction>>,
+    CompleteInstructionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return completeInstruction(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteInstructionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeInstruction>>
+>;
+export type CompleteInstructionMutationBody = InstructionCompleteIn;
+export type CompleteInstructionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CompleteInstructionMutationVariables = { id: string; data: InstructionCompleteIn };
+
+/**
+ * @summary EDS · Поручение исполнено (P8b)
+ */
+export const useCompleteInstruction = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeInstruction>>,
+      TError,
+      CompleteInstructionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeInstruction>>,
+  TError,
+  CompleteInstructionMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteInstructionMutationOptions(options), queryClient);
+};
+
+export const getRequestInstructionExtensionUrl = (id: string) => {
+  return `/api/v1/eds/instructions/${id}/extension`;
+};
+
+/**
+ * EDS `POST /instructions/{id}/extension`. Любой сотрудник; просит только исполнитель (403 `not_executor`). Срок срочного письма не продлевается: запросить можно, автор резолюции может только отклонить; запрос уже ждёт решения — 409 `extension_pending`; новый срок не позже текущего — 422, `details.fields = [new_due]`. Автор резолюции получает строку «Перенос срока» в «Моих задачах» и уведомление. Ответ — карточка.
+ * @summary EDS · Запросить перенос срока поручения (P8b)
+ */
+export const requestInstructionExtension = async (
+  id: string,
+  instructionExtensionIn: InstructionExtensionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getRequestInstructionExtensionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(instructionExtensionIn),
+  });
+};
+
+export const getRequestInstructionExtensionMutationKey = () =>
+  ["requestInstructionExtension"] as const;
+
+export const getRequestInstructionExtensionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestInstructionExtension>>,
+    TError,
+    RequestInstructionExtensionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestInstructionExtension>>,
+  TError,
+  RequestInstructionExtensionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestInstructionExtensionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestInstructionExtension>>,
+    RequestInstructionExtensionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return requestInstructionExtension(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestInstructionExtensionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestInstructionExtension>>
+>;
+export type RequestInstructionExtensionMutationBody = InstructionExtensionIn;
+export type RequestInstructionExtensionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RequestInstructionExtensionMutationVariables = {
+  id: string;
+  data: InstructionExtensionIn;
+};
+
+/**
+ * @summary EDS · Запросить перенос срока поручения (P8b)
+ */
+export const useRequestInstructionExtension = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestInstructionExtension>>,
+      TError,
+      RequestInstructionExtensionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestInstructionExtension>>,
+  TError,
+  RequestInstructionExtensionMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestInstructionExtensionMutationOptions(options), queryClient);
+};
+
+export const getDecideInstructionExtensionUrl = (id: string) => {
+  return `/api/v1/eds/instructions/${id}/extension/decision`;
+};
+
+/**
+ * EDS `POST /instructions/{id}/extension/decision`. Раздел `eds.inbox` — полный; решает только автор резолюции (иначе 403, `details.reason = not_resolution_author`); запроса без решения нет — 409 `no_pending_extension`; одобрить перенос срочного письма — 409 `urgent_not_extendable` (срочные не продлеваются). Одобрено — срок меняется; исполнитель получает уведомление в обоих случаях. Ответ — карточка.
+ * @summary EDS · Одобрить или отклонить перенос срока (P8b)
+ */
+export const decideInstructionExtension = async (
+  id: string,
+  instructionExtensionDecisionIn: InstructionExtensionDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getDecideInstructionExtensionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(instructionExtensionDecisionIn),
+  });
+};
+
+export const getDecideInstructionExtensionMutationKey = () =>
+  ["decideInstructionExtension"] as const;
+
+export const getDecideInstructionExtensionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideInstructionExtension>>,
+    TError,
+    DecideInstructionExtensionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideInstructionExtension>>,
+  TError,
+  DecideInstructionExtensionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecideInstructionExtensionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideInstructionExtension>>,
+    DecideInstructionExtensionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decideInstructionExtension(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideInstructionExtensionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideInstructionExtension>>
+>;
+export type DecideInstructionExtensionMutationBody = InstructionExtensionDecisionIn;
+export type DecideInstructionExtensionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type DecideInstructionExtensionMutationVariables = {
+  id: string;
+  data: InstructionExtensionDecisionIn;
+};
+
+/**
+ * @summary EDS · Одобрить или отклонить перенос срока (P8b)
+ */
+export const useDecideInstructionExtension = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decideInstructionExtension>>,
+      TError,
+      DecideInstructionExtensionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decideInstructionExtension>>,
+  TError,
+  DecideInstructionExtensionMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecideInstructionExtensionMutationOptions(options), queryClient);
+};
+
+export const getListEdsStaffUrl = () => {
+  return `/api/v1/eds/staff`;
+};
+
+/**
+ * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+ * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
+ */
+export const listEdsStaff = async (options?: Parameters<typeof http>[1]): Promise<EdsStaffList> => {
+  return http<EdsStaffList>(getListEdsStaffUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsStaffQueryKey = () => {
+  return [`/api/v1/eds/staff`] as const;
+};
+
+export const getListEdsStaffQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsStaff>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsStaff>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsStaffQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsStaff>>> = ({ signal }) =>
+    listEdsStaff({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsStaff>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsStaffQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsStaff>>>;
+export type ListEdsStaffQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsStaff<
+  TData = Awaited<ReturnType<typeof listEdsStaff>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsStaff>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsStaff>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsStaff>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsStaff<
+  TData = Awaited<ReturnType<typeof listEdsStaff>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsStaff>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsStaff>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsStaff>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsStaff<
+  TData = Awaited<ReturnType<typeof listEdsStaff>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsStaff>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
+ */
+
+export function useListEdsStaff<
+  TData = Awaited<ReturnType<typeof listEdsStaff>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsStaff>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsStaffQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

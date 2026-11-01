@@ -426,3 +426,8 @@ queue:
   overdue_invoice: { resource: eds.payments, level: full }
   ticket: { resource: admin, level: full }
   integration_issue: { resource: admin, level: full }
+  # P8b (SPEC-v3 §3.2a): поручение по входящему и «Ознакомиться» — любому сотруднику (исполнитель — любой, «Моя очередь» есть
+  # у каждой роли); перенос срока решает автор резолюции — держатель резолюции (`eds.inbox: full`).
+  instruction: { resource: dashboard.queue, level: full }
+  instruction_extension: { resource: eds.inbox, level: full }
+  acquaint: { resource: dashboard.queue, level: full }

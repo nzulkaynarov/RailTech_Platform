@@ -354,6 +354,12 @@ channels:
     messages:
       uz.railtech.eds.mail.requested.v1:
         $ref: '#/components/messages/uz.railtech.eds.mail.requested.v1'
+  uz.railtech.eds.notice.requested.v1:
+    address: uz.railtech.eds.notice.requested.v1
+    title: Запрошено уведомление сотрудникам (EDS)
+    messages:
+      uz.railtech.eds.notice.requested.v1:
+        $ref: '#/components/messages/uz.railtech.eds.notice.requested.v1'
 operations:
   publish.uz.railtech.crm.client.created.v1:
     action: send
@@ -812,6 +818,15 @@ operations:
       $ref: '#/channels/uz.railtech.eds.mail.requested.v1'
     messages:
       - $ref: '#/channels/uz.railtech.eds.mail.requested.v1/messages/uz.railtech.eds.mail.requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.notice.requested.v1:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.notice.requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.eds.notice.requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.notice.requested.v1/messages/uz.railtech.eds.notice.requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
 components:
@@ -2136,3 +2151,28 @@ components:
                   const: rt://contracts/events/eds/mail.requested/v1
                 data:
                   $ref: './eds/mail.requested.v1.json'
+    uz.railtech.eds.notice.requested.v1:
+      name: uz.railtech.eds.notice.requested.v1
+      title: Запрошено уведомление сотрудникам (EDS)
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.notice.requested.v1
+                dataschema:
+                  const: rt://contracts/events/eds/notice.requested/v1
+                data:
+                  $ref: './eds/notice.requested.v1.json'

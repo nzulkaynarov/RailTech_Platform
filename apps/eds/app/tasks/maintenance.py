@@ -1,7 +1,9 @@
-"""Служебные задачи сервиса: уборка использованных `jti` SSO-токенов и просроченных ключей идемпотентности."""
+"""Служебные задачи сервиса: уборка использованных `jti` SSO-токенов и просроченных ключей идемпотентности, напоминания
+о сроках поручений по входящим (P8b)."""
 
+from app import clock
 from app.container import get_container
-from app.services import idempotency
+from app.services import idempotency, instructions
 from app.services.sso import purge_expired_jti
 from app.tasks.queue import queue
 
@@ -20,3 +22,12 @@ async def idempotency_cleanup(timestamp: int) -> int:
     """Раз в час: удалить ключи `Idempotency-Key` старше 24 часов."""
     async with get_container().session_factory() as session, session.begin():
         return await idempotency.purge_expired(session)
+
+
+@queue.periodic(cron="*/30 * * * *", periodic_id="instruction_reminders")
+@queue.task(name="instruction_reminders", queue="maintenance", queueing_lock="instruction_reminders")
+async def instruction_reminders(timestamp: int) -> int:
+    """Раз в 30 минут: напоминания о сроках поручений и «Просрочено» (с 9:00 по Ташкенту; одно на срок)."""
+    container = get_container()
+    async with container.session_factory() as session, session.begin():
+        return await instructions.send_reminders(session, container.bus, now=clock.now())

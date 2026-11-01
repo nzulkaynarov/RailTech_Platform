@@ -119,9 +119,10 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expect(page.getByText(/Зарегистрировано: ВХ-109\/26/)).toBeVisible();
       expect(Date.now() - started).toBeLessThan(60_000);
       await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
-      // письмо в боковом окне (на телефоне — лист): ждёт резолюции директора, у делопроизводителя кнопки решения нет
-      await expect(page.getByText("Письмо ждёт резолюции директора")).toBeVisible();
+      // письмо в боковом окне (на телефоне — лист): у делопроизводителя кнопки решения нет — только проект резолюции (P8b)
+      await expect(page.getByRole("button", { name: "Сохранить проект" })).toBeVisible();
       await expect(page.getByRole("button", { name: /Утвердить резолюцию/ })).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Утвердить проект" })).toHaveCount(0);
       await shot(page, "register-done");
       await expectNoViolations(page, `после регистрации ${String(width)}`);
     }
@@ -145,9 +146,14 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expect(page.getByText("Требование или уведомление ГНК")).toBeVisible();
       await expect(page.getByText("Кабинет налогоплательщика my.soliq")).toBeVisible();
       if (width >= 768) {
-        await expect(page.getByRole("button", { name: /Утвердить резолюцию/ })).toBeVisible();
-      } else {
+        // P8b: требование ГНК — путь делопроизводства, резолюция трёх типов
+        await expect(page.getByRole("radio", { name: /К исполнению/ })).toBeChecked();
         await expect(page.getByRole("button", { name: "Наложить резолюцию" })).toBeVisible();
+      } else {
+        // кнопка карточки и кнопка формы в листе (P8b: у письма делопроизводства подписи совпадают)
+        await expect(
+          page.getByRole("button", { name: "Наложить резолюцию" }).first(),
+        ).toBeVisible();
       }
       await shot(page, "director-letter");
       await expectNoViolations(page, `карточка ВХ директора ${String(width)}`);

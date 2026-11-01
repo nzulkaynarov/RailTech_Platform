@@ -21,7 +21,7 @@ from app.schemas.approvals import ApprovalTemplate
 from app.schemas.common import Money
 from app.schemas.documents import DocumentCreate, DocumentKind, DocumentStatus, DocumentSubmitIn, DocumentUpdate
 from app.security.permissions import EdsPermission as P
-from app.services import access, approvals, document_state, events, files, journal, numbering
+from app.services import access, approvals, document_state, events, files, instructions, journal, numbering
 from app.services.people import holds_permission, load_directory
 
 _NUMBER_KIND = {
@@ -263,6 +263,8 @@ async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document,
     await journal.record(session, "document.sent", by=employee.crm_user_id, document_id=document.id)
     await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
     await document_state.archive(session, bus, document, actor_id=employee.crm_user_id, reason=document.status)
+    # P8b: ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ» этого письма (тот же хук — письмо на бланке P4).
+    await instructions.close_by_outgoing(session, bus, document=document, actor_id=employee.crm_user_id)
 
 
 async def _open_approval(

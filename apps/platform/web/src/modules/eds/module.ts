@@ -78,6 +78,17 @@ export const eds: ModuleConfig = {
       actionTo: "/eds/inbox",
     },
     {
+      // P8b: рабочий экран поручения по входящему (SPEC-v3 §3.2a п. 3–4) — из «Моих задач»; исполнитель — любой сотрудник,
+      // письмо своего поручения он видит и без «Входящих» (решает EDS).
+      key: "tasks",
+      path: "/eds/tasks",
+      detail: "/eds/tasks/:id",
+      access: { resource: "dashboard.queue" },
+      hidden: true,
+      defaults: { panelOpen: false },
+      actionTo: "/dashboard/queue",
+    },
+    {
       key: "new",
       path: "/eds/new",
       access: { resource: "eds.memo.create" },

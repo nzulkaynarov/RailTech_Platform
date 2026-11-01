@@ -86,6 +86,61 @@ function taxNotice(): LetterCard {
   };
 }
 
+/**
+ * Письмо банка «Для сведения» (P8b, SPEC-v3 §3.2a п. 2): директор принял к сведению и отметил бухгалтера в «Ознакомить»,
+ * бухгалтер ознакомился. Путь делопроизводства — у письма есть вид документа.
+ */
+function bankNoted(): LetterCard {
+  const director = { id: "u-demo-director", name: "Демо Директоров", initials: "ДД" };
+  const accountant = { id: "u-demo-accountant", name: "Демо Бухгалтеров", initials: "ДБ" };
+  return {
+    ...taxNotice(),
+    id: "20000000-0000-4000-8000-000000000100",
+    number: "ВХ-100/26",
+    status: "noted",
+    subject: "Изменение тарифов на расчётно-кассовое обслуживание с 1 декабря",
+    summary: "Банк сообщает о новых тарифах на платёжные поручения и выписки с 01.12.2026.",
+    urgent: false,
+    received_at: "2026-10-20",
+    registered_at: "2026-10-20T08:40:00Z",
+    sender: { name: "АКБ «Демо-Банк»", inn: "200100200", contact: null },
+    sender_ref: { number: "12-07/881", date: "2026-10-18" },
+    files: [],
+    kind: "bank",
+    receipt_method: "email",
+    signed_by: null,
+    document_due: null,
+    track: "office",
+    office_resolution: {
+      kind: "info",
+      text: "Принять к сведению.",
+      due: null,
+      responsible: null,
+      co_executors: [],
+      acquaint: [accountant],
+      decided_by: director,
+      decided_at: "2026-10-20T10:15:00Z",
+    },
+    instructions: [],
+    acquaintances: [{ person: accountant, acknowledged_at: "2026-10-21T05:30:00Z" }],
+    journal: [
+      { at: "2026-10-20T08:40:00Z", action: "letter.registered", by: REGISTRAR, comment: null },
+      {
+        at: "2026-10-20T10:15:00Z",
+        action: "letter.resolved",
+        by: director,
+        comment: "Принять к сведению.",
+      },
+      {
+        at: "2026-10-21T05:30:00Z",
+        action: "letter.acknowledged",
+        by: accountant,
+        comment: null,
+      },
+    ],
+  };
+}
+
 interface Seed {
   n: number;
   subject: string;
@@ -241,6 +296,7 @@ function seedLetters(): LetterCard[] {
       reject_reason: "Не наш профиль.",
     }),
     taxNotice(),
+    bankNoted(),
   ];
 }
 

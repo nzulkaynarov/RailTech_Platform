@@ -64,6 +64,9 @@ class Snapshot:
     tickets_total: int = 0
     # Просроченные заказы поставщикам (ERP `stock/overdue`): снабженцу — «Мои задачи» (D2-2).
     overdue_orders: list[dict[str, Any]] = field(default_factory=list)
+    # P8b: мои поручения, переносы на решение и ознакомления (EDS `GET /letter-tasks`); `None` —
+    # EDS не читали или он не ответил (строк нет).
+    letter_tasks: dict[str, list[dict[str, Any]]] | None = None
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -89,6 +92,15 @@ def wants_letters(view: View) -> bool:
 
 def wants_memos(view: View) -> bool:
     return view.wants("approve_memo") or view.wants("pay_memo")
+
+
+# Виды работы по входящим делопроизводства (P8b): поручение, перенос срока, ознакомление.
+LETTER_TASK_KINDS = ("instruction", "instruction_extension", "acquaint")
+LETTER_TASKS_PATH = "/api/v1/letter-tasks"
+
+
+def wants_letter_tasks(view: View) -> bool:
+    return any(view.wants(kind) for kind in LETTER_TASK_KINDS)
 
 
 def wants_tickets(view: View) -> bool:
@@ -185,6 +197,15 @@ async def load_snapshot(
                 snap.memos = rows(payload)
                 snap.memos_more = _has_more(payload)
 
+    async def load_letter_tasks() -> None:
+        if eds and wants_letter_tasks(view):
+            payload = await feed.get("eds", LETTER_TASKS_PATH, ttl=SNAPSHOT_TTL_SECONDS)
+            if isinstance(payload, dict):
+                snap.letter_tasks = {
+                    key: rows(payload.get(key))
+                    for key in ("instructions", "extensions", "acquaintances")
+                }
+
     async def load_deals() -> None:
         if deals:
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
@@ -216,5 +237,6 @@ async def load_snapshot(
         load_memos(),
         load_returned(),
         load_stock(),
+        load_letter_tasks(),
     )
     return snap

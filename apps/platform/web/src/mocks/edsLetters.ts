@@ -24,7 +24,15 @@ import {
   readLetters,
   writeLetters,
 } from "./fixtures/letters";
-import { buildMe, readSession } from "./mockSession";
+import { buildMe, readSession, sessionRoles } from "./mockSession";
+import {
+  canReadLetter,
+  draftFrom,
+  personOf,
+  rowExtras,
+  trackOf,
+  withOffice,
+} from "./edsInstructions";
 
 /**
  * Моки EDS · Входящие письма и резолюция (D1-3, BFF 0.16.0). Права — как в BFF: список, карточка и вложения — `eds.inbox` не ниже
@@ -98,7 +106,8 @@ const companyToday = () =>
     day: "2-digit",
   }).format(new Date());
 
-function present(letter: LetterCard, margin: boolean): LetterCard {
+function present(raw: LetterCard, margin: boolean): LetterCard {
+  const letter = withOffice(raw);
   if (margin || !letter.resolution) return letter;
   const resolution = { ...letter.resolution };
   delete resolution.min_margin_pct;
@@ -117,6 +126,7 @@ function row(letter: LetterCard): LetterRow {
     urgent: letter.urgent,
     due: letter.resolution?.due ?? null,
     kind: letter.kind ?? null,
+    ...rowExtras(letter),
   };
 }
 
@@ -243,11 +253,15 @@ export const edsLettersHandlers = [
     if (held.error) return held.error;
     const url = new URL(request.url);
     const statuses = url.searchParams.getAll("status") as LetterStatus[];
+    const onControl = url.searchParams.get("on_control") === "true";
+    const overdue = url.searchParams.get("overdue") === "true";
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
     const limit = Number(url.searchParams.get("limit") ?? 50);
     const start = Number(url.searchParams.get("cursor") ?? 0);
     const found = readLetters()
       .filter((l) => statuses.length === 0 || statuses.includes(l.status))
+      .filter((l) => !onControl || rowExtras(l).on_control)
+      .filter((l) => !overdue || rowExtras(l).overdue)
       .filter(
         (l) =>
           q === "" ||
@@ -302,6 +316,21 @@ export const edsLettersHandlers = [
     }
     const now = new Date().toISOString();
     const number = nextNumber();
+    const addressee = body.addressee_id ? personOf(body.addressee_id) : DIRECTOR;
+    if (!addressee) {
+      return invalid("addressee_id", "not_active_employee", "Сотрудник не найден или отключён.");
+    }
+    const session = readSession();
+    const user = session ? sessionRoles(session)?.user : undefined;
+    const registrar = user ? (personOf(user.id) ?? REGISTRAR) : REGISTRAR;
+    const draft = body.resolution_draft?.kind ? draftFrom(body.resolution_draft, registrar) : null;
+    if (body.resolution_draft?.kind && !draft) {
+      return invalid(
+        "resolution_draft",
+        "not_active_employee",
+        "Сотрудник не найден или отключён.",
+      );
+    }
     const letter: LetterCard = {
       id: crypto.randomUUID(),
       number,
@@ -311,8 +340,8 @@ export const edsLettersHandlers = [
       urgent: Boolean(body.urgent) || kind.urgent,
       received_at: body.received_at,
       registered_at: now,
-      registered_by: REGISTRAR,
-      addressee: DIRECTOR,
+      registered_by: registrar,
+      addressee,
       manager: null,
       sender: { name: body.sender_name, inn: body.sender_inn ?? null, contact: null },
       sender_ref: { number: body.sender_ref_number ?? null, date: body.sender_ref_date ?? null },
@@ -336,7 +365,7 @@ export const edsLettersHandlers = [
       resolution: null,
       return_comment: null,
       reject_reason: null,
-      journal: [{ at: now, action: "letter.registered", by: REGISTRAR, comment: null }],
+      journal: [{ at: now, action: "letter.registered", by: registrar, comment: null }],
       sources: { crm: "ok", erp: "ok" },
       kind: kind.code,
       receipt_method: body.receipt_method,
@@ -349,6 +378,7 @@ export const edsLettersHandlers = [
             path: `/eds/inbox/${encodeURIComponent(related.number)}`,
           }
         : null,
+      resolution_draft: draft,
     };
     writeLetters([letter, ...readLetters()]);
     return HttpResponse.json(present(letter, held.margin), { status: 201 });
@@ -367,8 +397,8 @@ export const edsLettersHandlers = [
   }),
 
   http.get("*/eds/letter-files/:id", () => {
-    const held = guard("read");
-    if (held.error) return held.error;
+    // Файлы письма и отчётов скачивает и участник поручения без «Входящих» (решает EDS, P8b).
+    if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
     return new HttpResponse("демо-файл", {
       headers: {
         "content-type": "application/octet-stream",
@@ -378,11 +408,18 @@ export const edsLettersHandlers = [
   }),
 
   http.get("*/eds/letters/*", ({ request }) => {
-    const held = guard("read");
-    if (held.error) return held.error;
+    const held = access();
+    if (!held) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
     const letter = findLetter(refOf(request));
     if (!letter) {
       return failure(404, "NOT_FOUND", "Письмо не найдено.", "eds", { backend_status: 404 });
+    }
+    // P8b: без «Входящих» карточку видит участник поручения (исполнитель, «ознакомить», автор резолюции) — решает EDS.
+    if (!canReadLetter(letter)) {
+      return failure(403, "FORBIDDEN", "Нет права.", "eds", {
+        backend_status: 403,
+        permission: ["letters.read"],
+      });
     }
     return HttpResponse.json(present(letter, held.margin));
   }),
@@ -395,6 +432,12 @@ export const edsLettersHandlers = [
     const body = (await request.json()) as ResolutionIn;
     const conflict = notAwaiting(letter);
     if (conflict) return conflict;
+    if (trackOf(letter) !== "calc") {
+      return failure(409, "CONFLICT", "У письма другой путь резолюции.", "eds", {
+        backend_status: 409,
+        reason: "track_mismatch",
+      });
+    }
     if (body.due < companyToday()) {
       return invalid("due", "due_in_past", "Срок расчёта не может быть в прошлом.");
     }

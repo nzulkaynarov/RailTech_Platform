@@ -31,6 +31,9 @@ subscribers:
       # Секрет пары eds → crm — RT_BUS_SECRET_EDS_CRM (только окружение).
       - uz.railtech.erp.mail.requested.v1
       - uz.railtech.eds.mail.requested.v1
+      # P8b (SPEC-v3 §3.2a): уведомления сотрудникам по поручениям входящих — колокольчик (staff_notifications) и Telegram;
+      # текст готовит EDS, доставляет CRM. Секрет пары eds → crm — тот же RT_BUS_SECRET_EDS_CRM.
+      - uz.railtech.eds.notice.requested.v1
 
   - name: erp
     endpoint: http://erp-backend:8000/bus/v1/events

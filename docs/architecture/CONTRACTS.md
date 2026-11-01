@@ -376,8 +376,9 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
 | `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
-| `uz.railtech.eds.*.v1` — 9 типов: 8 — §10.2, `mail.requested` — §9.9 | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
+| `uz.railtech.eds.*.v1` — 10 типов: 8 — §10.2, `mail.requested` — §9.9, `notice.requested` (P8b) — ниже | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), crm (`mail.requested`, `notice.requested`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
 | `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (W18A-P1) | `rt://erp`, `rt://eds` → crm (platform-bff получает по маскам и подсказок не даёт) | запрос письма почтовому сервису CRM: `request_key`, `purpose`, `to`, `reply_to?`, `subject`, `language?`, `ref?`, `notify?`, `attachments?` (метаданные), `content` (`alg = fernet-pair-v1`, шифртекст) — §9.9 |
+| `uz.railtech.eds.notice.requested.v1` (P8b, SPEC-v3 §3.2a) | `rt://eds` → crm (platform-bff — подсказка `notifications`, `counters`, `queue` по маске) | уведомление сотрудникам по поручениям входящих: `notice_key`, `kind` (`instruction_assigned`, `instruction_reminder`, `instruction_overdue`, `extension_requested`, `extension_decided`, `acquaint_requested`, `letter_executed`), `recipients` (`crm_user_id`), `title`, `subtitle?`, `letter` (`LetterRef`), `due?`, `actor`. Текст (RU) готовит EDS; CRM доставляет: строка колокольчика `staff_notifications` (`kind = eds.<kind>`, объект `letter`, вкладка «Решения» или «Система») и Telegram привязавшим его (элементы `staff` в `erp_event_notices`, после коммита). Неизвестный или отключённый получатель пропускается; повтор доставки — один эффект (inbox) |
 | `uz.railtech.crm.mail.sent.v1`, `uz.railtech.crm.mail.failed.v1` (W18A-P1) | `rt://crm` → erp (EDS подпишется, когда итог понадобится — B-W18AP1-1) | итог запроса с `notify`: `requester`, `request_key`, `purpose`, `ref?`, `email_log_id`, `attempts`, `sent_at` либо `failed_at` + `reason` (+ `detail`); ни текста, ни адресов |
 
 События CRM и identity — снимки (event-carried state transfer): подписчик заменяет проекцию целиком по внешнему
@@ -456,7 +457,8 @@ subscribers:
 `quote.ready_for_approval` (волна 12: себестоимость и маржа адресованы EDS); `erp` ← `uz.railtech.crm.client.updated.v1`,
 `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
 `uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`, с W18A-P1 — `uz.railtech.crm.mail.*.v1` (итог письма);
-`crm` с W18A-P1 ещё и ← `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (§9.9); `eds` — §10.2.
+`crm` с W18A-P1 ещё и ← `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (§9.9), с P8b — ←
+`uz.railtech.eds.notice.requested.v1` (колокольчик и Telegram сотрудникам по поручениям входящих); `eds` — §10.2.
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
 `uz.railtech.eds.*.v1` (с D1-6 — подсказки `queue`, `counters`, `notifications`): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
@@ -635,7 +637,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | Файл | Что | Версия |
 |---|---|---|
 | `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
-| `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 9 типов `uz.railtech.eds.*.v1` (8 — §10.2, `mail.requested` — §9.9) | v1 |
+| `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 10 типов `uz.railtech.eds.*.v1` (8 — §10.2, `mail.requested` — §9.9, `notice.requested` — P8b) | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
 | `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1; `User.permissions.sections` — разделы модулей EDS и ERP и уровень (`full`/`read`), необязательное, аддитивно в v1 (D1-8: зона исполнителя резолюции в EDS, `assignee_zone_mismatch`) | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
@@ -696,6 +698,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `uz.railtech.eds.approval.requested.v1` | шаг стал текущим: маршрут (круг) открыт — первый шаг; решение передало маршрут дальше — следующий шаг (`step.index`); кто решает | platform-bff |
 | `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ), `channels` и `approved_late` (одобрено с опозданием; необязательное, с 2026-10-26) | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
 | `uz.railtech.eds.mail.requested.v1` (W18A-P1) | EDS просит почтовый сервис CRM отправить письмо (`app/services/mail_out.py::request_mail`; первый вызов — письмо на бланке, P4) — §9.9 | crm (platform-bff — без подсказки) |
+| `uz.railtech.eds.notice.requested.v1` (P8b) | уведомление сотрудникам по поручениям входящих: поручение выдано, напоминание о сроке, «Просрочено», перенос запрошен и решён, «Ознакомиться», письмо исполнено; CRM — колокольчик (`staff_notifications`) и Telegram (`app/services/eds_notices.py`) | crm, platform-bff (подсказка) |
 
 ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) — EDS открывает маршрут «КП» с чек-листом. Подписка `eds` ←
 `uz.railtech.identity.user.*.v1` (проекция сотрудников с `permissions.eds`), `uz.railtech.erp.request.created.v1` (письмо по

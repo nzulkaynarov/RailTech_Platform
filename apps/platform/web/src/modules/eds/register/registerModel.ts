@@ -1,4 +1,8 @@
-import type { LetterReceiptMethod, LetterRegisterIn } from "../../../shared/api/generated/model";
+import type {
+  LetterReceiptMethod,
+  LetterRegisterIn,
+  LetterResolutionKind,
+} from "../../../shared/api/generated/model";
 import type { Attachment, DealChoice } from "../new/formModel";
 
 /** Способы получения (SPEC-v3 §3.2a п. 1) в порядке показа. */
@@ -26,6 +30,13 @@ export interface RegisterValues {
   deal: DealChoice | null;
   relatedNumber: string;
   attachments: Attachment[];
+  /** Адресат (P8b): `crm_user_id`; пусто — директор по умолчанию (решает EDS) */
+  addresseeId: string;
+  /** Проект резолюции делопроизводителя (P8b): тип пуст — проекта нет */
+  draftKind: LetterResolutionKind | "";
+  draftResponsibleId: string;
+  draftDue: string;
+  draftText: string;
 }
 
 export type RegisterField =
@@ -69,6 +80,11 @@ export function emptyRegister(today: string): RegisterValues {
     deal: null,
     relatedNumber: "",
     attachments: [],
+    addresseeId: "",
+    draftKind: "",
+    draftResponsibleId: "",
+    draftDue: "",
+    draftText: "",
   };
 }
 
@@ -121,5 +137,21 @@ export function toRegisterBody(values: RegisterValues): LetterRegisterIn {
     deal_number: values.deal ? dealNumber(values.deal) : null,
     related_number: text(values.relatedNumber),
     file_ids: [...new Set(ids)],
+    addressee_id: values.addresseeId || null,
+    resolution_draft: draftOf(values),
+  };
+}
+
+/** Проект резолюции из формы регистрации (P8b): у «Для сведения» нет ответственного и срока; тип не выбран — проекта нет. */
+export function draftOf(values: RegisterValues): LetterRegisterIn["resolution_draft"] {
+  if (!values.draftKind) return null;
+  const executor = values.draftKind !== "info";
+  return {
+    kind: values.draftKind,
+    responsible_id: executor && values.draftResponsibleId ? values.draftResponsibleId : null,
+    due: executor && values.draftDue ? values.draftDue : null,
+    text: text(values.draftText),
+    co_executor_ids: [],
+    acquaint_ids: [],
   };
 }

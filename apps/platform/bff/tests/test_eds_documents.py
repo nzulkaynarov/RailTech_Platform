@@ -474,6 +474,44 @@ async def test_create_letter_sends_recipient(web: Web, eds: EdsFake) -> None:
     assert eds.body("POST", "documents")["recipient"] == {"name": "ООО «Пример»", "inn": None}
 
 
+REPLY_TO_ID = "40000000-0000-4000-8000-000000000112"
+
+
+async def test_letter_in_reply_to_an_incoming_letter_sends_its_id(web: Web, eds: EdsFake) -> None:
+    """P8b: «В ответ на ВХ» — номер входящего; BFF находит id по реестру, поручения закрывает EDS"""
+    await web.login(["MANAGER"])
+    eds.answer(
+        "GET",
+        "registry",
+        body={
+            "items": [{"kind": "letter_in", "id": REPLY_TO_ID, "number": "ВХ-112/26"}],
+            "next_cursor": None,
+        },
+    )
+    form = {**FORM, "kind": "letter_out", "in_reply_to_number": " ВХ-112/26 "}
+    form.pop("amount")
+
+    assert (await web.send("POST", f"{BASE}/documents", json=form)).status_code == 201
+
+    assert eds.body("POST", "documents")["in_reply_to"] == REPLY_TO_ID
+    assert eds.last("GET", "registry").url.params["number"] == "ВХ-112/26"
+
+
+async def test_reply_to_an_unknown_number_or_not_a_letter_is_422(web: Web, eds: EdsFake) -> None:
+    await web.login(["MANAGER"])
+    eds.answer("GET", "registry", body={"items": [], "next_cursor": None})
+    letter = {**FORM, "kind": "letter_out", "in_reply_to_number": "ВХ-999/26"}
+    letter.pop("amount")
+    memo = {**FORM, "in_reply_to_number": "ВХ-112/26"}
+
+    for form, reason in ((letter, "not_found"), (memo, "letter_out_only")):
+        response = await web.send("POST", f"{BASE}/documents", json=form)
+        assert response.status_code == 422, form
+        details = response.json()["details"]
+        assert (details["fields"], details["reason"]) == (["in_reply_to_number"], reason)
+    assert eds.requests("POST", "documents") == []
+
+
 async def test_create_submit_rejected_keeps_the_saved_document(web: Web, eds: EdsFake) -> None:
     """
     Документ создан, отправка отклонена: ошибка называет сохранённый черновик — введённое не
