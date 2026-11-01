@@ -1,9 +1,10 @@
 """Сквозной поиск ⌘K: CRM — лиды и клиенты, ERP — сделки и документы; группы по модулям.
 
-Каждая группа и каждый результат проходят по матрице ролей «вида» (`platform-rbac.yaml`): что
-раздел скрывает, того в поиске нет. Сделки (заявки ЗВ, проекты ПР) ищет сам ERP:
-`GET /crm/deals/?search=` по номеру (латиница ZV/PR и пробелы допустимы), названию и компании
-(ERP-09); BFF поиск не повторяет.
+Заявка (ЗВ) ведёт в «Заявки в расчёте» с окном «Задание» (B-UIA-1) и находится у ролей с
+разделом `erp.calc`. Каждая группа и каждый результат проходят по матрице ролей «вида»
+(`platform-rbac.yaml`): что раздел скрывает, того в поиске нет. Сделки (заявки ЗВ, проекты ПР)
+ищет сам ERP: `GET /crm/deals/?search=` по номеру (латиница ZV/PR и пробелы допустимы),
+названию и компании (ERP-09); BFF поиск не повторяет.
 """
 
 import asyncio
@@ -158,7 +159,9 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     can_leads = allows(access, "crm.leads", "read")
     can_clients = allows(access, "crm.clients", "read")
     can_docs = any(allows(access, res, "read") for res in set(_DOC_RESOURCE.values()))
-    can_deals = allows(access, "eds.projects", "read") or can_clients
+    # Номер ЗВ открывает рабочий экран заявки «Заявки в расчёте» (B-UIA-1): раздел `erp.calc`.
+    can_requests = allows(access, "erp.calc", "read")
+    can_deals = allows(access, "eds.projects", "read") or can_requests
     lead_id = lead_id_of(query)
     can_registry = any(
         allows(access, res, "read") for sections in _REGISTRY_SECTIONS.values() for res in sections
@@ -213,7 +216,7 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     )
     matching = [d for d in all_deals if isinstance(d.get("id"), int)]
     index = await _deals_of_documents(feed, matching, all_docs)
-    requests = [_deal_hit(d) for d in matching if deal_ref(d).kind == "request" and can_clients]
+    requests = [_deal_hit(d) for d in matching if deal_ref(d).kind == "request" and can_requests]
     projects = [
         _deal_hit(d)
         for d in matching

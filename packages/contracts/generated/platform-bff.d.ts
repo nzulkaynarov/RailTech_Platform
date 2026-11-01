@@ -773,6 +773,17 @@ export interface paths {
      *     `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
      *     реестре, которого у исполнителя может не быть); одна строка на поручение,
      *     перенос и ознакомление — без дублей.
+     *
+     *     Работа ERP (D2-8; что ждёт и чья очередь — решает ERP, BFF только показывает):
+     *     `calc_task` — мои задания на расчёт (ERP `GET /calc/tasks/?mine=1`, стадии расчёта): «Начать расчёт», «Завизировать
+     *     строки» (ждут визы зоны, которую даёт раздел `erp.calc.goods` или `erp.calc.services`), «Отправить расчёт директору»
+     *     (все визы собраны), «Доработать расчёт» (директор вернул); строка открывает расчёт `/erp/calc/{ЗВ}`.
+     *     `confirm_payment` — платёжки клиентов на подтверждение, `issue_invoice` — счета-черновики к выставлению (ERP
+     *     `GET /finance/receivables/?tab=proofs|to_issue`); строка открывает счёт `/eds/payments/{id}?panel=open&tab=payment`.
+     *     `issue_contract` — сформировать, отправить клиенту, подписать или доработать договор, `attach_scan` — приложить скан
+     *     подписанного договора, `issue_act` — выпустить акт (счета оплачены, акта нет) или выпустить заново (заказчик вернул)
+     *     (ERP `GET /crm/projects/?step=CONTRACT|PAYMENT`); строка открывает проект `/eds/projects/{ПР}` на вкладке «Договор» или
+     *     «Акт». Один объект — одна строка: у роли, совмещающей несколько видов, дублей нет.
      */
     get: operations["getQueue"];
     put?: never;
@@ -1487,6 +1498,26 @@ export interface paths {
      * @description ERP `POST /finance/receivables/{id}/request-payment-doc/`. Фиксирует в журнале счёта, что платёжку запросили. Автоматической отправки клиенту в бот или почту в main нет (клиенту пишет бот по событиям шины, письма ERP уходят сотрудникам клиента, которых нет): текст сообщения сотрудник отправляет сам через «Чаты». Автоотправка — хвост (B-D24-1). Раздел `eds.payments` — полный.
      */
     post: operations["requestPaymentDoc"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}/issue": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Выставить счёт (черновик → «Выставлен»)
+     * @description ERP `POST /crm/invoices/{id}/issue/` (право ERP `finance.invoice`): дата выставления — сегодня, срок оплаты отсчитывается от неё (если не задан вручную), реквизиты продавца фиксируются в счёте, ERP формирует PDF, клиент видит счёт в кабинете, получает сообщение бота и письмо (события `invoice.issued`). Ответ — карточка счёта после выставления. Счёт уже выставлен — 409 `already_issued`; у компании не заполнены расчётный счёт и МФО — 409 `bank_details_required`. Раздел `eds.payments` — полный.
+     */
+    post: operations["issuePayment"];
     delete?: never;
     options?: never;
     head?: never;
@@ -6853,6 +6884,7 @@ export interface components {
       | "issue_invoice"
       | "issue_contract"
       | "attach_scan"
+      | "issue_act"
       | "pay_memo"
       | "overdue_invoice"
       | "ticket"
@@ -11175,7 +11207,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка), `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой или датой); обновите карточку */
+    /** @description 409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка), `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой или датой), `already_issued` (счёт уже выставлен), `bank_details_required` (у компании не заполнены расчётный счёт и МФО — выставить счёт нельзя); обновите карточку */
     PaymentConflict: {
       headers: {
         [name: string]: unknown;
@@ -13808,6 +13840,37 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Запрос отмечен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["PaymentConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  issuePayment: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Счёт выставлен */
       200: {
         headers: {
           [name: string]: unknown;

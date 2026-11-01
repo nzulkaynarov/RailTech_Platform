@@ -422,6 +422,8 @@ queue:
   issue_invoice: { resource: eds.payments, level: full }
   issue_contract: { resource: eds.projects, level: full }
   attach_scan: { resource: eds.projects, level: full }
+  # D2-8: «Выпустить акт» — проект оплачен, акта нет или его вернул заказчик (ERP `act_blocker`, право `fulfillment.act`).
+  issue_act: { resource: eds.projects, level: full }
   pay_memo: { resource: eds.payments, level: full }
   overdue_invoice: { resource: eds.payments, level: full }
   ticket: { resource: admin, level: full }

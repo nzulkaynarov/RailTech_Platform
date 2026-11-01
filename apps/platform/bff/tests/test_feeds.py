@@ -493,6 +493,7 @@ async def test_menu_counters_for_supply_have_no_action_badges(
     assert [(c["module"], c["section"], c["attention"]) for c in response.json()["items"]] == [
         ("dashboard", "queue", False),
         ("erp", "stock", False),
+        ("erp", "calc", False),  # D2-8: «Мои расчёты» — заданий нет, бейдж серый
         ("dashboard", "projects", False),
         ("eds", "projects", False),
     ]
@@ -632,7 +633,9 @@ async def test_activity_falls_back_to_deal_timelines_when_log_is_closed(
     items = response.json()["items"]
     assert [i["text"] for i in items] == ["КП отправлено клиенту · ЗВ-2027-005"]
     assert items[0]["module"] == "eds"
-    assert items[0]["object"]["path"].startswith("/crm/requests?request=")
+    # B-UIA-1: номер ЗВ — рабочий экран заявки, «Заявки в расчёте» с окном «Задание»
+    assert items[0]["object"]["path"].startswith("/erp/requests?request=")
+    assert items[0]["object"]["path"].endswith("panel=open&tab=task")
     assert fb.query(fb.erp["timeline"])["deal_id"] == "5"
 
 
@@ -691,7 +694,9 @@ async def test_notifications_come_from_erp_with_tabs_and_objects(
     assert by_id["erp:3"]["tab"] == "system"
     assert by_id["erp:2"]["read"] is True
     assert by_id["erp:1"]["object"]["number"] == "ЗВ-2027-005"
-    assert by_id["erp:1"]["object"]["path"].endswith("panel=open&tab=documents")
+    # B-UIA-1: заявка (ещё не проект) открывается окном «Задание» в «Заявках в расчёте»
+    assert by_id["erp:1"]["object"]["path"].startswith("/erp/requests?request=")
+    assert by_id["erp:1"]["object"]["path"].endswith("panel=open&tab=task")
     assert by_id["erp:1"]["subtitle"] == "ЗВ-2027-005 · ООО «Демо-Депо»"
     assert "object" not in by_id["erp:3"]  # системное событие без сделки — без объекта
 
@@ -902,7 +907,7 @@ async def test_search_finds_a_deal_by_its_number(
     fb.state["documents"] = {"results": []}
     fb.state["leads"] = {"items": [], "total": 0}
     fb.state["clients"] = []
-    await web.login(["MANAGER"])
+    await web.login(["MANAGER_ALL"])
 
     response = await web.client.get("/api/v1/search", params={"q": "зв-2027-104"})
 
@@ -911,7 +916,10 @@ async def test_search_finds_a_deal_by_its_number(
     assert response.json()["groups"][0]["module"] == "crm"
     assert hit["object"]["kind"] == "request"
     assert hit["object"]["number"] == "ЗВ-2027-104"
-    assert hit["object"]["path"].startswith("/crm/requests?request=")
+    # B-UIA-1: поиск по номеру открывает заявку, а не заглушку «Клиенты · Заявки»
+    assert hit["object"]["path"] == (
+        "/erp/requests?request=%D0%97%D0%92-2027-104&panel=open&tab=task"
+    )
     assert hit["title"] == "ЗВ-2027-104 · Стрелочные приводы"
     assert hit["subtitle"] == "ООО «Демо-Депо» · Расчёт"
 
@@ -926,7 +934,7 @@ async def test_search_leaves_the_request_number_to_erp(
     """Номер ЗВ ищет ERP (ERP-09): латиница и пробелы — его забота, BFF шлёт запрос как набран."""
     search_data(fb)
     fb.state["documents"] = {"results": []}
-    await web.login(["MANAGER"])
+    await web.login(["MANAGER", "SUPPLY"])
 
     response = await web.client.get("/api/v1/search", params={"q": query})
 
@@ -1293,3 +1301,18 @@ def test_client_actions_from_the_cabinet_are_decisions(code: str) -> None:
     from app.feeds.notifications import tab_of
 
     assert tab_of(code) == "decisions"
+
+
+async def test_request_hits_need_the_costing_section_where_the_request_opens(
+    web: Web, fb: FeedBackends
+) -> None:
+    """B-UIA-1: заявка открывается в «Заявках в расчёте» (`erp.calc`); роль без раздела ссылку на
+    чужой экран не получает."""
+    search_data(fb)
+    fb.state["documents"] = {"results": []}
+    await web.login(["MANAGER"])
+
+    response = await web.client.get("/api/v1/search", params={"q": "ЗВ-2027-104"})
+
+    kinds = [h["object"]["kind"] for g in response.json()["groups"] for h in g["items"]]
+    assert "request" not in kinds

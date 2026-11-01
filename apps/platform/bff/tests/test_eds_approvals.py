@@ -168,7 +168,7 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
     assert card["request"] == {
         "number": "ЗВ-2026-104",
         "title": "Стрелочные приводы",
-        "path": "/crm/requests?request=%D0%97%D0%92-2026-104&panel=open&tab=card",
+        "path": "/erp/requests?request=%D0%97%D0%92-2026-104&panel=open&tab=task",
     }
     assert card["letter"] == {"number": "ВХ-104/26", "path": "/eds/inbox/%D0%92%D0%A5-104%2F26"}
     assert card["calculated_by"] == [

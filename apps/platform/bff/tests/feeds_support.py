@@ -71,6 +71,11 @@ class FeedBackends:
             "registry": {"items": [], "next_cursor": None},
             # EDS (P8b): мои поручения, переносы на решение и ознакомления
             "letter_tasks": {"instructions": [], "extensions": [], "acquaintances": []},
+            # D2-8, работа ERP: мои задания на расчёт, доска счетов по вкладкам, проекты по шагам
+            "calc_tasks": {"results": []},
+            "receivables": {"proofs": [], "to_issue": []},
+            "receivable_counts": {"to_issue": 0, "awaiting": 0, "proofs": 0, "overdue": 0},
+            "projects": {"CONTRACT": [], "PAYMENT": []},
         }
         self.mark_read_status = 200
         self.mark_all_status = 200
@@ -109,6 +114,11 @@ class FeedBackends:
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
             "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
+            "calc_tasks": self._erp("calc_tasks", router.get(f"{base}/calc/tasks/")),
+            "receivables": router.get(f"{base}/finance/receivables/").mock(
+                side_effect=self._receivables
+            ),
+            "projects": router.get(f"{base}/crm/projects/").mock(side_effect=self._projects),
         }
         self.deal_by_id = router.get(
             url__regex=re.compile(rf"^{ERP_URL}/api/v1/crm/deals/\d+/$")
@@ -156,6 +166,27 @@ class FeedBackends:
         size = request.url.params.get("page_size")
         page = found[: int(size)] if size else found
         return httpx.Response(200, json={**body, "count": len(found), "results": page})
+
+    def _receivables(self, request: httpx.Request) -> httpx.Response:
+        """Доска счетов ERP: строки вкладки `tab` и числа всех вкладок (`counts`)."""
+        if self.erp_down is not None:
+            return self._respond("receivables", self.erp_down)
+        tab = request.url.params.get("tab", "awaiting")
+        items = self.state["receivables"].get(tab, [])
+        body = {
+            "tab": tab,
+            "count": len(items),
+            "counts": self.state["receivable_counts"],
+            "results": items,
+        }
+        return httpx.Response(200, json=body)
+
+    def _projects(self, request: httpx.Request) -> httpx.Response:
+        """Проекты ERP по шагу `step`."""
+        if self.erp_down is not None:
+            return self._respond("projects", self.erp_down)
+        items = self.state["projects"].get(request.url.params.get("step", ""), [])
+        return httpx.Response(200, json={"count": len(items), "results": items})
 
     def _deal(self, request: httpx.Request) -> httpx.Response:
         """Сделка по id (`/crm/deals/{id}/`)."""

@@ -174,7 +174,7 @@ async def test_card_by_id_collects_details_links_and_the_step(
     assert card["request"] == {
         "number": "ЗВ-2026-104",
         "title": "Стрелочные приводы",
-        "path": "/crm/requests?request=%D0%97%D0%92-2026-104&panel=open&tab=card",
+        "path": "/erp/requests?request=%D0%97%D0%92-2026-104&panel=open&tab=task",
     }
     assert card["files"] == [
         {
@@ -285,7 +285,7 @@ async def test_erp_down_gives_a_partial_card_not_an_error(
     assert card["stage"] == "CALCULATION"  # по самому письму: данных заявки нет
     assert card["request"]["number"] == "ЗВ-2026-104"
     assert card["request"]["title"] is None
-    assert card["request"]["path"].startswith("/crm/requests?request=")
+    assert card["request"]["path"].startswith("/erp/requests?request=")
     assert card["number"] == NUMBER  # письмо показано целиком
     assert card["subject"]
 
