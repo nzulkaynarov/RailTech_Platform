@@ -371,6 +371,10 @@ export const QUEUE = {
     resource: "eds.projects",
     level: "full",
   },
+  issue_act: {
+    resource: "eds.projects",
+    level: "full",
+  },
   pay_memo: {
     resource: "eds.payments",
     level: "full",

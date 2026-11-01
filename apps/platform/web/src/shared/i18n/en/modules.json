@@ -34,6 +34,10 @@
           "text": "New letters come from CRM, draft quotes from ERP, memos from employees.",
           "action": "Projects"
         },
+        "universal": {
+          "title": "No tasks for you",
+          "text": "Leads, costing tasks, client payment orders, invoices to issue, contracts and acts will appear here and in the bell."
+        },
         "manager": {
           "title": "No clients are waiting for you right now",
           "text": "New client messages from Telegram and email will appear here and in the bell."
@@ -61,8 +65,8 @@
       },
       "partial": {
         "crm": "Leads and client replies did not load: the “{{crm}}” section did not respond. The rest is shown.",
-        "erp": "Quotes to approve and costings did not load: the “{{erp}}” section did not respond. The rest is shown.",
-        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown.",
+        "erp": "Commercial offers, costings, invoices and projects did not load: “{{erp}}” did not respond. The rest is shown.",
+        "both": "Leads, offers, costings, invoices and projects did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown.",
         "eds": "Letters and documents did not load: the “{{eds}}” section did not respond. The rest is shown.",
         "multi": "Data from the {{names}} sections did not load. The rest is shown."
       },

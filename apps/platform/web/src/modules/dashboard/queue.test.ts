@@ -11,6 +11,11 @@ describe("queueEmptyKind: пустое состояние — по раздел�
     ["письма и резолюции", { "eds.inbox": "full" }, "director"],
     ["одобрение КП", { "eds.drafts": "full", "eds.payments": "full" }, "director"],
     ["согласование служебок", { "eds.memo.approve": "full" }, "director"],
+    [
+      "продажи, расчёт, счета и оплаты (менеджер-универсал)",
+      { "crm.leads": "full", "erp.calc": "full", "eds.payments": "full", "eds.inbox": "read" },
+      "universal",
+    ],
     ["платёжки", { "eds.payments": "full", "erp.calc": "read" }, "accountant"],
     ["виза товаров и склада", { "erp.calc.goods": "full", "erp.stock": "full" }, "supply"],
     ["виза услуг", { "erp.calc.services": "full", "erp.stock": "full" }, "engineer"],

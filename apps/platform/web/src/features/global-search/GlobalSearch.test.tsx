@@ -28,9 +28,35 @@ function type(box: HTMLElement, value: string) {
   fireEvent.change(box, { target: { value } });
 }
 
+/** Объект без экрана Платформы (исходящее КП: «Исходящие» — мост в старый ERP) — для проверок «Где посмотреть». */
+function outboxQuoteFound() {
+  server.use(
+    http.get("*/search", () =>
+      HttpResponse.json({
+        groups: [
+          {
+            module: "eds",
+            items: [
+              {
+                title: "КП-2026/117",
+                object: {
+                  kind: "quote",
+                  number: "КП-2026/117",
+                  path: "/eds/outbox/%D0%9A%D0%9F-2026%2F117?panel=open&tab=card",
+                },
+              },
+            ],
+          },
+        ],
+        sources: { crm: "ok", erp: "ok" },
+      }),
+    ),
+  );
+}
+
 describe("Глобальный поиск", () => {
   it("находит сделку по номеру; результаты — группой модуля с названием вида объекта", async () => {
-    signInAs("manager@demo.example");
+    signInAs("universal@demo.example");
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
@@ -41,6 +67,23 @@ describe("Глобальный поиск", () => {
     const option = within(group).getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
     expect(option).toHaveTextContent("Заявка");
     expect(box).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("номер ЗВ открывает заявку в «Заявках в расчёте» с окном «Задание», а не подсказку «в старом ERP» (B-UIA-1)", async () => {
+    signInAs("universal@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "ЗВ-2026-104");
+    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/erp/requests");
+    });
+    const params = new URLSearchParams(router.state.location.search);
+    expect(params.get("request")).toBe("ЗВ-2026-104");
+    expect(params.get("tab")).toBe("task");
+    expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
   });
 
   it("группы по модулям: CRM и EDS; роль видит только свои разделы", async () => {
@@ -162,17 +205,18 @@ describe("Глобальный поиск", () => {
   });
 
   it("у объекта без экрана — «Где посмотреть» с мостом, а не заглушка: адрес не меняется, поиск остаётся открытым", async () => {
+    outboxQuoteFound();
     signInAs("manager@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "ЗВ-2026-104");
-    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
+    type(box, "КП-2026/117");
+    fireEvent.click(await screen.findByRole("option", { name: /КП-2026\/117/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
-    expect(within(where).getByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeInTheDocument();
+    expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
-    expect(box).toHaveValue("ЗВ-2026-104");
+    expect(box).toHaveValue("КП-2026/117");
 
     fireEvent.click(within(where).getByRole("button", { name: "Закрыть подсказку" }));
     expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
@@ -202,12 +246,13 @@ describe("Глобальный поиск", () => {
   });
 
   it("«Где посмотреть»: появляется в области aria-live, Escape внутри закрывает её и возвращает фокус в поле", async () => {
+    outboxQuoteFound();
     signInAs("manager@demo.example");
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "ЗВ-2026-104");
-    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
+    type(box, "КП-2026/117");
+    fireEvent.click(await screen.findByRole("option", { name: /КП-2026\/117/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
     expect(where.parentElement).toHaveAttribute("aria-live", "polite");
@@ -402,7 +447,7 @@ describe("Глобальный поиск", () => {
   });
 
   it("Escape закрывает список, второй Escape очищает поле", async () => {
-    signInAs("manager@demo.example");
+    signInAs("universal@demo.example");
     renderApp("/dashboard/queue");
     const box = await searchBox();
     type(box, "ЗВ-2026");

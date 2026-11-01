@@ -222,7 +222,7 @@ function awaiting(seed: Seed): LetterCard {
     request: {
       number: dealNumber,
       title: dealNumber === ERP_DOWN_DEAL_NUMBER ? null : seed.title,
-      path: `/crm/requests?request=${encodeURIComponent(dealNumber)}&panel=open&tab=card`,
+      path: `/erp/requests?request=${encodeURIComponent(dealNumber)}&panel=open&tab=task`,
     },
     stage: "RESOLUTION",
     lost_at_step: null,

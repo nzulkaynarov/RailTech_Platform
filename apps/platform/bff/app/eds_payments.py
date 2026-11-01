@@ -61,6 +61,17 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "Платёж с таким номером операции уже записан с другой суммой или датой.",
     ),
 }
+# Отказы ERP «Выставить счёт» (`POST /crm/invoices/{id}/issue/`, 400 с кодом): для сотрудника —
+# конфликт с состоянием счёта или компании.
+_ISSUE_CONFLICTS: dict[str, tuple[str, str]] = {
+    "INVOICE_ALREADY_ISSUED": ("already_issued", "Счёт уже выставлен. Обновите карточку."),
+    "SELLER_BANK_DETAILS_REQUIRED": (
+        "bank_details_required",
+        "Счёт без расчётного счёта и МФО компании не выставить: заполните их в «Настройки · "
+        "Компания и бланки».",
+    ),
+}
+INVOICES_API = "/api/v1/crm/invoices/"
 # Отказы проверки ERP по одному полю тела BFF (поле ERP `paid_at` в теле BFF — `date`).
 _FIELD_OF = {
     "PAYMENT_DATE_IN_FUTURE": "date",
@@ -119,6 +130,28 @@ def payments_error(response: httpx.Response) -> PlatformError:
     if status == 403:
         return from_backend("erp", response)
     return error
+
+
+def issue_error(response: httpx.Response) -> PlatformError:
+    """Отказ «Выставить счёт»: 400 ERP с кодом состояния -> 409 с причиной; сотрудник не продавца
+    -> 403; остальное — общий перевод ошибок счетов."""
+    code = _code(response)
+    details: dict[str, Any] = {"backend_status": response.status_code}
+    if code:
+        details["backend_code"] = code
+    if response.status_code == 400 and code in _ISSUE_CONFLICTS:
+        reason, message = _ISSUE_CONFLICTS[code]
+        details["reason"] = reason
+        return PlatformError("CONFLICT", message, status_code=409, source="erp", details=details)
+    if response.status_code == 400 and code == "MEMBER_REQUIRED_FOR_ACTION":
+        return PlatformError(
+            "FORBIDDEN",
+            "Выставить счёт может сотрудник компании с правом выставлять счета.",
+            status_code=403,
+            source="erp",
+            details=details,
+        )
+    return payments_error(response)
 
 
 # --- ERP: счета, платёжки, оплаты
@@ -342,6 +375,14 @@ class Receivables:
             content_type=content_type,
             expected=201,
         )
+
+    async def issue(self, invoice_id: int) -> dict[str, Any]:
+        """Черновик -> «Выставлен» (ERP: право `finance.invoice`, PDF, кабинет, бот и письмо
+        клиенту); ответ — карточка счёта доски после выставления."""
+        response = await self._authed.call("erp", "POST", f"{INVOICES_API}{invoice_id}/issue/")
+        if response.status_code != 200:
+            raise issue_error(response)
+        return await self.card(invoice_id)
 
     async def request_doc(self, invoice_id: int) -> dict[str, Any]:
         return await self._json("POST", f"{invoice_id}/request-payment-doc/")

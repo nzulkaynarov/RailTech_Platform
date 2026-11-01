@@ -369,7 +369,12 @@ export const edsApprovalsHandlers = [
     const view: MemoApprovalCard = {
       ...card,
       can_decide: can,
-      allowed_decisions: can ? ["approve", "return", "reject"] : [],
+      // EDS 0.5.0+ (B-D24-5): на шаге бухгалтера решения «Принять» нет — шаг закрывает «Оплачено» в «Счета и оплаты»
+      allowed_decisions: can
+        ? card.accountant_step
+          ? ["return", "reject"]
+          : ["approve", "return", "reject"]
+        : [],
     };
     return HttpResponse.json(view);
   }),
@@ -394,6 +399,13 @@ export const edsApprovalsHandlers = [
       });
     }
     const accountant = card.accountant_step;
+    if (accountant && body.decision === "approve") {
+      // EDS 0.5.0+: шаг бухгалтера закрывает «Оплачено» (`POST /documents/{id}/payment`), не решение «Принять»
+      return failure(409, "CONFLICT", "Шаг бухгалтера закрывает «Оплачено».", "eds", {
+        backend_status: 409,
+        reason: "payment_required",
+      });
+    }
     const actor = accountant ? ACCOUNTANT_PERSON : DIRECTOR_PERSON;
     const goesOn = body.decision === "approve" && card.steps.some((s) => s.status === "pending");
     const steps = decideSteps(card.steps, body.decision, body.comment, actor);

@@ -34,6 +34,10 @@
           "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
           "action": "Loyihalar"
         },
+        "universal": {
+          "title": "Siz uchun vazifalar yo‘q",
+          "text": "Lidlar, hisob-kitob topshiriqlari, mijozlar to‘lov topshiriqnomalari, chiqariladigan hisoblar, shartnomalar va dalolatnomalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
         "manager": {
           "title": "Mijozlar hozir sizni kutmayapti",
           "text": "Telegram va pochtadan kelgan yangi xabarlar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
@@ -61,8 +65,8 @@
       },
       "partial": {
         "crm": "Lidlar va mijozlarga javoblar yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "erp": "Tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{erp}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "both": "Lidlar, tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{crm}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan.",
+        "erp": "TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{erp}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "both": "Lidlar, TT, hisob-kitoblar, hisoblar va loyihalar yuklanmadi: «{{crm}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan.",
         "eds": "Xatlar va hujjatlar yuklanmadi: «{{eds}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
         "multi": "{{names}} bo‘limlaridan ma’lumotlar yuklanmadi. Qolgani ko‘rsatilgan."
       },

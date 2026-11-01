@@ -110,16 +110,23 @@ def deal_title(deal: dict[str, Any]) -> str:
     return str(deal.get("title") or deal.get("company_name") or deal_number(deal))
 
 
+def request_path(number: str) -> str:
+    """Рабочий экран заявки (B-UIA-1): «Расчёт · Заявки в расчёте» с боковым окном «Задание» —
+    резолюция директора, исполнители, визы и «Открыть расчёт». «Клиенты · Заявки» — заглушка, а у
+    блока «Заявки и проекты» карточки клиента нет адреса по номеру ЗВ; номер ЗВ ведёт сюда отовсюду:
+    очередь, колокольчик, лента, поиск, письмо, КП."""
+    return f"/erp/requests?request={segment(number)}&panel=open&tab=task"
+
+
 def deal_ref(deal: dict[str, Any], *, tab: str = "card") -> ObjectRef:
-    """Заявка (ЗВ) открывается в «Все заявки» CRM, проект (ПР) — в EDS; боковое окно — на вкладке
-    `tab`."""
+    """Заявка (ЗВ) открывается в «Заявках в расчёте» (окно «Задание», `request_path`), проект (ПР)
+    — в EDS; боковое окно проекта — на вкладке `tab`."""
     step = deal_step(deal)
     number = deal_number(deal)
-    side = f"panel=open&tab={tab}"
     if deal_kind(step) == "project":
-        path = f"/eds/projects/{segment(number)}?{side}"
+        path = f"/eds/projects/{segment(number)}?panel=open&tab={tab}"
     else:
-        path = f"/crm/requests?request={segment(number)}&{side}"
+        path = request_path(number)
     return ObjectRef(
         kind=deal_kind(step),
         number=number,
@@ -206,4 +213,45 @@ def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:
         number=number,
         title=supplier,
         path=f"/erp/stock/{segment(number)}",
+    )
+
+
+def calc_ref(number: str, title: str | None) -> ObjectRef:
+    """Задание на расчёт (D2-8): экран расчёта заявки `/erp/calc/ЗВ-…` — строки, визы, «Расчёт
+    готов»."""
+    return ObjectRef(
+        kind="request",
+        number=number,
+        title=title,
+        path=f"/erp/calc/{segment(number)}",
+        step="CALCULATION",
+    )
+
+
+def invoice_ref(invoice_id: int, number: str, title: str | None) -> ObjectRef:
+    """Счёт (D2-8): карточка в «Счетах и оплатах» с окном «Оплата» — «Подтвердить оплату» или
+    «Выставить счёт»."""
+    return ObjectRef(
+        kind="invoice",
+        number=number,
+        title=title,
+        path=f"/eds/payments/{invoice_id}?panel=open&tab=payment",
+    )
+
+
+def project_doc_ref(
+    kind: Literal["project", "contract", "act"],
+    number: str,
+    project: str,
+    title: str | None,
+    *,
+    tab: Literal["contract", "act"],
+) -> ObjectRef:
+    """Договор или акт проекта (D2-8): карточка проекта `/eds/projects/ПР-…` на вкладке
+    «Договор» или «Акт», где кнопки шага (сформировать, отправить, скан, выпустить)."""
+    return ObjectRef(
+        kind=kind,
+        number=number,
+        title=title,
+        path=f"/eds/projects/{segment(project)}?panel=open&tab={tab}",
     )

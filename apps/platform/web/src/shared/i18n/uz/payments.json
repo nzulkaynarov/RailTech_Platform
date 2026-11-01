@@ -137,7 +137,7 @@
       },
       "draft": {
         "title": "Hisob hali rasmiylashtirilmagan",
-        "text": "To‘lovni faqat rasmiylashtirilgan hisob bo‘yicha tasdiqlash mumkin."
+        "text": "To‘lov chiqarilgan hisob bo‘yicha tasdiqlanadi. Uni «Hisoblar va to‘lovlar»ga to‘liq ruxsati bor xodim chiqaradi."
       },
       "cancelled": {
         "title": "Hisob bekor qilingan",
@@ -427,6 +427,26 @@
       "document_paid": "To‘langan",
       "document_archived": "Arxivga o‘tkazilgan",
       "file_attached": "Fayl biriktirilgan"
+    }
+  },
+  "issue": {
+    "name": "Hisobni chiqarish",
+    "submit": "Hisobni chiqarish",
+    "lead": "{{number}} hisobi — qoralama: mijoz uni hali ko‘rmaydi.",
+    "consequence": {
+      "step1": "Hisob «Chiqarilgan» holatini va bugungi chiqarilgan sanani oladi; to‘lov muddati qo‘lda belgilanmagan bo‘lsa, shu sanadan hisoblanadi.",
+      "step2": "ERP kompaniya rekvizitlari bilan PDF tayyorlaydi; hisob summalari endi o‘zgarmaydi.",
+      "step3": "{{client}} hisobni kabinetda ko‘radi, Telegram-botda xabar va pochtaga xat oladi.",
+      "step4": "Hisob «To‘lovni kutmoqda» bo‘limida paydo bo‘ladi; to‘lovni shu yerda tasdiqlash mumkin."
+    },
+    "done": "{{number}} hisobi chiqarildi.",
+    "reasons": {
+      "already_issued": "Hisob allaqachon chiqarilgan. Karta yangilandi.",
+      "bank_details_required": "Kompaniyaning hisob raqami va MFO siz hisobni chiqarib bo‘lmaydi: ularni «Sozlamalar · Kompaniya va blankalar»da to‘ldiring.",
+      "forbidden": "Hisob chiqarish sizning rolingizga ruxsat etilmagan.",
+      "not_found": "Hisob topilmadi. Ro‘yxatni yangilang.",
+      "unavailable": "ERP hozir javob bermayapti. Birozdan keyin qaytaring.",
+      "unknown": "Hisobni chiqarib bo‘lmadi. Qaytaring."
     }
   }
 }

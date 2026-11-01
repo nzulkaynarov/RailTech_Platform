@@ -42,7 +42,15 @@ const request104: ObjectRef = {
   kind: "request",
   number: "ЗВ-2026-104",
   title: "Стрелочные приводы",
-  path: `/crm/requests?request=${seg("ЗВ-2026-104")}&panel=open&tab=card`,
+  path: `/erp/requests?request=${seg("ЗВ-2026-104")}&panel=open&tab=task`,
+  step: "CALCULATION",
+};
+/** Заявка с заданием на расчёт (мок «Расчёт»): номер открывает окно «Задание» с резолюцией (B-UIA-1). */
+const request097: ObjectRef = {
+  kind: "request",
+  number: "ЗВ-2026-097",
+  title: "Стрелочные переводы Р65 с монтажом",
+  path: `/erp/requests?request=${seg("ЗВ-2026-097")}&panel=open&tab=task`,
   step: "CALCULATION",
 };
 const project99: ObjectRef = {
@@ -264,7 +272,10 @@ export function cardsForView(view: readonly MockRole[]): QueueCard[] {
     .slice(0, 4);
 }
 
-/** Бейджи подменю: «Моя очередь» считается по очереди роли, остальное — набор из макетов v3. */
+/**
+ * Бейджи подменю: «Моя очередь» считается по очереди роли, остальное — набор из макетов v3. «Мои расчёты» и «Счета и
+ * оплаты» считает `erpWork.ts` из тех же строк, что очередь (D2-8, U1).
+ */
 export function menuCountersFor(queueCount: number): MenuCounter[] {
   return [
     { module: "dashboard", section: "queue", count: queueCount, attention: queueCount > 0 },
@@ -274,8 +285,6 @@ export function menuCountersFor(queueCount: number): MenuCounter[] {
     { module: "eds", section: "inbox", count: 1, attention: true },
     { module: "eds", section: "drafts", count: 1, attention: true },
     { module: "eds", section: "approvals", count: 1, attention: true },
-    { module: "eds", section: "payments", count: 2, attention: false },
-    { module: "erp", section: "calc", count: 2, attention: true },
   ];
 }
 
@@ -490,10 +499,18 @@ const SEARCH_INDEX: readonly SearchEntry[] = [
   },
   {
     module: "crm",
-    resource: "crm.clients",
+    // B-UIA-1: заявка открывается в «Заявках в расчёте» — находится у ролей с этим разделом, как в BFF
+    resource: "erp.calc",
     object: request104,
     title: "ЗВ-2026-104 · Стрелочные приводы",
     subtitle: "ООО «Демо-Депо» · Расчёт",
+  },
+  {
+    module: "crm",
+    resource: "erp.calc",
+    object: request097,
+    title: "ЗВ-2026-097 · Стрелочные переводы Р65 с монтажом",
+    subtitle: "АО «Пример Логистик» · Расчёт",
   },
   {
     module: "eds",

@@ -6,6 +6,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { useDecideMemoApproval } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { decisionReason, isTerminal, useRefreshApprovals } from "../decision/errors";
 import { clearComment, readComment, writeComment } from "./draft";
@@ -73,6 +74,10 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
 
   const text = comment.trim();
   const next = nextStepLabel(memo.steps);
+  // Шаг бухгалтера (EDS 0.5.0+, B-D24-5): решения «Принять» у него нет — шаг и маршрут закрывает «Оплачено» с датой,
+  // суммой и платёжкой в «Счета и оплаты»; здесь — переход туда и «Вернуть» с комментарием.
+  const accountant = memo.accountant_step;
+  const payPath = `/eds/payments?show=memos&memo=${encodeURIComponent(memo.id)}&panel=open&tab=payment`;
   const may = (d: Action) => memo.allowed_decisions.includes(d);
   const busy = decide.isPending;
 
@@ -93,7 +98,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (may("approve") && !busy) send("approve");
+        if (!accountant && may("approve") && !busy) send("approve");
       }}
     >
       {saved ? <p className="pf-hint">{t("form.draft")}</p> : null}
@@ -115,7 +120,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
       <Consequence
         title={t("form.consequence.title")}
         items={
-          memo.accountant_step
+          accountant
             ? [
                 t("accountant.consequence.step1"),
                 t("accountant.consequence.step2"),
@@ -134,15 +139,24 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
       <ErrorNote message={failure ? failureText(failure.action, failure.error) : null} />
 
       <div className="pf-dec-actions">
-        <Button
-          type="primary"
-          htmlType="submit"
-          block
-          loading={busy && pendingAction === "approve"}
-          disabled={!may("approve") || busy}
-        >
-          {memo.accountant_step ? t("accountant.submit") : t("form.submit")}
-        </Button>
+        {accountant ? (
+          <>
+            <LinkButton type="primary" block to={payPath}>
+              {t("accountant.submit")}
+            </LinkButton>
+            <p className="pf-hint">{t("accountant.hint")}</p>
+          </>
+        ) : (
+          <Button
+            type="primary"
+            htmlType="submit"
+            block
+            loading={busy && pendingAction === "approve"}
+            disabled={!may("approve") || busy}
+          >
+            {t("form.submit")}
+          </Button>
+        )}
         <div className="pf-dec-secondary">
           <Button
             block
@@ -153,7 +167,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
               send("return");
             }}
           >
-            {memo.accountant_step ? t("accountant.return") : t("form.return")}
+            {accountant ? t("accountant.return") : t("form.return")}
           </Button>
           <Button
             block

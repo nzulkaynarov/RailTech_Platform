@@ -25,7 +25,7 @@ from app.eds_documents import API, EdsProxy, eds_error
 from app.errors import PlatformError, backend_code, from_backend
 from app.feeds.feed import Feed
 from app.feeds.models import StepCode
-from app.feeds.numbers import deal_step
+from app.feeds.numbers import deal_step, request_path
 from app.rbac import allows, strip_restricted
 from app.schemas_eds_approvals import (
     MEMO_KINDS,
@@ -500,7 +500,8 @@ def _stage(deal: dict[str, Any] | None) -> StepCode:
 
 
 def _request_path(number: str) -> str:
-    return f"/crm/requests?request={quote(number, safe='')}&panel=open&tab=card"
+    """Заявка КП — рабочий экран заявки (B-UIA-1, `feeds.numbers.request_path`)."""
+    return request_path(number)
 
 
 async def _letter(proxy: EdsProxy, deal_number: str | None) -> QuoteLetterRef | None:

@@ -453,6 +453,37 @@ export const edsPaymentsHandlers = [
     });
   }),
 
+  // «Выставить счёт» (B-D24-4): черновик → «Выставлен»; дата выставления — сегодня, срок оплаты — от неё (как ERP)
+  http.post("*/eds/payments/:id/issue", ({ params }) => {
+    const ok = guard("full");
+    if (ok.error) return ok.error;
+    const card = findInvoice(Number(params["id"]));
+    if (!card) return notFound("Счёт не найден.");
+    if (card.status !== "draft") {
+      return failure(409, "CONFLICT", "Счёт уже выставлен. Обновите карточку.", "erp", {
+        backend_status: 400,
+        backend_code: "INVOICE_ALREADY_ISSUED",
+        reason: "already_issued",
+      });
+    }
+    const today = companyToday();
+    const due = new Date(`${today}T12:00:00Z`);
+    due.setUTCDate(due.getUTCDate() + 10);
+    const now = new Date().toISOString();
+    const next = update(card.id, (current) => ({
+      ...current,
+      status: "issued",
+      issued_at: today,
+      due_date: due.toISOString().slice(0, 10),
+      has_pdf: true,
+      history: [
+        { at: now, code: "invoice.issued", text: "Счёт выставлен", by: ACCOUNTANT_NAME },
+        ...current.history,
+      ],
+    }));
+    return HttpResponse.json(next && withFlags(next));
+  }),
+
   http.post("*/eds/payments/:id/request-payment-doc", ({ params }) => {
     const ok = guard("full");
     if (ok.error) return ok.error;

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.32.0
+  version: 0.33.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -1771,6 +1771,17 @@ paths:
         `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
         реестре, которого у исполнителя может не быть); одна строка на поручение,
         перенос и ознакомление — без дублей.
+
+        Работа ERP (D2-8; что ждёт и чья очередь — решает ERP, BFF только показывает):
+        `calc_task` — мои задания на расчёт (ERP `GET /calc/tasks/?mine=1`, стадии расчёта): «Начать расчёт», «Завизировать
+        строки» (ждут визы зоны, которую даёт раздел `erp.calc.goods` или `erp.calc.services`), «Отправить расчёт директору»
+        (все визы собраны), «Доработать расчёт» (директор вернул); строка открывает расчёт `/erp/calc/{ЗВ}`.
+        `confirm_payment` — платёжки клиентов на подтверждение, `issue_invoice` — счета-черновики к выставлению (ERP
+        `GET /finance/receivables/?tab=proofs|to_issue`); строка открывает счёт `/eds/payments/{id}?panel=open&tab=payment`.
+        `issue_contract` — сформировать, отправить клиенту, подписать или доработать договор, `attach_scan` — приложить скан
+        подписанного договора, `issue_act` — выпустить акт (счета оплачены, акта нет) или выпустить заново (заказчик вернул)
+        (ERP `GET /crm/projects/?step=CONTRACT|PAYMENT`); строка открывает проект `/eds/projects/{ПР}` на вкладке «Договор» или
+        «Акт». Один объект — одна строка: у роли, совмещающей несколько видов, дублей нет.
       parameters:
         - $ref: '#/components/parameters/RoleQuery'
       responses:
@@ -3127,6 +3138,38 @@ paths:
       responses:
         '200':
           description: Запрос отмечен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/PaymentConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}/issue:
+    post:
+      tags: [eds-payments]
+      operationId: issuePayment
+      summary: 'EDS · Выставить счёт (черновик → «Выставлен»)'
+      description: >-
+        ERP `POST /crm/invoices/{id}/issue/` (право ERP `finance.invoice`): дата выставления — сегодня, срок оплаты отсчитывается
+        от неё (если не задан вручную), реквизиты продавца фиксируются в счёте, ERP формирует PDF, клиент видит счёт в кабинете,
+        получает сообщение бота и письмо (события `invoice.issued`). Ответ — карточка счёта после выставления. Счёт уже
+        выставлен — 409 `already_issued`; у компании не заполнены расчётный счёт и МФО — 409 `bank_details_required`.
+        Раздел `eds.payments` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+      responses:
+        '200':
+          description: Счёт выставлен
           content:
             application/json:
               schema:
@@ -10546,7 +10589,8 @@ components:
       description: >-
         409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка),
         `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой
-        или датой); обновите карточку
+        или датой), `already_issued` (счёт уже выставлен), `bank_details_required` (у компании не заполнены расчётный счёт и
+        МФО — выставить счёт нельзя); обновите карточку
       content:
         application/json:
           schema:
@@ -12963,6 +13007,7 @@ components:
         - issue_invoice
         - issue_contract
         - attach_scan
+        - issue_act
         - pay_memo
         - overdue_invoice
         - ticket

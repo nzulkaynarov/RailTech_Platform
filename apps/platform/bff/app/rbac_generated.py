@@ -309,6 +309,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "eds.projects",
         "full",
     ),
+    "issue_act": (
+        "eds.projects",
+        "full",
+    ),
     "pay_memo": (
         "eds.payments",
         "full",

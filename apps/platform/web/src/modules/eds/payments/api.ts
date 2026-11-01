@@ -3,8 +3,16 @@ import { useCallback } from "react";
 
 import { ApiError } from "../../../shared/api/errors";
 
-/** Все запросы разделов: счета и служебки начинаются с этих префиксов ключа (orval). */
-const KEYS = ["/api/v1/eds/payments", "/api/v1/eds/payment-memos"] as const;
+/**
+ * Все запросы разделов: счета и служебки начинаются с этих префиксов ключа (orval); «Мои задачи», их карточки и бейджи меню
+ * тоже — выставленный счёт и подтверждённая оплата уходят из очереди сразу, не дожидаясь подсказки шины (D2-8).
+ */
+const KEYS = [
+  "/api/v1/eds/payments",
+  "/api/v1/eds/payment-memos",
+  "/api/v1/queue",
+  "/api/v1/menu-counters",
+] as const;
 
 /** После подтверждения, платёжки или «Оплачено» сбрасываются списки и карточки: статус и счётчики меняются везде. */
 export function useRefreshPayments(): () => Promise<void> {

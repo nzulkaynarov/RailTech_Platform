@@ -33,6 +33,7 @@ async def get_menu_counters(authed: QueueAuthed) -> MenuCounters:
         eds=True,
         tickets=True,
         stock=True,
+        work=True,
     )
     items = queue.build_queue(feed, view, snap)
     return MenuCounters(items=queue.build_counters(view, snap, items), sources=feed.sources)
@@ -53,6 +54,7 @@ async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
         eds=True,
         tickets=True,
         stock=True,
+        work=True,
     )
     return Queue(items=queue.build_queue(feed, view, snap), sources=feed.sources)
 
@@ -75,6 +77,7 @@ async def get_queue_cards(authed: QueueAuthed, role: RoleParam = None) -> QueueC
         eds=True,
         tickets=True,
         stock=True,
+        work=True,
     )
     items = queue.build_queue(feed, view, snap)
     return QueueCards(cards=queue.build_cards(view, snap, items), sources=feed.sources)

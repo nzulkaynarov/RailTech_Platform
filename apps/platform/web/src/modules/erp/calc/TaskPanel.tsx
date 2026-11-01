@@ -3,10 +3,12 @@ import { useTranslation } from "react-i18next";
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
+import { ApiError } from "../../../shared/api/errors";
 import type { CalcSheet, CalcVisaGroup } from "../../../shared/api/generated/model";
 import { useGetCalcSheet } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { EmptyState } from "../../../shared/ui/EmptyState";
 import { QueryState } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
@@ -126,8 +128,20 @@ export function TaskBody({ sheet, brief = false }: { sheet: CalcSheet; brief?: b
 }
 
 function TaskPanel({ number, brief }: { number: string; brief: boolean }) {
+  const { t } = useTranslation("calc");
   const query = useGetCalcSheet(calcRef(number));
   const labels = useStateLabels();
+  // Номер ЗВ ведёт сюда отовсюду (B-UIA-1): у заявки без резолюции задания ещё нет — говорим это, а не «не загрузился»
+  if (query.error instanceof ApiError && query.error.status === 404) {
+    return (
+      <EmptyState
+        level={3}
+        compact
+        title={t("load.notFound.title")}
+        text={t("load.notFound.text")}
+      />
+    );
+  }
   return (
     <QueryState query={query} labels={labels} level={3} compact>
       {(sheet) => <TaskBody sheet={sheet} brief={brief} />}

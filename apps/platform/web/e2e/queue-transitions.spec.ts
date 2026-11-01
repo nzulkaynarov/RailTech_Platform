@@ -69,7 +69,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
     // письма, КП и служебка рядом — «Открыть», «Где сделать» нет; плюс просроченный заказ поставщику (D2-2) и
-    // требование ГНК от делопроизводителя (P8)
+    // требование ГНК от делопроизводителя (P8); строк исполнения ERP у директора нет (D2-8)
     await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(5);
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
     await shoot(page, "queue-where");
@@ -170,13 +170,18 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
 test.describe("Мои задачи: пустые состояния и частичный результат", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("accountant@demo.example: пустая очередь своими словами", async ({ page }) => {
+  test("accountant@demo.example: платёжка и счёт ждут — очередь не пишет «Платёжек нет» (U1, D2-8)", async ({
+    page,
+  }) => {
     await loginAndWait(page, "accountant@demo.example");
+    const main = page.getByRole("main");
+    await expect(main.getByText("Подтвердить оплату по счёту СЧ-2026/145")).toBeVisible();
+    await expect(main.getByText("Выставить счёт СЧ-2026/143")).toBeVisible();
     await expect(
-      page.getByRole("main").getByText("Платёжек на подтверждение и счетов к выставлению нет"),
-    ).toBeVisible();
+      main.getByText("Платёжек на подтверждение и счетов к выставлению нет"),
+    ).toHaveCount(0);
     await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
-    await shoot(page, "queue-empty-accountant");
+    await shoot(page, "queue-accountant");
   });
 
   test("ERP не отвечает: данные CRM показаны, плашка называет «Документы» и «Расчёт»", async ({
@@ -187,7 +192,7 @@ test.describe("Мои задачи: пустые состояния и част�
     await page.reload();
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
     );
     await shoot(page, "queue-partial-erp");
   });
@@ -226,26 +231,16 @@ test.describe("Мои задачи: EDS не отвечает", () => {
 test.describe("Поиск: объект, «Где посмотреть», действия", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("менеджер: результат без экрана — «Где посмотреть» с мостом, адрес не меняется", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "manager@demo.example");
+  test("номер ЗВ в поиске открывает заявку, а не «Где посмотреть» (B-UIA-1)", async ({ page }) => {
+    await loginAndWait(page, "universal@demo.example");
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
-    // «Лиды» — настоящий экран (D1-2b); без экрана — заявки (раздел «Заявки», старый ERP)
     await search.fill("ЗВ-2026-104");
     await page.getByRole("option", { name: /ЗВ-2026-104/ }).click();
-    const where = page.getByRole("region", { name: "Где посмотреть" });
-    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-deals",
+    await expect(page).toHaveURL(
+      /\/erp\/requests\?request=%D0%97%D0%92-2026-104&panel=open&tab=task/,
     );
-    await expect(page).toHaveURL(/\/dashboard\/queue/);
-    await shoot(page, "search-where");
-    // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
-    await where.getByRole("link", { name: /Открыть в старом ERP/ }).focus();
-    await page.keyboard.press("Escape");
-    await expect(where).toHaveCount(0);
-    await expect(search).toBeFocused();
+    await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
+    await shoot(page, "search-request");
   });
 
   test("менеджер: «создать заявку» — действие в результатах; «пригласить» ему недоступно", async ({

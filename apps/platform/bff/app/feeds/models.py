@@ -49,6 +49,7 @@ QueueItemKind = Literal[
     "issue_invoice",
     "issue_contract",
     "attach_scan",
+    "issue_act",
     "pay_memo",
     "overdue_invoice",
     "ticket",

@@ -16,6 +16,7 @@ import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
 import { stockQueueItems } from "./erpStock";
+import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
 import { coveredQueueItems } from "./profileStore";
 import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 
@@ -152,6 +153,33 @@ function notificationsFor(roles: readonly MockRole[]): Notification[] {
 }
 
 /**
+ * Строки «Моих задач» из всех источников с учётом недоступных (как `build_queue` BFF): одна функция для очереди и бейджа
+ * «Мои задачи» — число в меню совпадает с числом строк (U1, D2-8).
+ */
+function ownQueue(view: readonly MockRole[]): QueueItem[] {
+  // D17G-1: строки лидов из моков «Ждут ответа» (разобрать, переданный лид) вытесняют демо-строки тех же лидов
+  const handOver = handOverQueueItems(view, sessionUserId());
+  const handNumbers = new Set(handOver.map((i) => i.object.number));
+  return [
+    ...queueForView(view).filter(
+      (i) => !(i.kind.endsWith("_lead") && handNumbers.has(i.object.number)),
+    ),
+    ...ticketQueueItems(view), // обращения живут в CRM, как и лиды
+    ...stockQueueItems(view), // просроченные заказы поставщикам (ERP, D2-2)
+    ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
+    ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
+    ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
+    ...handOver, // D17G-1: разобрать лида, переданный лид
+  ].filter((i) =>
+    i.kind.endsWith("_lead") || i.kind === "ticket"
+      ? !crmDown()
+      : EDS_KINDS.includes(i.kind)
+        ? !edsDown()
+        : !erpDown(),
+  );
+}
+
+/**
  * Моки Dashboard, уведомлений и поиска (PLT-14): данные зависят от роли сессии, чтобы сценарии и скриншоты не плавали.
  * Ответы совпадают по форме с BFF (`platform-bff.yaml`); недоступный источник тесты имитируют через `server.use`.
  */
@@ -166,7 +194,15 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const cards = cardsForView(roles.view)
+    // Карточки счетов (D2-8) — перед «Проектами в работе», как в BFF; всего не больше четырёх
+    const base = cardsForView(roles.view);
+    const at = base.findIndex((c) => c.key === "projects_in_work");
+    const merged =
+      at < 0
+        ? [...base, ...erpWorkCards(roles.view)]
+        : [...base.slice(0, at), ...erpWorkCards(roles.view), ...base.slice(at)];
+    const cards = merged
+      .slice(0, 4)
       .filter((c) => !erpDown() || c.path.startsWith("/crm"))
       .filter((c) => !edsDown() || !["/eds/inbox", "/eds/approvals"].includes(c.path));
     return HttpResponse.json({ cards, sources: sources() });
@@ -177,25 +213,7 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    // D17G-1: строки лидов из моков «Ждут ответа» (разобрать, переданный лид) вытесняют демо-строки тех же лидов
-    const handOver = handOverQueueItems(roles.view, sessionUserId());
-    const handNumbers = new Set(handOver.map((i) => i.object.number));
-    const own = [
-      ...queueForView(roles.view).filter(
-        (i) => !(i.kind.endsWith("_lead") && handNumbers.has(i.object.number)),
-      ),
-      ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
-      ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
-      ...registeredQueueItems(roles.view), // P8: входящие, зарегистрированные делопроизводителем
-      ...letterTaskQueueItems(roles.view), // P8b: поручения, переносы, ознакомления
-      ...handOver, // D17G-1: разобрать лида, переданный лид
-    ].filter((i) =>
-      i.kind.endsWith("_lead") || i.kind === "ticket"
-        ? !crmDown()
-        : EDS_KINDS.includes(i.kind)
-          ? !edsDown()
-          : !erpDown(),
-    );
+    const own = ownQueue(roles.view);
     const director = own.find((i) => i.kind === "resolve_letter");
     if (queueStub() && director) own.push({ ...STUB_ROW, role_id: director.role_id });
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
@@ -221,16 +239,15 @@ export const feedHandlers = [
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
         ...menuCountersFor(
-          queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length +
-            (edsDown()
-              ? 0
-              : reworkQueueItems(roles.view).length + letterTaskQueueItems(roles.view).length),
+          ownQueue(roles.view).length + (edsDown() ? 0 : reworkQueueItems(roles.view).length),
         )
           .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
           .filter(
             (c) =>
               !edsDown() || !(c.module === "eds" && ["inbox", "approvals"].includes(c.section)),
           ),
+        // «Мои расчёты» и «Счета и оплаты» (D2-8): из тех же строк, что очередь
+        ...(erpDown() ? [] : erpWorkCounters(roles.view)),
         // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)
         ...(stockOverdue > 0 && !erpDown()
           ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]

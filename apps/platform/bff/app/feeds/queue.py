@@ -8,7 +8,8 @@
 D17G-1); одобрение КП — ERP
 `my-approval-queue` (`approve_quote`); письма без резолюции (`resolve_letter`) и служебки,
 заявления, отчёты на моём шаге маршрута (`approve_memo`, `pay_memo`) — EDS по токену `aud=eds`
-(D1-6): что вернул EDS, то и строки. Задания и платёжки ждут ERP-02…06. Роли «вида» — активная,
+(D1-6): что вернул EDS, то и строки; работа ERP — расчёт, счета и платёжки, договор и акт (D2-8,
+`feeds/erp_work.py`). Роли «вида» — активная,
 если задана (Q-PLT-12-1), иначе все роли сотрудника. `QueueItem.role_id` — первая роль «вида»,
 которая даёт этот вид работы.
 """
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from app.feeds.erp_work import calc_rows, invoice_rows, project_rows
 from app.feeds.feed import Feed
 from app.feeds.models import (
     DueLabel,
@@ -43,7 +45,9 @@ from app.feeds.snapshot import (
     Covered,
     Snapshot,
     wants_approvals,
+    wants_calc_tasks,
     wants_inbox,
+    wants_invoices,
     wants_letter_tasks,
     wants_letters,
     wants_memos,
@@ -62,6 +66,7 @@ from app.feeds.text import (
     parse_dt,
     short,
 )
+from app.feeds.work_roles import wants_work, work_role_id
 from app.rbac import View
 
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
@@ -582,6 +587,17 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         rows_ += ticket_rows(snap, now, view)
     if wants_supplier_overdue(view):
         rows_ += supplier_rows(snap, now, view)
+
+    # D2-8: работа ERP — расчёт, счета и платёжки, договор и акт проекта
+    def role_of(kind: QueueItemKind) -> str:
+        return work_role_id(view, kind)
+
+    for item, since in (
+        calc_rows(snap, now, view, role_of)
+        + invoice_rows(snap, now, view, role_of)
+        + project_rows(snap, now, view, role_of)
+    ):
+        rows_.append(Row(item, since))
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 
@@ -649,6 +665,23 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Документы · На согласовании" + (" · не меньше" if snap.memos_more else ""),
             path="/eds/approvals",
         )
+    counts = snap.invoice_counts
+    if counts is not None and wants_work(view, "confirm_payment"):
+        cards["payments_to_confirm"] = QueueCard(
+            key="payments_to_confirm",
+            label="Платёжки на подтверждение",
+            count=counts["proofs"],
+            hint="Документы · Счета и оплаты",
+            path="/eds/payments?show=proofs",
+        )
+    if counts is not None and wants_work(view, "issue_invoice"):
+        cards["invoices_to_issue"] = QueueCard(
+            key="invoices_to_issue",
+            label="Счета к выставлению",
+            count=counts["to_issue"],
+            hint="Документы · Счета и оплаты",
+            path="/eds/payments?show=to_issue",
+        )
     if wants_projects(view):
         cards["projects_in_work"] = QueueCard(
             key="projects_in_work",
@@ -698,6 +731,17 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
     if wants_supplier_overdue(view):
         late = sum(1 for i in queue if i.kind == "supplier_overdue")
         items.append(MenuCounter(module="erp", section="stock", count=late, attention=late > 0))
+    if wants_calc_tasks(view) and snap.calc_tasks is not None:
+        calc = sum(1 for i in queue if i.kind == "calc_task")
+        items.append(MenuCounter(module="erp", section="calc", count=calc, attention=calc > 0))
+    if wants_invoices(view) and snap.invoice_counts is not None:
+        counts = snap.invoice_counts
+        waiting = (counts["proofs"] if wants_work(view, "confirm_payment") else 0) + (
+            counts["to_issue"] if wants_work(view, "issue_invoice") else 0
+        )
+        items.append(
+            MenuCounter(module="eds", section="payments", count=waiting, attention=waiting > 0)
+        )
     if wants_projects(view):
         total = projects_in_work(snap)
         items.append(

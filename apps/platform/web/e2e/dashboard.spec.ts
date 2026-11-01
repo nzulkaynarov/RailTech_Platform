@@ -64,6 +64,7 @@ test.describe("Мои задачи", () => {
 
     const queue = main.getByRole("region", { name: "Что сделать сейчас" });
     const rows = queue.getByRole("listitem");
+    // D2-8: в очереди директора только решения — строк исполнения ERP нет
     await expect(rows).toHaveCount(5);
     // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
@@ -109,11 +110,10 @@ test.describe("Мои задачи", () => {
   });
 
   test("пустая очередь: слова SPEC-v3 §7.1", async ({ page }) => {
-    await loginAndWait(page, "accountant@demo.example");
+    // у бухгалтера с D2-8 очередь не пустая (платёжка, счёт, договор) — пустая у администратора без обращений
+    await loginAndWait(page, "admin@demo.example");
 
-    await expect(
-      page.getByText("Платёжек на подтверждение и счетов к выставлению нет"),
-    ).toBeVisible();
+    await expect(page.getByText("Задач для вас нет")).toBeVisible();
     await expect(page.getByRole("main").getByText(/0 решений/)).toBeVisible();
     await settledScreenshot(page, "dashboard-empty");
     await expectNoViolations(page, "empty queue");
@@ -128,7 +128,7 @@ test.describe("Мои задачи", () => {
 
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
     );
     // КП ведёт ERP — строки нет; письмо читает EDS (D1-6) — строка на месте
     await expect(page.getByText("Одобрить КП-2026/118 (черновик)")).toHaveCount(0);
@@ -296,7 +296,8 @@ test.describe("Поиск ⌘K", () => {
     "находит сделку по номеру и открывает её",
     { tag: "@mobile" },
     async ({ page, isMobile }) => {
-      await loginAndWait(page, "manager@demo.example");
+      // ЗВ открывается в «Заявках в расчёте» (B-UIA-1) — находит её роль с разделом расчёта
+      await loginAndWait(page, "universal@demo.example");
       const search = page.getByRole("combobox", { name: "Глобальный поиск" });
       if (isMobile) await search.click();
       else await page.keyboard.press("Control+k");
@@ -310,14 +311,13 @@ test.describe("Поиск ⌘K", () => {
       await settledScreenshot(page, "dashboard-search");
       await expectNoViolations(page, "search results");
 
-      // раздела «Заявки» с экраном ещё нет: не заглушка, а «Где посмотреть» с мостом
+      // B-UIA-1: номер ЗВ открывает заявку — «Заявки в расчёте» с окном «Задание», а не подсказку «в старом ERP»
       await search.press("ArrowDown");
       await search.press("Enter");
-      const where = page.getByRole("region", { name: "Где посмотреть" });
-      await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
-      await expect(page).toHaveURL(/\/dashboard\/queue/);
-      await settledScreenshot(page, "search-where");
-      await expectNoViolations(page, "search where");
+      await expect(page).toHaveURL(/\/erp\/requests\?request=.*tab=task/);
+      await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
+      await settledScreenshot(page, "search-request");
+      await expectNoViolations(page, "search → request");
     },
   );
 

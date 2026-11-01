@@ -193,6 +193,11 @@ async def download_proof(id: InvoiceId, proof_id: ProofId, authed: Reader) -> Re
     return FileStream(response, headers, "application/octet-stream")
 
 
+@router.post("/payments/{id}/issue", response_model=PaymentCard, operation_id="issuePayment")
+async def issue_payment(id: InvoiceId, authed: Writer) -> PaymentCard:
+    return card_of(await Receivables(authed).issue(id))
+
+
 @router.post(
     "/payments/{id}/request-payment-doc",
     response_model=PaymentCard,

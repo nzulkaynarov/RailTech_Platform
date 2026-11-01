@@ -85,6 +85,7 @@ describe("Dashboard · Моя очередь", () => {
     renderApp("/dashboard/queue");
     const page = await main();
 
+    // D2-8: в очереди директора только решения — строк исполнения (договор, счета, расчёт) нет
     expect(await within(page).findByText(/Директор · .* · 5 решений/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
@@ -108,6 +109,39 @@ describe("Dashboard · Моя очередь", () => {
       "href",
       "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
     );
+  });
+
+  it("менеджер-универсал утром: расчёт, платёжка на подтверждение, счёт к выставлению, договор ждёт скана — каждая строка ведёт на экран, где это делается (D2-8)", async () => {
+    signInAs("universal@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const expectRow = async (title: RegExp, href: string) => {
+      const row = (await within(page).findByText(title)).closest("li");
+      if (!row) throw new Error(`нет строки ${String(title)}`);
+      expect(within(row).getByRole("link", { name: /Открыть/ })).toHaveAttribute("href", href);
+    };
+    await expectRow(/Начать расчёт по заявке ЗВ-2026-103/, "/erp/calc/%D0%97%D0%92-2026-103");
+    await expectRow(
+      /Подтвердить оплату по счёту СЧ-2026\/145/,
+      "/eds/payments/145?panel=open&tab=payment",
+    );
+    await expectRow(/Выставить счёт СЧ-2026\/143/, "/eds/payments/143?panel=open&tab=payment");
+    await expectRow(
+      /Прикрепить скан подписанного договора ДОГ-2026\/106/,
+      "/eds/projects/%D0%9F%D0%A0-2026-106?panel=open&tab=contract",
+    );
+    // одна строка — одно действие: роль совмещает пять ролей SPEC, а дублей нет
+    const titles = within(within(page).getByRole("region", { name: "Что сделать сейчас" }))
+      .getAllByRole("listitem")
+      .map((li) => li.querySelector(".pf-queue-title, strong")?.textContent ?? li.textContent);
+    expect(new Set(titles).size).toBe(titles.length);
+    // карточки счетов — из той же очереди, а не числа, заданные вручную (U1)
+    const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
+    expect(
+      within(cards).getByRole("link", { name: /Платёжки на подтверждение/ }),
+    ).toHaveTextContent("1");
+    expect(within(cards).getByRole("link", { name: /Счета к выставлению/ })).toHaveTextContent("1");
   });
 
   it("менеджер видит свои строки из CRM; плашки источников нет", async () => {
@@ -427,7 +461,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-0001")).toBeVisible();
     expect(within(page).getByRole("status")).toHaveTextContent(
-      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
+      "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
     );
   });
 
