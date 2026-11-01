@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { botLink, managerLink } from '@/app/links';
@@ -12,6 +12,11 @@ import { expectNoAxeViolations, heading } from '@/test/screens';
 const BOT = 'https://t.me/railtech_test_bot';
 /** Экран сделки собирается из семи списков портала — под параллельной нагрузкой дольше 1 с. */
 const LOADED = { timeout: 5000 };
+/**
+ * Содержимое экрана: роль ищется внутри `<main>`, а не по всему документу с меню и шапкой (CONVENTIONS, «Правило тестов»):
+ * поиск по документу на экране проекта из семи списков на раннере CI не укладывался в таймаут теста.
+ */
+const page = () => document.querySelector('main') as HTMLElement;
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -42,7 +47,8 @@ describe('«Написать менеджеру» на экранах', () => {
   it('сделка: кнопка в шапке ведёт в бота с deal_<id>, в вебе — новая вкладка', async () => {
     signedIn();
     renderApp('/deals/35');
-    const link = await screen.findByRole('link', { name: 'Написать менеджеру' }, LOADED);
+    await heading('Проект D-35');
+    const link = await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED);
     expect(link).toHaveAttribute('href', `${BOT}?start=deal_35`);
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -53,7 +59,7 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp('/quotes/301');
     await heading(/KP-2026-0042/);
-    const link = screen.getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' });
+    const link = within(page()).getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' });
     expect(link).toHaveAttribute('href', `${BOT}?start=deal_42`);
     expect(link).toHaveTextContent('Написать менеджеру');
   });
@@ -66,7 +72,7 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp(path);
     await heading(title);
-    expect(await screen.findByRole('link', { name })).toHaveAttribute('href', `${BOT}?start=deal_${dealId}`);
+    expect(await within(page()).findByRole('link', { name })).toHaveAttribute('href', `${BOT}?start=deal_${dealId}`);
     await expectNoAxeViolations();
   });
 
@@ -74,7 +80,7 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
-    const links = await screen.findAllByRole('link', { name: /^Написать менеджеру о проекте D-\d+$/ });
+    const links = await within(page()).findAllByRole('link', { name: /^Написать менеджеру о проекте D-\d+$/ });
     expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
       const id = link.getAttribute('aria-label')!.match(/D-(\d+)/)![1];
@@ -87,8 +93,9 @@ describe('«Написать менеджеру» на экранах', () => {
     vi.stubEnv('VITE_BOT_USERNAME', '');
     signedIn();
     renderApp('/deals/35');
-    await screen.findByRole('region', { name: 'Счета' }, LOADED);
-    expect(screen.queryByRole('link', { name: /Написать менеджеру/ })).not.toBeInTheDocument();
+    await heading('Проект D-35');
+    await within(page()).findByRole('region', { name: 'Счета' }, LOADED);
+    expect(within(page()).queryByRole('link', { name: /Написать менеджеру/ })).not.toBeInTheDocument();
     expect(document.querySelector('a[href^="https://t.me"]')).toBeNull();
   });
 
@@ -97,7 +104,7 @@ describe('«Написать менеджеру» на экранах', () => {
     const user = userEvent.setup();
     renderApp('/');
     await heading('Проект D-35');
-    await user.click(await screen.findByRole('link', { name: 'Написать менеджеру' }, LOADED));
+    await user.click(await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED));
     expect(webApp.openTelegramLink).toHaveBeenCalledWith(`${BOT}?start=deal_35`);
   });
 
@@ -108,7 +115,8 @@ describe('«Написать менеджеру» на экранах', () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/deals/35');
-    await user.click(await screen.findByRole('link', { name: 'Написать менеджеру' }, LOADED));
+    await heading('Проект D-35');
+    await user.click(await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED));
     expect(openTelegramLink).not.toHaveBeenCalled();
   });
 });
