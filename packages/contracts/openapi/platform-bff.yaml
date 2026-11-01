@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.31.0
+  version: 0.32.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -7542,8 +7542,9 @@ paths:
       operationId: listCrmMessages
       summary: 'Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера'
       description: >-
-        CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и
-        ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в
+        CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения или `crm.leads.triage`: директор видит
+        очередь без «Забрать» и ответа, делопроизводитель — с «Передать менеджеру» (D17G-1). Передачу первой линии
+        (`handoff.reasons` содержит `handed_over`) забирает только ответственный `assigned`. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в
         диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает
         от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
       responses:
@@ -7566,7 +7567,8 @@ paths:
       operationId: getCrmConversation
       summary: 'Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт'
       description: >-
-        CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+        CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения или `crm.leads.triage`. Номер лида —
+        `L-NNNN`.
       parameters:
         - $ref: '#/components/parameters/LeadNumber'
       responses:
@@ -7840,6 +7842,70 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/MessagesConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/hand-over:
+    post:
+      tags: [messages]
+      operationId: handOverCrmLead
+      summary: 'Передать менеджеру с запиской (первая линия, клиенту ничего не уходит)'
+      description: >-
+        CRM `POST /leads/{id}/actions/hand_over` (D17G-1, DECISIONS 2026-11-01 п. 1). Раздел `crm.leads.triage` полный —
+        делопроизводитель разбирает лида и передаёт его менеджеру, не забирая и не отвечая клиенту. Лид получает
+        ответственного (`user_id` — держатель `crm.leads: full`, список — `listCrmLeadManagers`), открытая передача бота
+        дополняется причиной `handed_over` и запиской (нет передачи — открывается новая со сроком реакции), бот на паузе до
+        «Забрать». Менеджеру — строка «Новый лид от делопроизводителя» в «Моих задачах», уведомление в колокольчике и в
+        Telegram; записка — ещё и заметкой команды в ленте. Лида уже ведёт сотрудник — 409 `CONFLICT` (`lead_taken`);
+        сотрудник не может вести лидов или неактивен — 422 (`inactive_colleague`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandOverIn'
+      responses:
+        '200':
+          description: Лид у менеджера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/MessagesConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/lead-managers:
+    get:
+      tags: [messages]
+      operationId: listCrmLeadManagers
+      summary: 'Кому передать лида: активные сотрудники с правом работы с клиентом'
+      description: >-
+        CRM `GET /leads/handover_targets` (D17G-1). Раздел `crm.leads.triage` полный. Активные сотрудники, у которых
+        объединение ролей даёт `crm.leads: full` («Забрать», ответ клиенту), по имени; без почты, телефона и ролей.
+      responses:
+        '200':
+          description: Менеджеры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeadManagerList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -10291,7 +10357,7 @@ components:
     MessagesConflict:
       description: >-
         409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с
-        `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим
+        `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим
         `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`,
         `assist_empty`, `assist_no_history`)
       content:
@@ -12713,6 +12779,7 @@ components:
       enum:
         - answer_lead
         - take_lead
+        - triage_lead
         - create_request
         - service_request
         - resolve_letter
@@ -16875,8 +16942,10 @@ components:
     HandoffInfo:
       type: object
       additionalProperties: false
-      description: Открытая передача от бота
-      required: [priority, state, reasons, reason_text, recommendation, created_at, sla_due_at, snoozed_until, taken_by]
+      description: >-
+        Открытая передача от бота или от первой линии (D17G-1: причина `handed_over`, `handed_by` — кто передал, `reason_text`
+        — его записка, лид у ответственного `MessageInboxItem.assigned`)
+      required: [priority, state, reasons, reason_text, recommendation, created_at, sla_due_at, snoozed_until, taken_by, handed_by, request_type]
       properties:
         priority:
           type: string
@@ -16910,6 +16979,51 @@ components:
           oneOf:
             - $ref: '#/components/schemas/PersonRef'
             - type: 'null'
+        handed_by:
+          description: 'Кто передал лида менеджеру с запиской («Передать менеджеру», D17G-1); `null` — передал бот'
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        request_type:
+          description: Тип обращения, который указал передавший (необязательно)
+          oneOf:
+            - $ref: '#/components/schemas/LeadRequestType'
+            - type: 'null'
+
+    LeadRequestType:
+      type: string
+      enum: [goods, services, project, other]
+      description: >-
+        Тип обращения при передаче лида (D17G-1): `goods` — товары, `services` — услуги, `project` — по действующему проекту,
+        `other` — другое. Подписи — в словаре интерфейса.
+
+    HandOverIn:
+      type: object
+      additionalProperties: false
+      required: [user_id, note]
+      properties:
+        user_id:
+          type: string
+          pattern: '^\d{1,12}$'
+          description: '`PersonRef.id` менеджера из `listCrmLeadManagers`'
+        note:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: Записка менеджеру — что нужно клиенту и что уже известно (клиенту не уходит)
+        request_type:
+          oneOf:
+            - $ref: '#/components/schemas/LeadRequestType'
+            - type: 'null'
+
+    LeadManagerList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PersonRef'}
 
     MessageInboxItem:
       type: object
