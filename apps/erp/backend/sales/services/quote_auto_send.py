@@ -247,7 +247,10 @@ def _detail(report: dict[str, Any]) -> str:
     if report["skipped"]:
         parts.append(
             "Недоступно: "
-            + ", ".join(f"{CHANNEL_NAMES.get(s['channel'], s['channel'])} ({reason_text(s['reason'])})" for s in report["skipped"])
+            + ", ".join(
+                f"{CHANNEL_NAMES.get(s['channel'], s['channel'])} ({reason_text(s['reason'])})"
+                for s in report["skipped"]
+            )
         )
     if report["error"]:
         parts.append(f"Отправка остановлена: {report['error']}")

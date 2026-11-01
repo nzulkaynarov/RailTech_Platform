@@ -787,7 +787,9 @@ def test_manager_sends_a_ready_quote_by_the_channel_that_now_works(world, django
     assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.delivered").count() == 1
 
 
-def test_sent_quote_is_emailed_again_once_the_contact_has_an_email(world, django_capture_on_commit_callbacks, monkeypatch):
+def test_sent_quote_is_emailed_again_once_the_contact_has_an_email(
+    world, django_capture_on_commit_callbacks, monkeypatch
+):
     """КП ушло в Telegram, почта пропущена (нет e-mail). Менеджер дописал e-mail и отправляет по почте: письмо ставится
     заново, второго `quote.sent` нет, пропуск почты снят, отметки прошлого итога письма сброшены."""
     from crm import tasks

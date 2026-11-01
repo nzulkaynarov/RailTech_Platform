@@ -271,9 +271,8 @@ def test_results_of_other_requesters_are_ignored(settings):
 
 
 def test_quote_mail_result_updates_send_report_and_quote_log():
-    from crm.models import ActivityLog
-
     from accounts.models import CustomUser
+    from crm.models import ActivityLog
 
     deal = make_deal(make_company(), "QUOTE_SENT")
     deal.manager = CustomUser.objects.create_user(email="mu@railtech.test", username="mu@railtech.test", password="pw")

@@ -400,8 +400,9 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
     @action(detail=True, methods=["post"], url_path="deliver", permission_classes=[IsAuthenticated])
     def deliver(self, request, pk=None):
         """Отправить КП по одному каналу из карточки КП Платформы (D17G-2); право — как у «Отправить клиенту»."""
-        from crm.services.quotes import can_send_quote_to_client
         from sales.services.quote_auto_send import deliver
+
+        from crm.services.quotes import can_send_quote_to_client
 
         quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=pk).first()
         if quote is None:
