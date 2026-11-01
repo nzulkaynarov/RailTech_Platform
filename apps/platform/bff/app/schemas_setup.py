@@ -85,3 +85,33 @@ class EmployeeCredentials(BaseModel):
 
     employee: Employee
     temporary_password: str = Field(min_length=1)
+
+
+# --- адрес кабинета клиента (D17G-3) -------------------------------------------------------------
+
+CabinetSource = Literal["saved", "env", "none"]
+CabinetCheckResult = Literal["ok", "not_set", "unreachable", "bad_status", "not_cabinet"]
+
+
+class SetupCabinet(BaseModel):
+    url: str | None
+    source: CabinetSource
+    env_url: str | None
+
+
+class SetupCabinetIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    url: str = Field(max_length=500)
+
+
+class SetupCabinetCheckIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    url: str | None = Field(default=None, max_length=500)
+
+
+class SetupCabinetCheck(BaseModel):
+    result: CabinetCheckResult
+    url: str | None
+    status_code: int | None

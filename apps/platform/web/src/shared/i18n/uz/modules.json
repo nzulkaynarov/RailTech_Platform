@@ -178,7 +178,7 @@
     "action": "Xodimni taklif qilish",
     "setup": {
       "title": "Birinchi ishga tushirish",
-      "subtitle": "To'rt qadam: administrator, ERP ulanishi, kompaniyangiz, qolgan ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
+      "subtitle": "Besh qadam: administrator, ERP ulanishi, kompaniyangiz, mijoz kabineti manzili, qolgan ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator yaratildi: {{name}}.",
       "companyTitle": "Sizning kompaniyangiz",
@@ -278,7 +278,8 @@
       "finish": "Yopish",
       "stepSaved": "«{{step}}» qadami tayyor.",
       "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
-      "bannerReturn": "Bannerni qaytarish"
+      "bannerReturn": "Bannerni qaytarish",
+      "cabinetTitle": "Mijoz kabineti manzili"
     },
     "org": {
       "title": "Xodimlar",

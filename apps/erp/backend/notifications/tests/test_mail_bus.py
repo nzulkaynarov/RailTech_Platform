@@ -273,7 +273,12 @@ def test_results_of_other_requesters_are_ignored(settings):
 def test_quote_mail_result_updates_send_report_and_quote_log():
     from crm.models import ActivityLog
 
-    quote = add_quote(make_deal(make_company(), "QUOTE_SENT"), 1, "SENT", "1000")
+    from accounts.models import CustomUser
+
+    deal = make_deal(make_company(), "QUOTE_SENT")
+    deal.manager = CustomUser.objects.create_user(email="mu@railtech.test", username="mu@railtech.test", password="pw")
+    deal.save(update_fields=["manager"])
+    quote = add_quote(deal, 1, "SENT", "1000")
     quote.send_report = {
         "requested": ["email", "cabinet"],
         "sent_via": ["cabinet", "email"],
@@ -292,6 +297,12 @@ def test_quote_mail_result_updates_send_report_and_quote_log():
     ]
     logs = ActivityLog.objects.filter(entity_type="quote", entity_id=quote.pk, event_code="quote.email_failed")
     assert logs.count() == 1, "повтор итога второй записи в журнал КП не даёт"
+    # D17G-2: письмо из отправленных каналов не ушло — менеджеру заявки уведомление с причиной (один раз)
+    from notifications.models import Notification
+
+    notes = Notification.objects.filter(event_code="quote.auto_send_failed", user=deal.manager)
+    assert notes.count() == 1
+    assert notes.get().message.startswith("Почта — письмо не ушло")
 
     sent_quote = add_quote(
         make_deal(make_company(name="ООО Второй", crm_client_id=7002), "QUOTE_SENT"), 1, "SENT", "500"

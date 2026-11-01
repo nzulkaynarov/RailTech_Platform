@@ -80,8 +80,20 @@ def tab_of(event_code: str) -> NotificationTab:
     return "system"
 
 
+# КП не ушло по каналу (D17G-2): уведомление ведёт в карточку КП — там отчёт и «Отправить».
+_QUOTE_CARD_EVENTS = frozenset({"quote.auto_send_failed"})
+
+
 def _object(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ObjectRef | None:
     params = row.get("event_params")
+    if (
+        row.get("event_code") in _QUOTE_CARD_EVENTS
+        and isinstance(params, dict)
+        and isinstance(params.get("number"), str)
+        and params["number"]
+    ):
+        number = params["number"]
+        return ObjectRef(kind="quote", number=number, path=f"/eds/drafts/{quote(number, safe='')}")
     if (
         str(row.get("event_code") or "").startswith("supplier_order.")
         and isinstance(params, dict)

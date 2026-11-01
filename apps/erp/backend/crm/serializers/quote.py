@@ -54,6 +54,27 @@ class QuoteEconomicsSerializer(serializers.Serializer):
     )
 
 
+class QuoteChannelStateSerializer(serializers.Serializer):
+    """Канал отправки КП клиенту и его доступность по контактам клиента (D17G-2, `quote_auto_send._CHECKS`)."""
+
+    channel = serializers.ChoiceField(choices=["telegram", "cabinet", "email"])
+    available = serializers.BooleanField()
+    reason = serializers.CharField(
+        allow_null=True,
+        help_text=(
+            "Почему канал недоступен: CONTACT_TELEGRAM_REQUIRED, CLIENT_NOT_IN_CRM, CABINET_NOT_INVITED, "
+            "CONTACT_EMAIL_REQUIRED; null — доступен"
+        ),
+    )
+
+
+class QuoteChannelAvailabilitySerializer(serializers.Serializer):
+    """Доступность каналов отправки КП по фактическим контактам клиента (D17G-2)."""
+
+    contact_name = serializers.CharField(allow_null=True, help_text="Кому уйдёт КП: контакт сделки или клиента")
+    channels = QuoteChannelStateSerializer(many=True)
+
+
 class QuoteFxOverrideInfoSerializer(serializers.Serializer):
     """Договорной курс финансиста (M1-ERP-08): курс, причина, кто и когда задал."""
 
@@ -221,6 +242,29 @@ class QuoteSerializer(serializers.ModelSerializer):
         ),
     )
 
+    # D17G-2: доступность каналов отправки по контактам клиента и право текущего сотрудника отправить КП — только в
+    # карточке одного КП (как экономика: в списках — null, без запросов на строку) и только сотрудникам продавца.
+    channel_availability = serializers.SerializerMethodField()
+    can_send = serializers.SerializerMethodField()
+
+    @extend_schema_field(QuoteChannelAvailabilitySerializer(allow_null=True))
+    def get_channel_availability(self, obj) -> dict | None:
+        if not self.context.get("include_economics"):
+            return None
+        from sales.services.quote_auto_send import channel_availability
+
+        return channel_availability(obj)
+
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
+    def get_can_send(self, obj) -> bool | None:
+        """Текущий сотрудник может отправить КП клиенту (`quote.send` и менеджер заявки или `quote.review`)."""
+        if not self.context.get("include_economics"):
+            return None
+        from crm.services.quotes import can_send_quote_to_client
+
+        user = getattr(self.context.get("request"), "user", None)
+        return bool(user and can_send_quote_to_client(user, obj))
+
     @extend_schema_field(QuoteFxRateSerializer(many=True))
     def get_fx_rates(self, obj) -> list:
         from sales.services.quote_fx import line_currency_codes, quote_fx_rates
@@ -348,6 +392,8 @@ class QuoteSerializer(serializers.ModelSerializer):
             "director_comment",
             "send_channels",
             "send_report",
+            "channel_availability",
+            "can_send",
             "items",
             "charges",
             "economics",
@@ -432,7 +478,14 @@ class QuoteSerializer(serializers.ModelSerializer):
 
     # Внутренняя кухня одобрения КП директором (C1-G-5): решение, комментарий и каналы — сотрудникам своей компании,
     # не покупателю. ИСХ-номер не скрываем: он печатается на КП, которое уходит клиенту.
-    _STAFF_ONLY_FIELDS = ("director_decision", "director_comment", "send_channels", "send_report")
+    _STAFF_ONLY_FIELDS = (
+        "director_decision",
+        "director_comment",
+        "send_channels",
+        "send_report",
+        "channel_availability",
+        "can_send",
+    )
 
     def _is_staff(self) -> bool:
         cached = getattr(self, "_staff_cache", None)

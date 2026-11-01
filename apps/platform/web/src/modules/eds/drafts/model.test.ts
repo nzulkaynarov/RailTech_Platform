@@ -37,16 +37,17 @@ describe("каналы отправки клиенту", () => {
       telegram: true,
       cabinet: false,
       email: false,
+      reasons: { telegram: null, cabinet: "no_cabinet", email: "mail_not_configured" },
     });
     expect(states).toEqual([
       { channel: "telegram", available: true, reason: null },
-      { channel: "cabinet", available: false, reason: "noCabinet" },
-      { channel: "email", available: false, reason: "noEmail" },
+      { channel: "cabinet", available: false, reason: "no_cabinet" },
+      { channel: "email", available: false, reason: "mail_not_configured" },
     ]);
     expect(defaultChannels(states)).toEqual(["telegram"]);
   });
 
-  it("контакт не получен из ERP — все каналы выбираемы", () => {
+  it("ERP не ответила — все каналы выбираемы", () => {
     const states = channelStates(null);
     expect(states.every((s) => s.available && s.reason === null)).toBe(true);
     expect(defaultChannels(states)).toEqual(["telegram", "cabinet", "email"]);

@@ -127,7 +127,50 @@
     "clientComments": "Client comments",
     "clientCommentsList": "Client comments on the quote",
     "clientCommentsHint": "The client writes them in the cabinet while the quote awaits a decision. Reply in Chats or with a new quote version.",
-    "clientCommentAuthor": "Client"
+    "clientCommentAuthor": "Client",
+    "delivery": {
+      "title": "Sending to the client",
+      "list": "Sending channels",
+      "state": {
+        "ready": "The quote is approved and not yet sent to the client.",
+        "sent": "The quote is sent to the client.",
+        "closed": "The client answered the quote, there is nothing more to send."
+      },
+      "status": {
+        "sent": "sent",
+        "pending": "handed to the mail service, no result yet",
+        "failed": "not sent",
+        "skipped": "not sent",
+        "not_selected": "not chosen at approval",
+        "published": "published",
+        "unknown": "no sending data"
+      },
+      "reason": {
+        "no_telegram": "the contact is not connected to the Telegram bot",
+        "client_not_in_crm": "the client was not passed to CRM, the bot does not know them",
+        "no_cabinet": "the client is not invited to the cabinet — invite them from the client card",
+        "no_email": "the contact has no e-mail — add it on the client card",
+        "mail_not_configured": "email is not set up — Settings · Connections · Email",
+        "mail_failed": "the email did not go out",
+        "below_cost": "the price is below cost",
+        "fx_missing": "no exchange rate",
+        "unpriced_lines": "some lines have no price",
+        "below_floor": "the margin is below the minimum, a justification is needed",
+        "not_claimed": "the quote has no seller company",
+        "no_recipient": "the request has no client contact",
+        "send_failed": "sending failed"
+      },
+      "error": "ERP stopped the automatic sending: {{reason}}.",
+      "line": "{{channel}} — {{status}}",
+      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "send": "Send",
+      "resend": "Send again",
+      "sendLabel": "{{action}}: {{channel}}",
+      "done": "Quote sent: {{channel}}",
+      "doneEmail": "The quote email is handed to the mail service — the result will appear in the report.",
+      "failed": "Not sent: {{reason}}",
+      "invalid": "The quote can no longer be sent — the card is refreshed."
+    }
   },
   "panel": {
     "sheetTitle": "Approval {{number}}",
@@ -147,7 +190,7 @@
     "decided": {
       "approved": {
         "title": "Quote approved",
-        "text": "The decision is made and the outgoing number is assigned. With channels chosen, the quote goes to the client right away (an unavailable channel is shown with the reason on the quote card and the request manager is notified); without channels the request manager sends it."
+        "text": "The decision is made and the outgoing number is assigned. The quote goes to the client through the chosen available channels; what went out and what did not is in the \"Sending to the client\" report on the quote card."
       },
       "returned": {
         "title": "Quote returned for rework",
@@ -184,9 +227,9 @@
     },
     "channels": {
       "legend": "Send to the client via",
-      "hint": "Choose channels for the PDF without internal fields; the request manager sends it.",
+      "hint": "The quote without internal fields goes to the client right after approval through the chosen channels.",
       "contact": "Client contact: {{name}}.",
-      "unknown": "The client contact was not received from ERP: channel availability will be checked on sending.",
+      "unknown": "ERP did not answer, channel availability is unknown: ERP checks it on sending and shows an unavailable channel in the quote card report.",
       "telegram": {
         "name": "Telegram bot"
       },
@@ -196,17 +239,19 @@
       "email": {
         "name": "Email"
       },
-      "unavailable": {
-        "noTelegram": "Unavailable: the contact is not connected to the bot.",
-        "noCabinet": "Unavailable: the client company has no cabinet.",
-        "noEmail": "Unavailable: the contact has no e-mail."
+      "reason": {
+        "no_telegram": "Unavailable: the contact is not connected to the Telegram bot.",
+        "client_not_in_crm": "Unavailable: the client was not passed to CRM, the bot does not know them.",
+        "no_cabinet": "Unavailable: the client is not invited to the cabinet.",
+        "no_email": "Unavailable: the contact has no e-mail.",
+        "mail_not_configured": "Unavailable: email is not set up — Settings · Connections · Email."
       }
     },
     "consequence": {
       "title": "What will happen",
       "step1": "The quote gets an outgoing number.",
       "step2": "The quote goes to the client right away through the chosen channels ({{channels}}) that are available; an unavailable channel is shown with the reason on the quote card and the request manager is notified. The client gets a PDF without cost and margin.",
-      "step2None": "No channels chosen: the quote goes to \"Outgoing\" and the request manager sends it to the client.",
+      "step2None": "No channels chosen: the quote stays \"Ready to send\" and the request manager sends it from the quote card.",
       "step3": "Nothing goes to the client until the quote is sent; the validity period and the reminder start after sending."
     },
     "other": {

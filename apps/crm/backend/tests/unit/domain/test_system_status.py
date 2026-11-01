@@ -189,6 +189,19 @@ def test_crm_url_component_reports_both_problems_in_one_row() -> None:
     assert "Платформы не задан" in result.reason
 
 
+def test_crm_url_component_warns_when_the_cabinet_address_is_missing() -> None:
+    """D17G-3: без адреса кабинета приглашения в кабинет не уходят — строка «Адреса для ссылок»
+    говорит, где задать."""
+    platform = PlatformUrlFacts("https://platform.example.com", True)
+    missing = rules.crm_url("https://crm.example.com", NOW, platform, "")
+    assert missing.status == "warn"
+    assert "Адрес кабинета клиента не задан" in missing.reason
+    assert "Подключениях" in missing.reason
+    ok = rules.crm_url("https://crm.example.com", NOW, platform, "https://cabinet.example.com")
+    assert ok.status == "ok"
+    assert "https://cabinet.example.com" in ok.reason
+
+
 def _backup(
     mounted: bool = True,
     alive: bool = True,

@@ -22,6 +22,8 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { useGetSetupCabinet } from "../../../shared/api/generated/platform-bff";
+import { CabinetAddress } from "../integrations/CabinetAddress";
 import { CompanyStep } from "./CompanyStep";
 import { ConnectionsStep } from "./ConnectionsStep";
 import { ErpStep } from "./ErpStep";
@@ -46,6 +48,18 @@ function StepCard({
       </div>
       {children}
     </Card>
+  );
+}
+
+/** Состояние шага «Адрес кабинета клиента» (D17G-3): задан здесь или на сервере — «Готово», нет — «Не сделано». */
+function CabinetStatus() {
+  const { t } = useTranslation("modules");
+  const cabinet = useGetSetupCabinet();
+  const state = cabinet.data ? (cabinet.data.url ? "done" : "todo") : "unknown";
+  return (
+    <StatusTag kind="setupStep" status={state}>
+      {t(`admin.setup.state.${state}`)}
+    </StatusTag>
   );
 }
 
@@ -214,6 +228,9 @@ export function SetupWizardPage() {
               void checklist.refetch();
             }}
           />
+        </StepCard>
+        <StepCard title={t("admin.setup.cabinetTitle")} status={<CabinetStatus />}>
+          <CabinetAddress titled={false} />
         </StepCard>
         <StepCard
           title={t("admin.setup.connectionsTitle")}

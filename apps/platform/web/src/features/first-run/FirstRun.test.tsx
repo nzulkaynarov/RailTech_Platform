@@ -341,6 +341,7 @@ describe("Баннер настройки и мастер", () => {
       "Администратор",
       "Подключение ERP",
       "Ваша компания",
+      "Адрес кабинета клиента",
       "Остальные подключения",
     ]);
     expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
@@ -361,6 +362,33 @@ describe("Баннер настройки и мастер", () => {
       expect(within(row).getByText("Не сделано")).toBeVisible();
     }
     expect(screen.getByText("Готово 0 из 5")).toBeVisible();
+  });
+
+  it("адрес кабинета клиента (D17G-3): не задан → проверка доступности → сохранение, шаг «Готово»", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+
+    const block = await screen.findByRole("region", { name: "Адрес кабинета клиента" });
+    expect(await within(block).findByText(/Адрес не задан — приглашения в кабинет/)).toBeVisible();
+    const card = block.closest(".ant-card") as HTMLElement;
+    expect(within(card).getByText("Не сделано")).toBeVisible();
+
+    const input = within(block).getByLabelText("Адрес кабинета");
+    fireEvent.change(input, { target: { value: "https://unreachable.example" } });
+    fireEvent.click(within(block).getByRole("button", { name: "Проверить доступность" }));
+    expect(await within(block).findByText(/Адрес не открылся с сервера/)).toBeVisible();
+
+    fireEvent.change(input, { target: { value: "https://lk.example.org" } });
+    // у antd значок загрузки уходит анимацией, в jsdom он остаётся в имени кнопки
+    fireEvent.click(within(block).getByRole("button", { name: /Проверить доступность/ }));
+    expect(
+      await within(block).findByText("Кабинет открывается: https://lk.example.org."),
+    ).toBeVisible();
+    fireEvent.click(within(block).getByRole("button", { name: /Сохранить адрес/ }));
+    expect(
+      await within(block).findByText("Сейчас: https://lk.example.org (задан здесь)."),
+    ).toBeVisible();
+    expect(await within(card).findByText("Готово")).toBeVisible();
   });
 
   it("ERP не подключена: «Ваша компания» объясняет и ведёт на шаг ERP — без формы и «Проверить снова»", async () => {

@@ -32,6 +32,23 @@ from crm.services.quotes.editable import assert_quote_items_editable
 from crm.views._pdf import pdf_generating_response
 from crm.views.quotes.approval import QuoteApprovalMixin, _chain_error_response
 
+# Коды отказа «Отправить по каналу» (D17G-2), которые доходят до интерфейса как есть; прочее — INVALID_STATUS.
+_DELIVER_ERRORS = frozenset(
+    {
+        "CONTACT_EMAIL_REQUIRED",
+        "CONTACT_TELEGRAM_REQUIRED",
+        "CLIENT_NOT_IN_CRM",
+        "UNKNOWN_CHANNEL",
+        "INVALID_STATUS",
+        "QUOTE_BELOW_COST",
+        "QUOTE_NOT_CLAIMED",
+        "FX_RATE_MISSING",
+        "QUOTE_HAS_UNPRICED_LINES",
+        "BELOW_FLOOR_JUSTIFICATION_REQUIRED",
+        "RECIPIENT_REQUIRED",
+    }
+)
+
 # Поля КП, влияющие на сумму/состав предложения: PATCH вне DRAFT → 409 (FIX-55, D-04).
 _QUOTE_PRICING_FIELDS = frozenset(
     {
@@ -91,6 +108,8 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         # Договорной курс КП (M1-ERP-08) — финансы, с причиной; сам расчёт КП не меняет права расчётчика.
         "fx_override": "finance.rates",
         "send_to_client": "quote.send",
+        # D17G-2: отправка по одному каналу из карточки КП Платформы — то же право и та же объектная проверка.
+        "deliver": "quote.send",
         # Виза расчёта — назначенный исполнитель шага (EDS-03, волна 12): право проверяет сервис по назначению.
         "approval_act": SELF_SERVICE,
         "force_approve": ADMIN_ONLY,
@@ -354,6 +373,47 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
                 )
                 else "INVALID_STATUS"
             )
+        return Response(self.get_serializer(quote).data)
+
+    @extend_schema(
+        summary="Отправить одобренное КП клиенту по одному каналу (D17G-2)",
+        description=(
+            "Для того, кто отправляет КП (менеджер заявки или директор, `quote.send`), когда канал не сработал или не был "
+            "выбран при одобрении. Канал проверяется по контактам клиента теми же правилами, что автоотправка (ERP-11). "
+            "КП «Готово к отправке» отправляется только по этому каналу; уже отправленное — повторно по каналу (письмо "
+            "заново, Telegram — новое `quote.sent`). Кабинет не отправляется: отправленное КП клиент видит в кабинете "
+            "всегда. Ошибки 400: причина недоступности канала (CONTACT_EMAIL_REQUIRED, CONTACT_TELEGRAM_REQUIRED, "
+            "CLIENT_NOT_IN_CRM), гейт отправки (QUOTE_BELOW_COST, FX_RATE_MISSING…), INVALID_STATUS, UNKNOWN_CHANNEL."
+        ),
+        request=inline_serializer(
+            name="QuoteDeliverRequest",
+            fields={"channel": drf_serializers.ChoiceField(choices=["telegram", "email"])},
+        ),
+        responses={
+            200: QuoteSerializer,
+            400: OpenApiResponse(description="Канал недоступен, гейт отправки или статус КП (код в `detail`)"),
+            403: OpenApiResponse(description="ROLE_NOT_PERMITTED"),
+            404: OpenApiResponse(description="QUOTE_NOT_FOUND"),
+        },
+        tags=["CRM"],
+    )
+    @action(detail=True, methods=["post"], url_path="deliver", permission_classes=[IsAuthenticated])
+    def deliver(self, request, pk=None):
+        """Отправить КП по одному каналу из карточки КП Платформы (D17G-2); право — как у «Отправить клиенту»."""
+        from crm.services.quotes import can_send_quote_to_client
+        from sales.services.quote_auto_send import deliver
+
+        quote = Quote.objects.select_related("status", "prepared_by", "deal").filter(pk=pk).first()
+        if quote is None:
+            return Response({"detail": "QUOTE_NOT_FOUND"}, status=status.HTTP_404_NOT_FOUND)
+        if not can_send_quote_to_client(request.user, quote):
+            return _chain_error_response("ROLE_NOT_PERMITTED")
+        channel = request.data.get("channel")
+        try:
+            quote = deliver(quote.pk, channel if isinstance(channel, str) else "", request.user)
+        except ValueError as exc:
+            code = str(exc)
+            return _chain_error_response(code if code in _DELIVER_ERRORS else "INVALID_STATUS")
         return Response(self.get_serializer(quote).data)
 
     @extend_schema(

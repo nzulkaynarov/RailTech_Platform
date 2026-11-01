@@ -18,6 +18,10 @@ from app.errors import PlatformError
 from app.schemas import SessionOut, build_session
 from app.schemas_setup import (
     SetupAdminIn,
+    SetupCabinet,
+    SetupCabinetCheck,
+    SetupCabinetCheckIn,
+    SetupCabinetIn,
     SetupChecklist,
     SetupCompanyCreated,
     SetupCompanyIn,
@@ -124,3 +128,24 @@ async def create_own_company(body: SetupCompanyIn, authed: Admin) -> SetupCompan
             payload[field] = value.strip()
     created = await crm_setup.create_company(authed.call, payload)
     return SetupCompanyCreated(id=created.id, name=created.name)
+
+
+# --- адрес кабинета клиента (D17G-3): мастер «Первый запуск» и «Подключения» ---------------------
+
+
+@router.get("/setup/cabinet", response_model=SetupCabinet, operation_id="getSetupCabinet")
+async def get_setup_cabinet(authed: Admin, response: Response) -> SetupCabinet:
+    response.headers["Cache-Control"] = "no-store"
+    return await crm_setup.get_cabinet(authed.call)
+
+
+@router.put("/setup/cabinet", response_model=SetupCabinet, operation_id="saveSetupCabinet")
+async def save_setup_cabinet(body: SetupCabinetIn, authed: Admin) -> SetupCabinet:
+    return await crm_setup.save_cabinet(authed.call, body.url)
+
+
+@router.post(
+    "/setup/cabinet/check", response_model=SetupCabinetCheck, operation_id="checkSetupCabinet"
+)
+async def check_setup_cabinet(body: SetupCabinetCheckIn, authed: Admin) -> SetupCabinetCheck:
+    return await crm_setup.check_cabinet(authed.call, body.url)

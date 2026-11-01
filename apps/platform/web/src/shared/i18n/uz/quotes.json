@@ -127,7 +127,50 @@
     "clientComments": "Mijoz izohlari",
     "clientCommentsList": "Taklif boʻyicha mijoz izohlari",
     "clientCommentsHint": "Mijoz ularni kabinetda, taklif qaror kutayotganda yozadi. «Chatlar»da yoki taklifning yangi versiyasi bilan javob bering.",
-    "clientCommentAuthor": "Mijoz"
+    "clientCommentAuthor": "Mijoz",
+    "delivery": {
+      "title": "Mijozga yuborish",
+      "list": "Yuborish kanallari",
+      "state": {
+        "ready": "TT tasdiqlandi, mijozga hali yuborilmagan.",
+        "sent": "TT mijozga yuborildi.",
+        "closed": "Mijoz TTga javob berdi, boshqa yuboriladigan narsa yo'q."
+      },
+      "status": {
+        "sent": "yuborildi",
+        "pending": "pochta xizmatiga topshirildi, natija hali kelmadi",
+        "failed": "yuborilmadi",
+        "skipped": "yuborilmadi",
+        "not_selected": "tasdiqlashda tanlanmagan",
+        "published": "e'lon qilindi",
+        "unknown": "yuborish haqida ma'lumot yo'q"
+      },
+      "reason": {
+        "no_telegram": "kontakt Telegram-botga ulanmagan",
+        "client_not_in_crm": "mijoz CRMga uzatilmagan, bot uni bilmaydi",
+        "no_cabinet": "mijoz kabinetga taklif qilinmagan — mijoz kartasidan taklif qiling",
+        "no_email": "kontaktda e-mail yo'q — uni mijoz kartasida qo'shing",
+        "mail_not_configured": "pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
+        "mail_failed": "xat ketmadi",
+        "below_cost": "narx tannarxdan past",
+        "fx_missing": "valyuta kursi yo'q",
+        "unpriced_lines": "narxsiz pozitsiyalar bor",
+        "below_floor": "marja minimaldan past, asoslash kerak",
+        "not_claimed": "TTda sotuvchi kompaniya yo'q",
+        "no_recipient": "arizada mijoz kontakti yo'q",
+        "send_failed": "yuborishda nosozlik"
+      },
+      "error": "Avtoyuborishni ERP to'xtatdi: {{reason}}.",
+      "line": "{{channel}} — {{status}}",
+      "lineReason": "{{channel}} — {{status}}: {{reason}}",
+      "send": "Yuborish",
+      "resend": "Qayta yuborish",
+      "sendLabel": "{{action}}: {{channel}}",
+      "done": "TT yuborildi: {{channel}}",
+      "doneEmail": "TT bilan xat pochta xizmatiga topshirildi — natija hisobotda paydo bo'ladi.",
+      "failed": "Yuborilmadi: {{reason}}",
+      "invalid": "TTni endi yuborib bo'lmaydi — karta yangilandi."
+    }
   },
   "panel": {
     "sheetTitle": "{{number}} tasdiqlash",
@@ -147,7 +190,7 @@
     "decided": {
       "approved": {
         "title": "TT tasdiqlandi",
-        "text": "Qaror qabul qilindi, ISH raqami berildi. Tanlangan kanallar bilan TT mijozga darhol yuboriladi (mavjud bo'lmagan kanal — sababi TT kartasida, ariza menejeriga xabar); kanalsiz uni ariza menejeri yuboradi."
+        "text": "Qaror qabul qilindi, ISH raqami berildi. TT tanlangan mavjud kanallar orqali mijozga yuboriladi; nima ketdi va nima ketmadi — TT kartasidagi «Mijozga yuborish» hisobotida."
       },
       "returned": {
         "title": "TT qayta ishlashga qaytarildi",
@@ -184,9 +227,9 @@
     },
     "channels": {
       "legend": "Mijozga yuborish kanali",
-      "hint": "Ichki maydonlarsiz PDF uchun kanallarni tanlang; uni ariza menejeri yuboradi.",
+      "hint": "Ichki maydonlarsiz TT tasdiqlangandan so'ng tanlangan kanallar orqali mijozga darhol yuboriladi.",
       "contact": "Mijoz kontakti: {{name}}.",
-      "unknown": "Mijoz kontakti ERPdan olinmadi: kanallar mavjudligini xizmat yuborishda tekshiradi.",
+      "unknown": "ERP javob bermadi, kanallar mavjudligi noma'lum: ERP uni yuborishda tekshiradi, mavjud bo'lmagan kanalni TT kartasidagi hisobotda ko'rsatadi.",
       "telegram": {
         "name": "Telegram-bot"
       },
@@ -196,17 +239,19 @@
       "email": {
         "name": "Pochta"
       },
-      "unavailable": {
-        "noTelegram": "Mavjud emas: kontakt botga ulanmagan.",
-        "noCabinet": "Mavjud emas: mijoz kompaniyasida kabinet yo'q.",
-        "noEmail": "Mavjud emas: kontaktda e-mail ko'rsatilmagan."
+      "reason": {
+        "no_telegram": "Mavjud emas: kontakt Telegram-botga ulanmagan.",
+        "client_not_in_crm": "Mavjud emas: mijoz CRMga uzatilmagan, bot uni bilmaydi.",
+        "no_cabinet": "Mavjud emas: mijoz kabinetga taklif qilinmagan.",
+        "no_email": "Mavjud emas: kontaktda e-mail yo'q.",
+        "mail_not_configured": "Mavjud emas: pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta."
       }
     },
     "consequence": {
       "title": "Nima bo'ladi",
       "step1": "TT chiquvchi ISH raqamini oladi.",
       "step2": "TT tanlangan kanallar ({{channels}}) orqali, ular mavjud bo'lsa, mijozga darhol yuboriladi; mavjud bo'lmagan kanal — sababi TT kartasida, ariza menejeriga xabar keladi. Mijoz PDFni tannarx va margasiz oladi.",
-      "step2None": "Kanal tanlanmagan: TT «Chiquvchilar»ga tushadi, mijozga uni ariza menejeri yuboradi.",
+      "step2None": "Kanal tanlanmagan: TT «Yuborishga tayyor» bo'lib qoladi, ariza menejeri uni TT kartasidan yuboradi.",
       "step3": "TT yuborilmaguncha mijozga hech narsa ketmaydi; amal qilish muddati va eslatma — yuborilgandan so'ng."
     },
     "other": {

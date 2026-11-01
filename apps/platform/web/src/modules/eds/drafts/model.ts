@@ -3,6 +3,7 @@ import type {
   QuoteApprovalCard,
   QuoteChannels,
   QuoteChecklistLine,
+  QuoteDeliveryReason,
   QuoteSendChannel,
 } from "../../../shared/api/generated/model";
 
@@ -23,26 +24,20 @@ export function lateWarning(checklist: readonly QuoteChecklistLine[]): QuoteChec
 export interface ChannelState {
   channel: QuoteSendChannel;
   available: boolean;
-  /** Почему канал недоступен: ключ подписи `form.channels.unavailable.<ключ>` */
-  reason: "noTelegram" | "noCabinet" | "noEmail" | null;
+  /** Почему канал недоступен — причина ERP или CRM: ключ подписи `form.channels.reason.<код>` */
+  reason: QuoteDeliveryReason | null;
 }
 
 /**
- * Каналы отправки по контакту клиента из ERP. Контакт не получен (`channels = null`) — все три выбираемы: доступность проверит
- * EDS и ERP при отправке, экран это оговаривает отдельной строкой.
+ * Каналы отправки по фактическим контактам клиента: доступность и причину считает ERP (те же проверки, что у автоотправки),
+ * «почта не настроена» — CRM (D17G-2). ERP не ответила (`channels = null`) — все три выбираемы: доступность ERP проверит при
+ * отправке, экран это оговаривает отдельной строкой.
  */
 export function channelStates(channels: QuoteChannels | null): ChannelState[] {
   return CHANNELS.map((channel) => {
     if (channels === null) return { channel, available: true, reason: null };
     const available = channels[channel];
-    const reason = !available
-      ? channel === "telegram"
-        ? "noTelegram"
-        : channel === "cabinet"
-          ? "noCabinet"
-          : "noEmail"
-      : null;
-    return { channel, available, reason };
+    return { channel, available, reason: available ? null : channels.reasons[channel] };
   });
 }
 

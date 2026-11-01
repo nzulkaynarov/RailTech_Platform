@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from app.services.auth import AuthService
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
+    from app.services.cabinet_url import CabinetUrlService
     from app.services.client_contacts import ClientContactService
     from app.services.client_notices import ClientNoticeService
     from app.services.client_requests import ClientRequestService
@@ -210,7 +211,14 @@ class Container:
             self.session_factory,
             crm_base_url_default=self.settings.crm_base_url_default,
             platform_url=self.settings.platform_base_url,
+            cabinet_url_default=self.settings.cabinet_url_default,
         )
+
+    @cached_property
+    def cabinet_url_service(self) -> "CabinetUrlService":
+        from app.services.cabinet_url import CabinetUrlService
+
+        return CabinetUrlService(self.settings_service, self.settings.cabinet_url_default)
 
     @cached_property
     def docling(self) -> DoclingClient:

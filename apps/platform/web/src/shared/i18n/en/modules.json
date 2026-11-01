@@ -178,7 +178,7 @@
     "action": "Invite employee",
     "setup": {
       "title": "First run",
-      "subtitle": "Four steps: administrator, ERP connection, your company, other connections. Any step can wait.",
+      "subtitle": "Five steps: administrator, ERP connection, your company, client cabinet address, other connections. Any step can wait.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator created: {{name}}.",
       "companyTitle": "Your company",
@@ -278,7 +278,8 @@
       "finish": "Close",
       "stepSaved": "Step “{{step}}” is done.",
       "bannerHidden": "The setup banner is hidden until tomorrow.",
-      "bannerReturn": "Bring the banner back"
+      "bannerReturn": "Bring the banner back",
+      "cabinetTitle": "Client cabinet address"
     },
     "org": {
       "title": "Employees",

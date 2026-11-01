@@ -704,7 +704,8 @@ def test_any_send_failure_keeps_the_approval_and_tells_the_request_manager(world
     assert quote.outgoing_number == "ИСХ-082/26"
     assert quote.send_report["error"] == "SEND_FAILED" and "smtp is on fire" in quote.send_report["error_detail"]
     note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
-    assert "cabinet" in note.message and "вручную" in note.message
+    assert note.message.startswith("Кабинет — сбой отправки") and "карточке КП" in note.message
+    assert note.event_params["channels"] == "cabinet" and note.event_params["error"] == "SEND_FAILED"
 
 
 def test_unavailable_channels_are_reported_to_the_request_manager(world):
@@ -717,3 +718,140 @@ def test_unavailable_channels_are_reported_to_the_request_manager(world):
     assert quote.status.code == "SENT"
     note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
     assert note.event_params["channels"] == "email"
+    # D17G-2: причина словами и куда идти, а не «отправьте вручную» с кодом канала
+    assert note.title == f"{quote.number}: не отправлено — Почта"
+    assert note.message == "Почта — у контакта клиента нет e-mail. Отчёт по каналам и отправка — в карточке КП."
+    assert note.event_params["reasons"] == {"email": "CONTACT_EMAIL_REQUIRED"}
+
+
+# ── D17G-2 (гейт D1-7): доступность каналов заранее и «Отправить» по каналу из карточки КП ─────────────────────────
+
+
+def test_quote_api_gives_channel_availability_by_the_clients_real_contact(world):
+    """Панель одобрения берёт доступность из ERP: контакт сделки с Telegram, без e-mail и без кабинета."""
+    _contact(world, telegram=700200, email="")
+    quote = _submitted(world)
+
+    body = _api(world["calc"]).get(f"/api/v1/crm/quotes/{quote.pk}/").json()
+
+    assert body["channel_availability"] == {
+        "contact_name": "Бахтиёр Каримов",
+        "channels": [
+            {"channel": "telegram", "available": True, "reason": None},
+            {"channel": "cabinet", "available": False, "reason": "CABINET_NOT_INVITED"},
+            {"channel": "email", "available": False, "reason": "CONTACT_EMAIL_REQUIRED"},
+        ],
+    }
+    assert body["can_send"] is True  # менеджер заявки с `quote.send`
+    # в списках — без расчёта на строку
+    listed = _api(world["calc"]).get("/api/v1/crm/quotes/", {"deal": world["deal"].pk}).json()
+    rows = listed["results"] if isinstance(listed, dict) else listed
+    assert all(row["channel_availability"] is None for row in rows)
+
+
+def test_buyer_gets_no_channel_availability(world):
+    _contact(world, telegram=700201, email="client@example.test")
+    quote = _submitted(world)
+    buyer = _user("buyer2@client.test")
+    _member(world["client"], buyer, [])
+    world["deal"].client = buyer
+    world["deal"].save(update_fields=["client"])
+
+    body = _api(buyer).get(f"/api/v1/crm/quotes/{quote.pk}/").json()
+
+    assert not {"channel_availability", "can_send"} & set(body)
+
+
+def _deliver(user, quote, channel):
+    return _api(user).post(f"/api/v1/crm/quotes/{quote.pk}/deliver/", {"channel": channel}, format="json")
+
+
+def test_manager_sends_a_ready_quote_by_the_channel_that_now_works(world, django_capture_on_commit_callbacks):
+    """Директор одобрил без доступных каналов → КП «Готово к отправке»; контакт подключил Telegram — менеджер
+    отправляет по Telegram: КП «Отправлено», `quote.sent` только с Telegram, итог и журнал."""
+    contact = _contact(world, telegram=None, email="")
+    quote, _ = _approve_with(world, ["telegram"])
+    assert quote.status.code == "READY_TO_SEND"
+    contact.telegram_user_id = 700202
+    contact.save(update_fields=["telegram_user_id"])
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _deliver(world["calc"], quote, "telegram")
+
+    assert response.status_code == 200, response.content
+    quote.refresh_from_db()
+    assert quote.status.code == "SENT"
+    assert quote.send_report["sent_via"] == ["telegram"] and quote.send_report["skipped"] == []
+    assert quote.send_report["error"] is None
+    assert bus_support.only("quote.sent")["data"]["payload"]["channels"] == ["telegram"]
+    assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.delivered").count() == 1
+
+
+def test_sent_quote_is_emailed_again_once_the_contact_has_an_email(world, django_capture_on_commit_callbacks, monkeypatch):
+    """КП ушло в Telegram, почта пропущена (нет e-mail). Менеджер дописал e-mail и отправляет по почте: письмо ставится
+    заново, второго `quote.sent` нет, пропуск почты снят, отметки прошлого итога письма сброшены."""
+    from crm import tasks
+
+    queued = []
+    monkeypatch.setattr(tasks.send_quote_email, "delay", lambda quote_id: queued.append(quote_id))
+    contact = _contact(world, telegram=700203, email="")
+    quote, _ = _approve_with(world, ["telegram", "email"])
+    assert quote.send_report["skipped"] == [{"channel": "email", "reason": "CONTACT_EMAIL_REQUIRED"}]
+    quote.send_report["email_failed_at"] = "2026-11-01T10:00:00Z"
+    quote.save(update_fields=["send_report"])
+    contact.email = "client@example.test"
+    contact.save(update_fields=["email"])
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = _deliver(world["calc"], quote, "email")
+
+    assert response.status_code == 200, response.content
+    quote.refresh_from_db()
+    assert queued == [quote.pk]
+    assert quote.send_report["sent_via"] == ["telegram", "email"] and quote.send_report["skipped"] == []
+    assert "email_failed_at" not in quote.send_report
+    assert len(bus_support.published("quote.sent")) == 1
+
+
+def test_telegram_is_sent_again_with_a_new_quote_sent_event(world):
+    _contact(world, telegram=700204, email="")
+    quote, _ = _approve_with(world, ["telegram"])
+
+    response = _deliver(world["calc"], quote, "telegram")
+
+    assert response.status_code == 200, response.content
+    sent = bus_support.published("quote.sent")
+    assert len(sent) == 2 and sent[-1]["data"]["payload"]["channels"] == ["telegram"]
+
+
+def test_unavailable_channel_cannot_be_sent_and_says_why(world):
+    _contact(world, telegram=700205, email="")
+    quote, _ = _approve_with(world, ["telegram"])
+
+    response = _deliver(world["calc"], quote, "email")
+
+    assert response.status_code == 400 and response.json()["detail"] == "CONTACT_EMAIL_REQUIRED"
+    cabinet = _deliver(world["calc"], quote, "cabinet")
+    assert cabinet.status_code == 400 and cabinet.json()["detail"] == "UNKNOWN_CHANNEL"
+    quote.refresh_from_db()
+    assert quote.send_report["sent_via"] == ["telegram"]
+
+
+def test_only_who_sends_the_quote_can_deliver_it(world):
+    _contact(world, telegram=700206, email="")
+    quote, _ = _approve_with(world, ["telegram"])
+    other = _staff(world, "other@railtech.test", 7, [Permission.DEAL_MANAGE.value, Permission.QUOTE_SEND.value])
+
+    response = _deliver(other, quote, "telegram")
+
+    assert response.status_code == 403, response.content
+    assert len(bus_support.published("quote.sent")) == 1
+
+
+def test_draft_quote_cannot_be_delivered(world):
+    _contact(world, telegram=700207, email="")
+    quote = _quote(world)
+
+    response = _deliver(world["calc"], quote, "telegram")
+
+    assert response.status_code == 400 and response.json()["detail"] == "INVALID_STATUS"

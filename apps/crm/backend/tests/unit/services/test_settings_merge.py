@@ -200,3 +200,28 @@ async def test_saving_a_crm_base_url_without_scheme_is_refused() -> None:
 )
 def test_stored_crm_base_url_variants(stored: str, expected: str) -> None:
     assert _merge({"company": {"crm_base_url": stored}}).company.crm_base_url == expected
+
+
+# --- D17G-3: адрес кабинета по умолчанию — из окружения, заданное админом главнее -----------------
+
+ENV_CABINET = "https://cabinet.example.com"
+
+
+def test_empty_cabinet_url_takes_the_env_address() -> None:
+    cfg = _with_env_defaults(_merge({}), None, ENV_CABINET)
+    assert cfg.company.cabinet_url == ENV_CABINET
+    assert cfg.company.crm_base_url == "http://localhost"
+
+
+def test_admin_cabinet_url_is_kept() -> None:
+    cfg = _with_env_defaults(
+        _merge({"company": {"cabinet_url": "https://lk.owner.example"}}), ENV_CRM, ENV_CABINET
+    )
+    assert cfg.company.cabinet_url == "https://lk.owner.example"
+    assert cfg.company.crm_base_url == ENV_CRM
+
+
+async def test_service_applies_cabinet_env_default_but_the_form_sees_the_stored_value() -> None:
+    service = SettingsService(lambda: _Session([]), cabinet_url_default=ENV_CABINET)  # type: ignore[arg-type]
+    assert (await service.get()).company.cabinet_url == ENV_CABINET
+    assert (await service.raw())["company"]["cabinet_url"] == ""

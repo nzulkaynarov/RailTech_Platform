@@ -17,6 +17,8 @@ import type {
 import {
   ACCOUNTANT_PERSON,
   DIRECTOR_PERSON,
+  deliveryAfterApproval,
+  deliveryAfterSend,
   MOCK_USER_CRM_ID,
   findMemo,
   findQuote,
@@ -41,7 +43,7 @@ function failure(
   status: number,
   code: string,
   message: string,
-  source: "bff" | "eds" = "bff",
+  source: "bff" | "eds" | "erp" = "bff",
   details?: Record<string, unknown>,
 ) {
   return HttpResponse.json({ code, message, source, ...(details ? { details } : {}) }, { status });
@@ -125,9 +127,17 @@ function presentQuote(
   card: QuoteApprovalCard,
   margin: boolean,
   mayDecide: boolean,
+  maySend = mayDecide,
 ): QuoteApprovalCard {
   const view: QuoteApprovalCard = {
     ...card,
+    // «Отправить» — у того, кто отправляет КП (раздел «Клиенты» полный, ERP `quote.send`; D17G-2)
+    delivery: card.delivery
+      ? {
+          ...card.delivery,
+          lines: card.delivery.lines.map((l) => ({ ...l, can_send: l.can_send && maySend })),
+        }
+      : null,
     can_decide: card.can_decide && mayDecide,
     allowed_decisions: mayDecide ? card.allowed_decisions : [],
     // ERP отказывает роли без доступа к КП (403): состав и итоги не приходят, снимка EDS у неё нет
@@ -236,8 +246,40 @@ export const edsApprovalsHandlers = [
     const card = findQuote(refOf(request, "/eds/quotes/"));
     if (!card) return failure(404, "NOT_FOUND", "КП не найдено.", "eds", { backend_status: 404 });
     return HttpResponse.json(
-      presentQuote(card, ok.who.margin, ok.who.levels["eds.drafts"] === "full"),
+      presentQuote(
+        card,
+        ok.who.margin,
+        ok.who.levels["eds.drafts"] === "full",
+        ok.who.levels["crm.clients"] === "full",
+      ),
     );
+  }),
+
+  http.post("*/eds/quotes/:id/send", async ({ request, params }) => {
+    const ok = guard(["crm.clients"], "full");
+    if (ok.error) return ok.error;
+    const card = findQuote(String(params["id"]));
+    if (!card) return failure(404, "NOT_FOUND", "КП не найдено.", "eds");
+    const { channel } = (await request.json()) as { channel: string };
+    if (channel !== "telegram" && channel !== "email") {
+      return failure(422, "VALIDATION_FAILED", "Канал не отправляется.", "bff", {
+        fields: ["channel"],
+      });
+    }
+    if (!card.delivery || card.delivery.state === "closed") {
+      return failure(409, "CONFLICT", "КП не отправлено.", "erp", { reason: "invalid_status" });
+    }
+    if (card.channels && !card.channels[channel]) {
+      return failure(409, "CONFLICT", "КП не отправлено.", "erp", {
+        reason: card.channels.reasons[channel] ?? "send_failed",
+      });
+    }
+    const delivery = card.delivery;
+    const next = updateQuote(card.id, (current) => ({
+      ...current,
+      delivery: deliveryAfterSend(delivery, channel),
+    }));
+    return HttpResponse.json(presentQuote(next ?? card, ok.who.margin, false, true));
   }),
 
   http.post("*/eds/quotes/:id/decision", async ({ request, params }) => {
@@ -270,6 +312,11 @@ export const edsApprovalsHandlers = [
       approved_late: late,
       outgoing_number:
         body.decision === "approve" ? `ИСХ-0${String(40 + current.version)}/26` : null,
+      // ERP-11: одобрение с каналами сразу отправляет КП по доступным из них (отчёт — D17G-2)
+      delivery:
+        body.decision === "approve"
+          ? deliveryAfterApproval(current.channels, body.channels ?? [])
+          : null,
       steps: decideSteps(current.steps, body.decision, body.comment),
     }));
     return HttpResponse.json(

@@ -28,6 +28,8 @@ from app.errors import (
 from app.schemas_setup import (
     STEP_KEYS,
     CompanyBlocker,
+    SetupCabinet,
+    SetupCabinetCheck,
     SetupChecklist,
     SetupCompanyStatus,
     SetupStep,
@@ -362,3 +364,43 @@ async def reset_user_password(
     if reset is None or not reset.temporary_password:
         raise backend_unavailable("crm", "no_temporary_password")
     return reset.temporary_password
+
+
+# --- адрес кабинета клиента (D17G-3) --------------------------------------------------------------
+
+CABINET = f"{SETUP}/cabinet"
+
+
+def _cabinet_error(response: httpx.Response) -> PlatformError:
+    """Отказ CRM -> `Error`; неверный адрес (422) подсвечивает поле `url`."""
+    error = from_backend("crm", response)
+    if response.status_code == 422:
+        error.body.details = {**(error.body.details or {}), "fields": ["url"]}
+    return error
+
+
+def _cabinet_body[T: BaseModel](model: type[T], response: httpx.Response) -> T:
+    if response.status_code != 200:
+        raise _cabinet_error(response)
+    found = _parse(model, _safe_json(response))
+    if found is None:
+        raise backend_unavailable("crm", "bad_cabinet_response")
+    return found
+
+
+async def get_cabinet(call: Call) -> SetupCabinet:
+    found = _cabinet_body(crm.CabinetUrlOut, await call("crm", "GET", CABINET))
+    return SetupCabinet(url=found.url, source=found.source.value, env_url=found.env_url)
+
+
+async def save_cabinet(call: Call, url: str) -> SetupCabinet:
+    found = _cabinet_body(crm.CabinetUrlOut, await call("crm", "PUT", CABINET, json={"url": url}))
+    return SetupCabinet(url=found.url, source=found.source.value, env_url=found.env_url)
+
+
+async def check_cabinet(call: Call, url: str | None) -> SetupCabinetCheck:
+    response = await call("crm", "POST", f"{CABINET}/check", json={"url": url}, probe=True)
+    found = _cabinet_body(crm.CabinetCheckOut, response)
+    return SetupCabinetCheck(
+        result=found.result.value, url=found.url, status_code=found.status_code
+    )
