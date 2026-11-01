@@ -42,9 +42,13 @@ from portal.serializers import (
     MagicLinkRequestSerializer,
     MagicLinkTokenSerializer,
     MeSerializer,
+    PaymentProofCreateSerializer,
+    PaymentProofSerializer,
     PortalDocumentSerializer,
     PortalUploadResponseSerializer,
     QuoteAcceptSerializer,
+    QuoteCommentCreateSerializer,
+    QuoteCommentSerializer,
     QuoteListItemSerializer,
     QuoteSerializer,
     ReasonSerializer,
@@ -55,6 +59,7 @@ from portal.serializers import (
 from portal.services import documents as portal_documents
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
+from portal.services.client_feedback import add_quote_comment, submit_payment_proof
 from portal.services.invitation import invite_team_member
 from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.requests import create_client_request
@@ -458,6 +463,24 @@ class QuoteRejectView(BasePortalView):
         return _quote_response(request, pk)
 
 
+class QuoteCommentView(BasePortalView):
+    """POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1)."""
+
+    permission_classes = [IsPortalAuthenticated, CanAct]
+
+    def post(self, request, pk):
+        serializer = QuoteCommentCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        text = serializer.validated_data["text"].strip()
+        if not text:
+            raise PortalValidationError("TEXT_REQUIRED")
+        quote = _quote_or_404(request, pk)
+        _assert_quote_awaits_decision(quote)
+        comment = add_quote_comment(quote, request.portal_contact, text)
+        return Response(QuoteCommentSerializer(comment).data, status=status.HTTP_201_CREATED)
+
+
 # ── 5. Contracts ────────────────────────────────────────────────────────────
 
 
@@ -496,16 +519,49 @@ class ContractSignView(BasePortalView):
 # ── 6. Invoices ─────────────────────────────────────────────────────────────
 
 
+def _client_invoices(company):
+    return Invoice.objects.filter(client_invoices_q(), deal__company=company).select_related(
+        "status", "deal", "currency", "contract__quote"
+    )
+
+
 class InvoiceListView(BasePortalView):
     """GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`)."""
 
     def get(self, request):
-        invoices = (
-            Invoice.objects.filter(client_invoices_q(), deal__company=request.portal_company)
-            .select_related("status", "deal", "currency", "contract__quote")
-            .order_by("-created_at")
-        )
+        invoices = _client_invoices(request.portal_company).prefetch_related("confirmations").order_by("-created_at")
         return Response(InvoiceSerializer(invoices, many=True).data)
+
+
+class InvoiceProofView(BasePortalView):
+    """POST /invoices/{id}/proofs — «Я оплатил»: платёжное поручение из `/uploads` к счёту (B-CABFIX-1).
+
+    Платёжка ложится в ту же `PaymentConfirmation`, что у менеджера (источник — кабинет), и ждёт подтверждения оплаты
+    в «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.
+    """
+
+    permission_classes = [IsPortalAuthenticated, CanAct]
+
+    def post(self, request, pk):
+        serializer = PaymentProofCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        data = serializer.validated_data
+        invoice = _client_invoices(request.portal_company).filter(pk=pk).first()
+        if invoice is None:
+            raise Http404
+        proof = submit_payment_proof(
+            invoice,
+            request.portal_contact,
+            upload_id=data["upload_id"],
+            paid_on=data.get("paid_on"),
+            amount=data.get("amount"),
+            comment=data.get("comment") or "",
+        )
+        currency = invoice.currency.code if invoice.currency_id else None
+        return Response(
+            PaymentProofSerializer(proof, context={"currency": currency}).data, status=status.HTTP_201_CREATED
+        )
 
 
 # ── 7. Acts ─────────────────────────────────────────────────────────────────

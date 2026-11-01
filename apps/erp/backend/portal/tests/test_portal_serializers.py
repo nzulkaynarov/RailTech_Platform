@@ -349,7 +349,7 @@ def test_invoice_status_mapping_and_form(contract_world, key, expected):
     invoice = contract_world["invoices"][key]
     data = InvoiceSerializer(invoice).data
     assert data["status"] == expected
-    assert set(data) == {"id", "deal", "number", "status", "total", "paid", "due_date", "document_id"}
+    assert set(data) == {"id", "deal", "number", "status", "total", "paid", "due_date", "document_id", "proofs"}
     assert "paid_amount" not in data
     assert data["paid"]["currency"] == "UZS"
     assert_matches_contract(data, "Invoice")

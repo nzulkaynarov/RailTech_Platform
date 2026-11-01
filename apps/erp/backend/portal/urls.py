@@ -20,11 +20,13 @@ from portal.views import (
     DocumentFileView,
     DocumentListView,
     InvoiceListView,
+    InvoiceProofView,
     LogoutView,
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
     MeView,
     QuoteAcceptView,
+    QuoteCommentView,
     QuoteDetailView,
     QuoteListView,
     QuoteRejectView,
@@ -66,6 +68,8 @@ urlpatterns = [
     path("quotes/<int:pk>/accept/", QuoteAcceptView.as_view(), name="portal-quote-accept-slash"),
     path("quotes/<int:pk>/reject", QuoteRejectView.as_view(), name="portal-quote-reject"),
     path("quotes/<int:pk>/reject/", QuoteRejectView.as_view(), name="portal-quote-reject-slash"),
+    path("quotes/<int:pk>/comments", QuoteCommentView.as_view(), name="portal-quote-comments"),
+    path("quotes/<int:pk>/comments/", QuoteCommentView.as_view(), name="portal-quote-comments-slash"),
     # Contracts (Договоры)
     path("contracts", ContractListView.as_view(), name="portal-contracts"),
     path("contracts/", ContractListView.as_view(), name="portal-contracts-slash"),
@@ -74,6 +78,8 @@ urlpatterns = [
     # Invoices (Счета на оплату)
     path("invoices", InvoiceListView.as_view(), name="portal-invoices"),
     path("invoices/", InvoiceListView.as_view(), name="portal-invoices-slash"),
+    path("invoices/<int:pk>/proofs", InvoiceProofView.as_view(), name="portal-invoice-proofs"),
+    path("invoices/<int:pk>/proofs/", InvoiceProofView.as_view(), name="portal-invoice-proofs-slash"),
     # Acts (Акты)
     path("acts", ActListView.as_view(), name="portal-acts"),
     path("acts/", ActListView.as_view(), name="portal-acts-slash"),

@@ -1047,6 +1047,54 @@
                 }
             }
         },
+        "/api/portal/v1/invoices/{id}/proofs": {
+            "post": {
+                "operationId": "api_portal_v1_invoices_proofs_create",
+                "description": "POST /invoices/{id}/proofs — «Я оплатил»: платёжное поручение из `/uploads` к счёту (B-CABFIX-1).\n\nПлатёжка ложится в ту же `PaymentConfirmation`, что у менеджера (источник — кабинет), и ждёт подтверждения оплаты\nв «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/invoices/{id}/proofs/": {
+            "post": {
+                "operationId": "api_portal_v1_invoices_proofs_create_2",
+                "description": "POST /invoices/{id}/proofs — «Я оплатил»: платёжное поручение из `/uploads` к счёту (B-CABFIX-1).\n\nПлатёжка ложится в ту же `PaymentConfirmation`, что у менеджера (источник — кабинет), и ждёт подтверждения оплаты\nв «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/me": {
             "get": {
                 "operationId": "api_portal_v1_me_retrieve",
@@ -1179,6 +1227,54 @@
             "post": {
                 "operationId": "api_portal_v1_quotes_accept_create_2",
                 "description": "POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/comments": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_comments_create",
+                "description": "POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/quotes/{id}/comments/": {
+            "post": {
+                "operationId": "api_portal_v1_quotes_comments_create_2",
+                "description": "POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1).",
                 "parameters": [
                     {
                         "in": "path",
@@ -42870,6 +42966,13 @@
                         "items": {},
                         "readOnly": true
                     },
+                    "client_comments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/QuoteClientComment"
+                        },
+                        "readOnly": true
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -42889,6 +42992,7 @@
                     "approved_by",
                     "charges",
                     "charges_total",
+                    "client_comments",
                     "created_at",
                     "deal",
                     "delivery_basis_data",
@@ -43118,6 +43222,40 @@
                 "required": [
                     "charge_type",
                     "quote"
+                ]
+            },
+            "QuoteClientComment": {
+                "type": "object",
+                "description": "Комментарий к КП: автор `client` (контакт из кабинета) или `manager` (сотрудник), имя, текст, время.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "author": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "author_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "text": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "author",
+                    "author_name",
+                    "created_at",
+                    "id",
+                    "text"
                 ]
             },
             "QuoteEconomics": {
