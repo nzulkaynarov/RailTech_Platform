@@ -458,6 +458,56 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /quotes/{id}/comments:
+    post:
+      tags: [quotes]
+      operationId: addQuoteComment
+      summary: Комментарий клиента к КП
+      description: |
+        Вопрос или замечание по КП, пока оно ждёт решения (`sent`, `viewed`, срок не вышел). Комментарий попадает в ленту
+        `Quote.comments`, в журнал сделки и уведомлением — ответственному менеджеру; КП не меняется. Ответ менеджер даёт
+        в канале клиента (бот, почта) или новой версией КП. Требует `can_act`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteCommentCreate'
+      responses:
+        '201':
+          description: Комментарий принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteComment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: КП уже принято или отклонено (`QUOTE_FINALIZED`) либо срок вышел (`QUOTE_EXPIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Текст пуст (`TEXT_REQUIRED`) или длиннее 2000 символов (`VALIDATION_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /contracts:
     get:
       tags: [contracts]
@@ -526,6 +576,62 @@ paths:
                   $ref: '#/components/schemas/Invoice'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /invoices/{id}/proofs:
+    post:
+      tags: [invoices]
+      operationId: submitPaymentProof
+      summary: «Я оплатил» — платёжное поручение к счёту
+      description: |
+        Клиент прикладывает платёжное поручение (SPEC-v3 §3.1 шаг 8, §8). Файл сначала грузится в `POST /uploads`
+        (PDF или изображение, ≤ 10 МБ; тело здесь — JSON, единственный multipart портала — `/uploads`), сюда — его
+        `upload_id`, а дата и сумма платежа и комментарий — по желанию. Платёжка деньгами не считается: она попадает
+        менеджеру в «Счета и оплаты» на вкладку «Платёжки на подтверждение» (источник — кабинет клиента), он сверяет
+        поступление с выпиской банка и подтверждает оплату — тогда меняется статус счёта. До этого платёжка в
+        `Invoice.proofs` — `pending`. Требует `can_act`. Счёт другой компании — 404.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentProofCreate'
+      responses:
+        '201':
+          description: Платёжка принята и ждёт проверки менеджером
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentProof'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Счёт уже оплачен или отменён (`INVOICE_NOT_OPEN`) — платёжка не нужна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: >-
+            Загрузки нет у компании или она уже вложена в другую сделку (`UPLOAD_NOT_FOUND`); файл не PDF и не
+            изображение, больше 10 МБ, сумма не больше нуля, дата платежа в будущем или комментарий длиннее
+            500 символов (`VALIDATION_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1166,6 +1272,8 @@ components:
         - DELIVERY_LINE_NOT_ACCEPTABLE
         - DOCUMENT_PENDING
         - DELIVERY_FAILED
+        - INVOICE_NOT_OPEN
+        - TEXT_REQUIRED
         - CONFLICT
 
     Reason:
@@ -1403,7 +1511,7 @@ components:
       allOf:
         - $ref: '#/components/schemas/QuoteListItem'
         - type: object
-          required: [lines, public_url, subtotal, vat]
+          required: [lines, public_url, subtotal, vat, comments]
           properties:
             subtotal:
               description: Итого без НДС — сумма `total` строк (Q-FIX21-2)
@@ -1423,6 +1531,42 @@ components:
               format: int64
             rejected_reason:
               type: [string, 'null']
+            comments:
+              type: array
+              description: Комментарии к КП, старые первыми (`POST /quotes/{id}/comments`)
+              items:
+                $ref: '#/components/schemas/QuoteComment'
+
+    QuoteCommentCreate:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+      additionalProperties: false
+
+    QuoteComment:
+      type: object
+      required: [id, author, text, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        author:
+          type: string
+          enum: [client, manager]
+          description: Кто написал — сотрудник компании клиента или менеджер продавца
+        author_name:
+          type: [string, 'null']
+          description: Имя автора; `null`, если его нет в карточке
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      additionalProperties: false
 
     ContractStatus:
       type: string
@@ -1457,7 +1601,7 @@ components:
 
     Invoice:
       type: object
-      required: [id, number, status, total, paid, due_date, deal]
+      required: [id, number, status, total, paid, due_date, deal, proofs]
       properties:
         id:
           type: integer
@@ -1478,6 +1622,76 @@ components:
         document_id:
           type: [integer, 'null']
           format: int64
+        proofs:
+          type: array
+          description: Платёжки по счёту, старые первыми — из кабинета и те, что приложил менеджер
+          items:
+            $ref: '#/components/schemas/PaymentProof'
+
+    PaymentProofStatus:
+      type: string
+      description: >-
+        `pending` — менеджер ещё не сверил платёжку с выпиской; `confirmed` — оплата по ней подтверждена; `rejected` —
+        отклонена с причиной `reject_reason` (ERP пока не отклоняет платёжки — BACKLOG B-D24-7)
+      enum: [pending, confirmed, rejected]
+
+    PaymentProofCreate:
+      type: object
+      required: [upload_id]
+      properties:
+        upload_id:
+          type: string
+          description: Файл платёжного поручения из `POST /uploads` (PDF или изображение, ≤ 10 МБ)
+        paid_on:
+          type: [string, 'null']
+          format: date
+          description: Дата платежа по словам клиента (не позже сегодняшней)
+        amount:
+          description: Сумма платежа по словам клиента в валюте счёта, больше нуля
+          oneOf:
+            - $ref: '#/components/schemas/Amount'
+            - type: 'null'
+        comment:
+          type: [string, 'null']
+          maxLength: 500
+      additionalProperties: false
+
+    PaymentProof:
+      type: object
+      required: [id, status, source, file_name, submitted_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        status:
+          $ref: '#/components/schemas/PaymentProofStatus'
+        source:
+          type: string
+          enum: [cabinet, bot, email, manager]
+          description: Откуда платёжка — кабинет клиента, бот, почта или её приложил менеджер
+        file_name:
+          type: string
+        submitted_at:
+          type: string
+          format: date-time
+        paid_on:
+          type: [string, 'null']
+          format: date
+          description: Дата платежа, которую указал клиент; не проверена
+        amount:
+          description: Сумма, которую указал клиент; не проверена — сумму подтверждает менеджер по выписке
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        comment:
+          type: [string, 'null']
+          description: Комментарий клиента (только у платёжек из кабинета)
+        confirmed_at:
+          type: [string, 'null']
+          format: date-time
+        reject_reason:
+          type: [string, 'null']
+      additionalProperties: false
 
     ActStatus:
       type: string
