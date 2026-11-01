@@ -1,5 +1,5 @@
 import AxeBuilder from "@axe-core/playwright";
-import { type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, spaGoto, waitForMotionEnd } from "./support/app";
 
@@ -31,6 +31,13 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, fullPage: true });
 }
 
+/** Прокрутить к блоку: React может перерисовать его между поиском и прокруткой — повторить до успеха. */
+async function scrollTo(target: Locator): Promise<void> {
+  await expect(async () => {
+    await target.scrollIntoViewIfNeeded({ timeout: 2000 });
+  }).toPass({ timeout: 10_000 });
+}
+
 const quotePath = (number: string, query = "") =>
   `/eds/drafts/${encodeURIComponent(number)}${query}`;
 
@@ -52,7 +59,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await expect(form.getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
       await expect(form.getByRole("checkbox", { name: "Telegram-бот" })).toBeChecked();
       await expect(form.getByText(/Контакт клиента не получен/)).toHaveCount(0);
-      await form.getByRole("group", { name: "Отправить клиенту через" }).scrollIntoViewIfNeeded();
+      await scrollTo(form.getByRole("group", { name: "Отправить клиенту через" }));
       await expectNoViolations(page, `панель одобрения ${String(width)}`);
       await shot(page, "d17g-approve-channels");
 
@@ -67,7 +74,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       } else {
         await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
       }
-      await report.scrollIntoViewIfNeeded();
+      await scrollTo(report);
       await expectNoViolations(page, `отчёт по каналам ${String(width)}`);
       await shot(page, "d17g-delivery-report");
     });
@@ -80,7 +87,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       const report = page.getByRole("list", { name: "Каналы отправки" });
       await expect(report.getByText("Почта — не отправлено: письмо не ушло")).toBeVisible();
       await expect(report.getByRole("button", { name: "Отправить: Telegram-бот" })).toBeVisible();
-      await report.scrollIntoViewIfNeeded();
+      await scrollTo(report);
       await expectNoViolations(page, `отчёт менеджера ${String(width)}`);
       await shot(page, "d17g-manager-report");
 
@@ -117,7 +124,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await block.getByLabel("Адрес кабинета").fill("https://unreachable.example");
       await block.getByRole("button", { name: "Проверить доступность" }).click();
       await expect(block.getByText(/Адрес не открылся с сервера/)).toBeVisible();
-      await block.scrollIntoViewIfNeeded();
+      await scrollTo(block);
       await expectNoViolations(page, `мастер: адрес не открылся ${String(width)}`);
       await shot(page, "d17g-wizard-cabinet-unreachable");
 
@@ -138,7 +145,7 @@ test.describe("D17G: каналы отправки КП и адрес кабин
       await expect(
         connections.getByText("Сейчас: https://cabinet.example.org (задан здесь)."),
       ).toBeVisible();
-      await connections.scrollIntoViewIfNeeded();
+      await scrollTo(connections);
       await expectNoViolations(page, `подключения: адрес кабинета ${String(width)}`);
       await shot(page, "d17g-integrations-cabinet");
     });
