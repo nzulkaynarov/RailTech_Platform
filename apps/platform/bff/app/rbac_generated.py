@@ -312,6 +312,18 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "admin",
         "full",
     ),
+    "instruction": (
+        "dashboard.queue",
+        "full",
+    ),
+    "instruction_extension": (
+        "eds.inbox",
+        "full",
+    ),
+    "acquaint": (
+        "dashboard.queue",
+        "full",
+    ),
 }
 
 # Системные роли (неизменны): название, матрица, поля с ограничением.

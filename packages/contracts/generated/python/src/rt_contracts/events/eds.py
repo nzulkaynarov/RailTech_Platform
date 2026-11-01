@@ -263,6 +263,20 @@ class ErpLinks(BaseModel):
     erp_company_id: int | None = None
 
 
+class Kind(StrEnum):
+    """
+    Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
+    """
+
+    instruction_assigned = "instruction_assigned"
+    instruction_reminder = "instruction_reminder"
+    instruction_overdue = "instruction_overdue"
+    extension_requested = "extension_requested"
+    extension_decided = "extension_decided"
+    acquaint_requested = "acquaint_requested"
+    letter_executed = "letter_executed"
+
+
 class Letter(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -420,6 +434,42 @@ class Money(BaseModel):
     )
     amount: Amount
     currency: Currency
+
+
+class NoticeRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.eds.notice.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Уведомления сотрудникам по поручениям входящих писем (P8b, SPEC-v3 §3.2a п. 2–5): поручение выдано, напоминание о сроке, «Просрочено», запрос переноса и решение по нему, «Ознакомиться», письмо исполнено. EDS сама сотрудникам не пишет: текст (RU) готовит EDS, доставляет CRM — строка колокольчика (`staff_notifications`, лента `crm:<id>` Платформы) и сообщение в Telegram тем, у кого он привязан (как сообщения сотрудникам по событиям ERP). Повтор с тем же notice_key второго уведомления не даёт. Подписчики v1: crm (доставка), platform-bff (подсказка).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ идемпотентности отправителя: одно уведомление каждому получателю на ключ
+    """
+    kind: Kind
+    """
+    Что случилось: выдано поручение; напоминание о сроке; срок прошёл; исполнитель просит перенос; автор решил перенос; надо ознакомиться; все поручения письма исполнены
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id получателей
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU), без персональных данных сверх номера и темы письма
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: тема письма, срок, причина
+    """
+    letter: LetterRef
+    due: date | None = None
+    """
+    Срок поручения, если уведомление о нём
+    """
+    actor: Actor
 
 
 class OutgoingNumber(RootModel[str]):

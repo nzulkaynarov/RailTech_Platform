@@ -32,6 +32,7 @@ from rt_contracts.events.eds import (
     LetterResolvedV1,
     LetterReturnedV1,
     MailRequestedV1,
+    NoticeRequestedV1,
 )
 from rt_contracts.events.envelope import Envelope
 from rt_contracts.events.erp import (
@@ -113,6 +114,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.eds.letter.resolved.v1": LetterResolvedV1,
     "uz.railtech.eds.letter.returned.v1": LetterReturnedV1,
     "uz.railtech.eds.mail.requested.v1": MailRequestedV1,
+    "uz.railtech.eds.notice.requested.v1": NoticeRequestedV1,
     "uz.railtech.identity.user.created.v1": UserCreatedV1,
     "uz.railtech.identity.user.deactivated.v1": UserDeactivatedV1,
     "uz.railtech.identity.user.updated.v1": UserUpdatedV1,
@@ -163,6 +165,7 @@ __all__ = [
     "MailRequestedV1",
     "MailRequestedV1",
     "MailSentV1",
+    "NoticeRequestedV1",
     "QuoteAcceptanceCodeRequestedV1",
     "QuoteAcceptedV1",
     "QuoteReadyForApprovalV1",

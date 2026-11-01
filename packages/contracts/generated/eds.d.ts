@@ -146,7 +146,12 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Карточка входящего письма */
+    /**
+     * Карточка входящего письма
+     * @description Держатель `letters.read` видит любое письмо. Без него (P8b, SPEC-v3 §3.2a «Права») — только письмо, где сотрудник
+     *     исполнитель поручения, в списке «ознакомить» или автор резолюции; иначе 403 `FORBIDDEN`
+     *     (`details.permission = [letters.read]`). Файлы такого письма и отчётов поручений он скачивает так же.
+     */
     get: operations["getLetter"];
     put?: never;
     post?: never;
@@ -174,7 +179,8 @@ export interface paths {
      *     `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
      *     `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
      *     `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
-     *     2026-10-26, C1-G-1).
+     *     2026-10-26, C1-G-1). Письмо пути делопроизводства (`Letter.track = office`) — 409, `details.reason = track_mismatch`:
+     *     его резолюция — `POST …/office-resolution` (P8b).
      */
     post: operations["resolveLetter"];
     delete?: never;
@@ -216,7 +222,8 @@ export interface paths {
     /**
      * Отклонить письмо с причиной
      * @description Только из `awaiting_resolution`; статус → `rejected`; публикуется `letter.rejected` — ERP переводит сделку в `LOST`
-     *     с причиной.
+     *     с причиной. Письмо пути делопроизводства (`track = office`, P8b) отклоняется без события: отказ по такому письму
+     *     сделку не закрывает.
      */
     post: operations["rejectLetter"];
     delete?: never;
@@ -240,6 +247,196 @@ export interface paths {
      *     `letter.resubmitted` (события шины нет). Другой статус — 409 `CONFLICT` (`details.reason = invalid_state`).
      */
     post: operations["resubmitLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/resolution-draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Проект резолюции делопроизводителя (P8b)
+     * @description Делопроизводитель (или директор) заполняет проект резолюции пути делопроизводства (SPEC-v3 §3.2a п. 1–2): тип,
+     *     ответственный, срок, текст, соисполнители, «ознакомить». Проект заменяется целиком; `null`-тело не принимается —
+     *     пустой проект задаётся `{"kind": null}`. Директор утверждает его одним действием (`POST …/office-resolution` с теми
+     *     же полями) или правит. Только письмо пути `office` (`Letter.track`; иначе 409, `details.reason = track_mismatch`) в
+     *     статусе `awaiting_resolution` (иначе 409 `invalid_state`). Сотрудники — активные в проекции (иначе 422,
+     *     `details.fields.<поле> = not_active_employee`); срок в прошлом — 422 `details.fields.due = due_in_past`. Журнал —
+     *     `letter.draft_saved`; событий шины нет.
+     */
+    put: operations["saveResolutionDraft"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/office-resolution": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Резолюция пути делопроизводства — К исполнению · Подготовить ответ · Для сведения (P8b)
+     * @description SPEC-v3 §3.2a п. 2. Только письмо пути `office` (иначе 409, `details.reason = track_mismatch`) в статусе
+     *     `awaiting_resolution` (иначе 409 `invalid_state`). `execute` и `reply`: обязательны ответственный и срок (не раньше
+     *     сегодняшней даты по `Asia/Tashkent`; иначе 422 `details.fields.due = due_in_past`), создаются поручения
+     *     ответственному и соисполнителям (статус `in_work`, общий срок), письмо → `in_execution`, `on_control = true`.
+     *     `info`: ответственного и срока нет (переданные — 422 `details.fields.<поле> = not_allowed_for_info`), поручений нет,
+     *     письмо → `noted`. «Ознакомить» — строки ознакомления у любого типа. Ответственный, соисполнители, «ознакомить» —
+     *     любые активные сотрудники проекции без проверки зоны (иначе 422 `not_active_employee`); один человек дважды —
+     *     422 `duplicate`. Проект резолюции очищается. Журнал `letter.resolved`. `letter.resolved` **не** публикуется (он
+     *     для расчёта ERP по зонам); исполнители и «ознакомить» получают `notice.requested` (колокольчик и Telegram).
+     */
+    post: operations["resolveOfficeLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/acquaint": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Ознакомлен» (P8b)
+     * @description Сотрудник из списка «ознакомить» отмечает, что ознакомился: строка получает дату. Повтор — без изменений (200).
+     *     Сотрудника нет в списке — 404 `NOT_FOUND`. Журнал `letter.acknowledged`.
+     */
+    post: operations["acknowledgeLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/instructions/{instruction_id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Поручение исполнено (P8b)
+     * @description Исполнитель поручения отмечает «Исполнено» (SPEC-v3 §3.2a п. 3): нужен отчёт (`report`, `file_ids`) или ссылка на
+     *     отправленный ИСХ (`outgoing_number`), иначе 422 `details.fields.report = report_required`; ИСХ не найден или не
+     *     отправлен — 422 `details.fields.outgoing_number = not_found`. Только сам исполнитель (иначе 403,
+     *     `details.reason = not_executor`), только поручение `in_work` (иначе 409 `invalid_state`). Когда исполнены все
+     *     поручения письма — письмо `executed`, `on_control = false`, `notice.requested` автору резолюции и регистратору.
+     *     Журнал `instruction.executed` (и `letter.executed`).
+     */
+    post: operations["completeInstruction"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/instructions/{instruction_id}/extension": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Запросить перенос срока поручения (P8b)
+     * @description Исполнитель просит новый срок с причиной (SPEC-v3 §3.2a п. 3–4). Срочное письмо не продлевается — 409,
+     *     `details.reason = urgent_not_extendable`; уже есть запрос без решения — 409 `extension_pending`; новый срок не позже
+     *     текущего — 422 `details.fields.new_due = not_later`. Только исполнитель поручения `in_work` (403 `not_executor`, 409
+     *     `invalid_state`). Статус поручения не меняется; автору резолюции — строка «Перенос срока» и `notice.requested`.
+     *     Журнал `instruction.extension_requested`.
+     */
+    post: operations["requestInstructionExtension"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/instructions/{instruction_id}/extension/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Одобрить или отклонить перенос срока (P8b)
+     * @description Решает автор резолюции (иначе 403, `details.reason = not_resolution_author`). Нет запроса без решения — 409
+     *     `no_pending_extension`. `approve` — срок поручения меняется (напоминания считаются заново), `reject` — срок прежний.
+     *     Исполнителю — `notice.requested`; история переносов — в поручении. Журнал `instruction.extension_approved` или
+     *     `instruction.extension_rejected`.
+     */
+    post: operations["decideInstructionExtension"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letter-tasks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мои поручения, переносы на решение и ознакомления (P8b)
+     * @description Строки «Моих задач» сотрудника по входящим (SPEC-v3 §3.2a п. 3–5): поручения в работе, где он исполнитель (со
+     *     сроком и признаком просрочки); запросы переноса без решения, где он автор резолюции; ознакомления без отметки.
+     *     Не больше 100 строк каждого вида, раньше — ближайший срок.
+     */
+    get: operations["listMyLetterTasks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/employees": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Активные сотрудники — адресат, исполнитель, «ознакомить» (P8b)
+     * @description Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
+     *     пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     */
+    get: operations["listActiveEmployees"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -879,11 +1076,20 @@ export interface components {
     };
     /**
      * @description SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
-     *     резолюции директора; `resolved` — резолюция наложена; `returned` — возвращено, письмо у регистратора; `rejected` —
-     *     отклонено. Переходы — таблица в описании API.
+     *     резолюции директора; `resolved` — резолюция «расчёт» наложена (путь `calc`); `returned` — возвращено, письмо у
+     *     регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
+     *     (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
+     *     «Принято к сведению». Переходы — таблица в описании API.
      * @enum {string}
      */
-    LetterStatus: "awaiting_resolution" | "resolved" | "returned" | "rejected";
+    LetterStatus:
+      | "awaiting_resolution"
+      | "resolved"
+      | "returned"
+      | "rejected"
+      | "in_execution"
+      | "executed"
+      | "noted";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец); `services` — услуги, ТЗ, бригада (гл. инженер); `payment_terms` — условия оплаты (бухгалтер)
      * @enum {string}
@@ -1010,8 +1216,10 @@ export interface components {
       document_due?: string | null;
       /** @description Номер предыдущего ВХ или нашего ИСХ, на который ссылается письмо */
       related_number?: string | null;
-      /** @description На чьё имя; нет — директор */
+      /** @description На чьё имя (активный сотрудник); нет — директор */
       addressee_crm_user_id?: number | null;
+      /** @description Проект резолюции делопроизводителя (P8b) — те же правила, что у `PUT …/resolution-draft` */
+      resolution_draft?: components["schemas"]["ResolutionDraftIn"] | null;
       /** @description Ответственный менеджер */
       manager_crm_user_id?: number | null;
       /** @default false */
@@ -1031,11 +1239,18 @@ export interface components {
       urgent: boolean;
       /**
        * Format: date
-       * @description Срок расчёта по резолюции
+       * @description Срок по резолюции — расчёта (путь `calc`) или ответственного (путь `office`)
        */
       due?: string | null;
       /** @description Код вида документа (P8); у писем по заявкам — `null` */
       kind?: string | null;
+      track?: components["schemas"]["LetterTrack"];
+      /** @description На контроле — поручения в работе (P8b) */
+      on_control?: boolean;
+      /** @description Есть просроченное поручение (P8b) */
+      overdue?: boolean;
+      /** @description Ответственный исполнитель поручения (P8b); у пути `calc` — `null` */
+      executor?: components["schemas"]["PersonRef"] | null;
     };
     LetterPage: {
       items: components["schemas"]["LetterListItem"][];
@@ -1071,6 +1286,215 @@ export interface components {
       /** Format: date */
       document_due?: string | null;
       related?: components["schemas"]["LetterRelatedRef"] | null;
+      track?: components["schemas"]["LetterTrack"];
+      /** @description На контроле (P8b) — есть поручения в работе */
+      on_control?: boolean;
+      /**
+       * Format: date
+       * @description Подсказка срока резолюции пути `office` (P8b, бенчмарк СЭД §6.4): срок по документу минус рабочий день; без
+       *     него — дата регистрации плюс 3 дня («срочно») или 10 дней; выходной (сб, вс) переносится на понедельник; не
+       *     раньше сегодня. У пути `calc` — `null`.
+       */
+      suggested_due?: string | null;
+      resolution_draft?: components["schemas"]["ResolutionDraft"] | null;
+      /** @description Резолюция пути делопроизводства; у пути `calc` — `resolution` */
+      office_resolution?: components["schemas"]["OfficeResolution"] | null;
+      /** @description Поручения (ответственный первым) */
+      instructions?: components["schemas"]["Instruction"][];
+      acquaintances?: components["schemas"]["Acquaintance"][];
+      /**
+       * Format: date-time
+       * @description Когда исполнены все поручения
+       */
+      executed_at?: string | null;
+    };
+    /**
+     * @description Путь резолюции (P8b, SPEC-v3 §3.2a). `calc` — письмо по заявке клиента: есть `links.erp_request_id`, или вид
+     *     документа не задан и есть `links.erp_deal_id` (письма «Создать заявку» и до P8); резолюция «расчёт по зонам»
+     *     (`POST …/resolution`). `office` — остальное, в том числе письмо с видом документа, связанное с заявкой как контекст;
+     *     резолюция трёх типов (`POST …/office-resolution`). Путь вычисляет EDS, экран его не выбирает.
+     * @enum {string}
+     */
+    LetterTrack: "calc" | "office";
+    /**
+     * @description Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения»
+     * @enum {string}
+     */
+    ResolutionKind: "execute" | "reply" | "info";
+    /** @description Проект резолюции делопроизводителя; все поля необязательны, `kind = null` — проекта нет */
+    ResolutionDraftIn: {
+      kind?: components["schemas"]["ResolutionKind"] | null;
+      responsible_crm_user_id?: number | null;
+      /** Format: date */
+      due?: string | null;
+      text?: string | null;
+      co_executor_ids?: number[];
+      acquaint_ids?: number[];
+    };
+    ResolutionDraft: {
+      kind: components["schemas"]["ResolutionKind"] | null;
+      responsible: components["schemas"]["PersonRef"] | null;
+      /** Format: date */
+      due: string | null;
+      text: string | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      drafted_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      drafted_at: string;
+    };
+    OfficeResolutionIn: {
+      kind: components["schemas"]["ResolutionKind"];
+      /** @description Обязателен для `execute` и `reply` */
+      responsible_crm_user_id?: number | null;
+      /**
+       * Format: date
+       * @description Обязателен для `execute` и `reply`; подсказка — `Letter.suggested_due`
+       */
+      due?: string | null;
+      text: string;
+      co_executor_ids?: number[];
+      acquaint_ids?: number[];
+    };
+    OfficeResolution: {
+      kind: components["schemas"]["ResolutionKind"];
+      text: string;
+      /**
+       * Format: date
+       * @description Срок ответственного (после одобренного переноса — новый)
+       */
+      due: string | null;
+      responsible: components["schemas"]["PersonRef"] | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      decided_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      decided_at: string;
+    };
+    /**
+     * @description Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус
+     * @enum {string}
+     */
+    InstructionStatus: "in_work" | "executed";
+    /** @enum {string} */
+    InstructionRole: "responsible" | "co_executor";
+    OutgoingRef: {
+      id: components["schemas"]["Uuid"];
+      number: components["schemas"]["OutgoingNumber"];
+    };
+    /** @enum {string} */
+    ExtensionStatus: "pending" | "approved" | "rejected";
+    InstructionExtension: {
+      id: components["schemas"]["Uuid"];
+      /** Format: date */
+      old_due: string;
+      /** Format: date */
+      new_due: string;
+      reason: string;
+      status: components["schemas"]["ExtensionStatus"];
+      requested_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      requested_at: string;
+      decided_by: components["schemas"]["PersonRef"] | null;
+      /** Format: date-time */
+      decided_at: string | null;
+      comment: string | null;
+    };
+    Instruction: {
+      id: components["schemas"]["Uuid"];
+      kind: components["schemas"]["ResolutionKind"];
+      role: components["schemas"]["InstructionRole"];
+      person: components["schemas"]["PersonRef"];
+      /** Format: date */
+      due: string;
+      text: string;
+      status: components["schemas"]["InstructionStatus"];
+      /** @description Срок прошёл (по `Asia/Tashkent`), поручение не исполнено */
+      overdue: boolean;
+      /** @description Отчёт исполнителя */
+      report: string | null;
+      /** @description Файлы отчёта */
+      files: components["schemas"]["FileRef"][];
+      /** @description Ответ — наш ИСХ */
+      outgoing: components["schemas"]["OutgoingRef"] | null;
+      /** Format: date-time */
+      executed_at: string | null;
+      /** @description История переносов, старые первыми */
+      extensions: components["schemas"]["InstructionExtension"][];
+    };
+    Acquaintance: {
+      person: components["schemas"]["PersonRef"];
+      /**
+       * Format: date-time
+       * @description «Ознакомлен»; `null` — ждёт
+       */
+      acknowledged_at: string | null;
+    };
+    InstructionCompleteIn: {
+      report?: string | null;
+      file_ids?: components["schemas"]["Uuid"][];
+      /** @description Номер нашего отправленного ИСХ — ответ на письмо */
+      outgoing_number?: string | null;
+    };
+    ExtensionRequestIn: {
+      /** Format: date */
+      new_due: string;
+      reason: string;
+    };
+    ExtensionDecisionIn: {
+      /** @enum {string} */
+      decision: "approve" | "reject";
+      comment?: string | null;
+    };
+    LetterTaskLetter: {
+      id: components["schemas"]["Uuid"];
+      number: components["schemas"]["LetterNumber"];
+      subject: string;
+      sender_name: string | null;
+      urgent: boolean;
+    };
+    InstructionTask: {
+      id: components["schemas"]["Uuid"];
+      letter: components["schemas"]["LetterTaskLetter"];
+      kind: components["schemas"]["ResolutionKind"];
+      role: components["schemas"]["InstructionRole"];
+      /** Format: date */
+      due: string;
+      overdue: boolean;
+      extension_pending: boolean;
+      /** Format: date-time */
+      created_at: string;
+    };
+    ExtensionTask: {
+      id: components["schemas"]["Uuid"];
+      instruction_id: components["schemas"]["Uuid"];
+      letter: components["schemas"]["LetterTaskLetter"];
+      executor: components["schemas"]["PersonRef"];
+      /** Format: date */
+      old_due: string;
+      /** Format: date */
+      new_due: string;
+      reason: string;
+      /** Format: date-time */
+      requested_at: string;
+    };
+    AcquaintanceTask: {
+      letter: components["schemas"]["LetterTaskLetter"];
+      /** Format: date-time */
+      created_at: string;
+    };
+    LetterTasks: {
+      instructions: components["schemas"]["InstructionTask"][];
+      extensions: components["schemas"]["ExtensionTask"][];
+      acquaintances: components["schemas"]["AcquaintanceTask"][];
+    };
+    EmployeeChoice: {
+      crm_user_id: number;
+      full_name: string;
+      position: string | null;
+    };
+    EmployeeList: {
+      items: components["schemas"]["EmployeeChoice"][];
     };
     /**
      * @description Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), исходящее письмо (ИСХ)
@@ -1473,6 +1897,7 @@ export interface components {
   };
   parameters: {
     LetterId: components["schemas"]["Uuid"];
+    InstructionId: components["schemas"]["Uuid"];
     DocumentId: components["schemas"]["Uuid"];
     ApprovalId: components["schemas"]["Uuid"];
     FileId: components["schemas"]["Uuid"];
@@ -1656,6 +2081,10 @@ export interface operations {
         status?: components["schemas"]["LetterStatus"][];
         /** @description Поиск по номеру, теме, отправителю, номеру заявки */
         q?: string;
+        /** @description Только письма на контроле (`true`) — фильтр журнала «На контроле» (P8b) */
+        on_control?: boolean;
+        /** @description Только письма с просроченным поручением (`true`) — фильтр «Просрочено» (P8b) */
+        overdue?: boolean;
         /** @description Непрозрачный курсор из `next_cursor` */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
@@ -1858,6 +2287,228 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  saveResolutionDraft: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionDraftIn"];
+      };
+    };
+    responses: {
+      /** @description Проект сохранён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  resolveOfficeLetter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OfficeResolutionIn"];
+      };
+    };
+    responses: {
+      /** @description Резолюция наложена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  acknowledgeLetter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отмечено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  completeInstruction: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        instruction_id: components["parameters"]["InstructionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InstructionCompleteIn"];
+      };
+    };
+    responses: {
+      /** @description Исполнено — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  requestInstructionExtension: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        instruction_id: components["parameters"]["InstructionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtensionRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос отправлен — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  decideInstructionExtension: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        instruction_id: components["parameters"]["InstructionId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ExtensionDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение принято — карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listMyLetterTasks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Задачи сотрудника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterTasks"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+    };
+  };
+  listActiveEmployees: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сотрудники */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EmployeeList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
     };
   };
   listDocuments: {

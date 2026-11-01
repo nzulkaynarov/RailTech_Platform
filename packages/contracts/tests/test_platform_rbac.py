@@ -35,6 +35,17 @@ BUS = "bus.manage"
 UPLOAD = "files.upload"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
+# Любой активный сотрудник, сужение — внутри операции (P8b, SPEC-v3 §3.2a «Права»: исполнитель видит письмо своего
+# поручения без `letters.read`): карточка письма, ознакомление, действия исполнителя и автора резолюции, свои задачи.
+ANY_EMPLOYEE = {
+    ("get", "/api/v1/me"),
+    ("get", "/api/v1/letters/{letter_id}"),
+    ("post", "/api/v1/letters/{letter_id}/acquaint"),
+    ("post", "/api/v1/instructions/{instruction_id}/complete"),
+    ("post", "/api/v1/instructions/{instruction_id}/extension"),
+    ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
+    ("get", "/api/v1/letter-tasks"),
+}
 
 
 def eds_permissions(access: dict[str, str]) -> set[str]:
@@ -221,7 +232,7 @@ def test_every_eds_operation_declares_its_permissions(method: str, path: str, op
     assert isinstance(perms, list)
     assert set(perms) <= EDS_CODES
     assert len(perms) == len(set(perms))
-    assert perms or path == "/api/v1/me", "пустой список (любой сотрудник) — только /me"
+    assert bool(perms) != ((method, path) in ANY_EMPLOYEE), "пустой список (любой сотрудник) — только ANY_EMPLOYEE"
     assert path == "/health" or path.startswith("/api/v1/")
 
 
@@ -229,9 +240,10 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    # 0.7.0 — договоры, счета, акты в реестре (D2-5); 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
+    # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
+    # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.7.0"
+    assert EDS_YAML["info"]["version"] == "0.8.0"
 
 
 def test_numbers_are_not_path_parameters() -> None:

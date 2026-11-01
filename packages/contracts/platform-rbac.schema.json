@@ -159,7 +159,10 @@
         "pay_memo",
         "overdue_invoice",
         "ticket",
-        "integration_issue"
+        "integration_issue",
+        "instruction",
+        "instruction_extension",
+        "acquaint"
       ]
     },
     "resourceKey": {
