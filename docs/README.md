@@ -49,6 +49,7 @@
 | Архитектурные решения ансамбля | [`adr/README.md`](adr/README.md) — индекс со статусами и поправками (0001…0020) | действует | архитектор |
 | Продукт: спецификация единого интерфейса (словарь, процессы, роли, экраны) | [`product/SPEC-v3.md`](product/SPEC-v3.md) (§4 — вместе с ADR-0012) | действует | владелец |
 | Продукт: ценность систем и путь клиента | [`product/BUSINESS.md`](product/BUSINESS.md) | основание; при расхождении права SPEC-v3 | владелец |
+| Продукт: кабинет контрагента — отношения, шаблоны ролей, подключаемые модули (концепция) | [`product/COUNTERPARTY-CABINET.md`](product/COUNTERPARTY-CABINET.md), бенчмарк [`research/2026-11-01-counterparty-cabinet`](research/2026-11-01-counterparty-cabinet/README.md) | утверждено 2026-11-01; ADR и волны K0–K5 — по §9 | владелец |
 | Контракты доменов: API, события шины, MCP, портал | [`architecture/CONTRACTS.md`](architecture/CONTRACTS.md) (машиночитаемо — `packages/contracts/`) | действует | архитектор |
 | Шина `rt_bus`: публикация, подписки, доставка, приёмник (пакет `rt-bus`) | [`architecture/rt-bus.md`](architecture/rt-bus.md), решение — [ADR-0014](adr/0014-integration-bus-rt-bus.md) | действует | архитектор |
 | SSO-токен сотрудника | [`architecture/sso-token.md`](architecture/sso-token.md) | действует | архитектор |
