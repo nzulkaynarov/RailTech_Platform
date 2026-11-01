@@ -58,7 +58,18 @@
     "whatHappens": "What happens next",
     "copyLink": "Copy link",
     "linkCopied": "Link copied",
-    "copyLinkFailed": "Could not copy the link — copy the page address from the browser bar."
+    "copyLinkFailed": "Could not copy the link — copy the page address from the browser bar.",
+    "file": {
+      "choose": "Choose file",
+      "replace": "Replace file",
+      "remove": "Remove",
+      "removeNamed": "Remove file {{name}}",
+      "drop": "or drag the file here",
+      "none": "No file chosen"
+    },
+    "date": {
+      "placeholder": "DD.MM.YYYY"
+    }
   },
   "access": {
     "canAct": "Authorized to approve",
@@ -481,8 +492,10 @@
           "tooLarge": "The file is larger than 10 MB.",
           "badType": "A PDF or an image is required.",
           "amount": "The amount must be a number above zero with at most two decimals.",
-          "future": "The payment date cannot be later than today."
-        }
+          "future": "The payment date cannot be later than today.",
+          "dateInvalid": "Enter the date as DD.MM.YYYY, for example 14.10.2026."
+        },
+        "paidOnHint": "Format DD.MM.YYYY, for example 14.10.2026"
       }
     },
     "acts": {

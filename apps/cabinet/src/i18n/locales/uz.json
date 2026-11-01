@@ -58,7 +58,18 @@
     "whatHappens": "Nima boʻladi",
     "copyLink": "Havolani nusxalash",
     "linkCopied": "Havola nusxalandi",
-    "copyLinkFailed": "Havolani nusxalab boʻlmadi — sahifa manzilini brauzer satridan nusxalang."
+    "copyLinkFailed": "Havolani nusxalab boʻlmadi — sahifa manzilini brauzer satridan nusxalang.",
+    "file": {
+      "choose": "Faylni tanlash",
+      "replace": "Faylni almashtirish",
+      "remove": "Olib tashlash",
+      "removeNamed": "{{name}} faylini olib tashlash",
+      "drop": "yoki faylni shu yerga torting",
+      "none": "Fayl tanlanmagan"
+    },
+    "date": {
+      "placeholder": "KK.OO.YYYY"
+    }
   },
   "access": {
     "canAct": "Vakolat tasdiqlangan",
@@ -481,8 +492,10 @@
           "tooLarge": "Fayl 10 MB dan katta.",
           "badType": "PDF yoki rasm kerak.",
           "amount": "Summa — noldan katta son, nuqtadan keyin koʻpi bilan ikki raqam.",
-          "future": "Toʻlov sanasi bugundan keyin boʻlishi mumkin emas."
-        }
+          "future": "Toʻlov sanasi bugundan keyin boʻlishi mumkin emas.",
+          "dateInvalid": "Sanani KK.OO.YYYY formatida kiriting, masalan 14.10.2026."
+        },
+        "paidOnHint": "Format KK.OO.YYYY, masalan 14.10.2026"
       }
     },
     "acts": {

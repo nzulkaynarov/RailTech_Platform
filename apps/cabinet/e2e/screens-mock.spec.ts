@@ -387,7 +387,7 @@ test('B-CABFIX-1: «Я оплатил» → платёжка на проверк
     mimeType: 'application/pdf',
     buffer: Buffer.from('%PDF-1.4 payment order'),
   });
-  await dialog.getByLabel(/Дата платежа/).fill('2026-10-14');
+  await dialog.getByLabel(/Дата платежа/).fill('14.10.2026');
   await dialog.getByLabel(/Сумма платежа/).fill('9 800 000');
   await dialog.getByLabel(/Комментарий/).fill('Оплатили одним платежом');
   await expect(dialog.getByText('Менеджер проверит поступление и подтвердит оплату — статус счёта изменится.')).toBeVisible();

@@ -8,9 +8,11 @@ import { useAcceptAct, useActs, useContracts, useInvoices, useReturnAct, useSign
 import { ActionDialog } from '@/components/ActionDialog';
 import { BillingNavTabs } from '@/components/BillingNavTabs';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
+import { DateField } from '@/components/DateField';
 import { DealLink, SummaryNote } from '@/components/Details';
 import { DocumentButton } from '@/components/DocumentButton';
 import { EmptyState } from '@/components/EmptyState';
+import { FileField } from '@/components/FileField';
 import { PageHeader } from '@/components/PageHeader';
 import { ErrorState, ListSkeleton } from '@/components/QueryStates';
 import { ReasonDialog } from '@/components/ReasonDialog';
@@ -23,7 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useNow } from '@/hooks/useNow';
-import { businessToday, formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
+import { businessToday, currencyLabel, formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
 import { invoiceOpen, invoiceView, parseAmount, PROOF_COMMENT_MAX } from '@/lib/invoice';
 import { contractAwaitsClient } from '@/lib/status';
 import { scanProblem, type UploadProblem } from '@/lib/upload';
@@ -299,7 +301,7 @@ function ProofClaim({ proof }: { proof: PaymentProof }) {
   return null;
 }
 
-type ProofProblem = 'fileMissing' | UploadProblem | 'amount' | 'future';
+type ProofProblem = 'fileMissing' | UploadProblem | 'amount' | 'future' | 'dateInvalid';
 
 /**
  * «Я оплатил» (SPEC-v3 §3.1 шаг 8, §8): файл платёжного поручения обязателен, дата, сумма и комментарий — по желанию.
@@ -320,7 +322,7 @@ function PaymentProofDialog({
   const now = useNow();
   const submit = useSubmitPaymentProof();
   const [file, setFile] = useState<File | null>(null);
-  const [paidOn, setPaidOn] = useState('');
+  const [paidOn, setPaidOn] = useState<string | null>('');
   const [amount, setAmount] = useState('');
   const [comment, setComment] = useState('');
   const [problem, setProblem] = useState<ProofProblem | null>(null);
@@ -336,10 +338,11 @@ function PaymentProofDialog({
     onClose();
   };
 
-  const choose = (picked: File | undefined) => {
+  const choose = (picked: File | null) => {
     submit.reset();
     if (!picked) {
       setFile(null);
+      setProblem(null);
       return;
     }
     const found = scanProblem(picked);
@@ -352,6 +355,7 @@ function PaymentProofDialog({
     if (!file) return setProblem(problem === 'tooLarge' || problem === 'badType' ? problem : 'fileMissing');
     const parsed = parseAmount(amount);
     if (parsed === 'invalid') return setProblem('amount');
+    if (paidOn === null) return setProblem('dateInvalid');
     if (paidOn && paidOn > today) return setProblem('future');
     setProblem(null);
     submit.mutate(
@@ -381,14 +385,13 @@ function PaymentProofDialog({
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor={`${id}-file`}>{t('pages.invoices.proofDialog.file')}</Label>
-          <Input
+          <FileField
             id={`${id}-file`}
-            type="file"
+            value={file}
             accept=".pdf,image/*"
-            required
-            aria-describedby={`${id}-file-hint`}
-            aria-invalid={problem === 'fileMissing' || problem === 'tooLarge' || problem === 'badType' ? true : undefined}
-            onChange={(event) => choose(event.target.files?.[0])}
+            describedBy={`${id}-file-hint`}
+            invalid={problem === 'fileMissing' || problem === 'tooLarge' || problem === 'badType'}
+            onChange={choose}
           />
           <p id={`${id}-file-hint`} className="text-xs text-muted-foreground">
             {t('pages.invoices.proofDialog.fileHint')}
@@ -399,18 +402,20 @@ function PaymentProofDialog({
             <Label htmlFor={`${id}-date`}>
               {t('pages.invoices.proofDialog.paidOn')} {optional}
             </Label>
-            <Input
+            <DateField
               id={`${id}-date`}
-              type="date"
-              max={today}
               value={paidOn}
-              aria-invalid={problem === 'future' ? true : undefined}
-              onChange={(event) => setPaidOn(event.target.value)}
+              describedBy={`${id}-date-hint`}
+              invalid={problem === 'future' || problem === 'dateInvalid'}
+              onChange={setPaidOn}
             />
+            <p id={`${id}-date-hint`} className="text-xs text-muted-foreground">
+              {t('pages.invoices.proofDialog.paidOnHint')}
+            </p>
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor={`${id}-amount`}>
-              {t('pages.invoices.proofDialog.amount', { currency: invoice?.total.currency ?? '' })} {optional}
+              {t('pages.invoices.proofDialog.amount', { currency: invoice ? currencyLabel(invoice.total.currency) : '' })} {optional}
             </Label>
             <Input
               id={`${id}-amount`}
@@ -579,7 +584,7 @@ function AcceptActDialog({ act, onClose }: { act: Act | null; onClose: () => voi
     onClose();
   };
 
-  const choose = (file: File | undefined) => {
+  const choose = (file: File | null) => {
     accept.reset();
     if (!file) {
       setScan(null);
@@ -617,14 +622,7 @@ function AcceptActDialog({ act, onClose }: { act: Act | null; onClose: () => voi
     >
       <div className="flex flex-col gap-2">
         <Label htmlFor={id}>{t('pages.acts.scanLabel')}</Label>
-        <Input
-          id={id}
-          type="file"
-          accept=".pdf,image/*"
-          aria-describedby={`${id}-hint`}
-          aria-invalid={problem ? true : undefined}
-          onChange={(event) => choose(event.target.files?.[0])}
-        />
+        <FileField id={id} value={scan} accept=".pdf,image/*" describedBy={`${id}-hint`} invalid={Boolean(problem)} onChange={choose} />
         <p id={`${id}-hint`} className="text-xs text-muted-foreground">
           {t('pages.acts.scanHint')}
         </p>

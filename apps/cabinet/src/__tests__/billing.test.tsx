@@ -135,8 +135,9 @@ describe('Счета', () => {
       within(dialog).getByLabelText('Платёжное поручение'),
       new File(['%PDF-1.4'], 'platezhka.pdf', { type: 'application/pdf' }),
     );
-    await user.type(within(dialog).getByLabelText(/Дата платежа/), '2026-10-14');
-    await user.type(within(dialog).getByLabelText(/Сумма платежа, UZS/), '9 800 000');
+    await user.type(within(dialog).getByLabelText(/Дата платежа/), '14102026');
+    expect(within(dialog).getByLabelText(/Дата платежа/)).toHaveValue('14.10.2026');
+    await user.type(within(dialog).getByLabelText(/Сумма платежа, сум/), '9 800 000');
     await user.type(within(dialog).getByLabelText(/Комментарий/), 'Оплатили одним платежом');
     await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
 
@@ -169,6 +170,26 @@ describe('Счета', () => {
     await user.type(within(dialog).getByLabelText(/Сумма платежа/), amount);
     await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
     expect(await within(dialog).findByText(message)).toBeInTheDocument();
+    expect(log).not.toContain('POST /uploads');
+  });
+
+  it('«Я оплатил»: поле файла и даты кабинета — «Выбрать файл», имя, «Убрать»; дата ДД.ММ.ГГГГ', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    const log = requestLog();
+    renderApp('/invoices');
+    await user.click(await screen.findByRole('button', { name: 'Я оплатил: счёт S-2026-0124' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('button', { name: 'Выбрать файл' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Файл не выбран')).toBeInTheDocument();
+    await user.upload(within(dialog).getByLabelText('Платёжное поручение'), new File(['%PDF-1.4'], 'p.pdf', { type: 'application/pdf' }));
+    expect(within(dialog).getByText('p.pdf')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Убрать файл p.pdf' }));
+    expect(within(dialog).getByText('Файл не выбран')).toBeInTheDocument();
+    await user.upload(within(dialog).getByLabelText('Платёжное поручение'), new File(['%PDF-1.4'], 'p.pdf', { type: 'application/pdf' }));
+    await user.type(within(dialog).getByLabelText(/Дата платежа/), '3102');
+    await user.click(within(dialog).getByRole('button', { name: 'Отправить платёжку' }));
+    expect(await within(dialog).findByText('Дата — в формате ДД.ММ.ГГГГ, например 14.10.2026.')).toBeInTheDocument();
     expect(log).not.toContain('POST /uploads');
   });
 

@@ -19,7 +19,7 @@
     "screen": "cabinet-proof-form",
     "width": 1440,
     "axe": true,
-    "rulesPassed": 39,
+    "rulesPassed": 40,
     "overflowPx": 0,
     "violations": []
   },
@@ -27,7 +27,7 @@
     "screen": "cabinet-proof-form",
     "width": 390,
     "axe": true,
-    "rulesPassed": 40,
+    "rulesPassed": 41,
     "overflowPx": 0,
     "violations": []
   },
