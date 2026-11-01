@@ -65,6 +65,7 @@ from app.feeds.text import (
     parse_dt,
     short,
 )
+from app.feeds.work_roles import wants_work, work_role_id
 from app.rbac import View
 
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
@@ -548,7 +549,7 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
 
     # D2-8: работа ERP — расчёт, счета и платёжки, договор и акт проекта
     def role_of(kind: QueueItemKind) -> str:
-        return _role_id(view, kind)
+        return work_role_id(view, kind)
 
     for item, since in (
         calc_rows(snap, now, view, role_of)
@@ -615,7 +616,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             path="/eds/approvals",
         )
     counts = snap.invoice_counts
-    if counts is not None and view.wants("confirm_payment"):
+    if counts is not None and wants_work(view, "confirm_payment"):
         cards["payments_to_confirm"] = QueueCard(
             key="payments_to_confirm",
             label="Платёжки на подтверждение",
@@ -623,7 +624,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Документы · Счета и оплаты",
             path="/eds/payments?show=proofs",
         )
-    if counts is not None and view.wants("issue_invoice"):
+    if counts is not None and wants_work(view, "issue_invoice"):
         cards["invoices_to_issue"] = QueueCard(
             key="invoices_to_issue",
             label="Счета к выставлению",
@@ -683,8 +684,8 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
         items.append(MenuCounter(module="erp", section="calc", count=calc, attention=calc > 0))
     if wants_invoices(view) and snap.invoice_counts is not None:
         counts = snap.invoice_counts
-        waiting = (counts["proofs"] if view.wants("confirm_payment") else 0) + (
-            counts["to_issue"] if view.wants("issue_invoice") else 0
+        waiting = (counts["proofs"] if wants_work(view, "confirm_payment") else 0) + (
+            counts["to_issue"] if wants_work(view, "issue_invoice") else 0
         )
         items.append(
             MenuCounter(module="eds", section="payments", count=waiting, attention=waiting > 0)

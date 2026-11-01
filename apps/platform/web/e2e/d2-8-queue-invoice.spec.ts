@@ -85,6 +85,24 @@ test.describe("D2-8: «Мои задачи» менеджера-универса
       await expectNoViolations(page, `договор ждёт скана ${String(width)}`);
     });
 
+    test(`директор: в «Моих задачах» только решения, строк исполнения ERP нет, ${String(width)}`, async ({
+      page,
+    }) => {
+      await signInAt(page, "director@demo.example", width);
+      await expect(queueRow(page, "Наложить резолюцию на письмо ВХ-104/26")).toHaveCount(1);
+      for (const title of [
+        /Начать расчёт|Завизировать строки|Отправить директору расчёт|Доработать расчёт/,
+        /Подтвердить оплату/,
+        /Выставить счёт/,
+        /проект договора|договор ДОГ|скан подписанного/,
+        /Выпустить (заново )?акт/,
+      ]) {
+        await expect(queueRow(page, title)).toHaveCount(0);
+      }
+      await shot(page, "queue-director");
+      await expectNoViolations(page, `очередь директора ${String(width)}`);
+    });
+
     test(`«Выставить счёт» из «Моих задач»: черновик → «Выставлен», ${String(width)}`, async ({
       page,
     }) => {

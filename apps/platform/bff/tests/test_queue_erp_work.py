@@ -12,6 +12,8 @@ import pytest
 
 from tests.conftest import ContractChecker, Web
 from tests.feeds_support import FeedBackends, Moments
+from tests.rbac_oracle import access_of
+from tests.roles import custom, rid
 
 NUMBER = "ЗВ-2027-104"
 ENCODED = "%D0%97%D0%92-2027-104"
@@ -404,3 +406,62 @@ async def test_erp_down_leaves_the_rest_and_hides_erp_badges(web: Web, fb: FeedB
     assert not kinds & {"confirm_payment", "issue_invoice", "issue_contract", "attach_scan"}
     counters = (await web.client.get("/api/v1/menu-counters")).json()["items"]
     assert ("eds", "payments") not in {(c["module"], c["section"]) for c in counters}
+
+
+# --- директор: только решения (решение архитектора 2026-11-02, PR #357) ------------------------
+
+EXECUTION = {"calc_task", "confirm_payment", "issue_invoice", "issue_contract", "attach_scan"}
+
+
+def everything(fb: FeedBackends) -> None:
+    """Работа ERP всех видов, в том числе задание, где сотрудник — исполнитель."""
+    morning(fb)
+    fb.state["projects"]["CONTRACT"].append(project(104, problems=["no_contract"]))
+
+
+async def test_system_director_gets_no_execution_rows_and_erp_is_not_asked(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """У директора разделы расчёта и проектов полные, но в очереди — только решения: исполнение он
+    контролирует через разделы. ERP за расчётами, счетами и проектами не спрашивается."""
+    everything(fb)
+    await web.login(["DIRECTOR"])
+
+    items = await queue_of(web, check)
+
+    assert not {i["kind"] for i in items} & (EXECUTION | {"issue_act"})
+    assert fb.calls(fb.erp["calc_tasks"]) == 0
+    assert fb.calls(fb.erp["projects"]) == 0
+    assert fb.calls(fb.erp["receivables"]) == 0
+    counters = (await web.client.get("/api/v1/menu-counters")).json()["items"]
+    sections = {(c["module"], c["section"]) for c in counters}
+    assert ("erp", "calc") not in sections
+    assert ("eds", "payments") not in sections
+
+
+async def test_director_with_a_second_role_gets_execution_by_that_role(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Директор и менеджер-универсал в одном лице: строки исполнения — по второй роли, её id."""
+    everything(fb)
+    await web.login(["DIRECTOR", "MANAGER_ALL"])
+
+    items = await queue_of(web)
+
+    rows = [i for i in items if i["kind"] in EXECUTION]
+    assert {i["kind"] for i in rows} == EXECUTION
+    assert {i["role_id"] for i in rows} == {rid("MANAGER_ALL")}
+
+
+async def test_a_created_role_with_director_sections_gets_execution_by_the_catalog(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Правило — про системную роль DIRECTOR, не про разделы: созданная роль с теми же разделами
+    получает строки по каталогу."""
+    everything(fb)
+    own = custom(70, "Своя роль с разделами директора", access_of("DIRECTOR"))
+    await web.login([own])
+
+    kinds = {i["kind"] for i in await queue_of(web)}
+
+    assert {"issue_contract", "attach_scan"} <= kinds

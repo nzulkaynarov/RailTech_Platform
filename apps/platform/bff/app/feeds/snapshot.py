@@ -9,7 +9,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.models import QueueItemKind
 from app.feeds.rework import Returned, load_rework
+from app.feeds.work_roles import wants_work
 from app.rbac import View, allows
 
 # Сделки ERP постранично (DRF: максимум 200 на страницу); берём новейшие — поиск и счётчики
@@ -123,8 +125,8 @@ def wants_supplier_overdue(view: View) -> bool:
 
 
 # Работа ERP «Моих задач» (D2-8): расчёт, счета и платёжки, договор и акт проекта.
-INVOICE_KINDS = ("confirm_payment", "issue_invoice")
-PROJECT_KINDS = ("issue_contract", "attach_scan", "issue_act")
+INVOICE_KINDS: tuple[QueueItemKind, ...] = ("confirm_payment", "issue_invoice")
+PROJECT_KINDS: tuple[QueueItemKind, ...] = ("issue_contract", "attach_scan", "issue_act")
 CALC_TASKS_PATH = "/api/v1/calc/tasks/"
 RECEIVABLES_PATH = "/api/v1/finance/receivables/"
 PROJECTS_PATH = "/api/v1/crm/projects/"
@@ -133,15 +135,15 @@ PROJECTS_PAGE_SIZE = 100
 
 
 def wants_calc_tasks(view: View) -> bool:
-    return view.wants("calc_task")
+    return wants_work(view, "calc_task")
 
 
 def wants_invoices(view: View) -> bool:
-    return any(view.wants(kind) for kind in INVOICE_KINDS)
+    return any(wants_work(view, kind) for kind in INVOICE_KINDS)
 
 
 def wants_project_work(view: View) -> bool:
-    return any(view.wants(kind) for kind in PROJECT_KINDS)
+    return any(wants_work(view, kind) for kind in PROJECT_KINDS)
 
 
 def wants_projects(view: View) -> bool:

@@ -29,7 +29,7 @@ test.describe("Мои задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/Директор · .* · 5 решений/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -56,7 +56,7 @@ test.describe("Мои задачи", () => {
     await loginAndWait(page, "director@demo.example");
     const main = page.getByRole("main");
 
-    await expect(main.getByText(/Директор · .* · 8 решений/)).toBeVisible();
+    await expect(main.getByText(/Директор · .* · 5 решений/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
@@ -64,8 +64,8 @@ test.describe("Мои задачи", () => {
 
     const queue = main.getByRole("region", { name: "Что сделать сейчас" });
     const rows = queue.getByRole("listitem");
-    // D2-8: три строки договора (раздел «Проекты» у директора полный) — после служебки, без срока
-    await expect(rows).toHaveCount(8);
+    // D2-8: в очереди директора только решения — строк исполнения ERP нет
+    await expect(rows).toHaveCount(5);
     // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
     await expect(rows.nth(1)).toContainText("срок сегодня");

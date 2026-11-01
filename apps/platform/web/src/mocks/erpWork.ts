@@ -35,13 +35,21 @@ function money(amount: string, currency: string): string {
 
 const join = (...parts: (string | null | undefined)[]) => parts.filter(Boolean).join(" · ");
 
+/**
+ * Роли исполнения — роли «вида» без системной роли DIRECTOR (решение архитектора 2026-11-02, как `feeds/work_roles.py`
+ * BFF): в очереди директора только решения, исполнение ERP — у ролей из шаблона и созданных ролей по каталогу.
+ */
+function executors(view: readonly MockRole[]): MockRole[] {
+  return view.filter((role) => !(role.system && role.code === "DIRECTOR"));
+}
+
 function roleFor(view: readonly MockRole[], kind: Kind): MockRole | undefined {
   const need = QUEUE[kind];
-  return view.find((role) => allows(role.access, need.resource, need.level));
+  return executors(view).find((role) => allows(role.access, need.resource, need.level));
 }
 
 function full(view: readonly MockRole[], resource: string): boolean {
-  return view.some((role) => role.access[resource] === "full");
+  return executors(view).some((role) => role.access[resource] === "full");
 }
 
 function userName(): string | null {

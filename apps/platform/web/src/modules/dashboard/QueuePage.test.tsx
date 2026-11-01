@@ -85,8 +85,8 @@ describe("Dashboard · Моя очередь", () => {
     renderApp("/dashboard/queue");
     const page = await main();
 
-    // D2-8: договор проектов — у директора раздел «Проекты» полный (сформировать, скан, доработать)
-    expect(await within(page).findByText(/Директор · .* · 8 решений/)).toBeVisible();
+    // D2-8: в очереди директора только решения — строк исполнения (договор, счета, расчёт) нет
+    expect(await within(page).findByText(/Директор · .* · 5 решений/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
     expect(within(cards).getByRole("link", { name: /Входящие без резолюции/ })).toHaveAttribute(
@@ -96,7 +96,7 @@ describe("Dashboard · Моя очередь", () => {
 
     const queue = await within(page).findByRole("region", { name: "Что сделать сейчас" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows).toHaveLength(8);
+    expect(rows).toHaveLength(5);
     // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым, он уже просрочен.
     expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
     expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
@@ -104,17 +104,6 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(rows[2] as HTMLElement).getByText(/ВХ-108\/26/)).toBeVisible();
     expect(within(rows[3] as HTMLElement).getByText("завтра")).toBeVisible();
     expect(within(rows[4] as HTMLElement).getByText("служебка")).toBeVisible();
-    expect(
-      within(rows[5] as HTMLElement).getByText(/Сформировать проект договора по ПР-2026-104/),
-    ).toBeVisible();
-    expect(
-      within(rows[6] as HTMLElement).getByText(
-        /Прикрепить скан подписанного договора ДОГ-2026\/106/,
-      ),
-    ).toBeVisible();
-    expect(
-      within(rows[7] as HTMLElement).getByText(/Доработать договор ДОГ-2026\/081/),
-    ).toBeVisible();
     const open = within(rows[1] as HTMLElement).getByRole("link", { name: /Открыть/ });
     expect(open).toHaveAttribute(
       "href",
@@ -298,10 +287,6 @@ describe("Dashboard · Моя очередь", () => {
       "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution",
       "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
       "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree",
-      // D2-8: договор — карточка проекта на вкладке «Договор»
-      "/eds/projects/%D0%9F%D0%A0-2026-104?panel=open&tab=contract",
-      "/eds/projects/%D0%9F%D0%A0-2026-106?panel=open&tab=contract",
-      "/eds/projects/%D0%9F%D0%A0-2026-081?panel=open&tab=contract",
     ]);
     expect(within(page).getAllByRole("button", { name: /^Где сделать/ })).toHaveLength(1);
   });

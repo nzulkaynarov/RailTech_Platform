@@ -69,8 +69,8 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
     // письма, КП и служебка рядом — «Открыть», «Где сделать» нет; плюс просроченный заказ поставщику (D2-2) и
-    // требование ГНК от делопроизводителя (P8) и три строки договора проектов (D2-8)
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(8);
+    // требование ГНК от делопроизводителя (P8); строк исполнения ERP у директора нет (D2-8)
+    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(5);
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
     await shoot(page, "queue-where");
   });

@@ -8,7 +8,8 @@ BFF не решает, чья это работа и что ждёт: задан
 каталога (`calc_task` — `erp.calc`, `confirm_payment` и `issue_invoice` — `eds.payments`,
 `issue_contract`, `attach_scan` и `issue_act` — `eds.projects`, все — полный). Одна строка — одно
 действие над одним объектом: у роли, которая совмещает несколько видов, дублей нет. Каждая строка
-ведёт на экран, где это действие делается.
+ведёт на экран, где это действие делается. Системному директору исполнения нет — только решения
+(`feeds/work_roles.py`, решение архитектора 2026-11-02).
 """
 
 from collections.abc import Callable
@@ -29,6 +30,7 @@ from app.feeds.numbers import (
 )
 from app.feeds.snapshot import Snapshot
 from app.feeds.text import ago, due_label, join, money, parse_deadline, parse_dt, short
+from app.feeds.work_roles import executor_access, wants_work
 from app.rbac import View, allows
 from app.schemas_eds_projects import RawRow
 
@@ -43,7 +45,7 @@ def _my_groups(view: View) -> set[str]:
     return {
         group
         for section, groups in _ZONE_GROUPS.items()
-        if allows(view.access, section, "full")
+        if allows(executor_access(view), section, "full")
         for group in groups
     }
 
@@ -71,7 +73,7 @@ def _calc_action(task: dict[str, Any], mine: set[str]) -> str | None:
 def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
     """Мои задания на расчёт: исполнителю по резолюции; «Завизировать» — если ждут визы строки зоны,
     которую даёт роль. Строка открывает расчёт заявки."""
-    if not view.wants("calc_task") or not snap.calc_tasks:
+    if not wants_work(view, "calc_task") or not snap.calc_tasks:
         return []
     mine = _my_groups(view)
     role_id = role_of("calc_task")
@@ -121,7 +123,7 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
     """Платёжки клиентов на подтверждение и счета-черновики к выставлению: строка открывает счёт в
     «Счетах и оплатах» с окном «Оплата». Срока у этой работы нет — бейдж «без срока»."""
     out: list[Work] = []
-    if view.wants("confirm_payment"):
+    if wants_work(view, "confirm_payment"):
         role_id = role_of("confirm_payment")
         for raw in snap.invoices_with_proofs:
             parsed = _invoice(raw)
@@ -144,7 +146,7 @@ def invoice_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
                 object=invoice_ref(invoice_id, number, client),
             )
             out.append((item, received))
-    if view.wants("issue_invoice"):
+    if wants_work(view, "issue_invoice"):
         role_id = role_of("issue_invoice")
         for raw in snap.invoices_to_issue:
             parsed = _invoice(raw)
@@ -234,7 +236,7 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
         if row.step != "CONTRACT":
             continue
         step = _contract_step(row)
-        if step is None or not view.wants(step[0]):
+        if step is None or not wants_work(view, step[0]):
             continue
         kind, action, why = step
         project = project_number(row.deal_id, row.created_at)
@@ -255,7 +257,7 @@ def project_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> 
             object=ref,
         )
         add(item, row.created_at)
-    if view.wants("issue_act"):
+    if wants_work(view, "issue_act"):
         role_id = role_of("issue_act")
         for row in _rows(snap.projects_payment):
             if row.step != "PAYMENT":
