@@ -179,6 +179,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/setup/cabinet": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Адрес кабинета клиента (мастер «Первый запуск» и «Подключения»)
+     * @description D17G-3. Раздел `admin` — полный. CRM `GET /setup/cabinet` (право записи настроек): действующий адрес кабинета клиента и откуда он взят — задан администратором (`saved`), из окружения сервера `CABINET_DOMAIN` (`env`) или нет (`none`). Без адреса приглашение в кабинет и кнопка «Открыть кабинет» под сообщениями бота клиенту не уходят.
+     */
+    get: operations["getSetupCabinet"];
+    /**
+     * Сохранить адрес кабинета клиента
+     * @description D17G-3. Раздел `admin` — полный. CRM `PUT /setup/cabinet`: меняется только адрес кабинета (раздел «Компания» CRM), пустая строка — вернуть адрес из окружения. Не `http(s)://…` — 422 `VALIDATION_FAILED` (`details.fields = [url]`).
+     */
+    put: operations["saveSetupCabinet"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/setup/cabinet/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить, открывается ли кабинет клиента
+     * @description D17G-3. Раздел `admin` — полный. CRM с сервера делает `GET <адрес>/health` (5 с); кабинет отвечает `200 healthy`. `url` — проверить ещё не сохранённый адрес, нет — действующий. Ответ кабинета наружу не отдаётся — только итог и код HTTP.
+     */
+    post: operations["checkSetupCabinet"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/setup/company": {
     parameters: {
       query?: never;
@@ -1196,7 +1240,7 @@ export interface paths {
     };
     /**
      * EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)
-     * @description Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП и итоги (`GET /crm/quotes/{id}/`), заявка и контакт клиента для каналов отправки (`GET /crm/deals/{id}/`, `GET /accounts/contacts/{id}/`); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП `КП-2026/115` (сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
+     * @description Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП, итоги, доступность каналов отправки по фактическим контактам клиента (`channel_availability`), итог отправки (`send_report`) и право отправить (`can_send`) — `GET /crm/quotes/{id}/`; заявка — `GET /crm/deals/{id}/`; настроена ли почта — CRM `GET /integrations/smtp/ready` (D17G-2); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП (`КП-2026-00001` ERP или `КП-2026/115`; сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
      */
     get: operations["getQuoteApproval"];
     put?: never;
@@ -1218,9 +1262,29 @@ export interface paths {
     put?: never;
     /**
      * EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
-     * @description EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
+     * @description EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сразу отправляет его клиенту по доступным из выбранных каналов (ERP-11); недоступный канал — в отчёте `delivery` карточки с причиной, отправить по нему можно позже (`POST /eds/quotes/{id}/send`). Ответ — обновлённая карточка.
      */
     post: operations["decideQuoteApproval"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/quotes/{id}/send": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Отправить одобренное КП клиенту по каналу («Отправить», «Отправить повторно»)
+     * @description D17G-2. Для того, кто отправляет КП (ERP-11): менеджер заявки или директор — раздел `crm.clients` полный (право ERP `quote.send`), объектную проверку (своя заявка или `quote.review`) делает ERP. Канал не сработал или не был выбран при одобрении — ERP `POST /crm/quotes/{id}/deliver/` по КП маршрута: КП «Готово к отправке» уходит только по этому каналу, уже отправленное — повторно по каналу (письмо заново, Telegram — новое сообщение бота). Кабинет не отправляется: отправленное КП клиент видит в кабинете всегда. Канал недоступен (нет e-mail, контакт не в боте…) или отправку остановил гейт — 409 `CONFLICT`, `details.reason` — код `QuoteDeliveryReason` или `invalid_status`; ERP не дала права — 403. Ответ — обновлённая карточка КП.
+     */
+    post: operations["sendQuoteByChannel"];
     delete?: never;
     options?: never;
     head?: never;
@@ -6587,6 +6651,35 @@ export interface components {
       /** @description Почему нет данных о компании (`company = null`); `null`, когда данные есть */
       company_blocker: components["schemas"]["SetupCompanyBlocker"] | null;
     };
+    /** @description Адрес кабинета клиента (D17G-3) — для кнопки «Открыть кабинет» и приглашений в кабинет */
+    SetupCabinet: {
+      /** @description Действующий адрес; `null` — не задан ни в настройках, ни на сервере */
+      url: string | null;
+      /**
+       * @description `saved` — задан администратором; `env` — из окружения сервера (`CABINET_DOMAIN`); `none` — не задан
+       * @enum {string}
+       */
+      source: "saved" | "env" | "none";
+      /** @description Адрес из окружения сервера — значение по умолчанию */
+      env_url: string | null;
+    };
+    SetupCabinetIn: {
+      /** @description https://…; пустая строка — вернуть адрес из окружения сервера */
+      url: string;
+    };
+    SetupCabinetCheckIn: {
+      /** @description Проверить этот адрес (ещё не сохранённый); нет — действующий */
+      url?: string | null;
+    };
+    SetupCabinetCheck: {
+      /**
+       * @description `ok` — кабинет отвечает; `not_set` — адреса нет; `unreachable` — адрес не открылся с сервера (DNS, сеть, сертификат); `bad_status` — ответ не 200 (`status_code`); `not_cabinet` — по адресу отвечает не кабинет
+       * @enum {string}
+       */
+      result: "ok" | "not_set" | "unreachable" | "bad_status" | "not_cabinet";
+      url: string | null;
+      status_code: number | null;
+    };
     /**
      * @description `erp_not_connected` — ERP не сопряжена (CRM: коннектор не задан): сначала шаг «ERP», компания невозможна. `erp_unavailable` — ERP сопряжена, но не ответила или не выдала сессию администратору: повторить позже
      * @enum {string}
@@ -7474,15 +7567,78 @@ export interface components {
       /** @description Значение для показа (`17.6 % ≥ 15 %`); строка `margin` — только с группой `cost_margin`, иначе поле не передаётся */
       value?: string | null;
     };
-    /** @description Что известно об основном контакте клиента в ERP (`GET /accounts/contacts/{id}/`); адреса и идентификаторы наружу не отдаются */
+    /** @description Доступность каналов отправки по фактическим контактам клиента — ERP `channel_availability` (те же проверки, что у автоотправки ERP-11, D17G-2) и CRM «почта настроена»; адреса и идентификаторы наружу не отдаются */
     QuoteChannels: {
+      /** @description Кому уйдёт КП — контакт заявки или основной контакт клиента */
       contact_name: string | null;
-      /** @description Контакт привязан к боту */
+      /** @description Контакт подключён к боту и клиент известен CRM */
       telegram: boolean;
-      /** @description У компании клиента есть кабинет */
+      /** @description Клиент приглашён в кабинет или уже входил */
       cabinet: boolean;
-      /** @description У контакта указан e-mail */
+      /** @description У контакта есть e-mail и почта настроена */
       email: boolean;
+      reasons: components["schemas"]["QuoteChannelReasons"];
+    };
+    /** @description Почему канал недоступен; `null` — доступен */
+    QuoteChannelReasons: {
+      telegram: components["schemas"]["QuoteDeliveryReason"] | null;
+      cabinet: components["schemas"]["QuoteDeliveryReason"] | null;
+      email: components["schemas"]["QuoteDeliveryReason"] | null;
+    };
+    /**
+     * @description Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не приглашён в кабинет; `no_email` — у контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без обоснования, нет компании-продавца, некому отправить) или сбой отправки
+     * @enum {string}
+     */
+    QuoteDeliveryReason:
+      | "no_telegram"
+      | "client_not_in_crm"
+      | "no_cabinet"
+      | "no_email"
+      | "mail_not_configured"
+      | "mail_failed"
+      | "below_cost"
+      | "fx_missing"
+      | "unpriced_lines"
+      | "below_floor"
+      | "not_claimed"
+      | "no_recipient"
+      | "send_failed";
+    /**
+     * @description `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал выбран, но недоступен; `not_selected` — канал не выбран; `published` — КП видно клиенту в кабинете; `unknown` — КП отправлено без отчёта по каналам
+     * @enum {string}
+     */
+    QuoteDeliveryStatus:
+      | "sent"
+      | "pending"
+      | "failed"
+      | "skipped"
+      | "not_selected"
+      | "published"
+      | "unknown";
+    QuoteDeliveryLine: {
+      channel: components["schemas"]["QuoteSendChannel"];
+      status: components["schemas"]["QuoteDeliveryStatus"];
+      reason: components["schemas"]["QuoteDeliveryReason"] | null;
+      /** @description Кнопка «Отправить» (`not_selected`, `unknown`) или «Отправить повторно» (`failed`, `skipped`): сотрудник может отправлять КП, канал сейчас доступен; у кабинета всегда `false` */
+      can_send: boolean;
+    };
+    /** @description Отчёт об отправке одобренного КП клиенту (ERP `send_report`, D17G-2): по строке на канал в порядке Telegram, Кабинет, Почта. Есть, пока КП одобрено директором и ERP ответила */
+    QuoteDelivery: {
+      /**
+       * @description `ready` — «Готово к отправке», клиенту ещё не ушло; `sent` — отправлено; `closed` — клиент ответил, отправлять нечего
+       * @enum {string}
+       */
+      state: "ready" | "sent" | "closed";
+      lines: components["schemas"]["QuoteDeliveryLine"][];
+      /** @description Гейт или сбой, остановивший автоотправку; `null` — не было */
+      error: components["schemas"]["QuoteDeliveryReason"] | null;
+    };
+    QuoteSendIn: {
+      /**
+       * @description Кабинет не отправляется — отправленное КП клиент видит в кабинете всегда
+       * @enum {string}
+       */
+      channel: "telegram" | "email";
     };
     QuoteLetterRef: {
       /** @example ВХ-104/26 */
@@ -7540,8 +7696,10 @@ export interface components {
       internal?: components["schemas"]["QuoteInternal"];
       checklist: components["schemas"]["QuoteChecklistLine"][];
       steps: components["schemas"]["EdsRouteStep"][];
-      /** @description `null` — контакт клиента не получен из ERP */
+      /** @description `null` — ERP не ответила или у неё другая редакция КП */
       channels: components["schemas"]["QuoteChannels"] | null;
+      /** @description Отчёт об отправке клиенту по каналам (D17G-2); `null` — КП ещё не одобрено или ERP не ответила */
+      delivery: components["schemas"]["QuoteDelivery"] | null;
       /** @description Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
       client_comments: components["schemas"]["QuoteClientComment"][];
       sources: components["schemas"]["Sources"];
@@ -11240,6 +11398,91 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  getSetupCabinet: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Адрес */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupCabinet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveSetupCabinet: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetupCabinetIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupCabinet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkSetupCabinet: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SetupCabinetCheckIn"];
+      };
+    };
+    responses: {
+      /** @description Итог проверки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SetupCabinetCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   createOwnCompany: {
     parameters: {
       query?: never;
@@ -13013,7 +13256,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description UUID маршрута одобрения КП или номер `КП-ГГГГ/NNN` */
+        /** @description UUID маршрута одобрения КП или номер КП (`КП-ГГГГ-NNNNN`, `КП-ГГГГ/NNN`) */
         ref: string;
       };
       cookie?: never;
@@ -13067,6 +13310,50 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["ApprovalConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendQuoteByChannel: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteSendIn"];
+      };
+    };
+    responses: {
+      /** @description Отправлено (по почте — передано почтовому сервису, итог придёт в отчёт) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — канал недоступен или отправку остановил гейт; причина — `details.reason` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
