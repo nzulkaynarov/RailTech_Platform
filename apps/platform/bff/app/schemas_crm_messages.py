@@ -19,6 +19,8 @@ OwnerMode = Literal["bot", "waiting", "manager"]
 InboxGroup = Literal["handoff", "mine", "unassigned"]
 Priority = Literal["hot", "warm", "info"]
 HandoffState = Literal["open", "taken", "snoozed"]
+# Тип обращения при «Передать менеджеру» (D17G-1)
+LeadRequestType = Literal["goods", "services", "project", "other"]
 Author = Literal["lead", "bot", "manager", "system"]
 Timeline = Literal["<1m", "<3m", "<12m", ">12m"]
 DecisionRole = Literal["decision_maker", "influencer", "researcher"]
@@ -52,6 +54,9 @@ class HandoffInfo(BaseModel):
     sla_due_at: datetime | None
     snoozed_until: datetime | None
     taken_by: PersonRef | None
+    # «Передать менеджеру» первой линией (D17G-1): кто передал и тип обращения; бот — `None`
+    handed_by: PersonRef | None = None
+    request_type: LeadRequestType | None = None
 
 
 class MessageInboxItem(BaseModel):
@@ -146,6 +151,16 @@ class AssistIn(BaseModel):
 class AssistSuggestion(BaseModel):
     text: str
     notice: Literal["numbers_removed", "new_numbers"] | None
+
+
+class HandOverIn(BaseModel):
+    user_id: str = Field(pattern=r"^\d{1,12}$")
+    note: str = Field(min_length=1, max_length=2000)
+    request_type: LeadRequestType | None = None
+
+
+class LeadManagerList(BaseModel):
+    items: list[PersonRef]
 
 
 class ReturnToBotIn(BaseModel):

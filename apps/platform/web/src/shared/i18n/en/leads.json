@@ -45,7 +45,11 @@
     "takeLabel": "Take {{name}} into “Awaiting reply”",
     "replyLabel": "Reply to {{name}} in “Awaiting reply”",
     "createLabel": "Create a request for {{name}}",
-    "clientLabel": "Client card of {{name}}"
+    "clientLabel": "Client card of {{name}}",
+    "handOver": "Hand over to a manager",
+    "openChat": "Open the conversation",
+    "triage": "Triage",
+    "triageLabel": "Triage {{name}} in “Awaiting reply”"
   },
   "paging": {
     "label": "Lead pages",

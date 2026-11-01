@@ -11,6 +11,7 @@ export type QueueItemKind = (typeof QueueItemKind)[keyof typeof QueueItemKind];
 export const QueueItemKind = {
   answer_lead: "answer_lead",
   take_lead: "take_lead",
+  triage_lead: "triage_lead",
   create_request: "create_request",
   service_request: "service_request",
   resolve_letter: "resolve_letter",

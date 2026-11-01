@@ -4,10 +4,11 @@
  */
 import type { HandoffInfoPriority } from "./handoffInfoPriority";
 import type { HandoffInfoState } from "./handoffInfoState";
+import type { LeadRequestType } from "./leadRequestType";
 import type { PersonRef } from "./personRef";
 
 /**
- * Открытая передача от бота
+ * Открытая передача от бота или от первой линии (D17G-1: причина `handed_over`, `handed_by` — кто передал, `reason_text` — его записка, лид у ответственного `MessageInboxItem.assigned`)
  */
 export interface HandoffInfo {
   /** `hot` — срочно, `warm` — важно, `info` — к сведению (без срока реакции) */
@@ -38,4 +39,8 @@ export interface HandoffInfo {
   /** @nullable */
   snoozed_until: string | null;
   taken_by: PersonRef | null;
+  /** Кто передал лида менеджеру с запиской («Передать менеджеру», D17G-1); `null` — передал бот */
+  handed_by: PersonRef | null;
+  /** Тип обращения, который указал передавший (необязательно) */
+  request_type: LeadRequestType | null;
 }

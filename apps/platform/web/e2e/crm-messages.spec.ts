@@ -159,6 +159,21 @@ test.describe("Ждут ответа: менеджер", () => {
     await expect(page.getByText("Только просмотр: отвечают менеджеры")).toBeVisible();
     await expectNoViolations(page, "директор");
   });
+
+  test("делопроизводитель: без «Забрать» и ответа, с «Передать менеджеру» (D17G-1)", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "registrar@demo.example");
+    await openMessages(page, "?lead=L-2041");
+    await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
+    await expect(page.getByText("Разбор и передача", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: /^Забрать/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Вернуть боту" })).toHaveCount(0);
+    await expect(page.getByLabel("Сообщение клиенту")).toHaveCount(0);
+    await expect(page.getByText(/^Ответ клиенту — менеджер\./)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Передать менеджеру: Азиз Демо" })).toBeVisible();
+    await expectNoViolations(page, "делопроизводитель");
+  });
 });
 
 // @mobile: проект mobile (Pixel 7, 390) гоняет только сценарии с этим тегом — экраны с адаптивной логикой.

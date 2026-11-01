@@ -10,11 +10,12 @@ import {
   writeMessages,
 } from "../../../mocks/fixtures/messages";
 import { invalidateTopics } from "../../../shared/api/useEventStream";
+import { chooseOption } from "../../../test/fields";
 import { renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import i18n from "../../../shared/i18n";
 import { ApiError } from "../../../shared/api/errors";
 import { sendFailure } from "./labels";
-import { mergeThread } from "./logic";
+import { canTake, mergeThread } from "./logic";
 import { durationParts, slaState } from "./sla";
 import { SlaTimer } from "./SlaTimer";
 
@@ -68,6 +69,8 @@ describe("таймер SLA", () => {
       recommendation: null,
       snoozed_until: null,
       taken_by: null,
+      handed_by: null,
+      request_type: null,
     };
     const { rerender } = render(
       <SlaTimer
@@ -266,6 +269,74 @@ describe("Клиенты · Ждут ответа: директор", () => {
     expect(screen.queryByRole("button", { name: /Забрать/ })).toBeNull();
     expect(screen.queryByLabelText("Сообщение клиенту")).toBeNull();
     expect(screen.getByText("Только просмотр: отвечают менеджеры")).toBeVisible();
+  });
+});
+
+describe("Клиенты · Ждут ответа: делопроизводитель (D17G-1)", () => {
+  it("не забирает и не отвечает: «Передать менеджеру» и пояснение «Ответ клиенту — менеджер»", async () => {
+    await open("registrar@demo.example", "?lead=L-2041");
+    expect(await screen.findByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
+    expect(screen.getByText("Разбор и передача")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Забрать/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Вернуть боту" })).toBeNull();
+    expect(screen.queryByLabelText("Сообщение клиенту")).toBeNull();
+    expect(screen.getByText(/^Ответ клиенту — менеджер\./)).toBeVisible();
+    expect(screen.getByRole("button", { name: "Передать менеджеру: Азиз Демо" })).toBeVisible();
+  });
+
+  it("передаёт с запиской: без записки — подсказка; лид у менеджера, клиенту ничего не ушло", async () => {
+    await open("registrar@demo.example", "?lead=L-2041");
+    const before = readMessages().leads[0]?.messages.length;
+    fireEvent.click(await screen.findByRole("button", { name: "Передать менеджеру: Азиз Демо" }));
+    const dialog = await screen.findByRole("dialog", { name: "Передать менеджеру" });
+    expect(within(dialog).getByText(/Клиенту ничего не уйдёт/)).toBeInTheDocument();
+    await chooseOption(within(dialog).getByLabelText("Менеджер"), "Демо Широков");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Передать" }));
+    expect(await within(dialog).findByText(/Напишите записку/)).toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText("Записка менеджеру"), {
+      target: { value: "Нужен расчёт 40 т к пятнице" },
+    });
+    await chooseOption(within(dialog).getByLabelText("Тип обращения (необязательно)"), "Товары");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Передать" }));
+    expect(
+      await screen.findByText("Лид передан: Демо Широков. Клиенту ничего не ушло."),
+    ).toBeVisible();
+    await waitFor(() => {
+      const row = readMessages().leads[0];
+      expect(row?.item.assigned?.name).toBe("Демо Широков");
+      expect(row?.item.handoff?.reasons).toContain("handed_over");
+      expect(row?.item.handoff?.reason_text).toBe("Нужен расчёт 40 т к пятнице");
+      expect(row?.item.handoff?.request_type).toBe("goods");
+      expect(row?.messages.length).toBe(before);
+    });
+  });
+});
+
+describe("Клиенты · Ждут ответа: переданный лид (D17G-1)", () => {
+  it("забирает только тот, кому передали; записка — «Передал(а)» и «Тип обращения»", async () => {
+    const state = readMessages();
+    const row = state.leads[0];
+    if (!row?.item.handoff) throw new Error("нет передачи в моке");
+    const target = { id: "u-demo-universal", name: "Демо Широков", initials: "ДШ" };
+    row.item.assigned = target;
+    row.item.handoff = {
+      ...row.item.handoff,
+      reasons: [...row.item.handoff.reasons, "handed_over"],
+      reason_text: "Нужен расчёт 40 т к пятнице",
+      handed_by: { id: "u-demo-registrar", name: "Демо Канцелярова", initials: "ДК" },
+      request_type: "goods",
+    };
+    writeMessages(state);
+    expect(canTake(row.item, "u-demo-universal")).toBe(true);
+    expect(canTake(row.item, "u-demo-manager")).toBe(false);
+
+    await open("universal@demo.example", "?lead=L-2041");
+    const note = await screen.findByRole("region", { name: "Записка передачи" });
+    expect(within(note).getByText("Демо Канцелярова")).toBeVisible();
+    expect(within(note).getByText("Товары")).toBeVisible();
+    expect(within(note).getByText(/Нужен расчёт 40 т к пятнице/)).toBeVisible();
+    expect(screen.getAllByRole("button", { name: /^Забрать/ }).length).toBeGreaterThan(0);
   });
 });
 

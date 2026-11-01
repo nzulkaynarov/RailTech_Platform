@@ -36,10 +36,29 @@ export function mergeThread(
   return entries.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
 
-/** Передачу можно забрать: она открыта (или отложена), лид ещё ни у кого. */
-export function canTake(item: Pick<MessageInboxItem, "handoff" | "assigned" | "group">): boolean {
-  if (item.handoff) return item.handoff.state !== "taken" && !item.assigned;
+/** Передача первой линии (D17G-1): причина `handed_over`, лид у ответственного — забирает только он. */
+export function handedOver(item: Pick<MessageInboxItem, "handoff" | "assigned">): boolean {
+  return Boolean(item.handoff?.reasons.includes("handed_over") && item.assigned);
+}
+
+/**
+ * Передачу можно забрать: она открыта (или отложена) и лид ещё ни у кого — или первая линия передала его именно мне
+ * (`me`, D17G-1).
+ */
+export function canTake(
+  item: Pick<MessageInboxItem, "handoff" | "assigned" | "group">,
+  me?: string,
+): boolean {
+  if (item.handoff) {
+    if (item.handoff.state === "taken") return false;
+    return !item.assigned || (handedOver(item) && item.assigned.id === me);
+  }
   return item.group === "unassigned";
+}
+
+/** «Передать менеджеру» (первая линия): лида ещё не ведёт сотрудник — бот, ждёт менеджера или передан, но не забран. */
+export function canHandOver(card: { owner_mode: "bot" | "waiting" | "manager" }): boolean {
+  return card.owner_mode !== "manager";
 }
 
 /** Шаблон на языке лида (пусто — русский) с подстановкой `{name}` и `{manager}`. */

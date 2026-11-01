@@ -17,7 +17,8 @@
       "title": "All handoffs are handled",
       "text": "The bot replies on its own until the client asks for a person.",
       "action": "Open leads"
-    }
+    },
+    "handedTo": "Handed to {{name}}"
   },
   "sla": {
     "waiting": "waiting {{duration}}",
@@ -52,7 +53,8 @@
     "attachment_received": "Sent a file",
     "agent_unavailable": "Bot could not reply",
     "stop_word": "Stop word in the message",
-    "other": "Other reason"
+    "other": "Other reason",
+    "handed_over": "Handed over by the office clerk"
   },
   "channels": {
     "telegram": "Telegram",
@@ -87,7 +89,9 @@
     "companySize": "Company size",
     "region": "Region",
     "lastMessage": "Last message",
-    "none": "no data"
+    "none": "no data",
+    "handedBy": "Handed over by",
+    "requestType": "Request type"
   },
   "owner": {
     "bot": "The bot handles the conversation",
@@ -103,7 +107,9 @@
     "returned": "The lead is back with the bot",
     "card": "Lead card",
     "back": "All conversations",
-    "close": "Close"
+    "close": "Close",
+    "handOver": "Hand over to a manager",
+    "handedOver": "Lead handed over to {{name}}. Nothing was sent to the client."
   },
   "consequence": {
     "take": "The bot goes silent and the conversation moves to you; the handoff leaves your colleagues' queue."
@@ -159,7 +165,8 @@
     "noteSaved": "Note saved",
     "takeFirst": "Take the lead to reply",
     "readOnly": "View only: managers reply",
-    "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered"
+    "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered",
+    "managerReplies": "A manager replies to the client. Triage the lead and press “Hand over to a manager” with a note on what the client needs."
   },
   "card": {
     "title": "Lead card",
@@ -203,6 +210,30 @@
     "VALIDATION_FAILED": "Check the text: 1 to 4000 characters",
     "generic": "Something went wrong. Try again",
     "reply_in_progress": "The message is still being sent — wait a moment and press Retry",
-    "delivery_unknown": "Delivery not confirmed: Telegram did not respond in time. Retry will not send a second message"
+    "delivery_unknown": "Delivery not confirmed: Telegram did not respond in time. Retry will not send a second message",
+    "inactive_colleague": "This employee does not work leads — choose another one"
+  },
+  "triageOnly": "Triage and hand over",
+  "requestTypes": {
+    "goods": "Goods",
+    "services": "Services",
+    "project": "Ongoing project",
+    "other": "Other"
+  },
+  "handOver": {
+    "title": "Hand over to a manager",
+    "manager": "Manager",
+    "managerPlaceholder": "Who takes the lead",
+    "managerRequired": "Choose a manager",
+    "note": "Note for the manager",
+    "notePlaceholder": "What the client needs, what is known, when to get in touch",
+    "noteRequired": "Write a note so the manager does not have to reread the conversation",
+    "type": "Request type (optional)",
+    "typePlaceholder": "Not set",
+    "submit": "Hand over",
+    "cancel": "Cancel",
+    "hint": "Nothing is sent to the client. The manager sees the lead in “My tasks” with your note and takes it.",
+    "noManagers": "Nobody works leads yet. Ask the administrator to grant the “All-round manager” role.",
+    "managersFailed": "Could not load managers. Try again"
   }
 }

@@ -19,6 +19,10 @@ export function HandoffNoteBox({
   const reason = [...reasons, handoff?.reason_text].filter(Boolean).join("; ");
   const facts = factRows(t, note.facts);
   const rows: { label: string; value: string }[] = [];
+  // Передача первой линией (D17G-1): кто передал и тип обращения — первыми, записка — в «Причине».
+  if (handoff?.handed_by) rows.push({ label: t("note.handedBy"), value: handoff.handed_by.name });
+  if (handoff?.request_type)
+    rows.push({ label: t("note.requestType"), value: t(`requestTypes.${handoff.request_type}`) });
   if (note.request) rows.push({ label: t("note.request"), value: note.request });
   if (reason) rows.push({ label: t("note.reason"), value: reason });
   if (handoff?.recommendation) rows.push({ label: t("note.next"), value: handoff.recommendation });

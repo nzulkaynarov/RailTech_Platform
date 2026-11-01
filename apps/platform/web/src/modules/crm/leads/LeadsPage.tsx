@@ -92,6 +92,18 @@ function RowAction({ row, onError }: { row: LeadRow; onError: (text: string | nu
       </LinkButton>
     );
   }
+  if (!canReply && canEdit(me, "crm.leads.triage") && !row.assigned && row.status !== "lost") {
+    // Первая линия (D17G-1): «Разобрать» — в диалог, где «Передать менеджеру» с запиской.
+    return (
+      <LinkButton
+        size="small"
+        to={toDialog}
+        aria-label={t("leads:actions.triageLabel", { name: row.name })}
+      >
+        {t("leads:actions.triage")}
+      </LinkButton>
+    );
+  }
   if (!canReply || row.status === "lost") return null;
   if (row.handoff_open) {
     return (
