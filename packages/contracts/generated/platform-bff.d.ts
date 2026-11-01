@@ -7498,7 +7498,20 @@ export interface components {
       steps: components["schemas"]["EdsRouteStep"][];
       /** @description `null` — контакт клиента не получен из ERP */
       channels: components["schemas"]["QuoteChannels"] | null;
+      /** @description Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
+      client_comments: components["schemas"]["QuoteClientComment"][];
       sources: components["schemas"]["Sources"];
+    };
+    QuoteClientComment: {
+      /**
+       * @description Контакт клиента (кабинет) или сотрудник
+       * @enum {string}
+       */
+      author: "client" | "manager";
+      author_name: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
     };
     QuoteDecisionIn: {
       decision: components["schemas"]["ApprovalDecision"];
