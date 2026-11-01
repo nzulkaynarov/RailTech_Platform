@@ -93,11 +93,61 @@ class QuoteChecklistLine(BaseModel):
     value: str | None = None
 
 
+DeliveryReason = Literal[
+    "no_telegram",
+    "client_not_in_crm",
+    "no_cabinet",
+    "no_email",
+    "mail_not_configured",
+    "mail_failed",
+    "below_cost",
+    "fx_missing",
+    "unpriced_lines",
+    "below_floor",
+    "not_claimed",
+    "no_recipient",
+    "send_failed",
+]
+DeliveryStatus = Literal[
+    "sent", "pending", "failed", "skipped", "not_selected", "published", "unknown"
+]
+DeliveryState = Literal["ready", "sent", "closed"]
+SendChannel = Literal["telegram", "email"]
+
+
+class QuoteChannelReasons(BaseModel):
+    telegram: DeliveryReason | None
+    cabinet: DeliveryReason | None
+    email: DeliveryReason | None
+
+
 class QuoteChannels(BaseModel):
     contact_name: str | None
     telegram: bool
     cabinet: bool
     email: bool
+    reasons: QuoteChannelReasons
+
+
+class QuoteDeliveryLine(BaseModel):
+    channel: Channel
+    status: DeliveryStatus
+    reason: DeliveryReason | None
+    can_send: bool
+
+
+class QuoteDelivery(BaseModel):
+    """Отчёт об отправке одобренного КП по каналам (ERP `send_report`, D17G-2)."""
+
+    state: DeliveryState
+    lines: list[QuoteDeliveryLine]
+    error: DeliveryReason | None
+
+
+class QuoteSendIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    channel: SendChannel
 
 
 class QuoteClientComment(BaseModel):
@@ -155,6 +205,7 @@ class QuoteApprovalCard(BaseModel):
     checklist: list[QuoteChecklistLine]
     steps: list[EdsRouteStep]
     channels: QuoteChannels | None
+    delivery: QuoteDelivery | None
     client_comments: list[QuoteClientComment]
     sources: Sources
 

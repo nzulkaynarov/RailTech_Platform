@@ -178,7 +178,9 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
             </Checkbox>
             {s.reason ? (
               <span className="pf-hint" id={id(`channel-${s.channel}`)}>
-                {t(`form.channels.unavailable.${s.reason}`)}
+                {t(`form.channels.reason.${s.reason}`, {
+                  defaultValue: t(`card.delivery.reason.${s.reason}`),
+                })}
               </span>
             ) : null}
           </div>

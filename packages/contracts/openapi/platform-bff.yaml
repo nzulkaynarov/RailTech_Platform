@@ -652,6 +652,91 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /setup/cabinet:
+    get:
+      tags: [setup]
+      operationId: getSetupCabinet
+      summary: Адрес кабинета клиента (мастер «Первый запуск» и «Подключения»)
+      description: >-
+        D17G-3. Раздел `admin` — полный. CRM `GET /setup/cabinet` (право записи настроек): действующий адрес кабинета клиента и
+        откуда он взят — задан администратором (`saved`), из окружения сервера `CABINET_DOMAIN` (`env`) или нет (`none`). Без адреса
+        приглашение в кабинет и кнопка «Открыть кабинет» под сообщениями бота клиенту не уходят.
+      responses:
+        '200':
+          description: Адрес
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCabinet'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [setup]
+      operationId: saveSetupCabinet
+      summary: Сохранить адрес кабинета клиента
+      description: >-
+        D17G-3. Раздел `admin` — полный. CRM `PUT /setup/cabinet`: меняется только адрес кабинета (раздел «Компания» CRM), пустая
+        строка — вернуть адрес из окружения. Не `http(s)://…` — 422 `VALIDATION_FAILED` (`details.fields = [url]`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupCabinetIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCabinet'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/cabinet/check:
+    post:
+      tags: [setup]
+      operationId: checkSetupCabinet
+      summary: Проверить, открывается ли кабинет клиента
+      description: >-
+        D17G-3. Раздел `admin` — полный. CRM с сервера делает `GET <адрес>/health` (5 с); кабинет отвечает `200 healthy`. `url` —
+        проверить ещё не сохранённый адрес, нет — действующий. Ответ кабинета наружу не отдаётся — только итог и код HTTP.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupCabinetCheckIn'
+      responses:
+        '200':
+          description: Итог проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCabinetCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /setup/company:
     post:
       tags: [setup]
@@ -2473,11 +2558,12 @@ paths:
       operationId: getQuoteApproval
       summary: 'EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)'
       description: >-
-        Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП и итоги
-        (`GET /crm/quotes/{id}/`), заявка и контакт клиента для каналов отправки (`GET /crm/deals/{id}/`,
-        `GET /accounts/contacts/{id}/`); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или
-        номер КП `КП-2026/115` (сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая,
-        иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов,
+        Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП, итоги,
+        доступность каналов отправки по фактическим контактам клиента (`channel_availability`), итог отправки (`send_report`) и
+        право отправить (`can_send`) — `GET /crm/quotes/{id}/`; заявка — `GET /crm/deals/{id}/`; настроена ли почта — CRM
+        `GET /integrations/smtp/ready` (D17G-2); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или
+        номер КП (`КП-2026-00001` ERP или `КП-2026/115`; сначала `GET /registry?number=&kind=quote`; у номера несколько версий —
+        берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов,
         `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и
         значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел
         `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
@@ -2485,7 +2571,7 @@ paths:
         - name: ref
           in: path
           required: true
-          description: UUID маршрута одобрения КП или номер `КП-ГГГГ/NNN`
+          description: UUID маршрута одобрения КП или номер КП (`КП-ГГГГ-NNNNN`, `КП-ГГГГ/NNN`)
           schema: {type: string, minLength: 1, maxLength: 64}
       responses:
         '200':
@@ -2516,8 +2602,9 @@ paths:
         КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`.
         `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` —
         только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP
-        переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка
-        по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
+        переводит КП в «Готово к отправке» и сразу отправляет его клиенту по доступным из выбранных каналов (ERP-11); недоступный
+        канал — в отчёте `delivery` карточки с причиной, отправить по нему можно позже (`POST /eds/quotes/{id}/send`). Ответ —
+        обновлённая карточка.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/ApprovalIdPath'
@@ -2542,6 +2629,52 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/ApprovalConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/quotes/{id}/send:
+    post:
+      tags: [eds-approvals]
+      operationId: sendQuoteByChannel
+      summary: 'EDS · Отправить одобренное КП клиенту по каналу («Отправить», «Отправить повторно»)'
+      description: >-
+        D17G-2. Для того, кто отправляет КП (ERP-11): менеджер заявки или директор — раздел `crm.clients` полный (право ERP
+        `quote.send`), объектную проверку (своя заявка или `quote.review`) делает ERP. Канал не сработал или не был выбран при
+        одобрении — ERP `POST /crm/quotes/{id}/deliver/` по КП маршрута: КП «Готово к отправке» уходит только по этому каналу, уже
+        отправленное — повторно по каналу (письмо заново, Telegram — новое сообщение бота). Кабинет не отправляется: отправленное КП
+        клиент видит в кабинете всегда. Канал недоступен (нет e-mail, контакт не в боте…) или отправку остановил гейт — 409
+        `CONFLICT`, `details.reason` — код `QuoteDeliveryReason` или `invalid_status`; ERP не дала права — 403. Ответ — обновлённая
+        карточка КП.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuoteSendIn'
+      responses:
+        '200':
+          description: Отправлено (по почте — передано почтовому сервису, итог придёт в отчёт)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteApprovalCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — канал недоступен или отправку остановил гейт; причина — `details.reason`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationFailed'
         '503':
@@ -12543,6 +12676,43 @@ components:
             - type: 'null'
           description: Почему нет данных о компании (`company = null`); `null`, когда данные есть
 
+    SetupCabinet:
+      type: object
+      additionalProperties: false
+      required: [url, source, env_url]
+      description: Адрес кабинета клиента (D17G-3) — для кнопки «Открыть кабинет» и приглашений в кабинет
+      properties:
+        url: {type: [string, 'null'], description: 'Действующий адрес; `null` — не задан ни в настройках, ни на сервере'}
+        source:
+          type: string
+          enum: [saved, env, none]
+          description: '`saved` — задан администратором; `env` — из окружения сервера (`CABINET_DOMAIN`); `none` — не задан'
+        env_url: {type: [string, 'null'], description: Адрес из окружения сервера — значение по умолчанию}
+    SetupCabinetIn:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url: {type: string, maxLength: 500, description: 'https://…; пустая строка — вернуть адрес из окружения сервера'}
+    SetupCabinetCheckIn:
+      type: object
+      additionalProperties: false
+      properties:
+        url: {type: [string, 'null'], maxLength: 500, description: Проверить этот адрес (ещё не сохранённый); нет — действующий}
+    SetupCabinetCheck:
+      type: object
+      additionalProperties: false
+      required: [result, url, status_code]
+      properties:
+        result:
+          type: string
+          enum: [ok, not_set, unreachable, bad_status, not_cabinet]
+          description: >-
+            `ok` — кабинет отвечает; `not_set` — адреса нет; `unreachable` — адрес не открылся с сервера (DNS, сеть, сертификат);
+            `bad_status` — ответ не 200 (`status_code`); `not_cabinet` — по адресу отвечает не кабинет
+        url: {type: [string, 'null']}
+        status_code: {type: [integer, 'null']}
+
     SetupCompanyBlocker:
       type: string
       enum: [erp_not_connected, erp_unavailable]
@@ -13975,13 +14145,86 @@ components:
     QuoteChannels:
       type: object
       additionalProperties: false
-      required: [contact_name, telegram, cabinet, email]
-      description: Что известно об основном контакте клиента в ERP (`GET /accounts/contacts/{id}/`); адреса и идентификаторы наружу не отдаются
+      required: [contact_name, telegram, cabinet, email, reasons]
+      description: >-
+        Доступность каналов отправки по фактическим контактам клиента — ERP `channel_availability` (те же проверки, что у
+        автоотправки ERP-11, D17G-2) и CRM «почта настроена»; адреса и идентификаторы наружу не отдаются
       properties:
-        contact_name: {type: [string, 'null']}
-        telegram: {type: boolean, description: Контакт привязан к боту}
-        cabinet: {type: boolean, description: У компании клиента есть кабинет}
-        email: {type: boolean, description: У контакта указан e-mail}
+        contact_name: {type: [string, 'null'], description: Кому уйдёт КП — контакт заявки или основной контакт клиента}
+        telegram: {type: boolean, description: Контакт подключён к боту и клиент известен CRM}
+        cabinet: {type: boolean, description: Клиент приглашён в кабинет или уже входил}
+        email: {type: boolean, description: У контакта есть e-mail и почта настроена}
+        reasons:
+          $ref: '#/components/schemas/QuoteChannelReasons'
+    QuoteChannelReasons:
+      type: object
+      additionalProperties: false
+      required: [telegram, cabinet, email]
+      description: Почему канал недоступен; `null` — доступен
+      properties:
+        telegram: {oneOf: [{$ref: '#/components/schemas/QuoteDeliveryReason'}, {type: 'null'}]}
+        cabinet: {oneOf: [{$ref: '#/components/schemas/QuoteDeliveryReason'}, {type: 'null'}]}
+        email: {oneOf: [{$ref: '#/components/schemas/QuoteDeliveryReason'}, {type: 'null'}]}
+    QuoteDeliveryReason:
+      type: string
+      enum:
+        [no_telegram, client_not_in_crm, no_cabinet, no_email, mail_not_configured, mail_failed, below_cost, fx_missing,
+         unpriced_lines, below_floor, not_claimed, no_recipient, send_failed]
+      description: >-
+        Почему КП не ушло по каналу (коды ERP `send_report` и проверок каналов, D17G-2): `no_telegram` — контакт не подключён к
+        боту; `client_not_in_crm` — клиент не передан в CRM; `no_cabinet` — клиент не приглашён в кабинет; `no_email` — у
+        контакта нет e-mail; `mail_not_configured` — почта не настроена (Настройки · Подключения · Почта); `mail_failed` — письмо
+        не ушло; остальное — гейт отправки ERP (цена ниже себестоимости, нет курса, позиции без цены, маржа ниже минимальной без
+        обоснования, нет компании-продавца, некому отправить) или сбой отправки
+    QuoteDeliveryStatus:
+      type: string
+      enum: [sent, pending, failed, skipped, not_selected, published, unknown]
+      description: >-
+        `sent` — отправлено (Telegram — передано боту CRM; почта — письмо ушло); `pending` — письмо у почтового сервиса, итога ещё
+        нет; `failed` — не отправлено (причина в `reason`); `skipped` — канал выбран, но недоступен; `not_selected` — канал не
+        выбран; `published` — КП видно клиенту в кабинете; `unknown` — КП отправлено без отчёта по каналам
+    QuoteDeliveryLine:
+      type: object
+      additionalProperties: false
+      required: [channel, status, reason, can_send]
+      properties:
+        channel: {$ref: '#/components/schemas/QuoteSendChannel'}
+        status: {$ref: '#/components/schemas/QuoteDeliveryStatus'}
+        reason: {oneOf: [{$ref: '#/components/schemas/QuoteDeliveryReason'}, {type: 'null'}]}
+        can_send:
+          type: boolean
+          description: >-
+            Кнопка «Отправить» (`not_selected`, `unknown`) или «Отправить повторно» (`failed`, `skipped`): сотрудник может отправлять
+            КП, канал сейчас доступен; у кабинета всегда `false`
+    QuoteDelivery:
+      type: object
+      additionalProperties: false
+      required: [state, lines, error]
+      description: >-
+        Отчёт об отправке одобренного КП клиенту (ERP `send_report`, D17G-2): по строке на канал в порядке Telegram, Кабинет,
+        Почта. Есть, пока КП одобрено директором и ERP ответила
+      properties:
+        state:
+          type: string
+          enum: [ready, sent, closed]
+          description: '`ready` — «Готово к отправке», клиенту ещё не ушло; `sent` — отправлено; `closed` — клиент ответил, отправлять нечего'
+        lines:
+          type: array
+          minItems: 3
+          maxItems: 3
+          items: {$ref: '#/components/schemas/QuoteDeliveryLine'}
+        error:
+          oneOf: [{$ref: '#/components/schemas/QuoteDeliveryReason'}, {type: 'null'}]
+          description: Гейт или сбой, остановивший автоотправку; `null` — не было
+    QuoteSendIn:
+      type: object
+      additionalProperties: false
+      required: [channel]
+      properties:
+        channel:
+          type: string
+          enum: [telegram, email]
+          description: Кабинет не отправляется — отправленное КП клиент видит в кабинете всегда
     QuoteLetterRef:
       type: object
       additionalProperties: false
@@ -14002,7 +14245,7 @@ components:
       required:
         [id, number, version, round, status, stage, can_decide, allowed_decisions, approved_late, outgoing_number, created_at,
          ready_at, due, client_name, request, letter, calculated_by, snapshot_total, totals_mismatch, lines, totals, checklist, steps,
-         channels, client_comments, sources]
+         channels, delivery, client_comments, sources]
       properties:
         id: {type: string, format: uuid, description: 'Маршрут одобрения КП (EDS); именно он идёт в `POST /eds/quotes/{id}/decision`'}
         number: {type: string}
@@ -14054,7 +14297,10 @@ components:
         steps:
           type: array
           items: {$ref: '#/components/schemas/EdsRouteStep'}
-        channels: {oneOf: [{$ref: '#/components/schemas/QuoteChannels'}, {type: 'null'}], description: '`null` — контакт клиента не получен из ERP'}
+        channels: {oneOf: [{$ref: '#/components/schemas/QuoteChannels'}, {type: 'null'}], description: '`null` — ERP не ответила или у неё другая редакция КП'}
+        delivery:
+          oneOf: [{$ref: '#/components/schemas/QuoteDelivery'}, {type: 'null'}]
+          description: 'Отчёт об отправке клиенту по каналам (D17G-2); `null` — КП ещё не одобрено или ERP не ответила'
         client_comments:
           type: array
           items: {$ref: '#/components/schemas/QuoteClientComment'}

@@ -164,6 +164,12 @@ Source = Literal["db", "env", "none"]
 EmailStatus = Literal["queued", "sent", "failed", "skipped_no_smtp"]
 
 
+class SmtpReadyOut(BaseModel):
+    """Почта настроена (D17G-2): только признак, без адреса сервера и логина — любому сотруднику."""
+
+    configured: bool
+
+
 class SmtpStatusOut(BaseModel):
     """Коннектор «Почта» (M3-CRM-08): пароль не возвращается — только «задан» и `last4`."""
 

@@ -109,6 +109,11 @@ test.describe("КП на одобрение: директор", () => {
     await expect(page.getByText(/КП КП-2026\/115 одобрено: ИСХ-/)).toBeVisible();
     await expect(page.locator(PANEL).getByRole("heading", { name: "КП одобрено" })).toBeVisible();
     await expect(page.getByText("ИСХ-042/26").first()).toBeVisible();
+    // D17G-2: отчёт по каналам в карточке — Telegram и кабинет ушли, почту не выбирали (можно отправить)
+    const report = page.getByRole("list", { name: "Каналы отправки" });
+    await expect(report.getByText("Telegram-бот — отправлено")).toBeVisible();
+    await expect(report.getByText("Кабинет — опубликовано")).toBeVisible();
+    await expect(report.getByText("Почта — не выбрано при одобрении")).toBeVisible();
     await settledScreenshot(page, "approved");
 
     // КП ушло из «Моего шага», но есть в «Все КП» со статусом «Одобрено»
@@ -156,7 +161,7 @@ test.describe("КП на одобрение: директор", () => {
     await expect(approve).toHaveAccessibleDescription(/нет визы гл\. инженера/);
     // канал «Кабинет» недоступен у этой компании
     await expect(form.getByRole("checkbox", { name: "Кабинет" })).toBeDisabled();
-    await expect(form.getByText("Недоступен: у компании клиента нет кабинета.")).toBeVisible();
+    await expect(form.getByText("Недоступен: клиент не приглашён в кабинет.")).toBeVisible();
     await settledScreenshot(page, "blocked");
     await expectNoViolations(page, "неактивная кнопка с подписью");
 
@@ -186,7 +191,7 @@ test.describe("КП на одобрение: директор", () => {
     await expect(form.getByText(/просрочен, это предупреждение/)).toBeVisible();
     await expect(form.getByText(/Одобрить можно: в журнале появится отметка/)).toBeVisible();
     await expect(form.getByRole("checkbox", { name: "Почта" })).toBeDisabled();
-    await expect(form.getByText("Недоступна: у контакта не указан e-mail.")).toBeVisible();
+    await expect(form.getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
     const approve = form.getByRole("button", { name: APPROVE });
     await expect(approve).toBeEnabled();
     await settledScreenshot(page, "late");

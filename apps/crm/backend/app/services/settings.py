@@ -37,9 +37,11 @@ class SettingsService:
         clock: Callable[[], float] = time.monotonic,
         crm_base_url_default: str | None = None,
         platform_url: str | None = None,
+        cabinet_url_default: str | None = None,
     ) -> None:
         self._sessions = session_factory
         self._crm_base_url_default = crm_base_url_default
+        self._cabinet_url_default = cabinet_url_default
         self._platform_url = platform_url
         self._ttl = ttl_s
         self._clock = clock
@@ -62,7 +64,9 @@ class SettingsService:
         async with self._sessions() as session:
             rows = (await session.scalars(select(Setting))).all()
         self._stored = _merge({row.key: row.value for row in rows})
-        self._cached = _with_env_defaults(self._stored, self._crm_base_url_default)
+        self._cached = _with_env_defaults(
+            self._stored, self._crm_base_url_default, self._cabinet_url_default
+        )
         self._loaded_at = self._clock()
         return self._stored, self._cached
 
@@ -161,15 +165,23 @@ class SettingsService:
         self._cached = None
 
 
-def _with_env_defaults(cfg: AppSettings, crm_base_url: str | None) -> AppSettings:
-    """`company.crm_base_url` по умолчанию — публичный адрес CRM из окружения, а не `localhost`.
+def _with_env_defaults(
+    cfg: AppSettings, crm_base_url: str | None, cabinet_url: str | None = None
+) -> AppSettings:
+    """`company.crm_base_url` по умолчанию — публичный адрес CRM из окружения, а не `localhost`;
+    пустой `company.cabinet_url` — адрес кабинета из окружения (D17G-3).
 
-    Подменяется только заводское значение (ключа нет в БД или в нём `http://localhost`); адрес,
-    заданный админом в «Настройки» → «Компания», остаётся как есть. В БД ничего не пишется.
+    Подменяется только заводское значение (ключа нет в БД, в адресе CRM `http://localhost`, адрес
+    кабинета пуст); адрес, заданный админом, остаётся как есть. В БД ничего не пишется.
     """
-    if not crm_base_url or not is_schema_default(cfg.company.crm_base_url):
+    update: dict[str, str] = {}
+    if crm_base_url and is_schema_default(cfg.company.crm_base_url):
+        update["crm_base_url"] = crm_base_url
+    if cabinet_url and not cfg.company.cabinet_url.strip():
+        update["cabinet_url"] = cabinet_url
+    if not update:
         return cfg
-    company = cfg.company.model_copy(update={"crm_base_url": crm_base_url})
+    company = cfg.company.model_copy(update=update)
     return cfg.model_copy(update={"company": company})
 
 

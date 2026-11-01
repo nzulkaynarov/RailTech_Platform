@@ -51,7 +51,7 @@ describe("Одобрение КП: форма", () => {
       "Одобрить нельзя: нет визы гл. инженера, маржа ниже порога резолюции.",
     );
     expect(within(form).getByRole("checkbox", { name: "Кабинет" })).toBeDisabled();
-    expect(within(form).getByText("Недоступен: у компании клиента нет кабинета.")).toBeVisible();
+    expect(within(form).getByText("Недоступен: клиент не приглашён в кабинет.")).toBeVisible();
   });
 
   it("срок клиента просрочен — предупреждение, не блок; почта недоступна с подписью", async () => {
@@ -63,7 +63,7 @@ describe("Одобрение КП: форма", () => {
       within(form).getByText(/в журнале появится отметка «одобрено с опозданием»/),
     ).toBeVisible();
     expect(within(form).getByRole("checkbox", { name: "Почта" })).toBeDisabled();
-    expect(within(form).getByText("Недоступна: у контакта не указан e-mail.")).toBeVisible();
+    expect(within(form).getByText("Недоступна: нет e-mail у контакта.")).toBeVisible();
     expect(
       within(within(form).getByRole("group", { name: "Что произойдёт" })).getByText(
         /\(Telegram-бот, Кабинет\)/,

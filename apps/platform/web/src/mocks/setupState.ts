@@ -18,6 +18,10 @@ export interface SetupMock {
   fresh: boolean;
   companyCreated: boolean;
   done: Partial<Record<SetupStepKey, boolean>>;
+  /** Адрес кабинета, заданный администратором (D17G-3); пусто — не задан */
+  cabinetUrl?: string;
+  /** Адрес кабинета из окружения сервера (`CABINET_DOMAIN`); null — не задан */
+  cabinetEnv?: string | null;
 }
 
 const DEFAULTS: SetupMock = {
@@ -26,6 +30,8 @@ const DEFAULTS: SetupMock = {
   fresh: false,
   companyCreated: true,
   done: {},
+  cabinetUrl: "",
+  cabinetEnv: "https://cabinet.example.org",
 };
 
 let memory: SetupMock | null = null;
@@ -59,12 +65,28 @@ export function resetSetup(): void {
 
 /** Чистая установка: администратора нет, нужен код `code`, шаги не сделаны, компании нет. */
 export function startFreshInstall(code: string): void {
-  writeSetup({ needsAdmin: true, code, fresh: true, companyCreated: false, done: {} });
+  writeSetup({
+    needsAdmin: true,
+    code,
+    fresh: true,
+    companyCreated: false,
+    done: {},
+    cabinetUrl: "",
+    cabinetEnv: null,
+  });
 }
 
 /** Уже есть администратор, но настройка не начата: шаги не сделаны, компании нет. */
 export function startFreshSetup(): void {
-  writeSetup({ needsAdmin: false, code: "", fresh: true, companyCreated: false, done: {} });
+  writeSetup({
+    needsAdmin: false,
+    code: "",
+    fresh: true,
+    companyCreated: false,
+    done: {},
+    cabinetUrl: "",
+    cabinetEnv: null,
+  });
 }
 
 export function markStepDone(step: SetupStepKey): void {

@@ -42,6 +42,10 @@ import type {
   BusOverviewOut,
   BusRetryDeadIn,
   BusRetryOut,
+  CabinetCheckIn,
+  CabinetCheckOut,
+  CabinetUrlIn,
+  CabinetUrlOut,
   ChangePasswordRequest,
   ChatCandidateOut,
   ClientContacts,
@@ -171,6 +175,7 @@ import type {
   SetupState,
   SmtpCheckOut,
   SmtpConnectorIn,
+  SmtpReadyOut,
   SmtpStatusOut,
   Snooze,
   SpendReport,
@@ -8154,6 +8159,120 @@ export function useListEmailLog<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListEmailLogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSmtpReadyUrl = () => {
+  return `/api/v1/integrations/smtp/ready`;
+};
+
+/**
+ * Настроена ли почта — любому сотруднику, без адреса и логина (D17G-2): панель одобрения КП
+ * честно выключает канал «Почта», пока почта не настроена. Сами настройки — `GET /smtp` (право
+ * `integrations:read`).
+ * @summary Get Smtp Ready
+ */
+export const getSmtpReady = async (options?: Parameters<typeof http>[1]): Promise<SmtpReadyOut> => {
+  return http<SmtpReadyOut>(getGetSmtpReadyUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSmtpReadyQueryKey = () => {
+  return [`/api/v1/integrations/smtp/ready`] as const;
+};
+
+export const getGetSmtpReadyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSmtpReady>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpReady>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSmtpReadyQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSmtpReady>>> = ({ signal }) =>
+    getSmtpReady({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSmtpReady>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSmtpReadyQueryResult = NonNullable<Awaited<ReturnType<typeof getSmtpReady>>>;
+export type GetSmtpReadyQueryError = ErrorType<ErrorOut>;
+
+export function useGetSmtpReady<
+  TData = Awaited<ReturnType<typeof getSmtpReady>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpReady>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSmtpReady>>,
+          TError,
+          Awaited<ReturnType<typeof getSmtpReady>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSmtpReady<
+  TData = Awaited<ReturnType<typeof getSmtpReady>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpReady>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSmtpReady>>,
+          TError,
+          Awaited<ReturnType<typeof getSmtpReady>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSmtpReady<
+  TData = Awaited<ReturnType<typeof getSmtpReady>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpReady>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Smtp Ready
+ */
+
+export function useGetSmtpReady<
+  TData = Awaited<ReturnType<typeof getSmtpReady>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSmtpReady>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSmtpReadyQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
@@ -17261,6 +17380,335 @@ export const useCreateFirstAdmin = <TError = ErrorType<ErrorOut>, TContext = unk
   TContext
 > => {
   return useMutation(getCreateFirstAdminMutationOptions(options), queryClient);
+};
+
+export const getGetCabinetUrlUrl = () => {
+  return `/api/v1/setup/cabinet`;
+};
+
+/**
+ * Адрес кабинета клиента для мастера «Первый запуск» и «Подключений» (D17G-3).
+ * @summary Get Cabinet Url
+ */
+export const getCabinetUrl = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CabinetUrlOut> => {
+  return http<CabinetUrlOut>(getGetCabinetUrlUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCabinetUrlQueryKey = () => {
+  return [`/api/v1/setup/cabinet`] as const;
+};
+
+export const getGetCabinetUrlQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCabinetUrl>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCabinetUrl>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCabinetUrlQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCabinetUrl>>> = ({ signal }) =>
+    getCabinetUrl({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCabinetUrl>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCabinetUrlQueryResult = NonNullable<Awaited<ReturnType<typeof getCabinetUrl>>>;
+export type GetCabinetUrlQueryError = ErrorType<ErrorOut>;
+
+export function useGetCabinetUrl<
+  TData = Awaited<ReturnType<typeof getCabinetUrl>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCabinetUrl>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCabinetUrl>>,
+          TError,
+          Awaited<ReturnType<typeof getCabinetUrl>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCabinetUrl<
+  TData = Awaited<ReturnType<typeof getCabinetUrl>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCabinetUrl>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCabinetUrl>>,
+          TError,
+          Awaited<ReturnType<typeof getCabinetUrl>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCabinetUrl<
+  TData = Awaited<ReturnType<typeof getCabinetUrl>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCabinetUrl>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Cabinet Url
+ */
+
+export function useGetCabinetUrl<
+  TData = Awaited<ReturnType<typeof getCabinetUrl>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCabinetUrl>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCabinetUrlQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPutCabinetUrlUrl = () => {
+  return `/api/v1/setup/cabinet`;
+};
+
+/**
+ * Сохранить адрес кабинета (меняется только `company.cabinet_url`); пусто — адрес из окружения.
+ *
+ * Не `http(s)://…` — 422 `validation_failed` с полем `url`.
+ * @summary Put Cabinet Url
+ */
+export const putCabinetUrl = async (
+  cabinetUrlIn: CabinetUrlIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CabinetUrlOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CabinetUrlOut>(getPutCabinetUrlUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(cabinetUrlIn),
+  });
+};
+
+export const getPutCabinetUrlMutationKey = () => ["putCabinetUrl"] as const;
+
+export const getPutCabinetUrlMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putCabinetUrl>>,
+    TError,
+    PutCabinetUrlMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putCabinetUrl>>,
+  TError,
+  PutCabinetUrlMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutCabinetUrlMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putCabinetUrl>>,
+    PutCabinetUrlMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putCabinetUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutCabinetUrlMutationResult = NonNullable<Awaited<ReturnType<typeof putCabinetUrl>>>;
+export type PutCabinetUrlMutationBody = CabinetUrlIn;
+export type PutCabinetUrlMutationError = ErrorType<ErrorOut>;
+export type PutCabinetUrlMutationVariables = { data: CabinetUrlIn };
+
+/**
+ * @summary Put Cabinet Url
+ */
+export const usePutCabinetUrl = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putCabinetUrl>>,
+      TError,
+      PutCabinetUrlMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putCabinetUrl>>,
+  TError,
+  PutCabinetUrlMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutCabinetUrlMutationOptions(options), queryClient);
+};
+
+export const getCheckCabinetUrlUrl = () => {
+  return `/api/v1/setup/cabinet/check`;
+};
+
+/**
+ * Открывается ли кабинет: `GET <адрес>/health` с сервера CRM (5 с). Ответ кабинета наружу не
+ * отдаётся.
+ * @summary Check Cabinet Url
+ */
+export const checkCabinetUrl = async (
+  cabinetCheckIn: CabinetCheckIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CabinetCheckOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CabinetCheckOut>(getCheckCabinetUrlUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(cabinetCheckIn),
+  });
+};
+
+export const getCheckCabinetUrlMutationKey = () => ["checkCabinetUrl"] as const;
+
+export const getCheckCabinetUrlMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkCabinetUrl>>,
+    TError,
+    CheckCabinetUrlMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkCabinetUrl>>,
+  TError,
+  CheckCabinetUrlMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCheckCabinetUrlMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkCabinetUrl>>,
+    CheckCabinetUrlMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return checkCabinetUrl(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckCabinetUrlMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkCabinetUrl>>
+>;
+export type CheckCabinetUrlMutationBody = CabinetCheckIn;
+export type CheckCabinetUrlMutationError = ErrorType<ErrorOut>;
+export type CheckCabinetUrlMutationVariables = { data: CabinetCheckIn };
+
+/**
+ * @summary Check Cabinet Url
+ */
+export const useCheckCabinetUrl = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkCabinetUrl>>,
+      TError,
+      CheckCabinetUrlMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof checkCabinetUrl>>,
+  TError,
+  CheckCabinetUrlMutationVariables,
+  TContext
+> => {
+  return useMutation(getCheckCabinetUrlMutationOptions(options), queryClient);
 };
 
 export const getGetSetupChecklistUrl = () => {

@@ -11,8 +11,13 @@ from app.api.deps import ContainerDep, client_ip, require
 from app.api.health import get_readiness
 from app.api.v1.auth import respond_with_session
 from app.api.v1.system_status import collect_components
+from app.domain.errors import ValidationFailedError
 from app.schemas.auth import TokenResponse
 from app.schemas.setup import (
+    CabinetCheckIn,
+    CabinetCheckOut,
+    CabinetUrlIn,
+    CabinetUrlOut,
     ChecklistItem,
     ChecklistKey,
     SetupAdminRequest,
@@ -111,3 +116,42 @@ async def get_setup_checklist(
         for key, done in checks.checklist(facts)
     ]
     return SetupChecklist(items=items, done=sum(i.done for i in items), total=len(items))
+
+
+SettingsWriter = Annotated[Principal, Depends(require("settings", "write"))]
+
+
+def _cabinet_out(address: Any) -> CabinetUrlOut:
+    return CabinetUrlOut(url=address.url, source=address.source, env_url=address.env_url)
+
+
+@router.get("/cabinet", response_model=CabinetUrlOut)
+async def get_cabinet_url(_: SettingsWriter, container: ContainerDep) -> CabinetUrlOut:
+    """Адрес кабинета клиента для мастера «Первый запуск» и «Подключений» (D17G-3)."""
+    return _cabinet_out(await container.cabinet_url_service.address())
+
+
+@router.put("/cabinet", response_model=CabinetUrlOut)
+async def put_cabinet_url(
+    body: CabinetUrlIn, who: SettingsWriter, container: ContainerDep
+) -> CabinetUrlOut:
+    """Сохранить адрес кабинета (меняется только `company.cabinet_url`); пусто — адрес из окружения.
+
+    Не `http(s)://…` — 422 `validation_failed` с полем `url`."""
+    try:
+        address = await container.cabinet_url_service.save(body.url, who.user_id, who.actor)
+    except ValueError as exc:
+        raise ValidationFailedError(
+            "нужен адрес вида https://cabinet.example.com", field="url"
+        ) from exc
+    return _cabinet_out(address)
+
+
+@router.post("/cabinet/check", response_model=CabinetCheckOut)
+async def check_cabinet_url(
+    body: CabinetCheckIn, _: SettingsWriter, container: ContainerDep
+) -> CabinetCheckOut:
+    """Открывается ли кабинет: `GET <адрес>/health` с сервера CRM (5 с). Ответ кабинета наружу не
+    отдаётся."""
+    found = await container.cabinet_url_service.check(body.url)
+    return CabinetCheckOut(result=found.result, url=found.url, status_code=found.status_code)

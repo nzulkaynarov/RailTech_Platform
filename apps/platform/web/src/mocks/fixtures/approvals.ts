@@ -3,7 +3,11 @@ import type {
   EdsRouteStep,
   MemoApprovalCard,
   QuoteApprovalCard,
+  QuoteChannels,
   QuoteChecklistLine,
+  QuoteDelivery,
+  QuoteDeliveryLine,
+  QuoteSendChannel,
 } from "../../shared/api/generated/model";
 
 import { companyDayIn } from "./dates";
@@ -145,6 +149,74 @@ const QUOTE_SEEDS: readonly QuoteSeed[] = [
   },
 ];
 
+/** Каналы по контакту клиента, как их отдаёт BFF (ERP `channel_availability`, D17G-2): у недоступного — причина. */
+function channelsOf(flags: QuoteSeed["channels"]): QuoteChannels {
+  return {
+    contact_name: "Алия Демо",
+    ...flags,
+    reasons: {
+      telegram: flags.telegram ? null : "no_telegram",
+      cabinet: flags.cabinet ? null : "no_cabinet",
+      email: flags.email ? null : "no_email",
+    },
+  };
+}
+
+const ORDER: readonly QuoteSendChannel[] = ["telegram", "cabinet", "email"];
+
+/**
+ * Отчёт об отправке после одобрения (как ERP-11 + BFF): выбранные доступные каналы уходят (почта — «передано почтовому
+ * сервису»), кабинет у отправленного КП — «опубликовано», невыбранные — «не выбрано» с «Отправить», если канал доступен.
+ */
+export function deliveryAfterApproval(
+  channels: QuoteChannels | null,
+  chosen: readonly QuoteSendChannel[],
+): QuoteDelivery {
+  const ok = (c: QuoteSendChannel) => channels === null || channels[c];
+  const sent = chosen.some((c) => ok(c));
+  const lines = ORDER.map((channel): QuoteDeliveryLine => {
+    const reason = channels?.reasons[channel] ?? null;
+    if (chosen.includes(channel)) {
+      if (!ok(channel)) return { channel, status: "skipped", reason, can_send: false };
+      const status = channel === "cabinet" ? "published" : channel === "email" ? "pending" : "sent";
+      return { channel, status, reason: null, can_send: false };
+    }
+    if (channel === "cabinet") {
+      if (!sent) return { channel, status: "not_selected", reason: null, can_send: false };
+      return ok(channel)
+        ? { channel, status: "published", reason: null, can_send: false }
+        : { channel, status: "skipped", reason, can_send: false };
+    }
+    return { channel, status: "not_selected", reason: null, can_send: ok(channel) };
+  });
+  return { state: sent ? "sent" : "ready", lines, error: null };
+}
+
+/** «Отправить» по каналу (ERP `deliver`): Telegram — отправлено, почта — у почтового сервиса; КП — «Отправлено». */
+export function deliveryAfterSend(
+  delivery: QuoteDelivery,
+  channel: QuoteSendChannel,
+): QuoteDelivery {
+  return {
+    state: "sent",
+    error: null,
+    lines: delivery.lines.map((line) => {
+      if (line.channel === channel) {
+        return {
+          channel,
+          status: channel === "email" ? "pending" : "sent",
+          reason: null,
+          can_send: false,
+        };
+      }
+      if (line.channel === "cabinet" && line.status === "not_selected") {
+        return { ...line, status: "published" };
+      }
+      return line;
+    }),
+  };
+}
+
 function quote(seed: QuoteSeed): QuoteApprovalCard {
   const version = seed.version ?? 1;
   const number = `КП-2026/${String(seed.n)}`;
@@ -233,7 +305,8 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     },
     checklist,
     steps: [step("Директор", "current")],
-    channels: { contact_name: "Алия Демо", ...seed.channels },
+    channels: channelsOf(seed.channels),
+    delivery: null,
     client_comments: [],
     sources: { crm: "ok", erp: seed.erpDown ? "unavailable" : "ok" },
   };
@@ -260,6 +333,16 @@ function approvedQuote(): QuoteApprovalCard {
     can_decide: false,
     allowed_decisions: [],
     outgoing_number: "ИСХ-027/26",
+    // D17G-2: директор выбрал кабинет и почту; письмо не ушло, Telegram не выбирали — менеджер отправит сам
+    delivery: {
+      state: "sent",
+      error: null,
+      lines: [
+        { channel: "telegram", status: "not_selected", reason: null, can_send: true },
+        { channel: "cabinet", status: "published", reason: null, can_send: false },
+        { channel: "email", status: "failed", reason: "mail_failed", can_send: true },
+      ],
+    },
     // КП отправлено клиенту, клиент спросил в кабинете (B-CABFIX-1)
     client_comments: [
       {

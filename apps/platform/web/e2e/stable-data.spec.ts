@@ -214,10 +214,13 @@ test.describe("Данные без мигания", () => {
       .click();
     await expect(page).not.toHaveURL(/\/dashboard\/queue$/);
     await expect(banner).toBeVisible();
-    expect(
-      await page.evaluate(
-        `document.querySelector("#main-content > .pf-setup-banner") === document.querySelector("#main-content").firstElementChild`,
-      ),
-    ).toBe(true);
+    // баннер переезжает наверх при отрисовке нового экрана — ждём кадр, а не читаем DOM в момент перехода
+    await expect
+      .poll(() =>
+        page.evaluate(
+          `document.querySelector("#main-content > .pf-setup-banner") === document.querySelector("#main-content").firstElementChild`,
+        ),
+      )
+      .toBe(true);
   });
 });

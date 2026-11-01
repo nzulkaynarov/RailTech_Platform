@@ -285,6 +285,7 @@ import type {
   QuoteDecisionIn,
   QuoteDefaults,
   QuoteDefaultsUpdate,
+  QuoteSendIn,
   ReferenceItem,
   ReferenceItemIn,
   ReferenceItemList,
@@ -320,6 +321,10 @@ import type {
   Session,
   SessionExpiredResponse,
   SetupAdminIn,
+  SetupCabinet,
+  SetupCabinetCheck,
+  SetupCabinetCheckIn,
+  SetupCabinetIn,
   SetupChecklist,
   SetupCompanyCreated,
   SetupCompanyIn,
@@ -1342,6 +1347,366 @@ export function useGetSetupChecklist<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetSetupCabinetUrl = () => {
+  return `/api/v1/setup/cabinet`;
+};
+
+/**
+ * D17G-3. Раздел `admin` — полный. CRM `GET /setup/cabinet` (право записи настроек): действующий адрес кабинета клиента и откуда он взят — задан администратором (`saved`), из окружения сервера `CABINET_DOMAIN` (`env`) или нет (`none`). Без адреса приглашение в кабинет и кнопка «Открыть кабинет» под сообщениями бота клиенту не уходят.
+ * @summary Адрес кабинета клиента (мастер «Первый запуск» и «Подключения»)
+ */
+export const getSetupCabinet = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SetupCabinet> => {
+  return http<SetupCabinet>(getGetSetupCabinetUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSetupCabinetQueryKey = () => {
+  return [`/api/v1/setup/cabinet`] as const;
+};
+
+export const getGetSetupCabinetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSetupCabinet>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupCabinet>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSetupCabinetQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSetupCabinet>>> = ({ signal }) =>
+    getSetupCabinet({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSetupCabinet>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSetupCabinetQueryResult = NonNullable<Awaited<ReturnType<typeof getSetupCabinet>>>;
+export type GetSetupCabinetQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetSetupCabinet<
+  TData = Awaited<ReturnType<typeof getSetupCabinet>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupCabinet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupCabinet>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupCabinet>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupCabinet<
+  TData = Awaited<ReturnType<typeof getSetupCabinet>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupCabinet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSetupCabinet>>,
+          TError,
+          Awaited<ReturnType<typeof getSetupCabinet>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSetupCabinet<
+  TData = Awaited<ReturnType<typeof getSetupCabinet>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupCabinet>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Адрес кабинета клиента (мастер «Первый запуск» и «Подключения»)
+ */
+
+export function useGetSetupCabinet<
+  TData = Awaited<ReturnType<typeof getSetupCabinet>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSetupCabinet>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSetupCabinetQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSaveSetupCabinetUrl = () => {
+  return `/api/v1/setup/cabinet`;
+};
+
+/**
+ * D17G-3. Раздел `admin` — полный. CRM `PUT /setup/cabinet`: меняется только адрес кабинета (раздел «Компания» CRM), пустая строка — вернуть адрес из окружения. Не `http(s)://…` — 422 `VALIDATION_FAILED` (`details.fields = [url]`).
+ * @summary Сохранить адрес кабинета клиента
+ */
+export const saveSetupCabinet = async (
+  setupCabinetIn: SetupCabinetIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SetupCabinet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SetupCabinet>(getSaveSetupCabinetUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(setupCabinetIn),
+  });
+};
+
+export const getSaveSetupCabinetMutationKey = () => ["saveSetupCabinet"] as const;
+
+export const getSaveSetupCabinetMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveSetupCabinet>>,
+    TError,
+    SaveSetupCabinetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveSetupCabinet>>,
+  TError,
+  SaveSetupCabinetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveSetupCabinetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveSetupCabinet>>,
+    SaveSetupCabinetMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveSetupCabinet(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveSetupCabinetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveSetupCabinet>>
+>;
+export type SaveSetupCabinetMutationBody = SetupCabinetIn;
+export type SaveSetupCabinetMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type SaveSetupCabinetMutationVariables = { data: SetupCabinetIn };
+
+/**
+ * @summary Сохранить адрес кабинета клиента
+ */
+export const useSaveSetupCabinet = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveSetupCabinet>>,
+      TError,
+      SaveSetupCabinetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveSetupCabinet>>,
+  TError,
+  SaveSetupCabinetMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveSetupCabinetMutationOptions(options), queryClient);
+};
+
+export const getCheckSetupCabinetUrl = () => {
+  return `/api/v1/setup/cabinet/check`;
+};
+
+/**
+ * D17G-3. Раздел `admin` — полный. CRM с сервера делает `GET <адрес>/health` (5 с); кабинет отвечает `200 healthy`. `url` — проверить ещё не сохранённый адрес, нет — действующий. Ответ кабинета наружу не отдаётся — только итог и код HTTP.
+ * @summary Проверить, открывается ли кабинет клиента
+ */
+export const checkSetupCabinet = async (
+  setupCabinetCheckIn: SetupCabinetCheckIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SetupCabinetCheck> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SetupCabinetCheck>(getCheckSetupCabinetUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(setupCabinetCheckIn),
+  });
+};
+
+export const getCheckSetupCabinetMutationKey = () => ["checkSetupCabinet"] as const;
+
+export const getCheckSetupCabinetMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkSetupCabinet>>,
+    TError,
+    CheckSetupCabinetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkSetupCabinet>>,
+  TError,
+  CheckSetupCabinetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCheckSetupCabinetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkSetupCabinet>>,
+    CheckSetupCabinetMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return checkSetupCabinet(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckSetupCabinetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkSetupCabinet>>
+>;
+export type CheckSetupCabinetMutationBody = SetupCabinetCheckIn;
+export type CheckSetupCabinetMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CheckSetupCabinetMutationVariables = { data: SetupCabinetCheckIn };
+
+/**
+ * @summary Проверить, открывается ли кабинет клиента
+ */
+export const useCheckSetupCabinet = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkSetupCabinet>>,
+      TError,
+      CheckSetupCabinetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof checkSetupCabinet>>,
+  TError,
+  CheckSetupCabinetMutationVariables,
+  TContext
+> => {
+  return useMutation(getCheckSetupCabinetMutationOptions(options), queryClient);
+};
 
 export const getCreateOwnCompanyUrl = () => {
   return `/api/v1/setup/company`;
@@ -8509,7 +8874,7 @@ export const getGetQuoteApprovalUrl = (ref: string) => {
 };
 
 /**
- * Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП и итоги (`GET /crm/quotes/{id}/`), заявка и контакт клиента для каналов отправки (`GET /crm/deals/{id}/`, `GET /accounts/contacts/{id}/`); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП `КП-2026/115` (сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
+ * Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП, итоги, доступность каналов отправки по фактическим контактам клиента (`channel_availability`), итог отправки (`send_report`) и право отправить (`can_send`) — `GET /crm/quotes/{id}/`; заявка — `GET /crm/deals/{id}/`; настроена ли почта — CRM `GET /integrations/smtp/ready` (D17G-2); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП (`КП-2026-00001` ERP или `КП-2026/115`; сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
  * @summary EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)
  */
 export const getQuoteApproval = async (
@@ -8646,7 +9011,7 @@ export const getDecideQuoteApprovalUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
+ * EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сразу отправляет его клиенту по доступным из выбранных каналов (ERP-11); недоступный канал — в отчёте `delivery` карточки с причиной, отправить по нему можно позже (`POST /eds/quotes/{id}/send`). Ответ — обновлённая карточка.
  * @summary EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
  */
 export const decideQuoteApproval = async (
@@ -8771,6 +9136,138 @@ export const useDecideQuoteApproval = <
   TContext
 > => {
   return useMutation(getDecideQuoteApprovalMutationOptions(options), queryClient);
+};
+
+export const getSendQuoteByChannelUrl = (id: string) => {
+  return `/api/v1/eds/quotes/${id}/send`;
+};
+
+/**
+ * D17G-2. Для того, кто отправляет КП (ERP-11): менеджер заявки или директор — раздел `crm.clients` полный (право ERP `quote.send`), объектную проверку (своя заявка или `quote.review`) делает ERP. Канал не сработал или не был выбран при одобрении — ERP `POST /crm/quotes/{id}/deliver/` по КП маршрута: КП «Готово к отправке» уходит только по этому каналу, уже отправленное — повторно по каналу (письмо заново, Telegram — новое сообщение бота). Кабинет не отправляется: отправленное КП клиент видит в кабинете всегда. Канал недоступен (нет e-mail, контакт не в боте…) или отправку остановил гейт — 409 `CONFLICT`, `details.reason` — код `QuoteDeliveryReason` или `invalid_status`; ERP не дала права — 403. Ответ — обновлённая карточка КП.
+ * @summary EDS · Отправить одобренное КП клиенту по каналу («Отправить», «Отправить повторно»)
+ */
+export const sendQuoteByChannel = async (
+  id: string,
+  quoteSendIn: QuoteSendIn,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<QuoteApprovalCard>(getSendQuoteByChannelUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(quoteSendIn),
+  });
+};
+
+export const getSendQuoteByChannelMutationKey = () => ["sendQuoteByChannel"] as const;
+
+export const getSendQuoteByChannelMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendQuoteByChannel>>,
+    TError,
+    SendQuoteByChannelMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendQuoteByChannel>>,
+  TError,
+  SendQuoteByChannelMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendQuoteByChannelMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendQuoteByChannel>>,
+    SendQuoteByChannelMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return sendQuoteByChannel(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendQuoteByChannelMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendQuoteByChannel>>
+>;
+export type SendQuoteByChannelMutationBody = QuoteSendIn;
+export type SendQuoteByChannelMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SendQuoteByChannelMutationVariables = { id: string; data: QuoteSendIn };
+
+/**
+ * @summary EDS · Отправить одобренное КП клиенту по каналу («Отправить», «Отправить повторно»)
+ */
+export const useSendQuoteByChannel = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendQuoteByChannel>>,
+      TError,
+      SendQuoteByChannelMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendQuoteByChannel>>,
+  TError,
+  SendQuoteByChannelMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendQuoteByChannelMutationOptions(options), queryClient);
 };
 
 export const getListMemoApprovalsUrl = (params?: ListMemoApprovalsParams) => {
