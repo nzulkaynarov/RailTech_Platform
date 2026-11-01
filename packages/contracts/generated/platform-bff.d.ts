@@ -770,7 +770,8 @@ export interface paths {
      *
      *     Входящие делопроизводства (P8b, SPEC-v3 §3.2a; EDS `GET /letter-tasks`): `instruction` — «Исполнить поручение» по
      *     письму со сроком (просрочено — `due_label = overdue`), `instruction_extension` — «Перенос срока» у автора резолюции,
-     *     `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/ВХ-NNN/ГГ`; одна строка на поручение,
+     *     `acquaint` — «Ознакомиться». Строка открывает рабочий экран письма `/eds/tasks/{UUID письма}` (по UUID: номер ищется в
+     *     реестре, которого у исполнителя может не быть); одна строка на поручение,
      *     перенос и ознакомление — без дублей.
      */
     get: operations["getQueue"];
@@ -3831,7 +3832,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Запросить перенос срока поручения (P8b)
-     * @description EDS `POST /instructions/{id}/extension`. Любой сотрудник; просит только исполнитель (403 `not_executor`). Срочное письмо не продлевается — 409, `details.reason = urgent_not_extendable`; запрос уже ждёт решения — 409 `extension_pending`; новый срок не позже текущего — 422, `details.fields = [new_due]`. Автор резолюции получает строку «Перенос срока» в «Моих задачах» и уведомление. Ответ — карточка.
+     * @description EDS `POST /instructions/{id}/extension`. Любой сотрудник; просит только исполнитель (403 `not_executor`). Срок срочного письма не продлевается: запросить можно, автор резолюции может только отклонить; запрос уже ждёт решения — 409 `extension_pending`; новый срок не позже текущего — 422, `details.fields = [new_due]`. Автор резолюции получает строку «Перенос срока» в «Моих задачах» и уведомление. Ответ — карточка.
      */
     post: operations["requestInstructionExtension"];
     delete?: never;
@@ -3851,7 +3852,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Одобрить или отклонить перенос срока (P8b)
-     * @description EDS `POST /instructions/{id}/extension/decision`. Раздел `eds.inbox` — полный; решает только автор резолюции (иначе 403, `details.reason = not_resolution_author`); запроса без решения нет — 409 `no_pending_extension`. Одобрено — срок меняется; исполнитель получает уведомление в обоих случаях. Ответ — карточка.
+     * @description EDS `POST /instructions/{id}/extension/decision`. Раздел `eds.inbox` — полный; решает только автор резолюции (иначе 403, `details.reason = not_resolution_author`); запроса без решения нет — 409 `no_pending_extension`; одобрить перенос срочного письма — 409 `urgent_not_extendable` (срочные не продлеваются). Одобрено — срок меняется; исполнитель получает уведомление в обоих случаях. Ответ — карточка.
      */
     post: operations["decideInstructionExtension"];
     delete?: never;

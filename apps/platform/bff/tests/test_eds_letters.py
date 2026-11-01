@@ -86,6 +86,11 @@ async def test_list_maps_rows_and_passes_filters_with_the_eds_token(
         "urgent": True,
         "due": None,
         "kind": None,
+        # P8b: письмо по заявке клиента (старый EDS без поля) — путь «расчёт по зонам»
+        "track": "calc",
+        "on_control": False,
+        "overdue": False,
+        "executor": None,
     }
     assert body["items"][1]["due"] == "2026-10-30"
     [call] = eds.made("GET", "letters")
@@ -115,10 +120,10 @@ async def test_roles_without_the_inbox_section_get_403_before_eds(
     web: Web, eds: EdsFake, roles: list[Role]
 ) -> None:
     assert (await web.login(roles)).status_code == 200
+    # Карточка и файлы письма (P8b) открыты и без раздела: исполнитель поручения видит письмо —
+    # решает EDS (`test_eds_instructions.py`).
     calls: list[tuple[str, str, Any]] = [
         ("GET", f"{BASE}/letters", None),
-        ("GET", CARD, None),
-        ("GET", f"{BASE}/letter-files/{FILE_ID}", None),
         ("GET", f"{BASE}/resolution/assignees", None),
         ("POST", f"{CARD}/resolution", {}),
         ("POST", f"{CARD}/return", {"comment": "x"}),

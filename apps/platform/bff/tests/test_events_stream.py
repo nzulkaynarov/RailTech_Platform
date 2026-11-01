@@ -374,8 +374,9 @@ async def test_eds_event_drops_the_cached_eds_parts_of_the_queue_before_the_hint
     assert (await web.login(["DIRECTOR"])).status_code == 200
     assert (await web.client.get("/api/v1/queue")).status_code == 200
     cached = [k for k in web.redis.values if k.startswith(f"feed:{web.sid}:data:eds:")]
-    # письма, служебки директора и его возвращённые документы (D1-6b) лежат в кэше сессии
-    assert len(cached) == 3
+    # письма, служебки директора, его возвращённые документы (D1-6b) и задачи по входящим (P8b)
+    # лежат в кэше сессии
+    assert len(cached) == 4
     conn = Asgi(fast_app, "/api/v1/events/stream", f"rt_pf_session={web.sid}")
     await until(lambda: conn.status == 200 and b": connected" in conn.body)
     await until(lambda: bool(web.redis.subscribers))

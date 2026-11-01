@@ -38,6 +38,7 @@ def concrete(path: str) -> str:
         .replace("{approval_id}", GHOST)
         .replace("{file_id}", GHOST)
         .replace("{event_id}", GHOST)
+        .replace("{instruction_id}", GHOST)
         .replace("{delivery_id}", "1")
         .replace("{subscriber}", "erp")
     )
@@ -64,11 +65,12 @@ async def test_operation_requires_token_and_one_of_the_listed_permissions(
     await seed_employee(container, nobody, permissions={"eds": []})
     headers = bearer(issue_access_token(nobody, ACCESS_SECRET))
     denied = await call(client, method, path, headers)
-    if codes:  # пустой список (/me) — любой активный сотрудник
+    if codes:  # пустой список — любой активный сотрудник (/me; P8b: письмо и поручения, сужение — в операции)
         assert denied.status_code == 403, denied.text
         assert denied.json()["code"] == "FORBIDDEN"
     else:
-        assert denied.status_code == 200
+        assert denied.status_code in (200, 404, 422), denied.text  # несуществующий объект или пустое тело
+        assert denied.status_code == 200 or not path.startswith("/api/v1/me")
 
     # право, которого в списке нет, не помогает
     all_codes: set[str] = set(SPEC["components"]["schemas"]["EdsPermission"]["enum"])

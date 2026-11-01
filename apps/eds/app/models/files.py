@@ -13,7 +13,8 @@ class StoredFile(Base):
     """Цепочка версий файла. Привязана не больше чем к одному объекту; непривязанный видит только загрузивший."""
 
     __tablename__ = "files"
-    __table_args__ = (CheckConstraint("letter_id IS NULL OR document_id IS NULL", name="one_owner"),)
+    # Владелец — письмо, документ или поручение (отчёт исполнителя, P8b), не больше одного.
+    __table_args__ = (CheckConstraint("num_nonnulls(letter_id, document_id, instruction_id) <= 1", name="one_owner"),)
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     created_by: Mapped[int] = mapped_column(BigInteger)
@@ -21,6 +22,9 @@ class StoredFile(Base):
     letter_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("letters.id", ondelete="CASCADE"), index=True)
     document_id: Mapped[uuid.UUID | None] = mapped_column(
         Uuid, ForeignKey("documents.id", ondelete="CASCADE"), index=True
+    )
+    instruction_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid, ForeignKey("instructions.id", ondelete="CASCADE"), index=True
     )
 
 

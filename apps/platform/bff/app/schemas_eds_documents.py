@@ -188,6 +188,8 @@ class _Form(BaseModel):
 
 class EdsDocumentIn(_Form):
     kind: DocumentKind
+    # P8b: «В ответ на ВХ» (только `letter_out`) — номер входящего; id находит BFF, решает EDS.
+    in_reply_to_number: str | None = Field(default=None, min_length=1, max_length=32)
 
 
 class EdsDocumentUpdateIn(_Form):

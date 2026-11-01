@@ -29,7 +29,7 @@ from pydantic import ValidationError
 from starlette.types import Send
 
 from app.clients.eds import EdsLetters, eds_error
-from app.deps import Authed, require, require_any
+from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
@@ -38,6 +38,11 @@ from app.schemas_eds_letters import (
     NUMBER_RE,
     UUID_RE,
     ZONES,
+    EdsStaffList,
+    EdsStaffMember,
+    InstructionCompleteIn,
+    InstructionExtensionDecisionIn,
+    InstructionExtensionIn,
     LetterCard,
     LetterDuplicate,
     LetterDuplicateList,
@@ -48,8 +53,10 @@ from app.schemas_eds_letters import (
     LetterReturnIn,
     LetterStatus,
     LetterZone,
+    OfficeResolutionIn,
     ResolutionAssignees,
     ResolutionCandidate,
+    ResolutionDraftIn,
     ResolutionIn,
     ResolutionZone,
     letter_path,
@@ -69,7 +76,15 @@ Reader = Annotated[
 ]
 Registrar = Annotated[Authed, Depends(require("eds.inbox.register", "full"))]
 Resolver = Annotated[Authed, Depends(require("eds.inbox", "full"))]
+# P8b: проект резолюции и выбор сотрудников — делопроизводителю и директору.
+Drafter = Annotated[
+    Authed, Depends(require_any(("eds.inbox.register", "full"), ("eds.inbox", "full")))
+]
+# P8b (SPEC-v3 §3.2a «Права»): карточку письма, его файлы и действия по поручению получает и
+# исполнитель без `eds.inbox` — решает EDS (участник поручения, «ознакомить», автор резолюции).
+Participant = Annotated[Authed, Depends(require_any_section)]
 LetterId = Annotated[uuid.UUID, Path()]
+InstructionId = Annotated[uuid.UUID, Path()]
 
 # «Маржа не ниже, %» — группа `cost_margin` (platform-rbac.yaml `restricted_fields`): без неё BFF
 # вырезает поле из ответа EDS до разбора.
@@ -130,6 +145,8 @@ async def list_letters(
     authed: Reader,
     status: Annotated[list[LetterStatus] | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
+    on_control: Annotated[bool | None, Query()] = None,
+    overdue: Annotated[bool | None, Query()] = None,
     cursor: Annotated[str | None, Query(max_length=500)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> LetterPage:
@@ -138,6 +155,11 @@ async def list_letters(
         params["status"] = list(dict.fromkeys(status))
     if q and q.strip():
         params["q"] = q.strip()
+    # P8b: фильтры журнала «На контроле» и «Просрочено»
+    if on_control is not None:
+        params["on_control"] = "true" if on_control else "false"
+    if overdue is not None:
+        params["overdue"] = "true" if overdue else "false"
     if cursor:
         params["cursor"] = cursor
     return to_page(await _letters(authed).page(params))
@@ -206,7 +228,7 @@ async def find_letter_duplicates(
     response_model_exclude_unset=True,
     operation_id="getLetter",
 )
-async def get_letter(ref: str, authed: Reader) -> LetterCard:
+async def get_letter(ref: str, authed: Participant) -> LetterCard:
     eds = _letters(authed)
     if UUID_RE.match(ref):
         letter_id: str | None = ref.lower()
@@ -255,6 +277,105 @@ async def return_letter(id: LetterId, body: LetterReturnIn, authed: Resolver) ->
 )
 async def reject_letter(id: LetterId, body: LetterRejectIn, authed: Resolver) -> LetterCard:
     return await _card(authed, await _letters(authed).reject(str(id), body.reason))
+
+
+# --- P8b: резолюция делопроизводства, поручения, ознакомление ------------------------------------
+
+
+@router.put(
+    "/letters/{id}/resolution-draft",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="saveResolutionDraft",
+)
+async def save_resolution_draft(
+    id: LetterId, body: ResolutionDraftIn, authed: Drafter
+) -> LetterCard:
+    return await _card(authed, await _letters(authed).save_draft(str(id), body.for_eds()))
+
+
+@router.post(
+    "/letters/{id}/office-resolution",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="resolveOfficeLetter",
+)
+async def resolve_office_letter(
+    id: LetterId, body: OfficeResolutionIn, authed: Resolver
+) -> LetterCard:
+    return await _card(authed, await _letters(authed).resolve_office(str(id), body.for_eds()))
+
+
+@router.post(
+    "/letters/{id}/acquaint",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="acknowledgeLetter",
+)
+async def acknowledge_letter(id: LetterId, authed: Participant) -> LetterCard:
+    return await _card(authed, await _letters(authed).acknowledge(str(id)))
+
+
+@router.post(
+    "/instructions/{id}/complete",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="completeInstruction",
+)
+async def complete_instruction(
+    id: InstructionId, body: InstructionCompleteIn, authed: Participant
+) -> LetterCard:
+    return await _card(authed, await _letters(authed).complete(str(id), body.for_eds()))
+
+
+@router.post(
+    "/instructions/{id}/extension",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="requestInstructionExtension",
+)
+async def request_instruction_extension(
+    id: InstructionId, body: InstructionExtensionIn, authed: Participant
+) -> LetterCard:
+    raw = await _letters(authed).request_extension(str(id), body.for_eds())
+    return await _card(authed, raw)
+
+
+@router.post(
+    "/instructions/{id}/extension/decision",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="decideInstructionExtension",
+)
+async def decide_instruction_extension(
+    id: InstructionId, body: InstructionExtensionDecisionIn, authed: Resolver
+) -> LetterCard:
+    raw = await _letters(authed).decide_extension(str(id), body.for_eds())
+    return await _card(authed, raw)
+
+
+@router.get("/staff", response_model=EdsStaffList, operation_id="listEdsStaff")
+async def list_eds_staff(authed: Drafter) -> EdsStaffList:
+    """Активные сотрудники EDS: адресат, исполнитель, «ознакомить» (P8b)."""
+    raw = await _letters(authed).employees()
+    items = raw.get("items") if isinstance(raw, dict) else None
+    if not isinstance(items, list):
+        raise backend_unavailable("eds", "bad_employees")
+    found: list[EdsStaffMember] = []
+    for item in items:
+        if not isinstance(item, dict) or not isinstance(item.get("crm_user_id"), int):
+            continue
+        name = item.get("full_name")
+        position = item.get("position")
+        found.append(
+            EdsStaffMember(
+                id=str(item["crm_user_id"]),
+                name=name if isinstance(name, str) and name else f"№{item['crm_user_id']}",
+                position=position if isinstance(position, str) and position else None,
+            )
+        )
+    found.sort(key=lambda m: (m.name.casefold(), m.id))
+    return EdsStaffList(items=found)
 
 
 # --- кандидаты в исполнители ---------------------------------------------------------------------
@@ -359,7 +480,7 @@ _ATTACHMENT = re.compile(r"^attachment(;|$)", re.IGNORECASE)
     responses={200: {"content": {"application/octet-stream": {}}}},
     operation_id="downloadLetterFile",
 )
-async def download_letter_file(file_id: uuid.UUID, authed: Reader) -> StreamingResponse:
+async def download_letter_file(file_id: uuid.UUID, authed: Participant) -> StreamingResponse:
     response = await _letters(authed).file(str(file_id))
     if response.status_code != 200:
         try:

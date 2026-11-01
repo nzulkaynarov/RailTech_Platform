@@ -24,7 +24,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
 
-LETTER_STATUSES = ("awaiting_resolution", "resolved", "returned", "rejected")
+# P8b: путь делопроизводства — «На исполнении», «Исполнено», «Принято к сведению» (SPEC-v3 §3.2a).
+LETTER_STATUSES = ("awaiting_resolution", "resolved", "returned", "rejected", "in_execution", "executed", "noted")
+RESOLUTION_KINDS = ("execute", "reply", "info")
 # Способ получения (SPEC-v3 §3.2a п. 1, P8): почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail.
 RECEIPT_METHODS = ("post", "paper", "taxpayer_cabinet", "courier", "email")
 
@@ -34,7 +36,15 @@ class Letter(Base):
 
     __tablename__ = "letters"
     __table_args__ = (
-        CheckConstraint("status IN ('awaiting_resolution', 'resolved', 'returned', 'rejected')", name="status"),
+        CheckConstraint(
+            "status IN ('awaiting_resolution', 'resolved', 'returned', 'rejected', "
+            "'in_execution', 'executed', 'noted')",
+            name="status",
+        ),
+        CheckConstraint(
+            "resolution_kind IS NULL OR resolution_kind IN ('execute', 'reply', 'info')", name="resolution_kind"
+        ),
+        Index("ix_letters_on_control", "on_control", postgresql_where=text("on_control")),
         Index(
             "uq_letters_erp_request_id",
             "erp_request_id",
@@ -98,4 +108,12 @@ class Letter(Base):
         Uuid,
         ForeignKey("documents.id", ondelete="SET NULL", use_alter=True),
     )  # наш ИСХ
+    # Путь делопроизводства (P8b, SPEC-v3 §3.2a п. 2–5): тип резолюции, «на контроле», проект делопроизводителя, когда
+    # исполнены все поручения. Резолюция пути `office` — `resolution_kind`, `resolution_text`, `resolution_due` (срок
+    # ответственного), `resolution_decided_*`; люди — строки `instructions` и `letter_acquaintances`.
+    resolution_kind: Mapped[str | None] = mapped_column(String(16))
+    on_control: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    # {kind, responsible, due, text, co_executors, acquaint, by, at} — проект резолюции делопроизводителя
+    resolution_draft: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

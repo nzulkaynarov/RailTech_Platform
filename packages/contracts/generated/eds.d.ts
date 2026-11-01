@@ -364,8 +364,9 @@ export interface paths {
     put?: never;
     /**
      * Запросить перенос срока поручения (P8b)
-     * @description Исполнитель просит новый срок с причиной (SPEC-v3 §3.2a п. 3–4). Срочное письмо не продлевается — 409,
-     *     `details.reason = urgent_not_extendable`; уже есть запрос без решения — 409 `extension_pending`; новый срок не позже
+     * @description Исполнитель просит новый срок с причиной (SPEC-v3 §3.2a п. 3–4). Срок срочного письма не продлевается (Росархив
+     *     5.14): запросить можно, автор резолюции может только отклонить; уже есть запрос без решения — 409
+     *     `extension_pending`; новый срок не позже
      *     текущего — 422 `details.fields.new_due = not_later`. Только исполнитель поручения `in_work` (403 `not_executor`, 409
      *     `invalid_state`). Статус поручения не меняется; автору резолюции — строка «Перенос срока» и `notice.requested`.
      *     Журнал `instruction.extension_requested`.
@@ -390,6 +391,7 @@ export interface paths {
      * Одобрить или отклонить перенос срока (P8b)
      * @description Решает автор резолюции (иначе 403, `details.reason = not_resolution_author`). Нет запроса без решения — 409
      *     `no_pending_extension`. `approve` — срок поручения меняется (напоминания считаются заново), `reject` — срок прежний.
+     *     Срочное письмо — `approve` отклоняется: 409, `details.reason = urgent_not_extendable` (срочные не продлеваются).
      *     Исполнителю — `notice.requested`; история переносов — в поручении. Журнал `instruction.extension_approved` или
      *     `instruction.extension_rejected`.
      */

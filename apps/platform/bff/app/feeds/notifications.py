@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import Notification, NotificationPage, NotificationTab, ObjectRef
-from app.feeds.numbers import deal_number, deal_ref, supplier_order_ref
+from app.feeds.numbers import deal_number, deal_ref, letter_task_ref, supplier_order_ref
 from app.feeds.snapshot import Snapshot
 from app.feeds.text import join, parse_dt, short
 
@@ -127,9 +127,17 @@ _TABS = frozenset({"decisions", "clients", "system"})
 
 
 def _crm_object(row: dict[str, Any]) -> ObjectRef | None:
-    """Объект уведомления CRM: пока — обращение (автору — «Мои обращения», админу — карточка)."""
+    """Объект уведомления CRM: обращение (автору — «Мои обращения», админу — карточка) или входящее
+    письмо по поручению (P8b, событие EDS `notice.requested`) — рабочий экран письма."""
     number = row.get("object_number")
-    if row.get("object_kind") != "ticket" or not isinstance(number, str) or not number:
+    if not isinstance(number, str) or not number:
+        return None
+    if row.get("object_kind") == "letter":
+        letter_id = row.get("object_id")
+        if not isinstance(letter_id, str) or not letter_id:
+            return None
+        return letter_task_ref(letter_id, number, None)
+    if row.get("object_kind") != "ticket":
         return None
     segment = quote(number, safe="")
     if row.get("kind") == "ticket_new":

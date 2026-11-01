@@ -170,6 +170,52 @@ class EdsLetters:
         )
         return letter
 
+    # --- P8b: резолюция делопроизводства, поручения, ознакомление ---------------------------
+
+    async def save_draft(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "PUT", f"/api/v1/letters/{letter_id}/resolution-draft", json=body
+        )
+        return letter
+
+    async def resolve_office(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/letters/{letter_id}/office-resolution", json=body
+        )
+        return letter
+
+    async def acknowledge(self, letter_id: str) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json("POST", f"/api/v1/letters/{letter_id}/acquaint")
+        return letter
+
+    async def complete(self, instruction_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/instructions/{instruction_id}/complete", json=body
+        )
+        return letter
+
+    async def request_extension(self, instruction_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/instructions/{instruction_id}/extension", json=body
+        )
+        return letter
+
+    async def decide_extension(self, instruction_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/instructions/{instruction_id}/extension/decision", json=body
+        )
+        return letter
+
+    async def tasks(self) -> dict[str, Any]:
+        """Мои поручения, переносы на решение и ознакомления (`GET /letter-tasks`)."""
+        found: dict[str, Any] = await self._json("GET", "/api/v1/letter-tasks")
+        return found
+
+    async def employees(self) -> dict[str, Any]:
+        """Активные сотрудники проекции EDS (`GET /employees`)."""
+        found: dict[str, Any] = await self._json("GET", "/api/v1/employees")
+        return found
+
     async def file(self, file_id: str) -> httpx.Response:
         """Файл потоком (`stream`): ответ открыт, закрывает вызывающий."""
         return await self._call("eds", "GET", f"/api/v1/files/{file_id}", stream=True)

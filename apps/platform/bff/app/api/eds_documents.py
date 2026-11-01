@@ -21,6 +21,7 @@ from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, 
 from fastapi.responses import StreamingResponse
 from starlette.types import Send
 
+from app.clients.eds import EdsLetters
 from app.deps import Authed, Rule, require, require_any
 from app.eds_documents import (
     API,
@@ -51,6 +52,7 @@ from app.schemas_eds_documents import (
     RegistryKind,
     StatusFilter,
 )
+from app.schemas_eds_letters import NUMBER_RE
 
 router = APIRouter(tags=["eds-documents"])
 
@@ -168,6 +170,29 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
     return edits
 
 
+def _bad_reply_to(reason: str) -> PlatformError:
+    return PlatformError(
+        "VALIDATION_FAILED",
+        "Входящее письмо с таким номером не найдено."
+        if reason == "not_found"
+        else "«В ответ на ВХ» — только у письма.",
+        status_code=422,
+        details={"fields": ["in_reply_to_number"], "reason": reason},
+    )
+
+
+async def _letter_id(authed: Authed, kind: str, number: str) -> str:
+    """«В ответ на ВХ» (P8b): id входящего по номеру; поручения «ответить» закрывает EDS."""
+    if kind != "letter_out":
+        raise _bad_reply_to("letter_out_only")
+    if not NUMBER_RE.match(number):
+        raise _bad_reply_to("not_found")
+    found = await EdsLetters(authed.call).id_by_number(number)
+    if found is None:
+        raise _bad_reply_to("not_found")
+    return found
+
+
 async def _submit(proxy: EdsProxy, document_id: str) -> Any:
     return await proxy.request("POST", f"{API}/documents/{document_id}/submit")
 
@@ -187,6 +212,9 @@ async def create_document(
 ) -> EdsDocument:
     proxy = _proxy(authed)
     payload = {"kind": body.kind, **_edits(body)}
+    reply_to = (body.in_reply_to_number or "").strip()
+    if reply_to:
+        payload["in_reply_to"] = await _letter_id(authed, body.kind, reply_to)
     # Повтор с тем же ключом и телом (ответ потерялся): EDS отдаёт прежний документ, а не второй.
     headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
     created = await proxy.request(
