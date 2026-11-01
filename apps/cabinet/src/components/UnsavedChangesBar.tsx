@@ -169,11 +169,21 @@ export function UnsavedChangesBar({ dirty, onSave, onReset, pending = false, cla
 export function UnsavedGuard({ when }: { when: boolean }) {
   const { t } = useTranslation();
   const blocker = useBlocker(({ currentLocation, nextLocation }) => when && currentLocation.pathname !== nextLocation.pathname);
+  // Состояние блокировщика роутер обновляет переходом (`React.startTransition`): после «Остаться» диалог закрывался бы
+  // с задержкой, а пока он открыт, Radix скрывает остальную страницу (`aria-hidden`) — меню недоступно. Поэтому ответ на
+  // попытку ухода (ключ адреса) помнится локально и закрывает диалог сразу; новая попытка — новый ключ, новый вопрос.
+  const attempt = blocker.state === 'blocked' ? blocker.location.key : null;
+  const [answered, setAnswered] = useState<string | null>(null);
+  const answer = (decide: () => void) => {
+    if (blocker.state !== 'blocked') return;
+    setAnswered(blocker.location.key);
+    decide();
+  };
   return (
     <ActionDialog
-      open={blocker.state === 'blocked'}
+      open={attempt !== null && attempt !== answered}
       onOpenChange={(open) => {
-        if (!open && blocker.state === 'blocked') blocker.reset();
+        if (!open) answer(() => blocker.reset?.());
       }}
       title={t('unsavedGuard.title')}
       description={t('unsavedGuard.text')}
@@ -181,9 +191,7 @@ export function UnsavedGuard({ when }: { when: boolean }) {
       confirmVariant="destructive"
       cancelLabel={t('unsavedGuard.stay')}
       pending={false}
-      onSubmit={() => {
-        if (blocker.state === 'blocked') blocker.proceed();
-      }}
+      onSubmit={() => answer(() => blocker.proceed?.())}
     />
   );
 }
