@@ -112,7 +112,8 @@ function ClientComments({ quote }: { quote: QuoteApprovalCard }) {
         {quote.client_comments.map((comment) => (
           <li key={`${comment.created_at}-${comment.author}`}>
             <div className="pf-hint">
-              {comment.author_name ?? t("card.clientCommentAuthor")} · {date(comment.created_at, "datetime")}
+              {comment.author_name ?? t("card.clientCommentAuthor")} ·{" "}
+              {date(comment.created_at, "datetime")}
             </div>
             <p className="pf-dec-note">{comment.text}</p>
           </li>

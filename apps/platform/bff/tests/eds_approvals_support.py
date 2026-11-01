@@ -201,7 +201,13 @@ def erp_quote(**over: Any) -> dict[str, Any]:
                 "text": "Можно срок 30 дней?",
                 "created_at": "2026-10-20T10:00:00+05:00",
             },
-            {"id": 2, "author": "manager", "author_name": "", "text": "Уточним", "created_at": "bad"},
+            {
+                "id": 2,
+                "author": "manager",
+                "author_name": "",
+                "text": "Уточним",
+                "created_at": "bad",
+            },
         ],
         "items": [
             {

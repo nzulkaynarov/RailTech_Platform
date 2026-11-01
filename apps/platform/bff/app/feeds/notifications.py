@@ -37,7 +37,8 @@ _DECISIONS = frozenset(
         "contract.signed_client",
         "act.rejected",
         "delivery.line_disputed",
-        # B-CABFIX-1: клиент приложил платёжку («Я оплатил») или прокомментировал КП в кабинете — ждут ответа сотрудника.
+        # B-CABFIX-1: клиент приложил платёжку («Я оплатил») или прокомментировал КП в кабинете —
+        # ждут ответа сотрудника.
         "payment.proof_received",
         "quote.client_commented",
         "fulfillment.accept_failed",

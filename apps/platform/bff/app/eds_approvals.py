@@ -418,7 +418,8 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         _letter(proxy, raw.object.deal_number),
     )
     erp_quote = erp_quote if isinstance(erp_quote, dict) else None
-    # Комментарии клиента — у объекта КП, а не у редакции: показываются и тогда, когда строки ERP скрыты ниже.
+    # Комментарии клиента — у объекта КП, а не у редакции: видны и тогда, когда строки ERP скрыты
+    # ниже.
     comments = _client_comments(erp_quote)
     version = raw.object.quote_version
     erp_version = erp_quote.get("version") if erp_quote else None

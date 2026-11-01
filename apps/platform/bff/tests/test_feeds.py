@@ -1289,7 +1289,7 @@ async def test_search_needs_at_least_one_section(web: Web, fb: FeedBackends) -> 
 
 @pytest.mark.parametrize("code", ["payment.proof_received", "quote.client_commented"])
 def test_client_actions_from_the_cabinet_are_decisions(code: str) -> None:
-    """B-CABFIX-1: платёжка «Я оплатил» и комментарий к КП ждут ответа сотрудника — вкладка «Решения»."""
+    """B-CABFIX-1: «Я оплатил» и комментарий к КП ждут ответа сотрудника — «Решения»."""
     from app.feeds.notifications import tab_of
 
     assert tab_of(code) == "decisions"

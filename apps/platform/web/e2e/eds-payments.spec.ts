@@ -100,7 +100,9 @@ test.describe("Счета и оплаты: бухгалтер", () => {
     const form = confirmForm(page);
     await expect(panel.getByText(/Откуда: Кабинет клиента/)).toBeVisible();
     // «Я оплатил» в кабинете (B-CABFIX-1): комментарий клиента к платёжке виден бухгалтеру
-    const note = panel.getByText("Комментарий клиента: Оплатили из двух счетов, вторая часть — завтра");
+    const note = panel.getByText(
+      "Комментарий клиента: Оплатили из двух счетов, вторая часть — завтра",
+    );
     await expect(note).toBeVisible();
     await note.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "card-proof-from-client");

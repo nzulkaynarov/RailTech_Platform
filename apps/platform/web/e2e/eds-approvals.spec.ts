@@ -118,7 +118,9 @@ test.describe("КП на одобрение: директор", () => {
     await expect(row(page, "КП-2026/115").getByText("Одобрено")).toBeVisible();
   });
 
-  test("отправленное КП: комментарий клиента из кабинета виден в карточке (B-CABFIX-1)", async ({ page }) => {
+  test("отправленное КП: комментарий клиента из кабинета виден в карточке (B-CABFIX-1)", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/113")}`);
     await expect(page.getByRole("heading", { level: 1, name: "КП-2026/113" })).toBeVisible();

@@ -101,7 +101,10 @@ class QuoteChannels(BaseModel):
 
 
 class QuoteClientComment(BaseModel):
-    """Комментарий к КП из кабинета клиента или ответ менеджера (ERP `client_comments`, B-CABFIX-1)."""
+    """Комментарий к КП из кабинета клиента или ответ менеджера (ERP `client_comments`).
+
+    B-CABFIX-1.
+    """
 
     author: Literal["client", "manager"]
     author_name: str | None
