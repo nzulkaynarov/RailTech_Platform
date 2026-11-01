@@ -157,6 +157,11 @@ class Settings(BaseSettings):
     platform_domain: str = ""
     crm_public_url: str = ""
     crm_domain: str = ""
+    # D17G-3: адрес кабинета клиента (кнопка «Открыть кабинет», приглашения). Значение по
+    # умолчанию «Адреса кабинета» в «Подключениях» — из окружения (`CABINET_PUBLIC_URL`, иначе
+    # `CABINET_DOMAIN`), как у адреса CRM; заданное администратором главнее.
+    cabinet_public_url: str = ""
+    cabinet_domain: str = ""
 
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
@@ -180,6 +185,11 @@ class Settings(BaseSettings):
     def crm_base_url_default(self) -> str | None:
         """Публичный адрес CRM из окружения: значение по умолчанию `company.crm_base_url`."""
         return public_url(self.crm_public_url, self.crm_domain)
+
+    @property
+    def cabinet_url_default(self) -> str | None:
+        """Адрес кабинета клиента из окружения: значение по умолчанию `company.cabinet_url`."""
+        return public_url(self.cabinet_public_url, self.cabinet_domain)
 
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")

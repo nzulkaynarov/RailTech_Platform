@@ -461,4 +461,5 @@ ATOMIC_BY_CALLER = {
     "portal/services/acceptance.py::_emit_code_event",  # из request_acceptance_code (with transaction.atomic)
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
     "crm/services/contract_flow.py::_publish",  # из apply_transition, generate_contract_from_quote, sign_* (все @atomic)
+    "sales/services/quote_auto_send.py::_redeliver",  # из deliver (with transaction.atomic, D17G-2)
 }

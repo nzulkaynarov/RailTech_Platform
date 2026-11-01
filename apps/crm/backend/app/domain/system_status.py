@@ -293,8 +293,20 @@ def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
     return None
 
 
-def crm_url(url: str, now: datetime, platform: PlatformUrlFacts | None = None) -> Component:
-    """Адреса для ссылок: Платформа (письма и ссылки Telegram) и CRM («Настройки» → «Компания»).
+CABINET_URL_MISSING: Final = (
+    "Адрес кабинета клиента не задан — приглашения в кабинет и кнопка «Открыть кабинет» клиенту не "
+    "уходят. Задайте его в «Подключениях» → «Адрес кабинета клиента»"
+)
+
+
+def crm_url(
+    url: str,
+    now: datetime,
+    platform: PlatformUrlFacts | None = None,
+    cabinet_url: str | None = None,
+) -> Component:
+    """Адреса для ссылок: Платформа (письма и ссылки Telegram), CRM («Настройки» → «Компания») и
+    кабинет клиента (D17G-3; `None` — не проверяется, пустая строка — не задан).
 
     Ссылки из Telegram ведут в Платформу (B-009); адрес CRM нужен только как запасной, пока адреса
     Платформы нет, поэтому его неполадки показываются лишь тогда."""
@@ -307,9 +319,13 @@ def crm_url(url: str, now: datetime, platform: PlatformUrlFacts | None = None) -
     platform_problem = platform_url_problem(platform) if platform is not None else None
     if platform_problem is not None:
         problems.append(platform_problem)
+    if cabinet_url is not None and not cabinet_url.strip():
+        problems.append(CABINET_URL_MISSING)
     if problems:
         return Component("crm_url", title, "warn", ". ".join(problems), now)
     shown = [url, *([platform.url] if platform is not None and platform.url else [])]
+    if cabinet_url:
+        shown.append(cabinet_url)
     return Component("crm_url", title, "ok", " · ".join(shown), now)
 
 

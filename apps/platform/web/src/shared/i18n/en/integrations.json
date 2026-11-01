@@ -31,7 +31,10 @@
       "title": "ERP",
       "purpose": "Back office: requests, quotes, stock. Pairing with CRM and exchange keys."
     },
-    "telegram": { "title": "Telegram", "purpose": "Customer bot, team channel and bot profile." },
+    "telegram": {
+      "title": "Telegram",
+      "purpose": "Customer bot, team channel and bot profile."
+    },
     "mail": {
       "title": "Mail",
       "purpose": "One sender for the whole system: emails to staff, cabinet clients, quotes and documents from ERP, EDS letters."
@@ -78,7 +81,11 @@
     "title": "Needs attention",
     "empty": "All good: no failures and nothing left to connect.",
     "openAria": "Open: {{subject}}",
-    "severity": { "fail": "Failure", "warn": "Attention", "setup": "Not connected" },
+    "severity": {
+      "fail": "Failure",
+      "warn": "Attention",
+      "setup": "Not connected"
+    },
     "notConfigured": {
       "erp": "ERP is not connected: staff will not get back-office access, requests will not reach ERP.",
       "telegram": "The bot token is not set: customers cannot write in Telegram.",
@@ -217,7 +224,11 @@
     },
     "profile": {
       "title": "Bot profile",
-      "lang": { "ru": "Russian", "uz": "Uzbek", "en": "English" },
+      "lang": {
+        "ru": "Russian",
+        "uz": "Uzbek",
+        "en": "English"
+      },
       "fields": {
         "name": "Bot name",
         "short_description": "Short description",
@@ -237,7 +248,10 @@
   },
   "mail": {
     "state": "State",
-    "stateValue": { "configured": "Configured", "none": "Not configured" },
+    "stateValue": {
+      "configured": "Configured",
+      "none": "Not configured"
+    },
     "server": "Server",
     "check": {
       "button": "Check connection",
@@ -258,7 +272,11 @@
       "host": "Server (host)",
       "port": "Port",
       "security": "Encryption",
-      "securityValue": { "starttls": "STARTTLS", "ssl": "SSL/TLS", "none": "No encryption" },
+      "securityValue": {
+        "starttls": "STARTTLS",
+        "ssl": "SSL/TLS",
+        "none": "No encryption"
+      },
       "fromEmail": "Sender address",
       "fromName": "Sender name",
       "username": "Login",
@@ -282,7 +300,11 @@
       },
       "empty": "No emails in the log yet.",
       "error": "Reason: {{error}}",
-      "source": { "crm": "CRM", "erp": "ERP", "eds": "Documents" },
+      "source": {
+        "crm": "CRM",
+        "erp": "ERP",
+        "eds": "Documents"
+      },
       "attachments_one": "{{count}} attachment",
       "attachments_other": "{{count}} attachments"
     },
@@ -368,7 +390,11 @@
       "draft-model": "ERP: quote draft",
       "enrich-model": "ERP: card enrichment"
     },
-    "health": { "ok": "Working", "problem": "Failure", "unknown": "No data" },
+    "health": {
+      "ok": "Working",
+      "problem": "Failure",
+      "unknown": "No data"
+    },
     "provider": {
       "anthropic": "Anthropic (Claude)",
       "gemini": "Google Gemini",
@@ -459,13 +485,28 @@
       "state": "State",
       "noLimit": "no limit"
     },
-    "series": { "title": "Spend by day", "day": "Day", "work": "Work", "test": "Checks" },
-    "purpose": { "title": "By purpose", "key": "Purpose", "calls": "Calls", "cost": "Cost" },
+    "series": {
+      "title": "Spend by day",
+      "day": "Day",
+      "work": "Work",
+      "test": "Checks"
+    },
+    "purpose": {
+      "title": "By purpose",
+      "key": "Purpose",
+      "calls": "Calls",
+      "cost": "Cost"
+    },
     "ensemble": {
       "title": "Whole system",
       "text": "All model calls from CRM and ERP according to the gateway log.",
       "groupBy": "Group by",
-      "group": { "day": "Day", "system": "System", "feature": "Feature", "model": "Model" },
+      "group": {
+        "day": "Day",
+        "system": "System",
+        "feature": "Feature",
+        "model": "Model"
+      },
       "range": "Period: {{from}} — {{to}} ({{zone}})",
       "calls": "Calls",
       "failed": "Failed",
@@ -581,7 +622,10 @@
     "backups": {
       "title": "Backups",
       "source": "Where backups are kept",
-      "sourceValue": { "volume": "server volume", "rustfs": "RustFS storage" },
+      "sourceValue": {
+        "volume": "server volume",
+        "rustfs": "RustFS storage"
+      },
       "last": "Latest backup",
       "none": "none",
       "state": "Freshness",
@@ -592,7 +636,10 @@
         "unavailable": "unavailable"
       },
       "daemon": "Backup service",
-      "daemonValue": { "alive": "responds", "down": "not responding" },
+      "daemonValue": {
+        "alive": "responds",
+        "down": "not responding"
+      },
       "error": {
         "bucket_missing": "The backup bucket was not found.",
         "access_denied": "No access to the backup storage.",
@@ -767,5 +814,28 @@
       "problem": "The “{{alias}}” role does not respond: check the key and balance with the provider."
     },
     "setupUnchecked": "Not checked — press “Check”"
+  },
+  "cabinet": {
+    "title": "Client cabinet address",
+    "lead": "Clients open the cabinet at this address: the \"Open cabinet\" button in bot messages and cabinet invitations. Without it, invitations do not go to the client.",
+    "current": {
+      "saved": "Now: {{url}} (set here).",
+      "env": "Now: {{url}} (from the server settings).",
+      "none": "No address — cabinet invitations and the \"Open cabinet\" button do not go to the client."
+    },
+    "label": "Cabinet address",
+    "hint": "For example https://cabinet.railtech.uz. Empty — the address from the server settings, if set there.",
+    "check": "Check availability",
+    "save": "Save address",
+    "saved": "Cabinet address saved",
+    "invalid": "An address like https://cabinet.example.com is needed.",
+    "failed": "Not saved: the service did not answer. Try again later.",
+    "result": {
+      "ok": "The cabinet opens: {{url}}.",
+      "not_set": "No address — nothing to check.",
+      "unreachable": "The address did not open from the server: check the address, DNS and certificate.",
+      "bad_status": "The cabinet answered with code {{code}} — check the address.",
+      "not_cabinet": "Something other than the client cabinet answers at this address — check the address."
+    }
   }
 }

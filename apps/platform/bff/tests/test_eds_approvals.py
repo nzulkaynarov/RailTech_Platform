@@ -25,8 +25,8 @@ from tests.eds_approvals_support import (
     QUOTE_ROUTE,
     QUOTE_ROUTE_OLD,
     ApprovalsFake,
+    availability,
     checklist_green,
-    erp_contact,
     erp_quote,
     memo_doc,
     memo_route,
@@ -221,7 +221,9 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
         "telegram": True,
         "cabinet": True,
         "email": True,
+        "reasons": {"telegram": None, "cabinet": None, "email": None},
     }
+    assert card["delivery"] is None  # КП ещё на одобрении
     assert card["steps"][0]["label"] == "Директор"
     # комментарий клиента из кабинета (B-CABFIX-1); запись с битой датой пропущена
     assert card["client_comments"] == [
@@ -236,7 +238,8 @@ async def test_quote_card_collects_route_erp_lines_and_the_internal_block(
     # адреса и идентификаторы контакта наружу не уходят
     assert "aliya@example.org" not in response.text
     assert "9001" not in response.text
-    assert eds.erp_paths == ["/api/v1/crm/quotes/1203/", "/api/v1/accounts/contacts/77/"]
+    # D17G-2: контакт — не по `deal.client` (это пользователь ERP), а из проверки каналов КП в ERP
+    assert eds.erp_paths == ["/api/v1/crm/quotes/1203/"]
 
 
 @pytest.mark.parametrize(
@@ -331,7 +334,6 @@ async def test_cost_and_margin_are_cut_without_the_cost_margin_group(
 
 async def test_card_without_erp_is_partial(web: Web, eds: ApprovalsFake) -> None:
     eds.erp_quote = httpx.ConnectError("down")
-    eds.erp_contact = httpx.ConnectError("down")
     eds.deal = httpx.ConnectError("down")
     await _director(web)
 
@@ -360,18 +362,197 @@ async def test_card_when_erp_refuses_the_quote(web: Web, eds: ApprovalsFake) -> 
     assert response.json()["sources"]["erp"] == "ok"
 
 
-async def test_contact_without_email_or_cabinet(web: Web, eds: ApprovalsFake) -> None:
-    eds.erp_contact = erp_contact(email="", telegram_user_id=None, company_is_registered=False)
+async def test_unavailable_channels_come_with_reasons_from_erp_and_crm(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """D17G-2: клиент без e-mail и без кабинета — оба канала выключены с причиной ERP; Telegram
+    есть."""
+    eds.erp_quote = erp_quote(
+        channel_availability=availability(
+            cabinet="CABINET_NOT_INVITED", email="CONTACT_EMAIL_REQUIRED"
+        )
+    )
+    await _director(web)
+
+    response = await web.client.get(QUOTE)
+
+    check(response, "/eds/quotes/{ref}", "get")
+    assert response.json()["channels"] == {
+        "contact_name": "Алия Демо",
+        "telegram": True,
+        "cabinet": False,
+        "email": False,
+        "reasons": {"telegram": None, "cabinet": "no_cabinet", "email": "no_email"},
+    }
+
+
+async def test_email_is_off_while_mail_is_not_configured(web: Web, eds: ApprovalsFake) -> None:
+    """E-mail у контакта есть, но почта в CRM не настроена — канал выключен с этой причиной."""
+    eds.smtp_ready = {"configured": False}
     await _director(web)
 
     channels = (await web.client.get(QUOTE)).json()["channels"]
 
-    assert channels == {
-        "contact_name": "Алия Демо",
-        "telegram": False,
-        "cabinet": False,
-        "email": False,
+    assert channels["email"] is False
+    assert channels["reasons"]["email"] == "mail_not_configured"
+
+
+async def test_unknown_mail_state_does_not_switch_email_off(web: Web, eds: ApprovalsFake) -> None:
+    eds.smtp_ready = 403
+    await _director(web)
+
+    channels = (await web.client.get(QUOTE)).json()["channels"]
+
+    assert channels["email"] is True
+    assert channels["reasons"]["email"] is None
+
+
+def _approved(eds: ApprovalsFake, status_code: str, report: dict[str, Any], **over: Any) -> None:
+    eds.routes[QUOTE_ROUTE] = quote_route(
+        status="approved", can_decide=False, allowed_decisions=[], outgoing_number="ИСХ-001/26"
+    )
+    eds.erp_quote = erp_quote(status_code=status_code, send_report=report, **over)
+
+
+async def test_delivery_report_after_approval_says_what_went_where(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """Отчёт по каналам из `send_report` ERP: Telegram ушёл, почта не ушла (почта не настроена),
+    кабинет — опубликовано; менеджер может отправить почту повторно, когда канал снова доступен."""
+    _approved(
+        eds,
+        "SENT",
+        {
+            "requested": ["telegram", "cabinet", "email"],
+            "sent_via": ["telegram", "cabinet"],
+            "skipped": [
+                {
+                    "channel": "email",
+                    "reason": "EMAIL_DELIVERY_FAILED",
+                    "detail": "smtp_not_configured",
+                }
+            ],
+            "error": None,
+        },
+    )
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.client.get(QUOTE)
+
+    check(response, "/eds/quotes/{ref}", "get")
+    assert response.json()["delivery"] == {
+        "state": "sent",
+        "lines": [
+            {"channel": "telegram", "status": "sent", "reason": None, "can_send": False},
+            {"channel": "cabinet", "status": "published", "reason": None, "can_send": False},
+            {
+                "channel": "email",
+                "status": "failed",
+                "reason": "mail_not_configured",
+                "can_send": True,
+            },
+        ],
+        "error": None,
     }
+
+
+async def test_ready_quote_without_channels_can_be_sent_by_the_manager_only(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    """Директор одобрил без каналов: КП «Готово к отправке», каналы «не выбраны»; отправить может
+    тот, у кого раздел «Клиенты» полный и ERP разрешила (`can_send`), кабинет не отправляется."""
+    _approved(
+        eds, "READY_TO_SEND", {}, channel_availability=availability(email="CONTACT_EMAIL_REQUIRED")
+    )
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    lines = (await web.client.get(QUOTE)).json()["delivery"]["lines"]
+
+    assert [(ln["status"], ln["can_send"]) for ln in lines] == [
+        ("not_selected", True),
+        ("not_selected", False),
+        ("not_selected", False),  # нет e-mail — отправить нельзя
+    ]
+    eds.erp_quote = {**eds.erp_quote, "can_send": False}  # type: ignore[dict-item]
+    assert not any(
+        ln["can_send"] for ln in (await web.client.get(QUOTE)).json()["delivery"]["lines"]
+    )
+
+
+async def test_gate_error_marks_the_requested_channels_failed(web: Web, eds: ApprovalsFake) -> None:
+    _approved(
+        eds,
+        "READY_TO_SEND",
+        {"requested": ["telegram"], "sent_via": [], "skipped": [], "error": "QUOTE_BELOW_COST"},
+    )
+    await _director(web)
+
+    delivery = (await web.client.get(QUOTE)).json()["delivery"]
+
+    assert delivery["error"] == "below_cost"
+    assert delivery["lines"][0] == {
+        "channel": "telegram",
+        "status": "failed",
+        "reason": "below_cost",
+        "can_send": True,
+    }
+
+
+async def test_send_by_channel_calls_erp_deliver_and_returns_the_card(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    _approved(
+        eds,
+        "SENT",
+        {
+            "requested": ["telegram", "email"],
+            "sent_via": ["telegram"],
+            "skipped": [{"channel": "email", "reason": "CONTACT_EMAIL_REQUIRED"}],
+            "error": None,
+        },
+    )
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/send", json={"channel": "email"})
+
+    check(response, "/eds/quotes/{id}/send", "post")
+    assert response.status_code == 200, response.text
+    assert eds.delivered == [{"channel": "email"}]
+    email = response.json()["delivery"]["lines"][2]
+    assert email["channel"] == "email"
+    assert email["status"] == "pending"
+
+
+@pytest.mark.parametrize(
+    ("code", "reason"),
+    [("CONTACT_EMAIL_REQUIRED", "no_email"), ("INVALID_STATUS", "invalid_status")],
+)
+async def test_send_refused_by_erp_is_a_conflict_with_a_reason(
+    web: Web, eds: ApprovalsFake, check: ContractChecker, code: str, reason: str
+) -> None:
+    _approved(eds, "SENT", {})
+    eds.deliver_error = (400, code)
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.send("POST", f"{QUOTE}/send", json={"channel": "email"})
+
+    check(response, "/eds/quotes/{id}/send", "post")
+    assert response.status_code == 409
+    assert response.json()["details"]["reason"] == reason
+
+
+async def test_send_needs_the_clients_section_and_rejects_the_cabinet(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _approved(eds, "SENT", {})
+    reader = custom(94, "Только КП", {"eds.drafts": "read"})
+    assert (await web.login([reader])).status_code == 200
+    denied = await web.send("POST", f"{QUOTE}/send", json={"channel": "telegram"})
+    assert denied.status_code == 403
+    assert (await web.login(["MANAGER"])).status_code == 200
+    cabinet = await web.send("POST", f"{QUOTE}/send", json={"channel": "cabinet"})
+    assert cabinet.status_code == 422
+    assert eds.delivered == []
 
 
 async def test_quote_stage_follows_the_deal(web: Web, eds: ApprovalsFake) -> None:
@@ -976,3 +1157,22 @@ async def test_eds_down_is_503(web: Web, eds: ApprovalsFake, status: int) -> Non
         assert response.json()["code"] == "BACKEND_UNAVAILABLE"
         assert response.json()["source"] == "eds"
     assert (await web.client.get("/api/v1/me")).status_code == 200
+
+
+async def test_quote_card_by_the_erp_number(web: Web, eds: ApprovalsFake) -> None:
+    """Номер КП ERP (`КП-2026-00001`) — ссылка из уведомления «КП не отправлено» (D17G-2)."""
+    eds.registry.append(
+        {
+            "kind": "quote",
+            "id": QUOTE_ROUTE,
+            "number": "КП-2026-00001",
+            "status": "approved",
+            "registered_at": "2026-10-29T08:00:00Z",
+        }
+    )
+    await _director(web)
+
+    response = await web.client.get(f"{BASE}/quotes/{quote('КП-2026-00001', safe='')}")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == QUOTE_ROUTE

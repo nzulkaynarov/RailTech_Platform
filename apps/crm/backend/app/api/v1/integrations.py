@@ -3,7 +3,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
 
-from app.api.deps import ContainerDep, require
+from app.api.deps import ContainerDep, PrincipalDep, require
 from app.bot.profile import ProfilePublish
 from app.integrations.erp import ErpRateLimited
 from app.integrations.telegram import AiogramProbe
@@ -25,6 +25,7 @@ from app.schemas.integrations import (
     ProfilePublishOut,
     SmtpCheckOut,
     SmtpConnectorIn,
+    SmtpReadyOut,
     SmtpStatusOut,
     TelegramStatusOut,
     TelegramTokenIn,
@@ -258,6 +259,14 @@ async def get_smtp_status(_: Reader, service: SmtpDep) -> SmtpStatusOut:
     есть хост и адрес отправителя (из «Подключений», иначе `SMTP_*` в `.env`).
     """
     return SmtpStatusOut(**asdict(await service.status()))
+
+
+@router.get("/smtp/ready", response_model=SmtpReadyOut)
+async def get_smtp_ready(_: PrincipalDep, service: SmtpDep) -> SmtpReadyOut:
+    """Настроена ли почта — любому сотруднику, без адреса и логина (D17G-2): панель одобрения КП
+    честно выключает канал «Почта», пока почта не настроена. Сами настройки — `GET /smtp` (право
+    `integrations:read`)."""
+    return SmtpReadyOut(configured=(await service.resolution()).connection is not None)
 
 
 @router.put("/smtp", response_model=SmtpStatusOut)

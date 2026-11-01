@@ -126,3 +126,60 @@ async def test_parallel_first_admins_only_one_wins(
     )
     assert sum(isinstance(r, int) for r in results) == 1
     assert sum(isinstance(r, ConflictError) for r in results) == 1
+
+
+async def test_cabinet_address_is_saved_checked_and_needs_settings_write(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """D17G-3: «Адрес кабинета клиента» в мастере и «Подключениях» — сохраняется только поле
+    кабинета, проверка `GET /health` идёт с сервера; сотрудник без права настроек — 403; признак
+    «почта настроена» видит любой."""
+    from app.services.cabinet_url import CabinetCheck
+    from tests.integration.crm_helpers import login, make_user
+
+    ok = client.post("/api/v1/setup/admin", json={**BODY, "code": _code(client)})
+    headers = {"Authorization": f"Bearer {ok.json()['access_token']}"}
+
+    start = client.get("/api/v1/setup/cabinet", headers=headers)
+    assert start.status_code == 200, start.text
+    assert start.json()["source"] in ("none", "env")
+
+    bad = client.put("/api/v1/setup/cabinet", headers=headers, json={"url": "cabinet.example.com"})
+    assert bad.status_code == 422
+    saved = client.put(
+        "/api/v1/setup/cabinet", headers=headers, json={"url": "https://cabinet.example.com/"}
+    )
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["url"] == "https://cabinet.example.com"
+    assert saved.json()["source"] == "saved"
+    company = client.get("/api/v1/settings", headers=headers).json()["values"]["company"]
+    assert company["cabinet_url"] == "https://cabinet.example.com"
+    assert company["name"] == "RailTech"
+
+    container = client.app.state.container  # type: ignore[attr-defined]
+    asked: list[str | None] = []
+
+    async def check(url: str | None = None) -> CabinetCheck:
+        asked.append(url)
+        return CabinetCheck("ok", "https://cabinet.example.com", 200)
+
+    monkeypatch.setattr(container.cabinet_url_service, "check", check)
+    checked = client.post("/api/v1/setup/cabinet/check", headers=headers, json={})
+    assert checked.json() == {
+        "result": "ok",
+        "url": "https://cabinet.example.com",
+        "status_code": 200,
+    }
+    assert asked == [None]
+
+    _, password = await make_user(sessions, "manager@railtech.uz", ["manager"])
+    manager = login(client, "manager@railtech.uz", password)
+    assert client.get("/api/v1/setup/cabinet", headers=manager).status_code == 403
+    assert client.post("/api/v1/setup/cabinet/check", headers=manager, json={}).status_code == 403
+    ready = client.get("/api/v1/integrations/smtp/ready", headers=manager)
+    assert ready.status_code == 200
+    assert ready.json() == {"configured": False}
+    ready_admin = client.get("/api/v1/integrations/smtp/ready", headers=headers)
+    assert ready_admin.json() == {"configured": False}

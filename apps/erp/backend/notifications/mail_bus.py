@@ -266,6 +266,7 @@ def _apply_quote_result(quote_id: int, sent: bool, data: dict[str, Any]) -> None
     if report.get("email_sent_at") and not sent:
         return  # «ошибка» после «отправлено» не применяется
     changed = False
+    email_lost = False  # письмо было в отправленных каналах КП и не ушло — менеджеру нужна причина (D17G-2)
     if report:
         if sent:
             report["email_sent_at"] = stamp
@@ -278,13 +279,17 @@ def _apply_quote_result(quote_id: int, sent: bool, data: dict[str, Any]) -> None
             )
             report["skipped"] = skipped
             report["email_failed_at"] = stamp
-            changed = True
+            changed = email_lost = True
         else:
             report["email_failed_at"] = stamp
             changed = True
     if changed:
         quote.send_report = report
         quote.save(update_fields=["send_report", "updated_at"])
+    if email_lost:
+        from sales.services.quote_auto_send import notify_unsent
+
+        notify_unsent(quote, [("email", "EMAIL_DELIVERY_FAILED", str(data.get("reason", "")))])
     if sent:
         _log_quote(
             quote,

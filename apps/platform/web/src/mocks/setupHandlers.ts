@@ -2,6 +2,10 @@ import { HttpResponse, http } from "msw";
 
 import type {
   SetupAdminIn,
+  SetupCabinet,
+  SetupCabinetCheck,
+  SetupCabinetCheckIn,
+  SetupCabinetIn,
   SetupChecklist,
   SetupCompanyIn,
   SetupStepKey,
@@ -11,11 +15,19 @@ import { ROLE_ID } from "./fixtures/roles";
 import { readEmployees, writeEmployees } from "./fixtures/employees";
 import { registerUser } from "./fixtures/users";
 import { buildSession, startSession } from "./mockSession";
-import { readSetup, writeSetup } from "./setupState";
+import { type SetupMock, readSetup, writeSetup } from "./setupState";
 
 const STEPS: readonly SetupStepKey[] = ["erp", "bot", "mail", "models", "first_employee"];
 
 /** Чистая установка без шага «ERP»: ERP не сопряжена, компания невозможна (BFF 0.15.0, `ERP_NOT_CONNECTED`). */
+function cabinetOf(state: SetupMock): SetupCabinet {
+  const env = state.cabinetEnv ?? null;
+  if (state.cabinetUrl) return { url: state.cabinetUrl, source: "saved", env_url: env };
+  return env
+    ? { url: env, source: "env", env_url: env }
+    : { url: null, source: "none", env_url: null };
+}
+
 function erpNotConnected(): boolean {
   const state = readSetup();
   return state.fresh && !state.done.erp;
@@ -110,6 +122,41 @@ export const setupHandlers = [
         : { required: !state.companyCreated, can_setup: !state.companyCreated },
       company_blocker: erpNotConnected() ? "erp_not_connected" : null,
     };
+    return HttpResponse.json(body);
+  }),
+
+  // D17G-3: адрес кабинета клиента — из настроек, иначе «с сервера»; проверка: адрес с «unreachable» не открывается
+  http.get("*/setup/cabinet", () => {
+    const denied = guard("full");
+    if (denied) return denied;
+    return HttpResponse.json(cabinetOf(readSetup()));
+  }),
+
+  http.put("*/setup/cabinet", async ({ request }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const { url } = (await request.json()) as SetupCabinetIn;
+    const typed = url.trim().replace(/\/+$/, "");
+    if (typed !== "" && !/^https?:\/\/[^\s/]+/.test(typed)) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "crm", {
+        fields: ["url"],
+      });
+    }
+    const state = { ...readSetup(), cabinetUrl: typed };
+    writeSetup(state);
+    return HttpResponse.json(cabinetOf(state));
+  }),
+
+  http.post("*/setup/cabinet/check", async ({ request }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const { url } = (await request.json()) as SetupCabinetCheckIn;
+    const target = url?.trim() || cabinetOf(readSetup()).url;
+    const body: SetupCabinetCheck = !target
+      ? { result: "not_set", url: null, status_code: null }
+      : target.includes("unreachable")
+        ? { result: "unreachable", url: target, status_code: null }
+        : { result: "ok", url: target, status_code: 200 };
     return HttpResponse.json(body);
   }),
 

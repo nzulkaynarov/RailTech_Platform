@@ -1,29 +1,37 @@
 """Сборка экранов «КП на одобрение» и «На согласовании» (контракт BFF 0.24.0, тег `eds-approvals`).
 
 BFF не решает: маршрут, шаги, чек-лист КП и `allowed_decisions` приходят из EDS; здесь — вызовы с
-токеном доступа EDS, состав КП и контакт клиента из ERP (частичный ответ `sources`), вырезание
-полей `cost_margin` и перевод ошибок решения (`not_your_step`, `route_closed`,
+токеном доступа EDS, состав КП, доступность каналов и итог отправки из ERP (частичный ответ
+`sources`), вырезание полей `cost_margin` и перевод ошибок решения (`not_your_step`, `route_closed`,
 `checklist_not_green`).
+
+D17G-2 (гейт D1-7): каналы отправки — по фактическим контактам клиента, их проверяет ERP
+(`channel_availability` КП, те же правила, что у автоотправки), «почта настроена» — CRM. Прежде BFF
+искал контакт по `deal.client` (это пользователь ERP, а не контакт) и почти всегда писал «контакт
+не получен». Отчёт по каналам после одобрения — из `send_report` КП ERP.
 """
 
 import asyncio
 import re
 from collections.abc import Awaitable
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 from pydantic import ValidationError
 
 from app.deps import Authed
 from app.eds_documents import API, EdsProxy, eds_error
-from app.errors import PlatformError
+from app.errors import PlatformError, backend_code, from_backend
 from app.feeds.feed import Feed
 from app.feeds.models import StepCode
 from app.feeds.numbers import deal_step
-from app.rbac import strip_restricted
+from app.rbac import allows, strip_restricted
 from app.schemas_eds_approvals import (
     MEMO_KINDS,
+    Channel,
+    DeliveryReason,
+    DeliveryStatus,
     MemoApprovalCard,
     MemoApprovalPage,
     MemoApprovalRow,
@@ -31,9 +39,12 @@ from app.schemas_eds_approvals import (
     QuoteApprovalPage,
     QuoteApprovalRow,
     QuoteCalculator,
+    QuoteChannelReasons,
     QuoteChannels,
     QuoteChecklistLine,
     QuoteClientComment,
+    QuoteDelivery,
+    QuoteDeliveryLine,
     QuoteInternal,
     QuoteLetterRef,
     QuoteLine,
@@ -52,7 +63,8 @@ from app.schemas_eds_documents import EdsDealRef, EdsDecision, EdsFile, EdsMoney
 UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 )
-QUOTE_NUMBER_RE = re.compile(r"^КП-\d{4}/\d+$")
+# Номер КП: ERP (`КП-2026-00001`, с префиксом продавца — `ACME-КП-2026-00001`) и вид `КП-2026/115`.
+QUOTE_NUMBER_RE = re.compile(r"^(?:[\w.]+-)?КП-\d{4}[-/]\d+$")
 MEMO_NUMBER_RE = re.compile(r"^(СЗ|ЗЯ|ОТ)-\d{4}/\d+$")
 
 # Поля снимка КП и чек-листа с экономикой: без группы `cost_margin` вырезаются до разбора.
@@ -357,15 +369,122 @@ def _totals(erp_quote: dict[str, Any]) -> QuoteTotals | None:
     )
 
 
-def _channels(contact: dict[str, Any] | None) -> QuoteChannels | None:
-    if contact is None:
+CHANNEL_ORDER: tuple[Channel, ...] = ("telegram", "cabinet", "email")
+SMTP_READY_PATH = "/api/v1/integrations/smtp/ready"
+# Коды ERP (проверки каналов `quote_auto_send._CHECKS`, гейты отправки) -> причины контракта.
+_ERP_REASONS: dict[str, DeliveryReason] = {
+    "CONTACT_TELEGRAM_REQUIRED": "no_telegram",
+    "CLIENT_NOT_IN_CRM": "client_not_in_crm",
+    "CABINET_NOT_INVITED": "no_cabinet",
+    "CONTACT_EMAIL_REQUIRED": "no_email",
+    "QUOTE_BELOW_COST": "below_cost",
+    "FX_RATE_MISSING": "fx_missing",
+    "QUOTE_HAS_UNPRICED_LINES": "unpriced_lines",
+    "BELOW_FLOOR_JUSTIFICATION_REQUIRED": "below_floor",
+    "QUOTE_NOT_CLAIMED": "not_claimed",
+    "RECIPIENT_REQUIRED": "no_recipient",
+}
+_STATES: dict[str, Literal["ready", "sent", "closed"]] = {
+    "READY_TO_SEND": "ready",
+    "SENT": "sent",
+    "APPROVED": "closed",
+    "REJECTED": "closed",
+}
+_RESENDABLE: frozenset[DeliveryStatus] = frozenset({"failed", "skipped", "not_selected", "unknown"})
+
+
+def erp_reason(code: object, detail: object = None) -> DeliveryReason:
+    """Код ERP -> причина контракта; недоставленное письмо — по причине почтового сервиса."""
+    if code == "EMAIL_DELIVERY_FAILED":
+        return "mail_not_configured" if detail == "smtp_not_configured" else "mail_failed"
+    return _ERP_REASONS.get(str(code), "send_failed")
+
+
+def _channels(erp_quote: dict[str, Any] | None, mail_ready: bool | None) -> QuoteChannels | None:
+    """Доступность каналов из ERP (`channel_availability`) и CRM (почта настроена; `None` —
+    не узнали)."""
+    found = erp_quote.get("channel_availability") if erp_quote else None
+    if not isinstance(found, dict):
         return None
+    reasons: dict[str, DeliveryReason | None] = dict.fromkeys(CHANNEL_ORDER)
+    for row in found.get("channels") or []:
+        if not isinstance(row, dict) or row.get("channel") not in reasons:
+            continue
+        if row.get("available") is not True:
+            reasons[row["channel"]] = erp_reason(row.get("reason"))
+    if reasons["email"] is None and mail_ready is False:
+        reasons["email"] = "mail_not_configured"
     return QuoteChannels(
-        contact_name=_text(contact.get("name")),
-        telegram=isinstance(contact.get("telegram_user_id"), int),
-        cabinet=contact.get("company_is_registered") is True,
-        email=_text(contact.get("email")) is not None,
+        contact_name=_text(found.get("contact_name")),
+        telegram=reasons["telegram"] is None,
+        cabinet=reasons["cabinet"] is None,
+        email=reasons["email"] is None,
+        reasons=QuoteChannelReasons.model_validate(reasons),
     )
+
+
+def _line_status(
+    channel: Channel,
+    state: Literal["ready", "sent", "closed"],
+    report: dict[str, Any],
+    channels: QuoteChannels | None,
+) -> tuple[DeliveryStatus, DeliveryReason | None]:
+    skipped = {
+        item.get("channel"): item for item in report.get("skipped") or [] if isinstance(item, dict)
+    }
+    sent_via = report.get("sent_via") or []
+    if channel in skipped:
+        item = skipped[channel]
+        reason = erp_reason(item.get("reason"), item.get("detail"))
+        return ("failed" if item.get("reason") == "EMAIL_DELIVERY_FAILED" else "skipped"), reason
+    if channel in sent_via:
+        if channel == "cabinet":
+            return "published", None
+        if channel == "email" and not report.get("email_sent_at"):
+            return "pending", None
+        return "sent", None
+    error = report.get("error")
+    if error and channel in (report.get("requested") or []):
+        return "failed", erp_reason(error)
+    if channel == "cabinet" and state != "ready":
+        # Отправленное КП клиент видит в кабинете всегда (DECISIONS 2026-10-28 «ERP-11»), если он
+        # туда приглашён.
+        if channels is not None and not channels.cabinet:
+            return "skipped", channels.reasons.cabinet
+        return "published", None
+    if not report and state != "ready":
+        return "unknown", None
+    return "not_selected", None
+
+
+def _delivery(
+    route_status: str,
+    erp_quote: dict[str, Any] | None,
+    channels: QuoteChannels | None,
+    may_send: bool,
+) -> QuoteDelivery | None:
+    """Отчёт об отправке одобренного КП по каналам (ERP `send_report`, D17G-2)."""
+    if route_status != "approved" or erp_quote is None:
+        return None
+    state = _STATES.get(str(erp_quote.get("status_code") or ""))
+    if state is None:
+        return None
+    raw_report = erp_quote.get("send_report")
+    report: dict[str, Any] = raw_report if isinstance(raw_report, dict) else {}
+    lines: list[QuoteDeliveryLine] = []
+    for channel in CHANNEL_ORDER:
+        status, reason = _line_status(channel, state, report, channels)
+        can = (
+            may_send
+            and state != "closed"
+            and channel != "cabinet"
+            and status in _RESENDABLE
+            and channels is not None
+            and bool(getattr(channels, channel))
+        )
+        lines.append(QuoteDeliveryLine(channel=channel, status=status, reason=reason, can_send=can))
+    error = report.get("error")
+    return QuoteDelivery(state=state, lines=lines, error=erp_reason(error) if error else None)
 
 
 def _stage(deal: dict[str, Any] | None) -> StepCode:
@@ -412,10 +531,11 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         raise not_found("КП не найдено.")
     feed = Feed(authed)
     quote_id, deal_id = raw.object.erp_quote_id, raw.object.erp_deal_id
-    erp_quote, deal, letter = await asyncio.gather(
+    erp_quote, deal, letter, smtp = await asyncio.gather(
         feed.get("erp", f"/api/v1/crm/quotes/{quote_id}/"),
         feed.get("erp", f"/api/v1/crm/deals/{deal_id}/") if deal_id is not None else _none(),
         _letter(proxy, raw.object.deal_number),
+        feed.peek("crm", SMTP_READY_PATH, ttl=30),
     )
     erp_quote = erp_quote if isinstance(erp_quote, dict) else None
     # Комментарии клиента — у объекта КП, а не у редакции: видны и тогда, когда строки ERP скрыты
@@ -427,11 +547,9 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         # У ERP уже другая редакция КП: строки закрытого круга не показываем — только снимок EDS.
         erp_quote = None
     deal = deal if isinstance(deal, dict) else None
-    contact: dict[str, Any] | None = None
-    contact_id = deal.get("client") if deal else None
-    if isinstance(contact_id, int):
-        found = await feed.get("erp", f"/api/v1/accounts/contacts/{contact_id}/")
-        contact = found if isinstance(found, dict) else None
+    channels = _channels(erp_quote, _mail_ready(smtp))
+    may_send = erp_quote is not None and erp_quote.get("can_send") is True
+    may_send = may_send and allows(authed.access, "crm.clients", "full")
 
     snap = raw.quote
     number = raw.object.quote_number or raw.title
@@ -507,7 +625,8 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         totals=totals,
         checklist=checklist,
         steps=[route_step(s) for s in raw.steps],
-        channels=_channels(contact),
+        channels=channels,
+        delivery=_delivery(raw.status, erp_quote, channels, may_send),
         client_comments=comments,
         sources=feed.sources,
         **extra,
@@ -516,6 +635,47 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
 
 async def _none() -> None:
     return None
+
+
+SEND_FAILED_MESSAGE = "КП не отправлено: канал недоступен или отправку остановила ERP."
+
+
+async def send_quote(authed: Authed, proxy: EdsProxy, approval_id: str, channel: str) -> Any:
+    """«Отправить» КП по каналу (D17G-2): ERP `deliver` по КП маршрута; ответ — маршрут EDS.
+
+    Право и объектную проверку (своя заявка или `quote.review`) решает ERP; недоступный канал и гейт
+    отправки — 409 с причиной контракта, `INVALID_STATUS` — `invalid_status`.
+    """
+    body = await proxy.request("GET", f"{API}/approvals/{approval_id}")
+    raw = parse(RawApproval, strip_restricted(body, authed.fields, MARGIN_RULES), "approval")
+    if raw.template != "quote" or raw.object.erp_quote_id is None:
+        raise not_found("КП не найдено.")
+    response = await authed.call(
+        "erp",
+        "POST",
+        f"/api/v1/crm/quotes/{raw.object.erp_quote_id}/deliver/",
+        json={"channel": channel},
+    )
+    if response.status_code == 400:
+        code = backend_code(response) or ""
+        invalid = code in ("INVALID_STATUS", "UNKNOWN_CHANNEL")
+        reason = "invalid_status" if invalid else erp_reason(code)
+        raise PlatformError(
+            "CONFLICT",
+            SEND_FAILED_MESSAGE,
+            status_code=409,
+            source="erp",
+            details={"reason": reason, "backend_code": code},
+        )
+    if response.status_code >= 400:
+        raise from_backend("erp", response)
+    return body
+
+
+def _mail_ready(body: Any) -> bool | None:
+    """CRM `smtp/ready`: почта настроена; не ответила или отказала — неизвестно (`None`)."""
+    configured = body.get("configured") if isinstance(body, dict) else None
+    return configured if isinstance(configured, bool) else None
 
 
 # --- карточка документа --------------------------------------------------------------------------

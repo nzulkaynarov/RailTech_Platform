@@ -294,3 +294,31 @@ async def test_letter_notice_opens_the_work_screen_of_the_letter(
         "number": "ВХ-112/26",
         "path": "/eds/tasks/40000000-0000-4000-8000-000000000112",
     }
+
+
+async def test_quote_not_sent_notification_opens_the_quote_card(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """D17G-2: «КП не отправлено по каналу» — с причиной в тексте ERP и ссылкой на карточку КП, где
+    отчёт по каналам и «Отправить»."""
+    note = notification(
+        9,
+        "quote.auto_send_failed",
+        "КП-2026-00001: не отправлено — Почта",
+        message="Почта — у контакта клиента нет e-mail. Отчёт и отправка — в карточке КП.",
+    )
+    note["event_params"] = {"number": "КП-2026-00001", "channels": "email", "error": ""}
+    fb.state["notifications"] = {"count": 1, "next": None, "previous": None, "results": [note]}
+    await web.login(["MANAGER"])
+
+    response = await web.client.get("/api/v1/notifications")
+
+    check(response, "/notifications", "get")
+    (item,) = response.json()["items"]
+    assert item["title"] == "КП-2026-00001: не отправлено — Почта"
+    assert item["subtitle"].startswith("Почта — у контакта клиента нет e-mail")
+    assert item["object"] == {
+        "kind": "quote",
+        "number": "КП-2026-00001",
+        "path": "/eds/drafts/%D0%9A%D0%9F-2026-00001",
+    }
