@@ -521,3 +521,10 @@
 .pf-msg-delivery--sending {
   color: #595959;
 }
+
+/* «Передать менеджеру» (D17G-1): поля формы столбиком */
+.pf-msg-handover {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}

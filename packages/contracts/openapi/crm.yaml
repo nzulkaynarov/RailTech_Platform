@@ -3074,6 +3074,16 @@ components:
           format: date-time
           title: Created At
           type: string
+        handed_by_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Handed By User Id
+        handed_by_user_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Handed By User Name
         id:
           title: Id
           type: integer
@@ -3095,6 +3105,11 @@ components:
           - type: string
           - type: 'null'
           title: Recommendation
+        request_type:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request Type
         sla_due_at:
           anyOf:
           - format: date-time
@@ -3519,6 +3534,33 @@ components:
       required:
       - identifier
       title: ForgotPasswordRequest
+      type: object
+    HandOver:
+      description: '«Передать менеджеру» (D17G-1): кому, записка (обязательна), тип обращения (необязателен).'
+      properties:
+        note:
+          maxLength: 2000
+          minLength: 1
+          title: Note
+          type: string
+        request_type:
+          anyOf:
+          - enum:
+            - goods
+            - services
+            - project
+            - other
+            type: string
+          - type: 'null'
+          title: Request Type
+        user_id:
+          exclusiveMinimum: 0.0
+          title: User Id
+          type: integer
+      required:
+      - user_id
+      - note
+      title: HandOver
       type: object
     HandoffFacts:
       description: 'Факты квалификации от бота (коды CRM: срок `<1m|<3m|<12m|>12m`, роль `decision_maker|…`).'
@@ -11810,6 +11852,31 @@ paths:
       summary: Create Lead
       tags:
       - leads
+  /api/v1/leads/handover_targets:
+    get:
+      description: 'Кому передать лида (D17G-1): активные сотрудники с работой с клиентом (`crm.leads: full`).'
+      operationId: handover_targets
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TeamMember'
+                title: Response Handover Targets
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Handover Targets
+      tags:
+      - leads
   /api/v1/leads/web:
     post:
       description: 'Форма «Запрос» со страницы входа Cabinet → лид CRM с источником `web` (ARCHITECTURE §17).
@@ -12069,6 +12136,43 @@ paths:
       summary: Create Request From Lead
       tags:
       - clients
+  /api/v1/leads/{lead_id}/actions/hand_over:
+    post:
+      description: '«Передать менеджеру» с запиской (D17G-1): лид у ответственного, клиенту ничего не уходит.
+
+        Лида ведёт сотрудник — 409 `lead_taken`; адресат не ведёт лидов — 422 `inactive_colleague`.'
+      operationId: hand_over
+      parameters:
+      - in: path
+        name: lead_id
+        required: true
+        schema:
+          title: Lead Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HandOver'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Hand Over
+      tags:
+      - leads
   /api/v1/leads/{lead_id}/actions/make_customer:
     post:
       description: '«Сделать клиентом» / «Передать в бэк-офис» (ADR-0022).

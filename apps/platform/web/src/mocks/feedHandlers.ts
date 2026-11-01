@@ -17,6 +17,7 @@ import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
 import { stockQueueItems } from "./erpStock";
 import { coveredQueueItems } from "./profileStore";
+import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -154,6 +155,11 @@ function notificationsFor(roles: readonly MockRole[]): Notification[] {
  * Моки Dashboard, уведомлений и поиска (PLT-14): данные зависят от роли сессии, чтобы сценарии и скриншоты не плавали.
  * Ответы совпадают по форме с BFF (`platform-bff.yaml`); недоступный источник тесты имитируют через `server.use`.
  */
+function sessionUserId(): string | undefined {
+  const session = readSession();
+  return session ? sessionRoles(session)?.user.id : undefined;
+}
+
 export const feedHandlers = [
   http.get("*/queue/cards", ({ request }) => {
     const roles = viewRoles(new URL(request.url).searchParams.get("role"));
@@ -171,12 +177,18 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
+    // D17G-1: строки лидов из моков «Ждут ответа» (разобрать, переданный лид) вытесняют демо-строки тех же лидов
+    const handOver = handOverQueueItems(roles.view, sessionUserId());
+    const handNumbers = new Set(handOver.map((i) => i.object.number));
     const own = [
-      ...queueForView(roles.view),
+      ...queueForView(roles.view).filter(
+        (i) => !(i.kind.endsWith("_lead") && handNumbers.has(i.object.number)),
+      ),
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
       ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
       ...registeredQueueItems(roles.view), // P8: входящие, зарегистрированные делопроизводителем
       ...letterTaskQueueItems(roles.view), // P8b: поручения, переносы, ознакомления
+      ...handOver, // D17G-1: разобрать лида, переданный лид
     ].filter((i) =>
       i.kind.endsWith("_lead") || i.kind === "ticket"
         ? !crmDown()
@@ -252,7 +264,13 @@ export const feedHandlers = [
     // Лента CRM (W15-H7): ответы на обращения, привязка Telegram; не зависит от недоступности ERP.
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
-    const crm = userId ? [...crmNotificationsOf(userId), ...letterNotificationsOf(userId)] : [];
+    const crm = userId
+      ? [
+          ...crmNotificationsOf(userId),
+          ...letterNotificationsOf(userId),
+          ...handOverNotificationsOf(userId),
+        ]
+      : [];
     const all = [...mine, ...crm].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const items = all.filter((n) => tab === "all" || n.tab === tab);
     return HttpResponse.json({

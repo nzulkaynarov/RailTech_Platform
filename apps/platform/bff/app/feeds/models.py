@@ -34,6 +34,8 @@ StepCode = Literal[
 QueueItemKind = Literal[
     "answer_lead",
     "take_lead",
+    # D17G-1: «Разобрать лида» — первая линия передаёт менеджеру с запиской
+    "triage_lead",
     "create_request",
     "service_request",
     "resolve_letter",

@@ -153,6 +153,7 @@ import type {
   GetQueueParams,
   GetRoleJournalParams,
   GetSpendReportParams,
+  HandOverIn,
   Health,
   HsCode,
   HsCodeCreate,
@@ -178,6 +179,7 @@ import type {
   KbSearchIn,
   KbSearchResult,
   LeadCard,
+  LeadManagerList,
   LeadPage,
   LetterCard,
   LetterConflictResponse,
@@ -28317,7 +28319,7 @@ export const getListCrmMessagesUrl = () => {
 };
 
 /**
- * CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+ * CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения или `crm.leads.triage`: директор видит очередь без «Забрать» и ответа, делопроизводитель — с «Передать менеджеру» (D17G-1). Передачу первой линии (`handoff.reasons` содержит `handed_over`) забирает только ответственный `assigned`. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
  * @summary Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
  */
 export const listCrmMessages = async (
@@ -28433,7 +28435,7 @@ export const getGetCrmConversationUrl = (lead: string) => {
 };
 
 /**
- * CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+ * CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения или `crm.leads.triage`. Номер лида — `L-NNNN`.
  * @summary Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
  */
 export const getCrmConversation = async (
@@ -29541,6 +29543,264 @@ export const useReturnCrmLeadToBot = <
 > => {
   return useMutation(getReturnCrmLeadToBotMutationOptions(options), queryClient);
 };
+
+export const getHandOverCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/hand-over`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/hand_over` (D17G-1, DECISIONS 2026-11-01 п. 1). Раздел `crm.leads.triage` полный — делопроизводитель разбирает лида и передаёт его менеджеру, не забирая и не отвечая клиенту. Лид получает ответственного (`user_id` — держатель `crm.leads: full`, список — `listCrmLeadManagers`), открытая передача бота дополняется причиной `handed_over` и запиской (нет передачи — открывается новая со сроком реакции), бот на паузе до «Забрать». Менеджеру — строка «Новый лид от делопроизводителя» в «Моих задачах», уведомление в колокольчике и в Telegram; записка — ещё и заметкой команды в ленте. Лида уже ведёт сотрудник — 409 `CONFLICT` (`lead_taken`); сотрудник не может вести лидов или неактивен — 422 (`inactive_colleague`).
+ * @summary Передать менеджеру с запиской (первая линия, клиенту ничего не уходит)
+ */
+export const handOverCrmLead = async (
+  lead: string,
+  handOverIn: HandOverIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getHandOverCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(handOverIn),
+  });
+};
+
+export const getHandOverCrmLeadMutationKey = () => ["handOverCrmLead"] as const;
+
+export const getHandOverCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof handOverCrmLead>>,
+    TError,
+    HandOverCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof handOverCrmLead>>,
+  TError,
+  HandOverCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getHandOverCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof handOverCrmLead>>,
+    HandOverCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return handOverCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type HandOverCrmLeadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof handOverCrmLead>>
+>;
+export type HandOverCrmLeadMutationBody = HandOverIn;
+export type HandOverCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type HandOverCrmLeadMutationVariables = { lead: string; data: HandOverIn };
+
+/**
+ * @summary Передать менеджеру с запиской (первая линия, клиенту ничего не уходит)
+ */
+export const useHandOverCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof handOverCrmLead>>,
+      TError,
+      HandOverCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof handOverCrmLead>>,
+  TError,
+  HandOverCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getHandOverCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getListCrmLeadManagersUrl = () => {
+  return `/api/v1/crm/lead-managers`;
+};
+
+/**
+ * CRM `GET /leads/handover_targets` (D17G-1). Раздел `crm.leads.triage` полный. Активные сотрудники, у которых объединение ролей даёт `crm.leads: full` («Забрать», ответ клиенту), по имени; без почты, телефона и ролей.
+ * @summary Кому передать лида: активные сотрудники с правом работы с клиентом
+ */
+export const listCrmLeadManagers = async (
+  options?: Parameters<typeof http>[1],
+): Promise<LeadManagerList> => {
+  return http<LeadManagerList>(getListCrmLeadManagersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmLeadManagersQueryKey = () => {
+  return [`/api/v1/crm/lead-managers`] as const;
+};
+
+export const getListCrmLeadManagersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmLeadManagers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadManagers>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmLeadManagersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmLeadManagers>>> = ({ signal }) =>
+    listCrmLeadManagers({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmLeadManagers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmLeadManagersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCrmLeadManagers>>
+>;
+export type ListCrmLeadManagersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmLeadManagers<
+  TData = Awaited<ReturnType<typeof listCrmLeadManagers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadManagers>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeadManagers>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeadManagers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeadManagers<
+  TData = Awaited<ReturnType<typeof listCrmLeadManagers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadManagers>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmLeadManagers>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmLeadManagers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmLeadManagers<
+  TData = Awaited<ReturnType<typeof listCrmLeadManagers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadManagers>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Кому передать лида: активные сотрудники с правом работы с клиентом
+ */
+
+export function useListCrmLeadManagers<
+  TData = Awaited<ReturnType<typeof listCrmLeadManagers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmLeadManagers>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmLeadManagersQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListExternalChatsUrl = (params?: ListExternalChatsParams) => {
   const normalizedParams = new URLSearchParams();

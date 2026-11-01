@@ -328,7 +328,9 @@ def test_pilot_roles_are_four_templates_and_system_roles() -> None:
 def test_registrar_is_the_first_line_and_the_all_round_manager_covers_the_back_office() -> None:
     """P8: граница по лидам (DECISIONS 2026-11-01 п. 1) и состав менеджера-универсала (runbook 18a, P8; W-1)."""
     registrar = role("REGISTRAR")
-    assert registrar["crm.leads"] == "full"  # разбор и передача лида
+    # D17G-1: лиды — чтение и разбор с передачей менеджеру; «Забрать» и ответ клиенту — менеджер-универсал
+    assert registrar["crm.leads"] == "read" and registrar["crm.leads.triage"] == "full"
+    assert CATALOG["queue"]["triage_lead"] == {"resource": "crm.leads.triage", "level": "full"}
     assert registrar["crm.clients"] == "read"  # «Создать заявку» — менеджер-универсал
     assert registrar["eds.inbox"] == "read" and registrar["eds.inbox.register"] == "full"
     assert not {"eds.drafts", "eds.payments", "erp.calc", "admin"} & set(registrar)

@@ -51,6 +51,16 @@ export const RESOURCES = {
       en: "Clients · Awaiting reply, leads, channels, bot knowledge base",
     },
   },
+  "crm.leads.triage": {
+    module: "crm",
+    levels: ["full"],
+    backends: ["crm"],
+    label: {
+      ru: "Клиенты · Лиды · разбор и передача менеджеру",
+      uz: "Mijozlar · Lidlar · saralash va menejerga topshirish",
+      en: "Clients · Leads · triage and hand over to a manager",
+    },
+  },
   "crm.clients": {
     module: "crm",
     levels: ["read", "full"],
@@ -224,8 +234,8 @@ export const MENU = {
     summary: ["dashboard.summary"],
   },
   crm: {
-    messages: ["crm.leads"],
-    leads: ["crm.leads"],
+    messages: ["crm.leads", "crm.leads.triage"],
+    leads: ["crm.leads", "crm.leads.triage"],
     clients: ["crm.clients"],
     requests: ["crm.clients"],
     channels: ["crm.leads"],
@@ -303,6 +313,10 @@ export const QUEUE = {
   },
   take_lead: {
     resource: "crm.leads",
+    level: "full",
+  },
+  triage_lead: {
+    resource: "crm.leads.triage",
     level: "full",
   },
   create_request: {
@@ -530,7 +544,8 @@ export const TEMPLATES = {
     },
     access: {
       "dashboard.queue": "full",
-      "crm.leads": "full",
+      "crm.leads": "read",
+      "crm.leads.triage": "full",
       "crm.clients": "read",
       "eds.inbox": "read",
       "eds.inbox.register": "full",

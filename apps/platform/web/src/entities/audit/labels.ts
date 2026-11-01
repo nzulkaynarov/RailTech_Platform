@@ -21,6 +21,7 @@ export const AUDIT_ACTIONS = [
   "lead.consent_recorded",
   "lead.new_deal",
   "lead.assign",
+  "lead.hand_over",
   "lead.acknowledge",
   "lead.assist",
   "lead.create",

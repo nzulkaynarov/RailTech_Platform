@@ -84,6 +84,11 @@ class Escalation(TimestampMixin, Base):
     snoozed_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     outcome: Mapped[str | None] = mapped_column(String(32))
+    # «Передать менеджеру» первой линией (D17G-1): кто передал (бот — NULL) и тип обращения.
+    handed_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    request_type: Mapped[str | None] = mapped_column(String(16))
 
 
 class StageTransition(TimestampMixin, Base):

@@ -15,14 +15,17 @@ from fastapi import APIRouter, Depends, Path, Query
 from app.api.crm_messages import _Crm, _lead_id
 from app.clients import crm_models as crm
 from app.crm_leads_view import client_short, lead_card, lead_row, list_params
-from app.deps import Authed, require
+from app.deps import Authed, require_any
 from app.errors import PlatformError
 from app.schemas_crm_leads import LeadCard, LeadPage, LeadScope, LeadTab
 
 router = APIRouter(tags=["leads"])
 
 API = "/api/v1"
-Reader = Annotated[Authed, Depends(require("crm.leads", "read"))]
+# Реестр лидов или первая линия (`crm.leads.triage`, D17G-1).
+Reader = Annotated[
+    Authed, Depends(require_any(("crm.leads", "read"), ("crm.leads.triage", "full")))
+]
 LeadParam = Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")]
 
 

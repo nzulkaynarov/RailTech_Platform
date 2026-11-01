@@ -2,6 +2,7 @@ import { Button, Skeleton } from "antd";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
+import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
@@ -12,6 +13,7 @@ import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { HandOverButton } from "../messages/HandOver";
 import { channelLabel, factRows } from "../messages/labels";
 import { canCreateFromLead } from "../common/access";
 import { clientPath } from "../common/params";
@@ -56,6 +58,11 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const fmt = useFormat();
   const { me } = useAuth();
   const canCreate = canCreateFromLead(me, card.assigned) && card.status !== "lost";
+  // Первая линия (D17G-1): «Передать менеджеру» вместо «Забрать» и ответа — пока лида не ведёт сотрудник
+  // (свободен или передан, но не забран).
+  const triage = !canEdit(me, "crm.leads") && canEdit(me, "crm.leads.triage");
+  const handable =
+    triage && (!card.assigned || Boolean(card.handoff?.reasons.includes("handed_over")));
   const contacts = [
     {
       label: t("messages:card.telegram"),
@@ -177,7 +184,10 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
             {t("leads:actions.create")}
           </LinkButton>
         ) : null}
-        <LinkButton to={`/crm/messages?lead=${card.lead}`}>{t("leads:actions.reply")}</LinkButton>
+        {handable ? <HandOverButton lead={card.lead} name={card.name} /> : null}
+        <LinkButton to={`/crm/messages?lead=${card.lead}`}>
+          {t(triage ? "leads:actions.openChat" : "leads:actions.reply")}
+        </LinkButton>
         {sheet ? <Button onClick={onClose}>{t("leads:card.close")}</Button> : null}
       </div>
     </div>
@@ -186,7 +196,8 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
 
 /**
  * Карточка лида в боковом окне (SPEC-v3 §7.2): контакты и каналы, согласие на данные, факты квалификации от бота, последние
- * сообщения, срок первого ответа и итог подтверждения заявки клиенту (D1-9). Отсюда — «Создать заявку» и «Ответить».
+ * сообщения, срок первого ответа и итог подтверждения заявки клиенту (D1-9). Отсюда — «Создать заявку» и «Ответить»; у
+ * первой линии (D17G-1) — «Передать менеджеру» и «Открыть переписку».
  */
 export function LeadPanel({ lead, onClose }: { lead: string; onClose: () => void }) {
   const { t } = useTranslation("leads");

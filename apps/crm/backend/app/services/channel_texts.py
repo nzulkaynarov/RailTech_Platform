@@ -36,6 +36,7 @@ REASONS: Final[dict[str, str]] = {
     "attachment_received": "Прислал файл",
     "agent_unavailable": "Сбой ИИ-ассистента",
     "delivery_failed": "Не удалось отправить файл",
+    "handed_over": "Передал делопроизводитель",
 }
 TIMELINES: Final[dict[str, str]] = {
     "<1m": "до 1 мес.",

@@ -25,6 +25,7 @@ from app.schemas_crm_messages import (
     HandoffState,
     InboxGroup,
     Language,
+    LeadRequestType,
     MessageInboxItem,
     OwnerMode,
     Priority,
@@ -40,6 +41,7 @@ _LANGUAGES: tuple[str, ...] = get_args(Language)
 _PRIORITIES: tuple[str, ...] = get_args(Priority)
 _STATES: tuple[str, ...] = get_args(HandoffState)
 _AUTHORS: tuple[str, ...] = get_args(Author)
+_REQUEST_TYPES: tuple[str, ...] = get_args(LeadRequestType)
 _TIMELINES: tuple[str, ...] = get_args(Timeline)
 _ROLES: tuple[str, ...] = get_args(DecisionRole)
 _CHANNEL = re.compile(r"^[a-z][a-z_]{0,15}$")
@@ -108,7 +110,13 @@ def handoff(escalation: crm.EscalationOut | None, names: Names) -> HandoffInfo |
         sla_due_at=escalation.sla_due_at,
         snoozed_until=escalation.snoozed_until,
         taken_by=person(escalation.taken_by_user_id, names),
+        handed_by=person(escalation.handed_by_user_id, names, escalation.handed_by_user_name),
+        request_type=request_type(escalation.request_type),
     )
+
+
+def request_type(value: str | None) -> LeadRequestType | None:
+    return value if value in _REQUEST_TYPES else None  # type: ignore[return-value]
 
 
 def note(lead: crm.LeadOut) -> HandoffNote:

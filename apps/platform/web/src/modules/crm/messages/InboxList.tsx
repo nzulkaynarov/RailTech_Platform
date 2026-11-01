@@ -2,12 +2,13 @@ import { Button } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
+import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { MessageInboxItem, MessageInboxItemGroup } from "../../../shared/api/generated/model";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
-import { canTake } from "./logic";
+import { canTake, handedOver } from "./logic";
 import { reasonLabels } from "./labels";
 import { SlaTimer } from "./SlaTimer";
 import { useNow } from "./sla";
@@ -46,6 +47,7 @@ function Row({
   // На 390 px карточка лида — свой лист из диалога, боковое окно каркаса не открываем.
   const { mobile } = useViewport();
   const summary = item.note.request ?? item.note.last_message ?? t("list.noRequest");
+  const { me } = useAuth();
   const reasons = item.handoff ? reasonLabels(t, item.handoff.reasons) : [];
   return (
     <li className={active ? "pf-msg-row pf-msg-row--active" : "pf-msg-row"}>
@@ -72,7 +74,12 @@ function Row({
         ) : item.assigned ? (
           <span className="pf-msg-sla">{t("list.takenBy", { name: item.assigned.name })}</span>
         ) : null}
-        {canReply && canTake(item) ? <TakeButton lead={item.lead} name={item.name} /> : null}
+        {item.handoff && handedOver(item) ? (
+          <span className="pf-msg-sla">
+            {t("list.handedTo", { name: item.assigned?.name ?? "" })}
+          </span>
+        ) : null}
+        {canReply && canTake(item, me.id) ? <TakeButton lead={item.lead} name={item.name} /> : null}
       </span>
     </li>
   );

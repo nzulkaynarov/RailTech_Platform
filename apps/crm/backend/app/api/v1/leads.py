@@ -34,6 +34,7 @@ from app.schemas.leads import (
     AssistRequest,
     Close,
     EscalationOut,
+    HandOver,
     InboxResponse,
     LeadDetail,
     LeadOut,
@@ -44,16 +45,20 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
+    TeamMember,
 )
 from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
 from app.services import handoff_notes, web_lead_sla
+from app.services import team as team_service
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
 Reader = Annotated[Principal, Depends(require("leads", "read"))]
 Taker = Annotated[Principal, Depends(require("leads", "take"))]
 Worker = Annotated[Principal, Depends(require("leads", "work"))]
+# Первая линия (D17G-1): разобрать лида и передать менеджеру с запиской, не забирая.
+Triager = Annotated[Principal, Depends(require("leads", "triage"))]
 # Переписка диалога: реестр или участник/зона (B-D18-1).
 DialogReader = Annotated[Principal, Depends(dialog("read"))]
 DialogReplier = Annotated[Principal, Depends(dialog("reply"))]
@@ -61,7 +66,9 @@ DialogAssister = Annotated[Principal, Depends(dialog("assist"))]
 DialogNoter = Annotated[Principal, Depends(dialog("note"))]
 
 
-def escalation_out(e: Escalation | None) -> EscalationOut | None:
+def escalation_out(
+    e: Escalation | None, names: dict[int, str] | None = None
+) -> EscalationOut | None:
     if e is None:
         return None
     return EscalationOut(
@@ -76,7 +83,16 @@ def escalation_out(e: Escalation | None) -> EscalationOut | None:
         sla_due_at=e.sla_due_at,
         snoozed_until=e.snoozed_until,
         created_at=e.created_at,
+        handed_by_user_id=e.handed_by_user_id,
+        handed_by_user_name=(names or {}).get(e.handed_by_user_id)
+        if e.handed_by_user_id is not None
+        else None,
+        request_type=e.request_type,
     )
+
+
+def _handed_by(escalations: dict[int, Escalation]) -> list[int | None]:
+    return [e.handed_by_user_id for e in escalations.values()]
 
 
 def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
@@ -103,7 +119,7 @@ def lead_out(
         product_interest=list(lead.product_interest or []),
         last_lead_msg_at=lead.last_lead_msg_at,
         created_at=lead.created_at,
-        escalation=escalation_out(escalation),
+        escalation=escalation_out(escalation, names),
         source=lead.source,
         platform_status=_platform_status(lead, escalation),
     )
@@ -194,7 +210,7 @@ async def list_leads(
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
         escalations = await crm.active_escalations(session, [r.id for r in rows])
-        names = await crm.user_names(session, rows)
+        names = await crm.user_names(session, rows, _handed_by(escalations))
     return LeadPage(items=[lead_out(r, escalations.get(r.id), names) for r in rows], total=total)
 
 
@@ -219,7 +235,9 @@ async def inbox(
             unassigned = []
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
-        names = await crm.user_names(session, [*escalated, *mine, *unassigned])
+        names = await crm.user_names(
+            session, [*escalated, *mine, *unassigned], _handed_by(escalations)
+        )
         notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
@@ -239,6 +257,13 @@ async def inbox(
     return InboxResponse(escalations=out(ranked), mine=out(mine), unassigned=out(unassigned))
 
 
+@router.get("/leads/handover_targets", response_model=list[TeamMember])
+async def handover_targets(_: Triager, container: ContainerDep) -> list[TeamMember]:
+    """Кому передать лида (D17G-1): активные сотрудники с работой с клиентом (`crm.leads: full`)."""
+    async with container.session_factory() as session:
+        return await team_service.lead_workers(session)
+
+
 @router.get("/leads/{lead_id}", response_model=LeadDetail)
 async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDetail:
     async with container.session_factory() as session:
@@ -249,7 +274,9 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         username = await crm.tg_username(session, lead_id)
         phone = await crm.tg_phone(session, lead_id)
         client_phone = await crm.client_primary_phone(session, lead.client_id)
-        names = await crm.user_names(session, [lead])
+        names = await crm.user_names(
+            session, [lead], [escalation.handed_by_user_id] if escalation else []
+        )
         request_id = await service_requests.open_request_id(session, lead)
         client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
         erp_company_id = client.erp_company_id if client is not None else None
@@ -349,6 +376,16 @@ async def lead_notes(lead_id: int, _: DialogReader, container: ContainerDep) -> 
 @router.post("/leads/{lead_id}/actions/take", response_model=ActionResult)
 async def take(lead_id: int, who: Taker, container: ContainerDep) -> ActionResult:
     await container.lead_service.take(who, lead_id)
+    return ActionResult()
+
+
+@router.post("/leads/{lead_id}/actions/hand_over", response_model=ActionResult)
+async def hand_over(
+    lead_id: int, body: HandOver, who: Triager, container: ContainerDep
+) -> ActionResult:
+    """«Передать менеджеру» с запиской (D17G-1): лид у ответственного, клиенту ничего не уходит.
+    Лида ведёт сотрудник — 409 `lead_taken`; адресат не ведёт лидов — 422 `inactive_colleague`."""
+    await container.lead_service.hand_over(who, lead_id, body.user_id, body.note, body.request_type)
     return ActionResult()
 
 

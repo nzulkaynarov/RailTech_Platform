@@ -26,8 +26,22 @@ export interface LeadMock {
   notes: TeamNote[];
 }
 
+/** «Передать менеджеру» (D17G-1): кому, кто передал, записка — для «Моих задач» и колокольчика менеджера */
+export interface HandOverMock {
+  seq: number;
+  lead: string;
+  name: string;
+  to: string;
+  by: string;
+  note: string;
+  at: string;
+  read: boolean;
+}
+
 export interface MessagesMock {
   leads: LeadMock[];
+  /** Передачи первой линией (D17G-1); в старом сохранённом состоянии поля нет */
+  handovers?: HandOverMock[];
   nextId: number;
   /** Ключи повтора отправленных ответов → id сообщения («Повторить» не дублирует) */
   sent: Record<string, number>;
@@ -52,6 +66,8 @@ function handoff(base: number, over: Partial<HandoffInfo>): HandoffInfo {
     sla_due_at: ago(base, -3),
     snoozed_until: null,
     taken_by: null,
+    handed_by: null,
+    request_type: null,
     ...over,
   };
 }

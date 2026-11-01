@@ -45,7 +45,11 @@
     "takeLabel": "Забрать {{name}} в «Ждут ответа»",
     "replyLabel": "Ответить {{name}} в «Ждут ответа»",
     "createLabel": "Создать заявку для {{name}}",
-    "clientLabel": "Карточка клиента {{name}}"
+    "clientLabel": "Карточка клиента {{name}}",
+    "handOver": "Передать менеджеру",
+    "openChat": "Открыть переписку",
+    "triage": "Разобрать",
+    "triageLabel": "Разобрать {{name}} в «Ждут ответа»"
   },
   "paging": {
     "label": "Страницы лидов",

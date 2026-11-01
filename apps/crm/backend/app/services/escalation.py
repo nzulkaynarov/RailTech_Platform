@@ -87,7 +87,9 @@ async def apply(
         )
         session.add(current)
     else:
-        current.reason_codes = codes
+        # Причины от сотрудника (`handed_over`, D17G-1) — не триггеры бота: не теряются.
+        staff = [c for c in current.reason_codes if c not in _KNOWN and c not in codes]
+        current.reason_codes = codes + staff
         if priority_raised(Priority(current.priority), escalation_plan.priority):
             # Срочнее — новый срок и новое напоминание (аудит 2026-10-12, P1-8).
             timer = reset_sla(now, cfg.escalation.sla_minutes, hours)

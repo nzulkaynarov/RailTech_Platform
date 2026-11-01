@@ -12,10 +12,11 @@ import { canCreateFromLead } from "../common/access";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
 import { Composer } from "./Composer";
+import { HandOverButton } from "./HandOver";
 import { HandoffNoteBox } from "./HandoffNoteBox";
 import { channelLabel } from "./labels";
 import { LeadCard } from "./LeadCard";
-import { canTake } from "./logic";
+import { canHandOver, canTake } from "./logic";
 import { Thread } from "./Thread";
 
 function ownerText(
@@ -35,16 +36,23 @@ function Actions({
   card,
   item,
   canReply,
+  canTriage,
 }: {
   card: ConversationCard;
   item?: MessageInboxItem;
   canReply: boolean;
+  canTriage: boolean;
 }) {
   const { t } = useTranslation("messages");
   const { me } = useAuth();
   const actions = useLeadActions(card.lead);
-  if (!canReply) return null;
-  const takeable = item ? canTake(item) : card.owner_mode === "waiting" && !card.assigned;
+  if (!canReply) {
+    // Первая линия (D17G-1): разобрать и передать менеджеру с запиской; «Забрать» и ответ — менеджер.
+    return canTriage && canHandOver(card) ? (
+      <HandOverButton lead={card.lead} name={card.name} />
+    ) : null;
+  }
+  const takeable = item ? canTake(item, me.id) : card.owner_mode === "waiting" && !card.assigned;
   const mine = card.owner_mode === "manager" && card.assigned?.id === me.id;
   return (
     <>
@@ -71,11 +79,14 @@ export function Dialog({
   lead,
   item,
   canReply,
+  canTriage = false,
   mobile,
 }: {
   lead: string;
   item?: MessageInboxItem;
   canReply: boolean;
+  /** Первая линия (`crm.leads.triage`, D17G-1): «Передать менеджеру» вместо «Забрать» и ответа */
+  canTriage?: boolean;
   mobile: boolean;
 }) {
   const { t } = useTranslation("messages");
@@ -99,7 +110,7 @@ export function Dialog({
       </section>
     );
   }
-  const takeable = canReply && (item ? canTake(item) : false);
+  const takeable = canReply && (item ? canTake(item, me.id) : false);
   return (
     <section className="pf-msg-dialog" aria-labelledby="pf-msg-dialog-title">
       <header className="pf-msg-dialog-head">
@@ -124,7 +135,9 @@ export function Dialog({
               {t("actions.card")}
             </Button>
           ) : null}
-          {mobile ? null : <Actions card={card} item={item} canReply={canReply} />}
+          {mobile ? null : (
+            <Actions card={card} item={item} canReply={canReply} canTriage={canTriage} />
+          )}
         </div>
       </header>
       {takeable && !mobile ? <Consequence items={[t("consequence.take")]} /> : null}
@@ -133,7 +146,9 @@ export function Dialog({
       {canReply ? (
         <Composer card={card} />
       ) : (
-        <p className="pf-msg-readonly">{t("composer.readOnly")}</p>
+        <p className="pf-msg-readonly">
+          {t(canTriage ? "composer.managerReplies" : "composer.readOnly")}
+        </p>
       )}
       {mobile ? (
         <Drawer
@@ -148,7 +163,7 @@ export function Dialog({
           styles={{ body: { padding: 16 } }}
           footer={
             <div className="pf-msg-sheet-foot">
-              <Actions card={card} item={item} canReply={canReply} />
+              <Actions card={card} item={item} canReply={canReply} canTriage={canTriage} />
               <Button
                 onClick={() => {
                   setSheet(false);

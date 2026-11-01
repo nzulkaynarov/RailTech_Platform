@@ -3954,7 +3954,7 @@ export interface paths {
     };
     /**
      * Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
-     * @description CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+     * @description CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения или `crm.leads.triage`: директор видит очередь без «Забрать» и ответа, делопроизводитель — с «Передать менеджеру» (D17G-1). Передачу первой линии (`handoff.reasons` содержит `handed_over`) забирает только ответственный `assigned`. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
      */
     get: operations["listCrmMessages"];
     put?: never;
@@ -3974,7 +3974,7 @@ export interface paths {
     };
     /**
      * Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
-     * @description CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+     * @description CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения или `crm.leads.triage`. Номер лида — `L-NNNN`.
      */
     get: operations["getCrmConversation"];
     put?: never;
@@ -4119,6 +4119,46 @@ export interface paths {
      * @description CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
      */
     post: operations["returnCrmLeadToBot"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/hand-over": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Передать менеджеру с запиской (первая линия, клиенту ничего не уходит)
+     * @description CRM `POST /leads/{id}/actions/hand_over` (D17G-1, DECISIONS 2026-11-01 п. 1). Раздел `crm.leads.triage` полный — делопроизводитель разбирает лида и передаёт его менеджеру, не забирая и не отвечая клиенту. Лид получает ответственного (`user_id` — держатель `crm.leads: full`, список — `listCrmLeadManagers`), открытая передача бота дополняется причиной `handed_over` и запиской (нет передачи — открывается новая со сроком реакции), бот на паузе до «Забрать». Менеджеру — строка «Новый лид от делопроизводителя» в «Моих задачах», уведомление в колокольчике и в Telegram; записка — ещё и заметкой команды в ленте. Лида уже ведёт сотрудник — 409 `CONFLICT` (`lead_taken`); сотрудник не может вести лидов или неактивен — 422 (`inactive_colleague`).
+     */
+    post: operations["handOverCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/lead-managers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кому передать лида: активные сотрудники с правом работы с клиентом
+     * @description CRM `GET /leads/handover_targets` (D17G-1). Раздел `crm.leads.triage` полный. Активные сотрудники, у которых объединение ролей даёт `crm.leads: full` («Забрать», ответ клиенту), по имени; без почты, телефона и ролей.
+     */
+    get: operations["listCrmLeadManagers"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -6933,6 +6973,7 @@ export interface components {
     QueueItemKind:
       | "answer_lead"
       | "take_lead"
+      | "triage_lead"
       | "create_request"
       | "service_request"
       | "resolve_letter"
@@ -9577,7 +9618,7 @@ export interface components {
       /** @description Последнее сообщение клиента (до 200 символов) */
       last_message: string | null;
     };
-    /** @description Открытая передача от бота */
+    /** @description Открытая передача от бота или от первой линии (D17G-1: причина `handed_over`, `handed_by` — кто передал, `reason_text` — его записка, лид у ответственного `MessageInboxItem.assigned`) */
     HandoffInfo: {
       /**
        * @description `hot` — срочно, `warm` — важно, `info` — к сведению (без срока реакции)
@@ -9605,6 +9646,25 @@ export interface components {
       /** Format: date-time */
       snoozed_until: string | null;
       taken_by: components["schemas"]["PersonRef"] | null;
+      /** @description Кто передал лида менеджеру с запиской («Передать менеджеру», D17G-1); `null` — передал бот */
+      handed_by: components["schemas"]["PersonRef"] | null;
+      /** @description Тип обращения, который указал передавший (необязательно) */
+      request_type: components["schemas"]["LeadRequestType"] | null;
+    };
+    /**
+     * @description Тип обращения при передаче лида (D17G-1): `goods` — товары, `services` — услуги, `project` — по действующему проекту, `other` — другое. Подписи — в словаре интерфейса.
+     * @enum {string}
+     */
+    LeadRequestType: "goods" | "services" | "project" | "other";
+    HandOverIn: {
+      /** @description `PersonRef.id` менеджера из `listCrmLeadManagers` */
+      user_id: string;
+      /** @description Записка менеджеру — что нужно клиенту и что уже известно (клиенту не уходит) */
+      note: string;
+      request_type?: components["schemas"]["LeadRequestType"] | null;
+    };
+    LeadManagerList: {
+      items: components["schemas"]["PersonRef"][];
     };
     MessageInboxItem: {
       /** @description Номер лида */
@@ -11279,7 +11339,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
         [name: string]: unknown;
@@ -18971,6 +19031,65 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  handOverCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HandOverIn"];
+      };
+    };
+    responses: {
+      /** @description Лид у менеджера */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmLeadManagers: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Менеджеры */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadManagerList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

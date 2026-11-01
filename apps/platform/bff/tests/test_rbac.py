@@ -37,10 +37,10 @@ def roles(*codes: str | dict[str, Any]) -> list[SessionRole]:
     return [role(c) for c in codes]
 
 
-def test_catalog_has_nineteen_sections_in_oracle_order() -> None:
-    # P8: + `eds.inbox.register`; восемь ролей каталога (с шаблонами пилота)
+def test_catalog_has_twenty_sections_in_oracle_order() -> None:
+    # P8: + `eds.inbox.register`; D17G-1: + `crm.leads.triage`; восемь ролей каталога
     assert list(RESOURCE_MODULE) == list(MATRIX)
-    assert len(CELLS) == 19 * 8
+    assert len(CELLS) == 20 * 8
     assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
 
 
