@@ -203,6 +203,7 @@ describe('просрочка счёта вычисляется из due_date', (
     total: { amount: '100.00', currency: 'UZS' },
     paid: { amount: '0.00', currency: 'UZS' },
     due_date: '2026-10-14',
+    proofs: [],
   };
   it.each([
     ['срок сегодня — не просрочен', {}, null, 'issued'],

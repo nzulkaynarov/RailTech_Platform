@@ -110,6 +110,11 @@
       "in_stock": "Mavjud",
       "on_order": "Buyurtma asosida",
       "expected": "Kutilmoqda"
+    },
+    "proof": {
+      "pending": "Tekshirilmoqda",
+      "confirmed": "Toʻlov tasdiqlandi",
+      "rejected": "Rad etildi"
     }
   },
   "documents": {
@@ -392,7 +397,19 @@
         "telegramTo": "Kod Telegramga ({{to}}) yuborildi. {{minutes}} daqiqa amal qiladi.",
         "email": "Kod {{to}} manziliga yuborildi. {{minutes}} daqiqa amal qiladi."
       },
-      "resendCode": "Kodni qayta yuborish"
+      "resendCode": "Kodni qayta yuborish",
+      "comments": "Izohlar",
+      "commentsEmpty": "Hozircha izoh yoʻq.",
+      "commentsListLabel": "{{number}} taklif boʻyicha izohlar",
+      "commentAuthorYou": "Siz",
+      "commentAuthorClient": "Kompaniyangiz",
+      "commentAuthorManager": "Menejer",
+      "commentLabel": "Izohingiz",
+      "commentPlaceholder": "Taklif boʻyicha savol yoki eslatma",
+      "commentSend": "Izohni yuborish",
+      "commentSent": "Izoh menejerga yuborildi",
+      "commentConsequence": "Izohni menejeringiz oladi. Taklif oʻzgarmaydi — izohdan keyin ham uni qabul qilish yoki rad etish mumkin.",
+      "commentRequired": "Izoh matnini yozing."
     },
     "contracts": {
       "title": "Shartnomalar",
@@ -436,6 +453,36 @@
         "remaining": "Qoldiq",
         "due": "Toʻlov muddati",
         "deal": "Loyiha"
+      },
+      "payButton": "Toʻladim",
+      "payNamed": "Toʻladim: {{number}} hisob-faktura",
+      "proofsLabel": "{{number}} hisob-faktura boʻyicha toʻlov topshiriqnomalari",
+      "proofLine": "{{name}} toʻlov topshiriqnomasi, {{date}}",
+      "proofClaimed": "Siz koʻrsatdingiz: {{amount}}",
+      "proofClaimedDate": "Siz koʻrsatdingiz: {{amount}}, toʻlangan sana {{date}}",
+      "proofPaidOn": "Toʻlangan sana {{date}}",
+      "proofRejected": "Sabab: {{reason}}",
+      "proofDialog": {
+        "title": "Toʻladim: {{number}} hisob-faktura",
+        "text": "Bankdan olingan toʻlov topshiriqnomasini biriktiring — PDF yoki rasm, 10 MB gacha. Toʻlanishi kerak: {{remaining}}.",
+        "file": "Toʻlov topshiriqnomasi",
+        "fileHint": "PDF yoki rasm, 10 MB gacha",
+        "paidOn": "Toʻlov sanasi",
+        "amount": "Toʻlov summasi, {{currency}}",
+        "amountHint": "Masalan, 1500000 yoki 1500000.50",
+        "comment": "Izoh",
+        "commentPlaceholder": "Masalan: qismlab toʻlaymiz, ikkinchi qismi oy oxirigacha",
+        "optional": "ixtiyoriy",
+        "consequence": "Menejer pul tushganini tekshirib, toʻlovni tasdiqlaydi — shunda hisob-faktura holati oʻzgaradi.",
+        "confirm": "Topshiriqnomani yuborish",
+        "sent": "{{number}} hisob-faktura boʻyicha toʻlov topshiriqnomasi menejerga yuborildi",
+        "problem": {
+          "fileMissing": "Toʻlov topshiriqnomasi faylini biriktiring.",
+          "tooLarge": "Fayl 10 MB dan katta.",
+          "badType": "PDF yoki rasm kerak.",
+          "amount": "Summa — noldan katta son, nuqtadan keyin koʻpi bilan ikki raqam.",
+          "future": "Toʻlov sanasi bugundan keyin boʻlishi mumkin emas."
+        }
       }
     },
     "acts": {
@@ -678,7 +725,9 @@
     "DOCUMENT_PENDING": "Hujjat hali tayyorlanmoqda. Bir daqiqadan soʻng urinib koʻring.",
     "CONFLICT": "Maʼlumotlar allaqachon oʻzgargan — sahifani yangilab, qayta urinib koʻring.",
     "IDEMPOTENCY_KEY_REQUIRED": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
-    "UNSUPPORTED_MEDIA_TYPE": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring."
+    "UNSUPPORTED_MEDIA_TYPE": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
+    "INVOICE_NOT_OPEN": "Hisob-faktura allaqachon toʻlangan yoki bekor qilingan — toʻlov topshiriqnomasi kerak emas. Sahifani yangilang.",
+    "TEXT_REQUIRED": "Izoh matnini yozing."
   },
   "widgets": {
     "actionRequired": {

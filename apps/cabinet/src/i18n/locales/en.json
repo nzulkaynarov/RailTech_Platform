@@ -110,6 +110,11 @@
       "in_stock": "In stock",
       "on_order": "On order",
       "expected": "Expected"
+    },
+    "proof": {
+      "pending": "Under review",
+      "confirmed": "Payment confirmed",
+      "rejected": "Rejected"
     }
   },
   "documents": {
@@ -392,7 +397,19 @@
         "telegramTo": "The code was sent to Telegram ({{to}}). Valid for {{minutes}} min.",
         "email": "The code was sent to {{to}}. Valid for {{minutes}} min."
       },
-      "resendCode": "Send the code again"
+      "resendCode": "Send the code again",
+      "comments": "Comments",
+      "commentsEmpty": "No comments yet.",
+      "commentsListLabel": "Comments on quote {{number}}",
+      "commentAuthorYou": "You",
+      "commentAuthorClient": "Your company",
+      "commentAuthorManager": "Manager",
+      "commentLabel": "Your comment",
+      "commentPlaceholder": "A question or a remark on the quote",
+      "commentSend": "Send comment",
+      "commentSent": "Comment sent to your manager",
+      "commentConsequence": "Your manager receives the comment. The quote does not change — you can still accept or decline it afterwards.",
+      "commentRequired": "Write the comment text."
     },
     "contracts": {
       "title": "Contracts",
@@ -436,6 +453,36 @@
         "remaining": "Balance",
         "due": "Due date",
         "deal": "Project"
+      },
+      "payButton": "I have paid",
+      "payNamed": "I have paid: invoice {{number}}",
+      "proofsLabel": "Payment orders for invoice {{number}}",
+      "proofLine": "Payment order {{name}} of {{date}}",
+      "proofClaimed": "You entered: {{amount}}",
+      "proofClaimedDate": "You entered: {{amount}}, paid on {{date}}",
+      "proofPaidOn": "Paid on {{date}}",
+      "proofRejected": "Reason: {{reason}}",
+      "proofDialog": {
+        "title": "I have paid: invoice {{number}}",
+        "text": "Attach the payment order from your bank — PDF or photo, up to 10 MB. Amount due: {{remaining}}.",
+        "file": "Payment order",
+        "fileHint": "PDF or image, up to 10 MB",
+        "paidOn": "Payment date",
+        "amount": "Amount paid, {{currency}}",
+        "amountHint": "For example, 1500000 or 1500000.50",
+        "comment": "Comment",
+        "commentPlaceholder": "For example: paying in instalments, the second part by the end of the month",
+        "optional": "optional",
+        "consequence": "Your manager will check the incoming payment and confirm it — then the invoice status changes.",
+        "confirm": "Send payment order",
+        "sent": "Payment order for invoice {{number}} sent to your manager",
+        "problem": {
+          "fileMissing": "Attach the payment order file.",
+          "tooLarge": "The file is larger than 10 MB.",
+          "badType": "A PDF or an image is required.",
+          "amount": "The amount must be a number above zero with at most two decimals.",
+          "future": "The payment date cannot be later than today."
+        }
       }
     },
     "acts": {
@@ -678,7 +725,9 @@
     "DOCUMENT_PENDING": "The document is still being prepared. Try again in a minute.",
     "CONFLICT": "The data has changed — reload the page and try again.",
     "IDEMPOTENCY_KEY_REQUIRED": "The server rejected the request. Reload the page and try again.",
-    "UNSUPPORTED_MEDIA_TYPE": "The server rejected the request. Reload the page and try again."
+    "UNSUPPORTED_MEDIA_TYPE": "The server rejected the request. Reload the page and try again.",
+    "INVOICE_NOT_OPEN": "The invoice is already paid or cancelled — no payment order needed. Refresh the page.",
+    "TEXT_REQUIRED": "Write the comment text."
   },
   "widgets": {
     "actionRequired": {

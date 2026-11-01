@@ -21,6 +21,8 @@ import * as fixtures from './fixtures';
  * иначе e-mail), без запроса или с другим кодом `accept` → 409 `QUOTE_CODE_INVALID`;
  * приёмка поставки — только из `delivered` (иначе 409 `DELIVERY_LINE_NOT_ACCEPTABLE`), замечание требует причину;
  * приёмка акта со сканом (`upload_id` из `/uploads`) кладёт скан в документы и в `scan_document_id`;
+ * «Я оплатил» (`POST /invoices/{id}/proofs`) — платёжка `pending` в `proofs` счёта, оплаченный или отменённый счёт → 409
+ * `INVOICE_NOT_OPEN`; комментарий к КП — только пока КП ждёт решения (иначе 409), пустой текст → 422 `TEXT_REQUIRED`;
  * КП с истёкшим сроком → 409 `QUOTE_EXPIRED`; повторное действие над закрытым объектом → 409 `*_FINALIZED`;
  * PDF документа `DOC_PREPARING_ONCE` первый раз отвечает 202 + `Retry-After`, `DOC_ALWAYS_PREPARING` — всегда 202.
  */
@@ -146,7 +148,7 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
 /** Элемент списка КП — карточка без строк и служебных полей (`deal` остаётся как есть). */
 function quoteListItem(quote: Schemas['Quote']): Schemas['QuoteListItem'] {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { lines, public_url, pdf_document_id, rejected_reason, ...item } = quote;
+  const { lines, public_url, pdf_document_id, rejected_reason, comments, ...item } = quote;
   return item;
 }
 
@@ -334,6 +336,31 @@ export const handlers = [
     ),
   ),
 
+  http.post<IdParams>(
+    `${API}/quotes/:id/comments`,
+    withSession<IdParams>(
+      async ({ db, params, request, session }) => {
+        const quote = byId(db.quotes, params.id);
+        if (!quote) return error(404, 'NOT_FOUND');
+        if (quote.status !== 'sent' && quote.status !== 'viewed') return error(409, 'QUOTE_FINALIZED');
+        if (quote.valid_until && quote.valid_until < businessToday()) return error(409, 'QUOTE_EXPIRED');
+        const { text } = await readJson<Schemas['QuoteCommentCreate']>(request);
+        if (typeof text !== 'string' || text.length > 2000) return error(422, 'VALIDATION_ERROR');
+        if (!text.trim()) return error(422, 'TEXT_REQUIRED');
+        const comment: Schemas['QuoteComment'] = {
+          id: Math.max(0, ...quote.comments.map((item) => item.id)) + 1,
+          author: 'client',
+          author_name: contactFor(session.role).name,
+          text: text.trim(),
+          created_at: new Date().toISOString(),
+        };
+        quote.comments = [...quote.comments, comment];
+        return json(comment, 201);
+      },
+      { action: true },
+    ),
+  ),
+
   // --- договоры, счета, акты ------------------------------------------------------------------
   http.get(`${API}/contracts`, withSession(({ db }) => json(db.contracts))),
   http.post<IdParams>(
@@ -352,6 +379,37 @@ export const handlers = [
     ),
   ),
   http.get(`${API}/invoices`, withSession(({ db }) => json(db.invoices))),
+  http.post<IdParams>(
+    `${API}/invoices/:id/proofs`,
+    withSession<IdParams>(
+      async ({ db, params, request }) => {
+        const invoice = byId(db.invoices, params.id);
+        if (!invoice) return error(404, 'NOT_FOUND');
+        if (invoice.status === 'paid' || invoice.status === 'cancelled') return error(409, 'INVOICE_NOT_OPEN');
+        const body = await readJson<Schemas['PaymentProofCreate']>(request);
+        const name = body.upload_id === undefined ? undefined : db.uploads.get(body.upload_id);
+        if (name === undefined) return error(422, 'UPLOAD_NOT_FOUND');
+        if (body.amount !== undefined && body.amount !== null && !/^\d+\.\d{2}$/.test(body.amount)) return error(422, 'VALIDATION_ERROR');
+        if (body.paid_on && body.paid_on > businessToday()) return error(422, 'VALIDATION_ERROR');
+        if (body.comment && body.comment.length > 500) return error(422, 'VALIDATION_ERROR');
+        const proof: Schemas['PaymentProof'] = {
+          id: Math.max(100, ...db.invoices.flatMap((item) => item.proofs.map((p) => p.id))) + 1,
+          status: 'pending',
+          source: 'cabinet',
+          file_name: name,
+          submitted_at: new Date().toISOString(),
+          paid_on: body.paid_on ?? null,
+          amount: body.amount ? { amount: body.amount, currency: invoice.total.currency } : null,
+          comment: body.comment ?? null,
+          confirmed_at: null,
+          reject_reason: null,
+        };
+        invoice.proofs = [...invoice.proofs, proof];
+        return json(proof, 201);
+      },
+      { action: true },
+    ),
+  ),
   http.get(`${API}/acts`, withSession(({ db }) => json(db.acts))),
   http.post<IdParams>(
     `${API}/acts/:id/accept`,
