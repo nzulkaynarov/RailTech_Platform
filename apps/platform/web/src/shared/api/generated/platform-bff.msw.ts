@@ -45,6 +45,7 @@ import {
   Language,
   LeadOwnerMode,
   LeadPlatformStatus,
+  LeadRequestType,
   LetterReceiptMethod,
   LetterResolutionKind,
   LetterStatus,
@@ -176,6 +177,7 @@ import type {
   KbProductList,
   KbSearchResult,
   LeadCard,
+  LeadManagerList,
   LeadNotice,
   LeadPage,
   LetterCard,
@@ -13897,6 +13899,11 @@ export const getListCrmMessagesResponseHandoffInfoMock = (
       null,
     ]),
     taken_by: faker.helpers.arrayElement([{ ...getListCrmMessagesResponsePersonRefMock() }, null]),
+    handed_by: faker.helpers.arrayElement([{ ...getListCrmMessagesResponsePersonRefMock() }, null]),
+    request_type: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LeadRequestType)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -14000,6 +14007,14 @@ export const getGetCrmConversationResponseHandoffInfoMock = (
     ]),
     taken_by: faker.helpers.arrayElement([
       { ...getGetCrmConversationResponsePersonRefMock() },
+      null,
+    ]),
+    handed_by: faker.helpers.arrayElement([
+      { ...getGetCrmConversationResponsePersonRefMock() },
+      null,
+    ]),
+    request_type: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LeadRequestType)),
       null,
     ]),
   },
@@ -14147,6 +14162,25 @@ export const getReturnCrmLeadToBotResponseMock = (
 ): ActionOk => ({
   id: faker.helpers.arrayElement([faker.number.int(), null]),
   ok: true,
+  ...overrideResponse,
+});
+
+export const getHandOverCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getListCrmLeadManagersResponseMock = (
+  overrideResponse: Partial<Extract<LeadManagerList, object>> = {},
+): LeadManagerList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  })),
   ...overrideResponse,
 });
 
@@ -18038,6 +18072,11 @@ export const getGetCrmLeadResponseHandoffInfoMock = (
       null,
     ]),
     taken_by: faker.helpers.arrayElement([{ ...getGetCrmLeadResponsePersonRefMock() }, null]),
+    handed_by: faker.helpers.arrayElement([{ ...getGetCrmLeadResponsePersonRefMock() }, null]),
+    request_type: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(LeadRequestType)),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -24911,6 +24950,52 @@ export const getReturnCrmLeadToBotMockHandler = (
   );
 };
 
+export const getHandOverCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/hand-over",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getHandOverCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCrmLeadManagersMockHandler = (
+  overrideResponse?:
+    | LeadManagerList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<LeadManagerList> | LeadManagerList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/lead-managers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmLeadManagersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListExternalChatsMockHandler = (
   overrideResponse?:
     | ExternalChatList
@@ -26803,6 +26888,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getNoteCrmLeadMockHandler(),
   getAssistCrmReplyMockHandler(),
   getReturnCrmLeadToBotMockHandler(),
+  getHandOverCrmLeadMockHandler(),
+  getListCrmLeadManagersMockHandler(),
   getListExternalChatsMockHandler(),
   getListCrmReplyTemplatesMockHandler(),
   getListCalcRequestsMockHandler(),

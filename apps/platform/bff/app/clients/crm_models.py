@@ -505,11 +505,16 @@ class Error1(StrEnum):
 
 class EscalationOut(BaseModel):
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    handed_by_user_id: Annotated[int | None, Field(title="Handed By User Id")] = None
+    handed_by_user_name: Annotated[str | None, Field(title="Handed By User Name")] = (
+        None
+    )
     id: Annotated[int, Field(title="Id")]
     priority: Annotated[str, Field(title="Priority")]
     reason_codes: Annotated[list[str], Field(title="Reason Codes")]
     reason_text: Annotated[str | None, Field(title="Reason Text")]
     recommendation: Annotated[str | None, Field(title="Recommendation")]
+    request_type: Annotated[str | None, Field(title="Request Type")] = None
     sla_due_at: Annotated[AwareDatetime | None, Field(title="Sla Due At")]
     snoozed_until: Annotated[AwareDatetime | None, Field(title="Snoozed Until")]
     status: Annotated[str, Field(title="Status")]

@@ -111,13 +111,15 @@ templates:
     restricted_fields: [totals_only]
   # P8, пилот (DECISIONS 2026-10-29 W-2; 2026-11-01 п. 1 — граница по лидам). Делопроизводитель: вся входящая
   # корреспонденция — регистрация без резолюции (`eds.inbox` — чтение, `eds.inbox.register` — полный; SPEC-v3 §3.2a п. 1);
-  # лиды — первая линия: разбор, тип, регистрация, передача (`crm.leads` — полный: передать лида нельзя без `leads:work`);
-  # клиенты и заявки — чтение («Создать заявку» и ответ клиенту — менеджер-универсал); документы — реестр и проекты (чтение).
+  # лиды — первая линия: разбор и передача менеджеру с запиской (D17G-1: `crm.leads` — чтение, `crm.leads.triage` — полный;
+  # «Забрать», ответ клиенту и «Вернуть боту» — `crm.leads: full`, у него их нет); клиенты и заявки — чтение («Создать
+  # заявку» и ответ клиенту — менеджер-универсал); документы — реестр и проекты (чтение).
   REGISTRAR:
     name: { ru: Делопроизводитель, uz: Ish yurituvchi, en: Office clerk }
     access:
       dashboard.queue: full
-      crm.leads: full
+      crm.leads: read
+      crm.leads.triage: full
       crm.clients: read
       eds.inbox: read
       eds.inbox.register: full
@@ -182,6 +184,17 @@ resources:
       crm:
         read: [leads:read, stream:read, dashboard:read, kb:read]
         full: [leads:read, leads:take, leads:work, leads:reply, leads:note, leads:assist, leads:create, stream:read, dashboard:read, kb:read, reply_templates:read]
+  # D17G-1 (DECISIONS 2026-11-01 п. 1, гейт D1-7 D17-G-1): первая линия — разобрать лида и передать менеджеру с запиской
+  # (`leads:triage`), не забирая и не отвечая клиенту. Работа с клиентом («Забрать», ответ, «Вернуть боту», «Создать заявку»)
+  # — `crm.leads: full`. Кому передать — держателям `crm.leads: full`. Миграция CRM перевела роли из шаблона
+  # «Делопроизводитель» на `crm.leads: read` + этот раздел; права остальных ролей не изменились.
+  - key: crm.leads.triage
+    module: crm
+    levels: [full]
+    label: { ru: "Клиенты · Лиды · разбор и передача менеджеру", uz: "Mijozlar · Lidlar · saralash va menejerga topshirish", en: "Clients · Leads · triage and hand over to a manager" }
+    backend:
+      crm:
+        full: [leads:read, leads:triage, stream:read, dashboard:read, kb:read]
   - key: crm.clients
     module: crm
     label: { ru: "Клиенты · Клиенты, Заявки, Создать заявку", uz: "Mijozlar · Mijozlar, arizalar, ariza yaratish", en: "Clients · Clients, requests, new request" }
@@ -349,8 +362,8 @@ menu:
     projects: [eds.projects]
     summary: [dashboard.summary]
   crm:
-    messages: [crm.leads]
-    leads: [crm.leads]
+    messages: [crm.leads, crm.leads.triage]
+    leads: [crm.leads, crm.leads.triage]
     clients: [crm.clients]
     requests: [crm.clients]
     channels: [crm.leads]
@@ -408,6 +421,8 @@ restricted_fields:
 queue:
   answer_lead: { resource: crm.leads, level: full }
   take_lead: { resource: crm.leads, level: full }
+  # D17G-1: «Разобрать лида» — первая линия: лид без менеджера или передача бота → «Передать менеджеру» с запиской.
+  triage_lead: { resource: crm.leads.triage, level: full }
   create_request: { resource: crm.clients, level: full }
   service_request: { resource: crm.clients, level: full }
   resolve_letter: { resource: eds.inbox, level: full }

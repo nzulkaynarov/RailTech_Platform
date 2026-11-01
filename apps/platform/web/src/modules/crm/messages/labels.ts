@@ -19,6 +19,7 @@ const KNOWN_REASONS = new Set([
   "attachment_received",
   "agent_unavailable",
   "stop_word",
+  "handed_over",
 ]);
 const KNOWN_CHANNELS = new Set(["telegram", "web", "email", "phone", "referral"]);
 

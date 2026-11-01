@@ -17,7 +17,8 @@
       "title": "Barcha o'tkazishlar ko'rib chiqildi",
       "text": "Mijoz inson so'ramaguncha bot o'zi javob beradi.",
       "action": "Lidlarni ochish"
-    }
+    },
+    "handedTo": "Topshirildi: {{name}}"
   },
   "sla": {
     "waiting": "{{duration}} kutmoqda",
@@ -52,7 +53,8 @@
     "attachment_received": "Fayl yubordi",
     "agent_unavailable": "Bot javob bera olmadi",
     "stop_word": "Xabarda taqiqlangan so'z",
-    "other": "Boshqa sabab"
+    "other": "Boshqa sabab",
+    "handed_over": "Ish yurituvchi topshirdi"
   },
   "channels": {
     "telegram": "Telegram",
@@ -87,7 +89,9 @@
     "companySize": "Kompaniya hajmi",
     "region": "Hudud",
     "lastMessage": "Oxirgi xabar",
-    "none": "ma'lumot yo'q"
+    "none": "ma'lumot yo'q",
+    "handedBy": "Topshirdi",
+    "requestType": "Murojaat turi"
   },
   "owner": {
     "bot": "Suhbatni bot olib boryapti",
@@ -103,7 +107,9 @@
     "returned": "Lid yana botda",
     "card": "Lid kartasi",
     "back": "Barcha suhbatlar",
-    "close": "Yopish"
+    "close": "Yopish",
+    "handOver": "Menejerga topshirish",
+    "handedOver": "Lid topshirildi: {{name}}. Mijozga hech narsa yuborilmadi."
   },
   "consequence": {
     "take": "Bot jim bo'ladi, suhbat sizga o'tadi; o'tkazish hamkasblar navbatidan chiqadi."
@@ -159,7 +165,8 @@
     "noteSaved": "Eslatma saqlandi",
     "takeFirst": "Javob berish uchun lidni oling",
     "readOnly": "Faqat ko'rish: menejerlar javob beradi",
-    "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin"
+    "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin",
+    "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan."
   },
   "card": {
     "title": "Lid kartasi",
@@ -203,6 +210,30 @@
     "VALIDATION_FAILED": "Matnni tekshiring: 1 dan 4000 belgigacha",
     "generic": "Bo'lmadi. Qayta urinib ko'ring",
     "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing",
-    "delivery_unknown": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi. «Qayta urinish» ikkinchi xabar yubormaydi"
+    "delivery_unknown": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi. «Qayta urinish» ikkinchi xabar yubormaydi",
+    "inactive_colleague": "Bu xodim lidlarni yuritmaydi — boshqasini tanlang"
+  },
+  "triageOnly": "Saralash va topshirish",
+  "requestTypes": {
+    "goods": "Tovarlar",
+    "services": "Xizmatlar",
+    "project": "Amaldagi loyiha bo'yicha",
+    "other": "Boshqa"
+  },
+  "handOver": {
+    "title": "Menejerga topshirish",
+    "manager": "Menejer",
+    "managerPlaceholder": "Kimga topshiriladi",
+    "managerRequired": "Menejerni tanlang",
+    "note": "Menejerga izoh",
+    "notePlaceholder": "Mijozga nima kerak, nima ma'lum, qachon bog'lanish kerak",
+    "noteRequired": "Izoh yozing — menejer yozishmani qayta o'qimasin",
+    "type": "Murojaat turi (ixtiyoriy)",
+    "typePlaceholder": "Ko'rsatilmagan",
+    "submit": "Topshirish",
+    "cancel": "Bekor qilish",
+    "hint": "Mijozga hech narsa yuborilmaydi. Menejer lidni «Mening vazifalarim»da izohingiz bilan ko'radi va o'zi oladi.",
+    "noManagers": "Lidlarni yurituvchi xodimlar yo'q. Administratordan «Universal menejer» rolini berishni so'rang.",
+    "managersFailed": "Menejerlar ro'yxatini yuklab bo'lmadi. Qayta urinib ko'ring"
   }
 }

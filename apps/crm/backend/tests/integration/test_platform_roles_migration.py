@@ -134,14 +134,15 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert director[0]["eds.payments"] == "read"
         assert director[0]["eds.inbox.register"] == "full"
         assert director[1] == 4
-        # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1).
+        # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1);
+        # «Делопроизводитель» — 2 (D17G-1: разбор и передача лидов вместо `crm.leads: full`).
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles "
-            "WHERE code NOT IN ('DIRECTOR', 'tpl:ACCOUNTANT')"
+            "WHERE code NOT IN ('DIRECTOR', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
         ).fetchall() == [(1,)]
         assert conn.execute(
-            "SELECT version FROM platform_roles WHERE code = 'tpl:ACCOUNTANT'"
-        ).fetchall() == [(2,)]
+            "SELECT version FROM platform_roles WHERE code IN ('tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
+        ).fetchall() == [(2,), (2,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -331,3 +332,89 @@ def test_pilot_roles_appear_and_the_resolution_holders_keep_registering(
     with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
         codes = {r[0] for r in conn.execute("SELECT code FROM platform_roles").fetchall()}
         assert {"tpl:REGISTRAR", "tpl:MANAGER_ALL"} <= codes
+
+
+def test_registrar_template_triages_leads_and_downgrade_returns_full(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """D17G-1: «Делопроизводитель» из шаблона — `crm.leads: read` + `crm.leads.triage: full`,
+    признак базовой роли — `viewer`; «Менеджер-универсал» и роль, которую администратор уже
+    поменял, не трогаются; у передачи есть «кто передал» и «тип обращения»; downgrade — обратно."""
+    before = "bf63b9342895"
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        # TRUNCATE users каскадом чистит и роли; шаблоны пилота вернёт миграция P8.
+        conn.execute("TRUNCATE users, audit_log, procrastinate_jobs RESTART IDENTITY CASCADE")
+    command.downgrade(alembic_config, "ac71231f330f")
+    command.upgrade(alembic_config, before)
+
+    def role(conn: psycopg.Connection, code: str) -> tuple[dict[str, str], int]:
+        row = conn.execute(
+            "SELECT access, version FROM platform_roles WHERE code = %s", (code,)
+        ).fetchone()
+        assert row is not None
+        return dict(row[0]), int(row[1])
+
+    def base_role(conn: psycopg.Connection, user_id: int) -> list[str]:
+        rows = conn.execute(
+            "SELECT r.name FROM user_roles ur JOIN roles r ON r.id = ur.role_id "
+            "WHERE ur.user_id = %s ORDER BY r.name",
+            (user_id,),
+        ).fetchall()
+        return [r[0] for r in rows]
+
+    def give(conn: psycopg.Connection, user_id: int, code: str) -> None:
+        conn.execute(
+            "INSERT INTO user_platform_roles (user_id, role_id) "
+            "SELECT %s, id FROM platform_roles WHERE code = %s",
+            (user_id, code),
+        )
+
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        clerk = _seed_user(conn, "clerk@x.uz", "manager")
+        give(conn, clerk, "tpl:REGISTRAR")
+        seller = _seed_user(conn, "seller@x.uz", "manager")
+        give(conn, seller, "tpl:MANAGER_ALL")
+        registrar, version = role(conn, "tpl:REGISTRAR")
+        assert registrar["crm.leads"] == "full"
+        manager_all = role(conn, "tpl:MANAGER_ALL")
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        after, after_version = role(conn, "tpl:REGISTRAR")
+        assert after == {**registrar, "crm.leads": "read", "crm.leads.triage": "full"}
+        assert after_version == version + 1
+        assert role(conn, "tpl:MANAGER_ALL") == manager_all
+        assert base_role(conn, clerk) == ["viewer"]
+        assert base_role(conn, seller) == ["manager"]
+        columns = {
+            r[0]
+            for r in conn.execute(
+                "SELECT column_name FROM information_schema.columns "
+                "WHERE table_name = 'escalations'"
+            ).fetchall()
+        }
+        assert {"handed_by_user_id", "request_type"} <= columns
+
+    command.upgrade(alembic_config, "head")  # повтор — без изменений
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        assert role(conn, "tpl:REGISTRAR") == (after, after_version)
+
+    command.downgrade(alembic_config, before)
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        back, back_version = role(conn, "tpl:REGISTRAR")
+        assert back == registrar
+        assert back_version == after_version + 1
+        assert base_role(conn, clerk) == ["manager"]
+
+    # Роль, которую администратор уже перевёл на чтение лидов, миграция не трогает.
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute(
+            'UPDATE platform_roles SET access = access || \'{"crm.leads": "read"}\'::jsonb '
+            "WHERE code = 'tpl:REGISTRAR'"
+        )
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        edited, _ = role(conn, "tpl:REGISTRAR")
+        assert edited["crm.leads"] == "read"
+        assert "crm.leads.triage" not in edited

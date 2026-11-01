@@ -231,6 +231,14 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 CRM `GET /chats`, BFF `GET /chats/external`; лента и вложения — прежние маршруты (`getCrmThread`, `downloadCrmAttachment`),
 BFF пускает `crm.leads` или `chats.external` от чтения и объект не проверяет сам.
 
+**Первая линия по лидам (D17G-1; DECISIONS 2026-11-01 п. 1, гейт D1-7).** Раздел `crm.leads.triage` (только `full`) даёт CRM
+`leads:triage` (+ `leads:read`, `stream:read`, `dashboard:read`, `kb:read`): разобрать лида и «Передать менеджеру» с запиской
+(`POST /leads/{id}/actions/hand_over`, BFF `POST /crm/messages/{lead}/hand-over`), без «Забрать», ответа клиенту и «Вернуть
+боту» (`crm.leads: full`). Кому передать — держатели `crm.leads: full` (`GET /leads/handover_targets`). Передача — та же
+эскалация, что у бота: причина `handed_over`, записка в `reason_text`, `handed_by_user_id`, `request_type`; лид получает
+ответственного, забрать её может только он. Вид «Моей очереди» первой линии — `triage_lead` («Разобрать лида»); менеджеру —
+`take_lead` с заголовком «Новый лид от делопроизводителя».
+
 Правила: словарь SPEC-v3 §2 — в именах полей и значениях; номера объектов — бизнес-номера; ошибки — `Error` с `source`;
 агрегирующие ответы несут `sources`. Разрывы бэкендов, нужные экранам, меняют контракты CRM и ERP в том же PR, что и код
 (`docs/architecture/integration-map.md` §7).

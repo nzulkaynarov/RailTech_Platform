@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode, may_close_locally
+from app.domain.business_hours import add_business_minutes
 from app.domain.errors import (
     ConflictError,
     ForbiddenError,
@@ -24,6 +25,7 @@ from app.domain.errors import (
     Reason,
     ValidationFailedError,
 )
+from app.domain.escalation import HANDED_OVER, HANDOFF_FROM
 from app.domain.lead_access import may_acknowledge
 from app.domain.stage_machine import stage_before_handoff
 from app.domain.stages import OwnerMode, Stage, TransitionSource
@@ -37,8 +39,9 @@ from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals, lead_parts, lead_snooze, stages
-from app.services.escalation import OPEN_STATUSES
+from app.services import deals, lead_parts, lead_snooze, staff_notifications, stages
+from app.services import team as team_service
+from app.services.escalation import OPEN_STATUSES, open_escalation
 from app.services.lead_messenger import DeliveryError, LeadMessenger
 from app.services.settings import SettingsService
 
@@ -99,6 +102,15 @@ class LeadService:
                     assigned_user_id=lead.assigned_user_id,
                     assigned_user_name=await lead_parts.user_name(session, lead.assigned_user_id),
                 )
+            escalation = await _active_escalation(session, lead_id)
+            if _handed_to_other(lead, escalation, who):
+                # Передача первой линии адресована ответственному (D17G-1): забирает только он.
+                raise ConflictError(
+                    "lead is handed over to a colleague",
+                    reason=Reason.LEAD_TAKEN,
+                    assigned_user_id=lead.assigned_user_id,
+                    assigned_user_name=await lead_parts.user_name(session, lead.assigned_user_id),
+                )
             before = lead_parts.snapshot(lead)
             # Из «Отказа» — снова в работу (ADR-0015); клиента и «Сделку» берут без смены стадии.
             if lead.stage not in (Stage.IN_PROGRESS, Stage.WON, Stage.CUSTOMER):
@@ -106,7 +118,6 @@ class LeadService:
             lead.owner_mode = OwnerMode.HUMAN.value
             lead.assigned_user_id = who.user_id
             lead.snoozed_until = None
-            escalation = await _active_escalation(session, lead_id)
             if escalation is not None:
                 escalation.status = "taken"
                 escalation.taken_by_user_id = who.user_id
@@ -148,6 +159,105 @@ class LeadService:
         text = cfg.texts.returned_to_bot.get(language, company=cfg.company.name)
         await self._messenger.send(lead_id, text, {"notice": "returned_to_bot"})
         await self._notify(changed)
+
+    async def hand_over(
+        self,
+        who: Principal,
+        lead_id: int,
+        user_id: int,
+        note: str,
+        request_type: str | None = None,
+    ) -> None:
+        """«Передать менеджеру» первой линией (D17G-1; research-standards §2.2 — с запиской).
+
+        Механизм — передача бота (эскалация): открытая передача дополняется причиной `handed_over`
+        и запиской, нет её — открывается новая со сроком реакции; лид получает ответственного, бот
+        на паузе до «Забрать». Забрать её может только ответственный. Клиенту ничего не уходит;
+        менеджеру — колокольчик и личное сообщение, записка — ещё и заметкой команды в ленте.
+        """
+        text = note.strip()
+        if not text:
+            raise ValidationFailedError("note is empty", field="note")
+        cfg = await self._settings.get()
+        now = datetime.now(UTC)
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            if (
+                lead.owner_mode == OwnerMode.HUMAN
+                and lead.assigned_user_id is not None
+                and not who.is_admin
+            ):
+                raise ConflictError(
+                    "lead is already taken",
+                    reason=Reason.LEAD_TAKEN,
+                    assigned_user_id=lead.assigned_user_id,
+                    assigned_user_name=await lead_parts.user_name(session, lead.assigned_user_id),
+                )
+            if not await team_service.works_leads(session, user_id):
+                raise ValidationFailedError(
+                    "choose an active manager",
+                    reason=Reason.INACTIVE_COLLEAGUE,
+                    field="user_id",
+                )
+            before = lead_parts.snapshot(lead)
+            escalation = await open_escalation(session, lead_id)
+            hours = cfg.business_hours.domain()
+            due = add_business_minutes(now, cfg.escalation.sla_minutes, hours)
+            if escalation is None:
+                escalation = Escalation(
+                    lead_id=lead_id,
+                    reason_codes=[HANDED_OVER],
+                    priority="warm",
+                    status="open",
+                    sla_due_at=due,
+                )
+                session.add(escalation)
+            else:
+                codes = list(escalation.reason_codes or [])
+                if HANDED_OVER not in codes:
+                    escalation.reason_codes = [*codes, HANDED_OVER]
+                if escalation.priority == "info":
+                    escalation.priority = "warm"
+                # Новый адресат — новый срок и напоминание; из «Отложить» — снова открыта.
+                escalation.status, escalation.snoozed_until = "open", None
+                escalation.sla_due_at, escalation.sla_notified_at = due, None
+            escalation.reason_text = text
+            escalation.handed_by_user_id = who.user_id
+            escalation.request_type = request_type
+            if Stage(lead.stage) in HANDOFF_FROM:
+                await stages.transition(
+                    session,
+                    lead,
+                    Stage.HANDOFF,
+                    TransitionSource.TRIGGER,
+                    reason=HANDED_OVER,
+                    actor_user_id=who.user_id,
+                )
+            # Бот молчит, пока менеджер не заберёт (как у передачи бота); клиенту текста нет.
+            lead.owner_mode = OwnerMode.PAUSED.value
+            lead.assigned_user_id = user_id
+            lead.snoozed_until = None
+            lead_parts.add_note(session, lead, who, text, visible_to_bot=False)
+            await session.flush()
+            number = f"L-{lead_id:04d}"
+            staff_notifications.add_in(
+                session,
+                [user_id],
+                kind="lead_handed_over",
+                tab="decisions",
+                title=f"Новый лид от делопроизводителя {number}",
+                subtitle=text,
+                object_kind="lead",
+                object_id=str(lead_id),
+                object_number=number,
+            )
+            changed = await self._finish(session, who, lead, "lead.hand_over", before, escalation)
+        await self._notify(changed, reopened=True)
+        if self._on_assigned is not None:
+            try:
+                await self._on_assigned(lead_id, user_id)
+            except Exception as exc:  # noqa: BLE001 — очередь недоступна; передача уже сохранена
+                logger.warning("lead_hand_over_notify_failed", lead_id=lead_id, error=repr(exc))
 
     async def new_deal(self, who: Principal, lead_id: int) -> None:
         """Повторная продажа клиенту: customer → in_progress, ведёт тот, кто открыл (ADR-0015)."""
@@ -423,6 +533,13 @@ async def _lead(session: AsyncSession, lead_id: int) -> Lead:
     if lead is None or lead.erased_at is not None:
         raise NotFoundError("lead not found")
     return lead
+
+
+def _handed_to_other(lead: Lead, escalation: Escalation | None, who: Principal) -> bool:
+    """Передача первой линии другому сотруднику (D17G-1): «Забрать» — только ответственному."""
+    if who.is_admin or escalation is None or lead.assigned_user_id in (None, who.user_id):
+        return False
+    return escalation.status in OPEN_STATUSES and HANDED_OVER in (escalation.reason_codes or [])
 
 
 def _require_owner(lead: Lead, who: Principal) -> None:

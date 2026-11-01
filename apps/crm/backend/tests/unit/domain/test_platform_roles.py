@@ -211,6 +211,8 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("dashboard.summary", "full"): ({"dashboard:read", "spend:read"}, {"data.export"}),
     ("crm.leads", "read"): (LEADS_READ, set()),
     ("crm.leads", "full"): (LEADS_FULL, set()),
+    # D17G-1: первая линия — разобрать и передать менеджеру, без «Забрать» и ответа клиенту
+    ("crm.leads.triage", "full"): (LEADS_READ | {"leads:triage"}, set()),
     ("crm.clients", "read"): (CLIENTS_READ, set()),
     # quote.send — отправка одобренного КП клиенту (C1-G-4, решение архитектора 2026-10-26)
     ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage", "quote.send"}),
@@ -374,7 +376,8 @@ ROLE_BASE = {
     "ENGINEER": "viewer",
     "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
-    "REGISTRAR": "manager",  # `crm.leads: full` — первая линия по лидам
+    # D17G-1: `crm.leads` — чтение; лидов не ведёт, ему их не передают (передаёт он)
+    "REGISTRAR": "viewer",
     "MANAGER_ALL": "manager",
 }
 
@@ -408,9 +411,11 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
     # D2-4: «Счета и оплаты» тоже чтение — оплату подтверждает бухгалтер.
     read_only = {"admin", "crm.leads", "chats.external", "eds.payments"}
+    # D17G-1: разбор и передачу лидов (первая линия) директор не ведёт — раздела у него нет.
+    hidden = {"crm.leads.triage"}
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
-        k: "full" for k in generated.RESOURCE_KEYS if k not in read_only
+        k: "full" for k in generated.RESOURCE_KEYS if k not in read_only | hidden
     }
     assert rows["DIRECTOR"]["restricted_fields"] == ["cost_margin", "supplier_prices"]
     assert rows["ADMIN"]["is_system"] is True

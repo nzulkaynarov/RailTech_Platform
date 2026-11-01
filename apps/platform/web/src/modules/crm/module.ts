@@ -8,14 +8,15 @@ export const crm: ModuleConfig = {
     {
       key: "messages",
       path: "/crm/messages",
-      access: { resource: "crm.leads" },
+      // Первая линия (`crm.leads.triage`, D17G-1) — разбор и «Передать менеджеру»
+      access: { anyOf: ["crm.leads", "crm.leads.triage"] },
       actionTo: "/crm/leads",
     },
     {
       key: "leads",
       path: "/crm/leads",
       detail: "/crm/leads/:id",
-      access: { resource: "crm.leads" },
+      access: { anyOf: ["crm.leads", "crm.leads.triage"] },
       defaults: { panelOpen: false },
     },
     {

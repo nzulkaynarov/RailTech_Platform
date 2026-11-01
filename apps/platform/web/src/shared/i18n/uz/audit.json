@@ -179,7 +179,8 @@
       "create_web": "Saytdan so'rov",
       "web_request": "Saytdan takroriy so'rov",
       "merge": "Lid kartochkalarini birlashtirdi",
-      "updated": "Lidni o'zgartirdi"
+      "updated": "Lidni o'zgartirdi",
+      "hand_over": "Lidni izoh bilan menejerga topshirdi"
     },
     "deal": {
       "create": "Bitim yaratdi",

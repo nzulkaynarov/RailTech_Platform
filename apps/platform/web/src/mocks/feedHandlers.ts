@@ -18,6 +18,7 @@ import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./tickets
 import { stockQueueItems } from "./erpStock";
 import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
 import { coveredQueueItems } from "./profileStore";
+import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -156,13 +157,19 @@ function notificationsFor(roles: readonly MockRole[]): Notification[] {
  * «Мои задачи» — число в меню совпадает с числом строк (U1, D2-8).
  */
 function ownQueue(view: readonly MockRole[]): QueueItem[] {
+  // D17G-1: строки лидов из моков «Ждут ответа» (разобрать, переданный лид) вытесняют демо-строки тех же лидов
+  const handOver = handOverQueueItems(view, sessionUserId());
+  const handNumbers = new Set(handOver.map((i) => i.object.number));
   return [
-    ...queueForView(view),
+    ...queueForView(view).filter(
+      (i) => !(i.kind.endsWith("_lead") && handNumbers.has(i.object.number)),
+    ),
     ...ticketQueueItems(view), // обращения живут в CRM, как и лиды
     ...stockQueueItems(view), // просроченные заказы поставщикам (ERP, D2-2)
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
     ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
+    ...handOver, // D17G-1: разобрать лида, переданный лид
   ].filter((i) =>
     i.kind.endsWith("_lead") || i.kind === "ticket"
       ? !crmDown()
@@ -176,6 +183,11 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
  * Моки Dashboard, уведомлений и поиска (PLT-14): данные зависят от роли сессии, чтобы сценарии и скриншоты не плавали.
  * Ответы совпадают по форме с BFF (`platform-bff.yaml`); недоступный источник тесты имитируют через `server.use`.
  */
+function sessionUserId(): string | undefined {
+  const session = readSession();
+  return session ? sessionRoles(session)?.user.id : undefined;
+}
+
 export const feedHandlers = [
   http.get("*/queue/cards", ({ request }) => {
     const roles = viewRoles(new URL(request.url).searchParams.get("role"));
@@ -269,7 +281,13 @@ export const feedHandlers = [
     // Лента CRM (W15-H7): ответы на обращения, привязка Telegram; не зависит от недоступности ERP.
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
-    const crm = userId ? [...crmNotificationsOf(userId), ...letterNotificationsOf(userId)] : [];
+    const crm = userId
+      ? [
+          ...crmNotificationsOf(userId),
+          ...letterNotificationsOf(userId),
+          ...handOverNotificationsOf(userId),
+        ]
+      : [];
     const all = [...mine, ...crm].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const items = all.filter((n) => tab === "all" || n.tab === tab);
     return HttpResponse.json({

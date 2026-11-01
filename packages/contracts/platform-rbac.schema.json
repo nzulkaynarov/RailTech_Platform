@@ -82,6 +82,7 @@
         "leads:note",
         "leads:assist",
         "leads:create",
+        "leads:triage",
         "stream:read",
         "dashboard:read",
         "clients:read",
@@ -143,6 +144,7 @@
       "enum": [
         "answer_lead",
         "take_lead",
+        "triage_lead",
         "create_request",
         "service_request",
         "resolve_letter",

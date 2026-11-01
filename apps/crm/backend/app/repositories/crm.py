@@ -1,6 +1,6 @@
 """Чтение данных для CRM: список лидов с фильтрами, карточка, переписка, входящие."""
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -99,9 +99,13 @@ async def active_escalations(
     return {e.lead_id: e for e in (await session.scalars(stmt)).all()}
 
 
-async def user_names(session: AsyncSession, leads: Sequence[Lead]) -> dict[int, str]:
-    """Имена владельцев лидов: менеджеру и наблюдателю `/users` недоступен, а «кто ведёт» нужен."""
+async def user_names(
+    session: AsyncSession, leads: Sequence[Lead], extra: Iterable[int | None] = ()
+) -> dict[int, str]:
+    """Имена владельцев лидов: менеджеру и наблюдателю `/users` недоступен, а «кто ведёт» нужен.
+    `extra` — ещё сотрудники (кто передал лида первой линией, D17G-1)."""
     ids = {lead.assigned_user_id for lead in leads if lead.assigned_user_id is not None}
+    ids |= {user_id for user_id in extra if user_id is not None}
     if not ids:
         return {}
     rows = await session.execute(select(User.id, User.full_name).where(User.id.in_(ids)))

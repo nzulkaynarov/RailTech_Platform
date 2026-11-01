@@ -88,7 +88,7 @@ class Snapshot:
 
 # Виды работы по лидам (секция `queue` каталога): их даёт раздел CRM-лидов; без него BFF не зовёт
 # CRM `/inbox` (у сотрудника нет прав CRM на лиды — был бы 403).
-LEAD_KINDS = ("answer_lead", "take_lead")
+LEAD_KINDS = ("answer_lead", "take_lead", "triage_lead")
 
 
 def wants_inbox(view: View) -> bool:

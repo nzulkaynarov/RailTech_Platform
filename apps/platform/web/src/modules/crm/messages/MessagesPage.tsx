@@ -24,12 +24,15 @@ const LEAD = /^L-\d{4,}$/;
  * Клиенты · Ждут ответа (SPEC-v3 §7.2 «Все сообщения», UX-оценка P0-5): передачи от бота с запиской и таймером SLA,
  * «Забрать», лента диалога и ответ «От себя / Заметка команде». Основное окно — список (≈280 px) и диалог, боковое — карточка
  * лида; на 390 px — список, затем диалог на весь экран. Живые обновления — подсказка `messages` потока BFF (без опроса;
- * опрос — страховка, `usePollQuery`). Директор (`crm.leads` — чтение) видит всё без «Забрать» и ответа.
+ * опрос — страховка, `usePollQuery`). Директор (`crm.leads` — чтение) видит всё без «Забрать» и ответа; делопроизводитель
+ * (`crm.leads.triage`, D17G-1) — с «Передать менеджеру» и пояснением «Ответ клиенту — менеджер».
  */
 export function MessagesPage() {
   const { t } = useTranslation(["messages", "modules"]);
   const { me } = useAuth();
   const canReply = canEdit(me, "crm.leads");
+  // Первая линия (D17G-1): разбирает и передаёт менеджеру, клиенту не отвечает.
+  const canTriage = !canReply && canEdit(me, "crm.leads.triage");
   const { mobile } = useViewport();
   const [params] = useSearchParams();
   const raw = params.get("lead")?.toUpperCase() ?? null;
@@ -77,7 +80,14 @@ export function MessagesPage() {
         {showList ? <InboxList items={items} selected={lead} canReply={canReply} /> : null}
         {showDialog ? (
           lead ? (
-            <Dialog key={lead} lead={lead} item={item} canReply={canReply} mobile={mobile} />
+            <Dialog
+              key={lead}
+              lead={lead}
+              item={item}
+              canReply={canReply}
+              canTriage={canTriage}
+              mobile={mobile}
+            />
           ) : (
             <section className="pf-msg-dialog">
               <EmptyState
@@ -103,7 +113,7 @@ export function MessagesPage() {
               <StatusTag tone="default">
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <LockIcon size={12} />
-                  {t("messages:viewOnly")}
+                  {t(canTriage ? "messages:triageOnly" : "messages:viewOnly")}
                 </span>
               </StatusTag>
             )

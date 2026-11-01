@@ -20,6 +20,9 @@ from app.domain.triggers import (
 )
 
 HANDOFF_FROM: Final = frozenset({Stage.NEW, Stage.ENGAGED, Stage.QUALIFIED, Stage.UNRESPONSIVE})
+# Причина передачи «Передать менеджеру» первой линией (D17G-1): не триггер бота — её ставит
+# сотрудник; передача адресована ответственному лида, забрать её может только он.
+HANDED_OVER: Final = "handed_over"
 
 ChannelAction = Literal["post", "edit", "none"]
 LeadText = Literal["handoff", "off_hours"]

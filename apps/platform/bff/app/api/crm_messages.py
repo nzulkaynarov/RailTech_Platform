@@ -29,7 +29,7 @@ from starlette.types import Send
 
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
-from app.crm_messages_view import card, inbox_items, team_note, thread_message
+from app.crm_messages_view import card, inbox_items, person, team_note, thread_message
 from app.deps import Authed, require, require_any
 from app.errors import PlatformError
 from app.feeds.numbers import lead_id_of, lead_number
@@ -39,6 +39,8 @@ from app.schemas_crm_messages import (
     AssistSuggestion,
     ConversationCard,
     ConversationThread,
+    HandOverIn,
+    LeadManagerList,
     MessageInbox,
     ReplyIn,
     ReturnToBotIn,
@@ -51,12 +53,17 @@ from app.schemas_kb import CreatedId
 router = APIRouter(tags=["messages"])
 
 API = "/api/v1"
-Reader = Annotated[Authed, Depends(require("crm.leads", "read"))]
+# Чтение очереди и карточки — реестр лидов или первая линия (`crm.leads.triage`, D17G-1).
+Reader = Annotated[
+    Authed, Depends(require_any(("crm.leads", "read"), ("crm.leads.triage", "full")))
+]
 # Переписка диалога (B-D18-1): реестр лидов или «Чаты · С клиентами»; объект проверяет CRM.
 DialogReader = Annotated[
     Authed, Depends(require_any(("crm.leads", "read"), ("chats.external", "read")))
 ]
 Worker = Annotated[Authed, Depends(require("crm.leads", "full"))]
+# «Передать менеджеру» с запиской — первая линия (D17G-1, DECISIONS 2026-11-01 п. 1).
+Triager = Annotated[Authed, Depends(require("crm.leads.triage", "full"))]
 LeadParam = Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")]
 
 
@@ -276,6 +283,33 @@ async def return_to_bot(
         body={"note": body.note if body else None},
     )
     return ActionOk(id=None, ok=True)
+
+
+@router.post(
+    "/crm/messages/{lead}/hand-over", response_model=ActionOk, operation_id="handOverCrmLead"
+)
+async def hand_over(lead: LeadParam, body: HandOverIn, authed: Triager) -> ActionOk:
+    """Передать менеджеру с запиской: лид у ответственного, клиенту ничего не уходит (D17G-1)."""
+    await _Crm(authed).json(
+        "POST",
+        f"{API}/leads/{_lead_id(lead)}/actions/hand_over",
+        body={
+            "user_id": int(body.user_id),
+            "note": body.note,
+            "request_type": body.request_type,
+        },
+    )
+    return ActionOk(id=None, ok=True)
+
+
+@router.get(
+    "/crm/lead-managers", response_model=LeadManagerList, operation_id="listCrmLeadManagers"
+)
+async def lead_managers(authed: Triager) -> LeadManagerList:
+    """Кому передать лида: держатели `crm.leads: full` (CRM решает, кто это)."""
+    rows = await CrmProxy(authed.call).get_list(crm.TeamMember, f"{API}/leads/handover_targets")
+    items = [person(row.id, {row.id: row.full_name}) for row in rows]
+    return LeadManagerList(items=[item for item in items if item is not None])
 
 
 @router.get(

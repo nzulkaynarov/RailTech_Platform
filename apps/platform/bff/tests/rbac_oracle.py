@@ -25,7 +25,9 @@ RANK: Final = {"hidden": 0, "read": 1, "full": 2}
 MATRIX: Final[dict[str, str]] = {
     "dashboard.queue": "FFFFFFFF",
     "dashboard.summary": "HFHHHRHH",
-    "crm.leads": "HRFHHHFF",
+    # D17G-1: делопроизводитель — лиды только чтение + разбор и передача (`crm.leads.triage`).
+    "crm.leads": "HRFHHHRF",
+    "crm.leads.triage": "HHHHHHFH",
     "crm.clients": "HFFRRRRF",
     "eds.inbox": "HFRHHRRR",
     # P8: регистрация входящих отдельно от резолюции — директор (системная) и делопроизводитель.

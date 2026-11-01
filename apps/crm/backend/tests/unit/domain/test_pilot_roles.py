@@ -17,7 +17,8 @@ PILOT = ("ADMIN", "DIRECTOR", "REGISTRAR", "MANAGER_ALL")
 SECTIONS: dict[str, dict[str, str]] = {
     "REGISTRAR": {
         "dashboard.queue": "full",
-        "crm.leads": "full",
+        "crm.leads": "read",
+        "crm.leads.triage": "full",
         "crm.clients": "read",
         "eds.inbox": "read",
         "eds.inbox.register": "full",
@@ -46,8 +47,13 @@ SECTIONS: dict[str, dict[str, str]] = {
 
 # Действие -> право бэкенда (CRM `ресурс:действие`, ERP или EDS код) и роли, которым оно положено.
 ACTIONS: dict[str, tuple[str, set[str]]] = {
-    "забрать лида": ("crm:leads:take", {"REGISTRAR", "MANAGER_ALL"}),
-    "передать лида": ("crm:leads:work", {"REGISTRAR", "MANAGER_ALL"}),
+    # D17G-1 (DECISIONS 2026-11-01 п. 1): делопроизводитель — разбор и передача; «Забрать», ответ
+    # клиенту, «Вернуть боту» и «Передать коллеге» — менеджер-универсал.
+    "забрать лида": ("crm:leads:take", {"MANAGER_ALL"}),
+    "вести лида (вернуть боту, передать коллеге)": ("crm:leads:work", {"MANAGER_ALL"}),
+    "ответить лиду": ("crm:leads:reply", {"MANAGER_ALL"}),
+    "разобрать и передать менеджеру": ("crm:leads:triage", {"REGISTRAR"}),
+    "читать лидов": ("crm:leads:read", {"REGISTRAR", "MANAGER_ALL", "DIRECTOR"}),
     "ответить клиенту в переписке": ("crm:chats:reply", {"MANAGER_ALL"}),
     "создать заявку": ("erp:deal.manage", {"MANAGER_ALL", "DIRECTOR"}),
     "отправить КП клиенту": ("erp:quote.send", {"MANAGER_ALL", "DIRECTOR"}),
@@ -105,6 +111,20 @@ def test_registrar_registers_but_never_resolves() -> None:
     rights = _rights("REGISTRAR")
     assert "eds:letters.register" in rights
     assert not rights & {"eds:letters.resolve", "erp:deal.assign", "erp:deal.manage"}
+
+
+def test_registrar_hands_leads_over_but_never_answers_the_client() -> None:
+    """D17G-1: первая линия не забирает лида и не пишет клиенту — ни через реестр, ни через чаты."""
+    rights = _rights("REGISTRAR")
+    assert "crm:leads:triage" in rights
+    assert not rights & {
+        "crm:leads:take",
+        "crm:leads:work",
+        "crm:leads:reply",
+        "crm:leads:assist",
+        "crm:chats:reply",
+        "crm:chats:assist",
+    }
 
 
 def test_the_all_round_manager_holds_both_calc_visas_and_the_accountant_work() -> None:

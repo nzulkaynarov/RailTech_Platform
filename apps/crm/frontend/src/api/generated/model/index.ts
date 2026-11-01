@@ -161,6 +161,8 @@ export * from "./getDashboardParams";
 export * from "./getSpendParams";
 export * from "./handoffFacts";
 export * from "./handoffNote";
+export * from "./handOver";
+export * from "./handOverRequestType";
 export * from "./healthResponse";
 export * from "./identityOut";
 export * from "./inboxParams";

@@ -162,4 +162,5 @@ async def test_admin_and_director_reads_like_a_director_but_does_not_work_the_le
         "note": False,
         "assist": False,
         "create": False,
+        "triage": False,  # D17G-1: разбор и передача — первая линия, не директор
     }

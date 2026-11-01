@@ -200,6 +200,14 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           hint: "Клиенты · Ждут ответа",
           path: "/crm/messages",
         },
+        // D17G-1: первой линии — вместо «Лиды без ответа» и «Лиды без менеджера» (у менеджера отсекает `cardAllowed`)
+        {
+          key: "leads_to_triage",
+          label: "Лиды разобрать",
+          count: 3,
+          hint: "Клиенты · Ждут ответа · передать менеджеру",
+          path: "/crm/messages",
+        },
         { ...PROJECTS_CARD, hint: "Документы · Проекты: договоры и акты" },
       ];
     case "ADMIN":
@@ -240,6 +248,7 @@ export function queueForView(view: readonly MockRole[], now = Date.now()): Queue
 const CARD_NEEDS: Record<string, QueueItem["kind"] | ResourceKey> = {
   leads_without_answer: "answer_lead",
   leads_to_take: "take_lead",
+  leads_to_triage: "triage_lead",
   letters_without_resolution: "resolve_letter",
   quotes_to_approve: "approve_quote",
   memos_to_approve: "approve_memo",

@@ -72,6 +72,8 @@ function handoff(base: number, over: Partial<HandoffInfo>): HandoffInfo {
     sla_due_at: new Date(base + 3 * MINUTE).toISOString(),
     snoozed_until: null,
     taken_by: null,
+    handed_by: null,
+    request_type: null,
     ...over,
   };
 }

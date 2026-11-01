@@ -69,6 +69,7 @@ def test_permissions_payload_shape() -> None:
         "note": False,
         "assist": False,
         "create": False,
+        "triage": False,
     }
 
 

@@ -4,7 +4,8 @@
 
 Виды работы — секция `queue` каталога (`platform-rbac.yaml`): вид попадает в очередь, если у ролей
 «вида» есть его раздел с нужным уровнем (ADR-0012 п. 6, названия ролей не используются).
-Источники сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`); одобрение КП — ERP
+Источники сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`, `triage_lead` — первая линия,
+D17G-1); одобрение КП — ERP
 `my-approval-queue` (`approve_quote`); письма без резолюции (`resolve_letter`) и служебки,
 заявления, отчёты на моём шаге маршрута (`approve_memo`, `pay_memo`) — EDS по токену `aud=eds`
 (D1-6): что вернул EDS, то и строки; работа ERP — расчёт, счета и платёжки, договор и акт (D2-8,
@@ -71,6 +72,13 @@ from app.rbac import View
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
 MAX_CARDS = 4
 _ACTIVE_STAGES = frozenset({"CONTRACT_SIGNED", "CLOSED_WON"})
+# Причина передачи «Передать менеджеру» первой линией (CRM `handed_over`, D17G-1).
+HANDED_OVER = "handed_over"
+_LEAD_ACTION: dict[QueueItemKind, str] = {
+    "take_lead": "Взять в работу лида",
+    "answer_lead": "Ответить лиду",
+    "triage_lead": "Разобрать лида",
+}
 
 
 @dataclass
@@ -98,18 +106,24 @@ def _lead_row(
     why: str | None,
     due_at: datetime | None,
     now: datetime,
+    handed_by: str | None = None,
 ) -> Row:
     lead_id = int(lead["id"])
     number = lead_number(lead_id)
     name = str(lead.get("display_name") or number)
     waiting = parse_dt(lead.get("last_lead_msg_at")) or parse_dt(lead.get("created_at"))
-    action = "Взять в работу лида" if kind == "take_lead" else "Ответить лиду"
+    action = _LEAD_ACTION.get(kind, "Ответить лиду")
+    title = f"{action} {number}"
+    if handed_by is not None:
+        # D17G-1: передача первой линии — строка с запиской делопроизводителя и его именем.
+        title = f"Новый лид от делопроизводителя {number}"
+        waiting = parse_dt((lead.get("escalation") or {}).get("created_at")) or waiting
     item = QueueItem(
         id=f"lead:{lead_id}:{kind}",
         role_id=role_id,
         kind=kind,
-        title=f"{action} {number}",
-        subtitle=join(name, short(why or lead.get("need_summary")), ago(waiting, now)),
+        title=title,
+        subtitle=join(name, short(why or lead.get("need_summary")), handed_by, ago(waiting, now)),
         due_label=due_label(due_at, now, default="today"),
         due_at=due_at,
         object=lead_ref(lead_id, name, conversation=True),
@@ -117,10 +131,24 @@ def _lead_row(
     return Row(item, waiting)
 
 
+def _handed_over(lead: dict[str, Any]) -> bool:
+    """Передача первой линии (D17G-1): адресована ответственному лида, другим не показывается."""
+    escalation = lead.get("escalation") or {}
+    reasons = escalation.get("reason_codes") or []
+    return HANDED_OVER in reasons and lead.get("assigned_user_id") is not None
+
+
+def _handed_by(lead: dict[str, Any]) -> str:
+    escalation = lead.get("escalation") or {}
+    name = escalation.get("handed_by_user_name")
+    return f"передал(а) {name}" if isinstance(name, str) and name else "передал делопроизводитель"
+
+
 # TODO(CRM-08): `/inbox` «мои» на стороне CRM; пока BFF отбирает чужие передачи и отложенные сам.
 def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
-    """Лиды, по которым ждут именно этого менеджера: передачи бота, ответ клиенту, свободные
-    лиды."""
+    """Лиды, по которым ждут именно этого сотрудника: передачи бота, ответ клиенту, свободные
+    лиды; первой линии (`triage_lead`, D17G-1) — разобрать и передать менеджеру, менеджеру —
+    «Новый лид от делопроизводителя» с запиской."""
     if snap.inbox is None:
         return []
     seen: set[int] = set()
@@ -140,8 +168,13 @@ def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
         if taker is not None and taker != me:
             continue
         kind: QueueItemKind = "take_lead" if taker is None else "answer_lead"
+        handed = _handed_over(lead)
+        if handed and lead.get("assigned_user_id") != me:
+            continue  # передана другому менеджеру: строка только у него
         if not view.wants(kind):
-            continue
+            if handed or taker is not None or not view.wants("triage_lead"):
+                continue
+            kind = "triage_lead"
         row = _lead_row(
             lead,
             kind,
@@ -149,6 +182,7 @@ def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
             why=escalation.get("reason_text"),
             due_at=parse_dt(escalation.get("sla_due_at")),
             now=now,
+            handed_by=_handed_by(lead) if handed else None,
         )
         add(row, int(lead["id"]))
     if view.wants("answer_lead"):
@@ -157,10 +191,17 @@ def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
             if lead.get("unread") is True:
                 row = _lead_row(lead, "answer_lead", role_id=answer, why=None, due_at=None, now=now)
                 add(row, int(lead["id"]))
-    if view.wants("take_lead"):
-        take = _role_id(view, "take_lead")
+    free: QueueItemKind | None = (
+        "take_lead"
+        if view.wants("take_lead")
+        else "triage_lead"
+        if view.wants("triage_lead")
+        else None
+    )
+    if free is not None:
+        role = _role_id(view, free)
         for lead in snap.inbox["unassigned"]:
-            row = _lead_row(lead, "take_lead", role_id=take, why=None, due_at=None, now=now)
+            row = _lead_row(lead, free, role_id=role, why=None, due_at=None, now=now)
             add(row, int(lead["id"]))
     return out
 
@@ -574,7 +615,16 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
     """Набор карточек задают виды работы ролей «вида» (SPEC-v3 §7.1); карточки без источника не
     показываются — ноль был бы ложью."""
     cards: dict[str, QueueCard] = {}
-    if wants_inbox(view):
+    if view.wants("triage_lead") and not (view.wants("answer_lead") or view.wants("take_lead")):
+        triage = sum(1 for i in queue if i.kind == "triage_lead")
+        cards["leads_to_triage"] = QueueCard(
+            key="leads_to_triage",
+            label="Лиды разобрать",
+            count=triage,
+            hint="Клиенты · Ждут ответа · передать менеджеру",
+            path="/crm/messages",
+        )
+    elif wants_inbox(view):
         answer = sum(1 for i in queue if i.kind == "answer_lead" and i.on_behalf_of is None)
         take = sum(1 for i in queue if i.kind == "take_lead")
         cards["leads_without_answer"] = QueueCard(
@@ -651,7 +701,9 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
     ]
     if wants_inbox(view):
         waiting = sum(
-            1 for i in queue if i.kind in ("answer_lead", "take_lead") and i.on_behalf_of is None
+            1
+            for i in queue
+            if i.kind in ("answer_lead", "take_lead", "triage_lead") and i.on_behalf_of is None
         )
         items.append(
             MenuCounter(module="crm", section="messages", count=waiting, attention=waiting > 0)

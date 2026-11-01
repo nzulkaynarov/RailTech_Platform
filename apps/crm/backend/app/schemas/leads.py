@@ -21,6 +21,10 @@ class EscalationOut(BaseModel):
     sla_due_at: datetime | None
     snoozed_until: datetime | None
     created_at: datetime
+    # «Передать менеджеру» первой линией (D17G-1): кто передал и тип обращения; бот — `None`.
+    handed_by_user_id: int | None = None
+    handed_by_user_name: str | None = None
+    request_type: str | None = None
 
 
 class HandoffFacts(BaseModel):
@@ -160,6 +164,17 @@ class Snooze(BaseModel):
 
 class Assign(BaseModel):
     user_id: int
+
+
+RequestType = Literal["goods", "services", "project", "other"]
+
+
+class HandOver(BaseModel):
+    """«Передать менеджеру» (D17G-1): кому, записка (обязательна), тип обращения (необязателен)."""
+
+    user_id: int = Field(gt=0)
+    note: str = Field(min_length=1, max_length=2000)
+    request_type: RequestType | None = None
 
 
 class TeamMember(BaseModel):

@@ -45,7 +45,11 @@
     "takeLabel": "{{name}}ni «Javob kutmoqda»ga olish",
     "replyLabel": "{{name}}ga «Javob kutmoqda»da javob berish",
     "createLabel": "{{name}} uchun ariza yaratish",
-    "clientLabel": "{{name}} mijoz kartasi"
+    "clientLabel": "{{name}} mijoz kartasi",
+    "handOver": "Menejerga topshirish",
+    "openChat": "Yozishmani ochish",
+    "triage": "Saralash",
+    "triageLabel": "{{name}} — «Javob kutmoqda»da saralash"
   },
   "paging": {
     "label": "Lidlar sahifalari",

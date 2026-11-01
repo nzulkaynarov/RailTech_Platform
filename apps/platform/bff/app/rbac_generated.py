@@ -36,6 +36,7 @@ RESOURCE_MODULE: Final[dict[str, ModuleCode]] = {
     "dashboard.queue": "dashboard",
     "dashboard.summary": "dashboard",
     "crm.leads": "crm",
+    "crm.leads.triage": "crm",
     "crm.clients": "crm",
     "eds.inbox": "eds",
     "eds.inbox.register": "eds",
@@ -68,6 +69,7 @@ RESOURCE_LEVELS: Final[dict[str, tuple[Level, ...]]] = {
         "read",
         "full",
     ),
+    "crm.leads.triage": ("full",),
     "crm.clients": (
         "read",
         "full",
@@ -133,6 +135,7 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
         "erp",
     ),
     "crm.leads": ("crm",),
+    "crm.leads.triage": ("crm",),
     "crm.clients": (
         "crm",
         "erp",
@@ -168,8 +171,14 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
         "summary": ("dashboard.summary",),
     },
     "crm": {
-        "messages": ("crm.leads",),
-        "leads": ("crm.leads",),
+        "messages": (
+            "crm.leads",
+            "crm.leads.triage",
+        ),
+        "leads": (
+            "crm.leads",
+            "crm.leads.triage",
+        ),
         "clients": ("crm.clients",),
         "requests": ("crm.clients",),
         "channels": ("crm.leads",),
@@ -242,6 +251,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
     ),
     "take_lead": (
         "crm.leads",
+        "full",
+    ),
+    "triage_lead": (
+        "crm.leads.triage",
         "full",
     ),
     "create_request": (
@@ -472,7 +485,8 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
         },
         "access": {
             "dashboard.queue": "full",
-            "crm.leads": "full",
+            "crm.leads": "read",
+            "crm.leads.triage": "full",
             "crm.clients": "read",
             "eds.inbox": "read",
             "eds.inbox.register": "full",
