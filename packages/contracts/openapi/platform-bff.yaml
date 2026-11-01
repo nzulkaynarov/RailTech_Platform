@@ -13670,7 +13670,7 @@ components:
       required:
         [id, number, version, round, status, stage, can_decide, allowed_decisions, approved_late, outgoing_number, created_at,
          ready_at, due, client_name, request, letter, calculated_by, snapshot_total, totals_mismatch, lines, totals, checklist, steps,
-         channels, sources]
+         channels, client_comments, sources]
       properties:
         id: {type: string, format: uuid, description: 'Маршрут одобрения КП (EDS); именно он идёт в `POST /eds/quotes/{id}/decision`'}
         number: {type: string}
@@ -13723,7 +13723,20 @@ components:
           type: array
           items: {$ref: '#/components/schemas/EdsRouteStep'}
         channels: {oneOf: [{$ref: '#/components/schemas/QuoteChannels'}, {type: 'null'}], description: '`null` — контакт клиента не получен из ERP'}
+        client_comments:
+          type: array
+          items: {$ref: '#/components/schemas/QuoteClientComment'}
+          description: Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил)
         sources: {$ref: '#/components/schemas/Sources'}
+    QuoteClientComment:
+      type: object
+      additionalProperties: false
+      required: [author, author_name, text, created_at]
+      properties:
+        author: {type: string, enum: [client, manager], description: Контакт клиента (кабинет) или сотрудник}
+        author_name: {type: [string, 'null']}
+        text: {type: string}
+        created_at: {type: string, format: date-time}
     QuoteDecisionIn:
       type: object
       additionalProperties: false

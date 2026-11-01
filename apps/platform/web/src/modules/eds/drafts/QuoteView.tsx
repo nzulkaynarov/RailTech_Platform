@@ -100,6 +100,29 @@ function Requisites({ quote }: { quote: QuoteApprovalCard }) {
   );
 }
 
+/** Комментарии клиента к КП из кабинета (B-CABFIX-1): блок есть, только когда клиент что-то написал. */
+function ClientComments({ quote }: { quote: QuoteApprovalCard }) {
+  const { t } = useTranslation("quotes");
+  const { date } = useFormat();
+  if (quote.client_comments.length === 0) return null;
+  return (
+    <Card size="small" title={<h2 className="pf-dec-title">{t("card.clientComments")}</h2>}>
+      <p className="pf-hint">{t("card.clientCommentsHint")}</p>
+      <ol className="pf-dec-list" aria-label={t("card.clientCommentsList")}>
+        {quote.client_comments.map((comment) => (
+          <li key={`${comment.created_at}-${comment.author}`}>
+            <div className="pf-hint">
+              {comment.author_name ?? t("card.clientCommentAuthor")} ·{" "}
+              {date(comment.created_at, "datetime")}
+            </div>
+            <p className="pf-dec-note">{comment.text}</p>
+          </li>
+        ))}
+      </ol>
+    </Card>
+  );
+}
+
 function Content({
   quote,
   refKey,
@@ -184,6 +207,7 @@ function Content({
           <Card size="small" title={<h2 className="pf-dec-title">{t("card.requisites")}</h2>}>
             <Requisites quote={quote} />
           </Card>
+          <ClientComments quote={quote} />
         </aside>
       </div>
       <ApprovalSlot quoteRef={refKey} />

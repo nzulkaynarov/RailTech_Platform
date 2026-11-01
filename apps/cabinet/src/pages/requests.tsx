@@ -429,8 +429,10 @@ function RequestForm() {
           <Label htmlFor={fileInputId}>{t('pages.requestNew.attachmentsTitle')}</Label>
           <p className="text-xs text-muted-foreground">{t('pages.requestNew.attachmentsHint')}</p>
           <div className="flex flex-wrap items-center gap-3">
+            {/* Скрытое системное поле за своей кнопкой «Загрузить файлы» (несколько файлов, загрузка сразу) — системной надписи не видно */}
             <input
               id={fileInputId}
+              // eslint-disable-next-line no-restricted-syntax -- скрыто за своей кнопкой, системной надписи не видно
               type="file"
               multiple
               className="hidden"

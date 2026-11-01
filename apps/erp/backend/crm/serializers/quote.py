@@ -147,6 +147,24 @@ class QuoteApprovalStepSerializer(serializers.ModelSerializer):
         return bool(company_id) and may_act_on_step(obj, user, company_id)
 
 
+class QuoteClientCommentSerializer(serializers.Serializer):
+    """Комментарий к КП: автор `client` (контакт из кабинета) или `manager` (сотрудник), имя, текст, время."""
+
+    id = serializers.IntegerField(read_only=True)
+    author = serializers.SerializerMethodField()
+    author_name = serializers.SerializerMethodField()
+    text = serializers.CharField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_author(self, comment) -> str:
+        return "manager" if comment.author_user_id else "client"
+
+    def get_author_name(self, comment) -> str:
+        if comment.author_user_id:
+            return comment.author_user.get_full_name() or comment.author_user.email
+        return comment.author_contact.name if comment.author_contact_id else ""
+
+
 class QuoteSerializer(serializers.ModelSerializer):
     items = QuoteItemSerializer(many=True, read_only=True)
     status_name = serializers.CharField(source="status.name", read_only=True)
@@ -177,6 +195,8 @@ class QuoteSerializer(serializers.ModelSerializer):
     economics = serializers.SerializerMethodField()
     # Internal approval chain (only on the single-quote/deal detail, same gate as economics).
     approval_steps = serializers.SerializerMethodField()
+    # Комментарии клиента из кабинета (B-CABFIX-1): Платформа показывает их в карточке КП.
+    client_comments = serializers.SerializerMethodField()
     # Current market FX rates ({code: "rate"}) for the frontend pricing mirror — a preview of the
     # rate a line's cost currency WOULD get before it is frozen into fx_snapshot / fx_manual.
     fx_market = serializers.SerializerMethodField()
@@ -253,6 +273,14 @@ class QuoteSerializer(serializers.ModelSerializer):
 
         return effective_quote_lead_time(obj)
 
+    @extend_schema_field(QuoteClientCommentSerializer(many=True))
+    def get_client_comments(self, obj) -> list:
+        """Комментарии к КП из кабинета клиента (B-CABFIX-1, `portal.QuoteComment`); только в карточке одного КП."""
+        if not self.context.get("include_economics"):
+            return []
+        comments = obj.client_comments.select_related("author_contact", "author_user").all()
+        return QuoteClientCommentSerializer(comments, many=True).data
+
     def get_approval_steps(self, obj) -> list:
         if not self.context.get("include_economics"):
             return []
@@ -324,6 +352,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "charges",
             "economics",
             "approval_steps",
+            "client_comments",
             "created_at",
             "updated_at",
         ]

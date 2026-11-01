@@ -13,6 +13,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 from urllib.parse import quote
 
+from pydantic import ValidationError
+
 from app.deps import Authed
 from app.eds_documents import API, EdsProxy, eds_error
 from app.errors import PlatformError
@@ -31,6 +33,7 @@ from app.schemas_eds_approvals import (
     QuoteCalculator,
     QuoteChannels,
     QuoteChecklistLine,
+    QuoteClientComment,
     QuoteInternal,
     QuoteLetterRef,
     QuoteLine,
@@ -317,6 +320,26 @@ def _lines(erp_quote: dict[str, Any]) -> list[QuoteLine]:
     return lines
 
 
+def _client_comments(erp_quote: dict[str, Any] | None) -> list[QuoteClientComment]:
+    """Комментарии клиента к КП из ERP (кабинет, B-CABFIX-1); битые записи пропускаются."""
+    found: list[QuoteClientComment] = []
+    for raw in (erp_quote or {}).get("client_comments") or []:
+        if not isinstance(raw, dict):
+            continue
+        try:
+            found.append(
+                QuoteClientComment(
+                    author="manager" if raw.get("author") == "manager" else "client",
+                    author_name=_text(raw.get("author_name")),
+                    text=str(raw.get("text") or ""),
+                    created_at=raw.get("created_at"),
+                )
+            )
+        except ValidationError:
+            continue
+    return found
+
+
 def _totals(erp_quote: dict[str, Any]) -> QuoteTotals | None:
     total = _dec(erp_quote.get("total_incl_vat"))
     currency = erp_quote.get("quote_currency")
@@ -395,6 +418,9 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         _letter(proxy, raw.object.deal_number),
     )
     erp_quote = erp_quote if isinstance(erp_quote, dict) else None
+    # Комментарии клиента — у объекта КП, а не у редакции: видны и тогда, когда строки ERP скрыты
+    # ниже.
+    comments = _client_comments(erp_quote)
     version = raw.object.quote_version
     erp_version = erp_quote.get("version") if erp_quote else None
     if erp_quote and isinstance(erp_version, int) and version and erp_version != version:
@@ -482,6 +508,7 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         checklist=checklist,
         steps=[route_step(s) for s in raw.steps],
         channels=_channels(contact),
+        client_comments=comments,
         sources=feed.sources,
         **extra,
     )

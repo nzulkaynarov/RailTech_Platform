@@ -589,6 +589,8 @@ export * from "./quoteCalculator";
 export * from "./quoteCalculatorZone";
 export * from "./quoteChannels";
 export * from "./quoteChecklistLine";
+export * from "./quoteClientComment";
+export * from "./quoteClientCommentAuthor";
 export * from "./quoteDecisionIn";
 export * from "./quoteDefaults";
 export * from "./quoteDefaultsCatalogPriceVisibility";

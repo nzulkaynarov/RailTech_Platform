@@ -203,6 +203,7 @@ describe('просрочка счёта вычисляется из due_date', (
     total: { amount: '100.00', currency: 'UZS' },
     paid: { amount: '0.00', currency: 'UZS' },
     due_date: '2026-10-14',
+    proofs: [],
   };
   it.each([
     ['срок сегодня — не просрочен', {}, null, 'issued'],
@@ -295,4 +296,19 @@ describe('статусы: подпись есть для каждого кода
       }
     });
   }
+});
+
+describe('ввод даты ДД.ММ.ГГГГ (components/DateField)', () => {
+  it('маска ставит точки, наружу — ключ YYYY-MM-DD; неполная и несуществующая дата — null', async () => {
+    const { maskDate, textToIso, isoToText } = await import('@/lib/dateInput');
+    expect(maskDate('14102026')).toBe('14.10.2026');
+    expect(maskDate('14.1')).toBe('14.1');
+    expect(maskDate('1a4b10202699')).toBe('14.10.2026');
+    expect(textToIso('14.10.2026')).toBe('2026-10-14');
+    expect(textToIso('')).toBe('');
+    expect(textToIso('14.10')).toBeNull();
+    expect(textToIso('31.02.2026')).toBeNull();
+    expect(isoToText('2026-10-14')).toBe('14.10.2026');
+    expect(isoToText(null)).toBe('');
+  });
 });

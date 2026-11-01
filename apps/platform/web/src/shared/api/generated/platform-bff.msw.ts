@@ -4900,6 +4900,18 @@ export const getGetQuoteApprovalResponseMock = (
     { ...getGetQuoteApprovalResponseQuoteChannelsMock() },
     null,
   ]),
+  client_comments: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    author: faker.helpers.arrayElement(["client", "manager"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -5112,6 +5124,18 @@ export const getDecideQuoteApprovalResponseMock = (
     { ...getDecideQuoteApprovalResponseQuoteChannelsMock() },
     null,
   ]),
+  client_comments: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    author: faker.helpers.arrayElement(["client", "manager"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),

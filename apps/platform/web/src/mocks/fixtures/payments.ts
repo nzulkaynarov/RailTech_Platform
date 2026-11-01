@@ -59,7 +59,7 @@ const CABINET_PROOF: PaymentProof = {
   original_name: "платёжка-0127.pdf",
   claimed_amount: "28000000.00",
   claimed_date: "2026-10-27",
-  note: "",
+  note: "Оплатили из двух счетов, вторая часть — завтра",
   received_at: "2026-10-27T15:00:00Z",
   recorded_by: null,
   payment_id: null,

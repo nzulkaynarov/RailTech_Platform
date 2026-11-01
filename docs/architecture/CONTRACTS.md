@@ -142,8 +142,10 @@ inline и до БД не доходит (§9.2).
 | `POST /auth/logout`, `GET /me` | сессия и контакт, компания, права (`can_act`) |
 | `GET /requests`, `POST /requests` | мои запросы; новый запрос (строки свободным текстом + вложения) → `request.created(source=cabinet)` |
 | `GET /quotes`, `GET /quotes/{id}`, `POST /quotes/{id}/request-code`, `POST /quotes/{id}/accept {code}`, `POST /quotes/{id}/reject {reason}` | КП; код акцепта (6 цифр, 15 мин) ERP шлёт контакту в Telegram или на e-mail по запросу — мастер-кода нет |
+| `POST /quotes/{id}/comments {text}` | комментарий клиента к КП, пока оно ждёт решения (до 2000 знаков; решённое или истёкшее — 409); лента — `Quote.comments` (автор `client` или `manager`, время); менеджеру — уведомление и блок в карточке КП Платформы (B-CABFIX-1) |
 | `GET /contracts`, `POST /contracts/{id}/sign` | договоры |
 | `GET /invoices`, `GET /acts`, `POST /acts/{id}/accept {upload_id?}`, `POST /acts/{id}/return {reason}` | счета и акты; при приёмке можно приложить скан подписанного акта (`Act.scan_document_id`) |
+| `POST /invoices/{id}/proofs {upload_id, paid_on?, amount?, comment?}` | «Я оплатил»: платёжное поручение из `/uploads` (PDF или изображение ≤ 10 МБ) к счёту компании; в ERP — та же платёжка, что прикладывает менеджер (источник «кабинет»), счёт встаёт на «Платёжки на подтверждение»; оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`. Платёжки счёта — `Invoice.proofs` (`pending` / `confirmed` / `rejected` с причиной; отклонения в ERP пока нет — B-D24-7) (B-CABFIX-1) |
 | `GET /deliveries`, `POST /deliveries/{id}/accept`, `POST /deliveries/{id}/dispute {reason}` | поставки по строкам заказа: проекция клиента (статус, ожидаемая дата, трек) и приёмка клиентом по строкам — `accepted` / `disputed` (BUSINESS §9, шаг 9) |
 | `GET /documents`, `GET /documents/{id}/file` | документы (поток, аудит) |
 | `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь) |

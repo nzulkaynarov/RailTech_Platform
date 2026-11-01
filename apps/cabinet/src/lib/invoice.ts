@@ -36,3 +36,24 @@ export function invoiceViews(invoices: Invoice[], now: number = Date.now()): Map
   }
   return map;
 }
+
+/** Счёт ещё ждёт денег — к нему можно приложить платёжку (оплаченный и отменённый ERP отклонит: `INVOICE_NOT_OPEN`). */
+export function invoiceOpen(invoice: Pick<Invoice, 'status'>): boolean {
+  return !CLOSED.includes(invoice.status);
+}
+
+/** Комментарий к платёжке — до 500 знаков (`PaymentProofCreate.comment`). */
+export const PROOF_COMMENT_MAX = 500;
+
+/**
+ * Сумма платежа из поля ввода → `Amount` контракта (`"1500000.00"`): пробелы разрядов убираются, запятая — десятичный
+ * знак. Пусто — `null` (сумма необязательна); не число, ноль или больше двух знаков после точки — `'invalid'`.
+ */
+export function parseAmount(text: string): string | null | 'invalid' {
+  const clean = text.replace(/[\s\u00a0\u202f]/g, '').replace(',', '.');
+  if (!clean) return null;
+  const match = /^(\d{1,12})(?:\.(\d{1,2}))?$/.exec(clean);
+  if (!match) return 'invalid';
+  const value = `${BigInt(match[1])}.${(match[2] ?? '').padEnd(2, '0')}`;
+  return /^0\.00$/.test(value) ? 'invalid' : value;
+}

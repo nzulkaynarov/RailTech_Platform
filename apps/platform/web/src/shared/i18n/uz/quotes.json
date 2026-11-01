@@ -123,7 +123,11 @@
       "services": "xizmatlar"
     },
     "snapshotTotal": "TT snimkasi bo'yicha jami",
-    "mismatch": "ERPdagi jami ({{erp}}) TT snimkasi jamidan ({{snapshot}}) farq qiladi: TT tasdiqqa topshirilgandan so'ng o'zgargan. Kartani yangilang yoki hisob-kitobchidan so'rang."
+    "mismatch": "ERPdagi jami ({{erp}}) TT snimkasi jamidan ({{snapshot}}) farq qiladi: TT tasdiqqa topshirilgandan so'ng o'zgargan. Kartani yangilang yoki hisob-kitobchidan so'rang.",
+    "clientComments": "Mijoz izohlari",
+    "clientCommentsList": "Taklif boʻyicha mijoz izohlari",
+    "clientCommentsHint": "Mijoz ularni kabinetda, taklif qaror kutayotganda yozadi. «Chatlar»da yoki taklifning yangi versiyasi bilan javob bering.",
+    "clientCommentAuthor": "Mijoz"
   },
   "panel": {
     "sheetTitle": "{{number}} tasdiqlash",

@@ -81,7 +81,7 @@
       },
       "proofs": {
         "title": "Tasdiqlanadigan to‘lov topshiriqnomalari yo‘q",
-        "text": "To‘lov topshiriqnomasini hisobga biriktirsangiz, u shu yerda paydo bo‘ladi. Mijoz kabineti va botdagi «Men to‘ladim» tugmasi tayyor bo‘lgach, ularni o‘zi yuboradi.",
+        "text": "Mijoz kabinetda «To‘ladim» tugmasini bossa yoki siz uni hisobga biriktirsangiz (pochta yoki bot orqali kelgan), to‘lov topshiriqnomasi shu yerda paydo bo‘ladi.",
         "action": "To‘lovni kutmoqda"
       },
       "overdue": {
@@ -163,7 +163,8 @@
       "EMAIL": "Pochta",
       "MANUAL": "Buxgalter biriktirgan"
     },
-    "from": "Manba: {{source}}"
+    "from": "Manba: {{source}}",
+    "note": "Mijoz izohi: {{note}}"
   },
   "attach": {
     "toggle": "To‘lov topshiriqnomasini biriktirish",

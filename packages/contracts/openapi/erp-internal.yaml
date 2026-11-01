@@ -28487,6 +28487,11 @@ components:
           type: array
           items: {}
           readOnly: true
+        client_comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuoteClientComment'
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -28503,6 +28508,7 @@ components:
       - approved_by
       - charges
       - charges_total
+      - client_comments
       - created_at
       - deal
       - delivery_basis_data
@@ -28695,6 +28701,32 @@ components:
       required:
       - charge_type
       - quote
+    QuoteClientComment:
+      type: object
+      description: 'Комментарий к КП: автор `client` (контакт из кабинета) или `manager` (сотрудник), имя, текст, время.'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        author:
+          type: string
+          readOnly: true
+        author_name:
+          type: string
+          readOnly: true
+        text:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_name
+      - created_at
+      - id
+      - text
     QuoteEconomics:
       type: object
       description: |-

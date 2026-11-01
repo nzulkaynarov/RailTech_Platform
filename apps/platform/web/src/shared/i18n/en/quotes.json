@@ -123,7 +123,11 @@
       "services": "services"
     },
     "snapshotTotal": "Total from the quote snapshot",
-    "mismatch": "The total in ERP ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the estimator."
+    "mismatch": "The total in ERP ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the estimator.",
+    "clientComments": "Client comments",
+    "clientCommentsList": "Client comments on the quote",
+    "clientCommentsHint": "The client writes them in the cabinet while the quote awaits a decision. Reply in Chats or with a new quote version.",
+    "clientCommentAuthor": "Client"
   },
   "panel": {
     "sheetTitle": "Approval {{number}}",

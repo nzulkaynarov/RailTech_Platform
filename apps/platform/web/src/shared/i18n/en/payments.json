@@ -81,7 +81,7 @@
       },
       "proofs": {
         "title": "No payment orders to confirm",
-        "text": "A payment order appears here when you attach it to an invoice. The “I have paid” button in the customer cabinet and the bot will send them automatically once it is built.",
+        "text": "A payment order appears here when the customer clicks “I have paid” in the cabinet or when you attach it to an invoice (it came by email or to the bot).",
         "action": "Awaiting payment"
       },
       "overdue": {
@@ -163,7 +163,8 @@
       "EMAIL": "Email",
       "MANUAL": "Attached by accountant"
     },
-    "from": "From: {{source}}"
+    "from": "From: {{source}}",
+    "note": "Customer comment: {{note}}"
   },
   "attach": {
     "toggle": "Attach payment order",

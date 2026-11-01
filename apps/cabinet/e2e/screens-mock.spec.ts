@@ -366,3 +366,56 @@ test('вход: демо-блок под своим заголовком, «Во
   await expect(page.getByRole('heading', { level: 2, name: /демо-вход/i })).toBeVisible();
   await snap(page, 'login');
 });
+
+/**
+ * B-CABFIX-1 · «Я оплатил» с платёжным поручением и комментарий к КП: счета с кнопкой и платёжками, форма, платёжка
+ * «На проверке» после отправки, КП с комментарием; наблюдатель — без кнопок. Снимки — в E2E_SCREENS_DIR (docs/screens/cabfix-1):
+ *
+ *   E2E_SCREENS_DIR=../../../../docs/screens/cabfix-1 npx playwright test -c playwright.screens.config.ts -g "B-CABFIX-1"
+ */
+test('B-CABFIX-1: «Я оплатил» → платёжка на проверке; комментарий к КП', async ({ page }) => {
+  await signIn(page, 'actor');
+  await page.goto('/invoices');
+  await heading(page, 'Счета');
+  await expect(page.getByRole('button', { name: 'Я оплатил: счёт S-2026-0124' }).first()).toBeVisible();
+  await snap(page, 'cabinet-invoices');
+
+  await page.getByRole('button', { name: 'Я оплатил: счёт S-2026-0124' }).first().click();
+  const dialog = page.getByRole('dialog', { name: 'Я оплатил: счёт S-2026-0124' });
+  await dialog.getByLabel('Платёжное поручение').setInputFiles({
+    name: 'platezhka-0124.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from('%PDF-1.4 payment order'),
+  });
+  await dialog.getByLabel(/Дата платежа/).fill('14.10.2026');
+  await dialog.getByLabel(/Сумма платежа/).fill('9 800 000');
+  await dialog.getByLabel(/Комментарий/).fill('Оплатили одним платежом');
+  await expect(dialog.getByText('Менеджер проверит поступление и подтвердит оплату — статус счёта изменится.')).toBeVisible();
+  await snap(page, 'cabinet-proof-form');
+
+  await dialog.getByRole('button', { name: 'Отправить платёжку' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByRole('list', { name: 'Платёжки по счёту S-2026-0124' }).first()).toContainText('На проверке');
+  await snap(page, 'cabinet-proof-pending');
+
+  await page.goto('/quotes/310');
+  await heading(page, 'КП KP-2026-0057');
+  const comments = page.getByRole('region', { name: 'Комментарии' });
+  await comments.getByLabel('Ваш комментарий').fill('Можно оплату в два этапа: 50 % до отгрузки и 50 % после приёмки?');
+  await comments.getByRole('button', { name: 'Отправить комментарий' }).click();
+  await expect(comments.getByRole('list', { name: 'Комментарии к КП KP-2026-0057' })).toContainText('Можно оплату в два этапа');
+  await snap(page, 'cabinet-quote-comment');
+});
+
+test('B-CABFIX-1: наблюдатель — платёжки и комментарии видны, кнопок нет', async ({ page }) => {
+  await signIn(page, 'viewer');
+  await page.goto('/invoices');
+  await heading(page, 'Счета');
+  await expect(page.getByRole('list', { name: 'Платёжки по счёту S-2026-0130' }).first()).toContainText('На проверке');
+  await expect(page.getByRole('button', { name: /Я оплатил/ })).toHaveCount(0);
+  await snap(page, 'viewer-cabinet-invoices');
+  await page.goto('/quotes/300');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByLabel('Ваш комментарий')).toHaveCount(0);
+  await snap(page, 'viewer-cabinet-quote-comments');
+});

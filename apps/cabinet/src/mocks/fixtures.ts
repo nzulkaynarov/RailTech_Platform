@@ -174,6 +174,7 @@ const quote42: Schemas['Quote'] = {
   public_url: 'https://cabinet.example.com/q/kp-2026-0042-v2',
   pdf_document_id: 901,
   rejected_reason: null,
+  comments: [],
   lines: [
     { line_no: 1, kind: 'section', title: 'Товары' },
     {
@@ -212,6 +213,22 @@ const quote42v1: Schemas['Quote'] = {
   public_url: 'https://cabinet.example.com/q/kp-2026-0042-v1',
   pdf_document_id: null,
   rejected_reason: 'Срок поставки ремней не устраивает',
+  comments: [
+    {
+      id: 1,
+      author: 'client',
+      author_name: 'Азиз Каримов',
+      text: 'Можно ли поставить ремни за 30 дней, а не за 45?',
+      created_at: '2026-10-02T10:15:00+05:00',
+    },
+    {
+      id: 2,
+      author: 'manager',
+      author_name: 'Дилноза Юсупова',
+      text: 'Быстрее 45 дней поставщик не отгружает — подготовим версию с другим производителем.',
+      created_at: '2026-10-02T15:40:00+05:00',
+    },
+  ],
 };
 
 const quote57: Schemas['Quote'] = {
@@ -226,6 +243,7 @@ const quote57: Schemas['Quote'] = {
   public_url: 'https://cabinet.example.com/q/kp-2026-0057-v1',
   pdf_document_id: null,
   rejected_reason: null,
+  comments: [],
   lines: [
     { line_no: 1, kind: 'section', title: 'Работы' },
     {
@@ -270,6 +288,7 @@ const quote48: Schemas['Quote'] = {
   public_url: 'https://cabinet.example.com/q/kp-2026-0048-v1',
   pdf_document_id: null,
   rejected_reason: null,
+  comments: [],
   lines: [
     {
       line_no: 1,
@@ -306,6 +325,7 @@ const quote33: Schemas['Quote'] = {
   public_url: 'https://cabinet.example.com/q/kp-2026-0033-v1',
   pdf_document_id: null,
   rejected_reason: null,
+  comments: [],
   lines: [
     {
       line_no: 1,
@@ -362,6 +382,7 @@ export const invoices: Schemas['Invoice'][] = [
     paid: { amount: '0.00', currency: 'UZS' },
     due_date: '2026-10-07',
     document_id: null,
+    proofs: [],
   },
   {
     id: 604,
@@ -372,6 +393,20 @@ export const invoices: Schemas['Invoice'][] = [
     paid: { amount: '0.00', currency: 'USD' },
     due_date: '2026-10-28',
     document_id: null,
+    proofs: [
+      {
+        id: 51,
+        status: 'pending',
+        source: 'cabinet',
+        file_name: 'platezhka-0130.pdf',
+        submitted_at: '2026-10-13T17:20:00+05:00',
+        paid_on: '2026-10-13',
+        amount: { amount: '12500.00', currency: 'USD' },
+        comment: null,
+        confirmed_at: null,
+        reject_reason: null,
+      },
+    ],
   },
   {
     id: 601,
@@ -382,6 +417,20 @@ export const invoices: Schemas['Invoice'][] = [
     paid: { amount: '13750000.00', currency: 'UZS' },
     due_date: '2026-10-30',
     document_id: 903,
+    proofs: [
+      {
+        id: 50,
+        status: 'confirmed',
+        source: 'cabinet',
+        file_name: 'platezhka-0118-1.pdf',
+        submitted_at: '2026-10-05T11:00:00+05:00',
+        paid_on: '2026-10-05',
+        amount: { amount: '13750000.00', currency: 'UZS' },
+        comment: 'Первая половина по договору',
+        confirmed_at: '2026-10-06T10:30:00+05:00',
+        reject_reason: null,
+      },
+    ],
   },
   {
     id: 602,
@@ -392,6 +441,7 @@ export const invoices: Schemas['Invoice'][] = [
     paid: { amount: '5400000.00', currency: 'UZS' },
     due_date: '2026-09-15',
     document_id: null,
+    proofs: [],
   },
 ];
 

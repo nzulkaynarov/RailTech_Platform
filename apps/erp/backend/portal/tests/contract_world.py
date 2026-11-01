@@ -14,7 +14,7 @@ from decimal import Decimal
 import pytest
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from portal.models import MagicLinkToken, PortalRequestLine, PortalUpload
+from portal.models import MagicLinkToken, PortalRequestLine, PortalUpload, QuoteComment
 from portal.services.tokens import hash_token
 from portal.tests.documents_world import build_document_fixtures
 
@@ -212,6 +212,15 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     # Сквозные суммы без декларации: сумма уже посчитана движком; добавляем «статьи расходов» документа.
     Quote.objects.filter(pk=quotes["sent"].pk).update(charges_total=Decimal("50000.00"))
     world["quotes"] = quotes
+    # Лента комментариев КП (B-CABFIX-1): вопрос клиента и ответ менеджера — у решённого КП, чтобы лента не мешала
+    # тестам комментариев к ждущим решения КП.
+    from accounts.models import CustomUser
+
+    responder = CustomUser.objects.create_user(
+        email="guard.manager@seller.uz", username="guard.manager@seller.uz", password="x", first_name="Азиз"
+    )
+    QuoteComment.objects.create(quote=quotes["rejected"], author_contact=client_contact, text="Можно дешевле?")
+    QuoteComment.objects.create(quote=quotes["rejected"], author_user=responder, text="Пришлём новую версию")
 
     # ── Договоры: sent / signed_by_client / signed_by_company / signed / cancelled (+ черновик) ─
     contracts = {}
@@ -259,6 +268,27 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
             currency=uzs,
         )
     world["invoices"] = invoices
+    # Платёжки (B-CABFIX-1): из кабинета на проверке (с датой, суммой и комментарием) и приложенная менеджером, уже
+    # подтверждённая, — у счёта с частичной оплатой.
+    from finance.models import PaymentConfirmation
+
+    PaymentConfirmation.objects.create(
+        invoice=invoices["partially_paid"],
+        source=PaymentConfirmation.Source.CABINET,
+        file=ContentFile(b"%PDF-1.4 order", name="order.pdf"),
+        original_name="order.pdf",
+        claimed_amount=Decimal("1000000.00"),
+        claimed_date=TODAY,
+        note="Оплатили частично",
+    )
+    PaymentConfirmation.objects.create(
+        invoice=invoices["partially_paid"],
+        source=PaymentConfirmation.Source.MANUAL,
+        file=ContentFile(b"%PDF-1.4 mail", name="mail.pdf"),
+        original_name="mail.pdf",
+        status=PaymentConfirmation.Status.CONFIRMED,
+        confirmed_at=now,
+    )
 
     # ── Акты: issued / accepted (со сканом) / returned (+ аннулированный) ─────────────────────
     acts = {}

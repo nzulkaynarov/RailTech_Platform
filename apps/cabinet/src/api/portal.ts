@@ -157,6 +157,9 @@ export type Quote = Schemas['Quote'];
 export type QuoteLine = Schemas['QuoteLine'];
 export type Contract = Schemas['Contract'];
 export type Invoice = Schemas['Invoice'];
+export type PaymentProof = Schemas['PaymentProof'];
+export type PaymentProofCreate = Schemas['PaymentProofCreate'];
+export type QuoteComment = Schemas['QuoteComment'];
 export type Act = Schemas['Act'];
 export type DealRef = Schemas['DealRef'];
 export type AcceptanceCodeSent = Schemas['AcceptanceCodeSent'];
@@ -191,6 +194,11 @@ export function acceptQuote(id: number, code: string): Promise<Quote> {
   const body: JsonBody<paths['/quotes/{id}/accept']['post']> = { code };
   return portalRequest<Quote>(`/quotes/${id}/accept`, { method: 'POST', body });
 }
+/** Комментарий к КП, пока оно ждёт решения; ответ — комментарий, лента — `Quote.comments`. */
+export function addQuoteComment(id: number, text: string): Promise<QuoteComment> {
+  const body: JsonBody<paths['/quotes/{id}/comments']['post']> = { text };
+  return portalRequest<QuoteComment>(`/quotes/${id}/comments`, { method: 'POST', body });
+}
 export function rejectQuote(id: number, reason: string): Promise<Quote> {
   const body: JsonBody<paths['/quotes/{id}/reject']['post']> = { reason };
   return portalRequest<Quote>(`/quotes/${id}/reject`, { method: 'POST', body });
@@ -200,6 +208,10 @@ export const listContracts = () => portalRequest<Contract[]>('/contracts');
 export const signContract = (id: number) => portalRequest<Contract>(`/contracts/${id}/sign`, { method: 'POST' });
 
 export const listInvoices = () => portalRequest<Invoice[]>('/invoices');
+/** «Я оплатил»: платёжное поручение (`upload_id` из `POST /uploads`) к счёту; ответ — платёжка `pending`. */
+export function submitPaymentProof(id: number, body: PaymentProofCreate): Promise<PaymentProof> {
+  return portalRequest<PaymentProof>(`/invoices/${id}/proofs`, { method: 'POST', body });
+}
 
 export const listActs = () => portalRequest<Act[]>('/acts');
 /** Приёмка акта; скан подписанного экземпляра (`upload_id` из `POST /uploads`) необязателен. */

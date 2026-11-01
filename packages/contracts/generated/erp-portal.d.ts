@@ -230,6 +230,28 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/quotes/{id}/comments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Комментарий клиента к КП
+     * @description Вопрос или замечание по КП, пока оно ждёт решения (`sent`, `viewed`, срок не вышел). Комментарий попадает в ленту
+     *     `Quote.comments`, в журнал сделки и уведомлением — ответственному менеджеру; КП не меняется. Ответ менеджер даёт
+     *     в канале клиента (бот, почта) или новой версией КП. Требует `can_act`.
+     */
+    post: operations["addQuoteComment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/contracts": {
     parameters: {
       query?: never;
@@ -278,6 +300,31 @@ export interface paths {
     get: operations["listInvoices"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/invoices/{id}/proofs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Я оплатил» — платёжное поручение к счёту
+     * @description Клиент прикладывает платёжное поручение (SPEC-v3 §3.1 шаг 8, §8). Файл сначала грузится в `POST /uploads`
+     *     (PDF или изображение, ≤ 10 МБ; тело здесь — JSON, единственный multipart портала — `/uploads`), сюда — его
+     *     `upload_id`, а дата и сумма платежа и комментарий — по желанию. Платёжка деньгами не считается: она попадает
+     *     менеджеру в «Счета и оплаты» на вкладку «Платёжки на подтверждение» (источник — кабинет клиента), он сверяет
+     *     поступление с выпиской банка и подтверждает оплату — тогда меняется статус счёта. До этого платёжка в
+     *     `Invoice.proofs` — `pending`. Требует `can_act`. Счёт другой компании — 404.
+     */
+    post: operations["submitPaymentProof"];
     delete?: never;
     options?: never;
     head?: never;
@@ -594,6 +641,8 @@ export interface components {
       | "DELIVERY_LINE_NOT_ACCEPTABLE"
       | "DOCUMENT_PENDING"
       | "DELIVERY_FAILED"
+      | "INVOICE_NOT_OPEN"
+      | "TEXT_REQUIRED"
       | "CONFLICT";
     Reason: {
       reason: string;
@@ -709,6 +758,25 @@ export interface components {
       /** Format: int64 */
       pdf_document_id?: number | null;
       rejected_reason?: string | null;
+      /** @description Комментарии к КП, старые первыми (`POST /quotes/{id}/comments`) */
+      comments: components["schemas"]["QuoteComment"][];
+    };
+    QuoteCommentCreate: {
+      text: string;
+    };
+    QuoteComment: {
+      /** Format: int64 */
+      id: number;
+      /**
+       * @description Кто написал — сотрудник компании клиента или менеджер продавца
+       * @enum {string}
+       */
+      author: "client" | "manager";
+      /** @description Имя автора; `null`, если его нет в карточке */
+      author_name?: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
     };
     /** @enum {string} */
     ContractStatus: "sent" | "signed_by_client" | "signed_by_company" | "signed" | "cancelled";
@@ -739,6 +807,50 @@ export interface components {
       due_date: string;
       /** Format: int64 */
       document_id?: number | null;
+      /** @description Платёжки по счёту, старые первыми — из кабинета и те, что приложил менеджер */
+      proofs: components["schemas"]["PaymentProof"][];
+    };
+    /**
+     * @description `pending` — менеджер ещё не сверил платёжку с выпиской; `confirmed` — оплата по ней подтверждена; `rejected` — отклонена с причиной `reject_reason` (ERP пока не отклоняет платёжки — BACKLOG B-D24-7)
+     * @enum {string}
+     */
+    PaymentProofStatus: "pending" | "confirmed" | "rejected";
+    PaymentProofCreate: {
+      /** @description Файл платёжного поручения из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
+      upload_id: string;
+      /**
+       * Format: date
+       * @description Дата платежа по словам клиента (не позже сегодняшней)
+       */
+      paid_on?: string | null;
+      /** @description Сумма платежа по словам клиента в валюте счёта, больше нуля */
+      amount?: components["schemas"]["Amount"] | null;
+      comment?: string | null;
+    };
+    PaymentProof: {
+      /** Format: int64 */
+      id: number;
+      status: components["schemas"]["PaymentProofStatus"];
+      /**
+       * @description Откуда платёжка — кабинет клиента, бот, почта или её приложил менеджер
+       * @enum {string}
+       */
+      source: "cabinet" | "bot" | "email" | "manager";
+      file_name: string;
+      /** Format: date-time */
+      submitted_at: string;
+      /**
+       * Format: date
+       * @description Дата платежа, которую указал клиент; не проверена
+       */
+      paid_on?: string | null;
+      /** @description Сумма, которую указал клиент; не проверена — сумму подтверждает менеджер по выписке */
+      amount?: components["schemas"]["Money"] | null;
+      /** @description Комментарий клиента (только у платёжек из кабинета) */
+      comment?: string | null;
+      /** Format: date-time */
+      confirmed_at?: string | null;
+      reject_reason?: string | null;
     };
     /** @enum {string} */
     ActStatus: "issued" | "accepted" | "returned";
@@ -1462,6 +1574,63 @@ export interface operations {
       429: components["responses"]["TooManyRequests"];
     };
   };
+  addQuoteComment: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Комментарий принят */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteComment"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП уже принято или отклонено (`QUOTE_FINALIZED`) либо срок вышел (`QUOTE_EXPIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 2000 символов (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
   listContracts: {
     parameters: {
       query?: never;
@@ -1546,6 +1715,63 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  submitPaymentProof: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PaymentProofCreate"];
+      };
+    };
+    responses: {
+      /** @description Платёжка принята и ждёт проверки менеджером */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentProof"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Счёт уже оплачен или отменён (`INVOICE_NOT_OPEN`) — платёжка не нужна */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Загрузки нет у компании или она уже вложена в другую сделку (`UPLOAD_NOT_FOUND`); файл не PDF и не изображение, больше 10 МБ, сумма не больше нуля, дата платежа в будущем или комментарий длиннее 500 символов (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       429: components["responses"]["TooManyRequests"];
     };
   };
