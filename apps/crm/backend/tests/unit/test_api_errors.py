@@ -280,4 +280,8 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_request_conflict",
         "request_not_failed",
         "request_not_retryable",
+        # Общий ящик (W18A-P2-3).
+        "mail_in_work_by_other",
+        "mail_handled",
+        "mail_not_returnable",
     }

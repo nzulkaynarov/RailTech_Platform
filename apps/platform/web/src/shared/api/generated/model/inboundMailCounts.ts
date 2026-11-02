@@ -38,12 +38,12 @@ export interface InboundMailCounts {
    */
   spam: number;
   /**
-   * Все
+   * Все, кроме подозрительных
    * @minimum 0
    */
   all: number;
   /**
-   * Новых
+   * Новых, которые этот сотрудник ещё не открывал
    * @minimum 0
    */
   unread_new: number;
