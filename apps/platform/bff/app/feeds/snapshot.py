@@ -78,6 +78,12 @@ class Snapshot:
     # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
     tickets: list[dict[str, Any]] = field(default_factory=list)
     tickets_total: int = 0
+    # Входящая почта общего ящика (CRM `inbound-mail?status=new`, W18A-P2): канцелярии — «Мои
+    # задачи»; `None` — не читали или CRM не ответил (строк и бейджа нет), `mail_configured` —
+    # настроен ли приём (иначе карточка подсказывает «Настройки · Подключения · Почта»).
+    mail: list[dict[str, Any]] | None = None
+    mail_total: int = 0
+    mail_configured: bool = True
     # Просроченные заказы поставщикам (ERP `stock/overdue`): снабженцу — «Мои задачи» (D2-2).
     overdue_orders: list[dict[str, Any]] = field(default_factory=list)
     # P8b: мои поручения, переносы на решение и ознакомления (EDS `GET /letter-tasks`); `None` —
@@ -132,6 +138,10 @@ def wants_letter_tasks(view: View) -> bool:
 
 def wants_tickets(view: View) -> bool:
     return view.wants("ticket")
+
+
+def wants_mail(view: View) -> bool:
+    return view.wants("inbound_mail")
 
 
 def wants_supplier_overdue(view: View) -> bool:
@@ -215,6 +225,8 @@ async def _quote_snapshots(feed: Feed, routes: list[dict[str, Any]]) -> dict[str
 OVERDUE_PATH = "/api/v1/stock/overdue/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
+MAIL_PATH = "/api/v1/inbound-mail"
+MAIL_PARAMS = {"status": "new"}
 
 
 async def load_snapshot(
@@ -284,6 +296,18 @@ async def load_snapshot(
             total = payload.get("total") if isinstance(payload, dict) else None
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
 
+    async def load_mail() -> None:
+        if tickets and wants_mail(view):
+            payload = await feed.get("crm", MAIL_PATH, MAIL_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            if isinstance(payload, dict):
+                snap.mail = rows(payload)
+                total = payload.get("total")
+                snap.mail_total = total if isinstance(total, int) else len(snap.mail)
+                mailbox = payload.get("mailbox")
+                snap.mail_configured = not (
+                    isinstance(mailbox, dict) and mailbox.get("configured") is False
+                )
+
     async def load_stock() -> None:
         if stock and wants_supplier_overdue(view):
             # ERP не ответил — очередь без просроченных заказов, `sources.erp = unavailable`.
@@ -334,6 +358,7 @@ async def load_snapshot(
         load_approvals(),
         load_deals(),
         load_tickets(),
+        load_mail(),
         load_letters(),
         load_memos(),
         load_returned(),

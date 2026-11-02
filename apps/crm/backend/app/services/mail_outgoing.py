@@ -25,6 +25,11 @@ class Outgoing:
     html: str | None
     reply_to: str | None
     refs: tuple[AttachmentRef, ...]
+    headers: tuple[tuple[str, str], ...] = ()
+
+
+#: Заголовки цепочки, которые строка журнала может нести (ответ на входящее письмо, W18A-P2).
+THREAD_HEADERS = frozenset({"In-Reply-To", "References"})
 
 
 class UndeliverableError(Exception):
@@ -59,7 +64,12 @@ def decode(row: EmailLog, cipher: SecretCipher | None) -> Outgoing:
         )
         for link, item in zip(links, meta, strict=True)
     )
-    return Outgoing(row.to_email, row.subject, body, html, row.reply_to or None, refs)
+    headers = tuple(
+        (name, str(value))
+        for name, value in (row.thread_headers or {}).items()
+        if name in THREAD_HEADERS and value
+    )
+    return Outgoing(row.to_email, row.subject, body, html, row.reply_to or None, refs, headers)
 
 
 async def download(
@@ -90,6 +100,8 @@ async def send(
         extra["reply_to"] = outgoing.reply_to
     if files:
         extra["attachments"] = files
+    if outgoing.headers:
+        extra["headers"] = outgoing.headers
     await transport.send(connection, outgoing.to, outgoing.subject, outgoing.body, **extra)
 
 

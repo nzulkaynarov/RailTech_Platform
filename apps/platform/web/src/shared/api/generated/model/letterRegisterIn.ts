@@ -92,7 +92,13 @@ export interface LetterRegisterIn {
   /** Проект резолюции делопроизводителя (P8b) */
   resolution_draft?: ResolutionDraftIn | null;
   /**
-   * @minItems 1
+   * Письмо общего ящика, из которого регистрируется ВХ (очередь «Входящая почта», W18A-P2): EDS передаёт его в `letter.registered`, CRM снимает письмо с очереди. С ним `file_ids` может быть пустым (письмо без вложений — текст в `summary`); без него нужен хотя бы один файл.
+   * @minimum 1
+   * @nullable
+   */
+  source_mail_id?: number | null;
+  /**
+   * @minItems 0
    * @maxItems 50
    */
   file_ids: string[];

@@ -37,6 +37,7 @@ import {
   EdsRegistryKind,
   EmployeeStatus,
   ErpSyncState,
+  InboundMailStatus,
   IntegrationAccess,
   IntegrationCardKey,
   IntegrationNote,
@@ -55,6 +56,7 @@ import {
   NotificationTab,
   NumberingResetPeriod,
   ObjectKind,
+  OnBehalfChannel,
   PaymentDisplayStatus,
   PaymentMemoStatus,
   PaymentProofSource,
@@ -173,6 +175,14 @@ import type {
   Health,
   HsCode,
   HsCodePage,
+  ImapCheck,
+  ImapConnector,
+  InboundMail,
+  InboundMailAssist,
+  InboundMailLeadResult,
+  InboundMailLink,
+  InboundMailPage,
+  InboundMailReply,
   IntegrationsOverview,
   KbChunkList,
   KbDocument,
@@ -209,6 +219,8 @@ import type {
   NumberingScheme,
   OffsiteBackup,
   OffsiteCheck,
+  OnBehalfNote,
+  OnBehalfRecord,
   PaymentBoard,
   PaymentCard,
   PaymentMemoCard,
@@ -239,6 +251,7 @@ import type {
   QuoteApprovalCard,
   QuoteApprovalPage,
   QuoteChannels,
+  QuoteClientDecision,
   QuoteDefaults,
   QuoteDelivery,
   QuoteLetterRef,
@@ -2762,6 +2775,16 @@ export const getGetEdsProjectResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getGetEdsProjectResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetEdsProjectResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -2815,6 +2838,10 @@ export const getGetEdsProjectResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getGetEdsProjectResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -2865,6 +2892,10 @@ export const getGetEdsProjectResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getGetEdsProjectResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -3025,6 +3056,10 @@ export const getGetEdsProjectResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getGetEdsProjectResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -3131,6 +3166,16 @@ export const getCreateEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsProjectContractResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsProjectContractResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -3187,6 +3232,10 @@ export const getCreateEdsProjectContractResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getCreateEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -3240,6 +3289,10 @@ export const getCreateEdsProjectContractResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getCreateEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -3424,6 +3477,10 @@ export const getCreateEdsProjectContractResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getCreateEdsProjectContractResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -3530,6 +3587,16 @@ export const getActEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectContractResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectContractResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -3586,6 +3653,10 @@ export const getActEdsProjectContractResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getActEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -3639,6 +3710,10 @@ export const getActEdsProjectContractResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getActEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -3820,6 +3895,10 @@ export const getActEdsProjectContractResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getActEdsProjectContractResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -3926,6 +4005,16 @@ export const getScanEdsProjectContractResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectContractResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectContractResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -3982,6 +4071,10 @@ export const getScanEdsProjectContractResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getScanEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4035,6 +4128,10 @@ export const getScanEdsProjectContractResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getScanEdsProjectContractResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4216,6 +4313,10 @@ export const getScanEdsProjectContractResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getScanEdsProjectContractResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -4322,6 +4423,16 @@ export const getActEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getActEdsProjectActResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getActEdsProjectActResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -4375,6 +4486,10 @@ export const getActEdsProjectActResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getActEdsProjectActResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4425,6 +4540,10 @@ export const getActEdsProjectActResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getActEdsProjectActResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4597,6 +4716,10 @@ export const getActEdsProjectActResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getActEdsProjectActResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -4703,6 +4826,16 @@ export const getScanEdsProjectActResponseProjectQuoteMock = (
   ...overrideResponse,
 });
 
+export const getScanEdsProjectActResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getScanEdsProjectActResponseProjectContractMock = (
   overrideResponse: Partial<ProjectContract> = {},
 ): ProjectContract => ({
@@ -4759,6 +4892,10 @@ export const getScanEdsProjectActResponseProjectContractMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getScanEdsProjectActResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4812,6 +4949,10 @@ export const getScanEdsProjectActResponseProjectActMock = (
           null,
         ]),
         reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getScanEdsProjectActResponseOnBehalfNoteMock() },
+          null,
+        ]),
       }),
     ),
   },
@@ -4984,6 +5125,10 @@ export const getScanEdsProjectActResponseMock = (
         null,
       ]),
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getScanEdsProjectActResponseOnBehalfNoteMock() },
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -5679,6 +5824,55 @@ export const getGetQuoteApprovalResponseQuoteDeliveryMock = (
   ...overrideResponse,
 });
 
+export const getGetQuoteApprovalResponseOnBehalfRecordMock = (
+  overrideResponse: Partial<OnBehalfRecord> = {},
+): OnBehalfRecord => ({
+  ...{
+    staff_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    occurred_on: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseQuoteClientDecisionMock = (
+  overrideResponse: Partial<QuoteClientDecision> = {},
+): QuoteClientDecision => ({
+  ...{
+    state: faker.helpers.arrayElement(["awaiting", "accepted", "rejected", "expired"] as const),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recorded_by_staff: faker.helpers.arrayElement([
+      { ...getGetQuoteApprovalResponseOnBehalfRecordMock() },
+      null,
+    ]),
+    can_record: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getGetQuoteApprovalResponseMock = (
   overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
 ): QuoteApprovalCard => ({
@@ -5822,6 +6016,10 @@ export const getGetQuoteApprovalResponseMock = (
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   })),
+  client_decision: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseQuoteClientDecisionMock() },
+    null,
+  ]),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -5939,6 +6137,55 @@ export const getDecideQuoteApprovalResponseQuoteDeliveryMock = (
       faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseOnBehalfRecordMock = (
+  overrideResponse: Partial<OnBehalfRecord> = {},
+): OnBehalfRecord => ({
+  ...{
+    staff_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    occurred_on: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseQuoteClientDecisionMock = (
+  overrideResponse: Partial<QuoteClientDecision> = {},
+): QuoteClientDecision => ({
+  ...{
+    state: faker.helpers.arrayElement(["awaiting", "accepted", "rejected", "expired"] as const),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recorded_by_staff: faker.helpers.arrayElement([
+      { ...getDecideQuoteApprovalResponseOnBehalfRecordMock() },
+      null,
+    ]),
+    can_record: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6089,6 +6336,10 @@ export const getDecideQuoteApprovalResponseMock = (
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   })),
+  client_decision: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteClientDecisionMock() },
+    null,
+  ]),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -6206,6 +6457,55 @@ export const getSendQuoteByChannelResponseQuoteDeliveryMock = (
       faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseOnBehalfRecordMock = (
+  overrideResponse: Partial<OnBehalfRecord> = {},
+): OnBehalfRecord => ({
+  ...{
+    staff_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    occurred_on: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendQuoteByChannelResponseQuoteClientDecisionMock = (
+  overrideResponse: Partial<QuoteClientDecision> = {},
+): QuoteClientDecision => ({
+  ...{
+    state: faker.helpers.arrayElement(["awaiting", "accepted", "rejected", "expired"] as const),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recorded_by_staff: faker.helpers.arrayElement([
+      { ...getSendQuoteByChannelResponseOnBehalfRecordMock() },
+      null,
+    ]),
+    can_record: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -6353,6 +6653,10 @@ export const getSendQuoteByChannelResponseMock = (
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   })),
+  client_decision: faker.helpers.arrayElement([
+    { ...getSendQuoteByChannelResponseQuoteClientDecisionMock() },
+    null,
+  ]),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -6363,6 +6667,329 @@ export const getSendQuoteByChannelResponseMock = (
   },
   ...overrideResponse,
 });
+
+export const getRecordQuoteClientDecisionResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseQuoteLetterRefMock = (
+  overrideResponse: Partial<QuoteLetterRef> = {},
+): QuoteLetterRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseQuoteTotalsMock = (
+  overrideResponse: Partial<QuoteTotals> = {},
+): QuoteTotals => ({
+  ...{
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+    subtotal: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseQuoteChannelsMock = (
+  overrideResponse: Partial<QuoteChannels> = {},
+): QuoteChannels => ({
+  ...{
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    telegram: faker.datatype.boolean(),
+    cabinet: faker.datatype.boolean(),
+    email: faker.datatype.boolean(),
+    reasons: {
+      telegram: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      cabinet: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+      email: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+        null,
+      ]),
+    },
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseQuoteDeliveryMock = (
+  overrideResponse: Partial<QuoteDelivery> = {},
+): QuoteDelivery => ({
+  ...{
+    state: faker.helpers.arrayElement(["ready", "sent", "closed"] as const),
+    lines: Array.from({ length: faker.number.int({ min: 3, max: 3 }) }, (_, i) => i + 1).map(
+      () => ({
+        channel: faker.helpers.arrayElement(Object.values(QuoteSendChannel)),
+        status: faker.helpers.arrayElement(Object.values(QuoteDeliveryStatus)),
+        reason: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+          null,
+        ]),
+        can_send: faker.datatype.boolean(),
+      }),
+    ),
+    error: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(QuoteDeliveryReason)),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseOnBehalfRecordMock = (
+  overrideResponse: Partial<OnBehalfRecord> = {},
+): OnBehalfRecord => ({
+  ...{
+    staff_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    occurred_on: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseQuoteClientDecisionMock = (
+  overrideResponse: Partial<QuoteClientDecision> = {},
+): QuoteClientDecision => ({
+  ...{
+    state: faker.helpers.arrayElement(["awaiting", "accepted", "rejected", "expired"] as const),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recorded_by_staff: faker.helpers.arrayElement([
+      { ...getRecordQuoteClientDecisionResponseOnBehalfRecordMock() },
+      null,
+    ]),
+    can_record: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getRecordQuoteClientDecisionResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
+): QuoteApprovalCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  version: faker.number.int({ min: 1 }),
+  superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
+  round: faker.number.int({ min: 1 }),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  approved_late: faker.datatype.boolean(),
+  outgoing_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseLetterRequestMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteLetterRefMock() },
+    null,
+  ]),
+  calculated_by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      zone: faker.helpers.arrayElement(["goods", "services"] as const),
+    }),
+  ),
+  snapshot_total: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseEdsMoneyMock() },
+    null,
+  ]),
+  totals_mismatch: faker.datatype.boolean(),
+  lines: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      position: faker.number.int({ min: 1 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      quantity: faker.number.int({ min: 0 }),
+      unit: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      unit_price: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      amount: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      lead_time_days: faker.helpers.arrayElement([faker.number.int(), null]),
+      optional: faker.datatype.boolean(),
+    })),
+    null,
+  ]),
+  totals: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteTotalsMock() },
+    null,
+  ]),
+  internal: faker.helpers.arrayElement([
+    {
+      cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+      margin_amount: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+        null,
+      ]),
+      margin_pct: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      min_margin_pct: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_terms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      supplier_price_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
+  checklist: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement(Object.values(ChecklistCode)),
+      ok: faker.datatype.boolean(),
+      blocking: faker.datatype.boolean(),
+      by_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      value: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getRecordQuoteClientDecisionResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  channels: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteChannelsMock() },
+    null,
+  ]),
+  delivery: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteDeliveryMock() },
+    null,
+  ]),
+  client_comments: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    author: faker.helpers.arrayElement(["client", "manager"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  client_decision: faker.helpers.arrayElement([
+    { ...getRecordQuoteClientDecisionResponseQuoteClientDecisionMock() },
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getDownloadQuoteClientDecisionEvidenceResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getListMemoApprovalsResponseEdsPersonMock = (
   overrideResponse: Partial<EdsPerson> = {},
@@ -8086,6 +8713,314 @@ export const getListMailLogResponseMock = (
     template: faker.string.alpha({ length: { min: 10, max: 20 } }),
     to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
+  ...overrideResponse,
+});
+
+export const getGetImapConnectorResponseMock = (
+  overrideResponse: Partial<Extract<ImapConnector, object>> = {},
+): ImapConnector => ({
+  configured: faker.datatype.boolean(),
+  host: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  port: faker.number.int(),
+  security: faker.helpers.arrayElement(["ssl", "starttls"] as const),
+  mailbox: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  assist_enabled: faker.datatype.boolean(),
+  username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  password_configured: faker.datatype.boolean(),
+  password_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  secrets_enabled: faker.datatype.boolean(),
+  last_poll_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_ok_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  last_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getSaveImapConnectorResponseMock = (
+  overrideResponse: Partial<Extract<ImapConnector, object>> = {},
+): ImapConnector => ({
+  configured: faker.datatype.boolean(),
+  host: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  port: faker.number.int(),
+  security: faker.helpers.arrayElement(["ssl", "starttls"] as const),
+  mailbox: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  assist_enabled: faker.datatype.boolean(),
+  username: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  password_configured: faker.datatype.boolean(),
+  password_last4: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  password_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  secrets_enabled: faker.datatype.boolean(),
+  last_poll_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_ok_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  last_error: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCheckImapResponseMock = (
+  overrideResponse: Partial<Extract<ImapCheck, object>> = {},
+): ImapCheck => ({
+  ok: faker.datatype.boolean(),
+  error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  detail: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  messages: faker.helpers.arrayElement([faker.number.int(), null]),
+  latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+  ...overrideResponse,
+});
+
+export const getListInboundMailResponseInboundMailLinkMock = (
+  overrideResponse: Partial<InboundMailLink> = {},
+): InboundMailLink => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailPage, object>> = {},
+): InboundMailPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    status: faker.helpers.arrayElement(Object.values(InboundMailStatus)),
+    from_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
+    attachments_count: faker.number.int({ min: 0 }),
+    assist: {
+      status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
+      kind: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
+        null,
+      ]),
+      summary: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 300 } }),
+        null,
+      ]),
+      action: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["register", "lead", "archive"] as const),
+        null,
+      ]),
+    },
+    client: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailLinkMock() },
+      null,
+    ]),
+    lead: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailLinkMock() },
+      null,
+    ]),
+  })),
+  total: faker.number.int({ min: 0 }),
+  mailbox: {
+    configured: faker.datatype.boolean(),
+    last_poll_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_ok_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_error_kind: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetInboundMailResponseInboundMailLinkMock = (
+  overrideResponse: Partial<InboundMailLink> = {},
+): InboundMailLink => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMail, object>> = {},
+): InboundMail => ({
+  id: faker.number.int(),
+  status: faker.helpers.arrayElement(Object.values(InboundMailStatus)),
+  from_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
+  attachments_count: faker.number.int({ min: 0 }),
+  assist: {
+    status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
+    kind: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
+      null,
+    ]),
+    summary: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 300 } }),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["register", "lead", "archive"] as const),
+      null,
+    ]),
+  },
+  client: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
+  lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
+  to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      index: faker.number.int({ min: 0 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size: faker.number.int({ min: 0 }),
+    }),
+  ),
+  skipped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      reason: faker.helpers.arrayElement(["type", "size", "count"] as const),
+    }),
+  ),
+  too_large: faker.datatype.boolean(),
+  inns: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  letter_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  letter_ref: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  result_lead: faker.helpers.arrayElement([
+    { ...getGetInboundMailResponseInboundMailLinkMock() },
+    null,
+  ]),
+  archive_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  handled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  replies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      sent_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getDownloadInboundMailAttachmentResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getCopyInboundMailFilesToEdsResponseMock = (): EdsFile[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  }));
+
+export const getAssistInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailAssist, object>> = {},
+): InboundMailAssist => ({
+  status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
+  kind: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
+    null,
+  ]),
+  summary: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 300 } }),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["register", "lead", "archive"] as const),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCreateLeadFromInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailLeadResult, object>> = {},
+): InboundMailLeadResult => ({
+  lead_id: faker.number.int(),
+  lead_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getReplyInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailReply, object>> = {},
+): InboundMailReply => ({
+  id: faker.number.int(),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
   ...overrideResponse,
 });
 
@@ -22573,6 +23508,53 @@ export const getSendQuoteByChannelMockHandler = (
   );
 };
 
+export const getRecordQuoteClientDecisionMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<QuoteApprovalCard> | QuoteApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/quotes/:id/client-decision",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRecordQuoteClientDecisionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadQuoteClientDecisionEvidenceMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/quotes/:id/client-decision/evidence",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadQuoteClientDecisionEvidenceResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
 export const getListMemoApprovalsMockHandler = (
   overrideResponse?:
     | MemoApprovalPage
@@ -23384,6 +24366,257 @@ export const getListMailLogMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getListMailLogResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetImapConnectorMockHandler = (
+  overrideResponse?:
+    | ImapConnector
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ImapConnector> | ImapConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/imap",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetImapConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveImapConnectorMockHandler = (
+  overrideResponse?:
+    | ImapConnector
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ImapConnector> | ImapConnector),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/imap",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveImapConnectorResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckImapMockHandler = (
+  overrideResponse?:
+    | ImapCheck
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ImapCheck> | ImapCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/imap/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckImapResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<InboundMailPage> | InboundMailPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/inbound-mail",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMail
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<InboundMail> | InboundMail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/inbound-mail/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadInboundMailAttachmentMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/inbound-mail/:id/attachments/:index",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadInboundMailAttachmentResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getCopyInboundMailFilesToEdsMockHandler = (
+  overrideResponse?:
+    | EdsFile[]
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<EdsFile[]> | EdsFile[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/eds-files",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCopyInboundMailFilesToEdsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAssistInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailAssist
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailAssist> | InboundMailAssist),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/assist",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssistInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateLeadFromInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailLeadResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailLeadResult> | InboundMailLeadResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/lead",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateLeadFromInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getArchiveInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/archive",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getReplyInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailReply
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailReply> | InboundMailReply),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/reply",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReplyInboundMailResponseMock(),
         { status: 200 },
       );
     },
@@ -28253,6 +29486,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetQuoteApprovalMockHandler(),
   getDecideQuoteApprovalMockHandler(),
   getSendQuoteByChannelMockHandler(),
+  getRecordQuoteClientDecisionMockHandler(),
+  getDownloadQuoteClientDecisionEvidenceMockHandler(),
   getListMemoApprovalsMockHandler(),
   getGetMemoApprovalMockHandler(),
   getDecideMemoApprovalMockHandler(),
@@ -28288,6 +29523,17 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCheckSmtpMockHandler(),
   getSendSmtpTestMockHandler(),
   getListMailLogMockHandler(),
+  getGetImapConnectorMockHandler(),
+  getSaveImapConnectorMockHandler(),
+  getCheckImapMockHandler(),
+  getListInboundMailMockHandler(),
+  getGetInboundMailMockHandler(),
+  getDownloadInboundMailAttachmentMockHandler(),
+  getCopyInboundMailFilesToEdsMockHandler(),
+  getAssistInboundMailMockHandler(),
+  getCreateLeadFromInboundMailMockHandler(),
+  getArchiveInboundMailMockHandler(),
+  getReplyInboundMailMockHandler(),
   getListExternalServicesMockHandler(),
   getGetExternalServiceMockHandler(),
   getCheckExternalServiceMockHandler(),

@@ -2648,6 +2648,22 @@ components:
           maxItems: 50
           items:
             $ref: '#/components/schemas/Uuid'
+        source:
+          oneOf:
+            - $ref: '#/components/schemas/LetterSourceIn'
+            - type: 'null'
+          description: >-
+            Откуда письмо (W18A-P2): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — уходит в
+            `letter.registered.source`, CRM снимает письмо с очереди и пишет номер ВХ
+    LetterSourceIn:
+      type: object
+      additionalProperties: false
+      required: [crm_inbound_mail_id]
+      properties:
+        crm_inbound_mail_id:
+          type: integer
+          minimum: 1
+          description: id письма в CRM (`inbound_mail.id`)
     LetterListItem:
       type: object
       additionalProperties: false

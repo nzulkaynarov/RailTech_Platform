@@ -93,6 +93,11 @@ class ProjectPageSerializer(serializers.Serializer):
     results = ProjectRowSerializer(many=True)
 
 
+class OnBehalfNoteSerializer(serializers.Serializer):
+    channel = serializers.ChoiceField(choices=["phone", "email", "messenger", "in_person", "paper"])
+    counterparty_person = serializers.CharField()
+
+
 class ProjectJournalEntrySerializer(serializers.Serializer):
     at = serializers.DateTimeField()
     code = serializers.CharField(help_text="Код события журнала (`contract.scan_attached`, …); пусто у прежних записей")
@@ -101,6 +106,11 @@ class ProjectJournalEntrySerializer(serializers.Serializer):
     document = serializers.ChoiceField(choices=JOURNAL_DOCUMENTS, allow_null=True)
     number = serializers.CharField(allow_null=True)
     reason = serializers.CharField(allow_blank=True, help_text="Причина или заметка к действию")
+    on_behalf = OnBehalfNoteSerializer(
+        allow_null=True,
+        required=False,
+        help_text="Действие контрагента записал сотрудник (A1, A2 волны 18a): канал и лицо со стороны клиента",
+    )
 
 
 class QuoteCardSerializer(QuoteRefSerializer):
@@ -188,6 +198,18 @@ class ProjectCardSerializer(ProjectRowSerializer):
 class ContractTransitionInSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True, help_text="Обязательна для `reject`")
     note = serializers.CharField(required=False, allow_blank=True, help_text="Заметка в журнал (оператор ЭДО, ссылка)")
+    # A2 волны 18a: согласие клиента записывает сотрудник — как клиент сообщил и кто со стороны клиента.
+    channel = serializers.ChoiceField(
+        choices=["phone", "email", "messenger", "in_person", "paper"],
+        required=False,
+        help_text="Обязателен для `client-agreed`: как клиент сообщил согласие",
+    )
+    counterparty_person = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=200,
+        help_text="Обязателен для `client-agreed`: кто со стороны клиента",
+    )
 
 
 class ContractScanInSerializer(serializers.Serializer):

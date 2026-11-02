@@ -37,6 +37,8 @@ export interface RegisterValues {
   draftResponsibleId: string;
   draftDue: string;
   draftText: string;
+  /** Письмо общего ящика (W18A-P2): ВХ из очереди «Входящая почта»; без вложений — можно */
+  sourceMailId: number | null;
 }
 
 export type RegisterField =
@@ -85,6 +87,7 @@ export function emptyRegister(today: string): RegisterValues {
     draftResponsibleId: "",
     draftDue: "",
     draftText: "",
+    sourceMailId: null,
   };
 }
 
@@ -103,7 +106,8 @@ export function validateRegister(values: RegisterValues, today: string): Registe
   if (values.senderInn.trim() && !INN.test(values.senderInn.trim())) errors.sender_inn = true;
   if (!values.receivedAt || values.receivedAt > today) errors.received_at = true;
   if (!values.subject.trim()) errors.subject = true;
-  if (!values.attachments.some((a) => a.status === "done" && a.id)) errors.file_ids = true;
+  const hasFile = values.attachments.some((a) => a.status === "done" && a.id);
+  if (!hasFile && values.sourceMailId === null) errors.file_ids = true;
   return errors;
 }
 
@@ -139,6 +143,7 @@ export function toRegisterBody(values: RegisterValues): LetterRegisterIn {
     file_ids: [...new Set(ids)],
     addressee_id: values.addresseeId || null,
     resolution_draft: draftOf(values),
+    source_mail_id: values.sourceMailId,
   };
 }
 

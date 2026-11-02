@@ -119,7 +119,7 @@ inline и до БД не доходит (§9.2).
 | `request.created` | `source: crm|cabinet|erp`; с W16-D1-2 необязательные `request_number` (ЗВ), `urgency`, `letter_file_id` (файл письма в EDS), `crm_request_id`, `process` | лента лида; зеркало сделки `open` — заявка CRM по `crm_request_id`, иначе открытая сделка лида; EDS — письмо ВХ со срочностью и файлом |
 | `deal.stage_changed` | `from, to, reason?` | лента; `external_stage` |
 | `quote.sent` | `version, public_url, valid_until`; `channels?` (ERP-11: каналы автоотправки по решению директора) | бот: «КП готово» с кнопками — если `channels` нет или в них есть `telegram` |
-| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?` | лента; при accepted — уведомление ответственному |
+| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?, recorded_by_staff?` | лента; при accepted — уведомление ответственному. `recorded_by_staff {staff_name, channel, counterparty_person, occurred_on}` — решение клиента записал сотрудник по подтверждению клиента (A1 волны 18a; `actor.type = staff`); нет поля — клиент решил онлайн |
 | `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
 | `contract.signed` | `by: client|company|both` | лента |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |
@@ -698,7 +698,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 
 | Тип | Когда | Подписчики v1 |
 |---|---|---|
-| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created` | platform-bff |
+| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created`; `source.crm_inbound_mail_id` — ВХ из очереди «Входящая почта» (W18A-P2) | platform-bff, crm (письма с `source`) |
 | `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION` — FSM ERP `CALCULATING`; §10.6), platform-bff |
 | `uz.railtech.eds.letter.returned.v1` | возврат регистратору с комментарием (повторная подача — `POST …/submit`, без события) | platform-bff |
 | `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |

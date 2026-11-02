@@ -31,6 +31,7 @@ import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
+import { inboundMailHandlers } from "./inboundMail";
 import { ticketsHandlers } from "./ticketsHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
@@ -165,6 +166,7 @@ export const handlers = [
   ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
+  ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
   ...companyArticlesHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,

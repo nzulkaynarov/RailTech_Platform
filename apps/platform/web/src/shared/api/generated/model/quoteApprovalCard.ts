@@ -11,6 +11,7 @@ import type { QuoteCalculator } from "./quoteCalculator";
 import type { QuoteChannels } from "./quoteChannels";
 import type { QuoteChecklistLine } from "./quoteChecklistLine";
 import type { QuoteClientComment } from "./quoteClientComment";
+import type { QuoteClientDecision } from "./quoteClientDecision";
 import type { QuoteDelivery } from "./quoteDelivery";
 import type { QuoteInternal } from "./quoteInternal";
 import type { QuoteLetterRef } from "./quoteLetterRef";
@@ -83,5 +84,7 @@ export interface QuoteApprovalCard {
   delivery: QuoteDelivery | null;
   /** Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
   client_comments: QuoteClientComment[];
+  /** Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила */
+  client_decision?: QuoteClientDecision | null;
   sources: Sources;
 }

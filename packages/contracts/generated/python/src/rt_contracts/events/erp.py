@@ -143,6 +143,18 @@ class Channel(StrEnum):
 
 
 class Channel1(StrEnum):
+    """
+    Как сторона сообщила решение
+    """
+
+    phone = "phone"
+    email = "email"
+    messenger = "messenger"
+    in_person = "in_person"
+    paper = "paper"
+
+
+class Channel2(StrEnum):
     telegram = "telegram"
     email = "email"
 
@@ -556,7 +568,7 @@ class InviteSent(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    channels: Annotated[list[Channel1], Field(min_length=1)]
+    channels: Annotated[list[Channel2], Field(min_length=1)]
     erp_contact_id: int | None = None
     crm_contact_id: int | None = None
 
@@ -899,6 +911,7 @@ class QuoteOutcome(BaseModel):
     """
     Тот же контакт в CRM, если сопоставлен
     """
+    recorded_by_staff: RecordedByStaff | None = None
 
 
 class QuoteReadyForApproval(BaseModel):
@@ -1087,6 +1100,32 @@ class QuoteVisaAuthor(BaseModel):
     null — сотрудник ERP без связи с CRM
     """
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class RecordedByStaff(BaseModel):
+    """
+    Решение внешней стороны записал сотрудник по подтверждению клиента — письмо, переписка, скан (A1 волны 18a, «Отметить за контрагента»); нет поля — решение принято онлайн (Cabinet, публичная ссылка)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    staff_name: str
+    """
+    Кто записал: сотрудник своей компании
+    """
+    channel: Channel1
+    """
+    Как сторона сообщила решение
+    """
+    counterparty_person: str
+    """
+    Кто со стороны контрагента: ФИО и должность
+    """
+    occurred_on: date
+    """
+    Когда клиент сообщил решение, не позже даты записи
+    """
 
 
 class Ref(BaseModel):

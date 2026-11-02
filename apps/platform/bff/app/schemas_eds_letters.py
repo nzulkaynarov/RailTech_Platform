@@ -13,7 +13,14 @@ import uuid
 from typing import Any, Literal
 from urllib.parse import quote
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+)
 
 from app.errors import backend_unavailable
 from app.feeds.models import PersonRef, Sources, StepCode
@@ -467,9 +474,20 @@ class LetterRegisterIn(BaseModel):
     # P8b: адресат (нет — директор) и проект резолюции делопроизводителя.
     addressee_id: str | None = Field(default=None, pattern=_USER_ID)
     resolution_draft: ResolutionDraftIn | None = None
-    file_ids: list[uuid.UUID] = Field(min_length=1, max_length=50)
+    # W18A-P2: письмо общего ящика (очередь «Входящая почта») — EDS вернёт его в `letter.registered`
+    source_mail_id: int | None = Field(default=None, ge=1)
+    file_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
 
     _sender = field_validator("sender_name")(_not_blank)
+
+    @field_validator("file_ids")
+    @classmethod
+    def _file_required(cls, value: list[uuid.UUID], info: ValidationInfo) -> list[uuid.UUID]:
+        """Нужен хотя бы один файл; письмо общего ящика без вложений — исключение."""
+        if not value and info.data.get("source_mail_id") is None:
+            raise ValueError("at least one file is required")
+        return value
+
     _subject = field_validator("subject")(_not_blank)
 
     def for_eds(self) -> dict[str, Any]:
@@ -514,6 +532,8 @@ class LetterRegisterIn(BaseModel):
             body["addressee_crm_user_id"] = int(self.addressee_id)
         if self.resolution_draft is not None:
             body["resolution_draft"] = self.resolution_draft.for_eds()
+        if self.source_mail_id is not None:
+            body["source"] = {"crm_inbound_mail_id": self.source_mail_id}
         return body
 
 

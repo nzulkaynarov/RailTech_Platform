@@ -73,9 +73,10 @@ async def test_registrar_triages_free_leads_and_never_sees_handed_ones(
     assert items[0]["object"]["path"] == "/crm/messages?lead=L-2041"
 
     cards = check(await web.client.get("/api/v1/queue/cards"), "/queue/cards", "get").json()
-    # «Проекты в работе» — от раздела «Проекты» (чтение) делопроизводителя
+    # «Проекты в работе» — от раздела «Проекты» (чтение); «Входящая почта» — W18A-P2
     assert {c["key"]: c["count"] for c in cards["cards"]} == {
         "leads_to_triage": 2,
+        "inbound_mail": 0,
         "projects_in_work": 0,
     }
     counters = (await web.client.get("/api/v1/menu-counters")).json()["items"]

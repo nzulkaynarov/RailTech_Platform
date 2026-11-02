@@ -462,4 +462,5 @@ ATOMIC_BY_CALLER = {
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
     "crm/services/contract_flow.py::_publish",  # из apply_transition, generate_contract_from_quote, sign_* (все @atomic)
     "sales/services/quote_auto_send.py::_redeliver",  # из deliver (with transaction.atomic, D17G-2)
+    "crm/services/quotes/lifecycle_accept.py::_outcome_event",  # из perform_quote_acceptance / _rejection (@atomic, A1)
 }

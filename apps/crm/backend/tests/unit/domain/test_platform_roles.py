@@ -212,7 +212,11 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("crm.leads", "read"): (LEADS_READ, set()),
     ("crm.leads", "full"): (LEADS_FULL, set()),
     # D17G-1: первая линия — разобрать и передать менеджеру, без «Забрать» и ответа клиенту
-    ("crm.leads.triage", "full"): (LEADS_READ | {"leads:triage"}, set()),
+    # W18A-P2: и очередь «Входящая почта» общего ящика (`mail_inbox`)
+    ("crm.leads.triage", "full"): (
+        LEADS_READ | {"leads:triage", "mail_inbox:read", "mail_inbox:work"},
+        set(),
+    ),
     ("crm.clients", "read"): (CLIENTS_READ, set()),
     # quote.send — отправка одобренного КП клиенту (C1-G-4, решение архитектора 2026-10-26)
     ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage", "quote.send"}),

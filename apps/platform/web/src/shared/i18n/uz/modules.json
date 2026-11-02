@@ -138,7 +138,8 @@
       "payments": "Hisoblar va to‘lovlar",
       "new": "Hujjat yaratish",
       "register": "Kiruvchi hujjatni ro‘yxatga olish",
-      "tasks": "Topshiriq"
+      "tasks": "Topshiriq",
+      "mail": "Kiruvchi pochta"
     },
     "action": "Hujjat yaratish"
   },

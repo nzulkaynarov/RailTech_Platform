@@ -206,7 +206,8 @@ def test_list_runs_in_a_bounded_number_of_queries(pw):  # noqa: F811
 def test_project_journal_lists_only_document_events(pw):  # noqa: F811
     contract = contract_in(pw, S.PENDING_CLIENT)
     ActivityLog.objects.create(action="Что-то другое", event_code="deal.stage_changed", deal=pw.deal)
-    api(pw.accountant).post(f"/api/v1/crm/contracts/{contract.id}/client-agreed/", {}, format="json")
+    agreed = {"channel": "phone", "counterparty_person": "Каримов А."}
+    api(pw.accountant).post(f"/api/v1/crm/contracts/{contract.id}/client-agreed/", agreed, format="json")
     codes = [row["code"] for row in _card(pw.director, pw.deal.id).json()["journal"]]
     assert codes == ["contract.client_agreed"]
 

@@ -171,7 +171,45 @@
       "failed": "Not sent: {{reason}}",
       "invalid": "The quote can no longer be sent — the card is refreshed."
     },
-    "superseded": "This is version {{version}}, superseded by version {{next}}. Decide on the current version in “Quotes for approval”; this is history."
+    "superseded": "This is version {{version}}, superseded by version {{next}}. Decide on the current version in “Quotes for approval”; this is history.",
+    "clientDecision": {
+      "title": "Client decision",
+      "state": {
+        "awaiting": "Awaiting the client's decision.",
+        "accepted": "The client accepted the quote.",
+        "rejected": "The client declined the quote.",
+        "expired": "The quote has expired."
+      },
+      "accept": "Client accepted",
+      "reject": "Client declined",
+      "acceptedAt": "Accepted {{date}}",
+      "rejectedAt": "Declined {{date}}",
+      "reason": "Reason: {{reason}}",
+      "file": "Confirmation: {{name}}",
+      "dialog": {
+        "accept": "Client accepted the quote",
+        "reject": "Client declined the quote",
+        "date": "When",
+        "dateRequired": "Enter a date no later than today",
+        "comment": "What the client replied",
+        "commentReject": "Reason for declining",
+        "commentRequired": "Fill in this field",
+        "file": "Client confirmation",
+        "fileHint": "Attach the client's confirmation: a letter, a chat or a scan",
+        "fileRequired": "Attach the client's confirmation",
+        "consequence": {
+          "accept": "The quote becomes accepted: the project and the draft contract open, as with acceptance in the cabinet.",
+          "reject": "The quote becomes declined: the request goes back to costing and reservations are released."
+        },
+        "cancel": "Cancel",
+        "submit": "Record",
+        "done": {
+          "accept": "Recorded: the client accepted the quote",
+          "reject": "Recorded: the client declined the quote"
+        },
+        "failed": "Not recorded: {{reason}}"
+      }
+    }
   },
   "panel": {
     "sheetTitle": "Approval {{number}}",

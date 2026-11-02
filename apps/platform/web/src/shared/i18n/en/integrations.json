@@ -345,6 +345,45 @@
       "test": "Sending check",
       "outgoing_letter": "Outgoing letter",
       "erp_mail": "ERP email"
+    },
+    "inbound": {
+      "title": "Receiving: shared mailbox (IMAP)",
+      "intro": "Every 2 minutes, mail from the company's shared mailbox lands in the clerk's Incoming mail queue. Messages are neither deleted nor marked as read on the server.",
+      "on": "Connected",
+      "off": "Not connected",
+      "mailbox": "Folder",
+      "username": "Login (mailbox address)",
+      "appPassword": "App password",
+      "appPasswordHint": "An app password from the mail service settings, not the mailbox password. Empty — keep the current one.",
+      "host": "IMAP server",
+      "hostHint": "For example, imap.yandex.ru; empty — receiving is off",
+      "securityValue": {
+        "ssl": "SSL (port 993)",
+        "starttls": "STARTTLS (port 143)"
+      },
+      "assist": "Clerk assistant: “Suggest” the type and gist of a letter (on request, without personal data)",
+      "assistLabel": "Clerk assistant",
+      "assistOn": "On — via the “Suggest” button",
+      "assistOff": "Off",
+      "lastPoll": "Last check",
+      "lastOk": "OK, {{at}}",
+      "lastError": "Failed: {{reason}}",
+      "check": "Check receiving",
+      "checkOk": "The mailbox opens: {{count}} messages in the folder",
+      "button": "Set up receiving",
+      "settings": "Receiving mail",
+      "saved": "Receiving settings saved",
+      "step1": "The platform will sign in to the mailbox every 2 minutes and put new mail into the Incoming mail queue.",
+      "step2": "Messages are not deleted or marked as read on the server.",
+      "step3": "The app password is stored encrypted and is never shown again.",
+      "reason": {
+        "not_configured": "Receiving is not set up: enter the server, login and app password",
+        "auth_failed": "The server rejected the login or app password — enter them again",
+        "mailbox_missing": "There is no such folder — usually INBOX",
+        "invalid_host": "The server address is wrong (for example, imap.yandex.ru)",
+        "tls_failed": "Could not establish a secure connection — check the port and encryption",
+        "unavailable": "The IMAP server does not respond — check the address and port"
+      }
     }
   },
   "services": {

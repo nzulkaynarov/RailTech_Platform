@@ -103,5 +103,23 @@
     "removeRow": "− строка",
     "removeColumn": "− столбец",
     "tableHint": "Первая строка — шапка: она повторяется на каждой странице PDF."
+  },
+  "onBehalf": {
+    "tag": "Отмечено сотрудником",
+    "staff": "отметил {{name}}",
+    "person": "подтвердил: {{person}}",
+    "channel": {
+      "email": "почта",
+      "messenger": "мессенджер",
+      "phone": "телефон",
+      "in_person": "лично",
+      "paper": "бумага"
+    },
+    "channelLabel": "Как клиент сообщил",
+    "channelPlaceholder": "Выберите канал",
+    "channelRequired": "Укажите, как клиент сообщил",
+    "personLabel": "Кто со стороны клиента",
+    "personPlaceholder": "ФИО и должность",
+    "personRequired": "Укажите, кто подтвердил"
   }
 }

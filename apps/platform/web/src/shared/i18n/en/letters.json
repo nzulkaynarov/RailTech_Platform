@@ -566,5 +566,106 @@
       "done": "Marked: acknowledged"
     },
     "failed": "Not saved: {{reason}}."
+  },
+  "mail": {
+    "subtitle": "Shared mailbox letters: handle each — register it as incoming, create a lead or archive it",
+    "caption": "Letters waiting to be handled",
+    "open": "Open the letter “{{subject}}”",
+    "noSubject": "(no subject)",
+    "attachments": "Attachments: {{count}}",
+    "off": {
+      "title": "Mail is not connected",
+      "text": "The administrator connects the shared mailbox in Settings · Connections · Mail → “Receiving”. Letters will then appear here automatically.",
+      "action": "Open Connections"
+    },
+    "empty": {
+      "title": "No new letters",
+      "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
+    },
+    "status": {
+      "new": "Waiting",
+      "registered": "Registered",
+      "lead": "Sent to leads",
+      "archived": "Archived"
+    },
+    "kind": {
+      "buyer": "Buyer",
+      "official": "Official letter",
+      "supplier_doc": "Supplier invoice or document",
+      "other": "Other"
+    },
+    "action": {
+      "register": "Register incoming",
+      "lead": "Create a lead",
+      "archive": "Archive"
+    },
+    "fields": {
+      "from": "From",
+      "to": "To",
+      "received": "Received",
+      "client": "Known client",
+      "lead": "Open lead",
+      "inns": "TIN in the text"
+    },
+    "text": "Letter text",
+    "files": "Attachments",
+    "download": "Download {{name}}",
+    "skipped": "Not accepted: {{name}} — {{reason}}",
+    "skippedReason": {
+      "type": "this file type is not accepted",
+      "size": "larger than 25 MB",
+      "count": "more than 20 files"
+    },
+    "tooLarge": "The letter is larger than 60 MB: only headers were saved — open it in the mailbox.",
+    "assist": {
+      "title": "Assistant suggestion",
+      "button": "Suggest",
+      "intro": "The assistant suggests the letter type and an action. Email addresses, phones, TINs, PINFLs, passport, card and account numbers are hidden; attachments are not sent. You can handle the letter without it.",
+      "suggests": "Suggests: {{action}}",
+      "note": "The suggestion does nothing by itself — you choose the action.",
+      "unavailable": "The assistant is unavailable now — handle the letter manually or try later.",
+      "retry": "Try again"
+    },
+    "actions": {
+      "title": "What to do",
+      "what": "What will happen",
+      "registerWhat": "The “Register incoming” form opens with the letter data and attachments; after registration the letter leaves the queue.",
+      "leadWhat": "A lead appears in the Inbox without a manager — a manager will take it. If a lead with this address exists, the letter is added to it as a note. The letter leaves the queue.",
+      "leadConfirm": "Create a lead",
+      "archiveReason": "Reason",
+      "archiveHint": "For example: advertising, duplicate, not for us",
+      "archiveWhat": "The letter leaves the queue for the archive with the reason; it stays in the mailbox.",
+      "archiveConfirm": "Archive",
+      "cancel": "Cancel",
+      "leadDone": "Lead {{number}} created — a manager will take it",
+      "leadNote": "The letter was added to lead {{number}}",
+      "archived": "The letter is archived",
+      "failed": "Failed: {{reason}}"
+    },
+    "result": {
+      "title": "Outcome",
+      "registered": "Registered: {{number}}",
+      "openLetter": "Open {{number}}",
+      "lead": "Lead: {{number}}",
+      "openLead": "Open the lead",
+      "archived": "Archived: {{reason}}"
+    },
+    "reply": {
+      "title": "Reply to the sender",
+      "label": "Reply text",
+      "send": "Send reply",
+      "what": "The reply goes to the sender from the company's shared address in the same thread.",
+      "sent": "The reply is queued for sending",
+      "history": "Replies",
+      "status": {
+        "queued": "queued",
+        "sent": "sent",
+        "failed": "not sent",
+        "skipped_no_smtp": "mail is not set up"
+      }
+    },
+    "fromMail": "From the letter “{{subject}}” by {{sender}}",
+    "fromMailLoading": "Copying the letter attachments…",
+    "fromMailFailed": "Could not copy the attachments — attach the files manually."
   }
 }

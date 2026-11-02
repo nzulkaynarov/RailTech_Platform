@@ -43,7 +43,7 @@ def test_card_with_every_document_follows_the_contract(pw):  # noqa: F811
     ("action", "start", "body"),
     [
         ("send-to-client", S.DRAFT, {}),
-        ("client-agreed", S.PENDING_CLIENT, {}),
+        ("client-agreed", S.PENDING_CLIENT, {"channel": "phone", "counterparty_person": "Каримов А."}),
         ("reject", S.PENDING_CLIENT, {"reason": "Не устраивает"}),
         ("revise", S.REJECTED, {}),
         ("mark-issued", S.PENDING_MANAGER, {"note": "Didox"}),

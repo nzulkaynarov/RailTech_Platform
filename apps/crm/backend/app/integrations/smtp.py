@@ -171,8 +171,8 @@ class SmtpTransport(Protocol):
         """Простое письмо: `to` — адрес или несколько через запятую.
 
         Письмо с HTML, ответом на другой адрес или вложениями (запросы ERP и EDS, W18A-P1) —
-        тот же метод с ключевыми `html`, `reply_to`, `attachments`; транспорт `SmtplibTransport`
-        их принимает.
+        тот же метод с ключевыми `html`, `reply_to`, `attachments`, ответ в цепочку (W18A-P2) —
+        `headers`; транспорт `SmtplibTransport` их принимает.
         """
         ...
 
@@ -186,6 +186,7 @@ def build_message(
     html: str | None = None,
     reply_to: str | None = None,
     attachments: tuple[MailAttachment, ...] = (),
+    headers: tuple[tuple[str, str], ...] = (),
 ) -> EmailMessage:
     message = EmailMessage()
     message["From"] = connection.sender
@@ -195,6 +196,8 @@ def build_message(
     message["Message-ID"] = make_msgid(domain=connection.from_email.rpartition("@")[2] or None)
     if reply_to:
         message["Reply-To"] = reply_to
+    for name, value in headers:  # цепочка ответа: In-Reply-To, References (W18A-P2)
+        message[name] = value
     message.set_content(body, charset="utf-8")
     if html:
         message.add_alternative(html, subtype="html", charset="utf-8")
@@ -228,9 +231,17 @@ class SmtplibTransport:
         html: str | None = None,
         reply_to: str | None = None,
         attachments: tuple[MailAttachment, ...] = (),
+        headers: tuple[tuple[str, str], ...] = (),
     ) -> None:
         message = build_message(
-            connection, to, subject, body, html=html, reply_to=reply_to, attachments=attachments
+            connection,
+            to,
+            subject,
+            body,
+            html=html,
+            reply_to=reply_to,
+            attachments=attachments,
+            headers=headers,
         )
         await asyncio.to_thread(self._send, connection, message)
 

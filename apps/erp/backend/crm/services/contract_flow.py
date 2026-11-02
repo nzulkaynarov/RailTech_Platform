@@ -62,6 +62,8 @@ class Transition:
     title: str
     needs_reason: bool = False
     needs_file: bool = False
+    #: Действие клиента записывает сотрудник (A2 волны 18a): канал и лицо со стороны клиента обязательны.
+    needs_on_behalf: bool = False
 
 
 TRANSITIONS = {
@@ -82,6 +84,7 @@ TRANSITIONS = {
             "contract.manage",
             "contract.client_agreed",
             "Редакция договора согласована клиентом",
+            needs_on_behalf=True,
         ),
         Transition(
             "reject",
@@ -178,7 +181,24 @@ def publish_current_status(contract, actor=None, *, reason: str = "") -> None:
     _publish(contract, actor, reason=reason)
 
 
-def _journal(contract, transition: Transition, actor, *, reason: str, note: str, before: str) -> None:
+#: Как клиент сообщил о действии (тот же список, что у КП, `crm/services/quotes/on_behalf.py`).
+ON_BEHALF_CHANNELS = ("phone", "email", "messenger", "in_person", "paper")
+
+
+def _on_behalf_note(transition: Transition, channel: str, person: str) -> Tuple[Optional[dict], Optional[str]]:
+    if not transition.needs_on_behalf:
+        return None, None
+    if channel not in ON_BEHALF_CHANNELS:
+        return None, "CHANNEL_INVALID"
+    person = (person or "").strip()
+    if not person or len(person) > 200:
+        return None, "COUNTERPARTY_PERSON_REQUIRED"
+    return {"channel": channel, "counterparty_person": person}, None
+
+
+def _journal(
+    contract, transition: Transition, actor, *, reason: str, note: str, before: str, on_behalf: Optional[dict] = None
+) -> None:
     ActivityLog.objects.create(
         action=transition.title,
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
@@ -189,6 +209,7 @@ def _journal(contract, transition: Transition, actor, *, reason: str, note: str,
             "from": before,
             "to": _status_code(contract),
             **({"note": note} if note else {}),
+            **({"on_behalf": on_behalf} if on_behalf else {}),
         },
         user=actor,
         level="WARNING" if transition.action == "reject" else "INFO",
@@ -219,12 +240,15 @@ def apply_transition(
     reason: str = "",
     note: str = "",
     scan=None,
+    channel: str = "",
+    counterparty_person: str = "",
 ) -> Tuple[Optional[Contract], Optional[str]]:
     """Перевести договор по действию `action` из `TRANSITIONS`; `(договор, None)` или `(None, код ошибки)`.
 
     Коды: `CONTRACT_NOT_FOUND`, `MEMBER_REQUIRED_FOR_ACTION` (нет права `contract.*` в своей компании),
     `CONTRACT_TRANSITION_NOT_ALLOWED` (статус не тот), `REASON_REQUIRED` (отклонение без причины), `SCAN_REQUIRED` и
-    `SCAN_INVALID` (скан не приложен или не PDF/изображение, больше лимита, подделана сигнатура).
+    `SCAN_INVALID` (скан не приложен или не PDF/изображение, больше лимита, подделана сигнатура), `CHANNEL_INVALID` и
+    `COUNTERPARTY_PERSON_REQUIRED` («Согласован клиентом» без канала или лица со стороны клиента, A2 волны 18a).
     """
     transition = TRANSITIONS.get(action)
     if transition is None:
@@ -250,6 +274,9 @@ def apply_transition(
         error = _check_scan(scan)
         if error:
             return None, error
+    on_behalf, error = _on_behalf_note(transition, channel, counterparty_person)
+    if error:
+        return None, error
 
     from integration.services import document_events, events
 
@@ -278,7 +305,7 @@ def apply_transition(
                 fields.append("client_signed_at")
             fields += ["signed_file", "manager_signed_at"]
         contract.save(update_fields=fields)
-    _journal(contract, transition, actor, reason=reason, note=note, before=before)
+    _journal(contract, transition, actor, reason=reason, note=note, before=before, on_behalf=on_behalf)
     _publish(contract, actor, reason=reason)
     if action == "send_to_client" and not was_sent:
         _notify_sent(contract)
@@ -312,7 +339,7 @@ def create_project_contract(quote_id: int, actor: Optional[CustomUser], *, notes
     """«Сформировать проект договора» из принятого КП: договор в статусе `DRAFT`, клиенту не отправляется.
 
     Обёртка над `generate_contract_from_quote(send_to_client=False)`: те же проверки (сотрудник компании-владельца,
-    КП одобрено или отправлено), тот же номер и PDF; отличие только в том, что отправляет клиенту бухгалтер отдельным
+    КП принято — A7), тот же номер и PDF; отличие только в том, что отправляет клиенту бухгалтер отдельным
     действием.
     """
     from .contracts import generate_contract_from_quote

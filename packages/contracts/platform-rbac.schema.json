@@ -121,7 +121,9 @@
         "chats:assist",
         "chats:invoiced",
         "company_articles:read",
-        "company_articles:write"
+        "company_articles:write",
+        "mail_inbox:read",
+        "mail_inbox:work"
       ]
     },
     "edsPermission": {
@@ -165,7 +167,8 @@
         "integration_issue",
         "instruction",
         "instruction_extension",
-        "acquaint"
+        "acquaint",
+        "inbound_mail"
       ]
     },
     "resourceKey": {

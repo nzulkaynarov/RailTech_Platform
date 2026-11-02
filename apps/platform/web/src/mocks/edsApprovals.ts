@@ -16,7 +16,9 @@ import type {
 } from "../shared/api/generated/model";
 import {
   ACCOUNTANT_PERSON,
+  AWAITING_CLIENT,
   DIRECTOR_PERSON,
+  MANAGER_PERSON,
   deliveryAfterApproval,
   deliveryAfterSend,
   MOCK_USER_CRM_ID,
@@ -122,6 +124,32 @@ function wantedStatuses(url: URL): ApprovalRouteStatus[] {
 
 // --- КП ------------------------------------------------------------------------------------------
 
+/**
+ * Поля и файл формы multipart без `request.formData()`: в jsdom (vitest) разбор форм в Node не знает чужой `File`
+ * (как `scanVerdict` в моке проектов); мок работает и там, и в браузере.
+ */
+async function multipart(
+  request: Request,
+): Promise<{ fields: Record<string, string>; file: { name: string; size: number } | null }> {
+  const boundary = /boundary=([^;]+)/.exec(request.headers.get("content-type") ?? "")?.[1];
+  const fields: Record<string, string> = {};
+  let file: { name: string; size: number } | null = null;
+  if (!boundary) return { fields, file };
+  const text = new TextDecoder().decode(await request.arrayBuffer());
+  for (const part of text.split(`--${boundary}`)) {
+    const split = part.indexOf("\r\n\r\n");
+    if (split < 0) continue;
+    const head = part.slice(0, split);
+    const name = /name="([^"]*)"/.exec(head)?.[1];
+    if (!name) continue;
+    const body = part.slice(split + 4).replace(/\r\n$/, "");
+    const filename = /filename="([^"]*)"/.exec(head)?.[1];
+    if (filename !== undefined) file = { name: filename, size: body.length };
+    else fields[name] = body;
+  }
+  return { fields, file };
+}
+
 /** Тому, кто не решает шаг КП, EDS снимок не отдаёт; а без `cost_margin` BFF вырезает экономику. */
 function presentQuote(
   card: QuoteApprovalCard,
@@ -140,6 +168,10 @@ function presentQuote(
       : null,
     can_decide: card.can_decide && mayDecide,
     allowed_decisions: mayDecide ? card.allowed_decisions : [],
+    // «Клиент принял / отклонил» — у того, кто ведёт клиента (раздел «Клиенты» полный, ERP `deal.manage`; A1)
+    client_decision: card.client_decision
+      ? { ...card.client_decision, can_record: card.client_decision.can_record && maySend }
+      : null,
     // ERP отказывает роли без доступа к КП (403): состав и итоги не приходят, снимка EDS у неё нет
     ...(mayDecide
       ? {}
@@ -241,6 +273,22 @@ export const edsApprovalsHandlers = [
     return HttpResponse.json(page);
   }),
 
+  // A1: файл подтверждения клиента — раньше карточки по номеру (`/eds/quotes/*` съел бы адрес).
+  http.get("*/eds/quotes/:id/client-decision/evidence", ({ params }) => {
+    const ok = guard(QUOTES, "read");
+    if (ok.error) return ok.error;
+    const card = findQuote(String(params["id"]));
+    if (!card?.client_decision?.recorded_by_staff?.evidence_url) {
+      return failure(404, "NOT_FOUND", "Файла подтверждения нет.", "bff");
+    }
+    return new HttpResponse(new Blob(["%PDF-1.4 demo"]), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="client-confirmation.pdf"',
+      },
+    });
+  }),
+
   http.get("*/eds/quotes/*", ({ request }) => {
     const ok = guard(QUOTES, "read");
     if (ok.error) return ok.error;
@@ -283,6 +331,70 @@ export const edsApprovalsHandlers = [
     return HttpResponse.json(presentQuote(next ?? card, ok.who.margin, false, true));
   }),
 
+  http.post("*/eds/quotes/:id/client-decision", async ({ request, params }) => {
+    const ok = guard(["crm.clients"], "full");
+    if (ok.error) return ok.error;
+    const card = findQuote(String(params["id"]));
+    if (!card) return failure(404, "NOT_FOUND", "КП не найдено.", "eds");
+    const form = await multipart(request);
+    const text = (name: string) => (form.fields[name] ?? "").trim();
+    const file = form.file;
+    const invalid = (field: string, reason: string, message: string) =>
+      failure(422, "VALIDATION_FAILED", message, "erp", { fields: [field], reason });
+    if (!file || file.size === 0) {
+      return invalid(
+        "file",
+        "evidence_required",
+        "Приложите подтверждение клиента: письмо, переписку или скан.",
+      );
+    }
+    if (!text("counterparty_person")) {
+      return invalid(
+        "counterparty_person",
+        "counterparty_person_required",
+        "Укажите, кто со стороны клиента.",
+      );
+    }
+    if (!text("comment")) return invalid("comment", "comment_required", "Заполните комментарий.");
+    if (card.client_decision?.state !== "awaiting") {
+      return failure(409, "CONFLICT", "КП уже не ждёт решения клиента. Обновите страницу.", "erp", {
+        backend_status: 409,
+        reason: "quote_not_sent",
+      });
+    }
+    const accept = text("decision") === "accept";
+    const decidedAt = new Date().toISOString();
+    const next = updateQuote(card.id, (current) => ({
+      ...current,
+      stage: accept ? "CONTRACT" : "CALCULATION",
+      delivery: current.delivery
+        ? {
+            ...current.delivery,
+            state: "closed",
+            lines: current.delivery.lines.map((line) => ({ ...line, can_send: false })),
+          }
+        : null,
+      client_decision: {
+        state: accept ? "accepted" : "rejected",
+        decided_at: decidedAt,
+        reason: accept ? null : text("comment"),
+        can_record: false,
+        recorded_by_staff: {
+          staff_name: MANAGER_PERSON.full_name,
+          channel: text("channel") as NonNullable<
+            NonNullable<QuoteApprovalCard["client_decision"]>["recorded_by_staff"]
+          >["channel"],
+          counterparty_person: text("counterparty_person"),
+          occurred_on: text("occurred_on") || null,
+          comment: text("comment"),
+          evidence_name: file.name,
+          evidence_url: `/api/v1/eds/quotes/${current.id}/client-decision/evidence`,
+        },
+      },
+    }));
+    return HttpResponse.json(presentQuote(next ?? card, ok.who.margin, false, true));
+  }),
+
   http.post("*/eds/quotes/:id/decision", async ({ request, params }) => {
     const ok = guard(QUOTES, "full");
     if (ok.error) return ok.error;
@@ -318,6 +430,9 @@ export const edsApprovalsHandlers = [
         body.decision === "approve"
           ? deliveryAfterApproval(current.channels, body.channels ?? [])
           : null,
+      // Отправленное КП ждёт решения клиента (A1)
+      client_decision:
+        body.decision === "approve" && (body.channels ?? []).length > 0 ? AWAITING_CLIENT : null,
       steps: decideSteps(current.steps, body.decision, body.comment),
     }));
     return HttpResponse.json(

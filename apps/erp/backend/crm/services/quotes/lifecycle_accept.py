@@ -11,9 +11,17 @@ contract materialization, seller notification — is identical and lives here on
 Legal honesty: a contact acceptance is a commercial acceptance (коммерческий акцепт) with an
 audit trail, NOT a qualified e-signature (E-IMZO is not implemented). The contract is still
 signed later via the existing MANUAL_MODE flow.
+
+Третий путь — `on_behalf` (A1 волны 18a, «Отметить за контрагента»): решение клиента со слов записал сотрудник
+(`on_behalf.OnBehalf`: канал, лицо клиента, дата, комментарий). Цепочка та же; отличие — атрибуция на КП
+(`client_decision_meta`), в журнале (`event_params.on_behalf`) и в событии (`recorded_by_staff`), действующее лицо — сотрудник.
+
+Гонка с онлайн-решением (клиент жмёт «Принять» в кабинете, пока менеджер отмечает «со слов»): строка КП читается под
+`select_for_update`, второй вызов ждёт коммита первого и видит уже не SENT — `ValueError`, без второго акцепта.
 """
 
 import logging
+from typing import Optional
 
 from django.db import transaction
 from django.utils import timezone
@@ -23,8 +31,34 @@ from crm.models import Quote, QuoteStatus
 from crm.services.deals import transition_deal_stage
 
 from ._shared import _log_quote, _notify_quote_outcome, _quote_client_display_name
+from .on_behalf import OnBehalf, staff_name
 
 logger = logging.getLogger(__name__)
+
+
+def _locked_quote(quote_id) -> Quote:
+    """Строка КП под блокировкой до конца транзакции решения (гонка онлайн-решения и записи «со слов»)."""
+    return (
+        Quote.objects.select_for_update(of=("self",))
+        .select_related("deal__company", "deal__manager", "deal__stage", "status")
+        .get(pk=quote_id)
+    )
+
+
+def _outcome_event(event_type: str, quote, portal_contact, on_behalf: Optional[OnBehalf], reason: str = "") -> None:
+    """Событие исхода КП: причина отказа — в `payload.reason` (CRM печатает её в ленте) для любого пути."""
+    from integration.services import events
+
+    if on_behalf is None:
+        events.publish_quote_outcome(event_type, quote, reason=reason or None, contact=portal_contact)
+        return
+    events.publish_quote_outcome(
+        event_type,
+        quote,
+        reason=reason or None,
+        actor=events.build_actor(user=on_behalf.recorded_by),
+        recorded_by_staff=on_behalf.event_ref(),
+    )
 
 
 def _provision_accepted_quote(quote) -> None:
@@ -40,8 +74,14 @@ def _provision_accepted_quote(quote) -> None:
 
 
 @transaction.atomic
-def perform_quote_acceptance(
-    quote_id, *, approved_by_user=None, contact_email=None, request_ip=None, portal_contact=None
+def perform_quote_acceptance(  # noqa: C901 — одна цепочка акцепта для трёх путей (Rule 8)
+    quote_id,
+    *,
+    approved_by_user=None,
+    contact_email=None,
+    request_ip=None,
+    portal_contact=None,
+    on_behalf: Optional[OnBehalf] = None,
 ) -> Quote:
     """Accept a SENT КП → APPROVED, advance the FSM, materialize the contract, notify the seller.
 
@@ -51,8 +91,10 @@ def perform_quote_acceptance(
 
     `portal_contact` — контакт клиента из Cabinet, давший акцепт кодом: событие шины `quote.accepted` (rt_bus, в этой же
     транзакции) несёт его `erp_contact_id`/`crm_contact_id` (Q-FIX22-6); публичная страница КП контакта не передаёт.
+    `on_behalf` — решение со слов клиента записал сотрудник (A1): `approved_by` пуст (это не клиентский аккаунт), атрибуция —
+    в `client_decision_meta`, журнале и событии.
     """
-    quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
+    quote = _locked_quote(quote_id)
 
     current = quote.status.code if quote.status else "None"
     if current != QuoteStatusCode.SENT:
@@ -62,19 +104,23 @@ def perform_quote_acceptance(
     quote.status = approved_status
     quote.approved_at = timezone.now()
     quote.approved_by = approved_by_user
-    quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
-    from integration.services import events
+    fields = ["status", "approved_at", "approved_by", "updated_at"]
+    if on_behalf is not None:
+        quote.client_decision_meta = on_behalf.meta("accept")
+        fields.append("client_decision_meta")
+    quote.save(update_fields=fields)
     from sales.services import deal_numbers
 
     deal_numbers.promote_to_project(quote.deal)  # проект ПР с тем же NNN — уже в событии принятия (ERP-09)
-    events.publish_quote_outcome("quote.accepted", quote, contact=portal_contact)
+    _outcome_event("quote.accepted", quote, portal_contact, on_behalf)
 
     # Change deal stage via FSM (P0-1: capture the error — don't swallow it).
+    staff = on_behalf.recorded_by if on_behalf is not None else None
     _, stage_err = transition_deal_stage(
         quote.deal,
         DealStageCode.CONTRACT_SIGNED,
-        actor=approved_by_user,
-        reason=f"КП v{quote.version} одобрено клиентом",
+        actor=approved_by_user or staff,
+        reason=f"КП v{quote.version} одобрено клиентом" + (f" {on_behalf.words()}" if on_behalf else ""),
     )
     if stage_err:
         raise ValueError(stage_err)
@@ -97,15 +143,20 @@ def perform_quote_acceptance(
         quote,
         type_code="SUCCESS",
         title="КП одобрено клиентом",
-        message=f"{_quote_client_display_name(quote)} одобрил КП v{quote.version}",
+        message=f"{_quote_client_display_name(quote)} одобрил КП v{quote.version}"
+        + (f" — {on_behalf.words()}, отметил {staff_name(staff)}" if on_behalf else ""),
         event_code="quote.accepted_by_client",
-        event_params={"client": _quote_client_display_name(quote), "version": quote.version},
+        event_params={"client": _quote_client_display_name(quote), "version": quote.version}
+        | ({"on_behalf": on_behalf.journal(), "recorded_by": staff_name(staff)} if on_behalf else {}),
     )
 
     # Counterparty timeline (Phase A): the acceptance itself as a first-class event.
     event_params = {"version": quote.version, "number": quote.number or "—"}
     detail = f"КП v{quote.version} ({quote.number or '—'})"
-    if approved_by_user is None:
+    if on_behalf is not None:
+        event_params["on_behalf"] = on_behalf.journal()
+        detail = f"КП v{quote.version} ({quote.number or '—'}) — {on_behalf.words()}"
+    elif approved_by_user is None:
         # Offline-contact acceptance — record channel + who (email) + IP for the audit trail.
         event_params.update(
             {"channel": "offline_contact", "contact_email": contact_email or "", "ip": request_ip or ""}
@@ -113,18 +164,26 @@ def perform_quote_acceptance(
         detail = f"КП v{quote.version} ({quote.number or '—'}) — офлайн-акцепт по email-коду"
     _log_quote(
         quote,
-        approved_by_user,
+        approved_by_user or staff,
         "КП принято клиентом",
         detail,
         event_code="quote.accepted",
         event_params=event_params,
+        reason=on_behalf.comment if on_behalf else "",
     )
     return quote
 
 
 @transaction.atomic
-def perform_quote_rejection(
-    quote_id, *, rejected_by_user=None, reason="", contact_email=None, request_ip=None, portal_contact=None
+def perform_quote_rejection(  # noqa: C901 — одна цепочка отказа для трёх путей (Rule 8)
+    quote_id,
+    *,
+    rejected_by_user=None,
+    reason="",
+    contact_email=None,
+    request_ip=None,
+    portal_contact=None,
+    on_behalf: Optional[OnBehalf] = None,
 ) -> Quote:
     """Reject a SENT КП → REJECTED, move the deal back to CALCULATING, notify the seller.
 
@@ -132,9 +191,10 @@ def perform_quote_rejection(
     (`channel=offline_contact`, email + IP in event_params). The reason is kept off `quote.notes`
     (that field renders in the client КП PDF) — it lives on the stage-transition audit + timeline.
     `portal_contact` — контакт клиента из Cabinet: событие шины `quote.rejected` несёт его идентификаторы (Q-FIX22-6).
+    `on_behalf` — отказ со слов клиента записал сотрудник (A1); причина — `reason` (комментарий записи).
     """
     reason = (reason or "").strip()
-    quote = Quote.objects.select_related("deal__company", "deal__manager", "deal__stage", "status").get(pk=quote_id)
+    quote = _locked_quote(quote_id)
 
     current = quote.status.code if quote.status else "None"
     if current != QuoteStatusCode.SENT:
@@ -144,16 +204,20 @@ def perform_quote_rejection(
     quote.status = rejected_status
     # D26G-3: причина клиента — на КП (экран расчёта и «Мои задачи» менеджера); в PDF КП она не печатается.
     quote.client_reject_reason = reason[:2000]
-    quote.save(update_fields=["status", "client_reject_reason", "updated_at"])
-    from integration.services import events
+    fields = ["status", "client_reject_reason", "updated_at"]
+    if on_behalf is not None:
+        quote.client_decision_meta = on_behalf.meta("reject")
+        fields.append("client_decision_meta")
+    quote.save(update_fields=fields)
 
-    events.publish_quote_outcome("quote.rejected", quote, contact=portal_contact)
+    _outcome_event("quote.rejected", quote, portal_contact, on_behalf, reason=reason)
 
+    staff = on_behalf.recorded_by if on_behalf is not None else None
     _, stage_err = transition_deal_stage(
         quote.deal,
         DealStageCode.CALCULATING,
-        actor=rejected_by_user,
-        reason=f"КП v{quote.version} отклонено. {reason}",
+        actor=rejected_by_user or staff,
+        reason=f"КП v{quote.version} отклонено" + (f" {on_behalf.words()}" if on_behalf else "") + f". {reason}",
     )
     if stage_err:
         raise ValueError(stage_err)
@@ -167,9 +231,14 @@ def perform_quote_rejection(
         quote,
         type_code="WARNING",
         title="КП отклонено клиентом",
-        message=f"{_quote_client_display_name(quote)} отклонил КП v{quote.version}. {reason}".strip(),
+        message=(
+            f"{_quote_client_display_name(quote)} отклонил КП v{quote.version}"
+            + (f" — {on_behalf.words()}, отметил {staff_name(staff)}" if on_behalf else "")
+            + f". {reason}"
+        ).strip(),
         event_code="quote.rejected_by_client",
-        event_params={"client": _quote_client_display_name(quote), "version": quote.version, "reason": reason},
+        event_params={"client": _quote_client_display_name(quote), "version": quote.version, "reason": reason}
+        | ({"on_behalf": on_behalf.journal(), "recorded_by": staff_name(staff)} if on_behalf else {}),
     )
 
     # `reason` кладём ВСЕГДА (не только для офлайн-контакта): лента показывает вариант
@@ -177,7 +246,10 @@ def perform_quote_rejection(
     # КП v2» и нигде на экране не находил, ПОЧЕМУ (найдено прогоном глазами).
     event_params = {"version": quote.version, "reason": reason}
     detail = f"КП v{quote.version}" + (f" — {reason}" if reason else "")
-    if rejected_by_user is None:
+    if on_behalf is not None:
+        event_params["on_behalf"] = on_behalf.journal()
+        detail = f"КП v{quote.version} — {on_behalf.words()}. {reason}".strip()
+    elif rejected_by_user is None:
         event_params.update(
             {
                 "channel": "offline_contact",
@@ -188,7 +260,7 @@ def perform_quote_rejection(
         detail = f"КП v{quote.version} — отклонено офлайн-контактом. {reason}".strip()
     _log_quote(
         quote,
-        rejected_by_user,
+        rejected_by_user or staff,
         "КП отклонено клиентом",
         detail,
         event_code="quote.rejected",

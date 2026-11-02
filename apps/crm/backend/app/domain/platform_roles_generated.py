@@ -156,6 +156,8 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "stream:read",
             "dashboard:read",
             "kb:read",
+            "mail_inbox:read",
+            "mail_inbox:work",
         ),
     },
     "crm.clients": {

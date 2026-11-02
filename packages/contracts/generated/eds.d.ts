@@ -1357,6 +1357,12 @@ export interface components {
       urgent: boolean;
       links?: components["schemas"]["ErpLinksIn"];
       file_ids?: components["schemas"]["Uuid"][];
+      /** @description Откуда письмо (W18A-P2): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — уходит в `letter.registered.source`, CRM снимает письмо с очереди и пишет номер ВХ */
+      source?: components["schemas"]["LetterSourceIn"] | null;
+    };
+    LetterSourceIn: {
+      /** @description id письма в CRM (`inbound_mail.id`) */
+      crm_inbound_mail_id: number;
     };
     LetterListItem: {
       id: components["schemas"]["Uuid"];

@@ -130,6 +130,16 @@ _AFTER_VENDORS: Final = (
         switch="mail",
     ),
     ServiceSpec(
+        key="mail_inbound",
+        title="Почта: приём (IMAP)",
+        purpose="Общий ящик компании: письма попадают в очередь «Входящая почта» делопроизводителя",
+        system="crm",
+        source="crm",
+        check="итог опроса ящика раз в 2 минуты (вход и папка только на чтение)",
+        tiers=("cheap",),
+        fix_path="/integrations?tab=mail",
+    ),
+    ServiceSpec(
         key="s3",
         title="Хранилище файлов (S3)",
         purpose="Документы клиентов, база знаний и вложения из Telegram",

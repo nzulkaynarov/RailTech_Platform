@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.33.0
+  version: 0.34.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -338,6 +338,8 @@ tags:
     description: Поток подсказок инвалидации (SSE) — замена опроса уведомлений, счётчиков и очереди
   - name: admin
     description: Admin · Оргструктура, Ролевая матрица (CRM — источник истины по людям и ролям) и Компания (ERP — реквизиты, бланк, нумерация, справочники)
+  - name: inbound-mail
+    description: Входящая почта общего ящика (W18A-P2, B-INB-5) — очередь делопроизводителя, карточка письма, действия
   - name: integrations
     description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
   - name: bus
@@ -2853,6 +2855,80 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/quotes/{id}/client-decision:
+    post:
+      tags: [eds-approvals]
+      operationId: recordQuoteClientDecision
+      summary: 'EDS · Отметить решение клиента по отправленному КП по его подтверждению («Клиент принял», «Клиент отклонил»)'
+      description: >-
+        A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по почте, в мессенджере, по телефону, лично или на бумаге, а не
+        в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и обязательный файл `file` —
+        подтверждение клиента: письмо, переписка, скан; изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ; решение юриста
+        2026-11-02: устного принятия мало). Нет файла — 422 `evidence_required`, не тот тип или размер — 422 `evidence_invalid`. Дальше — та же цепочка, что при онлайн-решении клиента: принято —
+        проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП
+        (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата не в будущем,
+        лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии
+        `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteClientDecisionIn'
+      responses:
+        '200':
+          description: Решение записано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteApprovalCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — КП не ждёт решения клиента (уже принято, отклонено, истекло или не отправлено); `details.reason = quote_not_sent`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          $ref: '#/components/responses/ProjectPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/quotes/{id}/client-decision/evidence:
+    get:
+      tags: [eds-approvals]
+      operationId: downloadQuoteClientDecisionEvidence
+      summary: 'EDS · Файл подтверждения клиента к решению по КП, записанному сотрудником'
+      description: >-
+        Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла
+        BFF берёт из решения клиента КП этого маршрута, а не из запроса. Файла нет — 404. Чтение — как у карточки КП.
+      parameters:
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      responses:
+        '200':
+          description: Содержимое файла
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/memo-approvals:
     get:
       tags: [eds-approvals]
@@ -3992,6 +4068,338 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/imap:
+    get:
+      tags: [integrations]
+      operationId: getImapConnector
+      summary: 'Почта (IMAP): приём общего ящика, пароль — маска'
+      description: >-
+        CRM `GET /integrations/imap` (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`; итог последнего
+        опроса ящика (`last_poll_at`, `last_ok_at`, `last_error_kind`).
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [integrations]
+      operationId: saveImapConnector
+      summary: 'Сохранить приём почты (IMAP)'
+      description: >-
+        CRM `PUT /integrations/imap`. `imap_password = null` — оставить прежний пароль приложения, `username = null` — прежний
+        логин; пустой `host` выключает приём. `password` — пароль администратора (повторный ввод), нигде не сохраняется.
+        `assist_enabled` — выключатель помощника канцелярии (тип и суть письма моделью).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImapSettingsIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapConnector'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/imap/check:
+    post:
+      tags: [integrations]
+      operationId: checkImap
+      summary: 'Проверить приём почты'
+      description: >-
+        CRM `POST /integrations/imap/check`: вход и открытие папки только на чтение, письма не читаются и не помечаются. Итог —
+        в ответе (`ok`, `error_kind`: `not_configured`, `invalid_host`, `unavailable`, `tls_failed`, `auth_failed`,
+        `mailbox_missing`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail:
+    get:
+      tags: [inbound-mail]
+      operationId: listInboundMail
+      summary: 'Входящая почта: очередь писем общего ящика'
+      description: >-
+        CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без
+        него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не
+        настроен: экран показывает «Настройки · Подключения · Почта».
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/InboundMailStatus'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}:
+    get:
+      tags: [inbound-mail]
+      operationId: getInboundMail
+      summary: 'Входящая почта: карточка письма'
+      description: >-
+        CRM `GET /inbound-mail/{id}`: отправитель, тема, текст (только текст), вложения, связка с клиентом и лидом, подсказка
+        помощника (тип, суть, предложенное действие — ничего не делает сама), итог (номер ВХ, лид, причина архива), ответы.
+      parameters:
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/attachments/{index}:
+    get:
+      tags: [inbound-mail]
+      operationId: downloadInboundMailAttachment
+      summary: 'Входящая почта: файл вложения'
+      description: CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит.
+      parameters:
+        - $ref: '#/components/parameters/InboundMailId'
+        - name: index
+          in: path
+          required: true
+          schema: {type: integer, minimum: 0, maximum: 49}
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/eds-files:
+    post:
+      tags: [inbound-mail]
+      operationId: copyInboundMailFilesToEds
+      summary: 'Входящая почта: вложения письма — файлами EDS для «Зарегистрировать ВХ»'
+      description: >-
+        Подготовка формы «Зарегистрировать входящее» (P8) из письма: BFF читает вложения письма из CRM и загружает их в EDS
+        (`POST /files`) от имени сотрудника — как если бы он приложил их сам; ответ — файлы EDS для `file_ids` формы. Право —
+        `crm.leads.triage` (полный), регистрация — `eds.inbox.register`. Повтор — новые черновые файлы (непривязанные
+        видит только загрузивший).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '200':
+          description: Файлы EDS (пусто — у письма нет вложений)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: '#/components/schemas/EdsFile'}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/EdsPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/EdsUnsupportedMedia'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/assist:
+    post:
+      tags: [inbound-mail]
+      operationId: assistInboundMail
+      summary: 'Входящая почта: «Подсказать» — тип, суть и предложенное действие'
+      description: >-
+        CRM `POST /inbound-mail/{id}/assist` — только по кнопке сотрудника (решение юриста 2026-11-02); без неё карточка
+        работает вручную. Модель — алиас `qualifier-model`, текст без персональных данных, вложения не уходят. Подсказка уже
+        есть — она же, без второго вызова. Модель недоступна — `status = unavailable`. Помощник выключен — 409 `CONFLICT`,
+        `details.reason = assist_disabled`. Вызов и решение человека по письму пишутся в журнал ИИ CRM (без текстов).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '200':
+          description: Подсказка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailAssist'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/lead:
+    post:
+      tags: [inbound-mail]
+      operationId: createLeadFromInboundMail
+      summary: 'Входящая почта: «Создать лид»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/lead`: лид из письма во «Входящих» без ответственного (как запрос с сайта — срок первого
+        ответа, «Забрать» у менеджера); открытый лид с этим адресом есть — письмо заметкой в него (`created = false`). Письмо
+        уходит из очереди. Уже обработано — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailLeadResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/archive:
+    post:
+      tags: [inbound-mail]
+      operationId: archiveInboundMail
+      summary: 'Входящая почта: «Архив» с причиной'
+      description: CRM `POST /inbound-mail/{id}/archive`. Письмо уходит из очереди; уже обработано — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailArchiveIn'
+      responses:
+        '204':
+          description: В архиве
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/reply:
+    post:
+      tags: [inbound-mail]
+      operationId: replyInboundMail
+      summary: 'Входящая почта: ответ отправителю в ту же цепочку'
+      description: >-
+        CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) с `In-Reply-To` и `References` — в почтовом клиенте
+        отправителя ответ ляжет в ту же цепочку. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason =
+        smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailReplyIn'
+      responses:
+        '200':
+          description: Поставлено в очередь отправки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailReply'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -10401,6 +10809,12 @@ components:
       name: rt_pf_session
 
   parameters:
+    InboundMailId:
+      name: id
+      in: path
+      required: true
+      description: id письма общего ящика (CRM `inbound_mail.id`)
+      schema: {type: integer, minimum: 1}
     CompanyArticleIdPath:
       name: id
       in: path
@@ -10754,6 +11168,14 @@ components:
       description: >-
         409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`,
         `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InboundMailConflict:
+      description: >-
+        409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`)
+        или помощник выключен (`assist_disabled`)
       content:
         application/json:
           schema:
@@ -13248,6 +13670,7 @@ components:
         - instruction
         - instruction_extension
         - acquaint
+        - inbound_mail
 
     DueLabel:
       type: string
@@ -13856,6 +14279,9 @@ components:
         reason:
           description: 'Причина или заметка к действию; пусто, если её не было'
           type: string
+        on_behalf:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfNote'}, {type: 'null'}]
+          description: 'Действие контрагента записал сотрудник (КП принято или отклонено по подтверждению клиента, редакция договора согласована); нет или `null` — нет'
       required: [at, code, text, actor_name, document, number, reason]
       additionalProperties: false
     ProjectQuote:
@@ -14124,7 +14550,7 @@ components:
     ProjectContractActionIn:
       type: object
       additionalProperties: false
-      description: 'Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422).'
+      description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
           enum: [send_to_client, client_agreed, reject, revise, mark_issued]
@@ -14135,7 +14561,21 @@ components:
         note:
           maxLength: 500
           type: [string, 'null']
+        channel:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfChannel'}, {type: 'null'}]
+          description: 'Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a)'
+        counterparty_person:
+          maxLength: 200
+          type: [string, 'null']
+          description: 'Только `client_agreed`, обязательно: кто со стороны клиента (ФИО, должность)'
       required: [action]
+    OnBehalfNote:
+      type: object
+      additionalProperties: false
+      required: [channel, counterparty_person]
+      properties:
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string}
     ProjectActActionIn:
       type: object
       additionalProperties: false
@@ -14718,7 +15158,60 @@ components:
           type: array
           items: {$ref: '#/components/schemas/QuoteClientComment'}
           description: Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил)
+        client_decision:
+          oneOf: [{$ref: '#/components/schemas/QuoteClientDecision'}, {type: 'null'}]
+          description: 'Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила'
         sources: {$ref: '#/components/schemas/Sources'}
+    QuoteClientDecision:
+      type: object
+      additionalProperties: false
+      required: [state, decided_at, reason, recorded_by_staff, can_record]
+      properties:
+        state:
+          type: string
+          enum: [awaiting, accepted, rejected, expired]
+          description: 'Ждёт решения клиента, принято, отклонено, срок истёк'
+        decided_at: {type: [string, 'null'], format: date-time, description: 'Когда решение записано в ERP'}
+        reason: {type: [string, 'null'], description: 'Причина отказа клиента'}
+        recorded_by_staff:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfRecord'}, {type: 'null'}]
+          description: '`null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник по подтверждению клиента'
+        can_record:
+          type: boolean
+          description: 'Показать «Клиент принял» / «Клиент отклонил»: КП ждёт решения и у сотрудника право ERP `deal.manage` (решает ERP)'
+    OnBehalfChannel:
+      type: string
+      enum: [phone, email, messenger, in_person, paper]
+      description: 'Как контрагент сообщил решение: телефон, почта, мессенджер, лично, бумага'
+    OnBehalfRecord:
+      type: object
+      additionalProperties: false
+      required: [staff_name, channel, counterparty_person, occurred_on, comment, evidence_name, evidence_url]
+      description: 'Решение контрагента, записанное сотрудником по его подтверждению («Отмечено сотрудником: кто, канал, лицо клиента, файл»)'
+      properties:
+        staff_name: {type: [string, 'null'], description: 'Сотрудник, который записал'}
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string, description: 'Кто со стороны контрагента (ФИО, должность)'}
+        occurred_on: {type: [string, 'null'], format: date, description: 'Когда клиент сообщил решение'}
+        comment: {type: [string, 'null']}
+        evidence_name: {type: [string, 'null'], description: 'Имя файла подтверждения клиента (письмо, переписка, скан)'}
+        evidence_url:
+          type: [string, 'null']
+          description: 'Ссылка BFF на файл подтверждения (`GET /eds/quotes/{id}/client-decision/evidence`); `null` — файла нет'
+    QuoteClientDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision, channel, counterparty_person, occurred_on, comment, file]
+      description: >-
+        Решение клиента по его подтверждению. `comment` — суть ответа клиента; для `reject` это причина отказа (как у отказа в
+        кабинете). `occurred_on` — не позже сегодняшнего дня. Файл подтверждения обязателен.
+      properties:
+        decision: {type: string, enum: [accept, reject]}
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string, minLength: 1, maxLength: 200}
+        occurred_on: {type: string, format: date}
+        comment: {type: string, minLength: 1, maxLength: 2000}
+        file: {type: string, format: binary, description: 'Подтверждение клиента: письмо, переписка, скан (изображение, PDF, doc, docx, xls, xlsx, csv, txt) до 20 МБ'}
     QuoteClientComment:
       type: object
       additionalProperties: false
@@ -17423,6 +17916,223 @@ components:
           maxItems: 5
           items: {$ref: '#/components/schemas/LetterDuplicate'}
 
+    ImapConnector:
+      description: 'Приём почты общего ящика (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`.'
+      type: object
+      additionalProperties: false
+      required: [configured, host, port, security, mailbox, assist_enabled, username, password_configured, password_last4,
+        password_updated_at, secrets_enabled, last_poll_at, last_ok_at, last_error_kind, last_error]
+      properties:
+        configured: {type: boolean, description: 'Есть хост, логин и пароль — ящик опрашивается раз в 2 минуты'}
+        host: {type: string}
+        port: {type: integer}
+        security: {type: string, enum: [ssl, starttls]}
+        mailbox: {type: string, description: Папка (по умолчанию INBOX)}
+        assist_enabled: {type: boolean, description: Помощник канцелярии включён}
+        username: {type: string}
+        password_configured: {type: boolean}
+        password_last4: {type: [string, 'null']}
+        password_updated_at: {type: [string, 'null'], format: date-time}
+        secrets_enabled: {type: boolean}
+        last_poll_at: {type: [string, 'null'], format: date-time}
+        last_ok_at: {type: [string, 'null'], format: date-time}
+        last_error_kind: {type: [string, 'null'], description: 'Причина последнего сбоя опроса словом-кодом (как `ImapCheck.error_kind`)'}
+        last_error: {type: [string, 'null']}
+    ImapSettingsIn:
+      type: object
+      additionalProperties: false
+      required: [host, password]
+      properties:
+        host: {type: string, maxLength: 253, description: Пусто — приём выключен}
+        port: {type: integer, minimum: 1, maximum: 65535, default: 993}
+        security: {type: string, enum: [ssl, starttls], default: ssl}
+        mailbox: {type: string, minLength: 1, maxLength: 200, default: INBOX}
+        assist_enabled: {type: boolean, default: true}
+        username: {type: [string, 'null'], maxLength: 255, description: '`null` — оставить прежний'}
+        imap_password: {type: [string, 'null'], minLength: 1, maxLength: 512, description: 'Пароль приложения; `null` — оставить прежний'}
+        password: {type: string, minLength: 1, maxLength: 256, description: Пароль администратора}
+    ImapCheck:
+      type: object
+      additionalProperties: false
+      required: [ok, error_kind, detail, messages, latency_ms]
+      properties:
+        ok: {type: boolean}
+        error_kind: {type: [string, 'null']}
+        detail: {type: [string, 'null']}
+        messages: {type: [integer, 'null'], description: Писем в папке}
+        latency_ms: {type: [integer, 'null']}
+    InboundMailStatus:
+      type: string
+      enum: [new, registered, lead, archived]
+      description: 'new — ждёт разбора; registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной'
+    InboundMailAssist:
+      type: object
+      additionalProperties: false
+      required: [status, kind, summary, action]
+      description: >-
+        Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель,
+        тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата
+        рождения); вложения — никогда
+      properties:
+        status:
+          type: string
+          enum: [none, done, unavailable, off]
+          description: >-
+            none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть;
+            unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
+        kind: {type: [string, 'null'], enum: [buyer, official, supplier_doc, other, null]}
+        summary: {type: [string, 'null'], maxLength: 300}
+        action: {type: [string, 'null'], enum: [register, lead, archive, null], description: 'Предложение по типу (выбирает код)'}
+    InboundMailLink:
+      type: object
+      additionalProperties: false
+      required: [id, number, name]
+      properties:
+        id: {type: integer}
+        number: {type: string, description: 'Номер лида `L-0042` или код клиента'}
+        name: {type: string}
+    InboundMailItem:
+      type: object
+      additionalProperties: false
+      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead]
+      properties:
+        id: {type: integer}
+        status: {$ref: '#/components/schemas/InboundMailStatus'}
+        from_email: {type: string}
+        from_name: {type: string}
+        subject: {type: string}
+        received_at: {type: string, format: date-time}
+        sent_at: {type: [string, 'null'], format: date-time}
+        preview: {type: string, maxLength: 200}
+        attachments_count: {type: integer, minimum: 0}
+        assist: {$ref: '#/components/schemas/InboundMailAssist'}
+        client:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailLink'
+            - type: 'null'
+          description: Известный клиент — по адресу контакта или ИНН в тексте
+        lead:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailLink'
+            - type: 'null'
+          description: Открытый лид с этим адресом
+    InboundMailMailbox:
+      type: object
+      additionalProperties: false
+      required: [configured, last_poll_at, last_ok_at, last_error_kind]
+      properties:
+        configured: {type: boolean, description: 'false — приём не настроен: «Настройки · Подключения · Почта»'}
+        last_poll_at: {type: [string, 'null'], format: date-time}
+        last_ok_at: {type: [string, 'null'], format: date-time}
+        last_error_kind: {type: [string, 'null']}
+    InboundMailPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, mailbox]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/InboundMailItem'}
+        total: {type: integer, minimum: 0}
+        mailbox: {$ref: '#/components/schemas/InboundMailMailbox'}
+    InboundMailAttachment:
+      type: object
+      additionalProperties: false
+      required: [index, name, content_type, size]
+      properties:
+        index: {type: integer, minimum: 0}
+        name: {type: string}
+        content_type: {type: string}
+        size: {type: integer, minimum: 0}
+    InboundMailSkipped:
+      type: object
+      additionalProperties: false
+      required: [name, reason]
+      properties:
+        name: {type: string}
+        reason: {type: string, enum: [type, size, count], description: 'Не принято: тип не из белого списка, больше 25 МБ, больше 20 файлов'}
+    InboundMailReply:
+      type: object
+      additionalProperties: false
+      required: [id, to_email, subject, status, created_at, sent_at]
+      properties:
+        id: {type: integer}
+        to_email: {type: string}
+        subject: {type: string}
+        status: {type: string, description: 'queued, sent, failed, skipped_no_smtp — как в журнале почты'}
+        created_at: {type: string, format: date-time}
+        sent_at: {type: [string, 'null'], format: date-time}
+    InboundMail:
+      type: object
+      additionalProperties: false
+      description: Карточка письма общего ящика
+      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead, to, text, attachments, skipped, too_large, inns, letter_number, letter_ref, result_lead, archive_reason, handled_at, replies]
+      properties:
+        id: {type: integer}
+        status: {$ref: '#/components/schemas/InboundMailStatus'}
+        from_email: {type: string}
+        from_name: {type: string}
+        subject: {type: string}
+        received_at: {type: string, format: date-time}
+        sent_at: {type: [string, 'null'], format: date-time}
+        preview: {type: string, maxLength: 200}
+        attachments_count: {type: integer, minimum: 0}
+        assist: {$ref: '#/components/schemas/InboundMailAssist'}
+        client:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailLink'
+            - type: 'null'
+          description: Известный клиент — по адресу контакта или ИНН в тексте
+        lead:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailLink'
+            - type: 'null'
+          description: Открытый лид с этим адресом
+        to:
+          type: array
+          items: {type: string}
+        text: {type: string, description: Тело письма только текстом (HTML — без разметки)}
+        attachments:
+          type: array
+          items: {$ref: '#/components/schemas/InboundMailAttachment'}
+        skipped:
+          type: array
+          items: {$ref: '#/components/schemas/InboundMailSkipped'}
+        too_large: {type: boolean, description: 'Письмо больше 60 МБ — сохранены только заголовки'}
+        inns:
+          type: array
+          items: {type: string}
+        letter_number: {type: [string, 'null'], description: 'Номер ВХ, если письмо зарегистрировано'}
+        letter_ref: {type: [string, 'null'], description: 'Путь к карточке ВХ'}
+        result_lead:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailLink'
+            - type: 'null'
+        archive_reason: {type: [string, 'null']}
+        handled_at: {type: [string, 'null'], format: date-time}
+        replies:
+          type: array
+          items: {$ref: '#/components/schemas/InboundMailReply'}
+    InboundMailLeadResult:
+      type: object
+      additionalProperties: false
+      required: [lead_id, lead_number, created]
+      properties:
+        lead_id: {type: integer}
+        lead_number: {type: string, examples: [L-0042]}
+        created: {type: boolean, description: 'false — письмо добавлено заметкой в открытый лид с этим адресом'}
+    InboundMailArchiveIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 3, maxLength: 500}
+    InboundMailReplyIn:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 20000}
     LetterRegisterIn:
       type: object
       additionalProperties: false
@@ -17454,9 +18164,16 @@ components:
             - $ref: '#/components/schemas/ResolutionDraftIn'
             - type: 'null'
           description: Проект резолюции делопроизводителя (P8b)
+        source_mail_id:
+          type: [integer, 'null']
+          minimum: 1
+          description: >-
+            Письмо общего ящика, из которого регистрируется ВХ (очередь «Входящая почта», W18A-P2): EDS передаёт его в
+            `letter.registered`, CRM снимает письмо с очереди. С ним `file_ids` может быть пустым (письмо без вложений —
+            текст в `summary`); без него нужен хотя бы один файл.
         file_ids:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 50
           uniqueItems: true
           items: {type: string, format: uuid}

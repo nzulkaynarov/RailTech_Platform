@@ -183,6 +183,9 @@ async def test_card_with_every_document(
     assert response.json()["fulfillment"]["carrier"] == "Авиа"
 
 
+AGREED = {"action": "client_agreed", "channel": "email", "counterparty_person": "Каримов А."}
+
+
 def history_row(code: str) -> dict[str, Any]:
     return {
         "at": "2026-10-25T12:00:00+05:00",
@@ -193,6 +196,25 @@ def history_row(code: str) -> dict[str, Any]:
         "number": "ДОГ-2026/104",
         "reason": "",
     }
+
+
+async def test_journal_carries_the_staff_attribution(
+    web: Web, erp: ProjectsFake, check: ContractChecker
+) -> None:
+    """A1, A2: «Отмечено сотрудником» — канал и лицо клиента из журнала ERP доходят до экрана."""
+    await _as(web, "ACCOUNTANT")
+    on_behalf = {"channel": "paper", "counterparty_person": "Юсупова Н., юрист"}
+    agreed = {**history_row("contract.client_agreed"), "on_behalf": on_behalf}
+    erp.cards[DEAL] = card(
+        contract=contract_card(status="client_agreed", history=[agreed]),
+        journal=[agreed, history_row("contract.scan_attached")],
+    )
+    response = await web.client.get(f"{BASE}/{NUMBER}")
+    check(response, "/eds/projects/{ref}", "get")
+    body = response.json()
+    assert body["journal"][0]["on_behalf"] == on_behalf
+    assert body["contract"]["history"][0]["on_behalf"] == on_behalf
+    assert body["journal"][1].get("on_behalf") is None
 
 
 @pytest.mark.parametrize(
@@ -312,13 +334,40 @@ async def test_contract_action_calls_the_erp_operation_of_the_contract_from_the_
     web: Web, erp: ProjectsFake, check: ContractChecker, action: str, slug: str
 ) -> None:
     await _as(web, "ACCOUNTANT")
+    # A2: согласие клиента — с каналом и лицом со стороны клиента.
+    agreed = {"channel": "phone", "counterparty_person": " Каримов А. "}
+    extra = agreed if action == "client_agreed" else {}
     response = await web.send(
-        "POST", f"{BASE}/{NUMBER}/contract", json={"action": action, "note": "  Didox, № 77  "}
+        "POST",
+        f"{BASE}/{NUMBER}/contract",
+        json={"action": action, "note": "  Didox, № 77  ", **extra},
     )
     check(response, "/eds/projects/{ref}/contract", "post")
     assert response.status_code == 200
-    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/{slug}/") == {"note": "Didox, № 77"}
+    expected = {"note": "Didox, № 77"}
+    if action == "client_agreed":
+        expected |= {"channel": "phone", "counterparty_person": "Каримов А."}
+    assert erp.body("POST", rf"contracts/{CONTRACT_ID}/{slug}/") == expected
     assert len(erp.posts()) == 1
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"action": "client_agreed"},
+        {"action": "client_agreed", "channel": "phone"},
+        {"action": "client_agreed", "channel": "phone", "counterparty_person": "  "},
+        {"action": "client_agreed", "channel": "fax", "counterparty_person": "Каримов А."},
+    ],
+)
+async def test_client_agreed_needs_channel_and_person_before_the_erp(
+    web: Web, erp: ProjectsFake, body: dict[str, str]
+) -> None:
+    await _as(web, "ACCOUNTANT")
+    response = await web.send("POST", f"{BASE}/{NUMBER}/contract", json=body)
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert erp.posts() == []
 
 
 async def test_reject_needs_a_reason_before_the_erp(web: Web, erp: ProjectsFake) -> None:
@@ -347,7 +396,7 @@ async def test_contract_id_comes_from_the_card_not_from_the_request(
 ) -> None:
     await _as(web, "ACCOUNTANT")
     erp.cards[DEAL] = card(contract=contract_card(id=999))
-    await web.send("POST", f"{BASE}/{NUMBER}/contract", json={"action": "client_agreed"})
+    await web.send("POST", f"{BASE}/{NUMBER}/contract", json=AGREED)
     assert [c.url.path for c in erp.posts()] == ["/api/v1/crm/contracts/999/client-agreed/"]
 
 
@@ -383,7 +432,7 @@ async def test_erp_refusals_are_translated(web: Web, erp: ProjectsFake) -> None:
     assert denied.json()["source"] == "erp"
 
     erp.answer("POST", r"contracts/\d+/client-agreed/", httpx.Response(500, text="x"))
-    assert (await web.send("POST", url, json={"action": "client_agreed"})).status_code == 503
+    assert (await web.send("POST", url, json=AGREED)).status_code == 503
 
 
 async def test_create_contract_calls_generate_without_sending(
