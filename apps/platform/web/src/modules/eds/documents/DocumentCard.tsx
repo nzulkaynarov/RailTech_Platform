@@ -1,5 +1,5 @@
 import { Alert, Button, Skeleton } from "antd";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
@@ -12,6 +12,7 @@ import {
 import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { BodyView } from "../../../shared/ui/BodyEditor/BodyView";
 import { DocNumber } from "../../../shared/ui/DocNumber";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { History, type HistoryItem } from "../../../shared/ui/History";
@@ -113,37 +114,60 @@ function Decisions({ doc }: { doc: EdsDocument }) {
   return <History items={items} label={t("panel.decisions")} />;
 }
 
+/** Поля, которых у вида документа не бывает: у письма нет суммы (сумма — у служебной записки, заявления и отчёта). */
+const NOT_APPLICABLE: Partial<Record<EdsDocument["kind"], readonly string[]>> = {
+  letter_out: ["amount"],
+};
+
+function isEmpty(value: ReactNode): boolean {
+  return value === null || value === undefined || value === "";
+}
+
+/**
+ * Реквизиты карточки: пустое и неприменимое к виду документа поле не показывается (не «Сумма —» у письма). Тип, автор и
+ * даты есть всегда.
+ */
 function Details({ doc }: { doc: EdsDocument }) {
   const { t } = useTranslation("documents");
   const { date } = useFormat();
   const isLetter = doc.kind === "letter_out";
+  const hidden = NOT_APPLICABLE[doc.kind] ?? [];
+  const optional: { key: string; label: string; value: ReactNode }[] = [
+    isLetter
+      ? {
+          key: "recipient",
+          label: t("panel.fields.recipient"),
+          value: doc.recipient
+            ? [doc.recipient.name, doc.recipient.inn].filter(Boolean).join(", ")
+            : null,
+        }
+      : {
+          key: "addressee",
+          label: t("panel.fields.addressee"),
+          value: doc.addressee ? doc.addressee.full_name : t("panel.toDirector"),
+        },
+    {
+      key: "amount",
+      label: t("panel.fields.amount"),
+      value: doc.amount ? (
+        <MoneyText value={doc.amount.amount} currency={doc.amount.currency} />
+      ) : null,
+    },
+    { key: "due", label: t("panel.fields.due"), value: doc.due_date ? date(doc.due_date) : null },
+    {
+      key: "deal",
+      label: t("panel.fields.deal"),
+      value: doc.deal ? (doc.deal.number ?? String(doc.deal.erp_deal_id)) : null,
+    },
+  ];
   return (
     <DefinitionList
       items={[
         { label: t("panel.fields.kind"), value: t(`kinds.${doc.kind}`) },
         { label: t("panel.fields.author"), value: doc.author.full_name },
-        isLetter
-          ? {
-              label: t("panel.fields.recipient"),
-              value: doc.recipient
-                ? [doc.recipient.name, doc.recipient.inn].filter(Boolean).join(", ")
-                : null,
-            }
-          : {
-              label: t("panel.fields.addressee"),
-              value: doc.addressee ? doc.addressee.full_name : t("panel.toDirector"),
-            },
-        {
-          label: t("panel.fields.amount"),
-          value: doc.amount ? (
-            <MoneyText value={doc.amount.amount} currency={doc.amount.currency} />
-          ) : null,
-        },
-        { label: t("panel.fields.due"), value: doc.due_date ? date(doc.due_date) : null },
-        {
-          label: t("panel.fields.deal"),
-          value: doc.deal ? (doc.deal.number ?? String(doc.deal.erp_deal_id)) : null,
-        },
+        ...optional
+          .filter((item) => !hidden.includes(item.key) && !isEmpty(item.value))
+          .map(({ label, value }) => ({ label, value })),
         { label: t("panel.fields.created"), value: date(doc.created_at, "datetime") },
         { label: t("panel.fields.updated"), value: date(doc.updated_at, "datetime") },
         ...(doc.version > 1 ? [{ label: t("panel.fields.version"), value: doc.version }] : []),
@@ -152,8 +176,29 @@ function Details({ doc }: { doc: EdsDocument }) {
   );
 }
 
+/**
+ * Текст документа. У письма на бланке — тело теми же блоками, что в редакторе (абзацы, списки, таблица таблицей); PDF на
+ * бланке — ниже, в разделе письма. Без тела — плоский текст; пустого текста нет — блока нет.
+ */
+function Text({ doc }: { doc: EdsDocument }) {
+  const { t } = useTranslation("documents");
+  const body = doc.letter?.body;
+  if (!body && doc.text.trim() === "") return null;
+  return (
+    <div className="pf-fp-block">
+      <h4>{t("panel.text")}</h4>
+      {body ? (
+        <BodyView body={body} tableLabel={t("panel.bodyTable")} />
+      ) : (
+        <p className="pf-doc-text">{doc.text}</p>
+      )}
+    </div>
+  );
+}
+
 function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClose: () => void }) {
   const { t } = useTranslation("documents");
+  const isLetter = doc.kind === "letter_out";
   return (
     <div className="pf-fp-stack">
       <div className="pf-fp-stack" style={{ gap: 8 }}>
@@ -168,23 +213,25 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
         </div>
       </div>
       <Details doc={doc} />
-      <div className="pf-fp-block">
-        <h4>{t("panel.text")}</h4>
-        <p className="pf-doc-text">{doc.text}</p>
-      </div>
-      {doc.kind === "letter_out" ? <LetterSection doc={doc} /> : null}
+      <Text doc={doc} />
+      {isLetter ? <LetterSection doc={doc} /> : null}
       <div className="pf-fp-block">
         <h4>{t("panel.files")}</h4>
         <Files doc={doc} />
       </div>
-      <div className="pf-fp-block">
-        <h4>{t("panel.route")}</h4>
-        <Route doc={doc} />
-      </div>
-      <div className="pf-fp-block">
-        <h4>{t("panel.decisions")}</h4>
-        <Decisions doc={doc} />
-      </div>
+      {/* У письма нет маршрута согласования: пустые «Маршрут» и «Решения» не показываются */}
+      {isLetter && doc.route.length === 0 ? null : (
+        <div className="pf-fp-block">
+          <h4>{t("panel.route")}</h4>
+          <Route doc={doc} />
+        </div>
+      )}
+      {isLetter && doc.decisions.length === 0 ? null : (
+        <div className="pf-fp-block">
+          <h4>{t("panel.decisions")}</h4>
+          <Decisions doc={doc} />
+        </div>
+      )}
       <div className="pf-doc-actions" data-sheet={sheet}>
         {doc.can_edit ? (
           <LinkButton type="primary" to={`/eds/new?draft=${doc.id}`}>
