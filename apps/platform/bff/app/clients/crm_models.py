@@ -769,10 +769,30 @@ class ImapStatusOut(BaseModel):
     password_updated_at: Annotated[
         AwareDatetime | None, Field(title="Password Updated At")
     ]
+    personal_label: Annotated[str | None, Field(title="Personal Label")] = (
+        "Адресовано лично"
+    )
+    """
+    Пометка у такого письма
+    """
+    personal_rule: Annotated[bool | None, Field(title="Personal Rule")] = True
+    """
+    «Адресовано лично»: сотрудник в «Кому», ящик в копии — письмо ему
+    """
     port: Annotated[int, Field(title="Port")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
     security: Annotated[Security, Field(title="Security")]
     username: Annotated[str, Field(title="Username")]
+
+
+class InboundMailAddress(BaseModel):
+    """
+    Адрес письма: сотрудник CRM по адресу и/или сам общий ящик.
+    """
+
+    email: Annotated[str, Field(title="Email")]
+    mailbox: Annotated[bool | None, Field(title="Mailbox")] = False
+    staff: InboundMailPerson | None = None
 
 
 class InboundMailAssist(BaseModel):
@@ -794,20 +814,58 @@ class InboundMailAttachment(BaseModel):
     size: Annotated[int, Field(title="Size")]
 
 
+class InboundMailBulkArchiveOut(BaseModel):
+    archived: Annotated[list[int], Field(title="Archived")]
+    skipped: Annotated[list[InboundMailSkippedItem], Field(title="Skipped")]
+
+
 class InboundMailCounts(BaseModel):
     """
-    Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные.
+    Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
+    работе, разобранные, подозрительные, все.
     """
 
+    all: Annotated[int, Field(title="All")]
+    done: Annotated[int, Field(title="Done")]
     history: Annotated[int, Field(title="History")]
+    in_work: Annotated[int, Field(title="In Work")]
+    mine: Annotated[int, Field(title="Mine")]
     new: Annotated[int, Field(title="New")]
     spam: Annotated[int, Field(title="Spam")]
+    unread_new: Annotated[int, Field(title="Unread New")]
+    """
+    Новых, которые этот сотрудник ещё не открывал
+    """
+
+
+class InboundMailEvent(BaseModel):
+    """
+    Строка журнала письма: действие кодом (подпись — на стороне интерфейса).
+    """
+
+    action: Annotated[str, Field(title="Action")]
+    actor: InboundMailPerson | None = None
+    at: Annotated[AwareDatetime, Field(title="At")]
+    detail: Annotated[str | None, Field(title="Detail")] = None
 
 
 class InboundMailItem(BaseModel):
+    activity_at: Annotated[AwareDatetime, Field(title="Activity At")]
+    """
+    Время последнего входящего письма записи
+    """
+    assigned_at: Annotated[AwareDatetime | None, Field(title="Assigned At")] = None
+    assignee: InboundMailPerson | None = None
+    """
+    «В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой
+    """
     assist: InboundMailAssist
     attachments_count: Annotated[int, Field(title="Attachments Count")]
     client: InboundMailLink | None = None
+    eds_waiting: Annotated[bool | None, Field(title="Eds Waiting")] = False
+    """
+    Регистрация начата, событие о ВХ не пришло в срок
+    """
     from_email: Annotated[str, Field(title="From Email")]
     from_history: Annotated[bool | None, Field(title="From History")] = False
     """
@@ -819,14 +877,34 @@ class InboundMailItem(BaseModel):
     """
     Открытый лид с этим адресом (связка) или лид-итог
     """
+    messages_count: Annotated[int | None, Field(title="Messages Count")] = 1
+    """
+    Входящих писем в записи (цепочка)
+    """
+    personal: Annotated[bool | None, Field(title="Personal")] = False
+    """
+    Адресовано лично сотруднику (правило ящика)
+    """
     preview: Annotated[str, Field(title="Preview")]
     """
     Начало текста письма (до 200 символов)
     """
     received_at: Annotated[AwareDatetime, Field(title="Received At")]
+    result: InboundMailResult | None = None
+    """
+    Итог у `done`
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
+    thread_reply: Annotated[bool | None, Field(title="Thread Reply")] = False
+    """
+    «Новое (ответ в цепочке)»: клиент ответил на разобранное
+    """
+    unread: Annotated[bool | None, Field(title="Unread")] = False
+    """
+    Не прочитано этим сотрудником
+    """
 
 
 class InboundMailLeadOut(BaseModel):
@@ -842,27 +920,67 @@ class InboundMailLink(BaseModel):
     name: Annotated[str, Field(title="Name")]
 
 
+class InboundMailMessage(BaseModel):
+    """
+    Входящее письмо записи (первое — корень); вложения качаются по `id` письма.
+    """
+
+    at: Annotated[AwareDatetime, Field(title="At")]
+    attachments: Annotated[list[InboundMailAttachment], Field(title="Attachments")]
+    from_email: Annotated[str, Field(title="From Email")]
+    from_name: Annotated[str, Field(title="From Name")]
+    id: Annotated[int, Field(title="Id")]
+    text: Annotated[str, Field(title="Text")]
+
+
 class InboundMailOut(BaseModel):
-    archive_reason: Annotated[str | None, Field(title="Archive Reason")]
+    activity_at: Annotated[AwareDatetime, Field(title="Activity At")]
+    """
+    Время последнего входящего письма записи
+    """
+    assigned_at: Annotated[AwareDatetime | None, Field(title="Assigned At")] = None
+    assignee: InboundMailPerson | None = None
+    """
+    «В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой
+    """
     assist: InboundMailAssist
     attachments: Annotated[list[InboundMailAttachment], Field(title="Attachments")]
     attachments_count: Annotated[int, Field(title="Attachments Count")]
+    cc: Annotated[list[InboundMailAddress], Field(title="Cc")]
     client: InboundMailLink | None = None
     eds_letter_id: Annotated[str | None, Field(title="Eds Letter Id")]
-    eds_letter_number: Annotated[str | None, Field(title="Eds Letter Number")]
+    eds_waiting: Annotated[bool | None, Field(title="Eds Waiting")] = False
+    """
+    Регистрация начата, событие о ВХ не пришло в срок
+    """
     from_email: Annotated[str, Field(title="From Email")]
     from_history: Annotated[bool | None, Field(title="From History")] = False
     """
     Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»
     """
     from_name: Annotated[str, Field(title="From Name")]
-    handled_at: Annotated[AwareDatetime | None, Field(title="Handled At")]
-    handled_by: Annotated[int | None, Field(title="Handled By")]
     id: Annotated[int, Field(title="Id")]
     inns: Annotated[list[str], Field(title="Inns")]
+    journal: Annotated[list[InboundMailEvent], Field(title="Journal")]
     lead: InboundMailLink | None = None
     """
     Открытый лид с этим адресом (связка) или лид-итог
+    """
+    messages: Annotated[list[InboundMailMessage], Field(title="Messages")]
+    """
+    Все входящие письма записи по времени, корень первым
+    """
+    messages_count: Annotated[int | None, Field(title="Messages Count")] = 1
+    """
+    Входящих писем в записи (цепочка)
+    """
+    personal: Annotated[bool | None, Field(title="Personal")] = False
+    """
+    Адресовано лично сотруднику (правило ящика)
+    """
+    personal_label: Annotated[str, Field(title="Personal Label")]
+    """
+    Пометка «адресовано лично» из настроек
     """
     preview: Annotated[str, Field(title="Preview")]
     """
@@ -870,14 +988,32 @@ class InboundMailOut(BaseModel):
     """
     received_at: Annotated[AwareDatetime, Field(title="Received At")]
     replies: Annotated[list[InboundMailReply], Field(title="Replies")]
-    result_lead: InboundMailLink | None
+    """
+    Наши ответы из журнала почты
+    """
+    reply_all_copy: Annotated[list[str], Field(title="Reply All Copy")]
+    """
+    Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)
+    """
+    result: InboundMailResult | None = None
+    """
+    Итог у `done`
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
     status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     text: Annotated[str, Field(title="Text")]
-    to: Annotated[list[str], Field(title="To")]
+    thread_reply: Annotated[bool | None, Field(title="Thread Reply")] = False
+    """
+    «Новое (ответ в цепочке)»: клиент ответил на разобранное
+    """
+    to: Annotated[list[InboundMailAddress], Field(title="To")]
     too_large: Annotated[bool, Field(title="Too Large")]
+    unread: Annotated[bool | None, Field(title="Unread")] = False
+    """
+    Не прочитано этим сотрудником
+    """
 
 
 class InboundMailPage(BaseModel):
@@ -887,7 +1023,13 @@ class InboundMailPage(BaseModel):
     total: Annotated[int, Field(title="Total")]
 
 
+class InboundMailPerson(BaseModel):
+    id: Annotated[int, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+
+
 class InboundMailReply(BaseModel):
+    by: InboundMailPerson | None = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
@@ -896,12 +1038,37 @@ class InboundMailReply(BaseModel):
     to_email: Annotated[str, Field(title="To Email")]
 
 
+class InboundMailResult(BaseModel):
+    """
+    Итог «Разобрано»: что сделано, кто и когда; ВХ и лид — для ссылки из списка.
+    """
+
+    at: Annotated[AwareDatetime | None, Field(title="At")] = None
+    by: InboundMailPerson | None = None
+    lead: InboundMailLink | None = None
+    letter_number: Annotated[str | None, Field(title="Letter Number")] = None
+    outcome: Annotated[Outcome | None, Field(title="Outcome")]
+    """
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3
+    """
+    reason: Annotated[str | None, Field(title="Reason")] = None
+    """
+    Причина архива
+    """
+
+
 class InboundMailSkipped(BaseModel):
     name: Annotated[str, Field(title="Name")]
     reason: Annotated[str, Field(title="Reason")]
     """
     type — тип не из белого списка, size — больше 25 МБ, count — больше 20
     """
+
+
+class InboundMailSkippedItem(BaseModel):
+    assignee: InboundMailPerson | None = None
+    id: Annotated[int, Field(title="Id")]
+    reason: Annotated[Reason, Field(title="Reason")]
 
 
 class InboundMailbox(BaseModel):
@@ -913,6 +1080,12 @@ class InboundMailbox(BaseModel):
     last_error_kind: Annotated[str | None, Field(title="Last Error Kind")] = None
     last_ok_at: Annotated[AwareDatetime | None, Field(title="Last Ok At")] = None
     last_poll_at: Annotated[AwareDatetime | None, Field(title="Last Poll At")] = None
+    personal_label: Annotated[str | None, Field(title="Personal Label")] = (
+        "Адресовано лично"
+    )
+    """
+    Пометка письма «адресовано лично» (настройка)
+    """
 
 
 class InboxResponse(BaseModel):
@@ -1252,6 +1425,17 @@ class OffsiteStatusOut(BaseModel):
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
 
 
+class Outcome(StrEnum):
+    """
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3
+    """
+
+    registered = "registered"
+    lead = "lead"
+    replied = "replied"
+    archived = "archived"
+
+
 class Owner(StrEnum):
     """
     Кто исправляет; нет — исправлять нечего
@@ -1326,6 +1510,13 @@ class ProviderToday(BaseModel):
     limit_usd: Annotated[float, Field(title="Limit Usd")]
     provider: Annotated[str, Field(title="Provider")]
     spent_usd: Annotated[float, Field(title="Spent Usd")]
+
+
+class Reason(StrEnum):
+    in_work_by_other = "in_work_by_other"
+    handled = "handled"
+    registering = "registering"
+    missing = "missing"
 
 
 class ReplyTemplateOut(BaseModel):
@@ -1695,10 +1886,10 @@ class Status6(StrEnum):
 
 class Status7(StrEnum):
     new = "new"
+    in_work = "in_work"
+    registering = "registering"
+    done = "done"
     spam = "spam"
-    registered = "registered"
-    lead = "lead"
-    archived = "archived"
 
 
 class Status9(StrEnum):

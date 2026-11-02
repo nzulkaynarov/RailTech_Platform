@@ -52,6 +52,7 @@ from app.feeds.snapshot import (
     wants_letter_tasks,
     wants_letters,
     wants_mail,
+    wants_mail_mine,
     wants_memos,
     wants_projects,
     wants_supplier_overdue,
@@ -548,32 +549,44 @@ def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
 
 
 def mail_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
-    """Письма общего ящика ждут разбора (W18A-P2): ВХ, лид или архив. Срока нет — разбор в день
-    поступления; суть — подсказка помощника, если есть, иначе начало текста."""
-    role_id = _role_id(view, "inbound_mail")
+    """Письма общего ящика в «Моих задачах» (W18A-P2, W18A-P2-3): «Новое» — разобрать (ВХ, лид или
+    архив; только первой линии), «в работе» у меня — довести. Срока нет — разбор в день поступления;
+    суть — подсказка помощника, если есть, иначе начало текста. Что приходит строкой, решает CRM."""
+    triage = wants_mail(view)
     out: list[Row] = []
     for mail in snap.mail or []:
         mail_id = mail.get("id")
+        status = mail.get("status")
         if not isinstance(mail_id, int):
             continue
-        received = parse_dt(mail.get("received_at"))
+        mine = status in ("in_work", "registering")
+        if not (mine or (status == "new" and triage)):
+            continue
+        kind: QueueItemKind = "inbound_mail_mine" if mine else "inbound_mail"
+        received = parse_dt(mail.get("activity_at") or mail.get("received_at"))
         raw_assist = mail.get("assist")
         assist: dict[str, Any] = raw_assist if isinstance(raw_assist, dict) else {}
         subject = str(mail.get("subject") or "") or "(без темы)"
         sender = str(mail.get("from_name") or "") or str(mail.get("from_email") or "") or None
+        verb = "Разобрать письмо"
+        if mine:
+            verb = "Письмо вам лично" if mail.get("personal") else "Письмо в работе"
         item = QueueItem(
             id=f"mail:{mail_id}",
-            role_id=role_id,
-            kind="inbound_mail",
-            title=f"Разобрать письмо: {short(subject, 80)}",
+            role_id=_role_id(view, kind),
+            kind=kind,
+            title=f"{verb}: {short(subject, 80)}",
             subtitle=join(
                 sender,
+                "ответ в цепочке" if mail.get("thread_reply") else None,
                 short(assist.get("summary") or mail.get("preview"), 80),
                 ago(received, now),
             ),
             due_label="later",
             due_at=None,
-            object=mail_ref(mail_id, str(mail.get("from_email") or "почта"), subject),
+            object=mail_ref(
+                mail_id, str(mail.get("from_email") or "почта"), subject, own=not triage
+            ),
         )
         out.append(Row(item, received))
     return out
@@ -630,7 +643,7 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):
         rows_ += ticket_rows(snap, now, view)
-    if wants_mail(view):
+    if wants_mail(view) or wants_mail_mine(view):
         rows_ += mail_rows(snap, now, view)
     if wants_supplier_overdue(view):
         rows_ += supplier_rows(snap, now, view)

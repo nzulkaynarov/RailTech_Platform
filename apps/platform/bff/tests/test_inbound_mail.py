@@ -38,11 +38,21 @@ def item(**over: Any) -> dict[str, Any]:
         "subject": "Акт сверки за октябрь",
         "received_at": "2026-11-02T05:00:00Z",
         "sent_at": "2026-11-02T04:59:00Z",
+        "activity_at": "2026-11-02T05:00:00Z",
         "preview": "Добрый день, направляем акт сверки",
         "attachments_count": 1,
         "assist": assist(),
         "client": {"id": 42, "name": "ООО Пример Поставка"},
         "lead": None,
+        "from_history": False,
+        "assignee": None,
+        "assigned_at": None,
+        "personal": False,
+        "thread_reply": False,
+        "unread": True,
+        "messages_count": 1,
+        "eds_waiting": False,
+        "result": None,
     }
     return {**base, **over}
 
@@ -50,7 +60,8 @@ def item(**over: Any) -> dict[str, Any]:
 def card(**over: Any) -> dict[str, Any]:
     base = {
         **item(),
-        "to": ["info@company.test"],
+        "to": [{"email": "info@company.test", "staff": None, "mailbox": True}],
+        "cc": [],
         "text": "Добрый день, направляем акт сверки за октябрь.",
         "attachments": [
             {"index": 0, "name": "акт.pdf", "content_type": "application/pdf", "size": len(PDF)}
@@ -59,26 +70,59 @@ def card(**over: Any) -> dict[str, Any]:
         "too_large": False,
         "inns": ["301234567"],
         "eds_letter_id": None,
-        "eds_letter_number": None,
-        "result_lead": None,
-        "archive_reason": None,
-        "handled_at": None,
-        "handled_by": None,
+        "messages": [
+            {
+                "id": 17,
+                "from_email": "buh@supplier.test",
+                "from_name": "ООО Пример Поставка",
+                "at": "2026-11-02T04:59:00Z",
+                "text": "Добрый день, направляем акт сверки за октябрь.",
+                "attachments": [
+                    {"index": 0, "name": "акт.pdf", "content_type": "application/pdf", "size": 15}
+                ],
+            }
+        ],
         "replies": [],
+        "journal": [],
+        "reply_all_copy": [],
+        "personal_label": "Адресовано лично",
     }
     return {**base, **over}
+
+
+def done(outcome: str, **over: Any) -> dict[str, Any]:
+    result = {
+        "outcome": outcome,
+        "by": {"id": 9, "name": "Делопроизводитель"},
+        "at": "2026-11-02T06:00:00Z",
+        "letter_number": None,
+        "lead": None,
+        "reason": None,
+        **over,
+    }
+    return {"status": "done", "result": result}
 
 
 def page(items: list[dict[str, Any]], *, configured: bool = True) -> dict[str, Any]:
     return {
         "items": items,
         "total": len(items),
-        "counts": {"new": len(items), "history": 0, "spam": 0},
+        "counts": {
+            "new": len(items),
+            "history": 0,
+            "mine": 0,
+            "in_work": 0,
+            "done": 0,
+            "spam": 0,
+            "all": len(items),
+            "unread_new": len(items),
+        },
         "mailbox": {
             "configured": configured,
             "last_poll_at": None,
             "last_ok_at": None,
             "last_error_kind": None,
+            "personal_label": "Адресовано лично",
         },
     }
 
@@ -116,7 +160,7 @@ async def test_registrar_queue_card_and_counter_show_new_mail(
     assert (mail_card["count"], mail_card["path"]) == (1, "/eds/mail")
     # «Мои задачи» — без писем «из истории» (W18A-P2-2): фильтр решает CRM.
     asked = fb.crm["mail"].calls[0].request.url.params
-    assert (asked["status"], asked["history"]) == ("new", "false")
+    assert asked["view"] == "tasks", "что строкой «Моих задач», решает CRM"
     assert {"module": "eds", "section": "mail", "count": 1, "attention": True} in counters.json()[
         "items"
     ]
@@ -143,8 +187,7 @@ async def test_manager_without_registration_right_has_no_mail_queue(
 
     assert [i for i in queue if i["kind"] == "inbound_mail"] == []
     assert [c for c in cards if c["key"] == "inbound_mail"] == []
-    assert not fb.crm["mail"].called, "без раздела канцелярии CRM не спрашиваем"
-    assert (await web.client.get("/api/v1/inbound-mail")).status_code == 403
+    assert fb.crm["mail"].called, "свои письма есть у любого сотрудника: CRM отдаёт только их"
 
 
 # --- карточка и действия ------------------------------------------------------------------------
@@ -171,7 +214,8 @@ async def test_list_card_and_attachment(web: Web, be: Backends, check: ContractC
     }
     body = shown.json()
     assert body["assist"]["action"] == "register"
-    assert (body["letter_number"], body["letter_ref"]) == (None, None)
+    assert body["result"] is None
+    assert body["to"][0]["mailbox"] is True
     assert file.status_code == 200
     assert file.content == PDF
     assert file.headers["content-type"] == "application/octet-stream", "тип файла не доверяется"
@@ -180,15 +224,14 @@ async def test_list_card_and_attachment(web: Web, be: Backends, check: ContractC
 
 async def test_registered_mail_card_links_the_letter(web: Web, be: Backends) -> None:
     be.router.get(f"{CRM}/17").mock(
-        return_value=httpx.Response(
-            200, json=card(status="registered", eds_letter_number="ВХ-12/26")
-        )
+        return_value=httpx.Response(200, json=card(**done("registered", letter_number="ВХ-12/26")))
     )
     await web.login(["REGISTRAR"])
 
     body = (await web.client.get("/api/v1/inbound-mail/17")).json()
 
-    assert body["letter_ref"].startswith("/eds/inbox/%D0%92%D0%A5-12%2F26")
+    assert body["result"]["letter_number"] == "ВХ-12/26"
+    assert body["result"]["letter_ref"].startswith("/eds/inbox/%D0%92%D0%A5-12%2F26")
 
 
 async def test_create_lead_archive_and_conflict(
@@ -291,6 +334,16 @@ async def test_mail_attachments_become_eds_files_of_the_clerk(
     assert "акт.pdf".encode() in upload.content
 
 
+IN_WORK_BY_OTHER = {
+    "code": "conflict",
+    "message": "x",
+    "details": {
+        "reason": "mail_in_work_by_other",
+        "assignee_name": "Иванов",
+        "assigned_at": "2026-11-02T05:42:00Z",  # 10:42 по Ташкенту
+    },
+}
+
 FORM: dict[str, Any] = {
     "kind": "supplier",
     "receipt_method": "email",
@@ -306,7 +359,7 @@ FORM: dict[str, Any] = {
 async def test_register_from_mail_passes_the_source_and_allows_no_files(
     web: Web, be: Backends, eds: EdsFake
 ) -> None:
-    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=card()))
+    mark = be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
     await web.login(["REGISTRAR"])
 
     response = await web.client.post(
@@ -320,12 +373,37 @@ async def test_register_from_mail_passes_the_source_and_allows_no_files(
     body = json.loads(call.content)
     assert body["source"] == {"crm_inbound_mail_id": 17}
     assert body["file_ids"] == []
+    assert [json.loads(c.request.content) for c in mark.calls] == [{"state": "start"}]
 
 
-async def test_register_from_already_handled_mail_is_409_before_eds(
+async def test_register_from_mail_in_work_by_other_is_409_before_eds(
     web: Web, be: Backends, eds: EdsFake
 ) -> None:
-    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=card(status="lead")))
+    be.router.post(f"{CRM}/17/registration").mock(
+        return_value=httpx.Response(409, json=IN_WORK_BY_OTHER)
+    )
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.post(
+        "/api/v1/eds/letters", json=FORM, headers={CSRF_HEADER: web.csrf}
+    )
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["details"]["reason"] == "mail_in_work_by_other"
+    assert body["message"] == "Письмо уже в работе у Иванов с 10:42."
+    assert eds.made("POST", "letters") == [], "второго ВХ нет"
+
+
+async def test_register_from_handled_mail_is_409_before_eds(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    be.router.post(f"{CRM}/17/registration").mock(
+        return_value=httpx.Response(
+            409,
+            json={"code": "conflict", "message": "x", "details": {"reason": "mail_handled"}},
+        )
+    )
     await web.login(["REGISTRAR"])
 
     response = await web.client.post(
@@ -335,6 +413,25 @@ async def test_register_from_already_handled_mail_is_409_before_eds(
     assert response.status_code == 409
     assert response.json()["details"]["reason"] == "mail_handled"
     assert eds.made("POST", "letters") == []
+
+
+async def test_eds_refusal_gives_the_mail_back_to_work(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    mark = be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
+    eds.answer(
+        "POST",
+        "letters",
+        httpx.Response(422, json={"code": "validation_failed", "message": "x", "details": {}}),
+    )
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.post(
+        "/api/v1/eds/letters", json=FORM, headers={CSRF_HEADER: web.csrf}
+    )
+
+    assert response.status_code >= 400
+    assert [json.loads(c.request.content)["state"] for c in mark.calls] == ["start", "cancel"]
 
 
 async def test_register_without_mail_still_needs_a_file(web: Web, eds: EdsFake) -> None:
@@ -357,6 +454,8 @@ IMAP = {
     "security": "ssl",
     "mailbox": "INBOX",
     "assist_enabled": True,
+    "personal_rule": True,
+    "personal_label": "Адресовано лично",
     "username": "info@company.test",
     "password_configured": True,
     "password_last4": "abcd",
@@ -461,18 +560,18 @@ async def test_spam_tab_forwards_filters_counts_and_history_mark(
 ) -> None:
     body = {
         **page([item(status="spam", from_history=True)]),
-        "counts": {"new": 4, "history": 2, "spam": 1},
+        "counts": {**page([])["counts"], "new": 4, "history": 2, "spam": 1},
     }
     listed_crm = be.router.get(CRM).mock(return_value=httpx.Response(200, json=body))
     await web.login(["REGISTRAR"])
 
-    listed = await web.client.get("/api/v1/inbound-mail?status=spam&history=true")
+    listed = await web.client.get("/api/v1/inbound-mail?view=spam&history=true")
 
     check(listed, "/inbound-mail", "get")
     params = listed_crm.calls[0].request.url.params
-    assert (params["status"], params["history"]) == ("spam", "true")
+    assert (params["view"], params["history"]) == ("spam", "true")
     data = listed.json()
-    assert data["counts"] == {"new": 4, "history": 2, "spam": 1}
+    assert (data["counts"]["new"], data["counts"]["history"], data["counts"]["spam"]) == (4, 2, 1)
     assert (data["items"][0]["status"], data["items"][0]["from_history"]) == ("spam", True)
     plain = await web.client.get("/api/v1/inbound-mail")
     assert "history" not in listed_crm.calls[1].request.url.params
@@ -619,3 +718,212 @@ async def test_registrar_cannot_start_history(web: Web) -> None:
         headers={CSRF_HEADER: web.csrf},
     )
     assert response.status_code == 403
+
+
+# --- обращение: «в работе», представления, цепочки (W18A-P2-3) ---------------------------------
+
+
+async def test_views_search_and_result_of_done_mail(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    rows = [
+        item(id=1, **done("registered", letter_number="ВХ-12/26")),
+        item(id=2, **done("lead", lead={"id": 42, "name": "Азиз"})),
+        item(id=3, **done("archived", reason="рассылка")),
+    ]
+    listed_crm = be.router.get(CRM).mock(return_value=httpx.Response(200, json=page(rows)))
+    await web.login(["REGISTRAR"])
+
+    listed = await web.client.get("/api/v1/inbound-mail?view=done&q= Акт ")
+
+    check(listed, "/inbound-mail", "get")
+    params = listed_crm.calls[0].request.url.params
+    assert (params["view"], params["q"]) == ("done", "Акт")
+    registered, lead, archived = [i["result"] for i in listed.json()["items"]]
+    assert registered["letter_number"] == "ВХ-12/26"
+    assert registered["letter_ref"].startswith("/eds/inbox/")
+    assert lead["lead"] == {"id": 42, "number": "L-0042", "name": "Азиз"}
+    assert (archived["outcome"], archived["reason"]) == ("archived", "рассылка")
+    assert registered["by"] == {"id": 9, "name": "Делопроизводитель"}
+
+
+async def test_take_conflict_says_who_since_when_and_takeover_goes_through(
+    web: Web, be: Backends
+) -> None:
+    take = be.router.post(f"{CRM}/17/take").mock(
+        side_effect=[
+            httpx.Response(409, json=IN_WORK_BY_OTHER),
+            httpx.Response(204),
+        ]
+    )
+    await web.login(["REGISTRAR"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    busy = await web.client.post("/api/v1/inbound-mail/17/take", json={}, headers=headers)
+    forced = await web.client.post(
+        "/api/v1/inbound-mail/17/take", json={"takeover": True}, headers=headers
+    )
+
+    assert busy.status_code == 409
+    body = busy.json()
+    assert body["message"] == "Письмо уже в работе у Иванов с 10:42."
+    assert (body["details"]["assignee_name"], body["details"]["reason"]) == (
+        "Иванов",
+        "mail_in_work_by_other",
+    )
+    assert forced.status_code == 204
+    assert [json.loads(c.request.content) for c in take.calls] == [
+        {"takeover": False},
+        {"takeover": True},
+    ]
+
+
+async def test_release_read_and_bulk_archive(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    release = be.router.post(f"{CRM}/17/release").mock(return_value=httpx.Response(204))
+    read = be.router.post(f"{CRM}/17/read").mock(return_value=httpx.Response(204))
+    bulk = be.router.post(f"{CRM}/bulk-archive").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "archived": [1, 2],
+                "skipped": [
+                    {
+                        "id": 3,
+                        "reason": "in_work_by_other",
+                        "assignee": {"id": 7, "name": "Иванов"},
+                    },
+                    {"id": 4, "reason": "handled", "assignee": None},
+                ],
+            },
+        )
+    )
+    await web.login(["REGISTRAR"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    back = await web.client.post("/api/v1/inbound-mail/17/release", headers=headers)
+    seen = await web.client.post("/api/v1/inbound-mail/17/read", headers=headers)
+    many = await web.client.post(
+        "/api/v1/inbound-mail/bulk-archive",
+        json={"ids": [1, 2, 3, 4], "reason": " рассылки "},
+        headers=headers,
+    )
+
+    assert (back.status_code, seen.status_code) == (204, 204)
+    assert release.called
+    assert read.called
+    check(many, "/inbound-mail/bulk-archive", "post")
+    assert many.json()["skipped"][0] == {
+        "id": 3,
+        "reason": "in_work_by_other",
+        "assignee": {"id": 7, "name": "Иванов"},
+    }
+    assert json.loads(bulk.calls[0].request.content) == {"ids": [1, 2, 3, 4], "reason": "рассылки"}
+
+
+async def test_reply_all_and_awaiting_are_forwarded(web: Web, be: Backends) -> None:
+    sent = be.router.post(f"{CRM}/17/reply").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "to_email": "buh@supplier.test",
+                "subject": "Re: Акт",
+                "status": "queued",
+                "created_at": "2026-11-02T06:00:00Z",
+                "sent_at": None,
+                "by": {"id": 9, "name": "Делопроизводитель"},
+            },
+        )
+    )
+    await web.login(["REGISTRAR"])
+
+    reply = await web.client.post(
+        "/api/v1/inbound-mail/17/reply",
+        json={"text": "Принято", "reply_all": True, "awaiting": True},
+        headers={CSRF_HEADER: web.csrf},
+    )
+
+    assert reply.status_code == 200, reply.text
+    assert json.loads(sent.calls[0].request.content) == {
+        "text": "Принято",
+        "reply_all": True,
+        "awaiting": True,
+    }
+
+
+async def test_manager_opens_only_own_mail_and_cannot_use_first_line_actions(
+    web: Web, be: Backends
+) -> None:
+    be.router.get(f"{CRM}/17").mock(
+        return_value=httpx.Response(200, json=card(status="in_work", personal=True))
+    )
+    be.router.get(f"{CRM}/18").mock(
+        return_value=httpx.Response(403, json={"code": "forbidden", "message": "x", "details": {}})
+    )
+    await web.login(["MANAGER_ALL"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    own = await web.client.get("/api/v1/inbound-mail/17")
+    foreign = await web.client.get("/api/v1/inbound-mail/18")
+    lead = await web.client.post("/api/v1/inbound-mail/17/lead", headers=headers)
+    take = await web.client.post("/api/v1/inbound-mail/17/take", json={}, headers=headers)
+    bulk = await web.client.post(
+        "/api/v1/inbound-mail/bulk-archive", json={"ids": [17], "reason": "тест"}, headers=headers
+    )
+
+    assert own.status_code == 200
+    assert own.json()["personal"] is True
+    assert foreign.status_code == 403
+    assert (lead.status_code, take.status_code, bulk.status_code) == (403, 403, 403)
+
+
+async def test_my_tasks_have_own_rows_for_mail_in_work_and_personal(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Сотрудник без раздела канцелярии: CRM отдаёт только его письма — строка ведёт в
+    `/eds/my-mail/…`;
+    у делопроизводителя «Новое» — разобрать, «в работе» — своя строка."""
+    fb.state["crm_mail"] = page(
+        [
+            item(
+                id=31,
+                status="in_work",
+                personal=True,
+                assignee={"id": 9, "name": "Я"},
+                assigned_at=fb.m.ago(minutes=5),
+            ),
+            item(id=32, status="in_work", assignee={"id": 9, "name": "Я"}, thread_reply=True),
+            item(id=33, status="new"),
+        ]
+    )
+    await web.login(["MANAGER_ALL"])
+
+    rows = [i for i in (await web.client.get("/api/v1/queue")).json()["items"] if "mail" in i["id"]]
+
+    assert {r["id"] for r in rows} == {"mail:31", "mail:32"}, "«Новое» — только первая линия"
+    by_id = {r["id"]: r for r in rows}
+    assert by_id["mail:31"]["title"].startswith("Письмо вам лично: ")
+    assert by_id["mail:31"]["kind"] == "inbound_mail_mine"
+    assert by_id["mail:31"]["object"]["path"] == "/eds/my-mail/31"
+    assert by_id["mail:32"]["title"].startswith("Письмо в работе: ")
+
+
+async def test_registrar_gets_new_and_own_work_rows_with_first_line_paths(
+    web: Web, fb: FeedBackends
+) -> None:
+    fb.state["crm_mail"] = page(
+        [
+            item(id=41, status="new"),
+            item(id=42, status="registering", assignee={"id": 9, "name": "Я"}),
+        ]
+    )
+    await web.login(["REGISTRAR"])
+
+    rows = [i for i in (await web.client.get("/api/v1/queue")).json()["items"] if "mail" in i["id"]]
+
+    assert {(r["id"], r["kind"], r["object"]["path"]) for r in rows} == {
+        ("mail:41", "inbound_mail", "/eds/mail/41"),
+        ("mail:42", "inbound_mail_mine", "/eds/mail/42"),
+    }

@@ -53,6 +53,7 @@ ROOTS = (
     "InboundMailOut",
     "InboundMailLeadOut",
     "InboundMailReply",
+    "InboundMailBulkArchiveOut",
     "OffsiteStatusOut",
     "OffsiteCheckOut",
     "SmtpCheckOut",
