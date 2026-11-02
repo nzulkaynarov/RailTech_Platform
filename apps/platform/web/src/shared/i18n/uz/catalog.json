@@ -10,7 +10,8 @@
     "brigades": "Brigadalar",
     "refs": "Ma'lumotnomalar",
     "requests": "Kategoriya so'rovlari",
-    "requestsCount": "Kategoriya so'rovlari ({{count}})"
+    "requestsCount": "Kategoriya so'rovlari ({{count}})",
+    "import": "Prays yuklash"
   },
   "kinds": {
     "stock": "Ombordagi tovar",
@@ -104,7 +105,26 @@
       "name_required": "Nomini kiriting.",
       "already_reviewed": "So'rov allaqachon hal qilingan. Ro'yxatni yangilang.",
       "category_required": "Yaratilgan kategoriyani tanlang.",
-      "reason_required": "Rad etish sababini kiriting."
+      "reason_required": "Rad etish sababini kiriting.",
+      "supplier_exists": "Bunday yetkazib beruvchi bor: ro‘yxatdan toping.",
+      "offer_exists": "Bu yetkazib beruvchining pozitsiyaga narxi bor — uni o‘zgartiring.",
+      "proposal_decided": "O‘zgarish allaqachon hal qilingan. Kartani yangilang.",
+      "proposal_stale": "Qiymat ma’lumotnomada endi yo‘q. O‘zgarishni rad eting.",
+      "product_incomplete": "Yetishmayotgan maydonlarni to‘ldiring, so‘ng e’lon qiling.",
+      "supplier_id_required": "STIR yoki xorijiy ro‘yxat raqamini kiriting.",
+      "tin_invalid": "STIR — 9 raqam.",
+      "supplier_name_required": "Yetkazib beruvchi nomini kiriting.",
+      "country_not_found": "Bunday mamlakat yo‘q.",
+      "currency_not_found": "Bunday valyuta yo‘q.",
+      "brand_not_found": "Bunday ishlab chiqaruvchi yo‘q.",
+      "item_hs_code_invalid": "TIF TN kodi — 2, 4, 6, 8 yoki 10 raqam.",
+      "delivery_basis_not_found": "Bunday yetkazish bazisi yo‘q.",
+      "supplier_not_found": "Ro‘yxatdan yetkazib beruvchi yoki ishlab chiqaruvchini tanlang.",
+      "supplier_invalid": "Ro‘yxatdan yetkazib beruvchini tanlang.",
+      "valid_date_invalid": "Sana — KK.OO.YYYY formatida.",
+      "rows_token_invalid": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
+      "offer_source_invalid": "Narx manbaini tanlang.",
+      "role_not_permitted": "Katalog va ta’minot huquqlari kerak."
     }
   },
   "items": {
@@ -148,7 +168,9 @@
       "status": "Karta holati",
       "brand": "Ishlab chiqaruvchi",
       "gost": "GOST / chizma",
-      "hs": "TIF TN kodi"
+      "hs": "TIF TN kodi",
+      "mpn": "Ishlab chiqaruvchi artikuli",
+      "source": "Prays bo‘yicha yaratilgan"
     },
     "offers": "Yetkazib beruvchilar takliflari",
     "offersTable": "Pozitsiya bo'yicha yetkazib beruvchilar takliflari",
@@ -175,7 +197,11 @@
         "O'zgarishlar pozitsiya kartasida saqlanadi.",
         "Yangi hisob-kitoblar yangilangan birlik va QQS dan foydalanadi.",
         "Yuborilgan TT lar o'zgarmaydi."
-      ]
+      ],
+      "brand": "Ishlab chiqaruvchi (brend)",
+      "mpn": "Ishlab chiqaruvchi artikuli",
+      "hs": "TIF TN kodi",
+      "hsHint": "2, 4, 6, 8 yoki 10 raqam"
     }
   },
   "offers": {
@@ -231,7 +257,7 @@
     "nearest": "eng yaqin muddat {{date}}",
     "empty": {
       "title": "Yetkazib beruvchilar yo'q",
-      "text": "Yetkazib beruvchilar pozitsiyalar bo'yicha takliflari bilan birga paydo bo'ladi.",
+      "text": "Yetkazib beruvchini qo‘shing yoki praysini yuklang.",
       "filtered": "Bu so'rov bo'yicha yetkazib beruvchilar yo'q."
     },
     "fields": {
@@ -241,11 +267,21 @@
       "phone": "Telefon",
       "email": "Pochta",
       "website": "Sayt",
-      "address": "Manzil"
+      "address": "Manzil",
+      "reg": "Ro‘yxat raqami",
+      "currency": "Narx valyutasi",
+      "kind": "Kim",
+      "brands": "Yetkazadigan brendlar",
+      "madeBrands": "Chiqaradigan brendlar"
     },
     "offers": "Pozitsiyalar bo'yicha takliflar",
     "offersTable": "Yetkazib beruvchi takliflari",
-    "noOffers": "Takliflar yo'q."
+    "noOffers": "Takliflar yo'q.",
+    "reg": "ro‘yxat № {{reg}}",
+    "add": "Yetkazib beruvchi qo‘shish",
+    "edit": "O‘zgartirish",
+    "maker": "Ishlab chiqaruvchi",
+    "dealer": "Yetkazib beruvchi"
   },
   "brigades": {
     "search": "Nomi va ixtisosligi bo'yicha qidiruv",
@@ -524,6 +560,159 @@
         "U bog'langan pozitsiya va arizada paydo bo'ladi.",
         "Fayl mijozga yuborilmaydi."
       ]
+    }
+  },
+  "supplierForm": {
+    "addTitle": "Yangi yetkazib beruvchi",
+    "editTitle": "Yetkazib beruvchi",
+    "add": "Qo‘shish",
+    "steps": [
+      "Yetkazib beruvchi ro‘yxatda va prays yuklashda paydo bo‘ladi.",
+      "Unga kirish yo‘q: kartani siz yuritasiz."
+    ],
+    "name": "Nomi",
+    "country": "Mamlakat",
+    "currency": "Narx valyutasi",
+    "tin": "STIR",
+    "tinHint": "9 raqam, O‘zbekiston kompaniyalari uchun",
+    "reg": "Ro‘yxat raqami",
+    "regHint": "Xorijiy kompaniya uchun STIR o‘rniga",
+    "contact": "Aloqa shaxsi",
+    "email": "Pochta",
+    "phone": "Telefon",
+    "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)"
+  },
+  "offerCreate": {
+    "open": "Narx qo‘shish",
+    "title": "Yetkazib beruvchi narxi: {{name}}",
+    "add": "Qo‘shish",
+    "steps": [
+      "Narx yetkazib beruvchida va pozitsiya kartasida paydo bo‘ladi.",
+      "Yangi hisob-kitoblar uni olishi mumkin."
+    ],
+    "product": "Pozitsiya",
+    "currency": "Valyuta",
+    "basis": "Yetkazish bazisi (Incoterms)",
+    "lead": "Yetkazish muddati",
+    "leadHint": "Praysdagidek, masalan «30 kun»",
+    "source": "Narx manbai"
+  },
+  "offerSource": {
+    "price_list": "prays",
+    "rfq_reply": "so‘rovga javob",
+    "manual": "qo‘lda"
+  },
+  "history": {
+    "title": "Narx tarixi: {{name}}",
+    "empty": "Hali o‘zgarishlar yo‘q.",
+    "table": "Narx tarixi",
+    "at": "Qachon",
+    "source": "Manba",
+    "open": "Tarix",
+    "openNamed": "{{name}} narx tarixi"
+  },
+  "proposals": {
+    "count": "tasdiqlashda: {{count}}",
+    "filter": "Tasdiqlashdagi o‘zgarishlar",
+    "title": "Yetkazib beruvchilardan o‘zgarishlar",
+    "current": "Hozir",
+    "proposed": "Taklif",
+    "accept": "Qabul qilish",
+    "reject": "Rad etish",
+    "acceptNamed": "O‘zgarishni qabul qilish: {{field}}",
+    "rejectNamed": "O‘zgarishni rad etish: {{field}}"
+  },
+  "proposalField": {
+    "name": "Nomi",
+    "description": "Tavsif",
+    "category": "Toifa",
+    "hs_code": "TIF TN kodi",
+    "uom": "O‘lchov birligi",
+    "domain_type": "Yo‘nalish",
+    "gost_drawing": "GOST / chizma"
+  },
+  "publish": {
+    "publish": "E’lon qilish",
+    "unpublish": "E’londan olish",
+    "missing": "E’lon qilish uchun to‘ldiring: {{fields}}.",
+    "fields": {
+      "name": "nomi",
+      "uom": "o‘lchov birligi",
+      "category": "toifa",
+      "hs_code": "TIF TN kodi",
+      "list_price": "vitrina narxi"
+    }
+  },
+  "import": {
+    "noAccess": {
+      "title": "Prays yuklash mavjud emas",
+      "text": "Praysni ta’minotchi yoki direktor yuklaydi."
+    },
+    "supplier": "Yetkazib beruvchi",
+    "supplierPlaceholder": "Nomi yoki raqami bo‘yicha toping",
+    "newSupplier": "Yangi yetkazib beruvchi",
+    "mode": "Fayl turi",
+    "modes": {
+      "xlsx": "Shablon (xlsx)",
+      "ai": "Istalgan: PDF, foto"
+    },
+    "modeHint": {
+      "xlsx": "Ustunlar shablondagidek",
+      "ai": "SI qatorlarni taklif qiladi — hisobotni tekshiring"
+    },
+    "file": "Prays fayli",
+    "template": "Shablonni yuklab olish",
+    "templateError": "Shablonni yuklab bo‘lmadi.",
+    "validFrom": "Narxlar amal qiladi (dan)",
+    "validUntil": "Narxlar amal qiladi (gacha)",
+    "validHint": "Butun fayl uchun; fayl ustunlari ustun",
+    "check": "Tekshirish",
+    "apply": "Qo‘llash",
+    "reportTitle": "Yuklash hisoboti",
+    "reportChecked": "Tekshiruv: hech narsa yozilmadi",
+    "reportApplied": "Prays yuklandi",
+    "aiNote": "Qatorlarni SI o‘qidi. «Qo‘llash»dan oldin fayl bilan solishtiring.",
+    "stats": {
+      "itemsCreated": "Yangi pozitsiyalar",
+      "itemsMatched": "Nomenklaturada topildi",
+      "offersCreated": "Yangi narxlar",
+      "offersUpdated": "Yangilangan narxlar",
+      "proposals": "Tasdiqlashga",
+      "errors": "Xatoli qatorlar"
+    },
+    "unpublishable": "E’lon uchun ma’lumoti yetmaydigan pozitsiyalar: {{count}}. Kartada to‘ldiring.",
+    "proposalsTitle": "Tasdiqlashga kartalar o‘zgarishi",
+    "proposalsNote": "Prays boshqalarning va e’lon qilingan kartalarni o‘zgartirmaydi — pozitsiya kartasida hal qiling.",
+    "openPending": "Tasdiqlashdagi pozitsiyalarni ochish",
+    "errorsTitle": "Xatoli qatorlar — yuklanmadi",
+    "warningsTitle": "Izoh bilan yuklandi",
+    "shown": "{{total}} tadan birinchi {{shown}} tasi ko‘rsatilgan.",
+    "row": "Qator",
+    "item": "Pozitsiya",
+    "field": "Maydon",
+    "reason": "Nima noto‘g‘ri",
+    "codes": {
+      "DEFAULT": "Qatorni o‘qib bo‘lmadi {{value}}",
+      "UNKNOWN_CURRENCY": "Noma’lum valyuta «{{value}}»",
+      "UNKNOWN_STOCK_STATUS": "Noma’lum mavjudlik holati «{{value}}»",
+      "UNKNOWN_CATEGORY": "Bunday toifa yo‘q «{{value}}»",
+      "UNKNOWN_DOMAIN": "Bunday yo‘nalish yo‘q «{{value}}»",
+      "PRICE_NOT_A_NUMBER": "Narx raqam emas",
+      "PRICE_NOT_POSITIVE": "Narx noldan katta bo‘lishi kerak",
+      "VALID_DATE_INVALID": "Muddat sanasi — KK.OO.YYYY",
+      "OFFER_VALIDITY_RANGE_INVALID": "«Gacha» sanasi «dan»dan oldin",
+      "ROW_FAILED": "Qatorni yuklab bo‘lmadi",
+      "HS_CODE_TOO_LONG": "TIF TN kodi 10 raqamdan uzun — yozilmadi: {{value}}",
+      "HS_CODE_NOT_IN_CLASSIFIER": "TIF TN kodi ma’lumotnomada yo‘q: {{value}}",
+      "HS_CODE_RETIRED": "TIF TN kodi endi amal qilmaydi: {{value}}"
+    },
+    "fileErrors": {
+      "IMPORT_FAILED": "Fayl yuklanmadi. Tekshirib, qayta urinib ko‘ring.",
+      "NAME_COLUMN_NOT_FOUND": "Faylda «Наименование» ustuni yo‘q. Shablonni oling.",
+      "AI_EXTRACT_FAILED": "SI faylni o‘qiy olmadi. Boshqa fayl yoki shablonni sinang.",
+      "AI_EXTRACT_EMPTY": "SI faylda tovar qatorlarini topmadi.",
+      "ROWS_TOKEN_EXPIRED": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
+      "AI_JOB_FAILED": "SI faylni o‘qiy olmadi. Keyinroq urinib ko‘ring."
     }
   }
 }

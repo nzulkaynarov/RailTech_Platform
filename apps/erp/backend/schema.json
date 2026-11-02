@@ -8752,6 +8752,148 @@
                 }
             }
         },
+        "/api/v1/catalog/field-proposals/{id}/accept/": {
+            "post": {
+                "operationId": "catalog_field_proposals_accept",
+                "description": "Needs `catalog.manage`. Значение из прайса записывается в карточку; уже решённое — 409.",
+                "summary": "Accept a supplier change to a catalog item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/field-proposals/{id}/reject/": {
+            "post": {
+                "operationId": "catalog_field_proposals_reject",
+                "description": "Needs `catalog.manage`. Карточка не меняется; это значение поставщика больше не предлагается.",
+                "summary": "Reject a supplier change to a catalog item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/items/": {
             "get": {
                 "operationId": "catalog_items_list",
@@ -8796,6 +8938,17 @@
                             "type": "integer"
                         },
                         "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "proposals",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pending"
+                            ]
+                        },
+                        "description": "Только позиции с изменениями от поставщиков на одобрении."
                     },
                     {
                         "in": "query",
@@ -8991,6 +9144,148 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/items/{id}/publish/": {
+            "post": {
+                "operationId": "catalog_items_publish",
+                "description": "Needs `catalog.publish`. Порог полноты (`catalog/publishing.py`): не хватает полей — 409 `PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки.",
+                "summary": "Publish a catalog item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/items/{id}/unpublish/": {
+            "post": {
+                "operationId": "catalog_items_unpublish",
+                "description": "Needs `catalog.publish`. Опубликованная карточка снова становится черновиком.",
+                "summary": "Unpublish a catalog item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
                 "security": [
                     {
                         "jwtAuth": []
@@ -11439,6 +11734,83 @@
                         "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
+            },
+            "post": {
+                "operationId": "catalog_suppliers_create",
+                "description": "Needs `supply.manage`. Простая карточка компании: название, страна, ИНН или рег. номер нерезидента (хотя бы одно — 400 `SUPPLIER_ID_REQUIRED`), контакт, валюта цен. Такой ИНН или пара (страна, рег. номер) уже есть — 409 `SUPPLIER_EXISTS`.",
+                "summary": "Add a supplier",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskSupplierInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskSupplierInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskSupplierInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskSupplierDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
             }
         },
         "/api/v1/catalog/suppliers/{id}/": {
@@ -11491,6 +11863,205 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_suppliers_update",
+                "description": "Needs `supply.manage`. Те же поля, что при создании; приходят только изменённые.",
+                "summary": "Edit a supplier",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskSupplierInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskSupplierInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskSupplierInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskSupplierDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suppliers/{id}/offers/": {
+            "post": {
+                "operationId": "catalog_suppliers_offer_create",
+                "description": "Needs `supply.manage` и право на цены поставщиков (403 `SUPPLIER_PRICES_REQUIRED`). Одна цена на пару «поставщик — товар»: вторая — 409 `OFFER_EXISTS`.",
+                "summary": "Add a supplier price",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskOfferCreateInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskOfferCreateInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskOfferCreateInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskOffer"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -11590,6 +12161,87 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suppliers/{id}/offers/{offer_id}/history/": {
+            "get": {
+                "operationId": "catalog_suppliers_offer_history",
+                "description": "Снимки цены, срока действия, базиса и источника; новые сверху. `price` — только с правом на цены.",
+                "summary": "Supplier price history",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "offer_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "name": "page",
+                        "required": false,
+                        "in": "query",
+                        "description": "A page number within the paginated result set.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "page_size",
+                        "required": false,
+                        "in": "query",
+                        "description": "Number of results to return per page.",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskOfferHistoryRowList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -34776,6 +35428,10 @@
                     "docs_count": {
                         "type": "integer"
                     },
+                    "proposals_count": {
+                        "type": "integer",
+                        "description": "Изменений от поставщиков на одобрении (CAT-1)."
+                    },
                     "description": {
                         "type": "string"
                     },
@@ -34792,6 +35448,20 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "brand_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Изготовитель (бренд) — id справочника."
+                    },
+                    "source_supplier": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Карточка заведена по прайсу этого поставщика."
+                    },
                     "offers": {
                         "type": "array",
                         "items": {
@@ -34807,10 +35477,21 @@
                         "items": {
                             "$ref": "#/components/schemas/DeskTechDocRef"
                         }
+                    },
+                    "proposals": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskProposal"
+                        },
+                        "description": "Изменения от поставщиков на одобрении."
+                    },
+                    "publish": {
+                        "$ref": "#/components/schemas/DeskPublishState"
                     }
                 },
                 "required": [
                     "brand",
+                    "brand_id",
                     "category",
                     "description",
                     "docs_count",
@@ -34825,7 +35506,11 @@
                     "offers",
                     "offers_count",
                     "prices_visible",
+                    "proposals",
+                    "proposals_count",
+                    "publish",
                     "sku",
+                    "source_supplier",
                     "status",
                     "tech_docs",
                     "unit",
@@ -34859,6 +35544,20 @@
                         "type": "string",
                         "nullable": true,
                         "description": "Процент 0..100; пусто — по умолчанию компании."
+                    },
+                    "brand_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Изготовитель (бренд)."
+                    },
+                    "manufacturer_part_number": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "hs_code": {
+                        "type": "string",
+                        "description": "2–10 цифр.",
+                        "maxLength": 20
                     }
                 }
             },
@@ -34937,6 +35636,10 @@
                     },
                     "docs_count": {
                         "type": "integer"
+                    },
+                    "proposals_count": {
+                        "type": "integer",
+                        "description": "Изменений от поставщиков на одобрении (CAT-1)."
                     }
                 },
                 "required": [
@@ -34948,6 +35651,7 @@
                     "name",
                     "nearest_valid_until",
                     "offers_count",
+                    "proposals_count",
                     "sku",
                     "status",
                     "unit",
@@ -35013,6 +35717,27 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "delivery_basis": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Базис поставки Incoterms (код)."
+                    },
+                    "lead_time": {
+                        "type": "string",
+                        "description": "Срок поставки словами, как в прайсе."
+                    },
+                    "source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                            }
+                        ],
+                        "description": "Откуда цена.\n\n* `price_list` - price_list\n* `rfq_reply` - rfq_reply\n* `manual` - manual"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
                     "valid_from": {
                         "type": "string",
                         "format": "date",
@@ -35031,20 +35756,141 @@
                     }
                 },
                 "required": [
+                    "delivery_basis",
                     "id",
                     "in_stock_lead_days",
                     "is_active",
+                    "lead_time",
                     "min_order_qty",
                     "order_lead_days",
                     "price",
                     "product",
                     "quota_qty",
+                    "source",
                     "stock_status",
                     "supplier",
                     "supplier_sku",
+                    "updated_at",
                     "valid_from",
                     "valid_until",
                     "validity"
+                ]
+            },
+            "DeskOfferCreateInRequest": {
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskMoneyInRequest"
+                            }
+                        ],
+                        "description": "Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED)."
+                    },
+                    "quota_qty": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "min_order_qty": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "in_stock_lead_days": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "order_lead_days": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "stock_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "delivery_basis": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Incoterms."
+                    },
+                    "lead_time": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "supplier_sku": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                    },
+                    "product_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "price",
+                    "product_id"
+                ]
+            },
+            "DeskOfferHistoryRow": {
+                "type": "object",
+                "properties": {
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Только с правом на цены поставщиков."
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "delivery_basis": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                    },
+                    "by": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "at",
+                    "by",
+                    "delivery_basis",
+                    "price",
+                    "source",
+                    "valid_from",
+                    "valid_until"
                 ]
             },
             "DeskOfferProduct": {
@@ -35081,6 +35927,64 @@
                     "name"
                 ]
             },
+            "DeskProposal": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "field": {
+                        "$ref": "#/components/schemas/ProductFieldProposalFieldEnum"
+                    },
+                    "current": {
+                        "type": "string",
+                        "description": "Значение в карточке на момент загрузки."
+                    },
+                    "proposed": {
+                        "type": "string",
+                        "description": "Значение из прайса поставщика."
+                    },
+                    "supplier": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "current",
+                    "field",
+                    "id",
+                    "proposed",
+                    "supplier"
+                ]
+            },
+            "DeskPublishState": {
+                "type": "object",
+                "properties": {
+                    "publishable": {
+                        "type": "boolean"
+                    },
+                    "missing": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Коды недостающих полей полноты."
+                    }
+                },
+                "required": [
+                    "missing",
+                    "publishable"
+                ]
+            },
             "DeskRef": {
                 "type": "object",
                 "properties": {
@@ -35108,9 +36012,26 @@
                     "tin": {
                         "type": "string"
                     },
+                    "registration_number": {
+                        "type": "string",
+                        "description": "Рег. номер нерезидента (без ИНН РУз)."
+                    },
                     "country": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "country_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Валюта цен поставщика."
+                    },
+                    "is_manufacturer": {
+                        "type": "boolean",
+                        "description": "Сам выпускает товар (тип «изготовитель»)."
                     },
                     "offers_count": {
                         "type": "integer"
@@ -35151,25 +36072,112 @@
                     },
                     "prices_visible": {
                         "type": "boolean"
+                    },
+                    "brands": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskRef"
+                        },
+                        "description": "Чьи бренды поставляет: изготовители его действующих цен."
+                    },
+                    "manufactured_brands": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskRef"
+                        },
+                        "description": "Бренды, изготовитель которых — эта компания."
                     }
                 },
                 "required": [
+                    "brands",
                     "contact_person",
                     "country",
+                    "country_id",
+                    "currency",
                     "email",
                     "expired_count",
                     "expiring_count",
                     "id",
+                    "is_manufacturer",
                     "legal_address",
+                    "manufactured_brands",
                     "name",
                     "nearest_valid_until",
                     "offers",
                     "offers_count",
                     "phone",
                     "prices_visible",
+                    "registration_number",
                     "tin",
                     "website"
                 ]
+            },
+            "DeskSupplierInRequest": {
+                "type": "object",
+                "description": "Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "country_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "tin": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 20
+                    },
+                    "registration_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 3
+                    },
+                    "contact_person": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "website": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "legal_address": {
+                        "type": "string"
+                    },
+                    "is_manufacturer": {
+                        "type": "boolean"
+                    }
+                }
             },
             "DeskSupplierRow": {
                 "type": "object",
@@ -35183,9 +36191,26 @@
                     "tin": {
                         "type": "string"
                     },
+                    "registration_number": {
+                        "type": "string",
+                        "description": "Рег. номер нерезидента (без ИНН РУз)."
+                    },
                     "country": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "country_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Валюта цен поставщика."
+                    },
+                    "is_manufacturer": {
+                        "type": "boolean",
+                        "description": "Сам выпускает товар (тип «изготовитель»)."
                     },
                     "offers_count": {
                         "type": "integer"
@@ -35206,12 +36231,16 @@
                 },
                 "required": [
                     "country",
+                    "country_id",
+                    "currency",
                     "expired_count",
                     "expiring_count",
                     "id",
+                    "is_manufacturer",
                     "name",
                     "nearest_valid_until",
                     "offers_count",
+                    "registration_number",
                     "tin"
                 ]
             },
@@ -39039,6 +40068,37 @@
                     }
                 }
             },
+            "PaginatedDeskOfferHistoryRowList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOfferHistoryRow"
+                        }
+                    }
+                }
+            },
             "PaginatedDeskSupplierRowList": {
                 "type": "object",
                 "required": [
@@ -40455,6 +41515,20 @@
                         "type": "string",
                         "nullable": true,
                         "description": "Процент 0..100; пусто — по умолчанию компании."
+                    },
+                    "brand_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Изготовитель (бренд)."
+                    },
+                    "manufacturer_part_number": {
+                        "type": "string",
+                        "maxLength": 120
+                    },
+                    "hs_code": {
+                        "type": "string",
+                        "description": "2–10 цифр.",
+                        "maxLength": 20
                     }
                 }
             },
@@ -40500,6 +41574,89 @@
                         "nullable": true
                     },
                     "is_active": {
+                        "type": "boolean"
+                    },
+                    "delivery_basis": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Incoterms."
+                    },
+                    "lead_time": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "supplier_sku": {
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SupplierOfferSourceEnum"
+                    }
+                }
+            },
+            "PatchedDeskSupplierInRequest": {
+                "type": "object",
+                "description": "Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "country_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "tin": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 20
+                    },
+                    "registration_number": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 3
+                    },
+                    "contact_person": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "phone": {
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email"
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "website": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 255
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "legal_address": {
+                        "type": "string"
+                    },
+                    "is_manufacturer": {
                         "type": "boolean"
                     }
                 }
@@ -42386,6 +43543,19 @@
                 "required": [
                     "name"
                 ]
+            },
+            "ProductFieldProposalFieldEnum": {
+                "enum": [
+                    "name",
+                    "description",
+                    "category",
+                    "hs_code",
+                    "uom",
+                    "domain_type",
+                    "gost_drawing"
+                ],
+                "type": "string",
+                "description": "* `name` - name\n* `description` - description\n* `category` - category\n* `hs_code` - hs_code\n* `uom` - uom\n* `domain_type` - domain_type\n* `gost_drawing` - gost_drawing"
             },
             "ProductImage": {
                 "type": "object",
@@ -47238,6 +48408,15 @@
                     "product",
                     "supplier"
                 ]
+            },
+            "SupplierOfferSourceEnum": {
+                "enum": [
+                    "price_list",
+                    "rfq_reply",
+                    "manual"
+                ],
+                "type": "string",
+                "description": "* `price_list` - price_list\n* `rfq_reply` - rfq_reply\n* `manual` - manual"
             },
             "SupplierOrderReceiptStateEnum": {
                 "enum": [

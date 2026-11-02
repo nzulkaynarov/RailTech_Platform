@@ -363,10 +363,10 @@ def test_migrations_roll_back_and_forward():
     before = [
         ("inventory", "0001_d2_2_stock_and_procurement"),
         ("supply", "0002_overdue_orders_beat"),
-        ("catalog", "0007_d2_3_catalog_desk"),
+        ("catalog", "0008_cat1_supplier_prices"),
     ]
     after = [
-        ("catalog", "0008_category_requires_conformity_doc_category_tracking"),
+        ("catalog", "0009_category_tracking"),
         ("supply", "0003_goodsreceiptline_conformity_doc_number_and_more"),
         ("inventory", "0002_traceunit_traceallocation_and_more"),
     ]

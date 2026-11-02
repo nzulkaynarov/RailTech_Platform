@@ -39,6 +39,26 @@ const REASONS = new Set([
   "already_reviewed",
   "category_required",
   "reason_required",
+  // CAT-1: поставщики, цены поставщиков, загрузка прайса, изменения карточек, публикация
+  "supplier_exists",
+  "offer_exists",
+  "proposal_decided",
+  "proposal_stale",
+  "product_incomplete",
+  "supplier_id_required",
+  "tin_invalid",
+  "supplier_name_required",
+  "country_not_found",
+  "currency_not_found",
+  "brand_not_found",
+  "item_hs_code_invalid",
+  "delivery_basis_not_found",
+  "supplier_not_found",
+  "supplier_invalid",
+  "valid_date_invalid",
+  "rows_token_invalid",
+  "offer_source_invalid",
+  "role_not_permitted",
 ]);
 
 /**
