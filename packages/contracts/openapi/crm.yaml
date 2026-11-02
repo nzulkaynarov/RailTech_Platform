@@ -4230,10 +4230,7 @@ components:
           title: Name
           type: string
         reason:
-          enum:
-          - type
-          - size
-          - count
+          description: type — тип не из белого списка, size — больше 25 МБ, count — больше 20
           title: Reason
           type: string
       required:

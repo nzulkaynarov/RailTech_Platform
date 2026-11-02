@@ -162,6 +162,16 @@ import type {
   HsCodeCreate,
   HsCodePage,
   HsCodeUpdate,
+  ImapCheck,
+  ImapConnector,
+  ImapSettingsIn,
+  InboundMail,
+  InboundMailArchiveIn,
+  InboundMailConflictResponse,
+  InboundMailLeadResult,
+  InboundMailPage,
+  InboundMailReply,
+  InboundMailReplyIn,
   InstructionCompleteIn,
   InstructionExtensionDecisionIn,
   InstructionExtensionIn,
@@ -210,6 +220,7 @@ import type {
   ListEmployeesParams,
   ListExternalChatsParams,
   ListHsCodesParams,
+  ListInboundMailParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLettersParams,
@@ -14413,6 +14424,1236 @@ export function useListMailLog<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetImapConnectorUrl = () => {
+  return `/api/v1/admin/integrations/imap`;
+};
+
+/**
+ * CRM `GET /integrations/imap` (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`; итог последнего опроса ящика (`last_poll_at`, `last_ok_at`, `last_error_kind`).
+ * @summary Почта (IMAP): приём общего ящика, пароль — маска
+ */
+export const getImapConnector = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImapConnector> => {
+  return http<ImapConnector>(getGetImapConnectorUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetImapConnectorQueryKey = () => {
+  return [`/api/v1/admin/integrations/imap`] as const;
+};
+
+export const getGetImapConnectorQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImapConnector>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapConnector>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImapConnectorQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImapConnector>>> = ({ signal }) =>
+    getImapConnector({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getImapConnector>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImapConnectorQueryResult = NonNullable<Awaited<ReturnType<typeof getImapConnector>>>;
+export type GetImapConnectorQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetImapConnector<
+  TData = Awaited<ReturnType<typeof getImapConnector>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapConnector>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImapConnector>>,
+          TError,
+          Awaited<ReturnType<typeof getImapConnector>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImapConnector<
+  TData = Awaited<ReturnType<typeof getImapConnector>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapConnector>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImapConnector>>,
+          TError,
+          Awaited<ReturnType<typeof getImapConnector>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImapConnector<
+  TData = Awaited<ReturnType<typeof getImapConnector>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapConnector>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Почта (IMAP): приём общего ящика, пароль — маска
+ */
+
+export function useGetImapConnector<
+  TData = Awaited<ReturnType<typeof getImapConnector>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapConnector>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImapConnectorQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSaveImapConnectorUrl = () => {
+  return `/api/v1/admin/integrations/imap`;
+};
+
+/**
+ * CRM `PUT /integrations/imap`. `imap_password = null` — оставить прежний пароль приложения, `username = null` — прежний логин; пустой `host` выключает приём. `password` — пароль администратора (повторный ввод), нигде не сохраняется. `assist_enabled` — выключатель помощника канцелярии (тип и суть письма моделью).
+ * @summary Сохранить приём почты (IMAP)
+ */
+export const saveImapConnector = async (
+  imapSettingsIn: ImapSettingsIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ImapConnector> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImapConnector>(getSaveImapConnectorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(imapSettingsIn),
+  });
+};
+
+export const getSaveImapConnectorMutationKey = () => ["saveImapConnector"] as const;
+
+export const getSaveImapConnectorMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveImapConnector>>,
+    TError,
+    SaveImapConnectorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveImapConnector>>,
+  TError,
+  SaveImapConnectorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveImapConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveImapConnector>>,
+    SaveImapConnectorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveImapConnector(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveImapConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveImapConnector>>
+>;
+export type SaveImapConnectorMutationBody = ImapSettingsIn;
+export type SaveImapConnectorMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | IntegrationConflictResponse
+  | IntegrationInvalidResponse
+  | AccountLockedResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type SaveImapConnectorMutationVariables = { data: ImapSettingsIn };
+
+/**
+ * @summary Сохранить приём почты (IMAP)
+ */
+export const useSaveImapConnector = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveImapConnector>>,
+      TError,
+      SaveImapConnectorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveImapConnector>>,
+  TError,
+  SaveImapConnectorMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveImapConnectorMutationOptions(options), queryClient);
+};
+
+export const getCheckImapUrl = () => {
+  return `/api/v1/admin/integrations/imap/check`;
+};
+
+/**
+ * CRM `POST /integrations/imap/check`: вход и открытие папки только на чтение, письма не читаются и не помечаются. Итог — в ответе (`ok`, `error_kind`: `not_configured`, `invalid_host`, `unavailable`, `tls_failed`, `auth_failed`, `mailbox_missing`).
+ * @summary Проверить приём почты
+ */
+export const checkImap = async (options?: Parameters<typeof http>[1]): Promise<ImapCheck> => {
+  return http<ImapCheck>(getCheckImapUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckImapMutationKey = () => ["checkImap"] as const;
+
+export const getCheckImapMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof checkImap>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkImap>>, TError, void, TContext> => {
+  const mutationKey = getCheckImapMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkImap>>, void> = () => {
+    return checkImap(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckImapMutationResult = NonNullable<Awaited<ReturnType<typeof checkImap>>>;
+
+export type CheckImapMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Проверить приём почты
+ */
+export const useCheckImap = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof checkImap>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkImap>>, TError, void, TContext> => {
+  return useMutation(getCheckImapMutationOptions(options), queryClient);
+};
+
+export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/inbound-mail?${stringifiedParams}`
+    : `/api/v1/inbound-mail`;
+};
+
+/**
+ * CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта».
+ * @summary Входящая почта: очередь писем общего ящика
+ */
+export const listInboundMail = async (
+  params?: ListInboundMailParams,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailPage> => {
+  return http<InboundMailPage>(getListInboundMailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListInboundMailQueryKey = (params?: ListInboundMailParams) => {
+  return [`/api/v1/inbound-mail`, ...(params ? [params] : [])] as const;
+};
+
+export const getListInboundMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListInboundMailQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listInboundMail>>> = ({ signal }) =>
+    listInboundMail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInboundMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListInboundMailQueryResult = NonNullable<Awaited<ReturnType<typeof listInboundMail>>>;
+export type ListInboundMailQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListInboundMailParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof listInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof listInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Входящая почта: очередь писем общего ящика
+ */
+
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListInboundMailQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}`;
+};
+
+/**
+ * CRM `GET /inbound-mail/{id}`: отправитель, тема, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), итог (номер ВХ, лид, причина архива), ответы.
+ * @summary Входящая почта: карточка письма
+ */
+export const getInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMail> => {
+  return http<InboundMail>(getGetInboundMailUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInboundMailQueryKey = (id: number) => {
+  return [`/api/v1/inbound-mail/${id}`] as const;
+};
+
+export const getGetInboundMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInboundMailQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboundMail>>> = ({ signal }) =>
+    getInboundMail(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetInboundMailQueryResult = NonNullable<Awaited<ReturnType<typeof getInboundMail>>>;
+export type GetInboundMailQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Входящая почта: карточка письма
+ */
+
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetInboundMailQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadInboundMailAttachmentUrl = (id: number, index: number) => {
+  return `/api/v1/inbound-mail/${id}/attachments/${index}`;
+};
+
+/**
+ * CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит.
+ * @summary Входящая почта: файл вложения
+ */
+export const downloadInboundMailAttachment = async (
+  id: number,
+  index: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadInboundMailAttachmentUrl(id, index), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadInboundMailAttachmentQueryKey = (id: number, index: number) => {
+  return [`/api/v1/inbound-mail/${id}/attachments/${index}`] as const;
+};
+
+export const getDownloadInboundMailAttachmentQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadInboundMailAttachmentQueryKey(id, index);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadInboundMailAttachment>>> = ({
+    signal,
+  }) => downloadInboundMailAttachment(id, index, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined && index !== null && index !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadInboundMailAttachmentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadInboundMailAttachment>>
+>;
+export type DownloadInboundMailAttachmentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  index: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof downloadInboundMailAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof downloadInboundMailAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Входящая почта: файл вложения
+ */
+
+export function useDownloadInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof downloadInboundMailAttachment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadInboundMailAttachmentQueryOptions(id, index, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCopyInboundMailFilesToEdsUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/eds-files`;
+};
+
+/**
+ * Подготовка формы «Зарегистрировать входящее» (P8) из письма: BFF читает вложения письма из CRM и загружает их в EDS (`POST /files`) от имени сотрудника — как если бы он приложил их сам; ответ — файлы EDS для `file_ids` формы. Право — `crm.leads.triage` (полный), регистрация — `eds.inbox.register`. Повтор — новые черновые файлы (непривязанные видит только загрузивший).
+ * @summary Входящая почта: вложения письма — файлами EDS для «Зарегистрировать ВХ»
+ */
+export const copyInboundMailFilesToEds = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsFile[]> => {
+  return http<EdsFile[]>(getCopyInboundMailFilesToEdsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCopyInboundMailFilesToEdsMutationKey = () => ["copyInboundMailFilesToEds"] as const;
+
+export const getCopyInboundMailFilesToEdsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof copyInboundMailFilesToEds>>,
+    TError,
+    CopyInboundMailFilesToEdsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof copyInboundMailFilesToEds>>,
+  TError,
+  CopyInboundMailFilesToEdsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCopyInboundMailFilesToEdsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof copyInboundMailFilesToEds>>,
+    CopyInboundMailFilesToEdsMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return copyInboundMailFilesToEds(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CopyInboundMailFilesToEdsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof copyInboundMailFilesToEds>>
+>;
+
+export type CopyInboundMailFilesToEdsMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | BackendUnavailableResponse
+>;
+export type CopyInboundMailFilesToEdsMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: вложения письма — файлами EDS для «Зарегистрировать ВХ»
+ */
+export const useCopyInboundMailFilesToEds = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof copyInboundMailFilesToEds>>,
+      TError,
+      CopyInboundMailFilesToEdsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof copyInboundMailFilesToEds>>,
+  TError,
+  CopyInboundMailFilesToEdsMutationVariables,
+  TContext
+> => {
+  return useMutation(getCopyInboundMailFilesToEdsMutationOptions(options), queryClient);
+};
+
+export const getCreateLeadFromInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/lead`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/lead`: лид из письма во «Входящих» без ответственного (как запрос с сайта — срок первого ответа, «Забрать» у менеджера); открытый лид с этим адресом есть — письмо заметкой в него (`created = false`). Письмо уходит из очереди. Уже обработано — 409 `CONFLICT`.
+ * @summary Входящая почта: «Создать лид»
+ */
+export const createLeadFromInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailLeadResult> => {
+  return http<InboundMailLeadResult>(getCreateLeadFromInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateLeadFromInboundMailMutationKey = () => ["createLeadFromInboundMail"] as const;
+
+export const getCreateLeadFromInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLeadFromInboundMail>>,
+    TError,
+    CreateLeadFromInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLeadFromInboundMail>>,
+  TError,
+  CreateLeadFromInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLeadFromInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLeadFromInboundMail>>,
+    CreateLeadFromInboundMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return createLeadFromInboundMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLeadFromInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLeadFromInboundMail>>
+>;
+
+export type CreateLeadFromInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type CreateLeadFromInboundMailMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: «Создать лид»
+ */
+export const useCreateLeadFromInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLeadFromInboundMail>>,
+      TError,
+      CreateLeadFromInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLeadFromInboundMail>>,
+  TError,
+  CreateLeadFromInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateLeadFromInboundMailMutationOptions(options), queryClient);
+};
+
+export const getArchiveInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/archive`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/archive`. Письмо уходит из очереди; уже обработано — 409 `CONFLICT`.
+ * @summary Входящая почта: «Архив» с причиной
+ */
+export const archiveInboundMail = async (
+  id: number,
+  inboundMailArchiveIn: InboundMailArchiveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getArchiveInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailArchiveIn),
+  });
+};
+
+export const getArchiveInboundMailMutationKey = () => ["archiveInboundMail"] as const;
+
+export const getArchiveInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveInboundMail>>,
+    TError,
+    ArchiveInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveInboundMail>>,
+  TError,
+  ArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getArchiveInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveInboundMail>>,
+    ArchiveInboundMailMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return archiveInboundMail(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveInboundMail>>
+>;
+export type ArchiveInboundMailMutationBody = InboundMailArchiveIn;
+export type ArchiveInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ArchiveInboundMailMutationVariables = { id: number; data: InboundMailArchiveIn };
+
+/**
+ * @summary Входящая почта: «Архив» с причиной
+ */
+export const useArchiveInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveInboundMail>>,
+      TError,
+      ArchiveInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveInboundMail>>,
+  TError,
+  ArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getArchiveInboundMailMutationOptions(options), queryClient);
+};
+
+export const getReplyInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/reply`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
+ * @summary Входящая почта: ответ отправителю в ту же цепочку
+ */
+export const replyInboundMail = async (
+  id: number,
+  inboundMailReplyIn: InboundMailReplyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailReply> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<InboundMailReply>(getReplyInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailReplyIn),
+  });
+};
+
+export const getReplyInboundMailMutationKey = () => ["replyInboundMail"] as const;
+
+export const getReplyInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyInboundMail>>,
+    TError,
+    ReplyInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyInboundMail>>,
+  TError,
+  ReplyInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyInboundMail>>,
+    ReplyInboundMailMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return replyInboundMail(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replyInboundMail>>
+>;
+export type ReplyInboundMailMutationBody = InboundMailReplyIn;
+export type ReplyInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReplyInboundMailMutationVariables = { id: number; data: InboundMailReplyIn };
+
+/**
+ * @summary Входящая почта: ответ отправителю в ту же цепочку
+ */
+export const useReplyInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replyInboundMail>>,
+      TError,
+      ReplyInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replyInboundMail>>,
+  TError,
+  ReplyInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyInboundMailMutationOptions(options), queryClient);
+};
 
 export const getListExternalServicesUrl = () => {
   return `/api/v1/admin/integrations/services`;

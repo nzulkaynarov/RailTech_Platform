@@ -192,9 +192,12 @@ resources:
     module: crm
     levels: [full]
     label: { ru: "Клиенты · Лиды · разбор и передача менеджеру", uz: "Mijozlar · Lidlar · saralash va menejerga topshirish", en: "Clients · Leads · triage and hand over to a manager" }
+    # W18A-P2 (B-INB-5): та же первая линия разбирает общий почтовый ящик — очередь «Входящая почта» (`mail_inbox`):
+    # карточка письма, «Создать лид», «Архив», ответ в цепочку; «Зарегистрировать ВХ» — право EDS `letters.register`
+    # раздела `eds.inbox.register` (у шаблона «Делопроизводитель» есть оба). Директору очередь не приходит.
     backend:
       crm:
-        full: [leads:read, leads:triage, stream:read, dashboard:read, kb:read]
+        full: [leads:read, leads:triage, stream:read, dashboard:read, kb:read, mail_inbox:read, mail_inbox:work]
   - key: crm.clients
     module: crm
     label: { ru: "Клиенты · Клиенты, Заявки, Создать заявку", uz: "Mijozlar · Mijozlar, arizalar, ariza yaratish", en: "Clients · Clients, requests, new request" }
@@ -227,10 +230,6 @@ resources:
     backend:
       eds:
         full: [letters.read, registry.read, letters.register]
-      # W18A-P2 (B-INB-5): очередь «Входящая почта» общего ящика CRM — карточка письма, «Создать лид», «Архив», ответ
-      # в цепочку; «Зарегистрировать ВХ» — `letters.register` выше.
-      crm:
-        full: [mail_inbox:read, mail_inbox:work]
   - key: eds.drafts
     module: eds
     label: { ru: "Документы · КП на одобрение, Исходящие · одобрение и отправка", uz: "Hujjatlar · Tasdiqlash uchun TT, chiquvchi · tasdiqlash va yuborish", en: "Documents · Quotes to approve, outgoing · approval and sending" }
@@ -377,8 +376,8 @@ menu:
   eds:
     documents: [eds.inbox, eds.inbox.register, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
     inbox: [eds.inbox, eds.inbox.register]
-    # W18A-P2: «Входящая почта» — письма общего ящика до регистрации (делопроизводитель, директор).
-    mail: [eds.inbox.register]
+    # W18A-P2: «Входящая почта» — письма общего ящика до регистрации (первая линия, `crm.leads.triage`).
+    mail: [crm.leads.triage]
     outbox: [eds.drafts]
     projects: [eds.projects]
     drafts: [eds.drafts]
@@ -453,6 +452,6 @@ queue:
   # у каждой роли); перенос срока решает автор резолюции — держатель резолюции (`eds.inbox: full`).
   instruction: { resource: dashboard.queue, level: full }
   instruction_extension: { resource: eds.inbox, level: full }
-  # W18A-P2 (B-INB-5): письмо общего ящика ждёт разбора — ВХ, лид или архив (канцелярия, `eds.inbox.register`).
-  inbound_mail: { resource: eds.inbox.register, level: full }
   acquaint: { resource: dashboard.queue, level: full }
+  # W18A-P2 (B-INB-5): письмо общего ящика ждёт разбора — ВХ, лид или архив (первая линия, `crm.leads.triage`).
+  inbound_mail: { resource: crm.leads.triage, level: full }

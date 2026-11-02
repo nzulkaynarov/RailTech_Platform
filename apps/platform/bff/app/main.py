@@ -39,6 +39,7 @@ from app.api import (
     erp_stock,
     events,
     health,
+    inbound_mail,
     me,
     me_notifications,
     me_profile,
@@ -128,6 +129,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
+    app.include_router(inbound_mail.router, prefix=API_PREFIX)
+    app.include_router(inbound_mail.admin_router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)
     app.include_router(eds_projects.router, prefix=API_PREFIX)
     app.include_router(erp_catalog.router, prefix=API_PREFIX)

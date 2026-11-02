@@ -4089,7 +4089,7 @@ paths:
       operationId: listInboundMail
       summary: 'Входящая почта: очередь писем общего ящика'
       description: >-
-        CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел `eds.inbox.register` — полный (делопроизводитель, директор); без
+        CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без
         него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не
         настроен: экран показывает «Настройки · Подключения · Почта».
       parameters:
@@ -4173,7 +4173,8 @@ paths:
       description: >-
         Подготовка формы «Зарегистрировать входящее» (P8) из письма: BFF читает вложения письма из CRM и загружает их в EDS
         (`POST /files`) от имени сотрудника — как если бы он приложил их сам; ответ — файлы EDS для `file_ids` формы. Право —
-        `eds.inbox.register` (полный). Повтор — новые черновые файлы (непривязанные видит только загрузивший).
+        `crm.leads.triage` (полный), регистрация — `eds.inbox.register`. Повтор — новые черновые файлы (непривязанные
+        видит только загрузивший).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/InboundMailId'

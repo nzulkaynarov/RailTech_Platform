@@ -141,7 +141,7 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
         "erp",
     ),
     "eds.inbox": ("erp",),
-    "eds.inbox.register": ("crm",),
+    "eds.inbox.register": (),
     "eds.drafts": ("erp",),
     "eds.projects": ("erp",),
     "eds.payments": (
@@ -198,7 +198,7 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
             "eds.inbox",
             "eds.inbox.register",
         ),
-        "mail": ("eds.inbox.register",),
+        "mail": ("crm.leads.triage",),
         "outbox": ("eds.drafts",),
         "projects": ("eds.projects",),
         "drafts": ("eds.drafts",),
@@ -338,12 +338,12 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "eds.inbox",
         "full",
     ),
-    "inbound_mail": (
-        "eds.inbox.register",
-        "full",
-    ),
     "acquaint": (
         "dashboard.queue",
+        "full",
+    ),
+    "inbound_mail": (
+        "crm.leads.triage",
         "full",
     ),
 }

@@ -26,6 +26,12 @@ class Action(StrEnum):
 
 
 class Action1(StrEnum):
+    register = "register"
+    lead = "lead"
+    archive = "archive"
+
+
+class Action2(StrEnum):
     enter_key = "enter_key"
     enter_token = "enter_token"
     recheck = "recheck"
@@ -670,6 +676,162 @@ class Health(StrEnum):
     unknown = "unknown"
 
 
+class ImapCheckOut(BaseModel):
+    """
+    «Проверить приём»: ок или причина словом-кодом (без исключения — без нового `Reason`).
+    """
+
+    detail: Annotated[str | None, Field(title="Detail")] = None
+    error_kind: Annotated[str | None, Field(title="Error Kind")] = None
+    latency_ms: Annotated[int | None, Field(title="Latency Ms")] = None
+    messages: Annotated[int | None, Field(title="Messages")] = None
+    ok: Annotated[bool, Field(title="Ok")]
+
+
+class ImapStatusOut(BaseModel):
+    """
+    Приём почты: несекретное и состояние секретов (только на запись).
+    """
+
+    assist_enabled: Annotated[bool, Field(title="Assist Enabled")]
+    configured: Annotated[bool, Field(title="Configured")]
+    host: Annotated[str, Field(title="Host")]
+    last_error: Annotated[str | None, Field(title="Last Error")]
+    last_error_kind: Annotated[str | None, Field(title="Last Error Kind")]
+    last_ok_at: Annotated[AwareDatetime | None, Field(title="Last Ok At")]
+    last_poll_at: Annotated[AwareDatetime | None, Field(title="Last Poll At")]
+    mailbox: Annotated[str, Field(title="Mailbox")]
+    password_configured: Annotated[bool, Field(title="Password Configured")]
+    password_last4: Annotated[str | None, Field(title="Password Last4")]
+    password_updated_at: Annotated[
+        AwareDatetime | None, Field(title="Password Updated At")
+    ]
+    port: Annotated[int, Field(title="Port")]
+    secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
+    security: Annotated[Security, Field(title="Security")]
+    username: Annotated[str, Field(title="Username")]
+
+
+class InboundMailAssist(BaseModel):
+    """
+    Подсказка помощника: тип, суть, предложенное действие. Ничего сама не делает.
+    """
+
+    action: Annotated[Action1 | None, Field(title="Action")] = None
+    kind: Annotated[Kind | None, Field(title="Kind")] = None
+    status: Annotated[Status5, Field(title="Status")]
+    summary: Annotated[str | None, Field(title="Summary")] = None
+
+
+class InboundMailAttachment(BaseModel):
+    content_type: Annotated[str, Field(title="Content Type")]
+    index: Annotated[int, Field(title="Index")]
+    name: Annotated[str, Field(title="Name")]
+    size: Annotated[int, Field(title="Size")]
+
+
+class InboundMailItem(BaseModel):
+    assist: InboundMailAssist
+    attachments_count: Annotated[int, Field(title="Attachments Count")]
+    client: InboundMailLink | None = None
+    from_email: Annotated[str, Field(title="From Email")]
+    from_name: Annotated[str, Field(title="From Name")]
+    id: Annotated[int, Field(title="Id")]
+    lead: InboundMailLink | None = None
+    """
+    Открытый лид с этим адресом (связка) или лид-итог
+    """
+    preview: Annotated[str, Field(title="Preview")]
+    """
+    Начало текста письма (до 200 символов)
+    """
+    received_at: Annotated[AwareDatetime, Field(title="Received At")]
+    sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
+    status: Annotated[Status6, Field(title="Status")]
+    subject: Annotated[str, Field(title="Subject")]
+
+
+class InboundMailLeadOut(BaseModel):
+    created: Annotated[bool, Field(title="Created")]
+    """
+    false — письмо добавлено заметкой в открытый лид с этим адресом
+    """
+    lead_id: Annotated[int, Field(title="Lead Id")]
+
+
+class InboundMailLink(BaseModel):
+    id: Annotated[int, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+
+
+class InboundMailOut(BaseModel):
+    archive_reason: Annotated[str | None, Field(title="Archive Reason")]
+    assist: InboundMailAssist
+    attachments: Annotated[list[InboundMailAttachment], Field(title="Attachments")]
+    attachments_count: Annotated[int, Field(title="Attachments Count")]
+    client: InboundMailLink | None = None
+    eds_letter_id: Annotated[str | None, Field(title="Eds Letter Id")]
+    eds_letter_number: Annotated[str | None, Field(title="Eds Letter Number")]
+    from_email: Annotated[str, Field(title="From Email")]
+    from_name: Annotated[str, Field(title="From Name")]
+    handled_at: Annotated[AwareDatetime | None, Field(title="Handled At")]
+    handled_by: Annotated[int | None, Field(title="Handled By")]
+    id: Annotated[int, Field(title="Id")]
+    inns: Annotated[list[str], Field(title="Inns")]
+    lead: InboundMailLink | None = None
+    """
+    Открытый лид с этим адресом (связка) или лид-итог
+    """
+    preview: Annotated[str, Field(title="Preview")]
+    """
+    Начало текста письма (до 200 символов)
+    """
+    received_at: Annotated[AwareDatetime, Field(title="Received At")]
+    replies: Annotated[list[InboundMailReply], Field(title="Replies")]
+    result_lead: InboundMailLink | None
+    sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
+    skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
+    status: Annotated[Status6, Field(title="Status")]
+    subject: Annotated[str, Field(title="Subject")]
+    text: Annotated[str, Field(title="Text")]
+    to: Annotated[list[str], Field(title="To")]
+    too_large: Annotated[bool, Field(title="Too Large")]
+
+
+class InboundMailPage(BaseModel):
+    items: Annotated[list[InboundMailItem], Field(title="Items")]
+    mailbox: InboundMailbox
+    total: Annotated[int, Field(title="Total")]
+
+
+class InboundMailReply(BaseModel):
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
+    status: Annotated[str, Field(title="Status")]
+    subject: Annotated[str, Field(title="Subject")]
+    to_email: Annotated[str, Field(title="To Email")]
+
+
+class InboundMailSkipped(BaseModel):
+    name: Annotated[str, Field(title="Name")]
+    reason: Annotated[str, Field(title="Reason")]
+    """
+    type — тип не из белого списка, size — больше 25 МБ, count — больше 20
+    """
+
+
+class InboundMailbox(BaseModel):
+    """
+    Состояние приёма для подсказки в очереди и строки здоровья.
+    """
+
+    configured: Annotated[bool, Field(title="Configured")]
+    last_error_kind: Annotated[str | None, Field(title="Last Error Kind")] = None
+    last_ok_at: Annotated[AwareDatetime | None, Field(title="Last Ok At")] = None
+    last_poll_at: Annotated[AwareDatetime | None, Field(title="Last Poll At")] = None
+
+
 class InboxResponse(BaseModel):
     escalations: Annotated[list[LeadOut], Field(title="Escalations")]
     mine: Annotated[list[LeadOut], Field(title="Mine")]
@@ -708,7 +870,7 @@ class InvitationOut(BaseModel):
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
     sent_via: Annotated[list[SentViaEnum] | None, Field(title="Sent Via")] = None
-    status: Annotated[Status5, Field(title="Status")]
+    status: Annotated[Status8, Field(title="Status")]
     suggested_channel: Annotated[
         SuggestedChannel | None, Field(title="Suggested Channel")
     ] = None
@@ -776,6 +938,13 @@ class KeySource(StrEnum):
 
 
 class Kind(StrEnum):
+    buyer = "buyer"
+    official = "official"
+    supplier_doc = "supplier_doc"
+    other = "other"
+
+
+class Kind1(StrEnum):
     vendor = "vendor"
     langfuse = "langfuse"
     mail = "mail"
@@ -952,7 +1121,7 @@ class NoticeOut(BaseModel):
     error_text: Annotated[str | None, Field(title="Error Text")] = None
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
-    status: Annotated[Status5, Field(title="Status")]
+    status: Annotated[Status8, Field(title="Status")]
 
 
 class OffsiteCheckOut(BaseModel):
@@ -1136,6 +1305,11 @@ class SearchResponse(BaseModel):
 
 
 class Security(StrEnum):
+    ssl = "ssl"
+    starttls = "starttls"
+
+
+class Security1(StrEnum):
     starttls = "starttls"
     ssl = "ssl"
     none = "none"
@@ -1150,7 +1324,7 @@ class ServiceCheckOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     error: Annotated[str | None, Field(title="Error")]
     latency_ms: Annotated[int | None, Field(title="Latency Ms")]
-    status: Annotated[Status7, Field(title="Status")]
+    status: Annotated[Status10, Field(title="Status")]
     summary: Annotated[str, Field(title="Summary")]
     tier: Annotated[Tier, Field(title="Tier")]
 
@@ -1169,7 +1343,7 @@ class ServiceGroupOut(BaseModel):
     Одна причина — одна строка «Требует внимания»: сервисы с общим корнем свёрнуты вместе.
     """
 
-    action: Annotated[Action1 | None, Field(title="Action")]
+    action: Annotated[Action2 | None, Field(title="Action")]
     affected: Annotated[list[str], Field(title="Affected")]
     """
     Что перестало работать — функции списком
@@ -1216,7 +1390,7 @@ class ServiceSwitchOut(BaseModel):
     changed_by: Annotated[str | None, Field(title="Changed By")]
     disabled: Annotated[bool, Field(title="Disabled")]
     effect: Annotated[str, Field(title="Effect")]
-    kind: Annotated[Kind, Field(title="Kind")]
+    kind: Annotated[Kind1, Field(title="Kind")]
     problem: Annotated[str | None, Field(title="Problem")]
     reason: Annotated[str | None, Field(title="Reason")]
 
@@ -1277,7 +1451,7 @@ class SmtpStatusOut(BaseModel):
     ]
     port: Annotated[int, Field(title="Port")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
-    security: Annotated[Security, Field(title="Security")]
+    security: Annotated[Security1, Field(title="Security")]
     settings_source: Annotated[SettingsSource, Field(title="Settings Source")]
     username: Annotated[str, Field(title="Username")]
     username_source: Annotated[UsernameSource, Field(title="Username Source")]
@@ -1394,6 +1568,21 @@ class Status1(StrEnum):
     skipped_no_smtp = "skipped_no_smtp"
 
 
+class Status10(StrEnum):
+    ok = "ok"
+    warn = "warn"
+    fail = "fail"
+    unknown = "unknown"
+    off = "off"
+
+
+class Status11(StrEnum):
+    ok = "ok"
+    warn = "warn"
+    fail = "fail"
+    unknown = "unknown"
+
+
 class Status3(StrEnum):
     ok = "ok"
     degraded = "degraded"
@@ -1409,25 +1598,24 @@ class Status4(StrEnum):
 
 
 class Status5(StrEnum):
+    pending = "pending"
+    done = "done"
+    unavailable = "unavailable"
+    off = "off"
+
+
+class Status6(StrEnum):
+    new = "new"
+    registered = "registered"
+    lead = "lead"
+    archived = "archived"
+
+
+class Status8(StrEnum):
     queued = "queued"
     sent = "sent"
     failed = "failed"
     skipped = "skipped"
-
-
-class Status7(StrEnum):
-    ok = "ok"
-    warn = "warn"
-    fail = "fail"
-    unknown = "unknown"
-    off = "off"
-
-
-class Status8(StrEnum):
-    ok = "ok"
-    warn = "warn"
-    fail = "fail"
-    unknown = "unknown"
 
 
 class SuggestedChannel(StrEnum):
@@ -1445,7 +1633,7 @@ class System(StrEnum):
 class SystemStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     components: Annotated[list[ComponentStatusOut], Field(title="Components")]
-    status: Annotated[Status8, Field(title="Status")]
+    status: Annotated[Status11, Field(title="Status")]
 
 
 class TeamMember(BaseModel):

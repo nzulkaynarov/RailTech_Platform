@@ -187,7 +187,6 @@ export * from "./inboundMailPage";
 export * from "./inboundMailReply";
 export * from "./inboundMailReplyIn";
 export * from "./inboundMailSkipped";
-export * from "./inboundMailSkippedReason";
 export * from "./inboxParams";
 export * from "./inboxResponse";
 export * from "./incidentOut";

@@ -156,6 +156,8 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "stream:read",
             "dashboard:read",
             "kb:read",
+            "mail_inbox:read",
+            "mail_inbox:work",
         ),
     },
     "crm.clients": {
@@ -174,12 +176,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         ),
     },
     "eds.inbox": {},
-    "eds.inbox.register": {
-        "full": (
-            "mail_inbox:read",
-            "mail_inbox:work",
-        ),
-    },
+    "eds.inbox.register": {},
     "eds.drafts": {},
     "eds.projects": {},
     "eds.payments": {

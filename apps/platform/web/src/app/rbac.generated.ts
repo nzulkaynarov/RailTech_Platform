@@ -84,7 +84,7 @@ export const RESOURCES = {
   "eds.inbox.register": {
     module: "eds",
     levels: ["full"],
-    backends: ["crm"],
+    backends: [],
     label: {
       ru: "Документы · Входящие письма · регистрация",
       uz: "Hujjatlar · Kiruvchi xatlar · ro‘yxatga olish",
@@ -252,7 +252,7 @@ export const MENU = {
       "eds.memo.approve",
     ],
     inbox: ["eds.inbox", "eds.inbox.register"],
-    mail: ["eds.inbox.register"],
+    mail: ["crm.leads.triage"],
     outbox: ["eds.drafts"],
     projects: ["eds.projects"],
     drafts: ["eds.drafts"],
@@ -400,12 +400,12 @@ export const QUEUE = {
     resource: "eds.inbox",
     level: "full",
   },
-  inbound_mail: {
-    resource: "eds.inbox.register",
-    level: "full",
-  },
   acquaint: {
     resource: "dashboard.queue",
+    level: "full",
+  },
+  inbound_mail: {
+    resource: "crm.leads.triage",
     level: "full",
   },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;

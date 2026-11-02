@@ -20,7 +20,9 @@ class InboundMailAttachment(BaseModel):
 
 class InboundMailSkipped(BaseModel):
     name: str
-    reason: Literal["type", "size", "count"]
+    reason: str = Field(
+        description="type — тип не из белого списка, size — больше 25 МБ, count — больше 20"
+    )
 
 
 class InboundMailAssist(BaseModel):

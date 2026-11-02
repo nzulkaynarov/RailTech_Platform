@@ -50,7 +50,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "chats": ("read", "reply", "note", "assist", "invoiced"),
     "company_articles": ("read", "write"),
     # Очередь «Входящая почта» (W18A-P2): чтение и действия (лид, архив, ответ); раздел
-    # каталога `eds.inbox.register`.
+    # каталога `crm.leads.triage` (первая линия, DECISIONS 2026-11-01 п. 1).
     "mail_inbox": ("read", "work"),
 }
 
