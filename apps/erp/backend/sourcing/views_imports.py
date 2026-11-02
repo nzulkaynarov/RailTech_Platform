@@ -61,6 +61,91 @@ def _resolve_seller_company(user):
     return seller_membership.company_id, None
 
 
+#: Типы компании, от имени которой сотрудник загружает прайс (CAT-1).
+SUPPLIER_TYPES = ("SUPPLIER", "MANUFACTURER")
+
+
+def _param(request, name: str) -> str:
+    """Параметр загрузки: поле формы или параметр запроса (BFF передаёт параметры адресом, файл — формой)."""
+    value = request.data.get(name)
+    if value in (None, ""):
+        value = request.query_params.get(name)
+    return str(value or "").strip()
+
+
+def _refuse(code: str, http_status=status.HTTP_400_BAD_REQUEST) -> Response:
+    return Response({"detail": code}, status=http_status)
+
+
+def _resolve_supplier(request):
+    """Чьи цены в файле → `(options, error_response)`; `options` — именованные параметры движка импорта.
+
+    CAT-1: сотрудник с правами каталога и снабжения выбирает поставщика явно (`supplier_company_id`): компания в
+    обороте, тип «поставщик» или «изготовитель», не своя. Цены поставщика пишет только тот, кому они открыты
+    (`SUPPLIER_PRICES_REQUIRED`, как правка предложения). Новые карточки — нашего каталога (владелец — своя компания),
+    поставщик — источник данных. Без параметра — прежний путь продавца (`_resolve_seller_company`).
+    """
+    raw = _param(request, "supplier_company_id")
+    if not raw:
+        supplier_id, error = _resolve_seller_company(request.user)
+        return {"supplier_company_id": supplier_id}, error
+    if not raw.isdigit():
+        return None, _refuse("SUPPLIER_INVALID")
+    from accounts.services.permissions import staff_has_permission
+    from parties.models import Company
+
+    from catalog.desk.access import can_view_supplier_prices
+    from core.tenant import own_company_id
+
+    user = request.user
+    if not (user.is_superuser or staff_has_permission(user, "supply.manage")):
+        return None, _refuse("ROLE_NOT_PERMITTED", status.HTTP_403_FORBIDDEN)
+    if not can_view_supplier_prices(user):
+        return None, _refuse("SUPPLIER_PRICES_REQUIRED", status.HTTP_403_FORBIDDEN)
+    own_id = own_company_id()
+    supplier = (
+        Company.objects.active().filter(pk=int(raw), types__code__in=SUPPLIER_TYPES).exclude(pk=own_id or 0).first()
+    )
+    if supplier is None:
+        return None, _refuse("SUPPLIER_NOT_FOUND")
+    return {"supplier_company_id": supplier.pk, "owner_company_id": own_id}, None
+
+
+def _resolve_validity(request):
+    """Срок действия цен на весь файл → `({valid_from, valid_until}, error_response)`; даты — `ГГГГ-ММ-ДД`."""
+    from django.utils.dateparse import parse_date
+
+    from catalog.services import offer_validity_error
+
+    out = {}
+    for name in ("valid_from", "valid_until"):
+        raw = _param(request, name)
+        if not raw:
+            continue
+        try:
+            value = parse_date(raw)
+        except ValueError:
+            value = None
+        if value is None:
+            return None, _refuse("VALID_DATE_INVALID")
+        out[name] = value.isoformat()
+    error = offer_validity_error(out.get("valid_from"), out.get("valid_until"))
+    if error:
+        return None, _refuse(error)
+    return out, None
+
+
+def _import_options(request):
+    """Поставщик и срок цен загрузки → `(options, error_response)`."""
+    options, error = _resolve_supplier(request)
+    if error is not None:
+        return None, error
+    validity, error = _resolve_validity(request)
+    if error is not None:
+        return None, error
+    return {**options, **validity, "actor_id": request.user.pk}, None
+
+
 def _check_deal_access(user, deal) -> bool:
     """Centralized deal access check to prevent IDOR."""
     if user.is_superuser:
@@ -264,7 +349,8 @@ class CatalogImportView(RoleGatedViewMixin, APIView):
         # Authorisation: platform admin (products-only, no offers — has no company; the
         # Unfold path is theirs) OR a can_sell member of a SUPPLIER company, whose company
         # becomes the supplier on every upserted offer (see _resolve_seller_company).
-        supplier_company_id, auth_error = _resolve_seller_company(request.user)
+        # CAT-1: сотрудник выбирает поставщика явно (`supplier_company_id`, см. _resolve_supplier).
+        options, auth_error = _import_options(request)
         if auth_error is not None:
             return auth_error
 
@@ -292,8 +378,9 @@ class CatalogImportView(RoleGatedViewMixin, APIView):
 
             file_content_b64 = base64.b64encode(file_content).decode("ascii")
             # dry_run=true → validate + preview counts without persisting.
-            dry_run = str(request.data.get("dry_run", "")).lower() in ("1", "true", "yes")
-            task = process_catalog_import.delay(file_content_b64, supplier_company_id, dry_run)
+            dry_run = _param(request, "dry_run").lower() in ("1", "true", "yes")
+            supplier_company_id = options.pop("supplier_company_id")
+            task = process_catalog_import.delay(file_content_b64, supplier_company_id, dry_run, **options)
 
             ImportTask.objects.create(
                 celery_task_id=task.id,
@@ -360,9 +447,21 @@ class ImportCatalogAiView(RoleGatedViewMixin, APIView):
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
             return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
-        supplier_company_id, auth_error = _resolve_seller_company(request.user)
+        options, auth_error = _import_options(request)
         if auth_error is not None:
             return auth_error
+
+        from .ai_jobs import enqueue_ai_job
+
+        dry_run = _param(request, "dry_run").lower() in ("1", "true", "yes")
+        rows_token = _param(request, "rows_token")
+        if rows_token:
+            # CAT-1: «Применить» после проверки — те же строки, что человек видел в отчёте, без второго вызова ИИ.
+            from .ai_rows import rows_token_owner
+
+            if dry_run or rows_token_owner(rows_token) != request.user.pk:
+                return Response({"detail": "ROWS_TOKEN_INVALID"}, status=status.HTTP_400_BAD_REQUEST)
+            return enqueue_ai_job("catalog_import_ai", {**options, "rows_token": rows_token, "dry_run": False}, request.user)
 
         file_obj = request.FILES.get("file")
         if not file_obj:
@@ -390,15 +489,8 @@ class ImportCatalogAiView(RoleGatedViewMixin, APIView):
 
         from core.storage import get_temp_storage
 
-        from .ai_jobs import enqueue_ai_job
-
         storage_path = get_temp_storage().save(f"ai_extract_tmp/{uuid.uuid4().hex}.{extension}", ContentFile(raw))
-        payload = {
-            "storage_path": storage_path,
-            "filename": file_obj.name,
-            "supplier_company_id": supplier_company_id,
-            "dry_run": str(request.data.get("dry_run", "")).lower() in ("1", "true", "yes"),
-        }
+        payload = {**options, "storage_path": storage_path, "filename": file_obj.name, "dry_run": dry_run}
         return enqueue_ai_job("catalog_import_ai", payload, request.user)
 
 
@@ -449,6 +541,11 @@ class ImportStatusView(APIView):
                     "created": raw_result.get("created"),
                     "updated": raw_result.get("updated"),
                     "offers_upserted": raw_result.get("offers_upserted"),
+                    # CAT-1: новые предложения, обновлённые цены и расхождения карточек на одобрение.
+                    "offers_created": raw_result.get("offers_created"),
+                    "offers_updated": raw_result.get("offers_updated"),
+                    "proposal_count": raw_result.get("proposal_count"),
+                    "proposals": raw_result.get("proposals"),
                     "skipped": raw_result.get("skipped"),
                     "error_count": raw_result.get("error_count"),
                     "errors": raw_result.get("errors"),

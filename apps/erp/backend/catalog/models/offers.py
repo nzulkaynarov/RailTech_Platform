@@ -1,3 +1,5 @@
+import pghistory
+import pgtrigger
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -13,6 +15,10 @@ from master_data.models import Currency, DeliveryBasis
 # ────────────────────────────────────────────
 
 
+#: CAT-1 — история цены поставщика: снимок строки при создании и каждой правке (как у КП, `sales/models/quotes.py`).
+@pghistory.track(
+    pghistory.RowEvent("offer.snapshot", row=pghistory.New, operation=pgtrigger.Insert | pgtrigger.Update),
+)
 class SupplierOffer(models.Model):
     """
     Коммерческое предложение поставщика на конкретный товар.
@@ -119,6 +125,18 @@ class SupplierOffer(models.Model):
         blank=True,
         verbose_name=_("Действует до"),
         help_text=_("Дата окончания действия предложения"),
+    )
+    class Source(models.TextChoices):
+        PRICE_LIST = "price_list", _("Прайс")
+        RFQ_REPLY = "rfq_reply", _("Ответ на запрос цены")
+        MANUAL = "manual", _("Вручную")
+
+    # CAT-1: откуда цена — загрузка прайса, ответ поставщика на запрос, ввод сотрудником.
+    source = models.CharField(
+        max_length=16,
+        choices=Source.choices,
+        default=Source.MANUAL,
+        verbose_name=_("Источник цены"),
     )
     is_active = models.BooleanField(
         default=True,

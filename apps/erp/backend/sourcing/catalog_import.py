@@ -33,6 +33,7 @@ from decimal import Decimal, InvalidOperation
 from io import BytesIO
 
 import pandas as pd
+import pghistory
 from django.db import transaction
 
 logger = logging.getLogger(__name__)
@@ -260,6 +261,8 @@ class _Ctx:
     actor: object = None
     valid_from: object = None
     valid_until: object = None
+    #: Владелец новых карточек: своя компания на пути сотрудника, иначе сам поставщик (путь продавца).
+    owner: object = None
 
 
 def _resolve_brand(ctx: _Ctx, name: str):
@@ -329,8 +332,8 @@ def _update_product(ctx: _Ctx, existing, fields: dict, brand, uom) -> None:
         existing.domain_type = fields["domain"]
     # Backfill ownership for an orphaned card (C3), but never hijack a product
     # another tenant already owns — de-dup matches globally on brand+MPN.
-    if ctx.supplier and existing.owner_company_id is None:
-        existing.owner_company = ctx.supplier
+    if ctx.owner and existing.owner_company_id is None:
+        existing.owner_company = ctx.owner
     _save_product(existing)
 
 
@@ -351,7 +354,10 @@ def _create_product(ctx: _Ctx, fields: dict, brand, uom):
         uom=uom,
         # Stamp the importing seller as owner so they can see/manage their own cards
         # (C3) — without this, imported products are orphaned and invisible to them.
-        owner_company=ctx.supplier,
+        # CAT-1: прайс завода, загруженный сотрудником, — карточка нашего каталога (владелец — своя компания),
+        # а завод записан источником данных.
+        owner_company=ctx.owner,
+        source_supplier=ctx.supplier,
     )
     _save_product(product)
     return product
@@ -373,12 +379,19 @@ def _find_by_own_offer(ctx: _Ctx, fields: dict, supplier_sku: str):
 
 
 def _is_foreign_card(ctx: _Ctx, product) -> bool:
-    """Карточку завёл другой поставщик (или сотрудник) или она уже не черновик — прайс её полей не меняет (CAT-1)."""
+    """Карточку завёл другой поставщик (или сотрудник) или она уже не черновик — прайс её полей не меняет (CAT-1).
+
+    «Свою» карточку поставщика узнаём по `source_supplier` (заведена из его прайса); у старых карточек без него — по
+    владельцу, как до CAT-1 (путь продавца: своя компания загружает свой каталог).
+    """
     status_code = getattr(product.status, "code", None)
     if status_code and status_code != "DRAFT":
         return True
+    supplier_id = getattr(ctx.supplier, "pk", None)
+    if product.source_supplier_id is not None:
+        return product.source_supplier_id != supplier_id
     owner_id = product.owner_company_id
-    return owner_id is not None and owner_id != getattr(ctx.supplier, "pk", None)
+    return owner_id is not None and owner_id != supplier_id
 
 
 def _display(value) -> str:
@@ -471,6 +484,7 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
         "delivery_lead_time": offer["lead"],
         "min_order_qty": offer["moq"],
         "is_active": True,
+        "source": ctx.SupplierOffer.Source.PRICE_LIST,
     }
     for key in ("valid_from", "valid_until"):
         if offer.get(key) is not None:
@@ -766,6 +780,7 @@ def run_catalog_import_frame(
     actor_id=None,
     valid_from=None,
     valid_until=None,
+    owner_company_id=None,
 ) -> dict:
     """Ядро импорта: DataFrame строк → upsert PIM-карточек + офферов загрузившего.
 
@@ -795,6 +810,7 @@ def run_catalog_import_frame(
         dry_run,
         hs_status=_prescan_hs_codes(data_frame, columns),
         actor=_actor(actor_id),
+        owner=Company.objects.filter(id=owner_company_id).first() if owner_company_id else supplier,
         valid_from=_as_date(valid_from),
         valid_until=_as_date(valid_until),
     )
@@ -807,7 +823,9 @@ def run_catalog_import_frame(
             _summarize_publishability(ctx, result)
             transaction.set_rollback(True)
     else:
-        _iterate_rows(ctx, data_frame, columns, result, progress_callback)
+        # История цены (pghistory, CAT-1): кто загрузил и откуда цена — в контексте каждого снимка предложения.
+        with pghistory.context(user=actor_id, source="price_list"):
+            _iterate_rows(ctx, data_frame, columns, result, progress_callback)
         _summarize_publishability(ctx, result)
 
     return result.as_dict()
