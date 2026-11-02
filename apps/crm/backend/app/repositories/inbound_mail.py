@@ -63,6 +63,19 @@ async def mailbox(
     return (await session.scalars(stmt)).first()
 
 
+async def lock_mailbox(session: AsyncSession, name: str, host: str) -> InboundMailbox:
+    """Строка состояния папки под блокировкой; нет — создаётся (два опроса сразу — без гонки)."""
+    await session.execute(
+        insert(InboundMailbox)
+        .values(mailbox=name, host=host, fetched_total=0)
+        .on_conflict_do_nothing(index_elements=[InboundMailbox.mailbox])
+    )
+    found = await mailbox(session, name, for_update=True)
+    if found is None:  # только что вставлена или уже была — есть всегда
+        raise LookupError(name)
+    return found
+
+
 async def last_mailbox(session: AsyncSession) -> InboundMailbox | None:
     stmt = select(InboundMailbox).order_by(InboundMailbox.last_poll_at.desc().nulls_last())
     return (await session.scalars(stmt.limit(1))).first()

@@ -19,7 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.inbound_mail import ParsedMail, find_inns, parse_message
 from app.integrations.imap import FetchedMessage, ImapClient, ImapProbeError, resolve_imap
-from app.models.inbound_mail import InboundMailbox
 from app.repositories import inbound_mail as repo
 from app.repositories import lead_intake as leads_repo
 from app.security.secrets_store import SecretsStore
@@ -159,10 +158,7 @@ class InboundMailIngest:
         fetched: int = 0,
     ) -> None:
         async with self._sessions() as session, session.begin():
-            state = await repo.mailbox(session, name, for_update=True)
-            if state is None:
-                state = InboundMailbox(mailbox=name, host=host, fetched_total=0)
-                session.add(state)
+            state = await repo.lock_mailbox(session, name, host)
             state.last_poll_at = now
             if error is not None:
                 state.last_error_kind, state.last_error = error.kind, error.detail or None

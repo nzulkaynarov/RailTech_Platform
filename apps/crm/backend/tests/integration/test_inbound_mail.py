@@ -4,6 +4,7 @@ IMAP — фейковый сервер (`tests/fake_imap.py`) и настоящ�
 модель — подставные. Адреса, тексты и ИНН вымышленные.
 """
 
+import asyncio
 from collections.abc import Iterator
 from email.message import EmailMessage
 from typing import Any, cast
@@ -23,6 +24,7 @@ from app.models.clients import Client, ClientContact
 from app.models.email import EmailLog
 from app.models.inbound_mail import InboundMail, InboundMailbox
 from app.models.leads import Lead, LeadNote
+from app.repositories import inbound_mail as repo_mail
 from app.repositories import platform_roles as prepo
 from app.security.audit import Actor
 from app.security.secrets_store import IMAP_PASSWORD, IMAP_USERNAME, SecretCipher, SecretsStore
@@ -175,6 +177,30 @@ async def test_new_mail_lands_once_and_repeat_poll_gives_no_duplicate(stand: Sta
         state = await session.get(InboundMailbox, "INBOX")
     assert state is not None
     assert (state.last_uid, state.uidvalidity, state.last_error_kind) == (8, 1001, None)
+
+
+async def test_two_polls_at_once_store_one_row(stand: Stand) -> None:
+    """Два опроса одновременно (сбой блокировки задачи, второй воркер) забирают одно письмо: строка
+    одна — защита UNIQUE `message_id` и `ON CONFLICT DO NOTHING` (мутационная проверка — в PR)."""
+    await stand.configure()
+    stand.server.box.add(7, _raw(1, attach=True))
+    other = InboundMailIngest(
+        stand.sessions, stand.store, stand.settings, PlainClient(), stand.storage, BUCKET
+    )
+    gate = asyncio.Barrier(2)
+    original = repo_mail.exists
+
+    async def exists_then_wait(session: AsyncSession, message_id: str) -> bool:
+        found = await original(session, message_id)
+        await gate.wait()  # оба опроса прошли проверку «уже есть» до вставки
+        return found
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(repo_mail, "exists", exists_then_wait)
+        first, second = await asyncio.gather(stand.ingest.poll(), other.poll())
+    assert {first.status, second.status} == {"ok"}
+    assert first.created + second.created == 1
+    assert len(await stand.mails()) == 1
 
 
 async def test_uidvalidity_change_rescans_without_duplicates(stand: Stand) -> None:
