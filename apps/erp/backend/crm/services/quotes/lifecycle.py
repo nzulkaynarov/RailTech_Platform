@@ -132,7 +132,7 @@ class QuoteLifecycleService:
         HTML(string=html_string).write_pdf(pdf_file)
 
         # Владелец 27-07: «имя файла разрознено с настройками компании» — файл называется
-        # НОМЕРОМ КП из схемы нумерации продавца («КП-2026-00042_v1.pdf»), а не внутренним
+        # НОМЕРОМ КП из схемы нумерации продавца («КП-2026_042_v1.pdf»), а не внутренним
         # deal-id/ИНН. Черновик без номера деградирует в старую deal-схему (уникальность цела).
         from crm.services.documents import quote_pdf_filename
 
@@ -191,8 +191,8 @@ class QuoteLifecycleService:
 
         # Mint a human, sequential, quotable КП number on first send (idempotent across
         # re-sends of the same version) — world-standard B2B: every offer the buyer receives
-        # carries a citable document number, per-company-prefixed (ACME-КП-2026-00001) or the
-        # shared platform counter (КП-2026-00001). Re-using next_document_number keeps the КП
+        # carries a citable document number, per-company-prefixed (ACME-КП-2026/001) or the
+        # shared platform counter (КП-2026/001). Re-using next_document_number keeps the КП
         # consistent with Contract/Invoice/Act numbering.
         if not quote.number:
             from crm.services.numbering import next_document_number

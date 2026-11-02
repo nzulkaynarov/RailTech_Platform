@@ -316,8 +316,8 @@ def _demo_context(company, user) -> PlaceholderContext:
     counterparty = SimpleNamespace(name="ООО Пример", inn="301234567")
     deal = SimpleNamespace(id=1024, title="Демо-сделка", company_id=1, company=counterparty)
     contact = SimpleNamespace(name="ООО Пример", company_id=1, company=counterparty)
-    quote = SimpleNamespace(number="КП-2026-00042", total_incl_vat="12 500 000 UZS")
-    contract = SimpleNamespace(number="ДГ-2026-00007")
+    quote = SimpleNamespace(number="КП-2026/042", total_incl_vat="12 500 000 UZS")
+    contract = SimpleNamespace(number="ДОГ-2026/007")
     return PlaceholderContext(company=company, deal=deal, contact=contact, quote=quote, contract=contract, user=user)
 
 
@@ -339,7 +339,7 @@ def render_document_html_from_body(company, rendered_body_html: str, *, brand: d
         brand = document_brand_context(company)
     document_stub = SimpleNamespace(
         rendered_html=rendered_body_html,
-        number="DOC-2026-00001",
+        number="ДОК-2026/001",
         title="Образец документа",
         created_at=timezone.now(),
     )
@@ -435,7 +435,7 @@ def generate_document(company, user: CustomUser, *, template, deal=None, contact
         deal=deal,
         contact=contact,
         template=template,
-        number=next_document_number("DOC", "DOC", company=company),
+        number=next_document_number("DOC", "ДОК", company=company),
         status=_status(GeneratedDocumentStatusCode.DRAFT),
         title=(title or template.name)[:255],
         values=values,

@@ -21,7 +21,9 @@ import { errorFields } from "../errors";
 
 const KINDS: DocumentKind[] = ["quote", "contract", "invoice", "act", "letter"];
 const RESET: NumberingResetPeriod[] = ["never", "yearly", "monthly"];
+// «Стандартный» — умолчание SPEC-v3 §2.2 (`КП-2026/042`); «Через дефис» — прежнее умолчание, его маски у компаний остаются.
 const PRESETS = [
+  { id: "standard", pattern: "{prefix}{type}-{YYYY}/{seq}" },
   { id: "brand", pattern: "{prefix}{type}-{YYYY}-{seq}" },
   { id: "slash", pattern: "{type}/{YYYY}/{seq}" },
   { id: "compact", pattern: "{type}-{seq}" },

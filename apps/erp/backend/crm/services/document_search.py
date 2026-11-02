@@ -21,6 +21,7 @@ from crm.services.recent_documents import (  # noqa: F401 — shared helpers, si
 )
 
 from .fulfillment import delivery_note_number
+from .numbering import number_search_q
 
 MIN_QUERY_LEN = 2
 
@@ -35,7 +36,7 @@ def _search_quotes(user, request, query: str, limit: int) -> List[dict]:
     qs = Quote.objects.select_related("deal", "status").order_by("-created_at")
     if not sees_all_deals(user):
         qs = qs.filter(deal__company_id__in=_user_company_ids(user))
-    qs = qs.filter(Q(number__icontains=query) | Q(deal__title__icontains=query))
+    qs = qs.filter(number_search_q("number", query) | Q(deal__title__icontains=query))
     return [
         {
             "type": "quote",
@@ -59,7 +60,7 @@ def _search_contracts(user, request, query: str, limit: int) -> List[dict]:
     qs = Contract.objects.select_related("status").order_by("-created_at")
     if not _sees_all(user):
         qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal"))
-    qs = qs.filter(Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
+    qs = qs.filter(number_search_q("number", query) | Q(deal__title__icontains=query)).distinct()
     return [
         {
             "type": "contract",
@@ -91,7 +92,7 @@ def _search_invoices(user, request, query: str, limit: int) -> List[dict]:
         if seller_side_q is not None:
             draft_gate = draft_gate | seller_side_q
         qs = qs.filter(visibility_q & draft_gate)
-    qs = qs.filter(Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
+    qs = qs.filter(number_search_q("number", query) | Q(deal__title__icontains=query)).distinct()
     return [
         {
             "type": "invoice",
@@ -115,7 +116,7 @@ def _search_acts(user, request, query: str, limit: int) -> List[dict]:
     qs = Act.objects.select_related("status").order_by("-created_at")
     if not _sees_all(user):
         qs = qs.filter(_billing_visibility_q(user, request, deal_path="deal"))
-    qs = qs.filter(Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
+    qs = qs.filter(number_search_q("number", query) | Q(deal__title__icontains=query)).distinct()
     return [
         {
             "type": "act",
@@ -141,7 +142,9 @@ def _search_generated(user, request, query: str, limit: int) -> List[dict]:
     qs = GeneratedDocument.objects.select_related("status").order_by("-created_at")
     if not getattr(user, "is_superuser", False):  # как GeneratedDocumentViewSet: чужой DRAFT не виден и сотруднику
         qs = qs.filter(Q(company_id__in=_user_company_ids(user)) | party_visible_document_q(user))
-    qs = qs.filter(Q(title__icontains=query) | Q(number__icontains=query) | Q(deal__title__icontains=query)).distinct()
+    qs = qs.filter(
+        Q(title__icontains=query) | number_search_q("number", query) | Q(deal__title__icontains=query)
+    ).distinct()
     return [
         {
             "type": "generated",
@@ -171,7 +174,7 @@ def _search_receipts(user, request, query: str, limit: int) -> List[dict]:
             qs = qs.filter(buyer_q | Q(invoice_id__in=invoice_ids))
         else:
             qs = qs.filter(buyer_q)
-    qs = qs.filter(Q(receipt_number__icontains=query) | Q(invoice__number__icontains=query)).distinct()
+    qs = qs.filter(number_search_q("receipt_number", query) | number_search_q("invoice__number", query)).distinct()
     return [
         {
             "type": "receipt",
@@ -198,7 +201,10 @@ def _search_delivery_notes(user, request, query: str, limit: int) -> List[dict]:
         seller_q = _seller_side_q(user)
         qs = qs.filter(buyer_q if seller_q is None else (buyer_q | seller_q))
     qs = qs.filter(
-        Q(tracking_number__icontains=query) | Q(carrier__icontains=query) | Q(contract__number__icontains=query)
+        Q(tracking_number__icontains=query)
+        | Q(carrier__icontains=query)
+        | number_search_q("note_number", query)
+        | number_search_q("contract__number", query)
     ).distinct()
     return [
         {

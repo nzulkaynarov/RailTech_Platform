@@ -85,8 +85,8 @@ def test_preview_resolves_known_placeholders_on_demo_data(lookups):
     body = resp.json()
     assert resp.status_code == 200, resp.content
     assert "Демо-сделка" in body["rendered_html"]
-    assert "КП-2026-00042" in body["rendered_html"]
-    assert "ДГ-2026-00007" in body["rendered_html"]
+    assert "КП-2026/042" in body["rendered_html"]
+    assert "ДОГ-2026/007" in body["rendered_html"]
     assert set(body["placeholders_used"]) == {"deal.title", "quote.number", "contract.number"}
     assert body["warnings"] == []
 
@@ -247,7 +247,7 @@ def test_contract_preview_uses_the_contract_frame_and_sample_blocks(lookups):
 
     page = result["document_html"]
     assert "Договор поставки" in page  # каркас договора, а не «Образец документа»
-    assert "Договор № ДГ-2026-00007" in page
+    assert "Договор № ДОГ-2026/007" in page
     assert "Образец документа" not in page
     assert "Приложение № 1. Спецификация" in page and "Стрелочный привод СП-6" in page
     assert "Итого к оплате" in page and "Реквизиты и подписи Сторон" in page

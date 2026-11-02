@@ -11,6 +11,8 @@ note — собственный номерной диапазон.
 контрагента, поэтому он не переписывается.
 """
 
+import re
+
 import pytest
 
 from accounts.models import Company
@@ -32,9 +34,9 @@ def test_number_comes_from_the_shared_scheme_on_first_print(fulfillment):
 
     fulfillment.refresh_from_db()
     assert number == fulfillment.note_number
-    assert number.startswith("DN-"), number
-    # Форма схемы — «тип-год-порядковый», как у прочих документов, а не «тип-идентификатор».
-    assert number.count("-") == 2, f"номер не по схеме: {number}"
+    assert number.startswith("НАК-"), number
+    # Форма схемы — «тип-год/порядковый» (SPEC-v3 §2.2), как у прочих документов, а не «тип-идентификатор».
+    assert re.fullmatch(r"НАК-\d{4}/\d{3,}", number), f"номер не по схеме: {number}"
     assert str(fulfillment.pk) != number.rsplit("-", 1)[-1].lstrip("0") or True
 
 

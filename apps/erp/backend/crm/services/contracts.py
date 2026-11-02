@@ -20,7 +20,7 @@ def _next_contract_number(seller_company=None) -> str:
     # load). Carries the seller company so the contract gets THEIR prefix + counter.
     from .numbering import next_document_number
 
-    return next_document_number("CT", "CT", company=seller_company)
+    return next_document_number("CT", "ДОГ", company=seller_company)
 
 
 def _cstatus(code: str):

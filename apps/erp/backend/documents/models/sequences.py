@@ -4,7 +4,13 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 NUMBERING_TYPE_CODES = ("KP", "CT", "INV", "ACT", "DOC")
-DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
+# Умолчания SPEC-v3 §2.2 (W-6, B-WDOCS2-1): КП-2026/115, ДОГ-2026/104, СЧ-2026/142, АКТ-2026/058; для документа по
+# шаблону SPEC молчит — тот же стиль, «ДОК». До 2026-11 умолчания были `КП-2026-00042`, `CT-…`, `INV-…`, `ACT-…`, `DOC-…`
+# (LEGACY_* ниже — их знает миграция documents/0004 и поиск по номеру).
+DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК"}
+LEGACY_DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
+LEGACY_DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
+LEGACY_DEFAULT_PADDING = 5
 
 
 def default_type_labels():
@@ -65,9 +71,9 @@ class DocumentSequence(models.Model):
 class DocumentNumberingScheme(models.Model):
     """Configurable, per-company document numbering scheme (N1).
 
-    Replaces the hardcoded `{prefix}-{label}-{year}-{NNNNN}` format with a token mask so
-    a selling company can shape its own numbers (separator, padding, date tokens, reset
-    period, start value).
+    A token mask so a selling company can shape its own numbers (separator, padding, date tokens,
+    reset period, start value). The shipped default is SPEC-v3 §2.2: `{prefix}{type}-{YYYY}/{seq}`
+    with three digits — `КП-2026/042`, `ACME-ДОГ-2026/104`.
     """
 
     RESET_NEVER = "never"
@@ -79,8 +85,8 @@ class DocumentNumberingScheme(models.Model):
         (RESET_MONTHLY, _("Ежемесячно")),
     ]
 
-    DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
-    DEFAULT_PADDING = 5
+    DEFAULT_PATTERN = "{prefix}{type}-{YYYY}/{seq}"
+    DEFAULT_PADDING = 3
     DEFAULT_RESET_PERIOD = RESET_YEARLY
     DEFAULT_START_VALUE = 0
 
@@ -103,7 +109,7 @@ class DocumentNumberingScheme(models.Model):
         default=DEFAULT_PADDING,
         validators=[MinValueValidator(1)],
         verbose_name=_("Ширина счётчика"),
-        help_text=_("Сколько цифр в {seq} с ведущими нулями (напр. 5 → 00001)"),
+        help_text=_("Сколько цифр в {seq} с ведущими нулями (напр. 3 → 001)"),
     )
     reset_period = models.CharField(
         max_length=16,
