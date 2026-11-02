@@ -403,7 +403,11 @@ def test_ai_import_takes_supplier_and_applies_only_own_checked_rows(world, monke
     response = world["clients"]["supply"].post(url, {"file": pdf}, format="multipart")
     assert response.status_code == 202, response.content
     payload = captured["payload"]
-    assert (payload["supplier_company_id"], payload["valid_until"], payload["dry_run"]) == (plant.pk, "2027-01-31", True)
+    assert (payload["supplier_company_id"], payload["valid_until"], payload["dry_run"]) == (
+        plant.pk,
+        "2027-01-31",
+        True,
+    )
     assert payload["owner_company_id"] == world["own"].pk
 
     foreign = save_rows([{"Наименование": "x"}], world["users"]["director"].pk)

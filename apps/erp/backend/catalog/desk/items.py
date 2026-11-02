@@ -61,9 +61,7 @@ def list_queryset(params):
             offers_count=Count("offers", filter=Q(offers__is_active=True), distinct=True),
             nearest_valid_until=Min("offers__valid_until", filter=current_offer_q("offers__", today)),
             docs_count=Count("tech_documents", distinct=True),
-            proposals_count=Count(
-                "field_proposals", filter=Q(field_proposals__status="pending"), distinct=True
-            ),
+            proposals_count=Count("field_proposals", filter=Q(field_proposals__status="pending"), distinct=True),
         )
     )
     text = (params.get("q") or "").strip()

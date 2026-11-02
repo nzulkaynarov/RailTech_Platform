@@ -248,9 +248,8 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
     from ai.services.price_list import extract_price_rows
 
     from core.storage import get_temp_storage
-    from sourcing.catalog_import import run_catalog_import_frame
-
     from sourcing.ai_rows import drop_rows, load_rows, save_rows
+    from sourcing.catalog_import import run_catalog_import_frame
 
     rows_token = payload.get("rows_token")
     if rows_token:

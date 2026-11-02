@@ -383,7 +383,10 @@ def offer_history(offer: SupplierOffer, user) -> list[dict]:
             {
                 "at": event.pgh_created_at,
                 "price": (
-                    {"amount": f"{event.base_price:.2f}", "currency": event.currency.code if event.currency_id else None}
+                    {
+                        "amount": f"{event.base_price:.2f}",
+                        "currency": event.currency.code if event.currency_id else None,
+                    }
                     if show_price
                     else None
                 ),

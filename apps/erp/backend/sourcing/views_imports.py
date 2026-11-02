@@ -91,9 +91,9 @@ def _resolve_supplier(request):
         return {"supplier_company_id": supplier_id}, error
     if not raw.isdigit():
         return None, _refuse("SUPPLIER_INVALID")
-    from accounts.services.permissions import staff_has_permission
     from parties.models import Company
 
+    from accounts.services.permissions import staff_has_permission
     from catalog.desk.access import can_view_supplier_prices
     from core.tenant import own_company_id
 
@@ -461,7 +461,9 @@ class ImportCatalogAiView(RoleGatedViewMixin, APIView):
 
             if dry_run or rows_token_owner(rows_token) != request.user.pk:
                 return Response({"detail": "ROWS_TOKEN_INVALID"}, status=status.HTTP_400_BAD_REQUEST)
-            return enqueue_ai_job("catalog_import_ai", {**options, "rows_token": rows_token, "dry_run": False}, request.user)
+            return enqueue_ai_job(
+                "catalog_import_ai", {**options, "rows_token": rows_token, "dry_run": False}, request.user
+            )
 
         file_obj = request.FILES.get("file")
         if not file_obj:

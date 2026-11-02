@@ -126,6 +126,7 @@ class SupplierOffer(models.Model):
         verbose_name=_("Действует до"),
         help_text=_("Дата окончания действия предложения"),
     )
+
     class Source(models.TextChoices):
         PRICE_LIST = "price_list", _("Прайс")
         RFQ_REPLY = "rfq_reply", _("Ответ на запрос цены")
