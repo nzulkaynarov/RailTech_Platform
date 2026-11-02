@@ -89,7 +89,10 @@ describe("EDS · карточка письма на бланке (P4)", () => {
     expect(saved?.status).toBe("sent");
     expect(saved?.letter?.pdf?.final).toBe(true);
     expect(saved?.letter?.mailings[0]?.to).toEqual(["gni@example.uz"]);
-    expect(await card.findByText(/gni@example\.uz/)).toBeVisible();
+    // Адрес — и в реквизитах письма, и в строке журнала отправки (она может появиться позже): хватает любого видимого.
+    const shown = await card.findAllByText(/gni@example\.uz/);
+    expect(shown.length).toBeGreaterThan(0);
+    expect(shown[0]).toBeVisible();
   });
 
   it("отправка не удалась — причина словами; «Отправить адресату ещё раз» добавляет строку журнала", async () => {
