@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив) или почта не настроена (`details.reason = smtp_not_configured`)
+ * 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`) или помощник выключен (`assist_disabled`)
  */
 export type InboundMailConflictResponse = Error;

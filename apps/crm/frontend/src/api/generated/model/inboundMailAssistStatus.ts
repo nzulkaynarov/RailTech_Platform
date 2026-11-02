@@ -7,7 +7,7 @@ export type InboundMailAssistStatus =
   (typeof InboundMailAssistStatus)[keyof typeof InboundMailAssistStatus];
 
 export const InboundMailAssistStatus = {
-  pending: "pending",
+  none: "none",
   done: "done",
   unavailable: "unavailable",
   off: "off",

@@ -415,3 +415,35 @@ async def test_registrar_does_not_touch_imap_settings(web: Web) -> None:
     await web.login(["REGISTRAR"])
 
     assert (await web.client.get("/api/v1/admin/integrations/imap")).status_code == 403
+
+
+async def test_assist_only_by_button_and_disabled_says_so(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    called = be.router.post(f"{CRM}/17/assist").mock(
+        return_value=httpx.Response(200, json=assist(status="done"))
+    )
+    be.router.post(f"{CRM}/18/assist").mock(
+        return_value=httpx.Response(
+            409, json={"code": "conflict", "message": "x", "details": {"reason": "assist_disabled"}}
+        )
+    )
+    be.router.get(f"{CRM}/17").mock(
+        return_value=httpx.Response(
+            200,
+            json=card(assist={"status": "none", "kind": None, "summary": None, "action": None}),
+        )
+    )
+    await web.login(["REGISTRAR"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    opened = await web.client.get("/api/v1/inbound-mail/17")
+    assert opened.json()["assist"]["status"] == "none"
+    assert not called.called, "открыть карточку — не звать модель"
+    asked = await web.client.post("/api/v1/inbound-mail/17/assist", headers=headers)
+    off = await web.client.post("/api/v1/inbound-mail/18/assist", headers=headers)
+
+    check(asked, "/inbound-mail/{id}/assist", "post")
+    assert asked.json()["kind"] == "supplier_doc"
+    assert off.status_code == 409
+    assert off.json()["details"]["reason"] == "assist_disabled"

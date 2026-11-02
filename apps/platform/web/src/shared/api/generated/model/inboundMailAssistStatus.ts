@@ -4,13 +4,13 @@
  */
 
 /**
- * pending — готовится; unavailable — модель недоступна; off — помощник выключен
+ * none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть; unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
  */
 export type InboundMailAssistStatus =
   (typeof InboundMailAssistStatus)[keyof typeof InboundMailAssistStatus];
 
 export const InboundMailAssistStatus = {
-  pending: "pending",
+  none: "none",
   done: "done",
   unavailable: "unavailable",
   off: "off",

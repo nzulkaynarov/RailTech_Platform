@@ -55,7 +55,7 @@ class ImapCheck(_Out):
 
 
 class InboundMailAssist(_Out):
-    status: Literal["pending", "done", "unavailable", "off"]
+    status: Literal["none", "done", "unavailable", "off"]
     kind: Literal["buyer", "official", "supplier_doc", "other"] | None
     summary: str | None
     action: Literal["register", "lead", "archive"] | None

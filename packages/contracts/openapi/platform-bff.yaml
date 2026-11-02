@@ -4199,6 +4199,37 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /inbound-mail/{id}/assist:
+    post:
+      tags: [inbound-mail]
+      operationId: assistInboundMail
+      summary: 'Входящая почта: «Подсказать» — тип, суть и предложенное действие'
+      description: >-
+        CRM `POST /inbound-mail/{id}/assist` — только по кнопке сотрудника (решение юриста 2026-11-02); без неё карточка
+        работает вручную. Модель — алиас `qualifier-model`, текст без персональных данных, вложения не уходят. Подсказка уже
+        есть — она же, без второго вызова. Модель недоступна — `status = unavailable`. Помощник выключен — 409 `CONFLICT`,
+        `details.reason = assist_disabled`. Вызов и решение человека по письму пишутся в журнал ИИ CRM (без текстов).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '200':
+          description: Подсказка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailAssist'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /inbound-mail/{id}/lead:
     post:
       tags: [inbound-mail]
@@ -11068,7 +11099,9 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     InboundMailConflict:
-      description: 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив) или почта не настроена (`details.reason = smtp_not_configured`)
+      description: >-
+        409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`)
+        или помощник выключен (`assist_disabled`)
       content:
         application/json:
           schema:
@@ -17792,9 +17825,17 @@ components:
       type: object
       additionalProperties: false
       required: [status, kind, summary, action]
-      description: 'Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек'
+      description: >-
+        Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель,
+        тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата
+        рождения); вложения — никогда
       properties:
-        status: {type: string, enum: [pending, done, unavailable, off], description: 'pending — готовится; unavailable — модель недоступна; off — помощник выключен'}
+        status:
+          type: string
+          enum: [none, done, unavailable, off]
+          description: >-
+            none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть;
+            unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
         kind: {type: [string, 'null'], enum: [buyer, official, supplier_doc, other, null]}
         summary: {type: [string, 'null'], maxLength: 300}
         action: {type: [string, 'null'], enum: [register, lead, archive, null], description: 'Предложение по типу (выбирает код)'}

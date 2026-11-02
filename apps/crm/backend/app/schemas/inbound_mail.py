@@ -6,7 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
 MailStatus = Literal["new", "registered", "lead", "archived"]
-AssistStatus = Literal["pending", "done", "unavailable", "off"]
+AssistStatus = Literal["none", "done", "unavailable", "off"]
 AssistKind = Literal["buyer", "official", "supplier_doc", "other"]
 AssistAction = Literal["register", "lead", "archive"]
 
@@ -26,7 +26,8 @@ class InboundMailSkipped(BaseModel):
 
 
 class InboundMailAssist(BaseModel):
-    """Подсказка помощника: тип, суть, предложенное действие. Ничего сама не делает."""
+    """Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
+    не делает; `none` — не запрашивали, `off` — помощник выключен админом."""
 
     status: AssistStatus
     kind: AssistKind | None = None

@@ -7,10 +7,10 @@ import type { InboundMailAssistKind } from "./inboundMailAssistKind";
 import type { InboundMailAssistStatus } from "./inboundMailAssistStatus";
 
 /**
- * Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек
+ * Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда
  */
 export interface InboundMailAssist {
-  /** pending — готовится; unavailable — модель недоступна; off — помощник выключен */
+  /** none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть; unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором */
   status: InboundMailAssistStatus;
   /** @nullable */
   kind: InboundMailAssistKind;

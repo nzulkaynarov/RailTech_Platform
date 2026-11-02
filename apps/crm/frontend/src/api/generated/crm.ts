@@ -101,6 +101,7 @@ import type {
   ImapConnectorIn,
   ImapStatusOut,
   InboundMailArchiveIn,
+  InboundMailAssist,
   InboundMailLeadOut,
   InboundMailOut,
   InboundMailPage,
@@ -7144,6 +7145,95 @@ export const useArchiveInboundMail = <TError = ErrorType<ErrorOut>, TContext = u
   TContext
 > => {
   return useMutation(getArchiveInboundMailMutationOptions(options), queryClient);
+};
+
+export const getAssistInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/assist`;
+};
+
+/**
+ * «Подсказать» (решение юриста 2026-11-02 — только по кнопке): тип, суть и предложенное
+ * действие; в модель — текст без персональных данных, вложения — никогда. Уже есть — она же, без
+ * второго вызова. Модель недоступна — `status = unavailable` (разберите вручную). Помощник
+ * выключен админом — 409 `assist_disabled`.
+ * @summary Assist Inbound Mail
+ */
+export const assistInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailAssist> => {
+  return http<InboundMailAssist>(getAssistInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAssistInboundMailMutationKey = () => ["assistInboundMail"] as const;
+
+export const getAssistInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    TError,
+    AssistInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    AssistInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return assistInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssistInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assistInboundMail>>
+>;
+
+export type AssistInboundMailMutationError = ErrorType<ErrorOut>;
+export type AssistInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Assist Inbound Mail
+ */
+export const useAssistInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assistInboundMail>>,
+      TError,
+      AssistInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistInboundMailMutationOptions(options), queryClient);
 };
 
 export const getGetInboundMailAttachmentUrl = (mailId: number, index: number) => {

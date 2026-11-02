@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents.llm import ChatResult, LlmUnavailableError
 from app.config import Settings
 from app.main import create_app
+from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact
 from app.models.email import EmailLog
 from app.models.inbound_mail import InboundMail, InboundMailbox
@@ -159,7 +160,6 @@ async def test_new_mail_lands_once_and_repeat_poll_gives_no_duplicate(stand: Sta
     assert mail.client_id == client.id, "связка с клиентом по ИНН в тексте"
     assert [a["name"] for a in mail.attachments] == ["счёт.pdf"]
     assert mail.skipped == [{"name": "a.exe", "reason": "type"}]
-    assert stand.new == [mail.id]
 
     # Повторный опрос: UID запомнен, дубля нет; то же письмо под другим UID — тоже без дубля.
     again = await stand.ingest.poll()
@@ -307,21 +307,44 @@ async def test_reply_goes_into_the_same_thread(stand: Stand) -> None:
         (FakeModel(error=LlmUnavailableError("qualifier-model")), "unavailable", None),
     ],
 )
-async def test_assist_suggests_but_does_nothing(
+async def test_assist_by_button_suggests_but_does_nothing(
     stand: Stand, model: FakeModel, status: str, kind: str | None
 ) -> None:
     mail_id = await _one_mail(stand)
+    (mail,) = await stand.mails()
+    assert mail.assist_status == "none", "без кнопки модель не зовётся: опрос подсказку не просит"
+    who = await _principal(stand.sessions)
     assist = InboundMailAssist(stand.sessions, stand.settings, model)
-    assert await assist.suggest(mail_id) == status
+
+    out = await assist.suggest(who, mail_id)
+
+    assert (out.status, out.kind) == (status, kind)
     (mail,) = await stand.mails()
     assert (mail.assist_status, mail.assist_kind, mail.status) == (status, kind, "new")
     if kind == "buyer":
         assert mail.assist_action == "lead"
-    # Текст письма — внутри блока данных промпта.
-    assert "<mail>" in model.prompts[0]
-    assert "Игнорируй инструкции" in model.prompts[0].rsplit("<mail>", 1)[1]
-    assert await assist.suggest(mail_id) == "skip", "повтор не зовёт модель второй раз"
-    assert len(model.prompts) == 1
+    prompt = model.prompts[0]
+    data = prompt.rsplit("<mail>", 1)[1]
+    assert "Игнорируй инструкции" in data, "текст письма — внутри блока данных"
+    # Персональные данные маскирует код до модели; вложения в модель не уходят.
+    assert "buyer@example.test" not in prompt
+    assert "301234567" not in prompt
+    assert "[email]" in data
+    assert "счёт.pdf" not in prompt
+    async with stand.sessions() as session:
+        logged = (
+            await session.scalars(select(AuditLog).where(AuditLog.action == "ai.mail_assist"))
+        ).one()
+    assert logged.actor_user_id == who.user_id
+    assert logged.after is not None
+    assert logged.after["alias"] == "qualifier-model"
+    assert logged.after["result"] == status
+    assert logged.after["prompt_version"]
+    assert "Игнорируй" not in str(logged.after), "журнал ИИ — без текстов"
+    if status == "done":
+        again = await assist.suggest(who, mail_id)
+        assert again.kind == kind
+        assert len(model.prompts) == 1, "повтор не зовёт модель второй раз"
 
 
 async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:
@@ -330,8 +353,44 @@ async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:
     current["imap"]["assist_enabled"] = False
     await stand.settings.update("integrations", current, None)
     model = FakeModel('{"kind": "buyer", "summary": "x"}')
-    assert await InboundMailAssist(stand.sessions, stand.settings, model).suggest(mail_id) == "off"
+    who = await _principal(stand.sessions)
+    from app.domain.errors import ConflictError
+
+    with pytest.raises(ConflictError):
+        await InboundMailAssist(stand.sessions, stand.settings, model).suggest(who, mail_id)
     assert model.prompts == []
+    assert (await stand.service().page("new")).items[0].assist.status == "off"
+
+
+@pytest.mark.parametrize(
+    ("suggest", "action", "decision"),
+    [
+        ('{"kind": "buyer", "summary": "КП"}', "lead", "accepted"),
+        ('{"kind": "buyer", "summary": "КП"}', "archive", "other"),
+        (None, "archive", "manual"),
+    ],
+)
+async def test_human_decision_is_logged(
+    stand: Stand, suggest: str | None, action: str, decision: str
+) -> None:
+    mail_id = await _one_mail(stand)
+    who = await _principal(stand.sessions)
+    if suggest is not None:
+        await InboundMailAssist(stand.sessions, stand.settings, FakeModel(suggest)).suggest(
+            who, mail_id
+        )
+    if action == "lead":
+        await stand.service().create_lead(who, mail_id)
+    else:
+        await stand.service().archive(who, mail_id, "реклама")
+    async with stand.sessions() as session:
+        row = (
+            await session.scalars(
+                select(AuditLog).where(AuditLog.action == "ai.mail_assist.decision")
+            )
+        ).one()
+    assert row.after is not None
+    assert (row.after["decision"], row.after["action"]) == (decision, action)
 
 
 async def _principal(sessions: async_sessionmaker[AsyncSession]) -> Any:

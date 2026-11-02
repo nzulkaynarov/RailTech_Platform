@@ -34,16 +34,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 
 MAIL_STATUSES = ("new", "registered", "lead", "archived")
-ASSIST_STATUSES = ("pending", "done", "unavailable", "off")
+ASSIST_STATUSES = ("none", "done", "unavailable")
 
 
 class InboundMail(TimestampMixin, Base):
     __tablename__ = "inbound_mail"
     __table_args__ = (
         CheckConstraint("status IN ('new', 'registered', 'lead', 'archived')", name="status"),
-        CheckConstraint(
-            "assist_status IN ('pending', 'done', 'unavailable', 'off')", name="assist_status"
-        ),
+        CheckConstraint("assist_status IN ('none', 'done', 'unavailable')", name="assist_status"),
         Index("uq_inbound_mail_message_id", "message_id", unique=True),
         Index("ix_inbound_mail_status_received", "status", "received_at"),
     )
@@ -80,10 +78,12 @@ class InboundMail(TimestampMixin, Base):
     )
     inns: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="new")
-    assist_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="pending")
+    # Подсказка — только по кнопке «Подсказать» (юрист 2026-11-02): `none` — не запрашивали.
+    assist_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="none")
     assist_kind: Mapped[str | None] = mapped_column(String(16))
     assist_summary: Mapped[str | None] = mapped_column(String(300))
     assist_action: Mapped[str | None] = mapped_column(String(16))
+    assist_trace_id: Mapped[str | None] = mapped_column(String(64))  # трасса Langfuse для оценки
     # Итог: ВХ в EDS (номер — из события EDS), лид, причина архива; кто и когда.
     eds_letter_id: Mapped[str | None] = mapped_column(String(64))
     eds_letter_number: Mapped[str | None] = mapped_column(String(32))

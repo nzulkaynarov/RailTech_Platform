@@ -3876,7 +3876,9 @@ components:
       title: InboundMailArchiveIn
       type: object
     InboundMailAssist:
-      description: 'Подсказка помощника: тип, суть, предложенное действие. Ничего сама не делает.'
+      description: 'Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
+
+        не делает; `none` — не запрашивали, `off` — помощник выключен админом.'
       properties:
         action:
           anyOf:
@@ -3899,7 +3901,7 @@ components:
           title: Kind
         status:
           enum:
-          - pending
+          - none
           - done
           - unavailable
           - 'off'
@@ -11228,6 +11230,42 @@ paths:
       security:
       - HTTPBearer: []
       summary: Archive Inbound Mail
+      tags:
+      - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/assist:
+    post:
+      description: '«Подсказать» (решение юриста 2026-11-02 — только по кнопке): тип, суть и предложенное
+
+        действие; в модель — текст без персональных данных, вложения — никогда. Уже есть — она же, без
+
+        второго вызова. Модель недоступна — `status = unavailable` (разберите вручную). Помощник
+
+        выключен админом — 409 `assist_disabled`.'
+      operationId: assist_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailAssist'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Assist Inbound Mail
       tags:
       - inbound-mail
   /api/v1/inbound-mail/{mail_id}/attachments/{index}:

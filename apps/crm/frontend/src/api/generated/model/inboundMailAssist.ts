@@ -7,7 +7,8 @@ import type { InboundMailAssistKind } from "./inboundMailAssistKind";
 import type { InboundMailAssistStatus } from "./inboundMailAssistStatus";
 
 /**
- * Подсказка помощника: тип, суть, предложенное действие. Ничего сама не делает.
+ * Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
+ * не делает; `none` — не запрашивали, `off` — помощник выключен админом.
  */
 export interface InboundMailAssist {
   action?: InboundMailAssistAction;

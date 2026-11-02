@@ -714,7 +714,8 @@ class ImapStatusOut(BaseModel):
 
 class InboundMailAssist(BaseModel):
     """
-    Подсказка помощника: тип, суть, предложенное действие. Ничего сама не делает.
+    Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
+    не делает; `none` — не запрашивали, `off` — помощник выключен админом.
     """
 
     action: Annotated[Action1 | None, Field(title="Action")] = None
@@ -1598,7 +1599,7 @@ class Status4(StrEnum):
 
 
 class Status5(StrEnum):
-    pending = "pending"
+    none = "none"
     done = "done"
     unavailable = "unavailable"
     off = "off"

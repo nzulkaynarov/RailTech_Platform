@@ -2188,6 +2188,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/inbound-mail/{id}/assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Подсказать» — тип, суть и предложенное действие
+     * @description CRM `POST /inbound-mail/{id}/assist` — только по кнопке сотрудника (решение юриста 2026-11-02); без неё карточка работает вручную. Модель — алиас `qualifier-model`, текст без персональных данных, вложения не уходят. Подсказка уже есть — она же, без второго вызова. Модель недоступна — `status = unavailable`. Помощник выключен — 409 `CONFLICT`, `details.reason = assist_disabled`. Вызов и решение человека по письму пишутся в журнал ИИ CRM (без текстов).
+     */
+    post: operations["assistInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/inbound-mail/{id}/lead": {
     parameters: {
       query?: never;
@@ -10048,13 +10068,13 @@ export interface components {
      * @enum {string}
      */
     InboundMailStatus: "new" | "registered" | "lead" | "archived";
-    /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек */
+    /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
     InboundMailAssist: {
       /**
-       * @description pending — готовится; unavailable — модель недоступна; off — помощник выключен
+       * @description none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть; unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
        * @enum {string}
        */
-      status: "pending" | "done" | "unavailable" | "off";
+      status: "none" | "done" | "unavailable" | "off";
       /** @enum {string|null} */
       kind: "buyer" | "official" | "supplier_doc" | "other" | null;
       summary: string | null;
@@ -12028,7 +12048,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив) или почта не настроена (`details.reason = smtp_not_configured`) */
+    /** @description 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`) или помощник выключен (`assist_disabled`) */
     InboundMailConflict: {
       headers: {
         [name: string]: unknown;
@@ -15866,6 +15886,37 @@ export interface operations {
       404: components["responses"]["NotFound"];
       413: components["responses"]["EdsPayloadTooLarge"];
       415: components["responses"]["EdsUnsupportedMedia"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assistInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подсказка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailAssist"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -16,6 +16,7 @@ from app.schemas.inbound_mail import (
     ImapConnectorIn,
     ImapStatusOut,
     InboundMailArchiveIn,
+    InboundMailAssist,
     InboundMailLeadOut,
     InboundMailOut,
     InboundMailPage,
@@ -71,6 +72,17 @@ async def get_inbound_mail_attachment(
     data, name, mime = await container.inbound_mail.attachment(mail_id, index)
     headers = {"Content-Disposition": _disposition(name), "Cache-Control": "private, no-store"}
     return Response(data, media_type=mime, headers=headers)
+
+
+@router.post("/inbound-mail/{mail_id}/assist", response_model=InboundMailAssist)
+async def assist_inbound_mail(
+    mail_id: MailId, who: Worker, container: ContainerDep
+) -> InboundMailAssist:
+    """«Подсказать» (решение юриста 2026-11-02 — только по кнопке): тип, суть и предложенное
+    действие; в модель — текст без персональных данных, вложения — никогда. Уже есть — она же, без
+    второго вызова. Модель недоступна — `status = unavailable` (разберите вручную). Помощник
+    выключен админом — 409 `assist_disabled`."""
+    return await container.inbound_mail_assist.suggest(who, mail_id)
 
 
 @router.post("/inbound-mail/{mail_id}/lead", response_model=InboundMailLeadOut)

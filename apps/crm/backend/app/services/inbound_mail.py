@@ -9,6 +9,7 @@
   ответа, дальше «Забрать» у менеджера-универсала); открытый лид с этим адресом есть — письмо
   заметкой в него (DECISIONS 2026-11-01 п. 1: делопроизводитель — первая линия);
 * «Архив» — с причиной;
+* решение человека (ВХ, лид, архив) — в журнал ИИ: принял подсказку, выбрал другое или вручную;
 * «Зарегистрировать ВХ» делает EDS (форма P8 с `source_mail_id`); CRM узнаёт номер из события
   `uz.railtech.eds.letter.registered.v1` (`accept_registered`, в транзакции inbox шины).
 
@@ -38,6 +39,8 @@ from app.schemas import inbound_mail as dto
 from app.security import audit
 from app.security.principal import Principal
 from app.services import web_lead_sla
+from app.services.inbound_mail_assist import record_decision
+from app.services.inbound_mail_assist import view as assist_view
 from app.services.mail import MailService
 from app.services.mail_templates import RenderedEmail
 from app.services.settings import SettingsService
@@ -55,23 +58,12 @@ class Storage(Protocol):
     async def get(self, bucket: str, key: str) -> bytes: ...
 
 
-def _assist(row: InboundMail) -> dto.InboundMailAssist:
-    return dto.InboundMailAssist.model_validate(
-        {
-            "status": row.assist_status,
-            "kind": row.assist_kind,
-            "summary": row.assist_summary,
-            "action": row.assist_action,
-        }
-    )
-
-
 def _link(ids: dict[int, str], key: int | None) -> dto.InboundMailLink | None:
     return dto.InboundMailLink(id=key, name=ids.get(key, "")) if key is not None else None
 
 
 def _item_fields(
-    row: InboundMail, clients: dict[int, str], leads: dict[int, str]
+    row: InboundMail, clients: dict[int, str], leads: dict[int, str], assist_on: bool = True
 ) -> dict[str, Any]:
     return {
         "id": row.id,
@@ -83,7 +75,7 @@ def _item_fields(
         "sent_at": row.sent_at,
         "preview": row.text[:PREVIEW_CHARS],
         "attachments_count": len(row.attachments or []),
-        "assist": _assist(row),
+        "assist": assist_view(row, assist_on),
         "client": _link(clients, row.client_id),
         "lead": _link(leads, row.matched_lead_id),
     }
@@ -107,6 +99,9 @@ class InboundMailService:
         # `async () -> bool`: настроен ли приём (резолвер IMAP «Подключений»).
         self._configured = configured
 
+    async def _assist_on(self) -> bool:
+        return (await self._settings.get()).integrations.imap.assist_enabled
+
     async def page(self, status: dto.MailStatus) -> dto.InboundMailPage:
         async with self._sessions() as session:
             rows = await repo.page(session, status, PAGE_LIMIT)
@@ -123,7 +118,8 @@ class InboundMailService:
             last_ok_at=state.last_ok_at if state else None,
             last_error_kind=state.last_error_kind if state else None,
         )
-        items = [dto.InboundMailItem(**_item_fields(r, clients, leads)) for r in rows]
+        on = await self._assist_on()
+        items = [dto.InboundMailItem(**_item_fields(r, clients, leads, on)) for r in rows]
         return dto.InboundMailPage(items=items, total=total, mailbox=mailbox)
 
     async def get(self, mail_id: int) -> dto.InboundMailOut:
@@ -137,7 +133,7 @@ class InboundMailService:
             )
             replies = await repo.replies(session, mail_id)
         return dto.InboundMailOut(
-            **_item_fields(row, clients, leads),
+            **_item_fields(row, clients, leads, await self._assist_on()),
             to=list(row.to_addrs or []),
             text=row.text,
             attachments=[
@@ -199,6 +195,7 @@ class InboundMailService:
                 lead = await _new_lead(session, row, now, web_lead_sla.due_at(cfg, now), who)
                 lead_id, created = lead.id, True
             _handled(row, "lead", who, now)
+            await record_decision(session, row, "lead", who.actor)
             row.lead_id = lead_id
             await audit.record(
                 session,
@@ -216,6 +213,7 @@ class InboundMailService:
         async with self._sessions() as session, session.begin():
             row = await _open_row(session, mail_id)
             _handled(row, "archived", who, now)
+            await record_decision(session, row, "archive", who.actor)
             row.archive_reason = reason.strip()[:500]
             await audit.record(
                 session,
@@ -279,6 +277,8 @@ class InboundMailService:
             user = actor.get("crm_user_id")
             known = isinstance(user, int) and await users_repo.get(session, user) is not None
             row.handled_by = user if known and isinstance(user, int) else None
+            who = audit.Actor(row.handled_by) if row.handled_by else audit.Actor.system()
+            await record_decision(session, row, "register", who)
         logger.info("inbound_mail_registered", mail_id=mail_id, number=row.eds_letter_number)
 
 

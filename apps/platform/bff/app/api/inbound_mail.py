@@ -1,11 +1,11 @@
 """Входящая почта общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0).
 
-Очередь, карточка и действия — CRM (`/api/v1/inbound-mail*`, права `mail_inbox:*`) токеном
-сотрудника; BFF проверяет раздел первой линии `crm.leads.triage` (полный), маппит номера (лид `L-0042`, путь
-ВХ) и ошибки. «Зарегистрировать ВХ» — форма P8 (`POST /eds/letters` с `source_mail_id`); чтобы
-форма открылась с вложениями, `POST /inbound-mail/{id}/eds-files` читает файлы письма из CRM и
-загружает их в EDS (`POST /files`) от имени того же сотрудника — как если бы он приложил их сам.
-Настройки приёма — карточка «Почта» «Подключений» (`/admin/integrations/imap*`, раздел `admin`).
+Очередь, карточка, «Подсказать» и действия — CRM (`/api/v1/inbound-mail*`, права `mail_inbox:*`)
+токеном сотрудника; BFF проверяет раздел первой линии `crm.leads.triage` (полный), маппит номера
+(лид `L-0042`, путь ВХ) и ошибки. «Зарегистрировать ВХ» — форма P8 (`POST /eds/letters` с
+`source_mail_id`); чтобы форма открылась с вложениями, `POST /inbound-mail/{id}/eds-files` читает
+файлы письма из CRM и загружает их в EDS (`POST /files`) от имени того же сотрудника — как если бы
+он приложил их сам. Приём — карточка «Почта» «Подключений» (`/admin/integrations/imap*`).
 """
 
 from typing import Annotated, Any
@@ -26,6 +26,7 @@ from app.schemas_inbound_mail import (
     ImapSettingsIn,
     InboundMail,
     InboundMailArchiveIn,
+    InboundMailAssist,
     InboundMailLeadResult,
     InboundMailPage,
     InboundMailReply,
@@ -48,6 +49,7 @@ _MESSAGES = {
     "smtp_not_configured": "Почта не настроена — Настройки · Подключения · Почта.",
     "wrong_password": "Пароль указан неверно.",
     "secrets_key_missing": "На сервере не задан ключ шифрования секретов: пароль не сохранить.",
+    "assist_disabled": "Помощник канцелярии выключен администратором — разберите письмо вручную.",
 }
 _HANDLED = "Письмо уже обработано: обновите очередь."
 
@@ -161,6 +163,17 @@ async def copy_files_to_eds(authed: Clerk, id: MailId) -> list[EdsFile]:
             )
         )
     return out
+
+
+@router.post(
+    "/inbound-mail/{id}/assist",
+    response_model=InboundMailAssist,
+    operation_id="assistInboundMail",
+)
+async def assist(authed: Clerk, id: MailId) -> InboundMailAssist:
+    """«Подсказать» — только по кнопке (решение юриста 2026-11-02); маскирование и журнал — CRM."""
+    raw = await _json(authed, "POST", f"{CRM}/{id}/assist")
+    return InboundMailAssist.model_validate(crm.InboundMailAssist.model_validate(raw).model_dump())
 
 
 @router.post(

@@ -177,6 +177,7 @@ import type {
   ImapCheck,
   ImapConnector,
   InboundMail,
+  InboundMailAssist,
   InboundMailLeadResult,
   InboundMailLink,
   InboundMailPage,
@@ -8214,7 +8215,7 @@ export const getListInboundMailResponseMock = (
     preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
     attachments_count: faker.number.int({ min: 0 }),
     assist: {
-      status: faker.helpers.arrayElement(["pending", "done", "unavailable", "off"] as const),
+      status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
       kind: faker.helpers.arrayElement([
         faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
         null,
@@ -8280,7 +8281,7 @@ export const getGetInboundMailResponseMock = (
   preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
   attachments_count: faker.number.int({ min: 0 }),
   assist: {
-    status: faker.helpers.arrayElement(["pending", "done", "unavailable", "off"] as const),
+    status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
     kind: faker.helpers.arrayElement([
       faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
       null,
@@ -8364,6 +8365,25 @@ export const getCopyInboundMailFilesToEdsResponseMock = (): EdsFile[] =>
     content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
     size: faker.number.int({ min: 0 }),
   }));
+
+export const getAssistInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailAssist, object>> = {},
+): InboundMailAssist => ({
+  status: faker.helpers.arrayElement(["none", "done", "unavailable", "off"] as const),
+  kind: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["buyer", "official", "supplier_doc", "other"] as const),
+    null,
+  ]),
+  summary: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 300 } }),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["register", "lead", "archive"] as const),
+    null,
+  ]),
+  ...overrideResponse,
+});
 
 export const getCreateLeadFromInboundMailResponseMock = (
   overrideResponse: Partial<Extract<InboundMailLeadResult, object>> = {},
@@ -23849,6 +23869,30 @@ export const getCopyInboundMailFilesToEdsMockHandler = (
   );
 };
 
+export const getAssistInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailAssist
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailAssist> | InboundMailAssist),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/assist",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssistInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getCreateLeadFromInboundMailMockHandler = (
   overrideResponse?:
     | InboundMailLeadResult
@@ -28819,6 +28863,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetInboundMailMockHandler(),
   getDownloadInboundMailAttachmentMockHandler(),
   getCopyInboundMailFilesToEdsMockHandler(),
+  getAssistInboundMailMockHandler(),
   getCreateLeadFromInboundMailMockHandler(),
   getArchiveInboundMailMockHandler(),
   getReplyInboundMailMockHandler(),

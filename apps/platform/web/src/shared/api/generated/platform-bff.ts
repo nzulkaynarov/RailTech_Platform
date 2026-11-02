@@ -167,6 +167,7 @@ import type {
   ImapSettingsIn,
   InboundMail,
   InboundMailArchiveIn,
+  InboundMailAssist,
   InboundMailConflictResponse,
   InboundMailLeadResult,
   InboundMailPage,
@@ -15282,6 +15283,113 @@ export const useCopyInboundMailFilesToEds = <
   TContext
 > => {
   return useMutation(getCopyInboundMailFilesToEdsMutationOptions(options), queryClient);
+};
+
+export const getAssistInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/assist`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/assist` — только по кнопке сотрудника (решение юриста 2026-11-02); без неё карточка работает вручную. Модель — алиас `qualifier-model`, текст без персональных данных, вложения не уходят. Подсказка уже есть — она же, без второго вызова. Модель недоступна — `status = unavailable`. Помощник выключен — 409 `CONFLICT`, `details.reason = assist_disabled`. Вызов и решение человека по письму пишутся в журнал ИИ CRM (без текстов).
+ * @summary Входящая почта: «Подсказать» — тип, суть и предложенное действие
+ */
+export const assistInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailAssist> => {
+  return http<InboundMailAssist>(getAssistInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAssistInboundMailMutationKey = () => ["assistInboundMail"] as const;
+
+export const getAssistInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    TError,
+    AssistInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    AssistInboundMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return assistInboundMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssistInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assistInboundMail>>
+>;
+
+export type AssistInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type AssistInboundMailMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: «Подсказать» — тип, суть и предложенное действие
+ */
+export const useAssistInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assistInboundMail>>,
+      TError,
+      AssistInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistInboundMailMutationOptions(options), queryClient);
 };
 
 export const getCreateLeadFromInboundMailUrl = (id: number) => {

@@ -673,12 +673,11 @@ class Container:
             ImaplibClient(),
             self.storage,
             self.settings.s3_bucket_attachments,
-            on_new=_enqueue_mail_assist,
         )
 
     @cached_property
     def inbound_mail_assist(self) -> "InboundMailAssist":
-        """Подсказка помощника канцелярии: `qualifier-model` под бюджетом, без резерва."""
+        """Подсказка помощника канцелярии по кнопке: `qualifier-model` под бюджетом, без резерва."""
         from app.agents.llm import ChatModel
         from app.services.budget import BudgetedModel
         from app.services.inbound_mail_assist import InboundMailAssist
@@ -933,12 +932,6 @@ async def _enqueue_email(email_log_id: int) -> object:
     from app.tasks.mail import enqueue_email
 
     return await enqueue_email(email_log_id)
-
-
-async def _enqueue_mail_assist(mail_ids: list[int]) -> None:
-    from app.tasks.inbound_mail import enqueue_assist
-
-    await enqueue_assist(mail_ids)
 
 
 async def _enqueue_extraction(document_id: int) -> object:
