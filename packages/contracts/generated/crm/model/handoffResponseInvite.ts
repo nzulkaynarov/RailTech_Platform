@@ -12,4 +12,10 @@ export type HandoffResponseInvite = {
    * @nullable
    */
   error?: string | null;
+  /**
+   * Ключ письма-приглашения в почтовом сервисе CRM (`request_key` события `uz.railtech.erp.mail.requested.v1`, B-MAIL-1): по нему CRM берёт итог доставки из своего журнала почты (в очереди · отправлено · не отправлено с причиной) и показывает менеджеру в карточке клиента. `null` — письмо не уходило.
+   * @nullable
+   * @pattern ^erp:email_log:\d+$
+   */
+  email_request_key?: string | null;
 };

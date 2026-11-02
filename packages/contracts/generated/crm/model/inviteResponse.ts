@@ -13,4 +13,10 @@ export interface InviteResponse {
    * @nullable
    */
   error?: string | null;
+  /**
+   * Ключ письма-приглашения в почтовом сервисе CRM (как в `HandoffResponse.invite.email_request_key`, B-MAIL-1); `null` — письмо не уходило
+   * @nullable
+   * @pattern ^erp:email_log:\d+$
+   */
+  email_request_key?: string | null;
 }
