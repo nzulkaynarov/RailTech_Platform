@@ -27,6 +27,7 @@ from finance.models import Invoice, Payment, PaymentConfirmation
 from accounts.models import CustomUser
 from crm.constants import InvoiceStatusCode
 from crm.models import ActivityLog
+from crm.services.numbering import number_search_q
 
 TABS = ("to_issue", "awaiting", "proofs", "overdue", "all")
 TAB_COUNTED = ("to_issue", "awaiting", "proofs", "overdue")
@@ -97,7 +98,7 @@ def board(*, tab: str, day: date, q: str = "", limit: int = 50, offset: int = 0)
     qs = annotated().filter(tab_q(tab, day))
     needle = q.strip()
     if needle:
-        qs = qs.filter(Q(number__icontains=needle) | Q(deal__company__name__icontains=needle))
+        qs = qs.filter(number_search_q("number", needle) | Q(deal__company__name__icontains=needle))
     if tab == "proofs":
         qs = qs.order_by("proof_at", "id")
     elif tab in ("awaiting", "overdue"):

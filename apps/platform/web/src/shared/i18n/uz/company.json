@@ -185,7 +185,8 @@
     "prefixlessBanner": "Oʻz sxemangiz faqat prefiks bilan ishlaydi. Hozir platforma formati qo'llanmoqda — prefiksni kiriting.",
     "format": "Raqam formati",
     "presets": {
-      "brand": "Brend prefiksi bilan",
+      "standard": "Standart",
+      "brand": "Defis bilan",
       "slash": "Qiya chiziq bilan",
       "compact": "Ixcham",
       "custom": "O'z niqobi"
@@ -194,7 +195,7 @@
     "maskHint": "Tokenlar: {prefix} {type} {YYYY} {YY} {MM} {seq}. {seq} majburiy.",
     "maskInvalid": "Niqobda {seq} tokeni majburiy",
     "padding": "Hisoblagich kengligi",
-    "paddingHint": "Nechta raqam: 5 → 00001",
+    "paddingHint": "Nechta raqam: 3 → 001",
     "reset": "Hisoblagichni nollash",
     "resets": {
       "never": "Hech qachon",

@@ -84,7 +84,7 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
     totals = _demo_totals(items)
     deal = SimpleNamespace(company=buyer, contact=None)
     contract = SimpleNamespace(
-        number="ДГ-2026-00007",
+        number="ДОГ-2026/007",
         created_at=now,
         valid_from=None,
         valid_until=None,
@@ -138,7 +138,7 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
     else:  # ACT
         invoice = SimpleNamespace(number="СЧ-2026-00012", issued_at=now, created_at=now, items=_Items(items))
         act = SimpleNamespace(
-            number="АКТ-2026-00005",
+            number="АКТ-2026/005",
             issued_at=now,
             created_at=now,
             deal_id=1024,

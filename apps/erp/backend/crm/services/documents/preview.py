@@ -113,7 +113,7 @@ def _sample_quote_number(seller) -> str:
     """Владелец 27-07: «нумерация документа разрознена с настройками компании» — номер образца
     рендерится ПО СХЕМЕ НУМЕРАЦИИ продавца (dry-run, счётчик не трогается), а не хардкодом.
     A broken draft scheme must never kill the preview — it falls back to the stock sample."""
-    fallback = "КП-2026-000123"
+    fallback = "КП-2026/123"
     if seller is None:
         return fallback
     from django.core.exceptions import ValidationError as DjangoValidationError
@@ -279,7 +279,7 @@ def _render_sample_contract_html(brand: dict) -> str:
         },
     ]
     sample_contract = {
-        "number": "CT-2026-00042 (образец)",
+        "number": "ДОГ-2026/042 (образец)",
         "created_at": date(2026, 7, 8),
         "valid_from": date(2026, 7, 8),
         "valid_until": date(2026, 12, 31),
@@ -309,11 +309,11 @@ def _render_sample_invoice_html(brand: dict) -> str:
     from django.template.loader import render_to_string
 
     sample_invoice = {
-        "number": "INV-2026-00042 (образец)",
+        "number": "СЧ-2026/042 (образец)",
         "issued_at": date(2026, 7, 8),
         "due_date": date(2026, 8, 8),
         "notes": "",
-        "contract": {"number": "CT-2026-00042"},
+        "contract": {"number": "ДОГ-2026/042"},
         "subtotal_excl_vat": Decimal("18400000.00"),
         "vat_amount": Decimal("2208000.00"),
         "total_incl_vat": Decimal("20608000.00"),
@@ -344,16 +344,16 @@ def _render_sample_act_html(brand: dict) -> str:
     from django.template.loader import render_to_string
 
     sample_invoice = {
-        "number": "INV-2026-00042",
+        "number": "СЧ-2026/042",
         "issued_at": date(2026, 7, 8),
         "items": {"all": _sample_invoice_lines()},
     }
     sample_act = {
-        "number": "ACT-2026-00042 (образец)",
+        "number": "АКТ-2026/042 (образец)",
         "issued_at": date(2026, 7, 15),
         "deal_id": 0,
         "total_amount": Decimal("20608000.00"),
-        "contract": {"number": "CT-2026-00042", "created_at": date(2026, 7, 8)},
+        "contract": {"number": "ДОГ-2026/042", "created_at": date(2026, 7, 8)},
         "invoice": sample_invoice,
     }
     context = {
@@ -380,11 +380,11 @@ def _render_sample_letter_html(brand: dict) -> str:
 
     sample_letter = {
         "title": "Гарантийное письмо (образец)",
-        "number": "DOC-2026-00042",
+        "number": "ДОК-2026/042",
         "created_at": date(2026, 7, 8),
         "rendered_html": (
             "<p>Настоящим гарантируем оплату по сделке #1024 в полном объёме в согласованные сроки.</p>"
-            "<p>Сумма обязательств соответствует коммерческому предложению КП-2026-00042 "
+            "<p>Сумма обязательств соответствует коммерческому предложению КП-2026/042 "
             "на сумму 20 608 000 UZS.</p>"
         ),
     }
