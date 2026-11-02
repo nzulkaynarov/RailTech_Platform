@@ -6,6 +6,8 @@ import type { Attachment } from "../new/formModel";
 import type { RegisterValues } from "../register/registerModel";
 
 export const ADMIN_MAIL_PATH = "/admin/integrations?card=mail&panel=open";
+/** Вкладка «Подозрительные» списка «Входящая почта» (W18A-P2-2). */
+export const SPAM_TAB_PATH = "/eds/mail?tab=spam";
 
 export function mailPath(id: number): string {
   return `/eds/mail/${String(id)}`;
@@ -28,6 +30,13 @@ export function receivedDate(iso: string): string {
 
 const SUMMARY_MAX = 2000;
 
+/** Когда письмо пришло в ящик: у загруженного «из истории» — дата самого письма, а не день загрузки (W18A-P2-2). */
+export function arrivedAt(
+  mail: Pick<InboundMail, "from_history" | "sent_at" | "received_at">,
+): string {
+  return mail.from_history && mail.sent_at ? mail.sent_at : mail.received_at;
+}
+
 /** Предзаполнение формы «Зарегистрировать входящее» из письма (W18A-P2): человек проверяет и правит. */
 export function prefillFromMail(
   mail: InboundMail,
@@ -46,7 +55,7 @@ export function prefillFromMail(
     receiptMethod: "email",
     senderName: mail.client?.name ?? (mail.from_name || mail.from_email),
     senderInn: mail.inns.length === 1 ? (mail.inns[0] ?? "") : "",
-    receivedAt: receivedDate(mail.received_at),
+    receivedAt: receivedDate(arrivedAt(mail)),
     subject: mail.subject.slice(0, 300),
     summary,
     attachments,

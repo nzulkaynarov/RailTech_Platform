@@ -3,6 +3,8 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { ImapConnectorSecurity } from "./imapConnectorSecurity";
+import type { ImapFolder } from "./imapFolder";
+import type { ImapHistory } from "./imapHistory";
 
 /**
  * Приём почты общего ящика (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`.
@@ -35,4 +37,8 @@ export interface ImapConnector {
   last_error_kind: string | null;
   /** @nullable */
   last_error: string | null;
+  /** Папки опроса (W18A-P2-2); по умолчанию одна — `mailbox`. Итог опроса выше — сводка по папкам */
+  folders: ImapFolder[];
+  /** Последняя загрузка писем за период */
+  history: ImapHistory | null;
 }

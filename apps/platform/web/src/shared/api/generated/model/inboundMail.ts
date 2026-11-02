@@ -30,6 +30,8 @@ export interface InboundMail {
   client: InboundMailLink | null;
   /** Открытый лид с этим адресом */
   lead: InboundMailLink | null;
+  /** Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
+  from_history: boolean;
   to: string[];
   /** Тело письма только текстом (HTML — без разметки) */
   text: string;

@@ -380,6 +380,26 @@
         "invalid_host": "Server manzili noto‘g‘ri (masalan, imap.yandex.ru)",
         "tls_failed": "Himoyalangan ulanib bo‘lmadi — port va shifrlashni tekshiring",
         "unavailable": "IMAP server javob bermayapti — manzil va portni tekshiring"
+      },
+      "folders": "Jildlar",
+      "foldersHint": "Odatda «Kiruvchi»; xatlar yoʻqolmasligi uchun «Spam» jildini belgilang",
+      "find": "Jildlarni topish",
+      "findOk": "Topilgan jildlar: {{count}}",
+      "spamFolder": "«Spam» jildi",
+      "spamNone": "Soʻralmasin",
+      "spamMark": "spam",
+      "history": {
+        "title": "Davr uchun xatlarni yuklash",
+        "period": "Davr",
+        "days": "{{count}} kun",
+        "button": "Yuklash",
+        "hint": "3 kundan eski xatlar roʻyxatda «tarixdan» belgisi bilan boʻladi",
+        "running": "Yuklanmoqda: {{found}} dan {{processed}}",
+        "searching": "Pochta qutisidan xatlar qidirilmoqda…",
+        "done": "Yangi xatlar yuklandi: {{found}} dan {{created}}",
+        "limited": "Davrda 2000 dan ortiq xat bor — oxirgi 2000 tasi yuklandi. Qisqaroq davrni tanlang.",
+        "error": "Yuklash toʻxtadi: {{reason}}",
+        "again": "Qayta yuklash xavfsiz: yuklangan xatlar takrorlanmaydi."
       }
     }
   },

@@ -102,6 +102,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
+        # 0.18.0 (W18A-P2-2): статус письма `spam` («Подозрительные»), папки опроса и загрузка
+        # писем за период — новое значение enum ответа oasdiff считает ломающим.
         # 0.17.0 (OPS-YADISK): внешняя копия на Яндекс Диске — provider, login, folder_path,
         # app_password в /integrations/offsite; новые подкоды Reason (offsite_login_invalid,
         # offsite_app_password_invalid) — oasdiff считает добавленное значение enum ломающим.
@@ -117,7 +119,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.17.0",
+        version="0.18.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,

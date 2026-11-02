@@ -1,4 +1,5 @@
-"""Схемы входящей почты общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0)."""
+"""Схемы входящей почты общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0;
+папки «Спам» и загрузка писем за период — W18A-P2-2, 0.35.0)."""
 
 from datetime import datetime
 from typing import Literal
@@ -8,11 +9,58 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from app.clients import crm_models as crm
 from app.feeds.numbers import lead_number, letter_ref
 
-MailStatus = Literal["new", "registered", "lead", "archived"]
+MailStatus = Literal["new", "spam", "registered", "lead", "archived"]
 
 
 class _Out(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class ImapFolder(_Out):
+    name: str
+    label: str
+    spam: bool
+
+
+class ImapHistory(_Out):
+    id: int
+    days: int
+    status: Literal["running", "done", "error"]
+    found: int
+    processed: int
+    created: int
+    limited: bool
+    error_kind: str | None
+    started_at: datetime
+    finished_at: datetime | None
+
+
+class ImapServerFolder(_Out):
+    name: str
+    label: str
+    junk: bool
+    selectable: bool
+
+
+class ImapFolders(_Out):
+    ok: bool
+    error_kind: str | None
+    detail: str | None
+    folders: list[ImapServerFolder]
+    spam_suggestion: str | None
+
+
+class ImapFolderIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=200)
+    spam: bool = False
+
+
+class ImapHistoryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: Literal[7, 14, 30, 90]
 
 
 class ImapConnector(_Out):
@@ -31,6 +79,8 @@ class ImapConnector(_Out):
     last_ok_at: datetime | None
     last_error_kind: str | None
     last_error: str | None
+    folders: list[ImapFolder]
+    history: ImapHistory | None
 
 
 class ImapSettingsIn(BaseModel):
@@ -40,6 +90,7 @@ class ImapSettingsIn(BaseModel):
     port: int = Field(default=993, ge=1, le=65535)
     security: Literal["ssl", "starttls"] = "ssl"
     mailbox: str = Field(default="INBOX", min_length=1, max_length=200)
+    folders: list[ImapFolderIn] | None = Field(default=None, max_length=10)
     assist_enabled: bool = True
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
@@ -80,6 +131,7 @@ class InboundMailItem(_Out):
     assist: InboundMailAssist
     client: InboundMailLink | None
     lead: InboundMailLink | None
+    from_history: bool
 
 
 class InboundMailMailbox(_Out):
@@ -89,10 +141,17 @@ class InboundMailMailbox(_Out):
     last_error_kind: str | None
 
 
+class InboundMailCounts(_Out):
+    new: int
+    history: int
+    spam: int
+
+
 class InboundMailPage(_Out):
     items: list[InboundMailItem]
     total: int
     mailbox: InboundMailMailbox
+    counts: InboundMailCounts
 
 
 class InboundMailAttachment(_Out):
@@ -177,6 +236,7 @@ def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
         assist=_assist(src.assist),
         client=_client(src.client),
         lead=_lead(src.lead),
+        from_history=bool(src.from_history),
     )
 
 
@@ -185,6 +245,7 @@ def to_page(src: crm.InboundMailPage) -> InboundMailPage:
         items=[to_item(i) for i in src.items],
         total=src.total,
         mailbox=InboundMailMailbox.model_validate(src.mailbox.model_dump(mode="json")),
+        counts=InboundMailCounts.model_validate(src.counts.model_dump(mode="json")),
     )
 
 
@@ -204,4 +265,29 @@ def to_mail(src: crm.InboundMailOut) -> InboundMail:
         archive_reason=src.archive_reason,
         handled_at=src.handled_at,
         replies=[InboundMailReply.model_validate(r.model_dump()) for r in src.replies],
+    )
+
+
+def to_history(src: crm.ImapHistoryOut) -> ImapHistory:
+    return ImapHistory.model_validate(src.model_dump(mode="json"))
+
+
+def to_connector(src: crm.ImapStatusOut) -> "ImapConnector":
+    data = src.model_dump(exclude={"folders", "history"})
+    return ImapConnector(
+        **data,
+        folders=[
+            ImapFolder(name=f.name, label=f.label, spam=bool(f.spam)) for f in src.folders or []
+        ],
+        history=to_history(src.history) if src.history is not None else None,
+    )
+
+
+def to_folders(src: crm.ImapFoldersOut) -> ImapFolders:
+    return ImapFolders(
+        ok=src.ok,
+        error_kind=src.error_kind,
+        detail=src.detail,
+        folders=[ImapServerFolder.model_validate(f.model_dump()) for f in src.folders or []],
+        spam_suggestion=src.spam_suggestion,
     )

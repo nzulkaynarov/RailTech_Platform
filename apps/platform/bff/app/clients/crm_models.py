@@ -688,6 +688,61 @@ class ImapCheckOut(BaseModel):
     ok: Annotated[bool, Field(title="Ok")]
 
 
+class ImapFolderOut(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    label: Annotated[str, Field(title="Label")]
+    """
+    Имя для человека (modified UTF-7 раскодирован)
+    """
+    name: Annotated[str, Field(max_length=200, min_length=1, title="Name")]
+    spam: Annotated[bool | None, Field(title="Spam")] = False
+
+
+class ImapFoldersOut(BaseModel):
+    """
+    «Найти папки»: список папок ящика (`LIST`) или причина словом-кодом.
+    """
+
+    detail: Annotated[str | None, Field(title="Detail")] = None
+    error_kind: Annotated[str | None, Field(title="Error Kind")] = None
+    folders: Annotated[list[ImapServerFolder] | None, Field(title="Folders")] = None
+    ok: Annotated[bool, Field(title="Ok")]
+    spam_suggestion: Annotated[str | None, Field(title="Spam Suggestion")] = None
+    """
+    Спам-папка по флагу \\Junk или единственному привычному имени
+    """
+
+
+class ImapHistoryOut(BaseModel):
+    """
+    Загрузка писем за период: ход и итог. `found` — сколько берём (не больше 2000), `limited` —
+    в периоде писем больше, взяты новые.
+    """
+
+    created: Annotated[int, Field(title="Created")]
+    days: Annotated[int, Field(title="Days")]
+    error_kind: Annotated[str | None, Field(title="Error Kind")]
+    finished_at: Annotated[AwareDatetime | None, Field(title="Finished At")]
+    found: Annotated[int, Field(title="Found")]
+    id: Annotated[int, Field(title="Id")]
+    limited: Annotated[bool, Field(title="Limited")]
+    processed: Annotated[int, Field(title="Processed")]
+    started_at: Annotated[AwareDatetime, Field(title="Started At")]
+    status: Annotated[Status5, Field(title="Status")]
+
+
+class ImapServerFolder(BaseModel):
+    junk: Annotated[bool, Field(title="Junk")]
+    """
+    Сервер отметил папку флагом \\Junk (RFC 6154)
+    """
+    label: Annotated[str, Field(title="Label")]
+    name: Annotated[str, Field(title="Name")]
+    selectable: Annotated[bool, Field(title="Selectable")]
+
+
 class ImapStatusOut(BaseModel):
     """
     Приём почты: несекретное и состояние секретов (только на запись).
@@ -695,6 +750,14 @@ class ImapStatusOut(BaseModel):
 
     assist_enabled: Annotated[bool, Field(title="Assist Enabled")]
     configured: Annotated[bool, Field(title="Configured")]
+    folders: Annotated[list[ImapFolderOut] | None, Field(title="Folders")] = None
+    """
+    Папки опроса; по умолчанию одна — `mailbox`
+    """
+    history: ImapHistoryOut | None = None
+    """
+    Последняя загрузка писем за период
+    """
     host: Annotated[str, Field(title="Host")]
     last_error: Annotated[str | None, Field(title="Last Error")]
     last_error_kind: Annotated[str | None, Field(title="Last Error Kind")]
@@ -720,7 +783,7 @@ class InboundMailAssist(BaseModel):
 
     action: Annotated[Action1 | None, Field(title="Action")] = None
     kind: Annotated[Kind | None, Field(title="Kind")] = None
-    status: Annotated[Status5, Field(title="Status")]
+    status: Annotated[Status6, Field(title="Status")]
     summary: Annotated[str | None, Field(title="Summary")] = None
 
 
@@ -731,11 +794,25 @@ class InboundMailAttachment(BaseModel):
     size: Annotated[int, Field(title="Size")]
 
 
+class InboundMailCounts(BaseModel):
+    """
+    Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные.
+    """
+
+    history: Annotated[int, Field(title="History")]
+    new: Annotated[int, Field(title="New")]
+    spam: Annotated[int, Field(title="Spam")]
+
+
 class InboundMailItem(BaseModel):
     assist: InboundMailAssist
     attachments_count: Annotated[int, Field(title="Attachments Count")]
     client: InboundMailLink | None = None
     from_email: Annotated[str, Field(title="From Email")]
+    from_history: Annotated[bool | None, Field(title="From History")] = False
+    """
+    Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»
+    """
     from_name: Annotated[str, Field(title="From Name")]
     id: Annotated[int, Field(title="Id")]
     lead: InboundMailLink | None = None
@@ -748,7 +825,7 @@ class InboundMailItem(BaseModel):
     """
     received_at: Annotated[AwareDatetime, Field(title="Received At")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
-    status: Annotated[Status6, Field(title="Status")]
+    status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
 
 
@@ -774,6 +851,10 @@ class InboundMailOut(BaseModel):
     eds_letter_id: Annotated[str | None, Field(title="Eds Letter Id")]
     eds_letter_number: Annotated[str | None, Field(title="Eds Letter Number")]
     from_email: Annotated[str, Field(title="From Email")]
+    from_history: Annotated[bool | None, Field(title="From History")] = False
+    """
+    Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»
+    """
     from_name: Annotated[str, Field(title="From Name")]
     handled_at: Annotated[AwareDatetime | None, Field(title="Handled At")]
     handled_by: Annotated[int | None, Field(title="Handled By")]
@@ -792,7 +873,7 @@ class InboundMailOut(BaseModel):
     result_lead: InboundMailLink | None
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
-    status: Annotated[Status6, Field(title="Status")]
+    status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     text: Annotated[str, Field(title="Text")]
     to: Annotated[list[str], Field(title="To")]
@@ -800,6 +881,7 @@ class InboundMailOut(BaseModel):
 
 
 class InboundMailPage(BaseModel):
+    counts: InboundMailCounts
     items: Annotated[list[InboundMailItem], Field(title="Items")]
     mailbox: InboundMailbox
     total: Annotated[int, Field(title="Total")]
@@ -871,7 +953,7 @@ class InvitationOut(BaseModel):
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
     sent_via: Annotated[list[SentViaEnum] | None, Field(title="Sent Via")] = None
-    status: Annotated[Status8, Field(title="Status")]
+    status: Annotated[Status9, Field(title="Status")]
     suggested_channel: Annotated[
         SuggestedChannel | None, Field(title="Suggested Channel")
     ] = None
@@ -1122,7 +1204,7 @@ class NoticeOut(BaseModel):
     error_text: Annotated[str | None, Field(title="Error Text")] = None
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
-    status: Annotated[Status8, Field(title="Status")]
+    status: Annotated[Status9, Field(title="Status")]
 
 
 class OffsiteCheckOut(BaseModel):
@@ -1325,7 +1407,7 @@ class ServiceCheckOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     error: Annotated[str | None, Field(title="Error")]
     latency_ms: Annotated[int | None, Field(title="Latency Ms")]
-    status: Annotated[Status10, Field(title="Status")]
+    status: Annotated[Status11, Field(title="Status")]
     summary: Annotated[str, Field(title="Summary")]
     tier: Annotated[Tier, Field(title="Tier")]
 
@@ -1569,7 +1651,7 @@ class Status1(StrEnum):
     skipped_no_smtp = "skipped_no_smtp"
 
 
-class Status10(StrEnum):
+class Status11(StrEnum):
     ok = "ok"
     warn = "warn"
     fail = "fail"
@@ -1577,7 +1659,7 @@ class Status10(StrEnum):
     off = "off"
 
 
-class Status11(StrEnum):
+class Status12(StrEnum):
     ok = "ok"
     warn = "warn"
     fail = "fail"
@@ -1599,20 +1681,27 @@ class Status4(StrEnum):
 
 
 class Status5(StrEnum):
+    running = "running"
+    done = "done"
+    error = "error"
+
+
+class Status6(StrEnum):
     none = "none"
     done = "done"
     unavailable = "unavailable"
     off = "off"
 
 
-class Status6(StrEnum):
+class Status7(StrEnum):
     new = "new"
+    spam = "spam"
     registered = "registered"
     lead = "lead"
     archived = "archived"
 
 
-class Status8(StrEnum):
+class Status9(StrEnum):
     queued = "queued"
     sent = "sent"
     failed = "failed"
@@ -1634,7 +1723,7 @@ class System(StrEnum):
 class SystemStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     components: Annotated[list[ComponentStatusOut], Field(title="Components")]
-    status: Annotated[Status11, Field(title="Status")]
+    status: Annotated[Status12, Field(title="Status")]
 
 
 class TeamMember(BaseModel):

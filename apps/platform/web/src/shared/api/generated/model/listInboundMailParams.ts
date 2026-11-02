@@ -6,4 +6,5 @@ import type { InboundMailStatus } from "./inboundMailStatus";
 
 export type ListInboundMailParams = {
   status?: InboundMailStatus;
+  history?: boolean;
 };
