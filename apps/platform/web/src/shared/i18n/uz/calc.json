@@ -32,7 +32,9 @@
     "returned": "Qayta ishlashga qaytarilgan",
     "at_director": "TK qoralamasi direktorda",
     "rejected": "TK rad etilgan",
-    "approved": "TK ma’qullangan"
+    "approved": "TK ma’qullangan",
+    "rejected_client": "Mijoz rad etdi",
+    "rejected_director": "Direktor rad etdi"
   },
   "groups": {
     "stock": "Ombor",
@@ -54,6 +56,7 @@
     "steps": "Ariza yo‘li",
     "openTask": "Topshiriq va vizalar",
     "atDirector": "{{number}} TK qoralamasi direktorda ma’qullashda. Direktor qaror qilguncha qatorlar o‘zgartirilmaydi.",
+    "atDirectorVersion": "{{number}} TK qoralamasi, {{version}}-versiya, direktorda ma’qullashda. Direktor qaror qilguncha qatorlar o‘zgartirilmaydi.",
     "returned": "Direktor TKni qayta ishlashga qaytardi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
     "rejected": "Direktor TKni rad etdi. Hisob-kitob yopildi.",
     "approved": "Direktor TKni ma’qulladi. Hisob-kitob o‘zgartirish uchun yopiq.",
@@ -72,7 +75,8 @@
     },
     "request": "Ariza matni",
     "requestEmpty": "Ariza matni yo‘q.",
-    "requestPrice": "Yetkazib beruvchidan narx so‘rash"
+    "requestPrice": "Yetkazib beruvchidan narx so‘rash",
+    "rejectedComment": "Direktor TTni rad etdi: «{{comment}}». Hisob-kitob yopildi."
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
@@ -135,7 +139,8 @@
     "reserve": "{{count}} zaxiralash",
     "reserveLabel": "«{{name}}» uchun {{count}} zaxiralash",
     "release": "Zaxirani olib tashlash",
-    "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash"
+    "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash",
+    "markupLabel": "Ustama, %: {{name}}"
   },
   "add": {
     "button": "Qator qo‘shish",
@@ -195,7 +200,8 @@
       "at_director": "TK qoralamasi allaqachon direktorda: qaror qabul qilinguncha qatorlar yopiq.",
       "approved": "TK direktor tomonidan ma’qullangan — hisob-kitob yopiq. Uni TKning yangi versiyasi bilan o‘zgartirish mumkin.",
       "rejected": "Direktor TKni rad etdi — hisob-kitob yopiq.",
-      "not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda — TKni bu yerdan direktorga yuborib bo‘lmaydi."
+      "not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda — TKni bu yerdan direktorga yuborib bo‘lmaydi.",
+      "rejected_client": "Mijoz TTni rad etdi — yuqorida tanlang: TTning yangi versiyasi yoki arizadan voz kechish."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
     "consequence": [
@@ -240,11 +246,13 @@
     "client_price_below_cost": "Mijoz narxi xarid narxidan past.",
     "markup_out_of_range": "Ustama 0–500 % chegarasidan tashqarida.",
     "zone_not_permitted": "Bu qatorni boshqa mutaxassis o‘zgartiradi: tovarlar — ta’minotchi, xizmatlar — bosh muhandis.",
-    "cost_forbidden": "Xarid narxini tannarxga ruxsati bor xodim o‘zgartiradi.",
+    "cost_forbidden": "Xarid narxi va ustamani tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
     "unavailable": "ERP javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
     "other": "Saqlanmadi: {{message}}",
-    "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda."
+    "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda.",
+    "quote_not_rejected_by_client": "Yangi versiya va voz kechish mijoz TTni rad etgandan keyin mavjud.",
+    "reason_required": "Sababni kiriting."
   },
   "load": {
     "retry": "Qayta urinish",
@@ -264,6 +272,36 @@
       "title": "Ariza hisob-kitob topshiriqlari orasida yo‘q",
       "text": "Topshiriq direktor rezolyutsiyasidan keyin paydo bo‘ladi. Raqamni tekshiring yoki ro‘yxatni oching.",
       "action": "Hisob-kitobdagi arizalar"
+    }
+  },
+  "rejection": {
+    "client": "Mijoz {{number}} TTni (versiya {{version}}) rad etdi: «{{reason}}».",
+    "clientNoReason": "Mijoz {{number}} TTni (versiya {{version}}) sababsiz rad etdi.",
+    "choose": "Ariza hisob-kitobga qaytdi. Keyingi qadamni tanlang: qayta hisoblab, mijozga TTning yangi versiyasini yuborish yoki arizani rad bilan yopish.",
+    "closed": "Ariza rad bilan yopildi. Uning zaxirasi bekor qilindi.",
+    "noRights": "Ariza bo‘yicha qarorni TT tuzish huquqiga ega menejer qabul qiladi.",
+    "cancel": "Bekor qilish",
+    "newVersion": {
+      "button": "TTning yangi versiyasi",
+      "done": "Hisob-kitob qayta ochildi: TT qoralamasi, versiya {{version}}",
+      "consequence": [
+        "«TTning yangi versiyasi»: qatorlar va narxlar keyingi versiya qoralamasiga o‘tadi, vizalar qaytadan yig‘iladi; mijoz rad etganda bekor qilingan zaxira shu ekranda qayta qo‘yiladi.",
+        "Oldingi versiya tarixda mijoz rad etgan sifatida qoladi.",
+        "«Arizadan voz kechish»: ariza sabab bilan yopiladi, uning zaxirasi bekor qilingan, mijozga hech narsa yuborilmaydi."
+      ]
+    },
+    "lost": {
+      "button": "Arizadan voz kechish",
+      "title": "{{number}} arizadan voz kechish",
+      "reason": "Voz kechish sababi",
+      "hint": "Majburiy. Ariza jurnaliga va CRMga tushadi.",
+      "submit": "Arizani rad bilan yopish",
+      "done": "Ariza rad bilan yopildi, zaxira bekor qilindi",
+      "consequence": [
+        "Ariza «Rad» bosqichiga o‘tadi; uni hisob-kitobga direktor qaytara oladi.",
+        "Ariza bo‘yicha tovar zaxirasi bekor qilinib, bo‘sh qoldiqqa qaytadi.",
+        "Mijozga hech narsa yuborilmaydi."
+      ]
     }
   }
 }

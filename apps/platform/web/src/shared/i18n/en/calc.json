@@ -32,7 +32,9 @@
     "returned": "Returned for rework",
     "at_director": "Draft quote with the director",
     "rejected": "Quote rejected",
-    "approved": "Quote approved"
+    "approved": "Quote approved",
+    "rejected_client": "Rejected by the client",
+    "rejected_director": "Rejected by the director"
   },
   "groups": {
     "stock": "Stock",
@@ -54,6 +56,7 @@
     "steps": "Request path",
     "openTask": "Task and sign-offs",
     "atDirector": "Draft quote {{number}} is with the director for approval. Lines are locked until the director decides.",
+    "atDirectorVersion": "Draft quote {{number}}, version {{version}}, is with the director for approval. Lines are locked until the director decides.",
     "returned": "The director returned the quote for rework: “{{comment}}”. Fix the lines and sign them off again.",
     "rejected": "The director rejected the quote. Costing is closed.",
     "approved": "The director approved the quote. Costing is locked.",
@@ -72,7 +75,8 @@
     },
     "request": "Request text",
     "requestEmpty": "No request text.",
-    "requestPrice": "Request a supplier price"
+    "requestPrice": "Request a supplier price",
+    "rejectedComment": "The director rejected the quote: “{{comment}}”. The costing is closed."
   },
   "lines": {
     "title": "Costing lines",
@@ -135,7 +139,8 @@
     "reserve": "Reserve {{count}}",
     "reserveLabel": "Reserve {{count}} for “{{name}}”",
     "release": "Release reservation",
-    "releaseLabel": "Release the reservation of line “{{name}}”"
+    "releaseLabel": "Release the reservation of line “{{name}}”",
+    "markupLabel": "Markup, %: {{name}}"
   },
   "add": {
     "button": "Add line",
@@ -195,7 +200,8 @@
       "at_director": "The draft quote is already with the director: lines are locked until the decision.",
       "approved": "The director approved the quote — costing is closed. Change it with a new quote version.",
       "rejected": "The director rejected the quote — costing is closed.",
-      "not_in_calculation": "The request is closed or past costing — the quote cannot be sent to the director from here."
+      "not_in_calculation": "The request is closed or past costing — the quote cannot be sent to the director from here.",
+      "rejected_client": "The client rejected the quote — choose above: a new quote version or a lost request."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
     "consequence": [
@@ -240,11 +246,13 @@
     "client_price_below_cost": "The client price is below the purchase price.",
     "markup_out_of_range": "Markup is outside 0–500 %.",
     "zone_not_permitted": "Another specialist edits this line: goods — supply, services — the chief engineer.",
-    "cost_forbidden": "Purchase prices are edited by employees with access to cost.",
+    "cost_forbidden": "Purchase prices and markup are edited by employees with access to cost.",
     "forbidden": "Your role does not allow this action.",
     "unavailable": "ERP did not respond. Try again in a minute.",
     "other": "Not saved: {{message}}",
-    "deal_not_in_calculation": "The request is closed or past costing."
+    "deal_not_in_calculation": "The request is closed or past costing.",
+    "quote_not_rejected_by_client": "A new version and a lost request are available once the client rejects the quote.",
+    "reason_required": "Give the reason."
   },
   "load": {
     "retry": "Retry",
@@ -264,6 +272,36 @@
       "title": "The request is not among costing tasks",
       "text": "A task appears after the director's resolution. Check the number or open the list.",
       "action": "Requests in costing"
+    }
+  },
+  "rejection": {
+    "client": "The client rejected quote {{number}} (version {{version}}): “{{reason}}”.",
+    "clientNoReason": "The client rejected quote {{number}} (version {{version}}) without a reason.",
+    "choose": "The request is back in costing. Decide what is next: recalculate and send a new quote version, or close the request as lost.",
+    "closed": "The request is closed as lost. Its reservation is released.",
+    "noRights": "A manager allowed to build quotes decides on the request.",
+    "cancel": "Cancel",
+    "newVersion": {
+      "button": "New quote version",
+      "done": "Costing reopened: draft quote version {{version}}",
+      "consequence": [
+        "“New quote version”: lines and prices move to the next version draft, visas are collected again; the reservation released on the client’s rejection is set again on this screen.",
+        "The previous version stays in history as rejected by the client.",
+        "“Lost request”: the request is closed with a reason, its reservation is released, nothing goes to the client."
+      ]
+    },
+    "lost": {
+      "button": "Lost request",
+      "title": "Lost request {{number}}",
+      "reason": "Reason",
+      "hint": "Required. Goes to the request log and to CRM.",
+      "submit": "Close as lost",
+      "done": "Request closed as lost, reservation released",
+      "consequence": [
+        "The request moves to “Lost”; the director can return it to costing.",
+        "The goods reservation is released back to free stock.",
+        "Nothing is sent to the client."
+      ]
     }
   }
 }

@@ -90,7 +90,10 @@ describe("Расчёт по заявке", () => {
     expect(
       within(rail).getByLabelText("Закупка за единицу для «Перевод стрелочный Р65 марки 1/11»"),
     ).toBeEnabled();
-    expect(within(rail).getByText("15.0")).toBeVisible();
+    expect(
+      within(rail).getByLabelText<HTMLInputElement>("Наценка, %: Перевод стрелочный Р65 марки 1/11")
+        .value,
+    ).toMatch(/^15([.,]0+)?$/);
     expect(
       within(rail).getByRole("button", {
         name: "Подтвердить строку «Перевод стрелочный Р65 марки 1/11»",
@@ -145,10 +148,23 @@ describe("Расчёт по заявке", () => {
   });
 
   it("подсказка «Расчёт готов» для закрытого расчёта называет состояние КП", () => {
-    const quote = { number: "КП-1", version: 1, director_comment: null, vat_rate: "12.00" };
+    const quote = {
+      number: "КП-1",
+      version: 1,
+      director_comment: null,
+      rejected_by: null,
+      reject_reason: null,
+      can_revise: false,
+      vat_rate: "12.00",
+    };
     const ready = { allowed: false, blocker: "not_draft", missing: 0 } as const;
     expect(readyHintKey({ ready, quote: { ...quote, state: "approved" } })).toBe("approved");
-    expect(readyHintKey({ ready, quote: { ...quote, state: "rejected" } })).toBe("rejected");
+    expect(
+      readyHintKey({ ready, quote: { ...quote, state: "rejected", rejected_by: "director" } }),
+    ).toBe("rejected");
+    expect(
+      readyHintKey({ ready, quote: { ...quote, state: "rejected", rejected_by: "client" } }),
+    ).toBe("rejected_client");
     expect(readyHintKey({ ready, quote: { ...quote, state: "at_director" } })).toBe("at_director");
     expect(readyHintKey({ ready: { ...ready, blocker: "visas_missing" }, quote: null })).toBe(
       "visas_missing",

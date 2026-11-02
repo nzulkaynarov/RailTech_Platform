@@ -39,6 +39,7 @@ class QuoteApprovalRow(BaseModel):
     id: str
     number: str
     version: int
+    superseded_by: int | None
     request_number: str | None
     client_name: str | None
     total: EdsMoney | None
@@ -182,6 +183,7 @@ class QuoteApprovalCard(BaseModel):
     id: str
     number: str
     version: int
+    superseded_by: int | None
     round: int
     status: RouteStatus
     stage: StepCode
@@ -375,6 +377,7 @@ class RawObject(BaseModel):
     quote_version: int | None = None
     erp_deal_id: int | None = None
     deal_number: str | None = None
+    superseded_by_version: int | None = None
 
 
 class RawApproval(BaseModel):

@@ -383,6 +383,27 @@ function ClientPrice({ line, actions }: { line: CalcLine; actions: Actions }) {
   );
 }
 
+/**
+ * Наценка строки (D26G-5): видна с доступом к себестоимости; правится там же, где цена клиенту. Введённая наценка —
+ * цена из неё, округлённая до сума; введённая цена — хранится как есть, наценка пересчитывается из неё.
+ */
+function Markup({ line, actions }: { line: CalcLine; actions: Actions }) {
+  const { t } = useTranslation("calc");
+  if (!line.can_edit || line.cost === null || line.cost === undefined) {
+    return <span className="pf-num">{line.markup_pct ?? "—"}</span>;
+  }
+  return (
+    <NumberCell
+      value={line.markup_pct ?? null}
+      label={t("lines.markupLabel", { name: line.name })}
+      disabled={actions.pending}
+      onCommit={(next) => {
+        actions.patch(line, { markup_pct: next });
+      }}
+    />
+  );
+}
+
 function Quantity({ line, actions }: { line: CalcLine; actions: Actions }) {
   const { t } = useTranslation("calc");
   return (
@@ -505,7 +526,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 {showMarkup ? (
                   <>
                     <span className="pf-hint">{t("lines.columns.markup")}</span>
-                    <span className="pf-num">{line.markup_pct ?? "—"}</span>
+                    <Markup line={line} actions={actions} />
                   </>
                 ) : null}
               </div>
@@ -575,7 +596,9 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <td className="pf-col-num">
                   <ClientPrice line={line} actions={actions} />
                 </td>
-                <td className="pf-col-num">{showMarkup ? (line.markup_pct ?? "—") : "—"}</td>
+                <td className="pf-col-num">
+                  {showMarkup ? <Markup line={line} actions={actions} /> : "—"}
+                </td>
                 <td>
                   <Visa line={line} actions={actions} />
                 </td>

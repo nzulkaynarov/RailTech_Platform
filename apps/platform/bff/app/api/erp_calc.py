@@ -22,6 +22,7 @@ from app.schemas_erp_calc import (
     CalcCatalogPage,
     CalcLinePatch,
     CalcLinesIn,
+    CalcLostIn,
     CalcParseIn,
     CalcParseJob,
     CalcParseResult,
@@ -48,6 +49,7 @@ ZONE_SECTION = {"goods": "erp.calc.goods", "service": "erp.calc.services"}
 _FIELD_OF = {
     "CLIENT_PRICE_BELOW_COST": "client_price",
     "MARKUP_OUT_OF_RANGE": "client_price",
+    "REASON_REQUIRED": "reason",
     "SERVICE_COST_FROM_CREW": "purchase_price",
     "GOODS_HAVE_NO_CREW": "crew_rate",
     "NAME_REQUIRED": "name",
@@ -68,6 +70,9 @@ _MESSAGES = {
     "CALC_NOT_STARTED": "Расчёт ещё не начат.",
     "DEAL_NOT_IN_CALCULATION": (
         "Заявка закрыта или ушла дальше расчёта: КП директору отсюда не отправить."
+    ),
+    "QUOTE_NOT_REJECTED_BY_CLIENT": (
+        "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте."
     ),
     "AI_DISABLED": "ИИ-разбор выключен в настройках моделей. Добавьте строки вручную.",
     "REQUEST_TEXT_EMPTY": "В заявке нет текста для разбора. Вставьте текст в поле.",
@@ -316,6 +321,13 @@ async def update_line(
             status_code=422,
             details={"reason": "cost_forbidden", "fields": cost_fields},
         )
+    if "markup_pct" in patch and "cost_margin" not in authed.fields:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Наценку правит сотрудник с доступом к себестоимости.",
+            status_code=422,
+            details={"reason": "cost_forbidden", "fields": ["markup_pct"]},
+        )
     if patch.get("product_id") is not None:
         patch["product_id"] = int(patch["product_id"])
     return await _sheet(authed, number, "PATCH", f"lines/{line_id}/", patch)
@@ -349,6 +361,37 @@ async def sign_line(authed: ZoneHolder, number: Number, line_id: LineId) -> Calc
 )
 async def mark_ready(authed: Builder, number: Number) -> CalcSheet:
     return await _sheet(authed, number, "POST", "ready/")
+
+
+@router.post(
+    "/calc/{number}/new-version",
+    response_model=CalcSheet,
+    response_model_exclude_unset=True,
+    operation_id="newCalcQuoteVersion",
+)
+async def new_version(authed: Builder, number: Number) -> CalcSheet:
+    """«Новая версия КП»: клиент отклонил КП — расчёт снова открыт черновиком версии +1 (D26G-3)."""
+    return await _sheet(authed, number, "POST", "new-version/")
+
+
+@router.post(
+    "/calc/{number}/lost",
+    response_model=CalcSheet,
+    response_model_exclude_unset=True,
+    operation_id="loseCalcRequest",
+)
+async def lose(authed: Builder, number: Number, body: Annotated[CalcLostIn, Body()]) -> CalcSheet:
+    """«Отказ по заявке» с причиной после отказа клиента: стадия «Отказ», резервы снимает ERP
+    (D26G-3)."""
+    reason = body.reason.strip()
+    if not reason:
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Укажите причину отказа.",
+            status_code=422,
+            details={"reason": "reason_required", "fields": ["reason"]},
+        )
+    return await _sheet(authed, number, "POST", "lost/", {"reason": reason})
 
 
 @router.post(

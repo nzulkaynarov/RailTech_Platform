@@ -1938,9 +1938,15 @@ export interface components {
       number?: components["schemas"]["DocumentNumber"];
       erp_quote_id?: number;
       quote_number?: string;
+      /** @description Версия КП ERP (`Quote.version`, сквозная в заявке); повторная отправка после возврата — версия +1 */
       quote_version?: number;
       erp_deal_id?: number | null;
       deal_number?: string | null;
+      /**
+       * @description Только у КП, которое заменила более новая версия (D26G-2): номер новейшей версии того же КП или той же заявки.
+       *     Нет поля — версия актуальна. Платформа показывает такую версию в истории как «Заменена».
+       */
+      superseded_by_version?: number;
     };
     /**
      * @description Строка чек-листа одобрения КП (SPEC-v3 §7.3) — с датой и автором. `margin` сверяет маржу КП с порогом **резолюции EDS**

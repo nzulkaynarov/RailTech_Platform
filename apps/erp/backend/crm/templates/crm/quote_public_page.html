@@ -229,7 +229,7 @@
           </div>
         </div>
         <div class="doc-id">
-          <div class="doc-no">КП {% if quote.number %}№ {{ quote.number }}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+          <div class="doc-no">КП {% if quote.number %}№ {{ quote.number }}{% if quote.version > 1 %}, версия {{ quote.version }}{% endif %}{% else %}{{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
           {# Т4 — тот же мета-блок, что в PDF (близнецы): дата/срок/менеджер/контакты в шапке. #}
           <table class="meta-grid">
             <tr><td class="mk">Дата</td><td>{{ quote.created_at|date:"d.m.Y" }}</td></tr>

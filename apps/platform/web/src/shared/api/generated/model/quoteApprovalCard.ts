@@ -23,8 +23,17 @@ export interface QuoteApprovalCard {
   /** Маршрут одобрения КП (EDS); именно он идёт в `POST /eds/quotes/{id}/decision` */
   id: string;
   number: string;
-  /** @minimum 1 */
+  /**
+   * Версия КП; состав КП из ERP показывается, только если версия ERP та же
+   * @minimum 1
+   */
   version: number;
+  /**
+   * Версию заменила более новая (D26G-2): карточка — история, «Заменена версией N», решений нет; `null` — актуальна
+   * @minimum 2
+   * @nullable
+   */
+  superseded_by: number | null;
   /** @minimum 1 */
   round: number;
   status: ApprovalRouteStatus;

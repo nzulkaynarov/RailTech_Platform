@@ -26,6 +26,7 @@ import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
 import { PriceRequestModal } from "./PriceRequestModal";
 import { PriceRequests } from "./PriceRequests";
+import { ClientRejection } from "./Rejection";
 import { TaskSlot } from "./TaskPanel";
 
 import "./calc.css";
@@ -36,13 +37,28 @@ function stateOf(sheet: CalcSheet) {
   return sheet.quote ? sheet.quote.state : "not_started";
 }
 
+/** Подпись состояния: у отклонённого КП — кто отклонил (клиент или директор, D26G-3). */
+function stateLabel(sheet: CalcSheet): string {
+  const quote = sheet.quote;
+  if (quote?.state === "rejected" && quote.rejected_by) return `rejected_${quote.rejected_by}`;
+  return stateOf(sheet);
+}
+
 function Banner({ sheet }: { sheet: CalcSheet }) {
   const { t } = useTranslation("calc");
   const quote = sheet.quote;
   if (!quote) return null;
   if (quote.state === "at_director") {
     return (
-      <Alert type="info" showIcon message={t("sheet.atDirector", { number: quote.number ?? "" })} />
+      <Alert
+        type="info"
+        showIcon
+        message={
+          quote.version > 1
+            ? t("sheet.atDirectorVersion", { number: quote.number ?? "", version: quote.version })
+            : t("sheet.atDirector", { number: quote.number ?? "" })
+        }
+      />
     );
   }
   if (quote.state === "returned") {
@@ -54,8 +70,20 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
       />
     );
   }
-  if (quote.state === "rejected")
-    return <Alert type="error" showIcon message={t("sheet.rejected")} />;
+  if (quote.state === "rejected") {
+    if (quote.rejected_by === "client") return <ClientRejection sheet={sheet} />;
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message={
+          quote.reject_reason
+            ? t("sheet.rejectedComment", { comment: quote.reject_reason })
+            : t("sheet.rejected")
+        }
+      />
+    );
+  }
   if (quote.state === "approved")
     return <Alert type="success" showIcon message={t("sheet.approved")} />;
   if (!sheet.rights.goods && !sheet.rights.services) {
@@ -201,7 +229,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
         extra={
           <div className="pf-calc-row">
             <StatusTag kind="quote" status={state}>
-              {t(`state.${state}`)}
+              {t(`state.${stateLabel(sheet)}`)}
             </StatusTag>
             {sheet.quote !== null && sheet.rights.stock === true ? (
               <Button

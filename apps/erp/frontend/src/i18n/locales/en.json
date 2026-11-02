@@ -2955,6 +2955,10 @@
       "director_rejected": {
         "title": "Quote rejected by the director",
         "detail": "{{comment}}"
+      },
+      "superseded": {
+        "title": "Quote: new version",
+        "detail": "Quote {{number}}: version {{version}} superseded by version {{new_version}}"
       }
     },
     "contract": {

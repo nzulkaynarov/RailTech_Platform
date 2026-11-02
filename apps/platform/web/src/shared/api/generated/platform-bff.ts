@@ -56,6 +56,7 @@ import type {
   CalcConflictResponse,
   CalcLinePatch,
   CalcLinesIn,
+  CalcLostIn,
   CalcParseIn,
   CalcParseJob,
   CalcParseResult,
@@ -32222,6 +32223,245 @@ export const useMarkCalcReady = <
   TContext
 > => {
   return useMutation(getMarkCalcReadyMutationOptions(options), queryClient);
+};
+
+export const getNewCalcQuoteVersionUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/new-version`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/new-version/` (D26G-3, SPEC-v3 §3.3). Только когда клиент отклонил КП и заявка вернулась в расчёт (`quote.can_revise`), иначе 409 `details.reason = quote_not_rejected_by_client`. ERP копирует КП в черновик версии +1: строки, введённые цены, тип строк и вводные бригады; визы собираются заново, резервы строк переходят на копии. Прежняя версия остаётся отклонённой в истории. Раздел `erp.calc` — полный.
+ * @summary Расчёт · «Новая версия КП» после отказа клиента
+ */
+export const newCalcQuoteVersion = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getNewCalcQuoteVersionUrl(number), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getNewCalcQuoteVersionMutationKey = () => ["newCalcQuoteVersion"] as const;
+
+export const getNewCalcQuoteVersionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof newCalcQuoteVersion>>,
+    TError,
+    NewCalcQuoteVersionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof newCalcQuoteVersion>>,
+  TError,
+  NewCalcQuoteVersionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNewCalcQuoteVersionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof newCalcQuoteVersion>>,
+    NewCalcQuoteVersionMutationVariables
+  > = (props) => {
+    const { number } = props ?? {};
+
+    return newCalcQuoteVersion(number, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NewCalcQuoteVersionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof newCalcQuoteVersion>>
+>;
+
+export type NewCalcQuoteVersionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | BackendUnavailableResponse
+>;
+export type NewCalcQuoteVersionMutationVariables = { number: string };
+
+/**
+ * @summary Расчёт · «Новая версия КП» после отказа клиента
+ */
+export const useNewCalcQuoteVersion = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof newCalcQuoteVersion>>,
+      TError,
+      NewCalcQuoteVersionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof newCalcQuoteVersion>>,
+  TError,
+  NewCalcQuoteVersionMutationVariables,
+  TContext
+> => {
+  return useMutation(getNewCalcQuoteVersionMutationOptions(options), queryClient);
+};
+
+export const getLoseCalcRequestUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/lost`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/lost/` (D26G-3). Только когда клиент отклонил КП (`quote.can_revise`), иначе 409 `quote_not_rejected_by_client`. Причина обязательна (пустая — 422 `reason_required`). Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной; резервы заявки ERP снимает при переходе стадии. Раздел `erp.calc` — полный.
+ * @summary Расчёт · «Отказ по заявке» после отказа клиента
+ */
+export const loseCalcRequest = async (
+  number: string,
+  calcLostIn: CalcLostIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcSheet>(getLoseCalcRequestUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcLostIn),
+  });
+};
+
+export const getLoseCalcRequestMutationKey = () => ["loseCalcRequest"] as const;
+
+export const getLoseCalcRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof loseCalcRequest>>,
+    TError,
+    LoseCalcRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof loseCalcRequest>>,
+  TError,
+  LoseCalcRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getLoseCalcRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof loseCalcRequest>>,
+    LoseCalcRequestMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return loseCalcRequest(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type LoseCalcRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof loseCalcRequest>>
+>;
+export type LoseCalcRequestMutationBody = CalcLostIn;
+export type LoseCalcRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type LoseCalcRequestMutationVariables = { number: string; data: CalcLostIn };
+
+/**
+ * @summary Расчёт · «Отказ по заявке» после отказа клиента
+ */
+export const useLoseCalcRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof loseCalcRequest>>,
+      TError,
+      LoseCalcRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof loseCalcRequest>>,
+  TError,
+  LoseCalcRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getLoseCalcRequestMutationOptions(options), queryClient);
 };
 
 export const getParseCalcTextUrl = (number: string) => {

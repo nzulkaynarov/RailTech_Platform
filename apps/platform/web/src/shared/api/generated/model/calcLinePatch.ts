@@ -29,7 +29,10 @@ export interface CalcLinePatch {
   purchase_currency?: string;
   crew_rate?: DecimalString | null;
   crew_days?: DecimalString | null;
+  /** Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5) */
   client_price?: DecimalString;
+  /** Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
+  markup_pct?: DecimalString;
   /**
    * @nullable
    * @pattern ^[0-9]+$

@@ -1,4 +1,4 @@
-import { Button, Card, Skeleton } from "antd";
+import { Alert, Button, Card, Skeleton } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
@@ -178,6 +178,13 @@ function Content({
         }
       />
       <SourceBanner sources={quote.sources} onRetry={refetch} />
+      {quote.superseded_by ? (
+        <Alert
+          type="info"
+          showIcon
+          message={t("card.superseded", { version: quote.version, next: quote.superseded_by })}
+        />
+      ) : null}
       <section className="pf-card pf-dec-steps" aria-label={t("card.steps")}>
         <RequestSteps
           stage={quote.stage}

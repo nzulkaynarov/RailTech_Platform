@@ -8587,6 +8587,61 @@ paths:
         '409': {$ref: '#/components/responses/CalcConflict'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/calc/{number}/new-version:
+    post:
+      tags: [calc]
+      operationId: newCalcQuoteVersion
+      summary: 'Расчёт · «Новая версия КП» после отказа клиента'
+      description: >-
+        ERP `POST /calc/{deal_id}/new-version/` (D26G-3, SPEC-v3 §3.3). Только когда клиент отклонил КП и заявка вернулась в
+        расчёт (`quote.can_revise`), иначе 409 `details.reason = quote_not_rejected_by_client`. ERP копирует КП в черновик
+        версии +1: строки, введённые цены, тип строк и вводные бригады; визы собираются заново, резервы строк переходят на
+        копии. Прежняя версия остаётся отклонённой в истории. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Расчёт снова открыт — черновик новой версии
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/lost:
+    post:
+      tags: [calc]
+      operationId: loseCalcRequest
+      summary: 'Расчёт · «Отказ по заявке» после отказа клиента'
+      description: >-
+        ERP `POST /calc/{deal_id}/lost/` (D26G-3). Только когда клиент отклонил КП (`quote.can_revise`), иначе 409
+        `quote_not_rejected_by_client`. Причина обязательна (пустая — 422 `reason_required`). Заявка — стадия «Отказ»
+        (CLOSED_LOST), событие `deal.lost` с причиной; резервы заявки ERP снимает при переходе стадии. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcLostIn'}
+      responses:
+        '200':
+          description: Заявка закрыта с отказом
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/calc/{number}/parse:
     post:
       tags: [calc]
@@ -14410,11 +14465,16 @@ components:
     QuoteApprovalRow:
       type: object
       additionalProperties: false
-      required: [id, number, version, request_number, client_name, total, due, status, can_decide, outgoing_number, created_at]
+      required:
+        [id, number, version, superseded_by, request_number, client_name, total, due, status, can_decide, outgoing_number, created_at]
       properties:
         id: {type: string, format: uuid, description: Маршрут одобрения КП (EDS)}
         number: {type: string, description: Номер КП, examples: [КП-2026/115]}
-        version: {type: integer, minimum: 1}
+        version: {type: integer, minimum: 1, description: 'Версия КП — та же, что у КП в ERP и на экране расчёта'}
+        superseded_by:
+          type: [integer, 'null']
+          minimum: 2
+          description: 'Версию заменила более новая (D26G-2, EDS `superseded_by_version`): в истории — «Заменена версией N»; `null` — актуальна'
         request_number: {type: [string, 'null'], description: Бизнес-номер заявки ЗВ}
         client_name: {type: [string, 'null'], description: 'Из снимка КП; `null` у роли, которой EDS снимок не отдаёт'}
         total: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: Итог с НДС из снимка КП}
@@ -14592,13 +14652,17 @@ components:
       type: object
       additionalProperties: false
       required:
-        [id, number, version, round, status, stage, can_decide, allowed_decisions, approved_late, outgoing_number, created_at,
+        [id, number, version, superseded_by, round, status, stage, can_decide, allowed_decisions, approved_late, outgoing_number, created_at,
          ready_at, due, client_name, request, letter, calculated_by, snapshot_total, totals_mismatch, lines, totals, checklist, steps,
          channels, delivery, client_comments, sources]
       properties:
         id: {type: string, format: uuid, description: 'Маршрут одобрения КП (EDS); именно он идёт в `POST /eds/quotes/{id}/decision`'}
         number: {type: string}
-        version: {type: integer, minimum: 1}
+        version: {type: integer, minimum: 1, description: 'Версия КП; состав КП из ERP показывается, только если версия ERP та же'}
+        superseded_by:
+          type: [integer, 'null']
+          minimum: 2
+          description: 'Версию заменила более новая (D26G-2): карточка — история, «Заменена версией N», решений нет; `null` — актуальна'
         round: {type: integer, minimum: 1}
         status: {$ref: '#/components/schemas/ApprovalRouteStatus'}
         stage: {$ref: '#/components/schemas/StepCode'}
@@ -17951,12 +18015,25 @@ components:
     CalcQuote:
       type: object
       additionalProperties: false
-      required: [number, version, state, director_comment, vat_rate]
+      required: [number, version, state, director_comment, rejected_by, reject_reason, can_revise, vat_rate]
       properties:
         number: {type: [string, 'null'], description: Номер КП появляется при «Расчёт готов»}
-        version: {type: integer, minimum: 1}
+        version:
+          type: integer
+          minimum: 1
+          description: Версия КП ERP — та же, что у КП на одобрение в EDS; повторный «Расчёт готов» после возврата — +1
         state: {$ref: '#/components/schemas/CalcState'}
         director_comment: {type: [string, 'null'], description: Комментарий директора при возврате на доработку}
+        rejected_by:
+          type: [string, 'null']
+          enum: [client, director, null]
+          description: 'При `state = rejected` — кто отклонил КП: клиент (кабинет, бот, офлайн) или директор; иначе null (D26G-3)'
+        reject_reason: {type: [string, 'null'], description: Причина клиента или комментарий директора при `state = rejected`}
+        can_revise:
+          type: boolean
+          description: >-
+            Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП»
+            (`newCalcQuoteVersion`) и «Отказ по заявке» (`loseCalcRequest`)
         vat_rate: {$ref: '#/components/schemas/DecimalString'}
 
     CalcLineKind:
@@ -18217,9 +18294,23 @@ components:
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
-        client_price: {$ref: '#/components/schemas/DecimalString'}
+        client_price:
+          allOf: [{$ref: '#/components/schemas/DecimalString'}]
+          description: Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5)
+        markup_pct:
+          allOf: [{$ref: '#/components/schemas/DecimalString'}]
+          description: >-
+            Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума.
+            Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`)
         product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
         kind: {type: string, enum: [goods, service]}
+
+    CalcLostIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 1000, description: Причина отказа по заявке — в журнал и событие `deal.lost`}
 
     CalcParseIn:
       type: object

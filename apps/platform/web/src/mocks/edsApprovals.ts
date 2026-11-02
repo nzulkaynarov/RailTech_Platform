@@ -158,6 +158,7 @@ function quoteRow(card: QuoteApprovalCard, mayDecide: boolean): QuoteApprovalRow
     id: card.id,
     number: card.number,
     version: card.version,
+    superseded_by: card.superseded_by,
     request_number: card.request?.number ?? null,
     client_name: mayDecide ? card.client_name : null,
     total:

@@ -257,7 +257,8 @@ test.describe("КП на одобрение: менеджер", () => {
 
     // менеджер открывает «Все КП» сам: у него нет «моего шага»
     await expect(page.getByRole("radiogroup", { name: "Какие КП показать" })).toHaveCount(0);
-    await expect(page.getByRole("row")).toHaveCount(1 + 5);
+    // пять КП и заменённая версия 1 КП-2026/115 в истории (D26G-2)
+    await expect(page.getByRole("row")).toHaveCount(1 + 6);
     await settledScreenshot(page, "manager-list");
 
     await spaGoto(page, `/eds/drafts/${encodeURIComponent("КП-2026/115")}`);

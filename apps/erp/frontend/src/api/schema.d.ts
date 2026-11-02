@@ -2912,6 +2912,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calc/{deal_id}/lost/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отказ по заявке после отказа клиента от КП (D26G-3)
+         * @description POST /api/v1/calc/<deal_id>/lost/ — клиент отклонил КП: «Отказ по заявке» с причиной, резервы снимаются.
+         */
+        post: operations["calc_lost"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/new-version/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Новая версия КП после отказа клиента (D26G-3)
+         * @description POST /api/v1/calc/<deal_id>/new-version/ — клиент отклонил КП: черновик новой версии, расчёт снова открыт.
+         */
+        post: operations["calc_new_version"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calc/{deal_id}/parse/": {
         parameters: {
             query?: never;
@@ -9309,6 +9349,10 @@ export interface components {
         CalcLinesInRequest: {
             lines: components["schemas"]["CalcLineInRequest"][];
         };
+        CalcLostInRequest: {
+            /** @description Причина отказа по заявке (обязательна) */
+            reason: string;
+        };
         CalcParseInRequest: {
             /** @default  */
             text: string;
@@ -9319,6 +9363,17 @@ export interface components {
             number: string | null;
             state: components["schemas"]["CalcStateEnum"];
             director_comment: string | null;
+            /**
+             * @description Кто отклонил КП при `state = rejected`; иначе null
+             *
+             *     * `client` - client
+             *     * `director` - director
+             */
+            rejected_by: (components["schemas"]["RejectedByEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description Причина клиента или комментарий директора при `state = rejected` */
+            reject_reason: string | null;
+            /** @description Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» (`POST /calc/<deal_id>/new-version/`) и «Отказ по заявке» (`POST /calc/<deal_id>/lost/`) */
+            can_revise: boolean;
             /** Format: decimal */
             vat_rate: string;
         };
@@ -9402,6 +9457,15 @@ export interface components {
             /** Format: date */
             due: string;
             state: components["schemas"]["CalcStateEnum"];
+            /**
+             * @description Кто отклонил КП при `state = rejected`; иначе null
+             *
+             *     * `client` - client
+             *     * `director` - director
+             */
+            rejected_by: (components["schemas"]["RejectedByEnum"] | components["schemas"]["NullEnum"]) | null;
+            /** @description Причина клиента или комментарий директора при `state = rejected` */
+            reject_reason: string | null;
             lines: number;
             visas: components["schemas"]["CalcVisaStates"];
             assignees: components["schemas"]["CalcAssignee"][];
@@ -13165,8 +13229,16 @@ export interface components {
             crew_rate?: string | null;
             /** Format: decimal */
             crew_days?: string | null;
-            /** Format: decimal */
+            /**
+             * Format: decimal
+             * @description Цена клиенту без НДС за единицу: хранится как введена, наценка строки — производная (D26G-5)
+             */
             client_price?: string;
+            /**
+             * Format: decimal
+             * @description Наценка строки, %: цена клиенту считается из неё и округляется до сума (D26G-5)
+             */
+            markup_pct?: string;
             product_id?: number | null;
             kind?: components["schemas"]["CalcItemKindEnum"];
         };
@@ -15333,7 +15405,7 @@ export interface components {
             readonly version: number;
             /**
              * Номер КП
-             * @description Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту (напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено.
+             * @description Человекочитаемый сквозной номер КП (напр. КП-2026/00001), выдаётся при передаче директору. Версии одного КП несут один номер (SPEC-v3 §2.1–2.2): уникальна пара номер + версия.
              */
             readonly number: string | null;
             /**
@@ -16305,6 +16377,12 @@ export interface components {
             frozen_at: string | null;
             fx_fixed_at: string | null;
         };
+        /**
+         * @description * `client` - client
+         *     * `director` - director
+         * @enum {string}
+         */
+        RejectedByEnum: "client" | "director";
         RemoveMemberRequest: {
             member_id: number;
         };
@@ -21955,6 +22033,128 @@ export interface operations {
             path: {
                 deal_id: number;
                 item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_lost: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalcLostInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CalcLostInRequest"];
+                "multipart/form-data": components["schemas"]["CalcLostInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_new_version: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
             };
             cookie?: never;
         };

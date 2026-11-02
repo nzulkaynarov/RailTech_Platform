@@ -51,6 +51,8 @@ const KNOWN = new Set([
   "zone_not_permitted",
   "cost_forbidden",
   "deal_not_in_calculation",
+  "quote_not_rejected_by_client",
+  "reason_required",
 ]);
 
 /** Отказ словами: подкод (`details.reason`) из словаря, иначе по статусу, иначе текст BFF. */
@@ -91,10 +93,10 @@ export function isOverdue(due: string, today: string): boolean {
 export function readyHintKey(sheet: Pick<CalcSheet, "ready" | "quote">): string {
   const blocker = sheet.ready.blocker;
   const state = sheet.quote?.state;
-  if (
-    blocker === "not_draft" &&
-    (state === "at_director" || state === "approved" || state === "rejected")
-  ) {
+  if (blocker === "not_draft" && state === "rejected") {
+    return sheet.quote?.rejected_by === "client" ? "rejected_client" : "rejected";
+  }
+  if (blocker === "not_draft" && (state === "at_director" || state === "approved")) {
     return state;
   }
   return blocker ?? "not_draft";

@@ -41,12 +41,11 @@ class Quote(models.Model):
         max_length=40,
         null=True,
         blank=True,
-        unique=True,
         db_index=True,
         verbose_name=_("Номер КП"),
         help_text=_(
-            "Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту "
-            "(напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено."
+            "Человекочитаемый сквозной номер КП (напр. КП-2026/00001), выдаётся при передаче директору. "
+            "Версии одного КП несут один номер (SPEC-v3 §2.1–2.2): уникальна пара номер + версия."
         ),
     )
     status = models.ForeignKey(
@@ -281,14 +280,14 @@ class Quote(models.Model):
     )
 
     # Одобрение КП директором — маршрут EDS (EDS-03, ADR-0015, runbook волны 12 §2.4–§2.5). ERP публикует
-    # `quote.ready_for_approval` с `version = eds_revision` и применяет `eds.approval.decided`; поля ниже — проекция
+    # `quote.ready_for_approval` с `version = Quote.version` (повторная отправка — версия +1, D26G-2) и применяет `eds.approval.decided`; поля ниже — проекция
     # решения EDS (владелец номера ИСХ и решения — EDS), своей цепочки одобрения директором у ERP нет.
     eds_revision = models.PositiveIntegerField(
         default=0,
         verbose_name=_("Редакция для одобрения в EDS"),
         help_text=_(
-            "Сколько раз КП уходило директору на одобрение (version события quote.ready_for_approval); "
-            "решение EDS по другой редакции — устаревшее и не применяется"
+            "Сколько раз КП уходило директору на одобрение; версия события quote.ready_for_approval — "
+            "Quote.version (повторная отправка поднимает её), решение EDS по другой версии не применяется"
         ),
     )
     outgoing_number = models.CharField(
@@ -316,6 +315,12 @@ class Quote(models.Model):
         null=True,
         blank=True,
         verbose_name=_("Время решения директора"),
+    )
+    client_reject_reason = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Причина отказа клиента"),
+        help_text=_("Причина, которую клиент указал, отклоняя КП (кабинет, бот, офлайн); не печатается в PDF КП"),
     )
     send_channels = models.JSONField(
         default=list,
@@ -346,6 +351,14 @@ class Quote(models.Model):
         verbose_name_plural = _("Коммерческие предложения")
         unique_together = [("deal", "version")]
         ordering = ["-version"]
+        constraints = [
+            # D26G-3: «Новая версия КП» после отказа клиента — новая строка с тем же номером и версией +1.
+            models.UniqueConstraint(
+                fields=["number", "version"],
+                condition=models.Q(number__isnull=False),
+                name="uniq_quote_number_version",
+            ),
+        ]
 
     def __str__(self):
         return f"КП v{self.version} — {self.deal}"
@@ -597,6 +610,18 @@ class QuoteItem(models.Model):
         editable=False,
         verbose_name=_("Цена без НДС"),
         help_text=_("= себестоимость × (1 + наценка%) (авто-расчёт)"),
+    )
+    # D26G-5: цена клиенту, введённая человеком (или округлённая до сума из введённой наценки), — источник истины цены
+    # строки: движок её не пересчитывает, наценка строки — производная. Пусто — цена считается из наценки.
+    client_price_fixed = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        default=None,
+        validators=[MinValueValidator(0)],
+        verbose_name=_("Цена клиенту (введена)"),
+        help_text=_("Цена без НДС за единицу, которую ввёл человек: не пересчитывается от наценки; пусто — от наценки"),
     )
 
     version = models.IntegerField(

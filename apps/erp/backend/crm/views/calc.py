@@ -21,6 +21,7 @@ from ..serializers.calc import (
     CalcLinePatchSerializer,
     CalcLinesCreatedSerializer,
     CalcLinesInSerializer,
+    CalcLostInSerializer,
     CalcParseInSerializer,
     CalcSheetSerializer,
     CalcTaskListSerializer,
@@ -237,6 +238,49 @@ class CalcReadyView(RoleGatedViewMixin, APIView):
             return _fail(exc)
         except ValueError as exc:  # request_director_approval: КП без клиента
             return Response({"detail": str(exc)}, status=status.HTTP_409_CONFLICT)
+
+
+class CalcNewVersionView(RoleGatedViewMixin, APIView):
+    """POST /api/v1/calc/<deal_id>/new-version/ — клиент отклонил КП: черновик новой версии, расчёт снова открыт."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "quote.build"}
+
+    @extend_schema(
+        operation_id="calc_new_version",
+        summary="Новая версия КП после отказа клиента (D26G-3)",
+        tags=TAGS,
+        request=None,
+        responses={200: CalcSheetSerializer, **ERRORS},
+    )
+    def post(self, request, deal_id: int):
+        try:
+            return Response(calc.new_version(deal_id, request.user))
+        except CalcError as exc:
+            return _fail(exc)
+
+
+class CalcLostView(RoleGatedViewMixin, APIView):
+    """POST /api/v1/calc/<deal_id>/lost/ — клиент отклонил КП: «Отказ по заявке» с причиной, резервы снимаются."""
+
+    permission_classes = [IsAuthenticated]
+    required_permissions = {"POST": "quote.build"}
+
+    @extend_schema(
+        operation_id="calc_lost",
+        summary="Отказ по заявке после отказа клиента от КП (D26G-3)",
+        tags=TAGS,
+        request=CalcLostInSerializer,
+        responses={200: CalcSheetSerializer, **ERRORS},
+    )
+    def post(self, request, deal_id: int):
+        serializer = CalcLostInSerializer(data=request.data)
+        if not serializer.is_valid():
+            return _invalid(serializer)
+        try:
+            return Response(calc.lose(deal_id, request.user, serializer.validated_data["reason"]))
+        except CalcError as exc:
+            return _fail(exc)
 
 
 class CalcParseView(RoleGatedViewMixin, APIView):

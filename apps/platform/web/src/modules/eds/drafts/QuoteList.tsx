@@ -23,15 +23,22 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { withParams } from "../inbox/api";
-import { DocumentStatusTag } from "../documents/status";
 import { type Scope, quotePath, scopeOf } from "./api";
 import { ApprovalSlot } from "./ApprovalPanel";
 import { useStateLabels } from "./labels";
+import { DocumentStatusTag } from "../documents/status";
+import { SupersededTag } from "./QuoteStatus";
 
 /** Ширины колонок: номер, заявка, клиент (гибкая), сумма, срок, получено, статус, действие (UX-1c, S9) */
 const COLS = [130, 130, null, 140, 100, 130, 170, 120] as const;
 
 const PAGE = 25;
+
+/** Статус строки: версию заменила более новая — «Заменена версией N» (D26G-2), иначе — слово статуса маршрута. */
+function RowStatus({ row }: { row: QuoteApprovalRow }) {
+  if (row.superseded_by) return <SupersededTag version={row.superseded_by} />;
+  return <DocumentStatusTag kind="quote" status={row.status} />;
+}
 
 function useSelect() {
   const [params] = useSearchParams();
@@ -77,7 +84,7 @@ function Rows({
               >
                 {row.number}
               </Link>
-              <DocumentStatusTag kind="quote" status={row.status} />
+              <RowStatus row={row} />
             </div>
             <p className="pf-dec-card-subject">{row.client_name ?? "—"}</p>
             <p className="pf-hint">
@@ -159,7 +166,7 @@ function Rows({
               <td className="pf-num">{row.due ? date(row.due) : "—"}</td>
               <td className="pf-num">{date(row.created_at, "datetime")}</td>
               <td>
-                <DocumentStatusTag kind="quote" status={row.status} />
+                <RowStatus row={row} />
               </td>
               <td>
                 <LinkButton

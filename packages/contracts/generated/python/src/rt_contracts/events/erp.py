@@ -915,6 +915,9 @@ class QuoteReadyForApproval(BaseModel):
     КП-ГГГГ/NNN
     """
     version: Annotated[int, Field(ge=1)]
+    """
+    Версия КП ERP (`Quote.version`, сквозная в заявке): повторная отправка после возврата или отзыва — версия +1; EDS открывает маршрут версии, решение по прежней версии ERP не применяет
+    """
     client_name: Annotated[str | None, Field(max_length=255)] = None
     total: Amount
     """

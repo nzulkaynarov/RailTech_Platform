@@ -20,6 +20,13 @@ class CalcLineKind(models.TextChoices):
     SERVICE = "service", _("Услуга")
 
 
+class CalcPriceBasis(models.TextChoices):
+    """Что человек ввёл в строке расчёта (D26G-5): от этого зависит, что пересчитывается при смене закупки."""
+
+    CLIENT = "client", _("Цена клиенту")
+    MARKUP = "markup", _("Наценка")
+
+
 class CalcLine(models.Model):
     item = models.OneToOneField(
         "sales.QuoteItem",
@@ -67,6 +74,17 @@ class CalcLine(models.Model):
         help_text=_("QuoteItem.version на момент визы: другая версия — строка менялась, виза не действует"),
     )
     visa_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Время визы"))
+    price_basis = models.CharField(
+        max_length=8,
+        choices=CalcPriceBasis.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Что ввели: цену или наценку"),
+        help_text=_(
+            "client — введена цена клиенту (она источник истины, наценка производная); markup — введена наценка "
+            "(цена считается из неё и округляется до сума); пусто — цену ещё не задавали"
+        ),
+    )
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
