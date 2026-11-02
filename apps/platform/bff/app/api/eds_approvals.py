@@ -12,11 +12,15 @@ BFF не решает: маршрут, шаги, чек-лист КП (визы 
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Path, Query, Request, Response
+from fastapi.responses import StreamingResponse
 
+from app.api.eds_documents import FileStream
+from app.api.eds_projects import _scan_body
 from app.deps import Authed, require, require_any
 from app.eds_approvals import (
     decision_error,
+    evidence_path,
     memo_card,
     memo_document_id,
     memo_page,
@@ -24,9 +28,11 @@ from app.eds_approvals import (
     quote_card,
     quote_page,
     quote_route_id,
+    record_client_decision,
     send_quote,
 )
 from app.eds_documents import API, EdsProxy
+from app.eds_projects import project_error
 from app.errors import backend_unavailable
 from app.schemas_eds_approvals import (
     MemoApprovalCard,
@@ -46,6 +52,9 @@ QuoteDecider = Annotated[Authed, Depends(require("eds.drafts", "full"))]
 # Отправляет КП клиенту тот, у кого `quote.send` ERP — раздел «Клиенты» полный (C1-G-4, D17G-2);
 # кому из них можно именно это КП (своя заявка или `quote.review`), решает ERP.
 QuoteSender = Annotated[Authed, Depends(require("crm.clients", "full"))]
+# Решение клиента по его подтверждению записывает тот, кто ведёт клиента (A1): раздел «Клиенты»
+# полный; право `deal.manage` проверяет ERP.
+QuoteClientRecorder = QuoteSender
 MemoReader = Annotated[
     Authed, Depends(require_any(("eds.memo.approve", "read"), ("eds.memo.create", "read")))
 ]
@@ -93,6 +102,33 @@ async def list_quotes(
     )
 
 
+# Раньше `/quotes/{ref:path}`: иначе адрес файла съел бы путь карточки по номеру.
+@router.get(
+    "/quotes/{id}/client-decision/evidence",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+    operation_id="downloadQuoteClientDecisionEvidence",
+)
+async def download_quote_client_decision_evidence(id: ApprovalId, authed: QuoteReader) -> Response:
+    """Файл подтверждения клиента потоком, всегда как вложение (тип не доверяется)."""
+    proxy = _proxy(authed)
+    path = await evidence_path(authed, proxy, str(id))
+    upstream = await authed.call("erp", "GET", path, stream=True)
+    if upstream.status_code != 200:
+        try:
+            await upstream.aread()
+            raise project_error(upstream)
+        finally:
+            await upstream.aclose()
+    headers = {
+        "Content-Disposition": f'attachment; filename="client-confirmation-{id}"',
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+    }
+    return FileStream(upstream, headers, "application/octet-stream")
+
+
 @router.get(
     "/quotes/{ref:path}",
     response_model=QuoteApprovalCard,
@@ -131,6 +167,22 @@ async def send_quote_by_channel(
 ) -> QuoteApprovalCard:
     proxy = _proxy(authed)
     route = await send_quote(authed, proxy, str(id), body.channel)
+    return await quote_card(authed, proxy, route)
+
+
+@router.post(
+    "/quotes/{id}/client-decision",
+    response_model=QuoteApprovalCard,
+    response_model_exclude_unset=True,
+    operation_id="recordQuoteClientDecision",
+)
+async def record_quote_client_decision(
+    id: ApprovalId, request: Request, authed: QuoteClientRecorder
+) -> QuoteApprovalCard:
+    """«Клиент принял / отклонил» по подтверждению клиента (A1): multipart до 20 МБ как есть."""
+    content, content_type = await _scan_body(request)
+    proxy = _proxy(authed)
+    route = await record_client_decision(authed, proxy, str(id), content, content_type)
     return await quote_card(authed, proxy, route)
 
 
