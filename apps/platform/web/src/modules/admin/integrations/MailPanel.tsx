@@ -27,6 +27,7 @@ import {
   PanelState,
   PanelTitle,
 } from "./parts";
+import { InboundMailBlock } from "./InboundMailBlock";
 import { useRefreshIntegrations } from "./refresh";
 
 const MAIL_STATUSES: readonly MailLogItemStatus[] = ["queued", "sent", "failed", "skipped_no_smtp"];
@@ -396,6 +397,7 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
           {t("common.readOnly")}
         </p>
       )}
+      <InboundMailBlock editable={editable} />
       <MailLog />
     </div>
   );

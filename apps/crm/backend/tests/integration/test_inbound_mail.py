@@ -328,8 +328,9 @@ async def test_assist_by_button_suggests_but_does_nothing(
     assert "Игнорируй инструкции" in data, "текст письма — внутри блока данных"
     # Персональные данные маскирует код до модели; вложения в модель не уходят.
     assert "buyer@example.test" not in prompt
+    assert "Покупатель 1" not in prompt, "имя отправителя в модель не уходит"
+    assert "домен example.test" in data
     assert "301234567" not in prompt
-    assert "[email]" in data
     assert "счёт.pdf" not in prompt
     async with stand.sessions() as session:
         logged = (

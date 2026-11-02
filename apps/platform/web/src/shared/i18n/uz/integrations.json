@@ -348,6 +348,45 @@
       "test": "Yuborishni tekshirish",
       "outgoing_letter": "Chiquvchi xat",
       "erp_mail": "ERP xati"
+    },
+    "inbound": {
+      "title": "Qabul: umumiy pochta qutisi (IMAP)",
+      "intro": "Kompaniya umumiy pochta qutisidagi xatlar har 2 daqiqada ish yurituvchining «Kiruvchi pochta» navbatiga tushadi. Serverda xatlar o‘chirilmaydi va o‘qilgan deb belgilanmaydi.",
+      "on": "Ulangan",
+      "off": "Ulanmagan",
+      "mailbox": "Papka",
+      "username": "Login (quti manzili)",
+      "appPassword": "Ilova paroli",
+      "appPasswordHint": "Pochta xizmati sozlamalaridagi ilova paroli, pochta paroli emas. Bo‘sh — avvalgisi qoladi.",
+      "host": "IMAP server",
+      "hostHint": "Masalan, imap.yandex.ru; bo‘sh — qabul o‘chirilgan",
+      "securityValue": {
+        "ssl": "SSL (port 993)",
+        "starttls": "STARTTLS (port 143)"
+      },
+      "assist": "Devonxona yordamchisi: xat turi va mazmunini «Taklif qilish» (tugma bilan, shaxsiy ma’lumotlarsiz)",
+      "assistLabel": "Devonxona yordamchisi",
+      "assistOn": "Yoqilgan — «Taklif qilish» tugmasi bilan",
+      "assistOff": "O‘chirilgan",
+      "lastPoll": "Oxirgi so‘rov",
+      "lastOk": "Muvaffaqiyatli, {{at}}",
+      "lastError": "Xato: {{reason}}",
+      "check": "Qabulni tekshirish",
+      "checkOk": "Quti ochiladi: papkada {{count}} ta xat",
+      "button": "Qabulni sozlash",
+      "settings": "Pochta qabuli",
+      "saved": "Qabul sozlamalari saqlandi",
+      "step1": "Platforma har 2 daqiqada qutiga kirib, yangi xatlarni «Kiruvchi pochta» navbatiga oladi.",
+      "step2": "Serverda xatlar o‘chirilmaydi va o‘qilgan deb belgilanmaydi.",
+      "step3": "Ilova paroli shifrlangan holda saqlanadi va boshqa ko‘rsatilmaydi.",
+      "reason": {
+        "not_configured": "Qabul sozlanmagan: server, login va ilova parolini kiriting",
+        "auth_failed": "Server login yoki ilova parolini qabul qilmadi — qayta kiriting",
+        "mailbox_missing": "Bunday papka yo‘q — odatda INBOX",
+        "invalid_host": "Server manzili noto‘g‘ri (masalan, imap.yandex.ru)",
+        "tls_failed": "Himoyalangan ulanib bo‘lmadi — port va shifrlashni tekshiring",
+        "unavailable": "IMAP server javob bermayapti — manzil va portni tekshiring"
+      }
     }
   },
   "services": {

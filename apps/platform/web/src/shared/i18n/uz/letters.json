@@ -566,5 +566,106 @@
       "done": "Belgilandi: tanishdim"
     },
     "failed": "Saqlanmadi: {{reason}}."
+  },
+  "mail": {
+    "subtitle": "Umumiy qutidagi xatlar: har birini ko‘rib chiqing — kiruvchi sifatida ro‘yxatga oling, lid yarating yoki arxivga yuboring",
+    "caption": "Ko‘rib chiqishni kutayotgan xatlar",
+    "open": "«{{subject}}» xatini ochish",
+    "noSubject": "(mavzusiz)",
+    "attachments": "Ilovalar: {{count}}",
+    "off": {
+      "title": "Pochta ulanmagan",
+      "text": "Administrator umumiy qutini Sozlamalar · Ulanishlar · Pochta → «Qabul» bo‘limida ulaydi. Shundan so‘ng xatlar shu yerda o‘zi paydo bo‘ladi.",
+      "action": "Ulanishlarni ochish"
+    },
+    "empty": {
+      "title": "Yangi xatlar yo‘q",
+      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi."
+    },
+    "status": {
+      "new": "Kutmoqda",
+      "registered": "Ro‘yxatga olingan",
+      "lead": "Lidlarga o‘tkazildi",
+      "archived": "Arxivda"
+    },
+    "kind": {
+      "buyer": "Xaridor",
+      "official": "Rasmiy xat",
+      "supplier_doc": "Yetkazib beruvchi hisobi yoki hujjati",
+      "other": "Boshqa"
+    },
+    "action": {
+      "register": "Kiruvchini ro‘yxatga olish",
+      "lead": "Lid yaratish",
+      "archive": "Arxivga"
+    },
+    "fields": {
+      "from": "Kimdan",
+      "to": "Kimga",
+      "received": "Olingan",
+      "client": "Ma’lum mijoz",
+      "lead": "Ochiq lid",
+      "inns": "Matndagi STIR"
+    },
+    "text": "Xat matni",
+    "files": "Ilovalar",
+    "download": "{{name}} yuklab olish",
+    "skipped": "Qabul qilinmadi: {{name}} — {{reason}}",
+    "skippedReason": {
+      "type": "bunday fayl turi qabul qilinmaydi",
+      "size": "25 MB dan katta",
+      "count": "20 tadan ko‘p fayl"
+    },
+    "tooLarge": "Xat 60 MB dan katta: faqat sarlavhalar saqlandi — uni pochtada oching.",
+    "assist": {
+      "title": "Yordamchi taklifi",
+      "button": "Taklif qilish",
+      "intro": "Yordamchi xat turi va harakatni taklif qiladi. Pochta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yashiriladi, ilovalar yuborilmaydi. Xatni taklifsiz ham ko‘rib chiqish mumkin.",
+      "suggests": "Taklif: {{action}}",
+      "note": "Taklif o‘zi hech narsa qilmaydi — harakatni siz tanlaysiz.",
+      "unavailable": "Yordamchi hozir mavjud emas — xatni qo‘lda ko‘rib chiqing yoki keyinroq urinib ko‘ring.",
+      "retry": "Qayta urinish"
+    },
+    "actions": {
+      "title": "Nima qilish kerak",
+      "what": "Nima bo‘ladi",
+      "registerWhat": "«Kiruvchini ro‘yxatga olish» shakli xat ma’lumotlari va ilovalari bilan ochiladi; ro‘yxatga olingach xat navbatdan chiqadi.",
+      "leadWhat": "«Kiruvchi»da menejersiz lid paydo bo‘ladi — uni menejer oladi. Shu manzilli lid bo‘lsa, xat unga izoh sifatida qo‘shiladi. Xat navbatdan chiqadi.",
+      "leadConfirm": "Lid yaratish",
+      "archiveReason": "Sabab",
+      "archiveHint": "Masalan: reklama, takror, bizga emas",
+      "archiveWhat": "Xat sabab bilan navbatdan arxivga o‘tadi; pochta qutisida qoladi.",
+      "archiveConfirm": "Arxivga yuborish",
+      "cancel": "Bekor qilish",
+      "leadDone": "{{number}} lid yaratildi — uni menejer oladi",
+      "leadNote": "Xat {{number}} lidga qo‘shildi",
+      "archived": "Xat arxivda",
+      "failed": "Bo‘lmadi: {{reason}}"
+    },
+    "result": {
+      "title": "Natija",
+      "registered": "Ro‘yxatga olindi: {{number}}",
+      "openLetter": "{{number}} ochish",
+      "lead": "Lid: {{number}}",
+      "openLead": "Lidni ochish",
+      "archived": "Arxivda: {{reason}}"
+    },
+    "reply": {
+      "title": "Jo‘natuvchiga javob",
+      "label": "Javob matni",
+      "send": "Javobni yuborish",
+      "what": "Javob kompaniyaning umumiy manzilidan o‘sha zanjirda jo‘natuvchiga ketadi.",
+      "sent": "Javob pochta navbatiga qo‘yildi",
+      "history": "Javoblar",
+      "status": {
+        "queued": "navbatda",
+        "sent": "yuborildi",
+        "failed": "yuborilmadi",
+        "skipped_no_smtp": "pochta sozlanmagan"
+      }
+    },
+    "fromMail": "«{{subject}}» xatidan, {{sender}}",
+    "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
+    "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling."
   }
 }

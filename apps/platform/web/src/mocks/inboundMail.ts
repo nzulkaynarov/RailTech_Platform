@@ -84,12 +84,8 @@ function seed(): StoredMail[] {
         "в Ташкент до конца года.\n\nАлия Демо, отдел снабжения",
       attachments_count: 0,
       attachments: [],
-      assist: {
-        status: "done",
-        kind: "buyer",
-        summary: "Покупатель просит КП на 6 стрелочных переводов с поставкой до конца года.",
-        action: "lead",
-      },
+      // Подсказки ещё нет: помощник — только по кнопке «Подсказать» (решение юриста 2026-11-02)
+      assist: { status: "none", kind: null, summary: null, action: null },
     },
     {
       ...base,
@@ -115,6 +111,11 @@ function seed(): StoredMail[] {
 }
 
 let memory: StoredMail[] | null = null;
+
+/** Тесты: начальные письма заново. */
+export function resetInboundMailMock(): void {
+  memory = null;
+}
 
 function read(): StoredMail[] {
   try {
@@ -145,29 +146,29 @@ function imapOff(): boolean {
 }
 
 function itemOf(mail: StoredMail): InboundMailItem {
-  const {
-    to: _to,
-    text: _text,
-    attachments: _a,
-    skipped: _s,
-    too_large: _t,
-    inns: _i,
-    letter_number: _ln,
-    letter_ref: _lr,
-    result_lead: _rl,
-    archive_reason: _ar,
-    handled_at: _h,
-    replies: _r,
-    ...item
-  } = mail;
-  return item;
+  return {
+    id: mail.id,
+    status: mail.status,
+    from_email: mail.from_email,
+    from_name: mail.from_name,
+    subject: mail.subject,
+    received_at: mail.received_at,
+    sent_at: mail.sent_at,
+    preview: mail.preview,
+    attachments_count: mail.attachments_count,
+    assist: mail.assist,
+    client: mail.client,
+    lead: mail.lead,
+  };
 }
 
 function update(id: number, change: (mail: StoredMail) => StoredMail): StoredMail | null {
   const mails = read();
   const at = mails.findIndex((m) => m.id === id);
   if (at < 0) return null;
-  const next = change(mails[at]!);
+  const current = mails[at];
+  if (!current) return null;
+  const next = change(current);
   mails[at] = next;
   write(mails);
   return next;
@@ -297,6 +298,23 @@ export const inboundMailHandlers = [
       size: a.size,
     }));
     return HttpResponse.json(files);
+  }),
+  http.post("*/inbound-mail/:id/assist", async ({ params }) => {
+    await delay(150);
+    const updated = update(Number(params.id), (mail) =>
+      mail.assist.status === "done"
+        ? mail
+        : {
+            ...mail,
+            assist: {
+              status: "done",
+              kind: "buyer",
+              summary: "Покупатель просит КП на стрелочные переводы с поставкой до конца года.",
+              action: "lead",
+            },
+          },
+    );
+    return updated ? HttpResponse.json(updated.assist) : notFound();
   }),
   http.post("*/inbound-mail/:id/lead", ({ params }) => {
     const id = Number(params.id);

@@ -84,6 +84,12 @@ exports[`карты статусов > снимок карты: изменени
     "info": "default",
     "warm": "gold",
   },
+  "inboundMail": {
+    "archived": "default",
+    "lead": "green",
+    "new": "blue",
+    "registered": "blue",
+  },
   "incoming": {
     "awaiting_resolution": "gold",
     "executed": "green",
