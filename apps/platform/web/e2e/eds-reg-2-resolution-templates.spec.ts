@@ -77,7 +77,7 @@ test.describe("EDS-REG · шаблоны резолюций", () => {
     await loginAndWait(page, "director@demo.example");
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
-      await spaGoto(page, width === 390 ? `${TAX.replace("panel=open", "sheet=resolution")}` : TAX);
+      await spaGoto(page, width === 390 ? TAX.replace("panel=open", "sheet=resolution") : TAX);
       const form = page.getByRole("form", { name: "Резолюция директора" });
       await expect(form.getByLabel("Из шаблона")).toBeVisible();
       await pickTemplate(page, "Налоговая — ответ бухгалтерии");
