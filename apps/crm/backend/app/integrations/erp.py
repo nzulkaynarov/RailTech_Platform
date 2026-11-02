@@ -423,6 +423,9 @@ class HandoffResult:
     # Код причины, по которой приглашение не ушло ни одним каналом (`HandoffResponse.invite.error`,
     # 0.8.0).
     invite_error: str | None = None
+    # Ключ письма-приглашения в почте CRM (`erp:email_log:<id>`, B-MAIL-1): итог доставки — в
+    # `email_log` по (`source=erp`, `request_key`).
+    invite_email_key: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -431,6 +434,8 @@ class InviteResult:
 
     sent_via: list[str]
     error: str | None
+    # Ключ письма-приглашения в почте CRM (B-MAIL-1); `None` — письмо не уходило.
+    email_key: str | None = None
 
 
 def handoff_payload_to_dict(p: HandoffPayload) -> dict[str, Any]:
@@ -540,6 +545,7 @@ class HttpxErpClient:
                 invite_sent_via=invite.get("sent_via", []),
                 cabinet_url=invite.get("cabinet_url", ""),
                 invite_error=invite.get("error"),
+                invite_email_key=invite.get("email_request_key"),
             )
         except Exception as exc:
             raise UpstreamUnavailableError(
@@ -560,7 +566,11 @@ class HttpxErpClient:
         self._check(response, ok=(200,))
         try:
             data = response.json()
-            return InviteResult(sent_via=list(data.get("sent_via", [])), error=data.get("error"))
+            return InviteResult(
+                sent_via=list(data.get("sent_via", [])),
+                error=data.get("error"),
+                email_key=data.get("email_request_key"),
+            )
         except Exception as exc:
             raise UpstreamUnavailableError(
                 f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE

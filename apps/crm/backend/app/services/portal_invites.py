@@ -10,10 +10,13 @@ Q-FIX23-1).
 клиента и лида отдаёт последнюю попытку, доступные каналы контакта и действие «повторить другим
 каналом».
 
-Состояния: письмо ERP отправляет сама — `sent` сразу; Telegram — `queued` с
-`detail.telegram=pending`, пока бот не
-доставит (`resolve_telegram`): `sent`, либо `failed` с причиной (бот заблокирован, контакт ни разу
-не писал боту).
+Состояния: Telegram — `queued` с `detail.telegram=pending`, пока бот не доставит
+(`resolve_telegram`): `sent`, либо `failed` с причиной (бот заблокирован, контакт ни разу не писал
+боту). Письмо ERP передаёт почтовому сервису CRM (W18A-P1), поэтому «ERP приняла письмо» — ещё не
+«отправлено»: ERP возвращает ключ письма (`email_request_key`, B-MAIL-1), он хранится в
+`detail.email_key`, а итог письма (в очереди · отправлено · не отправлено с причиной) карточка берёт
+при чтении из своего журнала почты (`email_log` по `source=erp` и `request_key`, `_mail_state`) —
+новых событий и полей не нужно. Строка попытки без ключа (до B-MAIL-1) показывается как раньше.
 """
 
 from dataclasses import dataclass
@@ -34,6 +37,7 @@ from app.domain.errors import (
 from app.domain.notice_errors import error_text
 from app.integrations.erp import ErpClient, HandoffResult
 from app.models.clients import Client, ClientContact
+from app.models.email import EmailLog
 from app.models.leads import Lead, TelegramIdentity
 from app.models.notices import ClientNotice
 from app.schemas.notices import InvitationOut
@@ -137,6 +141,7 @@ async def record_handoff(session: AsyncSession, client: Client, result: HandoffR
     requested = requested_channel(contact, reach)
     error = None if sent else _error_code(result.invite_error, reach)
     notice = _notice(client.id, contact, sent, requested, error, None)
+    _remember_email(notice, result.invite_email_key)
     await _adopt_orphan(session, notice)
     session.add(notice)
 
@@ -208,7 +213,7 @@ class PortalInviteService:
             if client.erp_company_id is None:
                 return None
             return _out_without_notice(client, contact, reach)
-        return _out(notice, client, contact, reach)
+        return _out(notice, client, contact, reach, await _mail_state(session, notice))
 
     async def resend(
         self, who: Principal, client_id: int, channel: str, contact_id: int | None
@@ -224,13 +229,15 @@ class PortalInviteService:
             reach = await reach_of(session, client, contact)
         sent: list[str] = []
         error: str | None = None
+        email_key: str | None = None
         if not reach.email and not reach.telegram:
             error = "CONTACT_CHANNEL_REQUIRED"
         else:
-            sent, error = await self._ask_erp(client_id, channel, contact)
+            sent, error, email_key = await self._ask_erp(client_id, channel, contact)
         async with self._sessions() as session, session.begin():
             await _lock_client(session, client_id)
             notice = _notice(client_id, contact, sent, channel, error, who.user_id)
+            _remember_email(notice, email_key)
             await _adopt_orphan(session, notice)
             session.add(notice)
             await session.flush()
@@ -243,28 +250,29 @@ class PortalInviteService:
                 client_id,
                 after={"channel": channel, "sent_via": sent, "error": error},
             )
-            return _out(notice, client, contact, reach)
+            return _out(notice, client, contact, reach, await _mail_state(session, notice))
 
     async def _ask_erp(
         self, client_id: int, channel: str, contact: ClientContact | None
-    ) -> tuple[list[str], str | None]:
+    ) -> tuple[list[str], str | None, str | None]:
         try:
             result = await self._erp.invite_client(
                 client_id, channel, contact.id if contact is not None else None
             )
         except ConflictError as exc:
             if exc.details.get("reason") == Reason.CLIENT_NOT_IN_ERP:
-                return [], "not_in_erp"
+                return [], "not_in_erp", None
             if exc.details.get("reason") == Reason.ERP_NOT_CONFIGURED:
-                return [], "erp_not_configured"
+                return [], "erp_not_configured", None
             raise
         except UpstreamUnavailableError:
-            return [], "erp_unavailable"
+            return [], "erp_unavailable", None
         except DomainError as exc:
             logger.warning("invite_resend_erp_rejected", client_id=client_id, error=exc.message)
-            return [], "erp_unavailable"
+            return [], "erp_unavailable", None
         sent = [c for c in result.sent_via if c in ("email", "telegram")]
-        return sent, None if sent else (result.error or "CONTACT_CHANNEL_REQUIRED")
+        error = None if sent else (result.error or "CONTACT_CHANNEL_REQUIRED")
+        return sent, error, result.email_key
 
     @staticmethod
     async def _contact(
@@ -358,7 +366,13 @@ async def _adopt_orphan(session: AsyncSession, notice: ClientNotice) -> None:
 
 
 _EMAIL_ERRORS: Final = frozenset(
-    {"CONTACT_EMAIL_REQUIRED", "EMAIL_DELIVERY_FAILED", "email_failed", "smtp_not_configured"}
+    {
+        "CONTACT_EMAIL_REQUIRED",
+        "EMAIL_DELIVERY_FAILED",
+        "email_failed",
+        "smtp_not_configured",
+        "secrets_key_missing",
+    }
 )
 _TELEGRAM_ERRORS: Final = frozenset(
     {
@@ -382,18 +396,22 @@ def _failed_channels(error: str | None, channel: str) -> list[str]:
 
 
 def _out(
-    notice: ClientNotice, client: Client, contact: ClientContact | None, reach: Reach
+    notice: ClientNotice,
+    client: Client,
+    contact: ClientContact | None,
+    reach: Reach,
+    mail: "MailState | None" = None,
 ) -> InvitationOut:
-    sent = [c for c in (notice.detail.get("sent_via") or []) if c in ("email", "telegram")]
-    tried = _failed_channels(notice.error, notice.channel) if notice.error else sent
+    status, error, sent_at, sent = _effective(notice, mail)
+    tried = _failed_channels(error, notice.channel) if error else sent
     return InvitationOut(
         id=notice.id,
         channel=notice.channel,
-        status=notice.status,
-        error=notice.error,
-        error_text=error_text(notice.error),
+        status=status,
+        error=error,
+        error_text=error_text(error),
         created_at=notice.created_at,
-        sent_at=notice.sent_at,
+        sent_at=sent_at,
         contact_id=contact.id if contact is not None else notice.contact_id,
         contact_name=contact.full_name if contact is not None else None,
         sent_via=sent,
@@ -421,3 +439,72 @@ def _out_without_notice(
         suggested_channel=suggest([], reach),
         can_resend=client.erp_company_id is not None,
     )
+
+
+# ── Итог письма-приглашения из журнала почты CRM (B-MAIL-1) ─────────────────────────────────────
+
+#: Причины журнала почты, у которых есть слова для менеджера (`notice_errors.ERRORS`); остальное —
+#: «письмо не ушло: почтовый сервер отказал» (`email_failed`), текст SMTP менеджеру не нужен.
+_MAIL_REASONS: Final = frozenset({"smtp_not_configured", "secrets_key_missing"})
+
+
+@dataclass(frozen=True, slots=True)
+class MailState:
+    """Итог письма-приглашения: `queued` (ещё в очереди или событие в пути), `sent`, `failed`."""
+
+    status: Literal["queued", "sent", "failed"]
+    error: str | None = None
+    sent_at: datetime | None = None
+
+
+def _remember_email(notice: ClientNotice, email_key: str | None) -> None:
+    """Ключ письма ERP — в строку попытки: по нему карточка берёт итог из журнала почты."""
+    if email_key and "email" in (notice.detail.get("sent_via") or []):
+        notice.detail = {**notice.detail, "email_key": email_key}
+
+
+async def _mail_state(session: AsyncSession, notice: ClientNotice) -> MailState | None:
+    """Итог письма попытки по журналу почты.
+
+    `None` — письма в попытке нет или ключа нет (попытка до B-MAIL-1)."""
+    key = notice.detail.get("email_key")
+    if not key or "email" not in (notice.detail.get("sent_via") or []):
+        return None
+    row = await session.scalar(
+        select(EmailLog).where(EmailLog.source == "erp", EmailLog.request_key == key)
+    )
+    return mail_state_of(row)
+
+
+def mail_state_of(row: EmailLog | None) -> MailState:
+    """Строка журнала → итог; строки ещё нет — запрос ERP в пути по шине, это «в очереди»."""
+    if row is None or row.status == "queued":
+        return MailState("queued")
+    if row.status == "sent":
+        return MailState("sent", sent_at=row.sent_at)
+    reason = row.error if row.error in _MAIL_REASONS else "email_failed"
+    return MailState("failed", error=reason)
+
+
+def _effective(
+    notice: ClientNotice, mail: MailState | None
+) -> tuple[str, str | None, datetime | None, list[str]]:
+    """Статус для менеджера с учётом письма: (статус, причина, когда ушло, каналы, которыми ушло).
+
+    Письмо в очереди — «в очереди», пока Telegram не доставил; письмо не ушло — каналы без почты и
+    причина письма, если Telegram тоже не дошёл.
+    """
+    sent = [c for c in (notice.detail.get("sent_via") or []) if c in ("email", "telegram")]
+    if mail is None:
+        return notice.status, notice.error, notice.sent_at, sent
+    telegram = notice.detail.get("telegram") if "telegram" in sent else None
+    if mail.status == "sent":
+        return "sent", None, mail.sent_at or notice.sent_at, sent
+    others = [c for c in sent if c != "email"]
+    if telegram == "sent":
+        return "sent", None, notice.sent_at, others
+    if mail.status == "queued":
+        return "queued", None, None, sent
+    if telegram == "pending":
+        return "queued", None, None, others
+    return "failed", mail.error, None, others
