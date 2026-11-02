@@ -3,6 +3,7 @@ import {
   Fragment,
   type ReactNode,
   type RefObject,
+  useEffect,
   useLayoutEffect,
   useRef,
 } from "react";
@@ -163,13 +164,36 @@ export function DataBlock({
  * Ширины колонок таблицы списка (UX-1c, S9): `table-layout: fixed` и `<colgroup>` — границы колонок не зависят от
  * содержимого страницы и стоят на месте при смене фильтра, вкладки и страницы. `null` — гибкая колонка (тема,
  * название): делит остаток ширины. `tableMinWidth` — ниже этой ширины таблица прокручивается в своей области.
+ * Ширина — по типу колонки (platform-frontend.md §4.2). Заголовок в одну строку обрезается многоточием, поэтому каждому
+ * обрезанному заголовку ставится `title` с его полным текстом (у заголовков без своего `title`): ширины колонок
+ * фиксированы, поэтому проверки после отрисовки достаточно.
  */
 export function TableCols({ widths }: { widths: readonly (number | null)[] }) {
+  const ref = useRef<HTMLTableColElement>(null);
+  useEffect(() => {
+    const table = ref.current?.closest("table");
+    if (!table) return;
+    for (const th of table.querySelectorAll<HTMLTableCellElement>(":scope > thead > tr > th")) {
+      const own = th.hasAttribute("title") && !th.hasAttribute(HEADER_TITLE);
+      if (own) continue;
+      const text = th.querySelector(".pf-sr-only") ? "" : th.textContent.trim();
+      if (text && th.scrollWidth > th.clientWidth) {
+        th.title = text;
+        th.setAttribute(HEADER_TITLE, "");
+      } else {
+        th.removeAttribute("title");
+        th.removeAttribute(HEADER_TITLE);
+      }
+    }
+  });
   return (
-    <colgroup>
+    <colgroup ref={ref}>
       {widths.map((width, index) => (
         <col key={index} style={width === null ? undefined : { width }} />
       ))}
     </colgroup>
   );
 }
+
+/** Метка заголовка, чей `title` поставил `TableCols` (а не экран): его можно обновить при смене языка. */
+const HEADER_TITLE = "data-pf-th-title";

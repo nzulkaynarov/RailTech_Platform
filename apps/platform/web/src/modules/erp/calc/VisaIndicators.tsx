@@ -18,7 +18,7 @@ export function VisaIndicators({ visas }: { visas: CalcVisaIndicators }) {
         const name = t(`groups.${group}`);
         return (
           <li key={group}>
-            <StatusTag kind="visa" status={state}>
+            <StatusTag kind="visa" status={state} title={t(`visaState.${state}`, { group: name })}>
               <span aria-hidden="true">{t(`visaState.${state}`, { group: name })}</span>
               <span className="pf-sr-only">{t(`visaState.${state}Label`, { group: name })}</span>
             </StatusTag>

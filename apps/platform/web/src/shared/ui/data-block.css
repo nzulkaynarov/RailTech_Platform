@@ -83,20 +83,49 @@
   }
 }
 
-/* Таблицы рабочих списков: ширины колонок из <colgroup>, а не из содержимого страницы (S9). */
+/* Таблицы рабочих списков: ширины колонок из <colgroup>, а не из содержимого страницы (S9); ширина — по типу колонки
+   (platform-frontend.md §4.2). */
 .pf-fixed-table {
   table-layout: fixed;
   width: 100%;
 }
-.pf-fixed-table th,
-.pf-fixed-table td {
-  overflow-wrap: anywhere;
+/* Отступ ячейки — 12 px, у краёв таблицы — 16 px (одно правило на все списки вместо 8/12/16 по модулям). */
+table.pf-fixed-table > * > tr > :is(th, td) {
+  padding-right: 12px;
+  padding-left: 12px;
 }
-/* Тег статуса не вылезает в соседнюю колонку: длинный переносится внутри своей. */
+table.pf-fixed-table > * > tr > :is(th, td):first-child {
+  padding-left: 16px;
+}
+table.pf-fixed-table > * > tr > :is(th, td):last-child {
+  padding-right: 16px;
+}
+/* Заголовок — одна строка; не помещается — многоточие, полный текст остаётся в разметке и в `title` (`TableCols`). */
+.pf-fixed-table th {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Перенос — по словам; слово рвётся, только если само не помещается в колонку (длинный адрес, артикул). */
+.pf-fixed-table td {
+  overflow-wrap: break-word;
+}
+/* Тег статуса — одна строка: не помещается — многоточие, полный текст — в `title` (`StatusTag`). */
 .pf-fixed-table .ant-tag {
   max-width: 100%;
-  /* у StatusTag в разметке nowrap: в таблице с фиксированными колонками перенос важнее */
-  white-space: normal !important;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+}
+/* Кнопка строки не распирает таблицу: длинная подпись (uz) обрезается многоточием, полное имя — в `aria-label`. */
+.pf-fixed-table td .ant-btn {
+  max-width: 100%;
+}
+.pf-fixed-table td .ant-btn > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* Одна строка с многоточием; полный текст — в `title`. */
 .pf-fixed-table .pf-ell {
