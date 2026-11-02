@@ -6,7 +6,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import not_found
-from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, Employee, StoredFile
+from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, DocumentRender, Employee, StoredFile
 from app.schemas.approvals import Decision
 from app.schemas.common import LetterSender, Money
 from app.schemas.documents import Document as DocumentOut
@@ -14,12 +14,15 @@ from app.schemas.documents import (
     DocumentDecision,
     DocumentKind,
     DocumentListItem,
+    DocumentMailing,
     DocumentPage,
     DocumentStatus,
+    OutgoingLetter,
+    RegistrationRequest,
 )
 from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
-from app.services import access, files, journal, paging
+from app.services import access, files, journal, letter_mail, paging, renders
 from app.services.people import Directory, load_directory
 
 _DECISION = {"approved": Decision.APPROVE, "returned": Decision.RETURN, "rejected": Decision.REJECT}
@@ -76,6 +79,43 @@ async def payment_of(session: AsyncSession, document: Document) -> PaymentOut | 
     )
 
 
+async def letter_of(session: AsyncSession, document: Document) -> OutgoingLetter | None:
+    """Письмо на бланке (P4): тело и реквизиты, последний PDF, журнал отправки, передача на регистрацию."""
+    if document.kind != DocumentKind.LETTER_OUT.value:
+        return None
+    mailings = await letter_mail.for_document(session, document.id)
+    directory = await load_directory(session, [document.registration_requested_by, *(m.requested_by for m in mailings)])
+    render = await session.get(DocumentRender, document.pdf_hash) if document.pdf_hash else None
+    requested = (
+        RegistrationRequest(
+            by=directory.person(document.registration_requested_by), at=document.registration_requested_at
+        )
+        if document.registration_requested_by is not None and document.registration_requested_at is not None
+        else None
+    )
+    return OutgoingLetter(
+        body=document.body,
+        recipient_attention=document.recipient_attention,
+        recipient_email=document.recipient_email,
+        signatory_name=document.signatory_name,
+        signatory_position=document.signatory_position,
+        pdf=renders.present(render) if render else None,
+        mailings=[
+            DocumentMailing(
+                id=m.id,
+                to=list(m.recipients),
+                status=m.status,
+                reason=m.reason,
+                requested_by=directory.person_or_none(m.requested_by),
+                requested_at=m.requested_at,
+                finished_at=m.finished_at,
+            )
+            for m in mailings
+        ],
+        registration_requested=requested,
+    )
+
+
 async def present(session: AsyncSession, document: Document) -> DocumentOut:
     route_id = (
         await session.execute(
@@ -116,6 +156,7 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         deal_number=document.deal_number,
         recipient=recipient,
         in_reply_to=document.in_reply_to,
+        letter=await letter_of(session, document),
         approval_id=route_id,
         payment=await payment_of(session, document),
         decisions=decisions,

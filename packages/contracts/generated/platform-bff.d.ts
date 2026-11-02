@@ -995,7 +995,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Создать документ (и отправить на согласование)
-     * @description EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT` (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
+     * @description EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT` (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`; черновик `letter_out` (Письмо) — тоже `memos.create` (P4: исполнитель готовит ответ), регистрация (`submit = true`) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено»; письмо на бланке (`letter`, P4) получает итоговый PDF, а с `send = true` уходит адресату почтой (журнал — `letter.mailings`). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
      */
     post: operations["createEdsDocument"];
     delete?: never;
@@ -1180,6 +1180,110 @@ export interface paths {
      * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
      */
     get: operations["downloadEdsProjectFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/pdf": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Письмо на бланке: состояние PDF (опрос)
+     * @description EDS `GET /documents/{id}/pdf`: `pending` — готовится, `ready` — готов (`GET …/pdf/file`), `failed` — ошибка с причиной словами (`error`). Не запрашивался — 404.
+     */
+    get: operations["getEdsDocumentPdf"];
+    put?: never;
+    /**
+     * EDS · Письмо на бланке: построить PDF (предпросмотр)
+     * @description EDS `POST /documents/{id}/pdf` (P4). PDF строит фоновый воркер EDS (`rt-docs`), ответ сразу — состояние `pending` или `ready` (кэш по хешу тела и бланка); экран опрашивает `GET /eds/documents/{id}/pdf`. Только письмо с телом (`letter.body`). Бланк компании ещё не получен — 409 `CONFLICT` (`details.reason = letterhead_missing`): админ сохраняет «Компания и бланки» (Настройки), и бланк приходит в EDS сам.
+     */
+    post: operations["requestEdsDocumentPdf"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/pdf/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Письмо на бланке: PDF (поток)
+     * @description EDS `GET /documents/{id}/pdf/file` — готовый PDF, построенный EDS (`application/pdf`, `inline`): предпросмотр в окне браузера и «Скачать PDF». Тот же файл уходит адресату. Не готов — 409 (`details.reason = pdf_not_ready`).
+     */
+    get: operations["downloadEdsDocumentPdf"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/registration-request": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо: передать на регистрацию делопроизводителю
+     * @description EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик делопроизводителю: тот видит его в «Все документы», смотрит PDF и регистрирует ИСХ (`PUT /eds/documents/{id}` с `submit = true`). Не черновик — 409, не автор — 403.
+     */
+    post: operations["requestEdsDocumentRegistration"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}/send": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Письмо: отправить адресату ещё раз
+     * @description EDS `POST /documents/{id}/send`: зарегистрированное письмо на бланке снова уходит на почту адресата через почтовый сервис CRM (например, после настройки почты). Итог — строка `letter.mailings` («отправлено» или причина словами: «Почта не настроена — Настройки · Подключения · Почта»). Раздел `eds.inbox.register` (полный).
+     */
+    post: operations["sendEdsDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letterhead": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Бланк компании для письма
+     * @description EDS `GET /letterhead` — проекция бланка ERP (реквизиты и подписант по умолчанию из «Компания и бланки»). `configured = false` — бланк ещё не пришёл: экран объясняет, что админ сохраняет «Компания и бланки».
+     */
+    get: operations["getEdsLetterhead"];
     put?: never;
     post?: never;
     delete?: never;
@@ -7680,6 +7784,101 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       updated_at: string;
+      /** @description Только `letter_out` — письмо на бланке (P4) */
+      letter?: components["schemas"]["EdsLetter"] | null;
+      /** @description Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */
+      can_register?: boolean;
+      /** @description Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
+      can_request_registration?: boolean;
+    };
+    /** @description Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1): абзацы, заголовки, списки, таблицы; без цветов, шрифтов и HTML. Проверяет EDS (422, `details.fields = [body]`). */
+    EdsDocumentBody: {
+      /** @constant */
+      version: 1;
+      /** @enum {string} */
+      lang: "ru" | "uz" | "en";
+      page?: Record<string, never>;
+      /** @description Корень `{type: doc, content: [...]}` */
+      doc: Record<string, never>;
+    };
+    /** @description Письмо на бланке (P4) — только `letter_out` */
+    EdsLetterIn: {
+      body: components["schemas"]["EdsDocumentBody"];
+      /** @description «Кому» — должность и ФИО получателя */
+      recipient_attention?: string | null;
+      /**
+       * Format: email
+       * @description Почта адресата — «Отправить адресату»
+       */
+      recipient_email?: string | null;
+      /** @description `null` — подписант бланка (директор) */
+      signatory_name?: string | null;
+      signatory_position?: string | null;
+    };
+    EdsDocumentPdf: {
+      /**
+       * @description `pending` — готовится, `ready` — готов, `failed` — ошибка
+       * @enum {string}
+       */
+      status: "pending" | "ready" | "failed";
+      /** @description `true` — с номером ИСХ и датой регистрации (этот PDF уходит адресату) */
+      final: boolean;
+      /** @description Причина ошибки словами */
+      error: string | null;
+      pages: number | null;
+      /** Format: date-time */
+      requested_at: string;
+      /** Format: date-time */
+      ready_at: string | null;
+    };
+    /** @description Строка журнала отправки письма адресату */
+    EdsDocumentMailing: {
+      /** Format: uuid */
+      id: string;
+      to: string[];
+      /**
+       * @description `awaiting_pdf` — ждёт итогового PDF; `requested` — у почтового сервиса; `sent`/`failed` — итог
+       * @enum {string}
+       */
+      status: "awaiting_pdf" | "requested" | "sent" | "failed";
+      /** @description Причина словами («Почта не настроена — Настройки · Подключения · Почта») */
+      reason: string | null;
+      requested_by: components["schemas"]["EdsPerson"] | null;
+      /** Format: date-time */
+      requested_at: string;
+      /** Format: date-time */
+      finished_at: string | null;
+    };
+    /** @description Письмо на бланке (P4) */
+    EdsLetter: {
+      /** @description `null` — письмо без бланка (только текст) */
+      body: components["schemas"]["EdsDocumentBody"] | null;
+      recipient_attention: string | null;
+      recipient_email: string | null;
+      signatory_name: string | null;
+      signatory_position: string | null;
+      /** @description Последний PDF; `null` — не строился */
+      pdf: components["schemas"]["EdsDocumentPdf"] | null;
+      /** @description Журнал отправки адресату */
+      mailings: components["schemas"]["EdsDocumentMailing"][];
+      /** @description Исполнитель передал черновик на регистрацию делопроизводителю */
+      registration_requested: {
+        by: components["schemas"]["EdsPerson"];
+        /** Format: date-time */
+        at: string;
+      } | null;
+    };
+    /** @description Бланк компании (проекция ERP в EDS) */
+    EdsLetterhead: {
+      /** @description `false` — бланк ещё не получен: PDF письма не строится */
+      configured: boolean;
+      company_name: string | null;
+      requisites: string[];
+      signatory_name: string | null;
+      signatory_position: string | null;
+      has_logo: boolean;
+      /** Format: date-time */
+      updated_at: string | null;
     };
     EdsDocumentIn: {
       kind: components["schemas"]["EdsDocumentKind"];
@@ -7702,6 +7901,13 @@ export interface components {
        * @example ВХ-112/26
        */
       in_reply_to_number?: string | null;
+      /** @description Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант */
+      letter?: components["schemas"]["EdsLetterIn"] | null;
+      /**
+       * @description Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке
+       * @default false
+       */
+      send: boolean;
       /**
        * @description `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик
        * @default false
@@ -7719,6 +7925,13 @@ export interface components {
       erp_deal_id?: number | null;
       /** @description Только `letter_out` */
       recipient?: components["schemas"]["EdsRecipient"] | null;
+      /** @description Только `letter_out` — письмо на бланке целиком (P4) */
+      letter?: components["schemas"]["EdsLetterIn"] | null;
+      /**
+       * @description Только письмо (P4): после регистрации отправить адресату почтой
+       * @default false
+       */
+      send: boolean;
       /** @default false */
       submit: boolean;
     };
@@ -13653,6 +13866,180 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsDocumentPdf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние PDF */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocumentPdf"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestEdsDocumentPdf: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Рендер поставлен в очередь или PDF уже готов */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocumentPdf"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsDocumentPdf: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description PDF */
+      200: {
+        headers: {
+          /** @description `inline; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestEdsDocumentRegistration: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Передано на регистрацию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendEdsDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отправка запрошена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsLetterhead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Бланк */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsLetterhead"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

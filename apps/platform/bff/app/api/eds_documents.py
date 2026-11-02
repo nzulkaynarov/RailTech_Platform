@@ -47,8 +47,10 @@ from app.schemas_eds_documents import (
     EdsDocument,
     EdsDocumentIn,
     EdsDocumentPage,
+    EdsDocumentPdf,
     EdsDocumentUpdateIn,
     EdsFile,
+    EdsLetterhead,
     RegistryKind,
     StatusFilter,
 )
@@ -80,6 +82,8 @@ _REGISTRY: tuple[Rule, ...] = (
 
 Reader = Annotated[Authed, Depends(require_any(*_EDS_READ))]
 Writer = Annotated[Authed, Depends(require("eds.memo.create", "full"))]
+# Регистрация исходящих и «Отправить адресату» (P4): раздел регистрации входящих и исходящих.
+Registrar = Annotated[Authed, Depends(require("eds.inbox.register", "full"))]
 DealReader = Annotated[
     Authed, Depends(require_any(("crm.clients", "read"), ("eds.projects", "read")))
 ]
@@ -139,7 +143,7 @@ async def list_documents(
 async def get_document(id: DocumentId, authed: Reader) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("GET", f"{API}/documents/{id}")
-    return await present(proxy, body, me=authed.data.user_id)
+    return await present(proxy, body, me=authed.data.user_id, registrar=_registrar(authed))
 
 
 def _with_document(error: PlatformError, document_id: str, *, created: bool) -> PlatformError:
@@ -167,7 +171,13 @@ def _edits(body: EdsDocumentIn | EdsDocumentUpdateIn) -> dict[str, Any]:
     }
     if body.recipient is not None:
         edits["recipient"] = body.recipient.model_dump()
+    if body.letter is not None:
+        edits["letter"] = body.letter.model_dump(exclude_none=True)
     return edits
+
+
+def _registrar(authed: Authed) -> bool:
+    return allows(authed.access, "eds.inbox.register", "full")
 
 
 def _bad_reply_to(reason: str) -> PlatformError:
@@ -193,8 +203,11 @@ async def _letter_id(authed: Authed, kind: str, number: str) -> str:
     return found
 
 
-async def _submit(proxy: EdsProxy, document_id: str) -> Any:
-    return await proxy.request("POST", f"{API}/documents/{document_id}/submit")
+async def _submit(proxy: EdsProxy, document_id: str, *, send: bool = False) -> Any:
+    # P4: письмо на бланке после регистрации уходит адресату почтой (`send`); без флага — тело
+    # запроса не нужно.
+    payload = {"send": True} if send else None
+    return await proxy.request("POST", f"{API}/documents/{document_id}/submit", json=payload)
 
 
 @router.post(
@@ -224,10 +237,10 @@ async def create_document(
     if body.submit:
         document_id = str(created.get("id", ""))
         try:
-            result = await _submit(proxy, document_id)
+            result = await _submit(proxy, document_id, send=body.send)
         except PlatformError as exc:
             raise _with_document(exc, document_id, created=True) from exc
-    return await present(proxy, result, me=authed.data.user_id)
+    return await present(proxy, result, me=authed.data.user_id, registrar=_registrar(authed))
 
 
 @router.put("/eds/documents/{id}", response_model=EdsDocument, operation_id="updateEdsDocument")
@@ -237,12 +250,83 @@ async def update_document(id: DocumentId, body: EdsDocumentUpdateIn, authed: Wri
     result = saved
     if body.submit:
         try:
-            result = await _submit(proxy, str(id))
+            result = await _submit(proxy, str(id), send=body.send)
         except PlatformError as exc:
             raise _with_document(exc, str(id), created=False) from exc
         # Документ ушёл на согласование — он больше не «Доработать» в очереди автора (D1-6b)
         await drop_returned(Feed(authed))
-    return await present(proxy, result, me=authed.data.user_id)
+    return await present(proxy, result, me=authed.data.user_id, registrar=_registrar(authed))
+
+
+# --- письмо на бланке (P4) ------------------------------------------------------------------------
+
+
+@router.post(
+    "/eds/documents/{id}/pdf",
+    response_model=EdsDocumentPdf,
+    status_code=status.HTTP_202_ACCEPTED,
+    operation_id="requestEdsDocumentPdf",
+)
+async def request_pdf(id: DocumentId, authed: Writer) -> EdsDocumentPdf:
+    """PDF строит фоновый воркер EDS; ответ сразу — `pending` или `ready` (кэш по хешу)."""
+    return await _proxy(authed).model(
+        EdsDocumentPdf, "POST", f"{API}/documents/{id}/pdf", expected=202
+    )
+
+
+@router.get(
+    "/eds/documents/{id}/pdf", response_model=EdsDocumentPdf, operation_id="getEdsDocumentPdf"
+)
+async def get_pdf(id: DocumentId, authed: Reader) -> EdsDocumentPdf:
+    return await _proxy(authed).model(EdsDocumentPdf, "GET", f"{API}/documents/{id}/pdf")
+
+
+@router.get(
+    "/eds/documents/{id}/pdf/file",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/pdf": {}}}},
+    operation_id="downloadEdsDocumentPdf",
+)
+async def download_pdf(id: DocumentId, authed: Reader) -> Response:
+    """PDF, построенный EDS из узлов контракта (не файл пользователя): `application/pdf`,
+    `inline` — для предпросмотра."""
+    response = await _proxy(authed).raw("GET", f"{API}/documents/{id}/pdf/file", stream=True)
+    if response.status_code != 200:
+        try:
+            await response.aread()
+            raise eds_error(response)
+        finally:
+            await response.aclose()
+    disposition = response.headers.get("content-disposition") or "inline"
+    headers = {
+        "Content-Disposition": disposition if disposition.startswith("inline") else "inline",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+    }
+    return FileStream(response, headers, "application/pdf")
+
+
+@router.post(
+    "/eds/documents/{id}/registration-request",
+    response_model=EdsDocument,
+    operation_id="requestEdsDocumentRegistration",
+)
+async def request_registration(id: DocumentId, authed: Writer) -> EdsDocument:
+    proxy = _proxy(authed)
+    body = await proxy.request("POST", f"{API}/documents/{id}/registration-request")
+    return await present(proxy, body, me=authed.data.user_id, registrar=_registrar(authed))
+
+
+@router.post("/eds/documents/{id}/send", response_model=EdsDocument, operation_id="sendEdsDocument")
+async def send_document(id: DocumentId, authed: Registrar) -> EdsDocument:
+    proxy = _proxy(authed)
+    body = await proxy.request("POST", f"{API}/documents/{id}/send")
+    return await present(proxy, body, me=authed.data.user_id, registrar=True)
+
+
+@router.get("/eds/letterhead", response_model=EdsLetterhead, operation_id="getEdsLetterhead")
+async def get_letterhead(authed: Reader) -> EdsLetterhead:
+    return await _proxy(authed).model(EdsLetterhead, "GET", f"{API}/letterhead")
 
 
 # --- вложения -------------------------------------------------------------------------------------

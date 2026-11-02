@@ -24,6 +24,7 @@ from app.schemas_eds_documents import (
     EdsDocumentPage,
     EdsDocumentRow,
     EdsFile,
+    EdsLetter,
     EdsMoney,
     EdsPerson,
     EdsRecipient,
@@ -217,6 +218,7 @@ class _RawDocument(BaseModel):
     erp_deal_id: int | None
     deal_number: str | None
     recipient: EdsRecipient | None = None
+    letter: EdsLetter | None = None
     approval_id: str | None
     decisions: list[_RawDecision]
     created_at: Any
@@ -266,10 +268,12 @@ def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
         raise backend_unavailable("eds", "bad_response") from exc
 
 
-async def present(proxy: EdsProxy, body: Any, *, me: int) -> EdsDocument:
+async def present(proxy: EdsProxy, body: Any, *, me: int, registrar: bool = False) -> EdsDocument:
     """Карточка документа: ответ EDS и шаги маршрута текущего круга (если документ отправлялся).
 
     Маршрут недоступен (нет права читать маршрут, не найден) — карточка без шагов, решения остаются.
+    `registrar` — у сотрудника раздел `eds.inbox.register` (полный): регистрирует исходящие
+    (P4, B-P8B-4).
     """
     raw = _parse(_RawDocument, body, f"{API}/documents")
     steps: list[EdsRouteStep] = []
@@ -310,8 +314,27 @@ async def present(proxy: EdsProxy, body: Any, *, me: int) -> EdsDocument:
             "can_edit": editable,
             "created_at": raw.created_at,
             "updated_at": raw.updated_at,
+            **_letter_flags(raw, me=me, registrar=registrar),
         }
     )
+
+
+def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str, Any]:
+    """Письмо на бланке (P4): регистрировать черновик может делопроизводитель — свой или
+    переданный ему; автор без
+    права регистрации — «Передать на регистрацию»."""
+    if raw.kind != "letter_out":
+        return {"letter": None, "can_register": False, "can_request_registration": False}
+    letter = raw.letter
+    draft = raw.status == "draft"
+    mine = raw.author.crm_user_id == me
+    handed = letter is not None and letter.registration_requested is not None
+    has_body = letter is not None and letter.body is not None
+    return {
+        "letter": letter,
+        "can_register": draft and registrar and (mine or handed),
+        "can_request_registration": draft and mine and not registrar and has_body and not handed,
+    }
 
 
 def documents_page(body: Any) -> EdsDocumentPage:

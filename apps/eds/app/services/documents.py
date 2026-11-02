@@ -1,8 +1,13 @@
 """Документы EDS: служебная записка, заявление, отчёт, исходящее письмо (SPEC-v3 §3.2; eds.yaml, тег `documents`).
 
 `memo`/`application`/`report`: номер (`СЗ|ЗЯ|ОТ-ГГГГ/NNN`) — при создании, `document.registered`; отправка открывает
-круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` — при отправке,
+круг маршрута (`approval.requested`), после возврата версия растёт. `letter_out`: номер `ИСХ-NNN/ГГ` — при регистрации,
 затем архив.
+
+Письмо на бланке (P4): тело блоками (`letter`), PDF — фоновый рендер (`services/renders.py`), «Отправить адресату» —
+`services/letter_mail.py`. Черновик письма создаёт любой с `memos.create` (исполнитель «Подготовить ответ», B-P8B-4) и
+передаёт делопроизводителю (`request_registration`); регистрирует только `letters.register` — автор или, если черновик
+передан, любой держатель права.
 """
 
 import uuid
@@ -19,10 +24,30 @@ from app.errors import conflict, forbidden, forbidden_reason, invalid_fields, no
 from app.models import ApprovalRoute, Document, DocumentVersion, Employee, Letter
 from app.schemas.approvals import ApprovalTemplate
 from app.schemas.common import Money
-from app.schemas.documents import DocumentCreate, DocumentKind, DocumentStatus, DocumentSubmitIn, DocumentUpdate
+from app.schemas.documents import (
+    DocumentCreate,
+    DocumentKind,
+    DocumentStatus,
+    DocumentSubmitIn,
+    DocumentUpdate,
+    OutgoingLetterIn,
+)
 from app.security.permissions import EdsPermission as P
-from app.services import access, approvals, document_state, events, files, instructions, journal, numbering
+from app.services import (
+    access,
+    approvals,
+    document_state,
+    events,
+    files,
+    instructions,
+    journal,
+    letter_body,
+    letter_mail,
+    numbering,
+    renders,
+)
 from app.services.people import holds_permission, load_directory
+from app.services.storage import ObjectStorage
 
 _NUMBER_KIND = {
     DocumentKind.MEMO: numbering.NumberKind.MEMO,
@@ -38,7 +63,7 @@ _TEMPLATE = {
 
 
 def required_permission(kind: DocumentKind) -> P:
-    """`letter_out` создаёт и отправляет регистратор писем, остальное — любой с `memos.create`."""
+    """Отправка: `letter_out` регистрирует регистратор писем, остальное отправляет любой с `memos.create`."""
     return P.LETTERS_REGISTER if kind is DocumentKind.LETTER_OUT else P.MEMOS_CREATE
 
 
@@ -46,6 +71,28 @@ def require_kind_permission(employee: Employee, kind: DocumentKind) -> None:
     needed = required_permission(kind)
     if not access.has(employee, needed):
         raise forbidden((needed.value,))
+
+
+def require_draft_permission(employee: Employee, kind: DocumentKind) -> None:
+    """Черновик: любой тип — `memos.create`; черновик письма — ещё и `letters.register` (P4, B-P8B-4)."""
+    allowed = (P.MEMOS_CREATE, P.LETTERS_REGISTER) if kind is DocumentKind.LETTER_OUT else (P.MEMOS_CREATE,)
+    if not any(access.has(employee, permission) for permission in allowed):
+        raise forbidden(tuple(permission.value for permission in allowed))
+
+
+def _apply_letter(document: Document, letter: OutgoingLetterIn | None) -> None:
+    """Письмо на бланке: тело (проверено `rt_docs`), «кому», почта, подписант; `text` — производный от тела."""
+    if letter is None:
+        document.body = None
+        document.recipient_attention = document.recipient_email = None
+        document.signatory_name = document.signatory_position = None
+        return
+    document.body = letter_body.clean(letter.body)
+    document.text = letter_body.plain_text(document.body)
+    document.recipient_attention = (letter.recipient_attention or "").strip() or None
+    document.recipient_email = (letter.recipient_email or "").strip() or None
+    document.signatory_name = (letter.signatory_name or "").strip() or None
+    document.signatory_position = (letter.signatory_position or "").strip() or None
 
 
 def _check_amount(amount: Money | None) -> None:
@@ -124,9 +171,9 @@ async def _publish_registered(
 
 async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, data: DocumentCreate) -> Document:
     """Черновик документа. `memo`/`application`/`report` получают номер сразу, `letter_out` — при отправке."""
-    require_kind_permission(employee, data.kind)
+    require_draft_permission(employee, data.kind)
     is_letter = data.kind is DocumentKind.LETTER_OUT
-    if not is_letter and (data.recipient is not None or data.in_reply_to is not None):
+    if not is_letter and (data.recipient is not None or data.in_reply_to is not None or data.letter is not None):
         raise invalid_fields("Адресат и ответ на письмо — только у исходящего письма.", recipient="letter_out_only")
     _check_amount(data.amount)
     await _check_addressee(session, data.kind, data.addressee_crm_user_id, employee.crm_user_id)
@@ -153,6 +200,8 @@ async def create(session: AsyncSession, bus: AsyncBus, *, employee: Employee, da
         created_at=now,
         updated_at=now,
     )
+    if is_letter and data.letter is not None:
+        _apply_letter(document, data.letter)
     if not is_letter:
         document.number = await numbering.allocate(session, _NUMBER_KIND[data.kind], now)
     session.add(document)
@@ -205,7 +254,7 @@ async def update(
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
     kind = DocumentKind(document.kind)
-    require_kind_permission(employee, kind)
+    require_draft_permission(employee, kind)
     if document.author_crm_user_id != employee.crm_user_id:
         raise forbidden_reason("not_author", "Править документ может только его автор.")
     allowed = {DocumentStatus.DRAFT.value} if kind is DocumentKind.LETTER_OUT else {"draft", "returned"}
@@ -223,6 +272,12 @@ async def update(
         else:
             document.recipient_name = edits.recipient.name if edits.recipient else None
             document.recipient_inn = edits.recipient.inn if edits.recipient else None
+    if "letter" in edits.model_fields_set:
+        if kind is not DocumentKind.LETTER_OUT:
+            if edits.letter is not None:
+                raise invalid_fields("Письмо на бланке — только у исходящего письма.", letter="letter_out_only")
+        else:
+            _apply_letter(document, edits.letter)
     document.updated_at = clock.now()
     if edits.file_ids:
         await files.attach(session, edits.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
@@ -230,16 +285,32 @@ async def update(
     return document
 
 
+def _may_register(employee: Employee, document: Document) -> bool:
+    """Чужое письмо регистрирует держатель `letters.register`, если автор передал черновик на регистрацию (B-P8B-4)."""
+    return (
+        document.kind == DocumentKind.LETTER_OUT.value
+        and document.registration_requested_at is not None
+        and access.has(employee, P.LETTERS_REGISTER)
+    )
+
+
 async def submit(
-    session: AsyncSession, bus: AsyncBus, *, employee: Employee, document_id: uuid.UUID, edits: DocumentSubmitIn | None
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    employee: Employee,
+    document_id: uuid.UUID,
+    edits: DocumentSubmitIn | None,
+    storage: ObjectStorage | None = None,
 ) -> Document:
-    """Отправить на согласование (или отправить исходящее письмо). Только автор; другой статус — 409 `invalid_state`."""
+    """Отправить на согласование (или зарегистрировать исходящее письмо). Автор (письмо — ещё делопроизводитель, если
+    черновик передан на регистрацию); другой статус — 409 `invalid_state`."""
     document = await get_for_update(session, document_id)
     if not await access.can_view_document(session, employee, document.id):
         raise not_found("Документ не найден.")
     kind = DocumentKind(document.kind)
     require_kind_permission(employee, kind)
-    if document.author_crm_user_id != employee.crm_user_id:
+    if document.author_crm_user_id != employee.crm_user_id and not _may_register(employee, document):
         raise forbidden_reason("not_author", "Отправить документ может только его автор.")
     allowed = {DocumentStatus.DRAFT.value} if kind is DocumentKind.LETTER_OUT else {"draft", "returned"}
     if document.status not in allowed:
@@ -250,16 +321,88 @@ async def submit(
     if changes.file_ids:
         await files.attach(session, changes.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     if kind is DocumentKind.LETTER_OUT:
+        if changes.send and not (document.recipient_email and document.body is not None):
+            raise invalid_fields("Укажите почту адресата и текст письма на бланке.", recipient_email="required")
         await _send_letter(session, bus, document, employee)
+        if document.body is not None:
+            render = await renders.request(session, document)  # итоговый PDF: номер и дата регистрации
+            if changes.send:
+                await letter_mail.start(
+                    session, bus, _storage(storage), document=document, render=render, actor_id=employee.crm_user_id
+                )
     else:
         await _open_approval(session, bus, document, employee, kind)
+    return document
+
+
+async def get_for_pdf(session: AsyncSession, *, employee: Employee, document_id: uuid.UUID) -> Document:
+    """PDF на бланке строит автор письма; держатель `letters.register` — переданный черновик и зарегистрированное."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    if document.kind != DocumentKind.LETTER_OUT.value:
+        raise conflict("no_body", "PDF на бланке строится только для письма.")
+    mine = document.author_crm_user_id == employee.crm_user_id
+    registrar = access.has(employee, P.LETTERS_REGISTER) and (
+        document.status == DocumentStatus.SENT.value or document.registration_requested_at is not None
+    )
+    if not (mine or registrar):
+        raise forbidden_reason("not_author", "PDF письма строит его автор или делопроизводитель.")
+    return document
+
+
+def _storage(storage: ObjectStorage | None) -> ObjectStorage:
+    if storage is None:
+        from app.container import get_container  # API передаёт хранилище; без него — хранилище процесса
+
+        return get_container().storage
+    return storage
+
+
+async def request_registration(session: AsyncSession, *, employee: Employee, document_id: uuid.UUID) -> Document:
+    """«Передать на регистрацию» (B-P8B-4): автор черновика письма просит делопроизводителя зарегистрировать ИСХ."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    if document.kind != DocumentKind.LETTER_OUT.value:
+        raise conflict("invalid_state", "На регистрацию передаётся только исходящее письмо.", status=document.status)
+    require_draft_permission(employee, DocumentKind.LETTER_OUT)
+    if document.author_crm_user_id != employee.crm_user_id:
+        raise forbidden_reason("not_author", "Передать письмо может только его автор.")
+    if document.status != DocumentStatus.DRAFT.value:
+        raise conflict("invalid_state", "Письмо уже зарегистрировано.", status=document.status)
+    if document.body is None:
+        raise conflict("no_body", "Сначала напишите текст письма на бланке.")
+    if document.registration_requested_at is None:
+        now = clock.now()
+        document.registration_requested_by, document.registration_requested_at = employee.crm_user_id, now
+        document.updated_at = now
+        await journal.record(
+            session, "document.registration_requested", by=employee.crm_user_id, document_id=document.id
+        )
+    return document
+
+
+async def send_again(
+    session: AsyncSession, bus: AsyncBus, storage: ObjectStorage, *, employee: Employee, document_id: uuid.UUID
+) -> Document:
+    """Повтор «Отправить адресату» зарегистрированного письма на бланке (например, после настройки почты)."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    if document.kind != DocumentKind.LETTER_OUT.value or document.status != DocumentStatus.SENT.value:
+        raise conflict("invalid_state", "Отправить адресату можно зарегистрированное письмо.", status=document.status)
+    if document.body is None:
+        raise conflict("no_body", "У письма нет PDF на бланке.")
+    render = await renders.request(session, document)
+    await letter_mail.start(session, bus, storage, document=document, render=render, actor_id=employee.crm_user_id)
     return document
 
 
 async def _send_letter(session: AsyncSession, bus: AsyncBus, document: Document, employee: Employee) -> None:
     now = clock.now()
     document.number = await numbering.allocate(session, numbering.NumberKind.OUTGOING, now)
-    document.status, document.updated_at = DocumentStatus.SENT.value, now
+    document.status, document.updated_at, document.registered_at = DocumentStatus.SENT.value, now, now
     await journal.record(session, "document.sent", by=employee.crm_user_id, document_id=document.id)
     await _publish_registered(session, bus, document, registered_at=now, actor_id=employee.crm_user_id)
     await document_state.archive(session, bus, document, actor_id=employee.crm_user_id, reason=document.status)

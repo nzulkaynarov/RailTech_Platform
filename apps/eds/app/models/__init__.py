@@ -8,6 +8,7 @@ from app.models.files import FileVersion, StoredFile
 from app.models.idempotency import IdempotencyKey
 from app.models.instructions import Acquaintance, Instruction, InstructionExtension
 from app.models.journal import JournalEntry
+from app.models.letterhead import DocumentMailing, DocumentRender, Letterhead, LetterheadLogo
 from app.models.letters import Letter
 from app.models.numbering import NumberCounter
 from app.models.project_documents import ProjectDocument
@@ -18,7 +19,9 @@ __all__ = [
     "ApprovalStep",
     "Base",
     "Document",
+    "DocumentMailing",
     "DocumentPayment",
+    "DocumentRender",
     "DocumentVersion",
     "Employee",
     "FileVersion",
@@ -27,6 +30,8 @@ __all__ = [
     "InstructionExtension",
     "JournalEntry",
     "Letter",
+    "Letterhead",
+    "LetterheadLogo",
     "NumberCounter",
     "ProjectDocument",
     "SsoJti",

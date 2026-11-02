@@ -10,7 +10,7 @@ documents`).
 """
 
 from datetime import UTC, date, datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -116,6 +116,78 @@ class EdsDealRef(BaseModel):
     number: str | None
 
 
+class EdsDocumentBody(BaseModel):
+    """Тело письма на бланке (контракт `documents/body.schema.json`); узлы проверяет EDS
+    (`rt_docs`)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    version: Literal[1]
+    lang: Literal["ru", "uz", "en"]
+    page: dict[str, Any] | None = None
+    doc: dict[str, Any]
+
+
+EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+
+class EdsLetterIn(BaseModel):
+    """Письмо на бланке (P4): тело блоками, «кому», почта адресата, подписант."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    body: EdsDocumentBody
+    recipient_attention: str | None = Field(default=None, max_length=300)
+    recipient_email: str | None = Field(default=None, max_length=254, pattern=EMAIL_PATTERN)
+    signatory_name: str | None = Field(default=None, max_length=255)
+    signatory_position: str | None = Field(default=None, max_length=255)
+
+
+class EdsDocumentPdf(BaseModel):
+    status: Literal["pending", "ready", "failed"]
+    final: bool
+    error: str | None
+    pages: int | None
+    requested_at: datetime
+    ready_at: datetime | None
+
+
+class EdsDocumentMailing(BaseModel):
+    id: str
+    to: list[str]
+    status: Literal["awaiting_pdf", "requested", "sent", "failed"]
+    reason: str | None
+    requested_by: EdsPerson | None
+    requested_at: datetime
+    finished_at: datetime | None
+
+
+class EdsRegistrationRequest(BaseModel):
+    by: EdsPerson
+    at: datetime
+
+
+class EdsLetter(BaseModel):
+    body: dict[str, Any] | None
+    recipient_attention: str | None
+    recipient_email: str | None
+    signatory_name: str | None
+    signatory_position: str | None
+    pdf: EdsDocumentPdf | None
+    mailings: list[EdsDocumentMailing]
+    registration_requested: EdsRegistrationRequest | None
+
+
+class EdsLetterhead(BaseModel):
+    configured: bool
+    company_name: str | None
+    requisites: list[str]
+    signatory_name: str | None
+    signatory_position: str | None
+    has_logo: bool
+    updated_at: datetime | None
+
+
 class EdsDocument(BaseModel):
     id: str
     kind: DocumentKind
@@ -136,6 +208,9 @@ class EdsDocument(BaseModel):
     can_edit: bool
     created_at: datetime
     updated_at: datetime
+    letter: EdsLetter | None = None
+    can_register: bool = False
+    can_request_registration: bool = False
 
 
 def _today() -> date:
@@ -161,6 +236,8 @@ class _Form(BaseModel):
     file_ids: list[str] = Field(default_factory=list, max_length=50)
     erp_deal_id: int | None = None
     recipient: EdsRecipient | None = None
+    letter: EdsLetterIn | None = None
+    send: bool = False
     submit: bool = False
 
     @field_validator("subject", "text")

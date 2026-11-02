@@ -365,6 +365,54 @@ const forbiddenBff = (resource: string) =>
     { status: 403 },
   );
 
+/**
+ * Хук регистрации ИСХ «в ответ на ВХ» (как `close_by_outgoing` EDS, P8b/P4): поручения «Подготовить ответ» письма в работе
+ * → «Исполнено» со ссылкой на ИСХ; все исполнены — письмо «Исполнено», уведомление автору резолюции и делопроизводителю.
+ */
+export function closeReplyInstructions(letterNumber: string, outgoingNumber: string): number {
+  const letter = readLetters().find((l) => l.number === letterNumber);
+  const user = me();
+  if (!letter || !user) return 0;
+  const now = new Date().toISOString();
+  let next = letter;
+  let closed = 0;
+  for (const instruction of letter.instructions ?? []) {
+    if (instruction.kind !== "reply" || instruction.status !== "in_work") continue;
+    closed += 1;
+    next = replaceInstruction(next, {
+      ...instruction,
+      status: "executed",
+      outgoing: {
+        number: outgoingNumber,
+        path: `/eds/documents?scope=all&q=${encodeURIComponent(outgoingNumber)}`,
+      },
+      executed_at: now,
+    });
+    next = {
+      ...next,
+      journal: [...next.journal, entry("instruction.executed", user, `Ответ ${outgoingNumber}`)],
+    };
+  }
+  if (closed === 0) return 0;
+  if ((next.instructions ?? []).every((i) => i.status === "executed")) {
+    next = {
+      ...next,
+      status: "executed",
+      on_control: false,
+      executed_at: now,
+      journal: [...next.journal, { ...entry("letter.executed", user), by: null }],
+    };
+    const ids = [next.office_resolution?.decided_by.id, next.registered_by?.id];
+    notify(
+      ids.filter((id): id is string => Boolean(id)),
+      `Письмо ${letter.number} исполнено`,
+      letter,
+    );
+  }
+  save(next);
+  return closed;
+}
+
 export const edsInstructionsHandlers = [
   http.get("*/eds/staff", () => {
     const held = access();

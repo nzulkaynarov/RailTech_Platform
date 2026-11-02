@@ -171,6 +171,12 @@ class Content(BaseModel):
     ciphertext: Annotated[str, Field(max_length=4194304, min_length=1)]
 
 
+class ContentType(StrEnum):
+    image_png = "image/png"
+    image_jpeg = "image/jpeg"
+    image_webp = "image/webp"
+
+
 class ContractSigned(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -504,6 +510,11 @@ class DocumentCreatedV1(BaseModel):
     payload: DocumentCreated
 
 
+class FontFamily(StrEnum):
+    sans = "sans"
+    serif = "serif"
+
+
 class InviteRequested(BaseModel):
     """
     Приглашение контакта в Cabinet через бот CRM (D1-9). Рабочей ссылки и токенов нет: контакт входит в Mini App по своему Telegram-аккаунту (initData), поэтому событие не секретно.
@@ -670,8 +681,87 @@ class Language(StrEnum):
     en = "en"
 
 
+class Letterhead(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    company_name: Annotated[str, Field(max_length=255)]
+    """
+    Полное юридическое наименование (пусто — не задано)
+    """
+    inn: Annotated[str, Field(max_length=20)]
+    legal_address: Annotated[str, Field(max_length=2000)]
+    bank_details: Annotated[str, Field(max_length=2000)]
+    signatory_name: Annotated[str, Field(max_length=255)]
+    """
+    ФИО подписанта — подписант писем по умолчанию (директор)
+    """
+    signatory_position: Annotated[str, Field(max_length=255)]
+    footer_text: Annotated[str, Field(max_length=2000)]
+    accent_color: Annotated[str, Field(pattern="^(#[0-9a-fA-F]{6})?$")]
+    """
+    Акцентный цвет #rrggbb; пусто — цвет бланка по умолчанию
+    """
+    font_family: FontFamily
+    logo: Logo | None
+    """
+    Логотип документов байтами; null — логотипа нет или он не подходит (logo_omitted)
+    """
+    logo_omitted: LogoOmitted | None = None
+    """
+    Почему логотипа нет при загруженном файле: hidden — «Показывать логотип» выключено, unsupported — SVG/GIF или файл не читается, too_large — больше 512 КиБ после уменьшения
+    """
+
+
+class LetterheadUpdatedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.letterhead.updated.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP — владелец реквизитов своей компании (ADR-0015 п. 5, ADR-0020 п. 5): админ сохранил «Компания и бланки» (реквизиты или логотип документов) — ERP публикует снимок бланка целиком, EDS держит проекцию для писем на бланке (P4 волны 18a). Только своя компания ERP (core.tenant.own_company_id). Логотип — байтами (PNG, JPEG или WebP, не больше 512 КиБ, как Logo в rt-docs): ERP уменьшает картинку до размера бланка; SVG, GIF и слишком большой файл — logo = null и logo_omitted с причиной. Каждое событие — полный снимок: более старое (по time конверта) проекцию не перезаписывает. Подписчики: EDS; CRM тип не получает.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Своя компания в ERP
+    """
+    actor: Actor | None = None
+    letterhead: Letterhead
+
+
 class LineNo(RootModel[int]):
     root: Annotated[int, Field(ge=1)]
+
+
+class Logo(BaseModel):
+    """
+    Логотип документов байтами; null — логотипа нет или он не подходит (logo_omitted)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    content_type: ContentType
+    data_base64: Annotated[
+        str,
+        Field(
+            json_schema_extra={"contentEncoding": "base64"},
+            max_length=700000,
+            min_length=4,
+        ),
+    ]
+    sha256: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+    size: Annotated[int, Field(ge=1, le=524288)]
+
+
+class LogoOmitted(StrEnum):
+    """
+    Почему логотипа нет при загруженном файле: hidden — «Показывать логотип» выключено, unsupported — SVG/GIF или файл не читается, too_large — больше 512 КиБ после уменьшения
+    """
+
+    hidden = "hidden"
+    unsupported = "unsupported"
+    too_large = "too_large"
 
 
 class MailRequestedV1(BaseModel):

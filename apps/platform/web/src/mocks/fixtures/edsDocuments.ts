@@ -1,6 +1,9 @@
 import type {
   EdsDecision,
+  EdsDocumentBody,
   EdsDocumentKind,
+  EdsDocumentMailing,
+  EdsDocumentPdf,
   EdsDocumentStatus,
   EdsFile,
   EdsMoney,
@@ -39,6 +42,23 @@ export interface MockDocument {
   decisions: EdsDecision[];
   created_at: string;
   updated_at: string;
+  /** Письмо на бланке (P4): тело, «кому», почта, подписант, PDF, журнал отправки, передача на регистрацию */
+  letter?: MockLetter;
+  /** «В ответ на ВХ» (P8b): регистрация закрывает поручения «Подготовить ответ» */
+  replyTo?: string | null;
+}
+
+export interface MockLetter {
+  body: EdsDocumentBody | null;
+  recipient_attention: string | null;
+  recipient_email: string | null;
+  signatory_name: string | null;
+  signatory_position: string | null;
+  pdf: EdsDocumentPdf | null;
+  /** Сколько раз спросили состояние PDF: «готов» — со второго опроса (рендер в фоне) */
+  pdfPolls: number;
+  mailings: EdsDocumentMailing[];
+  registration_requested: { ownerId: string; at: string } | null;
 }
 
 /** Строка реестра, которой нет среди документов сотрудников: входящее письмо или КП (откроются в своих разделах). */

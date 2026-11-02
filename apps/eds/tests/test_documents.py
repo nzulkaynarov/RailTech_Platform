@@ -115,16 +115,27 @@ async def test_permission_depends_on_document_kind(client: httpx.AsyncClient, st
         "text": "Здравствуйте",
         "recipient": {"name": "ООО «Пример»"},
     }
-    # менеджер может служебки, но не исходящие письма
-    denied = await client.post("/api/v1/documents", json=letter_out, headers=staff["manager"].headers)
+    # P4, B-P8B-4: черновик письма готовит любой с memos.create (исполнитель «Подготовить ответ»), а
+    # регистрирует ИСХ только держатель letters.register
+    draft = await client.post("/api/v1/documents", json=letter_out, headers=staff["manager"].headers)
+    assert draft.status_code == 201, draft.text
+    denied = await client.post(f"/api/v1/documents/{draft.json()['id']}/submit", headers=staff["manager"].headers)
     assert_error(denied, 403, "FORBIDDEN", permission="letters.register")
-    # регистратор — наоборот: исходящие и служебки (у него memos.create), но
+    # своё письмо автор видит и без letters.read
+    assert (
+        await client.get(f"/api/v1/documents/{draft.json()['id']}", headers=staff["manager"].headers)
+    ).status_code == 200
+    # регистратор: исходящие и служебки (у него memos.create)
     assert (
         await client.post("/api/v1/documents", json=letter_out, headers=staff["registrar"].headers)
     ).status_code == 201
-    # у «Администратора» только memos.create: исходящее письмо ему не положено
+    # у «Администратора» только memos.create: черновик письма — да, регистрация — нет
+    admin_draft = await client.post("/api/v1/documents", json=letter_out, headers=staff["admin"].headers)
+    assert admin_draft.status_code == 201
     assert_error(
-        await client.post("/api/v1/documents", json=letter_out, headers=staff["admin"].headers), 403, "FORBIDDEN"
+        await client.post(f"/api/v1/documents/{admin_draft.json()['id']}/submit", headers=staff["admin"].headers),
+        403,
+        "FORBIDDEN",
     )
 
 

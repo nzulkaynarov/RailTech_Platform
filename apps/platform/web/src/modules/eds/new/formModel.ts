@@ -6,8 +6,19 @@ import type {
   EdsDocumentUpdateIn,
 } from "../../../shared/api/generated/model";
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
-import type { FieldKey } from "../documents/errors";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
+import {
+  type Block,
+  type Body,
+  type BodyLang,
+  blockId,
+  bodyText,
+  emptyBlocks,
+  fromBody,
+  isBlank,
+  toBody,
+} from "../../../shared/ui/BodyEditor/bodyModel";
+import type { FieldKey } from "../documents/errors";
 
 /** Тип из адреса `/eds/new?type=memo|statement|report|letter` (SPEC-v3 §6.3) -> тип документа EDS. */
 const TYPE_PARAM: Record<string, EdsDocumentKind> = {
@@ -52,6 +63,12 @@ export interface FormValues {
   attachments: Attachment[];
   /** Только письмо (P8b): «в ответ на» — номер входящего ВХ; регистрация закрывает поручение «Подготовить ответ» */
   inReplyTo: string;
+  /** Письмо на бланке (P4): тело блоками, «кому», почта адресата, подписант (пусто — подписант бланка) */
+  blocks: Block[];
+  recipientAttention: string;
+  recipientEmail: string;
+  signatoryName: string;
+  signatoryPosition: string;
 }
 
 export const EMPTY_FORM: FormValues = {
@@ -65,6 +82,11 @@ export const EMPTY_FORM: FormValues = {
   deal: null,
   attachments: [],
   inReplyTo: "",
+  blocks: emptyBlocks(),
+  recipientAttention: "",
+  recipientEmail: "",
+  signatoryName: "",
+  signatoryPosition: "",
 };
 
 /** Сегодня в часовом поясе компании (`YYYY-MM-DD`): «нужно до» не раньше этой даты. */
@@ -98,14 +120,28 @@ export function isLetter(kind: EdsDocumentKind): boolean {
   return kind === "letter_out";
 }
 
-/** Клиентская проверка: тема и текст обязательны, сумма больше нуля, «нужно до» не в прошлом, у письма — адресат. */
+/** Почта адресата: одна, без пробелов, с «@» и точкой в домене (точную проверку делает сервер). */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isEmail(value: string): boolean {
+  return EMAIL.test(value.trim());
+}
+
+/**
+ * Клиентская проверка: тема и текст обязательны, сумма больше нуля, «нужно до» не в прошлом; у письма — адресат, тело на
+ * бланке (хотя бы один непустой блок) и почта адресата, если указана, — похожая на адрес.
+ */
 export function validate(values: FormValues, today: string = todayInCompanyZone()): FormErrors {
   const errors: FormErrors = {};
   if (values.subject.trim() === "") errors.subject = true;
-  if (values.text.trim() === "") errors.text = true;
   if (isLetter(values.kind)) {
+    if (isBlank(values.blocks)) errors.text = true;
     if (values.recipientName.trim() === "") errors.recipient = true;
+    if (values.recipientEmail.trim() !== "" && !isEmail(values.recipientEmail)) {
+      errors.recipient_email = true;
+    }
   } else {
+    if (values.text.trim() === "") errors.text = true;
     if (!parseAmount(values.amount).ok) errors.amount = true;
     if (values.dueDate !== "" && values.dueDate < today) errors.due_date = true;
   }
@@ -116,6 +152,7 @@ export function validate(values: FormValues, today: string = todayInCompanyZone(
 export const FIELD_ORDER: readonly FieldKey[] = [
   "subject",
   "recipient",
+  "recipient_email",
   "text",
   "amount",
   "due_date",
@@ -124,7 +161,7 @@ export const FIELD_ORDER: readonly FieldKey[] = [
 ];
 
 export function fieldElementId(field: FieldKey): string {
-  return `doc-${field.replace("_", "-")}`;
+  return `doc-${field.replaceAll("_", "-")}`;
 }
 
 interface Payload {
@@ -135,43 +172,84 @@ interface Payload {
   file_ids: string[];
   erp_deal_id: number | null;
   recipient?: { name: string; inn: string | null };
+  letter?: {
+    body: Body;
+    recipient_attention: string | null;
+    recipient_email: string | null;
+    signatory_name: string | null;
+    signatory_position: string | null;
+  };
   submit: boolean;
+  send?: boolean;
 }
 
-export function toPayload(values: FormValues, submit: boolean): Payload {
+const orNull = (value: string): string | null => (value.trim() === "" ? null : value.trim());
+
+/** Что сделать с документом: сохранить черновик, отправить (письмо — зарегистрировать) и, у письма, отправить адресату. */
+export interface SubmitMode {
+  submit: boolean;
+  /** Только письмо: после регистрации отправить адресату почтой (нужна почта) */
+  send?: boolean;
+}
+
+export function toPayload(
+  values: FormValues,
+  mode: SubmitMode | boolean,
+  lang: BodyLang = "ru",
+): Payload {
+  const { submit, send = false } = typeof mode === "boolean" ? { submit: mode } : mode;
   const letter = isLetter(values.kind);
   const parsed = letter ? null : parseAmount(values.amount);
   const amount = parsed?.ok ? parsed.value : null;
+  const body = letter ? toBody(values.blocks, lang) : null;
+  // У письма `text` — производный от тела (поиск и показ без PDF); поле обязательно, поэтому запасной — тема.
+  const text = body ? bodyText(body).trim() || values.subject.trim() : values.text.trim();
   return {
     subject: values.subject.trim(),
-    text: values.text.trim(),
+    text,
     amount: amount ? { amount, currency: HOME_CURRENCY } : null,
     due_date: !letter && values.dueDate !== "" ? values.dueDate : null,
     file_ids: values.attachments.flatMap((a) => (a.status === "done" && a.id ? [a.id] : [])),
     erp_deal_id: values.deal?.erp_deal_id ?? null,
-    ...(letter
+    ...(letter && body
       ? {
           recipient: {
             name: values.recipientName.trim(),
             inn: values.recipientInn.trim() === "" ? null : values.recipientInn.trim(),
           },
+          letter: {
+            body,
+            recipient_attention: orNull(values.recipientAttention),
+            recipient_email: orNull(values.recipientEmail),
+            signatory_name: orNull(values.signatoryName),
+            signatory_position: orNull(values.signatoryPosition),
+          },
+          ...(submit && send ? { send: true } : {}),
         }
       : {}),
     submit,
   };
 }
 
-export function toCreateBody(values: FormValues, submit: boolean): EdsDocumentIn {
+export function toCreateBody(
+  values: FormValues,
+  mode: SubmitMode | boolean,
+  lang: BodyLang = "ru",
+): EdsDocumentIn {
   const reply = values.inReplyTo.trim();
   return {
     kind: values.kind,
-    ...toPayload(values, submit),
+    ...toPayload(values, mode, lang),
     ...(isLetter(values.kind) && reply ? { in_reply_to_number: reply } : {}),
   };
 }
 
-export function toUpdateBody(values: FormValues, submit: boolean): EdsDocumentUpdateIn {
-  return toPayload(values, submit);
+export function toUpdateBody(
+  values: FormValues,
+  mode: SubmitMode | boolean,
+  lang: BodyLang = "ru",
+): EdsDocumentUpdateIn {
+  return toPayload(values, mode, lang);
 }
 
 function dealChoice(deal: EdsDealRef | null): DealChoice | null {
@@ -199,6 +277,16 @@ export function fromDocument(doc: EdsDocument): FormValues {
       existing: true,
     })),
     inReplyTo: "",
+    // Письмо без тела (до P4) открывается с его текстом в одном абзаце.
+    blocks: doc.letter?.body
+      ? fromBody(doc.letter.body)
+      : doc.kind === "letter_out" && doc.text
+        ? [{ id: blockId(), kind: "paragraph" as const, text: doc.text }]
+        : emptyBlocks(),
+    recipientAttention: doc.letter?.recipient_attention ?? "",
+    recipientEmail: doc.letter?.recipient_email ?? "",
+    signatoryName: doc.letter?.signatory_name ?? "",
+    signatoryPosition: doc.letter?.signatory_position ?? "",
   };
 }
 

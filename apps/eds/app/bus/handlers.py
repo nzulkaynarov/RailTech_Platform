@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated
 from app.bus.snapshots import UserDeactivated, UserEnvelope, parse_time
-from app.services import employees, letters, project_documents, quotes
+from app.services import employees, letter_mail, letterhead, letters, project_documents, quotes
 
 log = structlog.get_logger(__name__)
 
@@ -31,6 +31,9 @@ USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 REQUEST_CREATED = "uz.railtech.erp.request.created.v1"
 QUOTE_READY = "uz.railtech.erp.quote.ready_for_approval.v1"
+LETTERHEAD_UPDATED = "uz.railtech.erp.letterhead.updated.v1"
+MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
+MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 
 
 async def on_user_snapshot(event: Event, session: AsyncSession) -> None:
@@ -69,6 +72,20 @@ async def on_project_document(event: Event, session: AsyncSession) -> None:
     )
 
 
+async def on_letterhead(event: Event, session: AsyncSession) -> None:
+    """Бланк своей компании из ERP (P4): проекция; более старый снимок не применяется."""
+    data = letterhead.LetterheadUpdated.model_validate(event.data)
+    applied = await letterhead.apply(session, data, moment=parse_time(event.time))
+    log.info("letterhead_projection", erp_company_id=data.erp_company_id, applied=applied, event_id=event.id)
+
+
+async def on_mail_result(event: Event, session: AsyncSession) -> None:
+    """Итог письма адресату от почтового сервиса CRM (P4, B-W18AP1-1): строка журнала отправки; чужие итоги — мимо."""
+    data = letter_mail.MailResult.model_validate(event.data)
+    applied = await letter_mail.apply_result(session, data, sent=event.type == MAIL_SENT)
+    log.info("mail_result", event_type=event.type, request_key=data.request_key, applied=applied, event_id=event.id)
+
+
 def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegistry:
     """Реестр обработчиков EDS; свой, а не общий `default_registry` — тесты и процессы не делят состояние.
 
@@ -81,6 +98,9 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     registry.add(USER_DEACTIVATED, on_user_deactivated)
     for event_type in project_documents.EVENT_STATUS:
         registry.add(event_type, on_project_document)
+    registry.add(LETTERHEAD_UPDATED, on_letterhead)
+    registry.add(MAIL_SENT, on_mail_result)
+    registry.add(MAIL_FAILED, on_mail_result)
     if get_bus is not None:
 
         async def request_created(event: Event, session: AsyncSession) -> None:

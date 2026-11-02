@@ -98,10 +98,11 @@ x-eds-backend: &eds-backend
   build:
     context: ../../apps/eds
     target: prod
-    # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки.
+    # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки; rt-docs — письма на бланке (P4).
     additional_contexts:
       rtbus: ../../packages/rt-bus
       contracts: ../../packages/contracts
+      rtdocs: ../../packages/rt-docs
   environment: &eds-backend-env
     APP_ENV: ${APP_ENV:-dev}
     LOG_LEVEL: ${LOG_LEVEL:-INFO}

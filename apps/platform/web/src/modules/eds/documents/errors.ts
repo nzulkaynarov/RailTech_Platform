@@ -11,6 +11,7 @@ export const FIELD_KEYS = [
   "amount",
   "due_date",
   "recipient",
+  "recipient_email",
   "erp_deal_id",
   "in_reply_to_number",
 ] as const;
@@ -22,6 +23,7 @@ const FIELD_TEXT: Record<FieldKey, string> = {
   amount: "documents:form.validation.amount",
   due_date: "documents:form.validation.due",
   recipient: "documents:form.validation.recipient",
+  recipient_email: "documents:form.validation.recipientEmail",
   erp_deal_id: "documents:form.validation.deal",
   in_reply_to_number: "documents:form.validation.replyTo",
 };
@@ -39,11 +41,14 @@ export function serverFields(error: unknown): FieldKey[] {
   const found: FieldKey[] = [];
   for (const item of raw) {
     if (typeof item !== "string") continue;
-    // BFF называет поле по пути запроса (`body.amount.amount`), EDS — по имени (`amount`).
-    const name = item.split(".").filter((part) => part !== "body")[0];
-    const key = FIELD_KEYS.find(
-      (k) => k === name || (k === "erp_deal_id" && name === "erp_deal_id"),
-    );
+    // BFF называет поле по пути запроса (`body.amount.amount`, `body.letter.recipient_email`), EDS — по имени (`amount`,
+    // `body` — тело письма на бланке, его поле на экране — «Текст»).
+    const parts = item.split(".");
+    if (parts[0] === "body" && parts.length > 1) parts.shift();
+    if (parts[0] === "letter" && parts.length > 1) parts.shift();
+    const raw = parts[0];
+    const name = raw === "body" ? "text" : raw;
+    const key = FIELD_KEYS.find((k) => k === name);
     if (key && !found.includes(key)) found.push(key);
   }
   return found;

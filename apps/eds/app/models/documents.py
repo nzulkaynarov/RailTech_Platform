@@ -57,6 +57,17 @@ class Document(Base):
     recipient_name: Mapped[str | None] = mapped_column(String(255))
     recipient_inn: Mapped[str | None] = mapped_column(String(14))
     in_reply_to: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("letters.id"))
+    # Письмо на бланке (P4): тело блоками (контракт documents/body.schema.json), «кому», почта, подписант; когда
+    # зарегистрировано (дата итогового PDF); последний запрошенный PDF; передача на регистрацию исполнителем (B-P8B-4).
+    body: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    recipient_attention: Mapped[str | None] = mapped_column(String(300))
+    recipient_email: Mapped[str | None] = mapped_column(String(254))
+    signatory_name: Mapped[str | None] = mapped_column(String(255))
+    signatory_position: Mapped[str | None] = mapped_column(String(255))
+    registered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    pdf_hash: Mapped[str | None] = mapped_column(String(64), ForeignKey("document_renders.hash", use_alter=True))
+    registration_requested_by: Mapped[int | None] = mapped_column(BigInteger)
+    registration_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

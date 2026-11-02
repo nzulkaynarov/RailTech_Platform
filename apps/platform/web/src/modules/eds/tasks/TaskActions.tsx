@@ -2,8 +2,6 @@ import { App, Button, Card, Input } from "antd";
 import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import { canEdit } from "../../../app/access";
-import { useAuth } from "../../../app/auth/useAuth";
 import type { LetterCard, LetterInstruction } from "../../../shared/api/generated/model";
 import {
   useAcknowledgeLetter,
@@ -273,9 +271,7 @@ export function MyInstruction({
   instruction: LetterInstruction;
 }) {
   const { t } = useTranslation("letters");
-  const { me } = useAuth();
   const { date } = useFormat();
-  const canLetter = canEdit(me, "eds.inbox.register");
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.mine")}</h2>}>
       <p className={instruction.overdue ? "pf-instr-due pf-instr-due--overdue" : "pf-instr-due"}>
@@ -286,11 +282,10 @@ export function MyInstruction({
       <p className="pf-letters-summary">{instruction.text}</p>
       {instruction.kind === "reply" ? (
         <div className="pf-instr-reply">
-          {canLetter ? (
-            <LinkButton to={`/eds/new?type=letter&reply_to=${encodeURIComponent(letter.number)}`}>
-              {t("tasks.reply.prepare")}
-            </LinkButton>
-          ) : null}
+          {/* P4 (B-P8B-4): письмо-ответ готовит любой исполнитель; без права регистрировать — передаёт делопроизводителю */}
+          <LinkButton to={`/eds/new?type=letter&reply_to=${encodeURIComponent(letter.number)}`}>
+            {t("tasks.reply.prepare")}
+          </LinkButton>
           <p className="pf-hint">{t("tasks.reply.hint", { number: letter.number })}</p>
         </div>
       ) : null}

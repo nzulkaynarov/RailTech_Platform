@@ -1,0 +1,9 @@
+# Контекст `rtdocs` образа EDS (apps/eds/Dockerfile, P4): только пакет со шрифтами, без окружения, тестов и образа тестов.
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+**/__pycache__
+tests
+scripts
+docker

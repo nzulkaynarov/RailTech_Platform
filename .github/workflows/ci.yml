@@ -140,6 +140,9 @@ jobs:
             eds:
               - 'apps/eds/**'
               - 'packages/rt-bus/**'
+              # P4: письма на бланке — пакет rt-docs (path-зависимость) и схема тела документа.
+              - 'packages/rt-docs/**'
+              - 'packages/contracts/documents/**'
               - 'packages/contracts/openapi/eds.yaml'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
@@ -173,6 +176,8 @@ jobs:
               - 'apps/platform/bff/uv.lock'
               - 'apps/eds/pyproject.toml'
               - 'apps/eds/uv.lock'
+              - 'packages/rt-docs/pyproject.toml'
+              - 'packages/rt-docs/uv.lock'
               - 'apps/erp/backend/requirements*'
               - 'apps/erp/frontend/nginx.conf'
               - 'apps/cabinet/nginx.conf'
@@ -937,6 +942,7 @@ jobs:
           build-contexts: |
             rtbus=packages/rt-bus
             contracts=packages/contracts
+            rtdocs=packages/rt-docs
           platforms: linux/amd64
           load: true
           tags: ${{ steps.p.outputs.tag }}

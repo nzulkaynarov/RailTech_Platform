@@ -45,6 +45,8 @@ ANY_EMPLOYEE = {
     ("post", "/api/v1/instructions/{instruction_id}/extension"),
     ("post", "/api/v1/instructions/{instruction_id}/extension/decision"),
     ("get", "/api/v1/letter-tasks"),
+    # P4: бланк компании для формы письма — любой сотрудник (черновик письма создаёт любой с `memos.create`)
+    ("get", "/api/v1/letterhead"),
 }
 
 

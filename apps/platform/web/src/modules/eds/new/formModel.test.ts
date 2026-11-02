@@ -50,15 +50,79 @@ describe("formModel", () => {
     ).toEqual({});
   });
 
-  it("у письма обязателен адресат, а сумма и срок не проверяются", () => {
+  it("у письма обязательны адресат и тело на бланке, почта — похожая на адрес; сумма и срок не проверяются", () => {
     const letter: FormValues = {
       ...FILLED,
       kind: "letter_out",
       amount: "0",
       dueDate: "2020-01-01",
     };
-    expect(validate(letter, "2026-10-27")).toEqual({ recipient: true });
-    expect(validate({ ...letter, recipientName: "ООО «Пример»" }, "2026-10-27")).toEqual({});
+    // текст письма — блоки на бланке, а не поле «Текст» служебки
+    expect(validate(letter, "2026-10-27")).toEqual({ recipient: true, text: true });
+    const filled: FormValues = {
+      ...letter,
+      recipientName: "ООО «Пример»",
+      blocks: [{ id: "p", kind: "paragraph", text: "Сообщаем." }],
+    };
+    expect(validate(filled, "2026-10-27")).toEqual({});
+    expect(validate({ ...filled, recipientEmail: "не адрес" }, "2026-10-27")).toEqual({
+      recipient_email: true,
+    });
+    expect(validate({ ...filled, recipientEmail: "office@example.uz" }, "2026-10-27")).toEqual({});
+  });
+
+  it("письмо на бланке: тело контракта, производный текст, «кому», почта, подписант; отправка адресату только с регистрацией", () => {
+    const form: FormValues = {
+      ...FILLED,
+      kind: "letter_out",
+      subject: "Ответ на требование",
+      recipientName: "ГНИ Мирабадского района",
+      recipientAttention: " Начальнику ГНИ ",
+      recipientEmail: "gni@example.uz",
+      signatoryName: "",
+      inReplyTo: "ВХ-112/26",
+      blocks: [
+        { id: "a", kind: "paragraph", text: "Сообщаем следующее." },
+        { id: "b", kind: "bullet", items: ["декларация", ""] },
+      ],
+    };
+    const body = toCreateBody(form, { submit: true, send: true }, "uz");
+    expect(body).toMatchObject({
+      kind: "letter_out",
+      in_reply_to_number: "ВХ-112/26",
+      text: "Сообщаем следующее.\n\n• декларация",
+      submit: true,
+      send: true,
+      letter: {
+        recipient_attention: "Начальнику ГНИ",
+        recipient_email: "gni@example.uz",
+        signatory_name: null,
+        signatory_position: null,
+        body: {
+          version: 1,
+          lang: "uz",
+          doc: {
+            type: "doc",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "Сообщаем следующее." }] },
+              {
+                type: "bulletList",
+                content: [
+                  {
+                    type: "listItem",
+                    content: [
+                      { type: "paragraph", content: [{ type: "text", text: "декларация" }] },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    });
+    // черновик адресату не отправляется
+    expect(toUpdateBody(form, { submit: false, send: true })).not.toHaveProperty("send");
   });
 
   it("тело запроса: деньги строкой с двумя знаками, пустое — null, письмо несёт адресата и не несёт сумму", () => {

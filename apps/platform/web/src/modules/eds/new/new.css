@@ -55,3 +55,26 @@
     width: 100%;
   }
 }
+/* Письмо на бланке (P4): форма слева, PDF справа; на телефоне и узком экране — PDF под формой */
+.pf-newdoc--letter {
+  max-width: 1440px;
+}
+.pf-newdoc-letter {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(360px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.pf-newdoc-letter-pdf {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+@media (max-width: 1199px) {
+  .pf-newdoc-letter {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pf-newdoc-letter-pdf {
+    position: static;
+  }
+}

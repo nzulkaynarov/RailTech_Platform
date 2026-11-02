@@ -46,8 +46,8 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 26
-    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1)
+        len([t for t in TYPES if t.domain == "erp"]) == 27
+    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -158,11 +158,14 @@ ERP_EVENTS_D2 = {"contract.status_changed"}
 #: W18A-P1 (B-INB-6): ERP письма сама не шлёт — запрос отправки почтовому сервису CRM.
 ERP_EVENTS_W18A = {"mail.requested"}
 
+#: W18A-P4 (письмо на бланке): снимок бланка своей компании — проекция EDS; CRM тип не получает.
+ERP_EVENTS_W18A_P4 = {"letterhead.updated"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
     erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
-    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1 | ERP_EVENTS_D2 | ERP_EVENTS_W18A
+    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1 | ERP_EVENTS_D2 | ERP_EVENTS_W18A | ERP_EVENTS_W18A_P4
 
 
 EDS_EVENTS = {
@@ -405,14 +408,15 @@ def test_initial_subscriptions_v1() -> None:
 
 
 def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
-    """CRM — все типы ERP, кроме адресованных EDS: quote.ready_for_approval (себестоимость и маржа, волна 12) и
-    contract.status_changed (проекция реестра, D2-5)."""
+    """CRM — все типы ERP, кроме адресованных EDS: quote.ready_for_approval (себестоимость и маржа, волна 12),
+    contract.status_changed (проекция реестра, D2-5) и letterhead.updated (бланк с логотипом, W18A-P4)."""
     crm = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["crm"]
     erp_types = {t.name for t in TYPES if t.domain == "erp"}
     erp_got = {n for n in _gets(crm) if n.startswith("uz.railtech.erp.")}
     assert erp_got == erp_types - {
         "uz.railtech.erp.quote.ready_for_approval.v1",
         "uz.railtech.erp.contract.status_changed.v1",
+        "uz.railtech.erp.letterhead.updated.v1",
     }
     # от EDS — запрос письма (W18A-P1) и уведомления сотрудникам (P8b)
     assert _gets(crm) - erp_got == {"uz.railtech.eds.mail.requested.v1", "uz.railtech.eds.notice.requested.v1"}
@@ -438,6 +442,10 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.erp.act.issued.v1",
         "uz.railtech.erp.act.accepted.v1",
         "uz.railtech.erp.act.returned.v1",
+        # W18A-P4: бланк своей компании и итог письма на бланке адресату (журнал отправки).
+        "uz.railtech.erp.letterhead.updated.v1",
+        "uz.railtech.crm.mail.sent.v1",
+        "uz.railtech.crm.mail.failed.v1",
     }
 
 

@@ -507,12 +507,6 @@
       "Pozitsiya va arizaga bog'lanish olib tashlanadi.",
       "Yuklab olingan nusxalar yuklab olganlarda qoladi."
     ],
-    "viewer": {
-      "region": "«{{name}}» fayli sahifalari",
-      "page": "«{{name}}», {{page}}-sahifa, jami {{total}}",
-      "error": "Faylni ko'rish uchun ochib bo'lmadi. Uni yuklab oling.",
-      "truncated": "{{total}} sahifadan {{shown}} tasi ko'rsatilgan. Qolgani yuklab olingan faylda."
-    },
     "form": {
       "title": "Fayl yuklash",
       "ok": "Yuklash",

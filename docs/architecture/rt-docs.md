@@ -1,5 +1,5 @@
 # rt_docs — документы: формат тела, бланк, рендер PDF и DOCX
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28 (D-DOC1, ревью #295)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-11-02 (P4 волны 18a — письмо на бланке в EDS)
 
 Пакет [`packages/rt-docs`](../../packages/rt-docs/) (дистрибутив `rt-docs`, импорт `rt_docs`, Python ≥ 3.12, без фреймворков) и
 контракт [`packages/contracts/documents/`](../../packages/contracts/documents/) — ядро документов на бланке: тело JSON → HTML →
@@ -161,9 +161,27 @@ WeasyPrint и по PDF через pypdf с допуском 0,03; точное �
 
 ## 7. Подключение (D-DOC2, D-DOC3)
 
-- **EDS**: `rt-docs = { path = "../../packages/rt-docs", editable = true }` в `pyproject.toml`, контекст сборки `rtdocs` и
-  `contracts` (как `rtbus`), в образ — `libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0`; `RT_DOCS_CONTRACTS_DIR` →
-  копия `documents/`. Предпросмотр с кэшем по хешу тела, бланка и данных.
+- **EDS (подключено в P4 волны 18a — письмо на бланке)**: `rt-docs = { path = "../../packages/rt-docs", editable = true }` в
+  `pyproject.toml`, контекст сборки `rtdocs` (`packages/rt-docs/.dockerignore` — без тестов и окружения) рядом с `rtbus` и
+  `contracts` (compose `base.yml`, `deploy.yml`, задание `cpu` в `ci.yml`, `scripts/qemu_cpu_check.sh`), в образ —
+  `libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0`, `RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents`,
+  `XDG_CACHE_HOME=/tmp/.cache` (кэш fontconfig пользователя `app`). Устройство:
+  - **Бланк** — проекция события `uz.railtech.erp.letterhead.updated.v1` (ERP публикует снимок «Компания и бланки» своей
+    компании при каждом сохранении реквизитов или логотипа; логотип байтами ≤ 512 КиБ, большой растр ERP уменьшает Pillow,
+    SVG — `logo_omitted`): таблицы `letterhead` (одна строка, более старый снимок не применяется) и `letterhead_logos` (по SHA-256).
+  - **Тело** — `documents.body` (JSONB, `normalize_body` + `validate_body` при сохранении, 422 `body`), `documents.text` —
+    производный плоский текст для поиска. Подпись (`signature`, подписант письма или бланка) и реквизиты письма (`DocumentMeta`:
+    номер и дата — только у зарегистрированного, «На № …» — исх. номер и дата отправителя ВХ, адресат, «Исп.») добавляет EDS.
+  - **Кэш** — `document_renders`: ключ — SHA-256 канонического JSON ввода (тело с подписью, реквизиты, бланк, хеш логотипа,
+    версия вёрстки `rt-docs/letter-1`); строка с вводом — снимок выпущенного письма (ADR-0020 п. 7); PDF — `renders/<хеш>.pdf`
+    в `eds-private`. Тот же ввод второй раз не рендерится; неудачный — только явным повтором.
+  - **Очередь** — `POST /documents/{id}/pdf` пишет `pending` и ставит задачу **после коммита**; задача `render_pdf` (очередь
+    `renders`, `lock = rt-docs-render` — одна на все воркеры, `queueing_lock` = хеш), `render_sweep` раз в минуту подбирает
+    потерянные постановки. Рендер — в `ProcessPoolExecutor(max_workers=1, spawn)`: в процессе пула работает жёсткий тайм-аут
+    `rt_docs` (60 с), поверх — ожидание 75 с и `kill` с пересозданием пула. Ошибки — словами («Письмо слишком большое для PDF —
+    сократите текст…»), экран опрашивает `GET …/pdf`.
+  - **Отправка адресату** — после итогового PDF: `mail.requested` (`notify = true`, вложение — подписанная ссылка на 24 ч),
+    итог `crm.mail.sent|failed` → журнал `document_mailings` (B-W18AP1-1).
 - **ERP**: пакет копией в `site-packages` (как `rt_bus`); в образе ERP WeasyPrint 69.0 (`requirements.txt`) — та же мажорная версия,
   которую требует пакет (`weasyprint>=69,<70` в зависимостях, проверка при импорте `rt_docs.pdf`; lock пакета — 69.0).
 - **Правило встраивания (B-094):** рендер — только в фоновом воркере с параллельностью 1 и лимитом памяти контейнера; результат

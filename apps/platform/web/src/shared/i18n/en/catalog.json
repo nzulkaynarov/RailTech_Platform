@@ -507,12 +507,6 @@
       "Its links to the item and request are removed.",
       "Copies already downloaded stay with those who downloaded them."
     ],
-    "viewer": {
-      "region": "Pages of the file “{{name}}”",
-      "page": "“{{name}}”, page {{page}} of {{total}}",
-      "error": "Could not open the file for preview. Download it.",
-      "truncated": "Showing {{shown}} pages of {{total}}. The rest is in the downloaded file."
-    },
     "form": {
       "title": "Upload file",
       "ok": "Upload",

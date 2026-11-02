@@ -1,8 +1,8 @@
 ---
 title: Служебные записки
-sections: eds.new, eds.approvals, eds.documents
+sections: eds.approvals, eds.documents
 order: 60
-screens: [/eds/new, /eds/approvals, /eds/documents]
+screens: [/eds/approvals, /eds/documents]
 ---
 Служебная записка (СЗ-2026/031) — внутренний документ сотрудника на имя директора: тема, текст, сумма или срок, вложения.
 

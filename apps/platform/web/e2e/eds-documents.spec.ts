@@ -41,7 +41,7 @@ async function openDocuments(page: Page, query = "?scope=mine"): Promise<void> {
 
 async function fillMemo(page: Page, subject: string, text: string): Promise<void> {
   await page.getByLabel("Тема").fill(subject);
-  await page.getByLabel("Текст").fill(text);
+  await page.getByLabel("Текст", { exact: true }).fill(text);
 }
 
 test.describe("Создать документ: сотрудник", () => {
@@ -269,16 +269,16 @@ test.describe("Создать документ: директор и реестр
     await expect(panel.getByText("ООО «Демо-Путь»")).toBeVisible();
   });
 
-  test("менеджеру письмо недоступно: подсказка словами, форма остаётся служебной запиской", async ({
+  test("менеджер без права регистрировать готовит письмо и передаёт на регистрацию (P4, B-P8B-4)", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/eds/new?type=letter");
 
     await expect(
-      page.getByText("Письма регистрирует роль с доступом к входящим письмам."),
+      page.getByText("Письмо подготовите вы, зарегистрирует и отправит делопроизводитель."),
     ).toBeVisible();
-    await expect(page.getByLabel("Кому")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Передать на регистрацию" })).toBeVisible();
   });
 
   test("администратор: без доступа к реестру — только «Мои», пусто словами и с действием", async ({

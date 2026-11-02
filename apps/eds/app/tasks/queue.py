@@ -11,6 +11,7 @@ from app.config import get_settings
 TASK_MODULES = (
     "app.tasks.bus",
     "app.tasks.maintenance",
+    "app.tasks.renders",
 )
 
 queue = procrastinate.App(
