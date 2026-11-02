@@ -27,7 +27,7 @@ import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
 import type { Attachment } from "../new/formModel";
 import { todayInCompanyZone } from "../new/formModel";
-import { localName, useLetterDictionary } from "../dictionaries";
+import { localName, useLetterDictionary, useResolutionKindName } from "../dictionaries";
 import {
   REGISTER_ORDER,
   type RegisterErrors,
@@ -178,6 +178,7 @@ export function RegisterLetterPage() {
   const refreshMail = useRefreshMail();
   const kinds = useListLetterKinds({ query: { staleTime: 5 * 60_000 } });
   const methods = useLetterDictionary("receipt-methods");
+  const resolutionKindName = useResolutionKindName();
   const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
   const people = (staff.data?.items ?? []).map((person) => ({
     value: person.id,
@@ -593,7 +594,7 @@ export function RegisterLetterPage() {
                       { value: "", label: t("letters:register.draft.none") },
                       ...RESOLUTION_KINDS.map((kind) => ({
                         value: kind,
-                        label: t(`letters:office.kind.${kind}`),
+                        label: resolutionKindName(kind),
                       })),
                     ]}
                     onChange={(kind: LetterResolutionKind | "") => {

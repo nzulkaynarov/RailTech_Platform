@@ -14,6 +14,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
+import { useResolutionKindName } from "../dictionaries";
 import { companyDate, fieldsOf, reasonOf, useRefreshLetters } from "./api";
 import {
   type OfficeErrors,
@@ -29,6 +30,7 @@ import {
   validateDraft,
   validateOffice,
 } from "./officeModel";
+import { ResolutionTemplatePicker } from "./ResolutionTemplatePicker";
 
 type Action = "resolve" | "approve" | "draft" | "return" | "reject";
 const ORDER: readonly OfficeField[] = ["kind", "responsible", "due", "text"];
@@ -65,6 +67,7 @@ export function OfficeResolutionForm({
   const [comment, setComment] = useState("");
   const [failure, setFailure] = useState<unknown>(null);
   const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
+  const kindName = useResolutionKindName();
   const today = companyDate();
   const draft = letter.resolution_draft;
   const approvable = mode === "resolve" ? draftAsResolution(letter, today) : null;
@@ -201,6 +204,17 @@ export function OfficeResolutionForm({
         </div>
       ) : null}
 
+      <ResolutionTemplatePicker
+        letter={letter}
+        values={values}
+        idPrefix={ids}
+        onApply={(next) => {
+          setValues(next);
+          setErrors({});
+          setFailure(null);
+        }}
+      />
+
       <fieldset className="pf-res-fieldset">
         <legend id={id("kind-legend")}>{t("office.kind.legend")}</legend>
         <Radio.Group
@@ -217,7 +231,7 @@ export function OfficeResolutionForm({
           <div className="pf-res-kinds">
             {RESOLUTION_KINDS.map((kind) => (
               <Radio key={kind} value={kind}>
-                <span className="pf-res-zone-name">{t(`office.kind.${kind}`)}</span>
+                <span className="pf-res-zone-name">{kindName(kind)}</span>
                 <span className="pf-hint"> — {t(`office.kindHint.${kind}`)}</span>
               </Radio>
             ))}

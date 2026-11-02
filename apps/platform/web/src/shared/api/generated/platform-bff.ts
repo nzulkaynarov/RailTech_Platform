@@ -327,6 +327,9 @@ import type {
   ResolutionAssignees,
   ResolutionDraftIn,
   ResolutionIn,
+  ResolutionTemplate,
+  ResolutionTemplateIn,
+  ResolutionTemplateList,
   ReturnToBotIn,
   Role,
   RoleCreate,
@@ -31519,12 +31522,496 @@ export const useDecideInstructionExtension = <
   return useMutation(getDecideInstructionExtensionMutationOptions(options), queryClient);
 };
 
+export const getListResolutionTemplatesUrl = () => {
+  return `/api/v1/eds/resolution-templates`;
+};
+
+/**
+ * EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin` — чтение.
+ * @summary EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+ */
+export const listResolutionTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplateList> => {
+  return http<ResolutionTemplateList>(getListResolutionTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResolutionTemplatesQueryKey = () => {
+  return [`/api/v1/eds/resolution-templates`] as const;
+};
+
+export const getListResolutionTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListResolutionTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listResolutionTemplates>>> = ({
+    signal,
+  }) => listResolutionTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResolutionTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListResolutionTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResolutionTemplates>>
+>;
+export type ListResolutionTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+ */
+
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListResolutionTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateResolutionTemplateUrl = () => {
+  return `/api/v1/eds/resolution-templates`;
+};
+
+/**
+ * Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе 403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+ * @summary EDS · Сохранить шаблон резолюции
+ */
+export const createResolutionTemplate = async (
+  resolutionTemplateIn: ResolutionTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ResolutionTemplate>(getCreateResolutionTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionTemplateIn),
+  });
+};
+
+export const getCreateResolutionTemplateMutationKey = () => ["createResolutionTemplate"] as const;
+
+export const getCreateResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResolutionTemplate>>,
+    TError,
+    CreateResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResolutionTemplate>>,
+  TError,
+  CreateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResolutionTemplate>>,
+    CreateResolutionTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResolutionTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResolutionTemplate>>
+>;
+export type CreateResolutionTemplateMutationBody = ResolutionTemplateIn;
+export type CreateResolutionTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateResolutionTemplateMutationVariables = { data: ResolutionTemplateIn };
+
+/**
+ * @summary EDS · Сохранить шаблон резолюции
+ */
+export const useCreateResolutionTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createResolutionTemplate>>,
+      TError,
+      CreateResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createResolutionTemplate>>,
+  TError,
+  CreateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateResolutionTemplateUrl = (id: string) => {
+  return `/api/v1/eds/resolution-templates/${id}`;
+};
+
+/**
+ * Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.
+ * @summary EDS · Изменить шаблон резолюции
+ */
+export const updateResolutionTemplate = async (
+  id: string,
+  resolutionTemplateIn: ResolutionTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ResolutionTemplate>(getUpdateResolutionTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionTemplateIn),
+  });
+};
+
+export const getUpdateResolutionTemplateMutationKey = () => ["updateResolutionTemplate"] as const;
+
+export const getUpdateResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResolutionTemplate>>,
+    TError,
+    UpdateResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>,
+  TError,
+  UpdateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResolutionTemplate>>,
+    UpdateResolutionTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResolutionTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>
+>;
+export type UpdateResolutionTemplateMutationBody = ResolutionTemplateIn;
+export type UpdateResolutionTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateResolutionTemplateMutationVariables = { id: string; data: ResolutionTemplateIn };
+
+/**
+ * @summary EDS · Изменить шаблон резолюции
+ */
+export const useUpdateResolutionTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateResolutionTemplate>>,
+      TError,
+      UpdateResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>,
+  TError,
+  UpdateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteResolutionTemplateUrl = (id: string) => {
+  return `/api/v1/eds/resolution-templates/${id}`;
+};
+
+/**
+ * Личный — владелец, общий — `admin: full`.
+ * @summary EDS · Удалить шаблон резолюции
+ */
+export const deleteResolutionTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteResolutionTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteResolutionTemplateMutationKey = () => ["deleteResolutionTemplate"] as const;
+
+export const getDeleteResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+    TError,
+    DeleteResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+  TError,
+  DeleteResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+    DeleteResolutionTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteResolutionTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>
+>;
+
+export type DeleteResolutionTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteResolutionTemplateMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Удалить шаблон резолюции
+ */
+export const useDeleteResolutionTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+      TError,
+      DeleteResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+  TError,
+  DeleteResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteResolutionTemplateMutationOptions(options), queryClient);
+};
+
 export const getListEdsStaffUrl = () => {
   return `/api/v1/eds/staff`;
 };
 
 /**
- * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+ * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
  * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
  */
 export const listEdsStaff = async (options?: Parameters<typeof http>[1]): Promise<EdsStaffList> => {

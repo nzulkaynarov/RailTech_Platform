@@ -4,6 +4,7 @@ import { afterEach, beforeEach, expect } from "vitest";
 import { usePanelsStore } from "../app/shell/panelsStore";
 import { resetDictionariesMock } from "../mocks/dictionaries";
 import { resetInstructionsMock } from "../mocks/edsInstructions";
+import { resetResolutionTemplatesMock } from "../mocks/resolutionTemplates";
 import { resetLetters } from "../mocks/fixtures/letters";
 import { endSession } from "../mocks/mockSession";
 import i18n from "../shared/i18n";
@@ -21,6 +22,7 @@ export function setupLetterTests(width = 1440): void {
     resetLetters();
     resetInstructionsMock();
     resetDictionariesMock();
+    resetResolutionTemplatesMock();
     usePanelsStore.setState({ entries: {} });
     setViewportWidth(width);
     missing.length = 0;

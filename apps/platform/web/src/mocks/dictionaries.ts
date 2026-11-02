@@ -20,7 +20,8 @@ import { buildMe, readSession } from "./mockSession";
  */
 const KEY = "rt-pf-mock-dictionaries";
 
-type Kind = "letter-kinds" | "receipt-methods";
+type Kind = "letter-kinds" | "receipt-methods" | "resolution-kinds";
+const CLOSED: ReadonlySet<Kind> = new Set<Kind>(["resolution-kinds"]);
 type State = Record<Kind, DictionaryItem[]>;
 
 const names = (ru: string, uz: string, en: string) => ({ ru, uz, en });
@@ -100,6 +101,12 @@ function seed(): State {
       methodItem("courier", names("Курьер", "Kuryer", "Courier"), 40),
       methodItem("email", names("E-mail", "E-mail", "Email"), 50),
     ],
+    // Виды резолюции — поведение кода (закрытый список): только переименовать и переставить.
+    "resolution-kinds": [
+      methodItem("execute", names("К исполнению", "Ijro uchun", "For execution"), 10),
+      methodItem("reply", names("Подготовить ответ", "Javob tayyorlash", "Prepare a reply"), 20),
+      methodItem("info", names("Для сведения", "Ma’lumot uchun", "For information"), 30),
+    ],
   };
 }
 
@@ -129,6 +136,14 @@ const CATALOG: Dictionary[] = [
     closed: false,
     attrs: [],
   },
+  {
+    kind: "resolution-kinds",
+    owner: "eds",
+    area: "documents",
+    name: names("Виды резолюции", "Rezolyutsiya turlari", "Resolution types"),
+    closed: true,
+    attrs: [],
+  },
 ];
 
 let memory: State | null = null;
@@ -136,7 +151,7 @@ let memory: State | null = null;
 export function readDictionaries(): State {
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as State;
+    if (raw) return { ...seed(), ...(JSON.parse(raw) as Partial<State>) };
   } catch {
     // Хранилище недоступно — состояние в памяти.
   }
@@ -184,7 +199,12 @@ export function isActiveValue(kind: Kind, code: string): boolean {
 function usedCodes(kind: Kind): Set<string> {
   return new Set(
     readLetters().flatMap((letter) => {
-      const code = kind === "letter-kinds" ? letter.kind : letter.receipt_method;
+      const code =
+        kind === "letter-kinds"
+          ? letter.kind
+          : kind === "receipt-methods"
+            ? letter.receipt_method
+            : letter.office_resolution?.kind;
       return code ? [code] : [];
     }),
   );
@@ -216,7 +236,17 @@ function isAdmin(): boolean {
 }
 
 const isKind = (value: unknown): value is Kind =>
-  value === "letter-kinds" || value === "receipt-methods";
+  value === "letter-kinds" || value === "receipt-methods" || value === "resolution-kinds";
+
+const closedFailure = () =>
+  failure(
+    409,
+    "CONFLICT",
+    "Этот список задаёт поведение системы: его можно только переименовать.",
+    {
+      reason: "dictionary_closed",
+    },
+  );
 
 const TRANSLIT: Record<string, string> = Object.fromEntries(
   "а:a б:b в:v г:g д:d е:e ё:e ж:zh з:z и:i й:y к:k л:l м:m н:n о:o п:p р:r с:s т:t у:u ф:f х:h ц:ts ч:ch ш:sh щ:sch ъ: ы:y ь: э:e ю:yu я:ya"
@@ -265,6 +295,7 @@ export const dictionariesHandlers = [
     if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
     if (!isAdmin()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     const kind = params["kind"];
+    if (CLOSED.has(kind)) return closedFailure();
     const body = (await request.json()) as DictionaryItemIn;
     const state = readDictionaries();
     const ru = body.name.ru.trim();
@@ -316,6 +347,7 @@ export const dictionariesHandlers = [
     if (!isAdmin()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     const kind = params["kind"];
     const patch = (await request.json()) as DictionaryItemPatch;
+    if (CLOSED.has(kind) && patch.active !== undefined) return closedFailure();
     const state = readDictionaries();
     const current = state[kind].find((item) => item.code === params["code"]);
     if (!current) return failure(404, "NOT_FOUND", "Такого значения в справочнике нет.");
@@ -349,6 +381,7 @@ export const dictionariesHandlers = [
     if (!isKind(params["kind"])) return failure(404, "NOT_FOUND", "Такого справочника нет.");
     if (!isAdmin()) return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
     const kind = params["kind"];
+    if (CLOSED.has(kind)) return closedFailure();
     const code = String(params["code"]);
     if (usedCodes(kind).has(code)) {
       return failure(409, "CONFLICT", "Значение уже есть у писем — его можно только скрыть.", {

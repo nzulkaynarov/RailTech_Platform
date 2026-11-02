@@ -465,7 +465,32 @@
       "return": "Letter returned to the registrar",
       "reject": "Letter rejected"
     },
-    "failed": "Not saved: {{reason}}."
+    "failed": "Not saved: {{reason}}.",
+    "templates": {
+      "pick": "From a template",
+      "placeholder": "Choose a template",
+      "hint": "Fills the fields — you can still edit them.",
+      "none": "No templates yet — save a resolution as a template.",
+      "unavailable": "Templates did not load — fill in manually.",
+      "mine": "Mine",
+      "company": "Shared",
+      "applied": "Filled from “{{name}}” — check the fields.",
+      "saveAs": "Save as template",
+      "saveTitle": "Save as template",
+      "name": "Template name",
+      "nameHint": "For example: “Tax office — reply by accounting”.",
+      "nameRequired": "Enter a name.",
+      "shared": "Shared — for everyone who prepares resolutions",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Template “{{name}}” saved.",
+      "errors": {
+        "name_taken": "A template with this name already exists.",
+        "company_template_admin_only": "Shared templates are managed by an administrator.",
+        "invalid": "Check the people in the resolution: someone is disabled.",
+        "DEFAULT": "Could not save the template. Try again."
+      }
+    }
   },
   "instr": {
     "title": "Instructions",
@@ -670,10 +695,11 @@
     "fromMailFailed": "Could not copy the attachments — attach the files manually."
   },
   "settings": {
-    "subtitle": "Letter lists: document types and receipt methods.",
+    "subtitle": "Letter lists and resolution templates.",
     "tabsLabel": "Document flow sections",
     "tabs": {
-      "dictionaries": "Lists"
+      "dictionaries": "Lists",
+      "templates": "Resolution templates"
     },
     "readOnly": "View only: an administrator changes the lists.",
     "dict": {
@@ -729,6 +755,36 @@
         "load": "The lists did not load."
       },
       "retry": "Retry"
+    },
+    "templates": {
+      "title": "Resolution templates",
+      "hint": "The director picks a template in the resolution and edits it. Own templates — from the resolution form.",
+      "add": "Add template",
+      "name": "Name",
+      "kind": "Type",
+      "responsible": "Responsible",
+      "due": "Due",
+      "scope": "Visible to",
+      "company": "Everyone",
+      "personal": "Only {{name}}",
+      "addressee": "Letter addressee",
+      "chooseLater": "Choose in the resolution",
+      "days_one": "{{count}} day",
+      "days_few": "{{count}} days",
+      "days_many": "{{count}} days",
+      "days_other": "{{count}} days",
+      "dueDays": "Due in, days",
+      "dueHint": "Empty — the letter's suggested due date.",
+      "addTitle": "New resolution template",
+      "editTitle": "Edit template",
+      "required": "Fill in the field",
+      "deleted": "Template deleted",
+      "deleteTitle": "Delete template “{{name}}”?",
+      "consequence": "The template disappears from “From a template”. Existing resolutions do not change.",
+      "empty": {
+        "title": "No templates",
+        "text": "Add a shared template for typical letters."
+      }
     }
   },
   "listKind": {

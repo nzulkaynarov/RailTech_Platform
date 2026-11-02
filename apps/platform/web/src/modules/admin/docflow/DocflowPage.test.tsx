@@ -3,6 +3,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
 import { readDictionaries, resetDictionariesMock } from "../../../mocks/dictionaries";
+import {
+  readResolutionTemplates,
+  resetResolutionTemplatesMock,
+} from "../../../mocks/resolutionTemplates";
 import { resetFeedMocks } from "../../../mocks/feedHandlers";
 import { endSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
@@ -19,6 +23,7 @@ beforeEach(() => {
   resetFeedMocks();
   resetTicketsMock();
   resetDictionariesMock();
+  resetResolutionTemplatesMock();
 });
 afterEach(() => {
   cleanup();
@@ -94,5 +99,48 @@ describe("Настройки · Документооборот · Справоч
     await heading();
     expect(await screen.findByText(/Только просмотр/)).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Добавить значение" })).toBeDisabled();
+  });
+
+  it("виды резолюции — закрытый список: только переименовать", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/docflow");
+    await heading();
+    fireEvent.click(await screen.findByText("Виды резолюции"));
+    const row = await rowOf("Для сведения");
+    expect(within(row).getByRole("button", { name: "Изменить: Для сведения" })).toBeEnabled();
+    expect(within(row).queryByRole("button", { name: "Скрыть: Для сведения" })).toBeNull();
+    expect(within(row).queryByRole("button", { name: "Удалить: Для сведения" })).toBeNull();
+  });
+
+  it("шаблоны резолюций: администратор видит общий и добавляет новый", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/docflow?tab=templates");
+    expect(
+      await screen.findByText("Банк — к сведению бухгалтерии", { selector: "b" }),
+    ).toBeInTheDocument();
+    // Личный шаблон директора администратору не виден.
+    expect(screen.queryByText("Налоговая — ответ бухгалтерии")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Добавить шаблон" }));
+    const dialog = await screen.findByRole("dialog", { name: "Новый шаблон резолюции" });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Название шаблона" }), {
+      target: { value: "Госорган — к исполнению" },
+    });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Текст резолюции" }), {
+      target: { value: "Исполнить в срок." },
+    });
+    fireEvent.change(within(dialog).getByRole("spinbutton", { name: "Срок, дней" }), {
+      target: { value: "10" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+    expect(
+      await screen.findByText("Госорган — к исполнению", { selector: "b" }),
+    ).toBeInTheDocument();
+    expect(
+      readResolutionTemplates().find((t) => t.name === "Госорган — к исполнению"),
+    ).toMatchObject({
+      scope: "company",
+      kind: "execute",
+      due_days: 10,
+    });
   });
 });

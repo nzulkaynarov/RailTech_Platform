@@ -67,6 +67,7 @@ function access() {
     resolve: built?.resources["eds.inbox"] === "full",
     register: built?.resources["eds.inbox.register"] === "full",
     read: Boolean(built?.resources["eds.inbox"] || built?.resources["eds.inbox.register"]),
+    admin: built?.resources["admin"] === "full",
   };
 }
 
@@ -417,7 +418,8 @@ export const edsInstructionsHandlers = [
   http.get("*/eds/staff", () => {
     const held = access();
     if (!me()) return expired();
-    if (!held.resolve && !held.register) return forbiddenBff("eds.inbox");
+    // EDS-REG: администратору — люди общих шаблонов резолюций.
+    if (!held.resolve && !held.register && !held.admin) return forbiddenBff("eds.inbox");
     const list: EdsStaffList = {
       items: STAFF.map((u) => ({ id: u.id, name: u.name, position: u.position })).sort((a, b) =>
         a.name.localeCompare(b.name, "ru"),
