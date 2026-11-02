@@ -114,7 +114,7 @@ async def test_queue_is_sorted_overdue_today_tomorrow_later(web: Web, fb: FeedBa
     ]
 
 
-# --- Моя очередь: DIRECTOR (ERP my-approval-queue) ------------------------------------------------
+# --- Моя очередь: DIRECTOR (EDS: КП на моём шаге маршрута, D26G-4) ----------------------------
 
 
 def director_data(fb: FeedBackends) -> None:
@@ -133,7 +133,7 @@ def director_data(fb: FeedBackends) -> None:
     ]
 
 
-async def test_director_queue_comes_from_erp_approvals(
+async def test_director_queue_comes_from_eds_quote_routes(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:
     director_data(fb)
@@ -313,7 +313,8 @@ async def test_erp_down_keeps_crm_part_and_marks_source(
     check(response, "/queue", "get")
     body = response.json()
     assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
-    assert [i["object"]["number"] for i in body["items"]] == ["L-2060"]
+    # D26G-4: КП на одобрении — маршруты EDS: без ERP строки остаются (клиент и сумма — снимок EDS)
+    assert [i["object"]["number"] for i in body["items"]] == ["L-2060", "КП-2026/118", "КП v3"]
 
 
 async def test_crm_down_keeps_erp_part_and_marks_source(
@@ -397,7 +398,7 @@ async def test_screens_refreshed_together_share_one_backend_call(
     responses = await asyncio.gather(*(web.client.get(f"/api/v1{path}") for path in paths))
     assert [r.status_code for r in responses] == [200] * len(paths)
     assert fb.calls(fb.erp["deals"]) == 1
-    assert fb.calls(fb.erp["approvals"]) == 1
+    assert fb.quote_lists() == 1
     # следующий опрос в пределах кэша не ходит в бэкенд вовсе
     await web.client.get("/api/v1/queue")
     assert fb.calls(fb.erp["deals"]) == 1
@@ -1108,7 +1109,7 @@ async def test_endpoints_in_a_row_share_one_erp_snapshot(web: Web, fb: FeedBacke
         assert (await web.client.get(f"/api/v1{path}")).status_code == 200
 
     assert _deals_calls(fb) == 1  # сделки ERP — один запрос на все экраны
-    assert fb.calls(fb.erp["approvals"]) == 1
+    assert fb.quote_lists() == 1
     assert fb.calls(fb.erp["notifications"]) == 1
 
 

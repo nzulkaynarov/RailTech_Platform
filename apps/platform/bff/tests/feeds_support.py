@@ -49,6 +49,8 @@ class FeedBackends:
             "leads": {"items": [], "total": 0},
             "lead": (404, {"code": "not_found", "message": "x", "details": {}}),
             "clients": [],
+            # КП на одобрении на моём шаге (D26G-4): строки `quote()`; мок EDS отдаёт их маршрутами
+            # (`GET /approvals?template=quote`) и снимками карточек (`GET /approvals/{id}`)
             "approvals": {"count": 0, "next": None, "previous": None, "results": []},
             "deals": {"count": 0, "next": None, "previous": None, "results": []},
             "notifications": {"count": 0, "next": None, "previous": None, "results": []},
@@ -103,6 +105,7 @@ class FeedBackends:
         )
         base = f"{ERP_URL}/api/v1"
         self.erp = {
+            # Старый источник строк КП (до D26G-4): BFF его больше не зовёт — тесты проверяют ноль
             "approvals": self._erp(
                 "approvals", router.get(f"{base}/crm/quotes/my-approval-queue/")
             ),
@@ -125,7 +128,12 @@ class FeedBackends:
         ).mock(side_effect=self._deal)
         self.eds = {
             "letters": self._eds("letters", router.get(f"{EDS_URL}/api/v1/letters")),
-            "approvals": self._eds("memos", router.get(f"{EDS_URL}/api/v1/approvals")),
+            "approvals": router.get(f"{EDS_URL}/api/v1/approvals").mock(
+                side_effect=self._approvals
+            ),
+            "approval": router.get(
+                url__regex=re.compile(rf"^{EDS_URL}/api/v1/approvals/[0-9a-f-]+$")
+            ).mock(side_effect=self._approval),
             "registry": self._eds("registry", router.get(f"{EDS_URL}/api/v1/registry")),
             "letter_tasks": self._eds("letter_tasks", router.get(f"{EDS_URL}/api/v1/letter-tasks")),
         }
@@ -145,6 +153,39 @@ class FeedBackends:
         self.eds["card"] = router.get(
             url__regex=re.compile(rf"^{EDS_URL}/api/v1/documents/[0-9a-f-]+$")
         ).mock(side_effect=self._card)
+
+    def _approvals(self, request: httpx.Request) -> httpx.Response:
+        """EDS `GET /approvals`: КП (`template=quote`) — из `state["approvals"]`, иначе служебки."""
+        if "quote" not in request.url.params.get_list("template"):
+            return self._respond("memos", self.eds_down)
+        if self.eds_down is not None:
+            return self._respond("approvals", self.eds_down)
+        raw = self.state["approvals"]
+        if isinstance(raw, tuple):
+            return httpx.Response(raw[0], json=raw[1])
+        items = [quote_route(q) for q in raw["results"]]
+        more = int(raw.get("count") or 0) > len(items)
+        return httpx.Response(200, json={"items": items, "next_cursor": "c2" if more else None})
+
+    def _approval(self, request: httpx.Request) -> httpx.Response:
+        """EDS `GET /approvals/{id}`: снимок КП решающему шаг (без снимка — 404, строка без
+        суммы)."""
+        if self.eds_down is not None:
+            return self._respond("approvals", self.eds_down)
+        route_id = request.url.path.rsplit("/", 1)[-1]
+        raw = self.state["approvals"]
+        for q in raw["results"] if isinstance(raw, dict) else []:
+            if quote_route_id(q["id"]) == route_id and q.get("snapshot", True):
+                return httpx.Response(200, json={"id": route_id, "quote": quote_snapshot(q)})
+        return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
+
+    def quote_lists(self) -> int:
+        """Сколько раз BFF читал КП на моём шаге из EDS."""
+        return sum(
+            1
+            for call in self.eds["approvals"].calls
+            if "quote" in call.request.url.params.get_list("template")
+        )
 
     def _card(self, request: httpx.Request) -> httpx.Response:
         if self.eds_down is not None:
@@ -369,8 +410,15 @@ def quote(
     total: str = "12450000.00",
     valid_until: str | None = None,
     created: str = "2027-01-14T08:00:00Z",
+    client_name: str | None = None,
+    deal_number: str | None = None,
+    snapshot: bool = True,
 ) -> dict[str, Any]:
+    """КП на одобрении (D26G-4: источник — маршрут EDS, см. `quote_route` и `quote_snapshot`)."""
     return {
+        "client_name": client_name,
+        "deal_number": deal_number,
+        "snapshot": snapshot,
         "id": quote_id,
         "deal": deal_id,
         "version": version,
@@ -382,6 +430,52 @@ def quote(
         "created_at": created,
         "margin_percent": "23.40",
         "economics": {"gross_profit": "2000000.00"},
+    }
+
+
+def quote_route_id(quote_id: int) -> str:
+    return f"50000000-0000-4000-8000-{quote_id:012d}"
+
+
+def quote_route(q: dict[str, Any]) -> dict[str, Any]:
+    """Строка `quote()` как маршрут EDS на моём шаге (`ApprovalListItem`)."""
+    return {
+        "id": quote_route_id(q["id"]),
+        "template": "quote",
+        "title": f"{q['number'] or 'КП'} v{q['version']}",
+        "object": {
+            "kind": "quote",
+            "erp_quote_id": q["id"],
+            "quote_number": q["number"],
+            "quote_version": q["version"],
+            "erp_deal_id": q["deal"],
+            "deal_number": q.get("deal_number"),
+        },
+        "status": "open",
+        "round": 1,
+        "current_step": {
+            "index": 0,
+            "label": "Директор",
+            "assignee": {"crm_user_id": None, "permission": "approvals.decide"},
+            "status": "current",
+        },
+        "created_at": q["created_at"],
+    }
+
+
+def quote_snapshot(q: dict[str, Any]) -> dict[str, Any]:
+    """Снимок КП карточки маршрута EDS (решающему — с экономикой, BFF её не показывает)."""
+    return {
+        "erp_quote_id": q["id"],
+        "number": q["number"] or "",
+        "version": q["version"],
+        "client_name": q.get("client_name"),
+        "total": q["total_incl_vat"],
+        "currency": q["quote_currency"],
+        "cost": "9000000.00",
+        "margin_amount": "2000000.00",
+        "margin_pct": "23.40",
+        "valid_until": q["valid_until"],
     }
 
 

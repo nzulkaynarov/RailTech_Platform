@@ -108,16 +108,24 @@ async def test_director_queue_gets_letters_and_memos_from_eds(
     assert memo["object"]["kind"] == "memo"
     assert memo["object"]["path"] == "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree"
     assert by_number["ЗЯ-2026/003"]["kind"] == "approve_memo"
-    assert by_number["КП-2026/118"]["kind"] == "approve_quote"  # КП по-прежнему ведёт ERP
+    assert by_number["КП-2026/118"]["kind"] == "approve_quote"  # D26G-4: КП — маршрут EDS
     # срочное письмо — выше служебок и КП на завтра
     assert body["items"][0]["object"]["number"] == "ВХ-104/26"
     # EDS читают под токеном сотрудника (aud=eds), запросы — по виду работы
     letters = fb.eds["letters"].calls.last.request
     assert letters.headers["authorization"] == "Bearer eds-access-1"
     assert dict(letters.url.params) == {"status": "awaiting_resolution", "limit": "50"}
-    approvals = fb.eds["approvals"].calls.last.request
-    assert approvals.url.params["mine"] == "true"
-    assert approvals.url.params.get_list("template") == ["memo", "application", "report"]
+    lists = [c.request.url.params for c in fb.eds["approvals"].calls]
+    memos = next(p for p in lists if "memo" in p.get_list("template"))
+    assert memos["mine"] == "true"
+    assert memos.get_list("template") == ["memo", "application", "report"]
+    quotes = next(p for p in lists if "quote" in p.get_list("template"))
+    assert (quotes["mine"], quotes["status"], quotes.get_list("template")) == (
+        "true",
+        "open",
+        ["quote"],
+    )
+    assert fb.calls(fb.erp["approvals"]) == 0  # ERP `my-approval-queue` больше не источник
 
 
 async def test_letter_due_date_gives_the_badge(web: Web, fb: FeedBackends) -> None:
@@ -143,6 +151,98 @@ async def test_accountant_gets_memos_on_his_step_to_pay(web: Web, fb: FeedBacken
     assert fb.calls(fb.eds["letters"]) == 0  # писем бухгалтеру не нужно: резолюция — директору
 
 
+async def test_manager_all_gets_the_memo_to_pay_on_the_accountant_step(
+    web: Web, fb: FeedBackends
+) -> None:
+    """D26G-9: «Оплатить служебку» положена держателю права оплаты (`eds.payments: full` →
+    `payments.confirm`), а не роли с кодом «Бухгалтер»: на пилоте шаг ведёт менеджер-универсал. Чей
+    шаг — решает EDS по токену (`mine`), BFF показывает строку, которую EDS вернул."""
+    step = route("СЗ-2026/015", step="Бухгалтер")
+    step["current_step"]["assignee"] = {"crm_user_id": None, "permission": "payments.confirm"}
+    fb.state["memos"] = page(step)
+    await web.login(["MANAGER_ALL"])
+
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
+    counters = (await web.client.get("/api/v1/menu-counters")).json()["items"]
+
+    assert [(i["kind"], i["title"], i["role_id"]) for i in items] == [
+        (
+            "pay_memo",
+            "Принять к оплате СЗ-2026/015 · Закупка кофе для офиса",
+            rid("MANAGER_ALL"),
+        )
+    ]
+    memo_lists = [
+        c.request.url.params
+        for c in fb.eds["approvals"].calls
+        if "memo" in c.request.url.params.get_list("template")
+    ]
+    assert memo_lists
+    assert all(p["mine"] == "true" for p in memo_lists)
+    assert fb.quote_lists() == 0  # КП одобряет директор: у менеджера «КП на одобрение» — чтение
+    badges = {(c["module"], c["section"]): c["count"] for c in counters}
+    assert badges[("dashboard", "queue")] == 1
+
+
+async def test_director_sees_the_quote_waiting_on_his_eds_step(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """D26G-4: КП ждёт одобрения в EDS (маршрут на шаге директора) — в «Моих задачах» строка
+    «Одобрить КП-…», карточка «КП на одобрение» и бейдж — то же число. Клиент, сумма и срок — снимок
+    КП из карточки маршрута EDS; экономика КП в ответ не попадает."""
+    fb.state["approvals"] = {
+        "count": 2,
+        "results": [
+            quote(
+                21,
+                5,
+                number="КП-2026-00002",
+                version=2,
+                total="280000000.00",
+                valid_until="2027-01-16",
+                client_name="АО «Демо-Транс»",
+                deal_number="ЗВ-2026-002",
+            ),
+            quote(22, 6, number="КП-2026-00003", snapshot=False, deal_number="ЗВ-2026-003"),
+        ],
+    }
+    fb.state["deals"]["results"] = [deal(6, "SOURCING", company="ООО «Демо-Рейл»")]
+    await web.login(["DIRECTOR"])
+
+    queue = await web.client.get("/api/v1/queue")
+    cards = await web.client.get("/api/v1/queue/cards")
+    counters = await web.client.get("/api/v1/menu-counters")
+
+    check(queue, "/queue", "get")
+    rows = [i for i in queue.json()["items"] if i["kind"] == "approve_quote"]
+    assert [r["title"] for r in rows] == ["Одобрить КП-2026-00002", "Одобрить КП-2026-00003"]
+    first, second = rows
+    total = "280\u00a0000\u00a0000\u00a0сум"
+    assert first["subtitle"].startswith(f"АО «Демо-Транс» · {total} · ЗВ-2026-002")
+    assert (first["due_label"], first["role_id"]) == ("tomorrow", rid("DIRECTOR"))
+    assert first["object"]["path"] == "/eds/drafts/%D0%9A%D0%9F-2026-00002?panel=open&tab=approve"
+    # снимка нет (карточка не ответила) — клиент по сделке ERP, без суммы
+    assert second["subtitle"].startswith("ООО «Демо-Рейл» · ЗВ-2026-003")
+    assert "сум" not in second["subtitle"]
+    for secret in ("margin", "23.40", "9000000"):
+        assert secret not in queue.text
+    card = {c["key"]: c for c in cards.json()["cards"]}["quotes_to_approve"]
+    assert (card["count"], card["hint"]) == (2, "Документы · КП на одобрение")
+    badges = {(c["module"], c["section"]): c for c in counters.json()["items"]}
+    assert (badges[("eds", "drafts")]["count"], badges[("eds", "drafts")]["attention"]) == (2, True)
+    assert fb.calls(fb.erp["approvals"]) == 0
+
+
+async def test_no_quote_waiting_means_no_row_and_a_zero_card(web: Web, fb: FeedBackends) -> None:
+    await web.login(["DIRECTOR"])
+
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
+    cards = (await web.client.get("/api/v1/queue/cards")).json()["cards"]
+
+    assert [i for i in items if i["kind"] == "approve_quote"] == []
+    assert {c["key"]: c["count"] for c in cards}["quotes_to_approve"] == 0
+
+
 async def test_eds_down_keeps_the_rest_and_marks_the_source(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:
@@ -157,7 +257,8 @@ async def test_eds_down_keeps_the_rest_and_marks_the_source(
     check(response, "/queue", "get")
     body = response.json()
     assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "unavailable"}
-    assert [i["kind"] for i in body["items"]] == ["approve_quote"]  # не «пустая очередь»
+    # D26G-4: КП на одобрении — тоже EDS; очередь пуста, но плашка в `sources` говорит почему
+    assert body["items"] == []
 
 
 async def test_eds_5xx_is_a_partial_answer_too(web: Web, fb: FeedBackends) -> None:
@@ -184,7 +285,7 @@ async def test_eds_refuses_the_employee_by_token_not_by_the_bff(
     check(response, "/queue", "get")
     body = response.json()
     assert body["sources"]["eds"] == "not_applicable"
-    assert [i["kind"] for i in body["items"]] == ["approve_quote"]
+    assert body["items"] == []
 
 
 async def test_no_eds_section_means_no_eds_call(
@@ -240,6 +341,9 @@ async def test_director_cards_and_menu_badges_count_eds_work(
     assert cards["letters_without_resolution"]["path"] == "/eds/inbox"
     assert cards["memos_to_approve"]["count"] == 1
     assert cards["memos_to_approve"]["path"] == "/eds/approvals"
+    # EDS отдал одну строку и ещё страницу: число — строки очереди, подсказка «не меньше»
+    assert cards["quotes_to_approve"]["count"] == 1
+    assert cards["quotes_to_approve"]["hint"] == "Документы · КП на одобрение · не меньше"
     check(counters_response, "/menu-counters", "get")
     counters = {(c["module"], c["section"]): c for c in counters_response.json()["items"]}
     assert counters[("eds", "inbox")]["count"] == 3
@@ -257,6 +361,8 @@ async def test_eds_down_hides_its_cards_and_badges(web: Web, fb: FeedBackends) -
 
     assert "letters_without_resolution" not in [c["key"] for c in cards["cards"]]
     assert "memos_to_approve" not in [c["key"] for c in cards["cards"]]
+    assert "quotes_to_approve" not in [c["key"] for c in cards["cards"]]
+    assert ("eds", "drafts") not in [(c["module"], c["section"]) for c in counters["items"]]
     assert cards["sources"]["eds"] == counters["sources"]["eds"] == "unavailable"
     assert ("eds", "inbox") not in [(c["module"], c["section"]) for c in counters["items"]]
 

@@ -86,7 +86,8 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
 
     // D2-8: в очереди директора только решения — строк исполнения (договор, счета, расчёт) нет
-    expect(await within(page).findByText(/Директор · .* · 5 решений/)).toBeVisible();
+    // D26G-4: «Одобрить КП» — все КП на шаге директора в EDS (четыре в демо «КП на одобрение»)
+    expect(await within(page).findByText(/Директор · .* · 8 решений/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
     expect(within(cards).getByRole("link", { name: /Входящие без резолюции/ })).toHaveAttribute(
@@ -96,14 +97,15 @@ describe("Dashboard · Моя очередь", () => {
 
     const queue = await within(page).findByRole("region", { name: "Что сделать сейчас" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(8);
     // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым, он уже просрочен.
     expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
     expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
     // P8: требование ГНК, зарегистрированное делопроизводителем, — «срочно», тоже сегодня
     expect(within(rows[2] as HTMLElement).getByText(/ВХ-108\/26/)).toBeVisible();
-    expect(within(rows[3] as HTMLElement).getByText("завтра")).toBeVisible();
-    expect(within(rows[4] as HTMLElement).getByText("служебка")).toBeVisible();
+    expect(within(rows[3] as HTMLElement).getByText("служебка")).toBeVisible();
+    expect(within(rows[4] as HTMLElement).getByText("Одобрить КП-2026/115")).toBeVisible();
+    expect(within(cards).getByRole("link", { name: /КП на одобрение/ })).toHaveTextContent("4");
     const open = within(rows[1] as HTMLElement).getByRole("link", { name: /Открыть/ });
     expect(open).toHaveAttribute(
       "href",
@@ -130,6 +132,11 @@ describe("Dashboard · Моя очередь", () => {
     await expectRow(
       /Прикрепить скан подписанного договора ДОГ-2026\/106/,
       "/eds/projects/%D0%9F%D0%A0-2026-106?panel=open&tab=contract",
+    );
+    // D26G-9: служебка на шаге «Бухгалтер» — держателю права оплаты, на пилоте это менеджер-универсал
+    await expectRow(
+      /Принять к оплате СЗ-2026\/015/,
+      "/eds/approvals/%D0%A1%D0%97-2026%2F015?panel=open&tab=agree",
     );
     // одна строка — одно действие: роль совмещает пять ролей SPEC, а дублей нет
     const titles = within(within(page).getByRole("region", { name: "Что сделать сейчас" }))
@@ -285,8 +292,12 @@ describe("Dashboard · Моя очередь", () => {
       "/erp/stock/%D0%97%D0%9F-2026-029", // просроченный заказ поставщику (D2-2) — экран «Склад»
       "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
       "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution",
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
       "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree",
+      // D26G-4: КП на шаге директора — из «КП на одобрение» (EDS)
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F115?panel=open&tab=approve",
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F116?panel=open&tab=approve",
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F117?panel=open&tab=approve",
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
     ]);
     expect(within(page).getAllByRole("button", { name: /^Где сделать/ })).toHaveLength(1);
   });
@@ -401,13 +412,14 @@ describe("Dashboard · Моя очередь", () => {
     ).not.toHaveClass("ant-btn-primary");
   });
 
-  it("EDS не отвечает: КП и остальное показаны, письма и служебок нет, плашка называет «Документы» (D1-6)", async () => {
+  it("EDS не отвечает: писем, КП и служебок нет, остальное показано, плашка называет «Документы» (D1-6, D26G-4)", async () => {
     window.localStorage.setItem(MOCK_EDS_DOWN_KEY, "1");
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
-    expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    expect(await within(page).findByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
+    expect(within(page).queryByText(/Одобрить КП/)).toBeNull();
     expect(within(page).queryByText(/Наложить резолюцию на письмо/)).toBeNull();
     expect(within(page).queryByText(/Согласовать СЗ-2026\/031/)).toBeNull();
     expect(within(page).getByRole("status")).toHaveTextContent(
@@ -415,7 +427,7 @@ describe("Dashboard · Моя очередь", () => {
     );
     // карточки EDS без числа не показываются: ноль был бы ложью
     expect(within(page).queryByRole("link", { name: /Входящие без резолюции/ })).toBeNull();
-    expect(within(page).getByRole("link", { name: /КП на одобрение/ })).toBeVisible();
+    expect(within(page).queryByRole("link", { name: /КП на одобрение/ })).toBeNull();
   });
 
   it("не ответили ERP и EDS: одна плашка с названиями обоих разделов", async () => {

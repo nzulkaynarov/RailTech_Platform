@@ -5,8 +5,8 @@
 Виды работы — секция `queue` каталога (`platform-rbac.yaml`): вид попадает в очередь, если у ролей
 «вида» есть его раздел с нужным уровнем (ADR-0012 п. 6, названия ролей не используются).
 Источники сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`, `triage_lead` — первая линия,
-D17G-1); одобрение КП — ERP
-`my-approval-queue` (`approve_quote`); письма без резолюции (`resolve_letter`) и служебки,
+D17G-1); одобрение КП — маршруты EDS на моём шаге (`approve_quote`, D26G-4: тот же запрос, что
+экран «КП на одобрение»); письма без резолюции (`resolve_letter`) и служебки,
 заявления, отчёты на моём шаге маршрута (`approve_memo`, `pay_memo`) — EDS по токену `aud=eds`
 (D1-6): что вернул EDS, то и строки; работа ERP — расчёт, счета и платёжки, договор и акт (D2-8,
 `feeds/erp_work.py`). Роли «вида» — активная,
@@ -253,27 +253,38 @@ def covered_rows(covered: Covered, now: datetime, view: View, skip: set[int]) ->
 
 
 def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
-    """КП, которые ждут одобрения этого сотрудника (ERP решает, чья очередь — BFF только
-    показывает)."""
+    """КП на одобрении на моём шаге маршрута EDS (D26G-4): что вернул EDS по токену сотрудника, то и
+    строки — как экран «КП на одобрение · На моём шаге». Клиент, сумма и срок действия — снимок КП
+    из карточки маршрута; нет снимка — клиент по сделке ERP, без суммы."""
     deals = snap.deal_index
     role_id = _role_id(view, "approve_quote")
     out: list[Row] = []
-    for quote in snap.approvals:
-        if not isinstance(quote.get("id"), int):
+    seen: set[str] = set()
+    for route in snap.quotes or []:
+        route_id = route.get("id")
+        obj = _dict(route.get("object"))
+        if not isinstance(route_id, str) or route_id in seen:
             continue
-        deal = deals.get(int(quote["deal"])) if isinstance(quote.get("deal"), int) else None
-        client = deal_title(deal) if deal else None
-        valid_until = parse_deadline(quote.get("valid_until"))
-        created = parse_dt(quote.get("created_at"))
+        seen.add(route_id)
+        snapshot = snap.quote_snapshots.get(route_id, {})
+        deal_id = obj.get("erp_deal_id")
+        deal = deals.get(deal_id) if isinstance(deal_id, int) else None
+        client = _text(snapshot.get("client_name")) or (deal_title(deal) if deal else None)
+        valid_until = parse_deadline(snapshot.get("valid_until"))
+        created = parse_dt(route.get("created_at"))
+        quote = {"number": obj.get("quote_number"), "version": obj.get("quote_version")}
         number = quote_number(quote)
         item = QueueItem(
-            id=f"quote:{quote['id']}",
+            id=f"quote:{route_id}",
             role_id=role_id,
             kind="approve_quote",
             title=f"Одобрить {number}",
             subtitle=join(
                 client,
-                money(quote.get("total_incl_vat"), quote.get("quote_currency")),
+                money(snapshot.get("total"), snapshot.get("currency"))
+                if snapshot.get("total") is not None
+                else None,
+                _text(obj.get("deal_number")),
                 ago(created, now),
             ),
             due_label=due_label(valid_until, now),
@@ -649,12 +660,13 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Документы · Входящие письма" + (" · не меньше" if snap.letters_more else ""),
             path="/eds/inbox",
         )
-    if wants_approvals(view):
+    if wants_approvals(view) and snap.quotes is not None:
+        # D26G-4: число — те же строки «Одобрить КП», что в очереди (одна логика, без расхождений)
         cards["quotes_to_approve"] = QueueCard(
             key="quotes_to_approve",
             label="КП на одобрение",
-            count=snap.approvals_total,
-            hint="Документы · КП на одобрение",
+            count=sum(1 for i in queue if i.kind == "approve_quote"),
+            hint="Документы · КП на одобрение" + (" · не меньше" if snap.quotes_more else ""),
             path="/eds/drafts",
         )
     if wants_memos(view) and snap.memos is not None:
@@ -711,8 +723,8 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
     if wants_letters(view) and snap.letters is not None:
         total = len(snap.letters)
         items.append(MenuCounter(module="eds", section="inbox", count=total, attention=total > 0))
-    if wants_approvals(view):
-        total = snap.approvals_total
+    if wants_approvals(view) and snap.quotes is not None:
+        total = sum(1 for i in queue if i.kind == "approve_quote")
         items.append(MenuCounter(module="eds", section="drafts", count=total, attention=total > 0))
     if wants_memos(view) and snap.memos is not None:
         total = len(snap.memos)

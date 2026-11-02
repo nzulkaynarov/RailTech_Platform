@@ -74,6 +74,27 @@ function type(label: string | RegExp, value: string) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
+describe("Admin · Компания: реквизиты для счетов (D26G-6)", () => {
+  it("нет р/с и МФО — предупреждение над полями; после сохранения — «Реквизиты для счетов заданы»", async () => {
+    updateCompanyMock((state) => {
+      state.company = { ...state.company, bank_account: "", mfo: "" };
+    });
+    await openTab("details", "admin@demo.example");
+
+    expect(
+      await screen.findByText(/Нет банковских реквизитов для счетов: без расчётного счёта и МФО/),
+    ).toBeVisible();
+    type("Расчётный счёт", "20208000900000000001");
+    type("МФО банка", "00001");
+    fireEvent.click(await button(/Сохранить реквизиты/));
+
+    expect(
+      await screen.findByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
+    ).toBeVisible();
+    expect(readCompanyMock().company.mfo).toBe("00001");
+  });
+});
+
 describe("Admin · Компания: доступ и каркас", () => {
   it("директор и администратор открывают раздел; заголовок и подзаголовок — название компании", async () => {
     await openTab("details", "admin@demo.example");

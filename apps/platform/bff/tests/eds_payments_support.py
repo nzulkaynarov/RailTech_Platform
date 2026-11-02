@@ -248,6 +248,8 @@ class PaymentsFake(ApprovalsFake):
         self.routes[PAY_ROUTE] = pay_route()
         self.eds_list_status: int = 200
         self.paid: list[dict[str, Any]] = []
+        # D26G-6: реквизиты своей компании для счетов (ERP `seller_bank_details_ready`)
+        self.bank_ready = True
         be.router.route(url__regex=rf"^{re.escape(RECEIVABLES)}.*").mock(side_effect=self._erp_rec)
 
     # --- ERP --------------------------------------------------------------------------------
@@ -320,6 +322,7 @@ class PaymentsFake(ApprovalsFake):
                 "count": len(rows),
                 "counts": counts,
                 "results": rows[offset : offset + limit],
+                "seller_bank_details_ready": self.bank_ready,
             },
         )
 
@@ -340,6 +343,7 @@ class PaymentsFake(ApprovalsFake):
             "can_attach_proof": open_invoice,
             "can_request_proof": open_invoice,
             "replayed": replayed,
+            "seller_bank_details_ready": inv["status"] != "DRAFT" or self.bank_ready,
         }
 
     def _confirm(self, request: httpx.Request, inv: dict[str, Any]) -> httpx.Response:

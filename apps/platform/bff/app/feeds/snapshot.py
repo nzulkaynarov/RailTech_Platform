@@ -1,5 +1,5 @@
-"""Сырые данные на один запрос: входящие CRM, очередь одобрения ERP, сделки ERP, письма и документы
-на согласовании EDS.
+"""Сырые данные на один запрос: входящие CRM, сделки ERP, письма, КП и документы на согласовании
+EDS.
 
 Источники — docs/architecture/integration-map.md §1.2.
 """
@@ -21,7 +21,18 @@ APPROVALS_PAGE_SIZE = 50
 LETTERS_PATH = "/api/v1/letters"
 LETTERS_PARAMS: dict[str, Any] = {"status": "awaiting_resolution", "limit": APPROVALS_PAGE_SIZE}
 APPROVALS_PATH = "/api/v1/approvals"
-# Служебные записки, заявления и отчёты на моём шаге маршрута (`mine` — по умолчанию); КП ведёт ERP.
+# D26G-4: КП на одобрении на моём шаге маршрута EDS — тот же запрос, что экран «КП на одобрение · На
+# моём шаге» (`GET /eds/quotes`): одобрение директора — маршрут EDS (`approvals.decide`), не ERP.
+QUOTE_PARAMS: dict[str, Any] = {
+    "mine": "true",
+    "status": "open",
+    "template": ["quote"],
+    "limit": APPROVALS_PAGE_SIZE,
+}
+# Карточек маршрутов КП (клиент, сумма, срок — снимок EDS) за один опрос не больше стольких.
+QUOTE_DETAILS_MAX = 20
+QUOTE_DETAILS_PARALLEL = 8
+# Служебные записки, заявления и отчёты на моём шаге маршрута (`mine` — по умолчанию).
 MEMO_PARAMS: dict[str, Any] = {
     "mine": "true",
     "status": "open",
@@ -49,8 +60,11 @@ MAX_COVERED = 5
 class Snapshot:
     inbox: dict[str, list[dict[str, Any]]] | None = None
     covered: list[Covered] = field(default_factory=list)
-    approvals: list[dict[str, Any]] = field(default_factory=list)
-    approvals_total: int = 0
+    # EDS (D26G-4): маршруты КП на моём шаге (`None` — не читали или EDS не ответил: строк, карточки
+    # и бейджа нет) и снимки КП из карточек маршрутов (id маршрута -> `quote`) для подписи строки.
+    quotes: list[dict[str, Any]] | None = None
+    quotes_more: bool = False
+    quote_snapshots: dict[str, dict[str, Any]] = field(default_factory=dict)
     deals: list[dict[str, Any]] = field(default_factory=list)
     # EDS: мои документы, возвращённые на доработку (D1-6b); `None` — не читали или EDS не ответил.
     rework: list[Returned] | None = None
@@ -182,6 +196,22 @@ async def _covered(feed: Feed) -> list[Covered]:
     return [c for c in found if c is not None]
 
 
+async def _quote_snapshots(feed: Feed, routes: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    """Снимки КП (клиент, сумма, срок действия) из карточек маршрутов EDS: решающему шаг EDS их
+    отдаёт, остальным — нет. Сбой карточки — строка без суммы, а не пустая очередь."""
+    ids = [r["id"] for r in routes if isinstance(r.get("id"), str)][:QUOTE_DETAILS_MAX]
+    sem = asyncio.Semaphore(QUOTE_DETAILS_PARALLEL)
+
+    async def one(route_id: str) -> tuple[str, dict[str, Any] | None]:
+        async with sem:
+            body = await feed.get("eds", f"{APPROVALS_PATH}/{route_id}", ttl=SNAPSHOT_TTL_SECONDS)
+        quote = body.get("quote") if isinstance(body, dict) else None
+        return route_id, quote if isinstance(quote, dict) else None
+
+    found = await asyncio.gather(*(one(i) for i in ids))
+    return {route_id: quote for route_id, quote in found if quote is not None}
+
+
 OVERDUE_PATH = "/api/v1/stock/overdue/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
@@ -208,16 +238,12 @@ async def load_snapshot(
             snap.inbox, snap.covered = await asyncio.gather(_inbox(feed), _covered(feed))
 
     async def load_approvals() -> None:
-        if approvals and wants_approvals(view):
-            payload = await feed.get(
-                "erp",
-                "/api/v1/crm/quotes/my-approval-queue/",
-                {"page_size": APPROVALS_PAGE_SIZE},
-                ttl=SNAPSHOT_TTL_SECONDS,
-            )
-            snap.approvals = rows(payload)
-            total = payload.get("count") if isinstance(payload, dict) else None
-            snap.approvals_total = total if isinstance(total, int) else len(snap.approvals)
+        if approvals and eds and wants_approvals(view):
+            payload = await feed.get("eds", APPROVALS_PATH, QUOTE_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            if payload is not None:
+                snap.quotes = [r for r in rows(payload) if r.get("template") == "quote"]
+                snap.quotes_more = _has_more(payload)
+                snap.quote_snapshots = await _quote_snapshots(feed, snap.quotes)
 
     async def load_letters() -> None:
         if eds and wants_letters(view):

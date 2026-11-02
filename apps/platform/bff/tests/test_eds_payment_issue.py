@@ -109,3 +109,27 @@ async def test_csrf_is_required(web: Web, fake: IssueFake) -> None:
     response = await web.send("POST", f"{BASE}/payments/143/issue", csrf="x")
     assert response.status_code == 403
     assert fake.issue_calls == []
+
+
+@pytest.mark.parametrize("role", ["ACCOUNTANT", "MANAGER_ALL"])
+async def test_missing_bank_details_are_known_before_the_click(
+    web: Web, fake: IssueFake, check: ContractChecker, role: str
+) -> None:
+    """D26G-6: ERP говорит заранее, что реквизитов своей компании нет, — доска «К выставлению» и
+    карточка черновика несут `bank_details_ready: false`; у выставленного счёта — `true`."""
+    fake.bank_ready = False
+    await web.login([role])
+
+    board = await web.client.get(f"{BASE}/payments", params={"tab": "to_issue"})
+    draft = await web.client.get(f"{BASE}/payments/143")
+    issued = await web.client.get(f"{BASE}/payments/142")
+
+    check(board, "/eds/payments", "get")
+    check(draft, "/eds/payments/{id}", "get")
+    assert board.json()["bank_details_ready"] is False
+    assert draft.json()["bank_details_ready"] is False
+    assert issued.json()["bank_details_ready"] is True
+    assert fake.issue_calls == []  # предупреждение — без попытки выставить
+
+    fake.bank_ready = True
+    assert (await web.client.get(f"{BASE}/payments/143")).json()["bank_details_ready"] is True

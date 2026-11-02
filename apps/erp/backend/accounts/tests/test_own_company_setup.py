@@ -26,13 +26,18 @@ def admin(db):
 @pytest.mark.django_db
 def test_clean_database_admin_sees_setup_required(admin):
     data = _client(admin).get(STATUS).json()
-    assert data == {"setup_required": True, "can_setup": True, "own_company_id": None}
+    assert data == {"setup_required": True, "can_setup": True, "own_company_id": None, "bank_details_ready": True}
 
 
 @pytest.mark.django_db
 def test_staff_without_company_sees_required_but_cannot_setup(user_factory):
     user = user_factory(email="e@erp.test", username="e")
-    assert _client(user).get(STATUS).json() == {"setup_required": True, "can_setup": False, "own_company_id": None}
+    assert _client(user).get(STATUS).json() == {
+        "setup_required": True,
+        "can_setup": False,
+        "own_company_id": None,
+        "bank_details_ready": True,
+    }
 
 
 @pytest.mark.django_db
@@ -54,6 +59,8 @@ def test_admin_creates_own_company_and_becomes_owner(admin):
         "setup_required": False,
         "can_setup": False,
         "own_company_id": company.pk,
+        # Компания из мастера — без р/с и МФО: шаг «Банковские реквизиты для счетов» ещё не сделан (D26G-6).
+        "bank_details_ready": False,
     }
 
     from crm.models import ActivityLog
@@ -201,3 +208,23 @@ def test_own_company_id_pointing_nowhere_is_null_not_a_dangling_id(admin):
 
     assert data["own_company_id"] is None
     assert data["setup_required"] is True
+
+
+@pytest.mark.django_db
+def test_bank_details_ready_follows_the_own_company_requisites(admin, company_factory, user_factory):
+    """D26G-6: шаг мастера «Банковские реквизиты для счетов» — тот же признак, что гейт «Выставить счёт» (р/с или МФО)."""
+    from accounts.constants import WorkspaceRoleCode
+    from accounts.services import add_company_member
+    from accounts.testing import make_own_company
+
+    company = make_own_company(company_factory(inn="987654322"))
+    company.bank_account, company.mfo = "", ""
+    company.save(update_fields=["bank_account", "mfo"])
+    staff = user_factory(email="m@erp.test", username="m")
+    add_company_member(staff, company, WorkspaceRoleCode.OWNER, is_primary=True)
+
+    # Любой вошедший сотрудник (менеджер, не только администратор) видит признак заранее.
+    assert _client(staff).get(STATUS).json()["bank_details_ready"] is False
+    company.bank_account, company.mfo = "20208000900001234567", "00443"
+    company.save(update_fields=["bank_account", "mfo"])
+    assert _client(staff).get(STATUS).json()["bank_details_ready"] is True

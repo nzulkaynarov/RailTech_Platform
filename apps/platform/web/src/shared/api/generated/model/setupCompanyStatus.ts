@@ -8,4 +8,6 @@ export interface SetupCompanyStatus {
   required: boolean;
   /** Текущий сотрудник может её создать (суперпользователь ERP) */
   can_setup: boolean;
+  /** Шаг «Банковские реквизиты для счетов» (D26G-6): у своей компании есть р/с или МФО — без них ERP не выставит счёт (ERP `setup/status` `bank_details_ready`; компании нет — `true`) */
+  bank_details_ready: boolean;
 }

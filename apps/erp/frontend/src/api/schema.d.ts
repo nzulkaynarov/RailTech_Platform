@@ -16132,6 +16132,8 @@ export interface components {
             /** @description Счета на каждой вкладке (вкладки не пересекаются). */
             counts: components["schemas"]["ReceivableCounts"];
             results: components["schemas"]["ReceivableRow"][];
+            /** @description У своей компании есть реквизиты для счетов (р/с или МФО): без них «Выставить счёт» откажет `SELLER_BANK_DETAILS_REQUIRED` (D26G-6, подсказка до клика). */
+            seller_bank_details_ready: boolean;
         };
         ReceivableCard: {
             display_status: components["schemas"]["DisplayStatusEnum"];
@@ -16181,6 +16183,8 @@ export interface components {
             can_request_proof: boolean;
             /** @description Повтор подтверждения: платёж уже был записан, ничего не добавлено. */
             replayed: boolean;
+            /** @description Гейт выпуска пропустит этот счёт: реквизиты продавца есть (у выставленного счёта — всегда `true`). */
+            seller_bank_details_ready: boolean;
         };
         ReceivableConfirmation: {
             id: number;
@@ -16401,6 +16405,8 @@ export interface components {
             can_setup: boolean;
             /** @description Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет. */
             own_company_id: number | null;
+            /** @description У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт «Выставить счёт»); своей компании нет — true (D26G-6). */
+            bank_details_ready: boolean;
         };
         SharedSettingReadOnlyError: {
             detail: string;
