@@ -409,6 +409,10 @@ class ImapSettings(StrictModel):
     folders: list[ImapFolderSettings] = Field(default_factory=list, max_length=10)
     # Помощник канцелярии (тип, суть, предложение действия) — выключатель админа, как Q-019.
     assist_enabled: bool = True
+    # «Адресовано лично» (W18A-P2-3): сотрудник в «Кому», общий ящик (логин приёма) только в копии —
+    # письмо сразу «в работе» у этого сотрудника, а не в «Новых». Пометка — текст ≤ 80 знаков.
+    personal_rule: bool = True
+    personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
 
 
 class OffsiteCheckSettings(StrictModel):

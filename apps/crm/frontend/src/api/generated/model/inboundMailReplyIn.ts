@@ -4,6 +4,10 @@
  */
 
 export interface InboundMailReplyIn {
+  /** «Ждём ответа»: письмо остаётся «в работе», а не «Разобрано: ответ отправлен» */
+  awaiting?: boolean;
+  /** «Ответить всем»: копия — остальные адреса письма */
+  reply_all?: boolean;
   /**
    * @minLength 1
    * @maxLength 20000

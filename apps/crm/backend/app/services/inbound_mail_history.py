@@ -149,7 +149,11 @@ class InboundMailHistory:
                 for item in messages:
                     try:
                         mail_id = await self._ingest.store(
-                            folder, validity[folder.name], item, history_at=history_at
+                            folder,
+                            validity[folder.name],
+                            item,
+                            history_at=history_at,
+                            mailbox_address=connection.username,
                         )
                     except Exception:  # одно письмо не сломает загрузку; повтор её дозаберёт
                         logger.exception("inbound_mail_history_store_failed", uid=item.uid)

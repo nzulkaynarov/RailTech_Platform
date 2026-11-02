@@ -11,6 +11,11 @@
 статус `spam` («Подозрительные»); то же письмо (Message-ID) в обычной папке — одна строка, из `spam`
 в `new`.
 Загрузка истории (`inbound_mail_history.py`) пишет письма тем же `store` с пометкой «из истории».
+
+Обращение (W18A-P2-3): ответ клиента по `In-Reply-To`/`References` на известное письмо
+прикрепляется к
+той же записи (`thread_root_id`) и переоткрывает разобранную; письмо с сотрудником в «Кому» и общим
+ящиком в копии при включённом правиле сразу «в работе» у этого сотрудника («адресовано лично»).
 """
 
 import uuid
@@ -24,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.inbound_folders import FolderSetting, is_history
 from app.domain.inbound_mail import ParsedMail, find_inns, parse_message
+from app.domain.inbound_mail_flow import classify_recipients, status_after_reply, thread_ids
 from app.integrations.imap import (
     FetchedMessage,
     ImapClient,
@@ -32,8 +38,11 @@ from app.integrations.imap import (
     in_folder,
     resolve_imap,
 )
+from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
+from app.repositories import inbound_mail_views as views
 from app.repositories import lead_intake as leads_repo
+from app.security import audit
 from app.security.secrets_store import SecretsStore
 from app.services.settings import SettingsService
 
@@ -125,7 +134,9 @@ class InboundMailIngest:
         done: list[int] = []
         for item in batch.messages:
             try:
-                mail_id = await self.store(folder, batch.uidvalidity, item)
+                mail_id = await self.store(
+                    folder, batch.uidvalidity, item, mailbox_address=connection.username
+                )
             except (
                 Exception
             ):  # хранилище или база: UID не сдвигаем — письмо заберёт следующий опрос
@@ -156,9 +167,11 @@ class InboundMailIngest:
         item: FetchedMessage,
         *,
         history_at: datetime | None = None,
+        mailbox_address: str = "",
     ) -> int | None:
         """Письмо → строка очереди; уже есть (Message-ID) — None. `history_at` — время загрузки
-        истории: письмо старше окна задач помечается «из истории»."""
+        истории: письмо старше окна задач помечается «из истории». `mailbox_address` — адрес самого
+        общего ящика (логин приёма) для правила «адресовано лично»."""
         parsed = parse_message(item.raw)
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
@@ -168,7 +181,9 @@ class InboundMailIngest:
                     logger.info("inbound_mail_left_spam", folder=folder.name)
                 return None
         files = await self._put_files(parsed)
+        rule_on = (await self._settings.get()).integrations.imap.personal_rule
         async with self._sessions() as session, session.begin():
+            now = datetime.now(UTC)
             values = await _row(session, parsed, files)
             values.update(
                 mailbox=folder.name,
@@ -177,8 +192,30 @@ class InboundMailIngest:
                 too_large=item.too_large,
                 status="spam" if folder.spam else "new",
                 from_history=history_at is not None and is_history(parsed.sent_at, history_at),
+                activity_at=min(parsed.sent_at, now) if parsed.sent_at else now,
             )
+            root = None
+            if (
+                not folder.spam
+            ):  # из спама цепочку не продолжаем: подделка `In-Reply-To` не оживит запись
+                ids = thread_ids(parsed.in_reply_to, parsed.references)
+                root = await views.thread_root(session, ids, for_update=True)
+            if root is not None:
+                values.update(thread_root_id=root.id, status="done")
+            else:
+                await _personal(session, parsed, values, mailbox_address, rule_on, now)
             mail_id = await repo.insert_new(session, values)
+            if mail_id is not None and root is not None:
+                await _attach(session, root, mail_id, values["activity_at"])  # type: ignore[arg-type]
+            elif mail_id is not None and values.get("personal"):
+                await audit.record(
+                    session,
+                    audit.Actor.system(),
+                    "inbound_mail.personal",
+                    "inbound_mail",
+                    mail_id,
+                    after={"assignee_id": values["assignee_id"]},
+                )
         if mail_id is not None:
             logger.info("inbound_mail_stored", mail_id=mail_id, files=len(files), spam=folder.spam)
         return mail_id
@@ -236,6 +273,7 @@ async def _row(
         "from_email": parsed.from_email,
         "from_name": parsed.from_name,
         "to_addrs": list(parsed.to),
+        "cc_addrs": list(parsed.cc),
         "subject": parsed.subject,
         "sent_at": parsed.sent_at,
         "in_reply_to": parsed.in_reply_to,
@@ -247,3 +285,43 @@ async def _row(
         "client_id": client[0] if client else None,
         "matched_lead_id": lead.id if lead is not None else None,
     }
+
+
+async def _personal(
+    session: AsyncSession,
+    parsed: ParsedMail,
+    values: dict[str, object],
+    mailbox_address: str,
+    rule_on: bool,
+    now: datetime,
+) -> None:
+    """Адресаты письма: сотрудники из «Кому» и копии; «лично» — сразу «в работе» у первого."""
+    staff = await views.staff_by_email(session, [*parsed.to, *parsed.cc])
+    found = classify_recipients(parsed.to, parsed.cc, mailbox_address, staff, rule_on=rule_on)
+    values.update(
+        to_staff_ids=list(found.to_staff),
+        cc_staff_ids=list(found.cc_staff),
+        personal=found.personal,
+    )
+    if found.personal and values["status"] == "new":
+        values.update(status="in_work", assignee_id=found.assignee_id, assigned_at=now)
+
+
+async def _attach(session: AsyncSession, root: InboundMail, child_id: int, at: datetime) -> None:
+    """Ответ клиента — к записи: видно новое письмо, разобранная запись снова «Новое (ответ в
+    цепочке)»
+    с прежним исполнителем в справке."""
+    root.activity_at = max(root.activity_at, at)
+    reopened = status_after_reply(root.status) != root.status
+    if reopened:
+        root.status, root.thread_reply = "new", True
+        root.outcome = root.archive_reason = None
+        root.handled_by = root.handled_at = None
+    await audit.record(
+        session,
+        audit.Actor.system(),
+        "inbound_mail.thread_reply",
+        "inbound_mail",
+        root.id,
+        after={"mail_id": child_id, "reopened": reopened},
+    )

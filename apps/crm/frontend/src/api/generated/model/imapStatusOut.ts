@@ -25,6 +25,10 @@ export interface ImapStatusOut {
   password_configured: boolean;
   password_last4: string | null;
   password_updated_at: string | null;
+  /** Пометка у такого письма */
+  personal_label?: string;
+  /** «Адресовано лично»: сотрудник в «Кому», ящик в копии — письмо ему */
+  personal_rule?: boolean;
   port: number;
   secrets_enabled: boolean;
   security: ImapStatusOutSecurity;

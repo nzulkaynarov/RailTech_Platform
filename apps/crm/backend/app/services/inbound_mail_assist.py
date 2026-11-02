@@ -122,7 +122,7 @@ class InboundMailAssist:
             raise NotFoundError("mail not found")
         if row.assist_status == "done":
             return view(row, True)
-        if row.status != "new":
+        if row.status not in ("new", "in_work"):
             raise ConflictError("mail is already handled", status=row.status)
         version = prompts.version(PROMPT)
         verdict, trace_id = await self._ask(who, cfg.company.name, masked_mail(row), version)

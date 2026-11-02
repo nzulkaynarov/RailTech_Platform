@@ -41,27 +41,10 @@ async def get(
 
 
 def _filter(status: str, history: bool | None) -> list[ColumnElement[bool]]:
-    where = [InboundMail.status == status]
+    where = [InboundMail.status == status, InboundMail.thread_root_id.is_(None)]
     if history is not None:
         where.append(InboundMail.from_history.is_(history))
     return where
-
-
-async def page(
-    session: AsyncSession, status: str, limit: int, history: bool | None = None
-) -> Sequence[InboundMail]:
-    """Письма статуса; новые сверху по дате письма (у загруженных из истории дата приёма — сегодня);
-    дата из будущего (часы отправителя) не выше даты приёма — `LEAST` пропускает NULL."""
-    stmt = (
-        select(InboundMail)
-        .where(*_filter(status, history))
-        .order_by(
-            func.least(InboundMail.sent_at, InboundMail.received_at).desc(),
-            InboundMail.id.desc(),
-        )
-        .limit(limit)
-    )
-    return (await session.scalars(stmt)).all()
 
 
 async def count(session: AsyncSession, status: str, history: bool | None = None) -> int:
@@ -73,7 +56,11 @@ async def promote_from_spam(session: AsyncSession, message_id: str, mailbox: str
     """Письмо, которое было в «Спаме», нашлось в обычной папке (его переложили): в очередь."""
     stmt = (
         update(InboundMail)
-        .where(InboundMail.message_id == message_id, InboundMail.status == "spam")
+        .where(
+            InboundMail.message_id == message_id,
+            InboundMail.status == "spam",
+            InboundMail.thread_root_id.is_(None),
+        )
         .values(status="new", mailbox=mailbox)
         .returning(InboundMail.id)
     )

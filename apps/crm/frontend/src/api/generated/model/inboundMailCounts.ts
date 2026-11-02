@@ -4,10 +4,17 @@
  */
 
 /**
- * Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные.
+ * Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
+ * работе, разобранные, подозрительные, все.
  */
 export interface InboundMailCounts {
+  all: number;
+  done: number;
   history: number;
+  in_work: number;
+  mine: number;
   new: number;
   spam: number;
+  /** Новых, которые этот сотрудник ещё не открывал */
+  unread_new: number;
 }

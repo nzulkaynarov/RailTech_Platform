@@ -144,3 +144,17 @@ def test_reply_headers() -> None:
     assert im.reply_subject("RE: Запрос") == "RE: Запрос"
     assert im.thread_references("abc@x.test", "<a@x.test>") == "<a@x.test> <abc@x.test>"
     assert im.thread_references("abc@x.test", None) == "<abc@x.test>"
+
+
+def test_to_and_cc_are_kept_apart() -> None:
+    """«Кому» и «Копия» раздельно (W18A-P2-3): сотрудник в «Кому» — адресат, в копии — «для
+    сведения»."""
+    msg = EmailMessage()
+    msg["From"] = "client@example.test"
+    msg["To"] = "Иванов <Ivanov@Company.test>, client2@example.test"
+    msg["Cc"] = "inbox@company.test, ivanov@company.test"
+    msg["Subject"] = "Вопрос"
+    msg.set_content("Текст")
+    parsed = im.parse_message(msg.as_bytes())
+    assert parsed.to == ("ivanov@company.test", "client2@example.test")
+    assert parsed.cc == ("inbox@company.test", "ivanov@company.test")

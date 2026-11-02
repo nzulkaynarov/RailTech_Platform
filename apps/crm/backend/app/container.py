@@ -723,6 +723,7 @@ class Container:
             self.storage,
             self.settings.s3_bucket_attachments,
             self.imap_connector.configured,
+            self.imap_connector.address,
         )
 
     @cached_property

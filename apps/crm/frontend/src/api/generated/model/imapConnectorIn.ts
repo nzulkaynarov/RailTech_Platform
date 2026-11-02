@@ -26,6 +26,12 @@ export interface ImapConnectorIn {
    */
   password: string;
   /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  personal_label?: string;
+  personal_rule?: boolean;
+  /**
    * @minimum 1
    * @maximum 65535
    */

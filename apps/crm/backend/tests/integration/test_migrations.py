@@ -413,3 +413,54 @@ def test_staff_profile_revision_is_reversible_and_has_one_head(
     command.upgrade(alembic_config, "head")
     with psycopg.connect(live_settings.libpq_dsn) as conn:
         assert conn.execute(PROFILE_SQL).fetchone() == (11, 2)
+
+
+INBOUND_BEFORE = "add9f58d0dab"
+
+
+def _statuses(settings: Settings) -> list[tuple[str, str, str | None]]:
+    sql = "SELECT message_id, status, outcome FROM inbound_mail ORDER BY id"
+    with psycopg.connect(settings.libpq_dsn) as conn:
+        return [(str(a), str(b), c) for a, b, c in conn.execute(sql).fetchall()]
+
+
+def test_inbound_mail_statuses_become_done_with_outcome_and_back(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """W18A-P2-3: `registered | lead | archived` → `done` + итог; откат — прежний статус."""
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, INBOUND_BEFORE)
+    old = ["new", "spam", "registered", "lead", "archived"]
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        conn.execute("TRUNCATE inbound_mail RESTART IDENTITY CASCADE")
+        for n, status in enumerate(old):
+            conn.execute(
+                "INSERT INTO inbound_mail "
+                "(message_id, mailbox, uidvalidity, uid, status, to_addrs) "
+                "VALUES (%s, 'INBOX', 1, %s, %s, '[\"a@example.test\", \"b@example.test\"]')",
+                (f"m{n}", n, status),
+            )
+        conn.commit()
+
+    command.upgrade(alembic_config, "head")
+    assert _statuses(live_settings) == [
+        ("m0", "new", None),
+        ("m1", "spam", None),
+        ("m2", "done", "registered"),
+        ("m3", "done", "lead"),
+        ("m4", "done", "archived"),
+    ]
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        row = conn.execute(
+            "SELECT to_addrs, cc_addrs, personal, thread_root_id, activity_at IS NOT NULL "
+            "FROM inbound_mail WHERE message_id = 'm0'"
+        ).fetchone()
+    assert row is not None
+    assert row[0] == ["a@example.test", "b@example.test"], "старые строки: всё в «Кому»"
+    assert (row[1], row[2], row[3], row[4]) == ([], False, None, True)
+
+    command.downgrade(alembic_config, INBOUND_BEFORE)
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        back = [r[0] for r in conn.execute("SELECT status FROM inbound_mail ORDER BY id")]
+    assert back == old
+    command.upgrade(alembic_config, "head")

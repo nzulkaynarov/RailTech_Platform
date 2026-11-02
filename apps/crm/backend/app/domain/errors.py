@@ -185,6 +185,11 @@ class Reason(StrEnum):
     # изменилось после первой отправки — ERP ответила `IDEMPOTENCY_CONFLICT`).
     REQUEST_NOT_FAILED = "request_not_failed"
     REQUEST_NOT_RETRYABLE = "request_not_retryable"
+    # Общий ящик (W18A-P2-3): письмо уже ведёт другой сотрудник (`details.assignee_name`,
+    # `assigned_at`); письмо уже разобрано, подозрительное или не в том состоянии для действия.
+    MAIL_IN_WORK_BY_OTHER = "mail_in_work_by_other"
+    MAIL_HANDLED = "mail_handled"
+    MAIL_NOT_RETURNABLE = "mail_not_returnable"
 
 
 class DomainError(Exception):

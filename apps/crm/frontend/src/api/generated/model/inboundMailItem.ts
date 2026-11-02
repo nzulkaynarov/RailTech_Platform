@@ -5,11 +5,20 @@
 import type { InboundMailAssist } from "./inboundMailAssist";
 import type { InboundMailItemStatus } from "./inboundMailItemStatus";
 import type { InboundMailLink } from "./inboundMailLink";
+import type { InboundMailPerson } from "./inboundMailPerson";
+import type { InboundMailResult } from "./inboundMailResult";
 
 export interface InboundMailItem {
+  /** Время последнего входящего письма записи */
+  activity_at: string;
+  assigned_at?: string | null;
+  /** «В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой */
+  assignee?: InboundMailPerson | null;
   assist: InboundMailAssist;
   attachments_count: number;
   client?: InboundMailLink | null;
+  /** Регистрация начата, событие о ВХ не пришло в срок */
+  eds_waiting?: boolean;
   from_email: string;
   /** Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
   from_history?: boolean;
@@ -17,10 +26,20 @@ export interface InboundMailItem {
   id: number;
   /** Открытый лид с этим адресом (связка) или лид-итог */
   lead?: InboundMailLink | null;
+  /** Входящих писем в записи (цепочка) */
+  messages_count?: number;
+  /** Адресовано лично сотруднику (правило ящика) */
+  personal?: boolean;
   /** Начало текста письма (до 200 символов) */
   preview: string;
   received_at: string;
+  /** Итог у `done` */
+  result?: InboundMailResult | null;
   sent_at: string | null;
   status: InboundMailItemStatus;
   subject: string;
+  /** «Новое (ответ в цепочке)»: клиент ответил на разобранное */
+  thread_reply?: boolean;
+  /** Не прочитано этим сотрудником */
+  unread?: boolean;
 }

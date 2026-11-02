@@ -5,7 +5,9 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
-MailStatus = Literal["new", "spam", "registered", "lead", "archived"]
+MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
+MailOutcome = Literal["registered", "lead", "replied", "archived"]
+MailView = Literal["new", "mine", "in_work", "done", "spam", "all", "tasks"]
 AssistStatus = Literal["none", "done", "unavailable", "off"]
 AssistKind = Literal["buyer", "official", "supplier_doc", "other"]
 AssistAction = Literal["register", "lead", "archive"]
@@ -40,6 +42,25 @@ class InboundMailLink(BaseModel):
     name: str
 
 
+class InboundMailPerson(BaseModel):
+    id: int
+    name: str
+
+
+class InboundMailResult(BaseModel):
+    """Итог «Разобрано»: что сделано, кто и когда; ВХ и лид — для ссылки из списка."""
+
+    outcome: MailOutcome | None = Field(
+        description="registered — ВХ, lead — лид или заметка, replied — ответ отправлен, "
+        "archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3"
+    )
+    by: InboundMailPerson | None = None
+    at: datetime | None = None
+    letter_number: str | None = None
+    lead: InboundMailLink | None = None
+    reason: str | None = Field(default=None, description="Причина архива")
+
+
 class InboundMailItem(BaseModel):
     id: int
     status: MailStatus
@@ -48,6 +69,7 @@ class InboundMailItem(BaseModel):
     subject: str
     received_at: datetime
     sent_at: datetime | None
+    activity_at: datetime = Field(description="Время последнего входящего письма записи")
     preview: str = Field(description="Начало текста письма (до 200 символов)")
     attachments_count: int
     assist: InboundMailAssist
@@ -59,6 +81,21 @@ class InboundMailItem(BaseModel):
         default=False,
         description="Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»",
     )
+    assignee: InboundMailPerson | None = Field(
+        default=None,
+        description="«В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой",
+    )
+    assigned_at: datetime | None = None
+    personal: bool = Field(default=False, description="Адресовано лично сотруднику (правило ящика)")
+    thread_reply: bool = Field(
+        default=False, description="«Новое (ответ в цепочке)»: клиент ответил на разобранное"
+    )
+    unread: bool = Field(default=False, description="Не прочитано этим сотрудником")
+    messages_count: int = Field(default=1, description="Входящих писем в записи (цепочка)")
+    eds_waiting: bool = Field(
+        default=False, description="Регистрация начата, событие о ВХ не пришло в срок"
+    )
+    result: InboundMailResult | None = Field(default=None, description="Итог у `done`")
 
 
 class InboundMailReply(BaseModel):
@@ -68,22 +105,55 @@ class InboundMailReply(BaseModel):
     status: str
     created_at: datetime
     sent_at: datetime | None
+    by: InboundMailPerson | None = None
+
+
+class InboundMailAddress(BaseModel):
+    """Адрес письма: сотрудник CRM по адресу и/или сам общий ящик."""
+
+    email: str
+    staff: InboundMailPerson | None = None
+    mailbox: bool = False
+
+
+class InboundMailMessage(BaseModel):
+    """Входящее письмо записи (первое — корень); вложения качаются по `id` письма."""
+
+    id: int
+    from_email: str
+    from_name: str
+    at: datetime
+    text: str
+    attachments: list[InboundMailAttachment]
+
+
+class InboundMailEvent(BaseModel):
+    """Строка журнала письма: действие кодом (подпись — на стороне интерфейса)."""
+
+    at: datetime
+    action: str
+    actor: InboundMailPerson | None = None
+    detail: str | None = None
 
 
 class InboundMailOut(InboundMailItem):
-    to: list[str]
+    to: list[InboundMailAddress]
+    cc: list[InboundMailAddress]
     text: str
     attachments: list[InboundMailAttachment]
     skipped: list[InboundMailSkipped]
     too_large: bool
     inns: list[str]
     eds_letter_id: str | None
-    eds_letter_number: str | None
-    result_lead: InboundMailLink | None
-    archive_reason: str | None
-    handled_at: datetime | None
-    handled_by: int | None
-    replies: list[InboundMailReply]
+    messages: list[InboundMailMessage] = Field(
+        description="Все входящие письма записи по времени, корень первым"
+    )
+    replies: list[InboundMailReply] = Field(description="Наши ответы из журнала почты")
+    journal: list[InboundMailEvent]
+    reply_all_copy: list[str] = Field(
+        description="Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)"
+    )
+    personal_label: str = Field(description="Пометка «адресовано лично» из настроек")
 
 
 class InboundMailbox(BaseModel):
@@ -93,14 +163,23 @@ class InboundMailbox(BaseModel):
     last_poll_at: datetime | None = None
     last_ok_at: datetime | None = None
     last_error_kind: str | None = None
+    personal_label: str = Field(
+        default="Адресовано лично", description="Пометка письма «адресовано лично» (настройка)"
+    )
 
 
 class InboundMailCounts(BaseModel):
-    """Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные."""
+    """Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
+    работе, разобранные, подозрительные, все."""
 
     new: int
     history: int
+    mine: int
+    in_work: int
+    done: int
     spam: int
+    all: int
+    unread_new: int = Field(description="Новых, которые этот сотрудник ещё не открывал")
 
 
 class InboundMailPage(BaseModel):
@@ -116,6 +195,41 @@ class InboundMailArchiveIn(BaseModel):
 
 class InboundMailReplyIn(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
+    reply_all: bool = Field(
+        default=False, description="«Ответить всем»: копия — остальные адреса письма"
+    )
+    awaiting: bool = Field(
+        default=False,
+        description="«Ждём ответа»: письмо остаётся «в работе», а не «Разобрано: ответ отправлен»",
+    )
+
+
+class InboundMailTakeIn(BaseModel):
+    takeover: bool = Field(
+        default=False, description="«Забрать себе» у того, кто уже ведёт письмо (журнал)"
+    )
+
+
+class InboundMailRegistrationIn(BaseModel):
+    state: Literal["start", "cancel"] = Field(
+        description="start — ВХ создаётся в EDS (письмо «Регистрируется»); cancel — EDS отказал"
+    )
+
+
+class InboundMailBulkArchiveIn(BaseModel):
+    ids: list[int] = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class InboundMailSkippedItem(BaseModel):
+    id: int
+    reason: Literal["in_work_by_other", "handled", "registering", "missing"]
+    assignee: InboundMailPerson | None = None
+
+
+class InboundMailBulkArchiveOut(BaseModel):
+    archived: list[int]
+    skipped: list[InboundMailSkippedItem]
 
 
 class InboundMailLeadOut(BaseModel):
@@ -188,6 +302,11 @@ class ImapStatusOut(BaseModel):
     security: Literal["ssl", "starttls"]
     mailbox: str
     assist_enabled: bool
+    personal_rule: bool = Field(
+        default=True,
+        description="«Адресовано лично»: сотрудник в «Кому», ящик в копии — письмо ему",
+    )
+    personal_label: str = Field(default="Адресовано лично", description="Пометка у такого письма")
     username: str
     password_configured: bool
     password_last4: str | None
@@ -220,6 +339,8 @@ class ImapConnectorIn(BaseModel):
         description="Папки опроса; `null` — прежние. Задано — `mailbox` = первая не спам",
     )
     assist_enabled: bool = True
+    personal_rule: bool = True
+    personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
