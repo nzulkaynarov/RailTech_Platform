@@ -112,6 +112,17 @@ class Product(models.Model):
         verbose_name=_("Компания-владелец"),
         help_text=_("Продавец/поставщик, создавший карточку (мультитенантность PIM)."),
     )
+    # CAT-1: по данным какого поставщика заведена карточка (загрузка прайса). Прайс этого поставщика её поля обновляет,
+    # прайс другого — только предлагает изменения (`ProductFieldProposal`). Пусто — карточку завёл сотрудник.
+    source_supplier = models.ForeignKey(
+        "parties.Company",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="sourced_products",
+        verbose_name=_("Заведена по данным поставщика"),
+        help_text=_("Поставщик, из прайса которого создана карточка"),
+    )
     brand = models.ForeignKey(
         "catalog.Manufacturer",
         on_delete=models.SET_NULL,

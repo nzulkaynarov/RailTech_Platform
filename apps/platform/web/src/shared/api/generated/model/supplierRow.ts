@@ -8,8 +8,18 @@ export interface SupplierRow {
   id: CompanyItemRef;
   name: string;
   tin: string;
+  /** Рег. номер нерезидента (без ИНН РУз) */
+  registration_number: string;
   /** @nullable */
   country: string | null;
+  country_id: CompanyItemRef | null;
+  /**
+   * Валюта цен поставщика
+   * @nullable
+   */
+  currency: string | null;
+  /** Сам выпускает товар */
+  is_manufacturer: boolean;
   /** @minimum 0 */
   offers_count: number;
   /**

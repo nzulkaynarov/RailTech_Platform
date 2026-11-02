@@ -156,3 +156,61 @@
 .pf-cat .pf-co-tabs {
   padding: 0;
 }
+
+/* CAT-1: загрузка прайса поставщика, изменения карточки от поставщиков. */
+.pf-cat-import {
+  max-width: 880px;
+}
+.pf-cat-import-new {
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 2px;
+}
+.pf-cat-control-check {
+  justify-content: flex-end;
+  min-height: 32px;
+}
+.pf-cat-report {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-cat-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.pf-cat-stat {
+  padding: 10px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+}
+.pf-cat-stat dt {
+  color: #595959;
+  font-size: 13px;
+}
+.pf-cat-stat dd {
+  margin: 0;
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.pf-cat-proposals {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-cat-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  overflow-wrap: anywhere;
+}
+.pf-cat-proposal-values {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}

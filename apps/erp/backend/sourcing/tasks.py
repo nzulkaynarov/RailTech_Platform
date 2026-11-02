@@ -387,7 +387,7 @@ def process_excel_import(
     autoretry_for=(Exception,),
     retry_backoff=True,
 )
-def process_catalog_import(self, file_content_b64: str, supplier_company_id=None, dry_run=False):
+def process_catalog_import(self, file_content_b64: str, supplier_company_id=None, dry_run=False, **options):
     """
     Thin wrapper around the true-PIM seller catalog import engine (Rule 8).
 
@@ -408,6 +408,8 @@ def process_catalog_import(self, file_content_b64: str, supplier_company_id=None
             supplier_company_id=supplier_company_id,
             dry_run=dry_run,
             progress_callback=progress,
+            # CAT-1: срок цен на весь файл, кто загрузил, владелец новых карточек (путь сотрудника).
+            **options,
         )
     except ValueError as exc:
         # File-level fatal error (e.g. NAME_COLUMN_NOT_FOUND).

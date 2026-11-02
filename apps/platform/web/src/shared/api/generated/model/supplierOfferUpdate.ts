@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { CatalogMoneyIn } from "./catalogMoneyIn";
+import type { CatalogOfferSource } from "./catalogOfferSource";
 
 export interface SupplierOfferUpdate {
   price?: CatalogMoneyIn;
@@ -24,4 +25,15 @@ export interface SupplierOfferUpdate {
   /** @nullable */
   valid_until?: string | null;
   is_active?: boolean;
+  /**
+   * Incoterms
+   * @maxLength 10
+   * @nullable
+   */
+  delivery_basis?: string | null;
+  /** @maxLength 100 */
+  lead_time?: string;
+  /** @maxLength 100 */
+  supplier_sku?: string;
+  source?: CatalogOfferSource;
 }
