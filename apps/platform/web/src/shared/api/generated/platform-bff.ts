@@ -287,6 +287,7 @@ import type {
   QueueCards,
   QuoteApprovalCard,
   QuoteApprovalPage,
+  QuoteClientDecisionIn,
   QuoteDecisionIn,
   QuoteDefaults,
   QuoteDefaultsUpdate,
@@ -10026,6 +10027,134 @@ export const useSendQuoteByChannel = <
   TContext
 > => {
   return useMutation(getSendQuoteByChannelMutationOptions(options), queryClient);
+};
+
+export const getRecordQuoteClientDecisionUrl = (id: string) => {
+  return `/api/v1/eds/quotes/${id}/client-decision`;
+};
+
+/**
+ * A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по телефону, почте, в мессенджере, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и необязательный файл `file` — скрин переписки, письмо; PDF или изображение до 20 МБ). Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата со слов не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+ * @summary EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
+ */
+export const recordQuoteClientDecision = async (
+  id: string,
+  quoteClientDecisionIn: QuoteClientDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalCard> => {
+  const formData = new FormData();
+  formData.append(`decision`, quoteClientDecisionIn.decision);
+  formData.append(`channel`, quoteClientDecisionIn.channel);
+  formData.append(`counterparty_person`, quoteClientDecisionIn.counterparty_person);
+  formData.append(`occurred_on`, quoteClientDecisionIn.occurred_on);
+  formData.append(`comment`, quoteClientDecisionIn.comment);
+  if (quoteClientDecisionIn.file !== undefined) {
+    formData.append(`file`, quoteClientDecisionIn.file);
+  }
+
+  return http<QuoteApprovalCard>(getRecordQuoteClientDecisionUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getRecordQuoteClientDecisionMutationKey = () => ["recordQuoteClientDecision"] as const;
+
+export const getRecordQuoteClientDecisionMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof recordQuoteClientDecision>>,
+    TError,
+    RecordQuoteClientDecisionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof recordQuoteClientDecision>>,
+  TError,
+  RecordQuoteClientDecisionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRecordQuoteClientDecisionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof recordQuoteClientDecision>>,
+    RecordQuoteClientDecisionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return recordQuoteClientDecision(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RecordQuoteClientDecisionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof recordQuoteClientDecision>>
+>;
+export type RecordQuoteClientDecisionMutationBody = QuoteClientDecisionIn;
+export type RecordQuoteClientDecisionMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ProjectPayloadTooLargeResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RecordQuoteClientDecisionMutationVariables = {
+  id: string;
+  data: QuoteClientDecisionIn;
+};
+
+/**
+ * @summary EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
+ */
+export const useRecordQuoteClientDecision = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof recordQuoteClientDecision>>,
+      TError,
+      RecordQuoteClientDecisionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof recordQuoteClientDecision>>,
+  TError,
+  RecordQuoteClientDecisionMutationVariables,
+  TContext
+> => {
+  return useMutation(getRecordQuoteClientDecisionMutationOptions(options), queryClient);
 };
 
 export const getListMemoApprovalsUrl = (params?: ListMemoApprovalsParams) => {

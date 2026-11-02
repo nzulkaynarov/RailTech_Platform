@@ -1412,6 +1412,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/quotes/{id}/client-decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
+     * @description A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по телефону, почте, в мессенджере, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и необязательный файл `file` — скрин переписки, письмо; PDF или изображение до 20 МБ). Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата со слов не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+     */
+    post: operations["recordQuoteClientDecision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/memo-approvals": {
     parameters: {
       query?: never;
@@ -7480,6 +7500,8 @@ export interface components {
       number: string | null;
       /** @description Причина или заметка к действию; пусто, если её не было */
       reason: string;
+      /** @description Действие контрагента записал сотрудник со слов (КП принято или отклонено, редакция договора согласована); нет или `null` — нет */
+      on_behalf?: components["schemas"]["OnBehalfNote"] | null;
     };
     ProjectQuote: {
       id: number;
@@ -7629,12 +7651,20 @@ export interface components {
       /** @description История документов проекта (договор, счета, акт), новые первыми: кто, когда, что и по какой причине */
       journal: components["schemas"]["ProjectJournalEntry"][];
     };
-    /** @description Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422). */
+    /** @description Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422). */
     ProjectContractActionIn: {
       /** @enum {string} */
       action: "send_to_client" | "client_agreed" | "reject" | "revise" | "mark_issued";
       reason?: string | null;
       note?: string | null;
+      /** @description Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a) */
+      channel?: components["schemas"]["OnBehalfChannel"] | null;
+      /** @description Только `client_agreed`, обязательно: кто со стороны клиента (ФИО, должность) */
+      counterparty_person?: string | null;
+    };
+    OnBehalfNote: {
+      channel: components["schemas"]["OnBehalfChannel"];
+      counterparty_person: string;
     };
     /** @description Действие по акту. `reason` обязательна для `return`: возврат без причины не бывает. */
     ProjectActActionIn: {
@@ -8190,7 +8220,63 @@ export interface components {
       delivery: components["schemas"]["QuoteDelivery"] | null;
       /** @description Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил) */
       client_comments: components["schemas"]["QuoteClientComment"][];
+      /** @description Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила */
+      client_decision?: components["schemas"]["QuoteClientDecision"] | null;
       sources: components["schemas"]["Sources"];
+    };
+    QuoteClientDecision: {
+      /**
+       * @description Ждёт решения клиента, принято, отклонено, срок истёк
+       * @enum {string}
+       */
+      state: "awaiting" | "accepted" | "rejected" | "expired";
+      /**
+       * Format: date-time
+       * @description Когда решение записано в ERP
+       */
+      decided_at: string | null;
+      /** @description Причина отказа клиента */
+      reason: string | null;
+      /** @description `null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник со слов клиента */
+      recorded_by_staff: components["schemas"]["OnBehalfRecord"] | null;
+      /** @description Показать «Клиент принял» / «Клиент отклонил»: КП ждёт решения и у сотрудника право ERP `deal.manage` (решает ERP) */
+      can_record: boolean;
+    };
+    /**
+     * @description Как контрагент сообщил решение: телефон, почта, мессенджер, лично, бумага
+     * @enum {string}
+     */
+    OnBehalfChannel: "phone" | "email" | "messenger" | "in_person" | "paper";
+    /** @description Решение контрагента, записанное сотрудником («Отмечено сотрудником: кто, канал, со слов кого») */
+    OnBehalfRecord: {
+      /** @description Сотрудник, который записал */
+      staff_name: string | null;
+      channel: components["schemas"]["OnBehalfChannel"];
+      /** @description Кто со стороны контрагента (ФИО, должность) */
+      counterparty_person: string;
+      /**
+       * Format: date
+       * @description Когда сообщили (со слов)
+       */
+      occurred_on: string | null;
+      comment: string | null;
+      /** @description Приложен файл (скрин переписки, письмо) */
+      has_evidence: boolean;
+    };
+    /** @description Решение клиента со слов. `comment` — что сказал клиент; для `reject` это причина отказа (как у отказа в кабинете). `occurred_on` — не позже сегодняшнего дня. Файл — по желанию. */
+    QuoteClientDecisionIn: {
+      /** @enum {string} */
+      decision: "accept" | "reject";
+      channel: components["schemas"]["OnBehalfChannel"];
+      counterparty_person: string;
+      /** Format: date */
+      occurred_on: string;
+      comment: string;
+      /**
+       * Format: binary
+       * @description PDF или изображение (jpg, png, webp) до 20 МБ
+       */
+      file?: string;
     };
     QuoteClientComment: {
       /**
@@ -14240,6 +14326,51 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  recordQuoteClientDecision: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["QuoteClientDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение записано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — КП не ждёт решения клиента (уже принято, отклонено, истекло или не отправлено); `details.reason = quote_not_sent` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      413: components["responses"]["ProjectPayloadTooLarge"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
