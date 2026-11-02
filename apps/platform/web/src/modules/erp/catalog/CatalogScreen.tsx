@@ -7,6 +7,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SectionTabs } from "../../admin/company/SectionTabs";
 import { BrigadesPanel } from "./BrigadesPanel";
 import { ItemsPanel } from "./ItemsPanel";
+import { PriceImportPanel } from "./PriceImportPanel";
 import { RefsPanel } from "./RefsPanel";
 import { RequestsPanel } from "./RequestsPanel";
 import { SuppliersPanel } from "./SuppliersPanel";
@@ -14,12 +15,12 @@ import { SuppliersPanel } from "./SuppliersPanel";
 import "../../admin/company/company.css";
 import "./catalog.css";
 
-const PARTS = ["items", "suppliers", "brigades", "refs", "requests"] as const;
+const PARTS = ["items", "suppliers", "import", "brigades", "refs", "requests"] as const;
 type Part = (typeof PARTS)[number];
 
 /**
  * Расчёт · Номенклатура и поставщики (`/erp/catalog`, SPEC-v3 §7.4 «Справочники», D2-3): позиции, поставщики со сроками
- * цен, бригады и исполнители услуг, справочники (курсы, ТН ВЭД, производители) и запросы на новые категории. Раздел
+ * цен, загрузка прайса поставщика (`?part=import`, CAT-1), бригады и исполнители услуг, справочники (курсы, ТН ВЭД, производители) и запросы на новые категории. Раздел
  * `erp.stock`; цены поставщиков и ставки бригад ERP отдаёт только по праву (поля `supplier_prices`, `cost_margin`).
  */
 export function CatalogScreen() {
@@ -37,6 +38,7 @@ export function CatalogScreen() {
   const panels: Record<Part, React.ReactNode> = {
     items: <ItemsPanel />,
     suppliers: <SuppliersPanel />,
+    import: <PriceImportPanel />,
     brigades: <BrigadesPanel />,
     refs: <RefsPanel />,
     requests: <RequestsPanel />,

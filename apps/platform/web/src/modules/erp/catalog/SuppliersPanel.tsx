@@ -1,4 +1,4 @@
-import { Button, Drawer, Input } from "antd";
+import { Button, Drawer, Input, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -7,7 +7,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../app/auth/useAuth";
 import { canEdit } from "../../../app/access";
 import { useViewport } from "../../../app/shell/useViewport";
-import type { CatalogOffer, SupplierRow } from "../../../shared/api/generated/model";
+import type {
+  CatalogOffer,
+  CatalogOfferSource,
+  SupplierRow,
+} from "../../../shared/api/generated/model";
 import {
   getGetCatalogItemQueryKey,
   getGetCatalogSupplierQueryKey,
@@ -37,11 +41,15 @@ import { errorFields } from "./errors";
 import { useDebounced } from "./useDebounced";
 import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
+import { OFFER_SOURCES } from "./kinds";
+import { OfferCreateForm, OfferHistoryModal, SupplierForm } from "./supplierForms";
 
 /** Расчёт · Поставщики: квоты, сроки действия цен и, с правом на цены поставщиков, сами цены (D2-3). */
 export function SuppliersPanel() {
   const { t } = useTranslation("catalog");
   const { date } = useFormat();
+  const { me } = useAuth();
+  const [creating, setCreating] = useState(false);
   const [params, setParams] = useSearchParams();
   const [text, setText] = useState("");
   const [page, setPage] = useState(1);
@@ -78,7 +86,11 @@ export function SuppliersPanel() {
             {row.name}
           </Button>
           <span className="pf-cat-sub">
-            {[row.tin && t("suppliers.tin", { tin: row.tin }), row.country]
+            {[
+              row.tin && t("suppliers.tin", { tin: row.tin }),
+              row.registration_number && t("suppliers.reg", { reg: row.registration_number }),
+              row.country,
+            ]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -137,6 +149,17 @@ export function SuppliersPanel() {
             }}
           />
         </div>
+        <span className="pf-cat-spacer" />
+        {canEdit(me, "erp.stock") ? (
+          <Button
+            type="primary"
+            onClick={() => {
+              setCreating(true);
+            }}
+          >
+            {t("suppliers.add")}
+          </Button>
+        ) : null}
       </div>
       <QueryState query={query} labels={queryLabels(t)} rows={PAGE_SIZE}>
         {(data) =>
@@ -167,6 +190,17 @@ export function SuppliersPanel() {
           }}
         />
       ) : null}
+      {creating ? (
+        <SupplierForm
+          onClose={() => {
+            setCreating(false);
+          }}
+          onSaved={(saved) => {
+            setCreating(false);
+            select(saved.id);
+          }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -178,7 +212,11 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const { mobile } = useViewport();
   const query = useGetCatalogSupplier(id);
   const [editing, setEditing] = useState<CatalogOffer | null>(null);
+  const [history, setHistory] = useState<CatalogOffer | null>(null);
+  const [editCard, setEditCard] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [, setParams] = useSearchParams();
+  const editable = canEdit(me, "erp.stock");
   return (
     <Drawer
       open
@@ -192,7 +230,21 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
             <DefinitionList
               items={[
                 { label: t("suppliers.fields.tin"), value: card.tin },
+                { label: t("suppliers.fields.reg"), value: card.registration_number },
                 { label: t("suppliers.fields.country"), value: card.country },
+                { label: t("suppliers.fields.currency"), value: card.currency },
+                {
+                  label: t("suppliers.fields.kind"),
+                  value: card.is_manufacturer ? t("suppliers.maker") : t("suppliers.dealer"),
+                },
+                {
+                  label: t("suppliers.fields.brands"),
+                  value: card.brands.map((b) => b.name).join(", "),
+                },
+                {
+                  label: t("suppliers.fields.madeBrands"),
+                  value: card.manufactured_brands.map((b) => b.name).join(", "),
+                },
                 { label: t("suppliers.fields.contact"), value: card.contact_person },
                 { label: t("suppliers.fields.phone"), value: card.phone },
                 { label: t("suppliers.fields.email"), value: card.email },
@@ -200,6 +252,26 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 { label: t("suppliers.fields.address"), value: card.legal_address },
               ]}
             />
+            {editable ? (
+              <div className="pf-cat-actions">
+                <Button
+                  onClick={() => {
+                    setEditCard(true);
+                  }}
+                >
+                  {t("suppliers.edit")}
+                </Button>
+                {card.prices_visible ? (
+                  <Button
+                    onClick={() => {
+                      setAdding(true);
+                    }}
+                  >
+                    {t("offerCreate.open")}
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
             <h3 className="pf-cat-section">{t("suppliers.offers")}</h3>
             {!card.prices_visible ? <p className="pf-cat-note">{t("offers.pricesNote")}</p> : null}
             {card.offers.length === 0 ? (
@@ -241,6 +313,11 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                         </td>
                         <td>
                           <PriceCell price={offer.price} />
+                          <span className="pf-cat-sub">
+                            {[offer.delivery_basis, t(`offerSource.${offer.source}`)]
+                              .filter(Boolean)
+                              .join(" · ")}
+                          </span>
                         </td>
                         <td>
                           {t("offers.quotaValue", {
@@ -263,15 +340,26 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                         </td>
                         {canEdit(me, "erp.stock") ? (
                           <td>
-                            <Button
-                              size="small"
-                              aria-label={t("offers.editNamed", { name: offer.product.name })}
-                              onClick={() => {
-                                setEditing(offer);
-                              }}
-                            >
-                              {t("offers.edit")}
-                            </Button>
+                            <div className="pf-cat-actions">
+                              <Button
+                                size="small"
+                                aria-label={t("offers.editNamed", { name: offer.product.name })}
+                                onClick={() => {
+                                  setEditing(offer);
+                                }}
+                              >
+                                {t("offers.edit")}
+                              </Button>
+                              <Button
+                                size="small"
+                                aria-label={t("history.openNamed", { name: offer.product.name })}
+                                onClick={() => {
+                                  setHistory(offer);
+                                }}
+                              >
+                                {t("history.open")}
+                              </Button>
+                            </div>
                           </td>
                         ) : null}
                       </tr>
@@ -280,6 +368,34 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 </table>
               </div>
             )}
+            {history ? (
+              <OfferHistoryModal
+                supplierId={id}
+                offer={history}
+                onClose={() => {
+                  setHistory(null);
+                }}
+              />
+            ) : null}
+            {editCard ? (
+              <SupplierForm
+                supplier={card}
+                onClose={() => {
+                  setEditCard(false);
+                }}
+                onSaved={() => {
+                  setEditCard(false);
+                }}
+              />
+            ) : null}
+            {adding ? (
+              <OfferCreateForm
+                supplier={card}
+                onClose={() => {
+                  setAdding(false);
+                }}
+              />
+            ) : null}
             {editing ? (
               <OfferForm
                 supplierId={id}
@@ -320,7 +436,13 @@ function OfferForm({
   const [from, setFrom] = useState(offer.valid_from ?? "");
   const [until, setUntil] = useState(offer.valid_until ?? "");
   const [active, setActive] = useState(offer.is_active);
+  const [basis, setBasis] = useState<string | null>(offer.delivery_basis);
+  const [leadText, setLeadText] = useState(offer.lead_time);
+  const [source, setSource] = useState<CatalogOfferSource>(offer.source);
   const ids = {
+    basis: useId(),
+    leadText: useId(),
+    source: useId(),
     amount: useId(),
     quota: useId(),
     min: useId(),
@@ -363,6 +485,9 @@ function OfferForm({
         valid_from: from || null,
         valid_until: until || null,
         is_active: active,
+        ...(basis !== offer.delivery_basis ? { delivery_basis: basis } : {}),
+        ...(leadText.trim() !== offer.lead_time ? { lead_time: leadText.trim() } : {}),
+        ...(source !== offer.source ? { source } : {}),
       },
     });
   };
@@ -452,6 +577,40 @@ function OfferForm({
           />
         </FormField>
       </div>
+      <div className="pf-cat-form-row">
+        <FormField id={ids.basis} label={t("offerCreate.basis")}>
+          <Select
+            id={ids.basis}
+            allowClear
+            value={basis}
+            onChange={(value: string | null | undefined) => {
+              setBasis(value ?? null);
+            }}
+            options={(lookups.data?.delivery_bases ?? []).map((b) => ({
+              value: b.code,
+              label: `${b.code} · ${b.name}`,
+            }))}
+          />
+        </FormField>
+        <FormField id={ids.source} label={t("offerCreate.source")}>
+          <Select
+            id={ids.source}
+            value={source}
+            onChange={setSource}
+            options={OFFER_SOURCES.map((s) => ({ value: s, label: t(`offerSource.${s}`) }))}
+          />
+        </FormField>
+      </div>
+      <FormField id={ids.leadText} label={t("offerCreate.lead")} hint={t("offerCreate.leadHint")}>
+        <Input
+          id={ids.leadText}
+          maxLength={100}
+          value={leadText}
+          onChange={(e) => {
+            setLeadText(e.target.value);
+          }}
+        />
+      </FormField>
       <label htmlFor={ids.active} className="pf-cat-check">
         <input
           id={ids.active}
