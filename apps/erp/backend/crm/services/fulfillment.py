@@ -191,10 +191,13 @@ def update_fulfillment_status(
     with document_events.watch_document_issue("waybill", obj):  # document.created на выпуске накладной
         obj.status = FulfillmentStatus.objects.get(code=status_code)
         now = timezone.now()
-        if status_code == FulfillmentStatusCode.SHIPPED and not obj.shipped_at:
-            obj.shipped_at = now
-        if status_code == FulfillmentStatusCode.DELIVERED and not obj.delivered_at:
-            obj.delivered_at = now
+        # Отметки доставки из Платформы (L0-1, `sales.services.delivery_progress`) передают дату отправки и доставки явно;
+        # «В пути» и «Доставлено» без отметки «Отгружено» тоже значат, что товар ушёл — дата отгрузки не остаётся пустой.
+        moved = (FulfillmentStatusCode.SHIPPED, FulfillmentStatusCode.IN_TRANSIT, FulfillmentStatusCode.DELIVERED)
+        if status_code in moved and not obj.shipped_at:
+            obj.shipped_at = extra.get("shipped_at") or now
+        if status_code == FulfillmentStatusCode.DELIVERED and (extra.get("delivered_at") or not obj.delivered_at):
+            obj.delivered_at = extra.get("delivered_at") or now
         if status_code == FulfillmentStatusCode.ACCEPTED and not obj.accepted_at:
             obj.accepted_at = now
         for key in ("tracking_number", "carrier", "expected_delivery_date", "notes"):

@@ -187,6 +187,8 @@ SPECTACULAR_SETTINGS = {
         # A1, A2 волны 18a «Отметить за контрагента»: канал, которым контрагент сообщил решение, и решение по КП.
         "OnBehalfChannelEnum": "crm.services.quotes.on_behalf.CHANNELS",
         "ClientDecisionEnum": ["accept", "reject"],
+        # L0-1: отметка доставки клиенту по проекту («В пути» / «Доставлено»).
+        "DeliveryMarkActionEnum": "sales.services.delivery_progress.ACTIONS",
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

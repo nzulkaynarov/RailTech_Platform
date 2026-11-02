@@ -162,8 +162,27 @@ class FulfillmentCardSerializer(serializers.Serializer):
     shipped_at = serializers.DateTimeField(allow_null=True)
     delivered_at = serializers.DateTimeField(allow_null=True)
     accepted_at = serializers.DateTimeField(allow_null=True)
-    tracking_number = serializers.CharField(allow_blank=True)
+    tracking_number = serializers.CharField(allow_blank=True, help_text="№ накладной перевозчика или трек")
     carrier = serializers.CharField(allow_blank=True)
+    actions = serializers.ListField(
+        child=serializers.ChoiceField(choices=["in_transit", "delivered"]),
+        help_text="Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)",
+    )
+    proof_attachment_id = serializers.IntegerField(
+        allow_null=True, help_text="Вложение подтверждения доставки (`/sourcing/attachments/{id}/download/`)"
+    )
+    proof_name = serializers.CharField(allow_null=True, help_text="Имя файла подтверждения доставки")
+
+
+class DeliveryMarkInSerializer(serializers.Serializer):
+    action = serializers.ChoiceField(
+        choices=["in_transit", "delivered"], help_text="`in_transit` — отправлено, в пути; `delivered` — доставлено"
+    )
+    on_date = serializers.DateField(help_text="Дата отправки или доставки; не позже сегодня и не раньше отправки")
+    waybill = serializers.CharField(
+        required=False, allow_blank=True, max_length=128, help_text="№ накладной перевозчика"
+    )
+    file = serializers.FileField(required=False, help_text="Подтверждение доставки: накладная, фото, PDF (до 20 МБ)")
 
 
 class DeliveryLineCardSerializer(serializers.Serializer):
