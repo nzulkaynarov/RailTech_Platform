@@ -284,9 +284,9 @@
       "button": "TTning yangi versiyasi",
       "done": "Hisob-kitob qayta ochildi: TT qoralamasi, versiya {{version}}",
       "consequence": [
-        "«TTning yangi versiyasi»: qatorlar va narxlar keyingi versiya qoralamasiga o‘tadi, vizalar qaytadan yig‘iladi, zaxira ariza ortida qoladi.",
+        "«TTning yangi versiyasi»: qatorlar va narxlar keyingi versiya qoralamasiga o‘tadi, vizalar qaytadan yig‘iladi; mijoz rad etganda bekor qilingan zaxira shu ekranda qayta qo‘yiladi.",
         "Oldingi versiya tarixda mijoz rad etgan sifatida qoladi.",
-        "«Arizadan voz kechish»: ariza sabab bilan yopiladi, zaxira bekor qilinadi, mijozga hech narsa yuborilmaydi."
+        "«Arizadan voz kechish»: ariza sabab bilan yopiladi, uning zaxirasi bekor qilingan, mijozga hech narsa yuborilmaydi."
       ]
     },
     "lost": {

@@ -162,6 +162,29 @@ def _supplier_offers(product_ids: Iterable[int]) -> dict[int, Any]:
     return found
 
 
+def line_supplier_offer(item: QuoteItem, suppliers: Optional[dict[int, Any]] = None):
+    """Предложение поставщика строки-товара: выбранное в расчёте (`item.offer`, внешний поставщик), иначе лучшее
+    действующее — то же, что колонка «Поставщик · срок». Услуга или строка без карточки — None. `suppliers` — уже
+    подгруженные `_supplier_offers` (экран расчёта), иначе запрос по одной строке."""
+    if item.offer_id and item.offer.supplier_id != _own_company_id():
+        return item.offer
+    if not item.product_id or zone_of(item) != Zone.GOODS:
+        return None
+    found = suppliers if suppliers is not None else _supplier_offers([item.product_id])
+    return found.get(item.product_id)
+
+
+def supplier_lead_days(offer, quantity: int) -> Optional[int]:
+    """Срок поставщика на `quantity` единиц: его наличие покрывает — срок со склада поставщика, иначе — под заказ (поля
+    `SupplierOffer`: «stock_quantity за in_stock_lead_time_days, остальное за order_lead_time_days»). Нет данных — None.
+    """
+    if offer is None:
+        return None
+    if offer.stock_quantity and offer.stock_quantity >= quantity and offer.in_stock_lead_time_days:
+        return offer.in_stock_lead_time_days
+    return offer.order_lead_time_days or offer.in_stock_lead_time_days or None
+
+
 def _money(value: Any) -> Optional[str]:
     if value is None:
         return None
@@ -227,6 +250,60 @@ def _line_kind(item: QuoteItem, zone: str, ctx: _Context) -> tuple[str, Optional
     return "goods_to_order", on_hand
 
 
+#: Пометка КП, когда срок дефицитной части неизвестен (нет предложения поставщика со сроком): в «Условиях поставки» КП —
+#: «Сроки поставки: …уточняется», в договоре — «в сроки, согласованные Сторонами» (`Quote.delivery_lead_time_days` = 0).
+LEAD_PENDING_NOTE = "Срок поставки позиций под заказ уточняется"
+
+
+def delivery_lead(item: QuoteItem, ctx: _Context) -> Optional[int]:
+    """Срок строки для КП и договора (D26G-8): максимум из срока «со склада» и срока поставщика на дефицитную часть.
+
+    Свободный остаток (с резервом этой строки) покрывает количество — срок строки как есть (со склада или введённый
+    снабженцем). Дефицит — срок поставщика на недостающее (`supplier_lead_days`), но не меньше срока строки. Срока
+    поставщика нет: срок, введённый снабженцем (отличный от срока «со склада» своего предложения), считается данными;
+    иначе — None («срок уточняется»). Логистика в данных отдельно не хранится — входит в срок поставщика."""
+    current = item.lead_time_days or 0
+    if zone_of(item) != Zone.GOODS or not item.product_id:
+        return current
+    info = _stock_of(item, ctx)
+    available = max(info["available"], 0) if info is not None else 0
+    if available >= item.quantity:
+        return current
+    supplier = supplier_lead_days(line_supplier_offer(item, ctx.suppliers), item.quantity - available)
+    if supplier:
+        return max(current, supplier)
+    own = ctx.own.get(item.product_id)
+    stock_lead = own.in_stock_lead_time_days if own is not None else 0
+    if current and current != stock_lead:
+        return current
+    return None
+
+
+def apply_delivery_leads(quote: Quote, items: list[QuoteItem]) -> list[int]:
+    """«Расчёт готов»: срок строк-товаров пересчитывается по складу и поставщику (`delivery_lead`). Пишется прямо в базу
+    (`update`), без новой версии строки — визы остаются. Строки с неизвестным сроком получают 0, а КП — пометку
+    `LEAD_PENDING_NOTE` и общий срок 0 (если срок КП и пометку не задали руками); данные появились при повторном
+    «Расчёт готов» — пометка снимается. Вернуть id строк с неизвестным сроком."""
+    ctx = _context(items)
+    pending: list[int] = []
+    for item in items:
+        lead = delivery_lead(item, ctx)
+        if lead is None:
+            pending.append(item.pk)
+            lead = 0
+        if lead != (item.lead_time_days or 0):
+            QuoteItem.objects.filter(pk=item.pk).update(lead_time_days=lead)
+            item.lead_time_days = lead
+    ours = quote.delivery_note == LEAD_PENDING_NOTE and quote.delivery_lead_time_days == 0
+    if pending and quote.delivery_lead_time_days is None and not quote.delivery_note:
+        quote.delivery_lead_time_days, quote.delivery_note = 0, LEAD_PENDING_NOTE
+        quote.save(update_fields=["delivery_lead_time_days", "delivery_note", "updated_at"])
+    elif not pending and ours:
+        quote.delivery_lead_time_days, quote.delivery_note = None, ""
+        quote.save(update_fields=["delivery_lead_time_days", "delivery_note", "updated_at"])
+    return pending
+
+
 def _visa_group(kind: str) -> str:
     return {"goods": "stock", "goods_to_order": "supply", "service": "engineer"}[kind]
 
@@ -261,8 +338,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
     zone_cost = show_cost or rights.get(zone, False)
     offer_visible = show_cost or rights.get(Zone.GOODS, False)
     supplier = None
-    offer = item.offer if item.offer_id and item.offer.supplier_id != _own_company_id() else None
-    offer = offer or (ctx.suppliers.get(item.product_id) if item.product_id and zone == Zone.GOODS else None)
+    offer = line_supplier_offer(item, ctx.suppliers)
     if offer is not None:
         supplier = {
             "name": offer.supplier.name,
@@ -1167,6 +1243,7 @@ def mark_ready(deal_id: int, user) -> dict:
     missing = [it.id for it in items if not _signed(it)]
     if missing:
         raise CalcError("VISAS_MISSING", 409, missing=len(missing))
+    apply_delivery_leads(quote, items)  # срок КП и договора — с учётом поставщика на дефицит (D26G-8)
     company_id, err = resolve_submit_company(quote, user)
     if err:
         raise CalcError(err, 403 if err == "ROLE_NOT_PERMITTED" else 409)
@@ -1218,10 +1295,9 @@ def new_version(deal_id: int, user) -> dict:
     """«Новая версия КП»: клиент отклонил КП — расчёт снова открыт черновиком версии +1 с теми же строками.
 
     Копия — `duplicate_quote` (позиции, статьи, введённые цены); строкам расчёта переносятся тип и вводные бригады,
-    визы — нет (новая версия собирает визы заново). Резервы строк отклонённой версии переходят на её копии: товар не
-    уходит из-под заявки, пока менеджер готовит новую версию."""
-    from inventory.models import Reservation, ReservationStatus
-
+    визы — нет (новая версия собирает визы заново). Резервы заявки сняты ещё при отказе клиента
+    (`perform_quote_rejection` → `inventory.services.stock.release_for_deal`, D26G-1): новая версия резервирует заново.
+    """
     from .quotes._shared import _log_quote
     from .quotes.duplicate import duplicate_quote
 
@@ -1243,7 +1319,6 @@ def new_version(deal_id: int, user) -> dict:
                 crew_days=line.crew_days,
                 price_basis=line.price_basis,
             )
-        Reservation.objects.filter(quote_item=old, status=ReservationStatus.ACTIVE).update(quote_item=new)
     _log_quote(
         source,
         user,
@@ -1266,7 +1341,8 @@ def new_version(deal_id: int, user) -> dict:
 @transaction.atomic
 def lose(deal_id: int, user, reason: str) -> dict:
     """«Отказ по заявке» после отказа клиента: стадия «Отказ» (CLOSED_LOST) с причиной, событие `deal.lost`;
-    резервы заявки снимаются при переходе (`inventory.services.stock.release_for_lost_deal`, хук стадии)."""
+    резервы заявки снимает переход стадии (`inventory.services.stock.release_for_lost_deal` → `release_for_deal`, D26G-1;
+    после отказа клиента их уже нет — снятие идемпотентно)."""
     from .deals import transition_deal_stage
 
     _require_staff(user)

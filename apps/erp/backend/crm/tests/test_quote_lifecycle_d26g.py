@@ -209,11 +209,8 @@ def test_director_rejection_is_named_director_and_closes_the_calc(world):  # noq
     assert response.status_code == 409 and response.json()["detail"] == "QUOTE_NOT_REJECTED_BY_CLIENT"
 
 
-def test_new_version_reopens_the_calc_with_lines_crew_and_reservation(world):  # noqa: F811
+def test_new_version_reopens_the_calc_with_lines_and_crew(world):  # noqa: F811
     quote, goods_id, service_id = _sent_and_rejected(world)
-    reservation = Reservation.objects.create(
-        product=world["rail"], deal=world["deal"], quote_item_id=goods_id, quantity=1
-    )
     response = _api(world["supply"]).post(_url(world, "new-version/"))
     assert response.status_code == 200, response.json()
     body = response.json()
@@ -225,13 +222,25 @@ def test_new_version_reopens_the_calc_with_lines_crew_and_reservation(world):  #
     lines = {line["zone"]: line for line in body["lines"]}
     assert lines["goods"]["client_price"] == "99000000.00" and lines["services"]["crew_rate"] == "1500000.00"
     assert all(line["visa"] is None for line in body["lines"])
-    reservation.refresh_from_db()
-    assert reservation.quote_item_id == lines["goods"]["id"] and reservation.status == ReservationStatus.ACTIVE
     quote.refresh_from_db()
     assert quote.status.code == "REJECTED", "прежняя версия остаётся в истории отклонённой"
     assert ActivityLog.objects.filter(deal=world["deal"], event_code="calc.new_version").exists()
     again = _api(world["supply"]).post(_url(world, "new-version/"))
     assert again.status_code == 409, "вторая копия из той же отклонённой версии не делается"
+
+
+def test_client_rejection_already_released_the_reservation(world):  # noqa: F811
+    """D26G-1: резерв заявки снимается при отказе клиента — до решения менеджера (новая версия резервирует заново)."""
+    goods_id, _service_id = _ready(world)
+    quote = Quote.objects.get(deal=world["deal"])
+    assert _decide(quote, "approve", quote.version) == "applied"
+    reservation = Reservation.objects.create(
+        product=world["rail"], deal=world["deal"], quote_item_id=goods_id, quantity=1
+    )
+    _set_quote_status(quote, "SENT")
+    perform_quote_rejection(quote.pk, reason="Дорого")
+    reservation.refresh_from_db()
+    assert reservation.status == ReservationStatus.RELEASED
 
 
 def test_lost_after_client_rejection_closes_the_request_and_releases_the_reservation(world):  # noqa: F811

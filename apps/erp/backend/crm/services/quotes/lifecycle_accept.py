@@ -27,6 +27,18 @@ from ._shared import _log_quote, _notify_quote_outcome, _quote_client_display_na
 logger = logging.getLogger(__name__)
 
 
+def _provision_accepted_quote(quote) -> None:
+    """SPEC-v3 §3.1 ш. 6 (D26G-1): резерв склада и черновик заказа поставщику на дефицит. Своя точка сохранения: сбой
+    обеспечения не отменяет акцепт клиента — снабженец доберёт резерв и заказ вручную («Склад · Создать заказ»)."""
+    from supply.services.provision import provision_accepted_quote
+
+    try:
+        with transaction.atomic():
+            provision_accepted_quote(quote)
+    except Exception:  # noqa: BLE001 — акцепт клиента важнее авто-резерва; причина в журнале
+        logger.exception("Резерв и черновик заказа по принятому КП %s не созданы", quote.pk)
+
+
 @transaction.atomic
 def perform_quote_acceptance(
     quote_id, *, approved_by_user=None, contact_email=None, request_ip=None, portal_contact=None
@@ -66,6 +78,8 @@ def perform_quote_acceptance(
     )
     if stage_err:
         raise ValueError(stage_err)
+
+    _provision_accepted_quote(quote)
 
     # Materialize the Contract the instant the buyer accepts (audit B1). actor=None = system path:
     # the acceptance triggers it and the acceptor (buyer OR offline contact) is not a seller, so it
@@ -143,6 +157,11 @@ def perform_quote_rejection(
     )
     if stage_err:
         raise ValueError(stage_err)
+
+    # D26G-1: КП отклонено — резервы заявки снимаются, черновики заказа под неё отменяются (новая версия КП берёт своё).
+    from inventory.services import stock as stock_service
+
+    stock_service.release_for_deal(quote.deal, reason=f"КП v{quote.version} отклонено клиентом")
 
     _notify_quote_outcome(
         quote,

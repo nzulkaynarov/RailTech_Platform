@@ -284,9 +284,9 @@
       "button": "New quote version",
       "done": "Costing reopened: draft quote version {{version}}",
       "consequence": [
-        "“New quote version”: lines and prices move to the next version draft, visas are collected again, the reservation stays with the request.",
+        "“New quote version”: lines and prices move to the next version draft, visas are collected again; the reservation released on the client’s rejection is set again on this screen.",
         "The previous version stays in history as rejected by the client.",
-        "“Lost request”: the request is closed with a reason, the reservation is released, nothing goes to the client."
+        "“Lost request”: the request is closed with a reason, its reservation is released, nothing goes to the client."
       ]
     },
     "lost": {
