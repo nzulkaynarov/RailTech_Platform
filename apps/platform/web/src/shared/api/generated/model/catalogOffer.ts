@@ -4,6 +4,7 @@
  */
 import type { CatalogMoney } from "./catalogMoney";
 import type { CatalogNamedRef } from "./catalogNamedRef";
+import type { CatalogOfferSource } from "./catalogOfferSource";
 import type { CatalogOfferValidity } from "./catalogOfferValidity";
 import type { CatalogProductRef } from "./catalogProductRef";
 import type { CompanyItemRef } from "./companyItemRef";
@@ -31,6 +32,16 @@ export interface CatalogOffer {
    * @nullable
    */
   stock_status: string | null;
+  /**
+   * Базис поставки Incoterms: FCA, EXW, DAP…
+   * @nullable
+   */
+  delivery_basis: string | null;
+  /** Срок поставки словами, как в прайсе */
+  lead_time: string;
+  source: CatalogOfferSource;
+  /** Когда цена обновлена */
+  updated_at: string;
   /** @nullable */
   valid_from: string | null;
   /** @nullable */

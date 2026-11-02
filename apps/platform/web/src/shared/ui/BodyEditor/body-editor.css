@@ -63,3 +63,42 @@
   gap: 6px;
   margin-top: 6px;
 }
+
+/* Тело документа для чтения (карточка письма): абзацы, списки и таблица — как в PDF, без рамок блоков редактора */
+.pf-body-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  line-height: 22px;
+}
+.pf-body-view-p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pf-body-view-list {
+  margin: 0;
+  padding-inline-start: 22px;
+  overflow-wrap: anywhere;
+}
+.pf-body-view-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.pf-body-view-table {
+  border-collapse: collapse;
+  min-width: 100%;
+}
+.pf-body-view-table th,
+.pf-body-view-table td {
+  border: 1px solid #d9d9d9;
+  padding: 4px 8px;
+  text-align: left;
+  vertical-align: top;
+  white-space: pre-wrap;
+}
+.pf-body-view-table th {
+  background: #fafafa;
+  font-weight: 600;
+}

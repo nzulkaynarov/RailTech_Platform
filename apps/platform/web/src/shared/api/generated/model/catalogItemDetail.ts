@@ -5,6 +5,8 @@
 import type { CatalogItemKind } from "./catalogItemKind";
 import type { CatalogNamedRef } from "./catalogNamedRef";
 import type { CatalogOffer } from "./catalogOffer";
+import type { CatalogProposal } from "./catalogProposal";
+import type { CatalogPublishState } from "./catalogPublishState";
 import type { CatalogTechDocRef } from "./catalogTechDocRef";
 import type { CatalogUnit } from "./catalogUnit";
 import type { CompanyItemRef } from "./companyItemRef";
@@ -36,10 +38,21 @@ export interface CatalogItemDetail {
   gost_drawing: string;
   hs_code: string;
   manufacturer_part_number: string;
-  /** @nullable */
+  /**
+   * Изготовитель (бренд)
+   * @nullable
+   */
   brand: string | null;
+  brand_id: CompanyItemRef | null;
+  /** Карточка заведена по прайсу этого поставщика */
+  source_supplier: CatalogNamedRef | null;
+  /** @minimum 0 */
+  proposals_count: number;
   offers: CatalogOffer[];
   /** Видит ли сотрудник цены поставщиков */
   prices_visible: boolean;
   tech_docs: CatalogTechDocRef[];
+  /** Изменения от поставщиков на одобрении */
+  proposals: CatalogProposal[];
+  publish: CatalogPublishState;
 }

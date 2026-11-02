@@ -8,7 +8,7 @@ from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from catalog.desk.items import ALL_KINDS
-from catalog.models import Brigade, TechDocument
+from catalog.models import Brigade, ProductFieldProposal, SupplierOffer, TechDocument
 
 
 class Money(serializers.Serializer):
@@ -46,6 +46,7 @@ class DeskItemRow(serializers.Serializer):
     offers_count = serializers.IntegerField()
     nearest_valid_until = serializers.DateField(allow_null=True)
     docs_count = serializers.IntegerField()
+    proposals_count = serializers.IntegerField(help_text="Изменений от поставщиков на одобрении (CAT-1).")
 
 
 class DeskOfferSupplier(serializers.Serializer):
@@ -70,10 +71,28 @@ class DeskOffer(serializers.Serializer):
     in_stock_lead_days = serializers.IntegerField()
     order_lead_days = serializers.IntegerField()
     stock_status = serializers.CharField(allow_null=True)
+    delivery_basis = serializers.CharField(allow_null=True, help_text="Базис поставки Incoterms (код).")
+    lead_time = serializers.CharField(help_text="Срок поставки словами, как в прайсе.")
+    source = serializers.ChoiceField(choices=SupplierOffer.Source.values, help_text="Откуда цена.")
+    updated_at = serializers.DateTimeField()
     valid_from = serializers.DateField(allow_null=True)
     valid_until = serializers.DateField(allow_null=True)
     is_active = serializers.BooleanField()
     validity = serializers.ChoiceField(choices=["ok", "expiring", "expired"])
+
+
+class DeskProposal(serializers.Serializer):
+    id = serializers.IntegerField()
+    field = serializers.ChoiceField(choices=ProductFieldProposal.Field.values)
+    current = serializers.CharField(help_text="Значение в карточке на момент загрузки.")
+    proposed = serializers.CharField(help_text="Значение из прайса поставщика.")
+    supplier = DeskRef(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+
+class DeskPublishState(serializers.Serializer):
+    publishable = serializers.BooleanField()
+    missing = serializers.ListField(child=serializers.CharField(), help_text="Коды недостающих полей полноты.")
 
 
 class DeskTechDocRef(serializers.Serializer):
@@ -88,9 +107,13 @@ class DeskItemDetail(DeskItemRow):
     hs_code = serializers.CharField()
     manufacturer_part_number = serializers.CharField()
     brand = serializers.CharField(allow_null=True)
+    brand_id = serializers.IntegerField(allow_null=True, help_text="Изготовитель (бренд) — id справочника.")
+    source_supplier = DeskRef(allow_null=True, help_text="Карточка заведена по прайсу этого поставщика.")
     offers = DeskOffer(many=True)
     prices_visible = serializers.BooleanField(help_text="Видит ли сотрудник цены поставщиков (иначе price = null).")
     tech_docs = DeskTechDocRef(many=True)
+    proposals = DeskProposal(many=True, help_text="Изменения от поставщиков на одобрении.")
+    publish = DeskPublishState()
 
 
 class DeskItemIn(serializers.Serializer):
@@ -104,13 +127,20 @@ class DeskItemIn(serializers.Serializer):
     vat_rate = serializers.CharField(
         required=False, allow_null=True, allow_blank=True, help_text="Процент 0..100; пусто — по умолчанию компании."
     )
+    brand_id = serializers.IntegerField(required=False, allow_null=True, help_text="Изготовитель (бренд).")
+    manufacturer_part_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
+    hs_code = serializers.CharField(required=False, allow_blank=True, max_length=20, help_text="2–10 цифр.")
 
 
 class DeskSupplierRow(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     tin = serializers.CharField()
+    registration_number = serializers.CharField(help_text="Рег. номер нерезидента (без ИНН РУз).")
     country = serializers.CharField(allow_null=True)
+    country_id = serializers.IntegerField(allow_null=True)
+    currency = serializers.CharField(allow_null=True, help_text="Валюта цен поставщика.")
+    is_manufacturer = serializers.BooleanField(help_text="Сам выпускает товар (тип «изготовитель»).")
     offers_count = serializers.IntegerField()
     expired_count = serializers.IntegerField(help_text="Действующих предложений с истёкшим сроком цены.")
     expiring_count = serializers.IntegerField(help_text="Срок цены истекает в ближайшие 14 дней.")
@@ -125,6 +155,24 @@ class DeskSupplierDetail(DeskSupplierRow):
     legal_address = serializers.CharField()
     offers = DeskOffer(many=True)
     prices_visible = serializers.BooleanField()
+    brands = DeskRef(many=True, help_text="Чьи бренды поставляет: изготовители его действующих цен.")
+    manufactured_brands = DeskRef(many=True, help_text="Бренды, изготовитель которых — эта компания.")
+
+
+class DeskSupplierIn(serializers.Serializer):
+    """Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно."""
+
+    name = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    country_id = serializers.IntegerField(required=False, allow_null=True)
+    tin = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=20)
+    registration_number = serializers.CharField(required=False, allow_blank=True, max_length=64)
+    currency = serializers.CharField(required=False, allow_blank=True, allow_null=True, max_length=3)
+    contact_person = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    phone = serializers.CharField(required=False, allow_blank=True, max_length=50)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    website = serializers.URLField(required=False, allow_blank=True, max_length=255)
+    legal_address = serializers.CharField(required=False, allow_blank=True)
+    is_manufacturer = serializers.BooleanField(required=False)
 
 
 class DeskMoneyIn(serializers.Serializer):
@@ -144,6 +192,25 @@ class DeskOfferIn(serializers.Serializer):
     valid_from = serializers.DateField(required=False, allow_null=True)
     valid_until = serializers.DateField(required=False, allow_null=True)
     is_active = serializers.BooleanField(required=False)
+    delivery_basis = serializers.CharField(required=False, allow_null=True, allow_blank=True, help_text="Incoterms.")
+    lead_time = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    supplier_sku = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    source = serializers.ChoiceField(required=False, choices=SupplierOffer.Source.values)
+
+
+class DeskOfferCreateIn(DeskOfferIn):
+    product_id = serializers.IntegerField()
+    price = DeskMoneyIn(help_text="Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED).")
+
+
+class DeskOfferHistoryRow(serializers.Serializer):
+    at = serializers.DateTimeField()
+    price = Money(allow_null=True, help_text="Только с правом на цены поставщиков.")
+    valid_from = serializers.DateField(allow_null=True)
+    valid_until = serializers.DateField(allow_null=True)
+    delivery_basis = serializers.CharField(allow_null=True)
+    source = serializers.ChoiceField(choices=SupplierOffer.Source.values)
+    by = serializers.CharField(allow_null=True)
 
 
 class DeskCrewRate(serializers.Serializer):

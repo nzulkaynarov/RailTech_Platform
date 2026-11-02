@@ -31,6 +31,10 @@ OFFER = {
     "in_stock_lead_days": 2,
     "order_lead_days": 14,
     "stock_status": "IN_STOCK",
+    "delivery_basis": "FCA",
+    "lead_time": "14 дн.",
+    "source": "price_list",
+    "updated_at": "2026-11-01T10:00:00+05:00",
     "valid_from": None,
     "valid_until": "2026-12-31",
     "is_active": True,
@@ -50,6 +54,7 @@ ITEM = {
     "offers_count": 1,
     "nearest_valid_until": "2026-12-31",
     "docs_count": 1,
+    "proposals_count": 0,
 }
 ITEM_DETAIL = {
     **ITEM,
@@ -58,15 +63,23 @@ ITEM_DETAIL = {
     "hs_code": "8544",
     "manufacturer_part_number": "",
     "brand": None,
+    "brand_id": None,
+    "source_supplier": None,
     "offers": [OFFER],
     "prices_visible": True,
     "tech_docs": [{"id": 5, "title": "Паспорт кабеля", "kind": "certificate"}],
+    "proposals": [],
+    "publish": {"publishable": False, "missing": ["hs_code"]},
 }
 SUPPLIER = {
     "id": 9,
     "name": "ООО Поставщик Север",
     "tin": "300000777",
+    "registration_number": "",
     "country": "Узбекистан",
+    "country_id": 3,
+    "currency": "USD",
+    "is_manufacturer": False,
     "offers_count": 3,
     "expired_count": 1,
     "expiring_count": 1,
@@ -349,6 +362,8 @@ async def test_suppliers_list_and_card_cut_prices_for_roles_without_the_field(
                 "legal_address": "Ташкент",
                 "offers": [OFFER],
                 "prices_visible": True,
+                "brands": [{"id": 2, "name": "Аквилон"}],
+                "manufactured_brands": [],
             },
         )
     )
@@ -613,6 +628,11 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
     router.get(f"{API}/master-data/countries/").mock(
         return_value=httpx.Response(200, json=[{"id": 3, "code": "UZ", "name": "Узбекистан"}])
     )
+    router.get(f"{API}/master-data/delivery-basis/").mock(
+        return_value=httpx.Response(
+            200, json=page([{"id": 1, "code": "FCA", "name": "Free Carrier"}])
+        )
+    )
 
     response = await web.client.get("/api/v1/erp/catalog/lookups")
 
@@ -623,6 +643,7 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
     assert body["categories"] == [{"id": "2", "name": "Электро", "parent_id": None}]
     assert body["currencies"] == [{"code": "USD", "symbol": "$"}]
     assert body["countries"] == [{"id": "3", "name": "Узбекистан"}]
+    assert body["delivery_bases"] == [{"code": "FCA", "name": "Free Carrier"}]
 
 
 HS = {

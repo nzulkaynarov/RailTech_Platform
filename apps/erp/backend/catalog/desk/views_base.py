@@ -9,8 +9,10 @@ from core.pagination import DefaultPageNumberPagination
 from core.permissions import IsBackOfficeStaff, RoleGatedViewMixin
 
 #: Отказы по праву на закрытое поле: 403, а не ошибка проверки.
-FORBIDDEN_CODES = frozenset({"SUPPLIER_PRICES_REQUIRED", "CREW_RATES_REQUIRED"})
-CONFLICT_CODES = frozenset({"HS_CODE_EXISTS"})
+FORBIDDEN_CODES = frozenset({"SUPPLIER_PRICES_REQUIRED", "CREW_RATES_REQUIRED", "PRODUCT_NOT_YOURS"})
+CONFLICT_CODES = frozenset(
+    {"HS_CODE_EXISTS", "SUPPLIER_EXISTS", "OFFER_EXISTS", "PROPOSAL_DECIDED", "PROPOSAL_STALE", "PRODUCT_INCOMPLETE"}
+)
 
 SEARCH = OpenApiParameter("q", str, description="Поиск по названию и коду.")
 PAGE = OpenApiParameter("page", int, description="Номер страницы.")

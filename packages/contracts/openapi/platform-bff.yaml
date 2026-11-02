@@ -10083,6 +10083,11 @@ paths:
           required: false
           description: Категория
           schema: {$ref: '#/components/schemas/CompanyItemRef'}
+        - name: proposals
+          in: query
+          required: false
+          description: '`pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1)'
+          schema: {type: string, enum: [pending]}
       responses:
         '200':
           description: Готово
@@ -10185,6 +10190,114 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/publish:
+    post:
+      tags: [erp-catalog]
+      operationId: publishCatalogItem
+      summary: 'Расчёт · Номенклатура: опубликовать позицию'
+      description: >-
+        ERP `POST catalog/items/{id}/publish/` — право `catalog.publish`; порог полноты (`catalog/publishing.py`). Не хватает полей — 409 `CONFLICT` с `details.reason = PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Опубликована
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/unpublish:
+    post:
+      tags: [erp-catalog]
+      operationId: unpublishCatalogItem
+      summary: 'Расчёт · Номенклатура: снять позицию с публикации'
+      description: >-
+        ERP `POST catalog/items/{id}/unpublish/` — право `catalog.publish`; карточка снова черновик. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Снята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/proposals/{id}/accept:
+    post:
+      tags: [erp-catalog]
+      operationId: acceptCatalogProposal
+      summary: 'Расчёт · Номенклатура: принять изменение от поставщика'
+      description: >-
+        ERP `POST catalog/field-proposals/{id}/accept/` — право `catalog.manage`: значение из прайса поставщика записывается в карточку; уже решённое — 409. Ответ — карточка позиции. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/proposals/{id}/reject:
+    post:
+      tags: [erp-catalog]
+      operationId: rejectCatalogProposal
+      summary: 'Расчёт · Номенклатура: отклонить изменение от поставщика'
+      description: >-
+        ERP `POST catalog/field-proposals/{id}/reject/` — право `catalog.manage`: карточка не меняется, это значение поставщика больше не предлагается. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Отклонено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers:
     get:
       tags: [erp-catalog]
@@ -10221,6 +10334,37 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createCatalogSupplier
+      summary: 'Расчёт · Поставщики: добавить поставщика'
+      description: >-
+        ERP `POST catalog/suppliers/` — право `supply.manage`. Простая карточка компании (CAT-1): название, страна, ИНН или рег. номер нерезидента (хотя бы одно — иначе 422 с `details.reason = SUPPLIER_ID_REQUIRED`), контакт, валюта цен. Такой ИНН или пара «страна — рег. номер» уже есть — 409 (`SUPPLIER_EXISTS`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCreate'
+      responses:
+        '201':
+          description: Добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}:
     get:
       tags: [erp-catalog]
@@ -10245,6 +10389,100 @@ paths:
           $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [erp-catalog]
+      operationId: updateCatalogSupplier
+      summary: 'Расчёт · Поставщик: изменить карточку'
+      description: >-
+        ERP `PATCH catalog/suppliers/{id}/` — право `supply.manage`; те же поля, что при создании. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/offers:
+    post:
+      tags: [erp-catalog]
+      operationId: createSupplierOffer
+      summary: 'Расчёт · Поставщик: добавить цену'
+      description: >-
+        ERP `POST catalog/suppliers/{id}/offers/` — право `supply.manage` и поле `supplier_prices` (иначе 403). Товар, цена, валюта, Incoterms, MOQ, сроки поставки, действует с/до, источник. Одна цена на пару «поставщик — товар»: вторая — 409 (`OFFER_EXISTS`), её правят. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierOfferCreate'
+      responses:
+        '201':
+          description: Добавлена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogOffer'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/offers/{offer_id}/history:
+    get:
+      tags: [erp-catalog]
+      operationId: getSupplierOfferHistory
+      summary: 'Расчёт · Поставщик: история цены'
+      description: >-
+        ERP `catalog/suppliers/{id}/offers/{offer_id}/history/`: снимки цены, срока действия, базиса и источника, новые сверху. Сумма — только с полем `supplier_prices`, иначе `null`. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: offer_id, in: path, required: true, description: Id предложения, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierOfferHistory'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
@@ -10277,6 +10515,121 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/price-import/template:
+    get:
+      tags: [erp-catalog]
+      operationId: downloadPriceImportTemplate
+      summary: 'Расчёт · Загрузка прайса: шаблон xlsx'
+      description: >-
+        ERP `sourcing/catalog-template/` потоком: колонки, пример строки и лист допустимых кодов (валюты, наличие, единицы, категории). Вложением с `nosniff`. Раздел `erp.stock` — чтение.
+      responses:
+        '200':
+          description: Файл xlsx
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/price-import:
+    post:
+      tags: [erp-catalog]
+      operationId: startPriceImport
+      summary: 'Расчёт · Загрузка прайса: проверить или применить файл'
+      description: >-
+        ERP `POST sourcing/import-catalog/` (`mode=xlsx`) или `sourcing/import-catalog-ai/` (`mode=ai`) с `supplier_company_id`, сроком цен на весь файл и `dry_run`. Проверка (`check=true`) ничего не пишет и возвращает тот же отчёт. Чужие и опубликованные карточки прайс не меняет — расхождения уходят в изменения на одобрение. BFF читает тело до 21 МБ и передаёт multipart как есть (B-D23-6). Нужны поле `supplier_prices` (иначе 403) и раздел `erp.stock` — полный. ИИ выключен — 503.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: supplier_id, in: query, required: true, description: Поставщик, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: mode, in: query, required: false, description: '`xlsx` — по шаблону; `ai` — любой файл, строки предлагает ИИ', schema: {$ref: '#/components/schemas/PriceImportMode'}}
+        - {name: check, in: query, required: false, description: '`true` — только проверка, без записи', schema: {type: boolean, default: true}}
+        - {name: valid_from, in: query, required: false, description: Цены действуют с, schema: {type: string, format: date}}
+        - {name: valid_until, in: query, required: false, description: Цены действуют до, schema: {type: string, format: date}}
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PriceImportUpload'
+      responses:
+        '202':
+          description: Загрузка поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceImportJob'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 20 МБ'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/price-import/apply-checked:
+    post:
+      tags: [erp-catalog]
+      operationId: applyCheckedPriceImport
+      summary: 'Расчёт · Загрузка прайса: применить проверенные строки (ИИ)'
+      description: >-
+        ERP `POST sourcing/import-catalog-ai/` с `rows_token` из отчёта проверки: применяются ровно строки, которые сотрудник видел, без второго вызова ИИ. Токен другого сотрудника или истёкший — 422. Раздел `erp.stock` — полный, поле `supplier_prices`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PriceImportApplyIn'
+      responses:
+        '202':
+          description: Поставлено в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceImportJob'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/price-import/{job_id}:
+    get:
+      tags: [erp-catalog]
+      operationId: getPriceImport
+      summary: 'Расчёт · Загрузка прайса: состояние и отчёт'
+      description: >-
+        ERP `sourcing/import-status/{id}/` (`mode=xlsx`) или `sourcing/ai-status/{id}/` (`mode=ai`) — только своя загрузка. Пока идёт — `state = running`; готово — отчёт: новые позиции и цены, обновлённые цены, изменения на одобрение, ошибки по строкам. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: job_id, in: path, required: true, schema: {type: string, pattern: '^[A-Za-z0-9-]{1,64}$'}}
+        - {name: mode, in: query, required: false, description: '`xlsx` — по шаблону; `ai` — любой файл, строки предлагает ИИ', schema: {$ref: '#/components/schemas/PriceImportMode'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceImportStatus'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationFailed'
         '503':
@@ -11271,6 +11624,16 @@ components:
         409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
         (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
         `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    CatalogConflict:
+      description: >-
+        409 `CONFLICT` — номенклатура и поставщики (CAT-1): `details.reason` — `supplier_exists` (такой ИНН или рег. номер уже
+        есть), `offer_exists` (цена этого поставщика на товар уже есть — правьте её), `proposal_decided` (изменение уже
+        решено), `proposal_stale` (значения справочника больше нет), `product_incomplete` (не хватает полей для публикации)
       content:
         application/json:
           schema:
@@ -20207,7 +20570,7 @@ components:
     CatalogItem:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count]
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
@@ -20227,6 +20590,7 @@ components:
         offers_count: {type: integer, minimum: 0}
         nearest_valid_until: {type: [string, 'null'], format: date}
         docs_count: {type: integer, minimum: 0}
+        proposals_count: {type: integer, minimum: 0, description: Изменений от поставщиков на одобрении}
     CatalogItemPage:
       type: object
       additionalProperties: false
@@ -20248,7 +20612,7 @@ components:
       type: object
       additionalProperties: false
       description: Предложение поставщика. Квота — сколько единиц поставщик готов отгрузить по цене.
-      required: [id, supplier, product, supplier_sku, price, quota_qty, min_order_qty, in_stock_lead_days, order_lead_days, stock_status, valid_from, valid_until, is_active, validity]
+      required: [id, supplier, product, supplier_sku, price, quota_qty, min_order_qty, in_stock_lead_days, order_lead_days, stock_status, delivery_basis, lead_time, source, updated_at, valid_from, valid_until, is_active, validity]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         supplier: {$ref: '#/components/schemas/CatalogNamedRef'}
@@ -20262,6 +20626,10 @@ components:
         in_stock_lead_days: {type: integer, minimum: 0}
         order_lead_days: {type: integer, minimum: 0}
         stock_status: {type: [string, 'null'], description: 'Код: IN_STOCK, ON_ORDER, EXPECTED…'}
+        delivery_basis: {type: [string, 'null'], description: 'Базис поставки Incoterms: FCA, EXW, DAP…'}
+        lead_time: {type: string, description: 'Срок поставки словами, как в прайсе'}
+        source: {$ref: '#/components/schemas/CatalogOfferSource'}
+        updated_at: {type: string, format: date-time, description: Когда цена обновлена}
         valid_from: {type: [string, 'null'], format: date}
         valid_until: {type: [string, 'null'], format: date}
         is_active: {type: boolean}
@@ -20277,7 +20645,7 @@ components:
     CatalogItemDetail:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, offers, prices_visible, tech_docs]
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, proposals, publish]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
@@ -20301,10 +20669,43 @@ components:
         gost_drawing: {type: string}
         hs_code: {type: string}
         manufacturer_part_number: {type: string}
-        brand: {type: [string, 'null']}
+        brand: {type: [string, 'null'], description: Изготовитель (бренд)}
+        brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        source_supplier:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+          description: Карточка заведена по прайсу этого поставщика
+        proposals_count: {type: integer, minimum: 0}
         offers: {type: array, items: {$ref: '#/components/schemas/CatalogOffer'}}
         prices_visible: {type: boolean, description: 'Видит ли сотрудник цены поставщиков'}
         tech_docs: {type: array, items: {$ref: '#/components/schemas/CatalogTechDocRef'}}
+        proposals: {type: array, items: {$ref: '#/components/schemas/CatalogProposal'}, description: Изменения от поставщиков на одобрении}
+        publish: {$ref: '#/components/schemas/CatalogPublishState'}
+    CatalogOfferSource:
+      type: string
+      enum: [price_list, rfq_reply, manual]
+      description: 'Откуда цена: прайс, ответ на запрос цены, введена вручную'
+    CatalogProposalField:
+      type: string
+      enum: [name, description, category, hs_code, uom, domain_type, gost_drawing]
+    CatalogProposal:
+      type: object
+      additionalProperties: false
+      description: Изменение карточки из прайса поставщика, ждёт решения сотрудника
+      required: [id, field, current, proposed, supplier, created_at]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        field: {$ref: '#/components/schemas/CatalogProposalField'}
+        current: {type: string, description: Значение в карточке на момент загрузки}
+        proposed: {type: string, description: Значение из прайса}
+        supplier: {oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]}
+        created_at: {type: string, format: date-time}
+    CatalogPublishState:
+      type: object
+      additionalProperties: false
+      required: [publishable, missing]
+      properties:
+        publishable: {type: boolean, description: Карточка проходит порог полноты}
+        missing: {type: array, items: {type: string}, description: 'Коды недостающих полей полноты: name, category, hs_code, uom…'}
     CatalogItemCreate:
       type: object
       additionalProperties: false
@@ -20327,12 +20728,25 @@ components:
         unit_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         category_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         vat_rate: {oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]}
+        brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: Изготовитель (бренд)}
+        manufacturer_part_number: {type: string, maxLength: 120, description: Артикул изготовителя}
+        hs_code: {type: string, pattern: '^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$', description: 'Код ТН ВЭД: 2–10 цифр; пусто — снять'}
     CatalogLookups:
       type: object
       additionalProperties: false
-      required: [units, categories, currencies, countries]
+      required: [units, categories, currencies, countries, delivery_bases]
       properties:
         units: {type: array, items: {$ref: '#/components/schemas/CatalogUnit'}}
+        delivery_bases:
+          type: array
+          description: Базисы поставки Incoterms
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, name]
+            properties:
+              code: {type: string}
+              name: {type: string}
         categories:
           type: array
           items:
@@ -20356,12 +20770,16 @@ components:
     SupplierRow:
       type: object
       additionalProperties: false
-      required: [id, name, tin, country, offers_count, expired_count, expiring_count, nearest_valid_until]
+      required: [id, name, tin, registration_number, country, country_id, currency, is_manufacturer, offers_count, expired_count, expiring_count, nearest_valid_until]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
         tin: {type: string}
+        registration_number: {type: string, description: Рег. номер нерезидента (без ИНН РУз)}
         country: {type: [string, 'null']}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        currency: {type: [string, 'null'], description: Валюта цен поставщика}
+        is_manufacturer: {type: boolean, description: Сам выпускает товар}
         offers_count: {type: integer, minimum: 0}
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
@@ -20378,12 +20796,16 @@ components:
     SupplierDetail:
       type: object
       additionalProperties: false
-      required: [id, name, tin, country, offers_count, expired_count, expiring_count, nearest_valid_until, contact_person, phone, email, website, legal_address, offers, prices_visible]
+      required: [id, name, tin, registration_number, country, country_id, currency, is_manufacturer, offers_count, expired_count, expiring_count, nearest_valid_until, contact_person, phone, email, website, legal_address, offers, prices_visible, brands, manufactured_brands]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
         tin: {type: string}
+        registration_number: {type: string, description: Рег. номер нерезидента (без ИНН РУз)}
         country: {type: [string, 'null']}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        currency: {type: [string, 'null'], description: Валюта цен поставщика}
+        is_manufacturer: {type: boolean, description: Сам выпускает товар}
         offers_count: {type: integer, minimum: 0}
         expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
         expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
@@ -20395,6 +20817,148 @@ components:
         legal_address: {type: string}
         offers: {type: array, items: {$ref: '#/components/schemas/CatalogOffer'}}
         prices_visible: {type: boolean}
+        brands: {type: array, items: {$ref: '#/components/schemas/CatalogNamedRef'}, description: 'Чьи бренды поставляет: изготовители его действующих цен'}
+        manufactured_brands: {type: array, items: {$ref: '#/components/schemas/CatalogNamedRef'}, description: 'Бренды, изготовитель которых — эта компания'}
+    SupplierCreate:
+      type: object
+      additionalProperties: false
+      description: 'Поставщик — простая карточка компании: ИНН или рег. номер нерезидента, хотя бы одно'
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        tin: {type: string, pattern: '^([0-9]{9})?$', description: ИНН (9 цифр)}
+        registration_number: {type: string, maxLength: 64}
+        currency: {type: [string, 'null'], maxLength: 3}
+        contact_person: {type: string, maxLength: 255}
+        phone: {type: string, maxLength: 50}
+        email: {type: string, maxLength: 254}
+        website: {type: string, maxLength: 255}
+        is_manufacturer: {type: boolean}
+    SupplierUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        tin: {type: string, pattern: '^([0-9]{9})?$'}
+        registration_number: {type: string, maxLength: 64}
+        currency: {type: [string, 'null'], maxLength: 3}
+        contact_person: {type: string, maxLength: 255}
+        phone: {type: string, maxLength: 50}
+        email: {type: string, maxLength: 254}
+        website: {type: string, maxLength: 255}
+        is_manufacturer: {type: boolean}
+    SupplierOfferCreate:
+      type: object
+      additionalProperties: false
+      required: [product_id, price]
+      properties:
+        product_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        price: {$ref: '#/components/schemas/CatalogMoneyIn'}
+        delivery_basis: {type: [string, 'null'], maxLength: 10}
+        min_order_qty: {type: integer, minimum: 1}
+        quota_qty: {type: integer, minimum: 0}
+        in_stock_lead_days: {type: integer, minimum: 0}
+        order_lead_days: {type: integer, minimum: 0}
+        lead_time: {type: string, maxLength: 100}
+        supplier_sku: {type: string, maxLength: 100}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+        source: {$ref: '#/components/schemas/CatalogOfferSource'}
+    SupplierOfferHistory:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [at, price, valid_from, valid_until, delivery_basis, source, by]
+            properties:
+              at: {type: string, format: date-time}
+              price:
+                oneOf: [{$ref: '#/components/schemas/CatalogMoney'}, {type: 'null'}]
+                description: Только с полем `supplier_prices`
+              valid_from: {type: [string, 'null'], format: date}
+              valid_until: {type: [string, 'null'], format: date}
+              delivery_basis: {type: [string, 'null']}
+              source: {$ref: '#/components/schemas/CatalogOfferSource'}
+              by: {type: [string, 'null'], description: Кто изменил}
+    PriceImportMode:
+      type: string
+      enum: [xlsx, ai]
+    PriceImportUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, description: 'xlsx по шаблону; для `mode=ai` — xlsx, PDF, PNG, JPEG; до 20 МБ'}
+    PriceImportApplyIn:
+      type: object
+      additionalProperties: false
+      required: [supplier_id, rows_token]
+      properties:
+        supplier_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        rows_token: {type: string, pattern: '^[0-9a-f]{32}$'}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+    PriceImportJob:
+      type: object
+      additionalProperties: false
+      required: [job_id, mode]
+      properties:
+        job_id: {type: string}
+        mode: {$ref: '#/components/schemas/PriceImportMode'}
+    PriceImportRowNote:
+      type: object
+      additionalProperties: false
+      required: [row, code, value]
+      properties:
+        row: {type: integer, minimum: 0, description: Номер строки файла (с заголовком — 1)}
+        code: {type: string, description: 'Код: UNKNOWN_CURRENCY, PRICE_NOT_A_NUMBER, VALID_DATE_INVALID…'}
+        value: {type: string, description: 'Значение из файла, если есть'}
+    PriceImportProposal:
+      type: object
+      additionalProperties: false
+      required: [row, product_id, product_name, field, current, proposed]
+      properties:
+        row: {type: integer, minimum: 0}
+        product_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        product_name: {type: string}
+        field: {$ref: '#/components/schemas/CatalogProposalField'}
+        current: {type: string}
+        proposed: {type: string}
+    PriceImportReport:
+      type: object
+      additionalProperties: false
+      required: [checked, items_created, items_matched, offers_created, offers_updated, proposal_count, proposals, error_count, errors, warning_count, warnings, rows_truncated, unpublishable, rows_token, ai_used]
+      properties:
+        checked: {type: boolean, description: '`true` — проверка, ничего не записано'}
+        items_created: {type: integer, minimum: 0, description: Новые позиции (черновики)}
+        items_matched: {type: integer, minimum: 0, description: Найдены в номенклатуре}
+        offers_created: {type: integer, minimum: 0, description: Новые цены поставщика}
+        offers_updated: {type: integer, minimum: 0, description: Обновлённые цены}
+        proposal_count: {type: integer, minimum: 0, description: Изменений карточек на одобрение}
+        proposals: {type: array, items: {$ref: '#/components/schemas/PriceImportProposal'}, description: Первые 200}
+        error_count: {type: integer, minimum: 0}
+        errors: {type: array, items: {$ref: '#/components/schemas/PriceImportRowNote'}, description: Первые 200 строк с ошибкой — не загружены}
+        warning_count: {type: integer, minimum: 0}
+        warnings: {type: array, items: {$ref: '#/components/schemas/PriceImportRowNote'}, description: 'Загружены, но есть вопрос'}
+        rows_truncated: {type: integer, minimum: 0, description: Строк сверх предела 50 000}
+        unpublishable: {type: integer, minimum: 0, description: Позиций не пройдут порог публикации}
+        rows_token: {type: [string, 'null'], description: 'ИИ: строки проверки для «Применить» без второго вызова'}
+        ai_used: {type: [boolean, 'null'], description: 'ИИ: файл разобран моделью (`false` — шаблон, без ИИ)'}
+    PriceImportStatus:
+      type: object
+      additionalProperties: false
+      required: [state, report, error]
+      properties:
+        state: {type: string, enum: [running, done, failed]}
+        report: {oneOf: [{$ref: '#/components/schemas/PriceImportReport'}, {type: 'null'}]}
+        error: {type: [string, 'null'], description: 'Код ошибки файла: NAME_COLUMN_NOT_FOUND, AI_EXTRACT_FAILED, AI_EXTRACT_EMPTY, ROWS_TOKEN_EXPIRED…'}
     SupplierOfferUpdate:
       type: object
       additionalProperties: false
@@ -20409,6 +20973,10 @@ components:
         valid_from: {type: [string, 'null'], format: date}
         valid_until: {type: [string, 'null'], format: date}
         is_active: {type: boolean}
+        delivery_basis: {type: [string, 'null'], maxLength: 10, description: Incoterms}
+        lead_time: {type: string, maxLength: 100}
+        supplier_sku: {type: string, maxLength: 100}
+        source: {$ref: '#/components/schemas/CatalogOfferSource'}
     BrigadeKind:
       type: string
       enum: [brigade, person, subcontractor]
@@ -20546,7 +21114,7 @@ components:
     Manufacturer:
       type: object
       additionalProperties: false
-      required: [id, name, country_id, country_name, website, is_active]
+      required: [id, name, country_id, country_name, website, is_active, company_id]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
@@ -20554,6 +21122,9 @@ components:
         country_name: {type: [string, 'null']}
         website: {type: string}
         is_active: {type: boolean}
+        company_id:
+          oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
+          description: Компания-изготовитель (поставщик с типом «изготовитель»), если заведена
     ManufacturerPage:
       type: object
       additionalProperties: false
@@ -20572,6 +21143,7 @@ components:
         country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         website: {type: string, maxLength: 200}
         is_active: {type: boolean}
+        company_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
     ManufacturerUpdate:
       type: object
       additionalProperties: false
@@ -20581,6 +21153,7 @@ components:
         country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         website: {type: string, maxLength: 200}
         is_active: {type: boolean}
+        company_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
     TechDocKind:
       type: string
       enum: [tz, drawing, certificate, pnr, other]
