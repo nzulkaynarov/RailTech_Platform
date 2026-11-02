@@ -267,7 +267,7 @@ def test_event_log_step_approved_and_sent_to_director(seller, deal):
     assert handed is not None
     assert handed.action == "КП передано директору на одобрение"
     quote.refresh_from_db()
-    assert handed.event_params == {"number": quote.number, "revision": 1}
+    assert handed.event_params == {"number": quote.number, "revision": 1, "version": quote.version}
 
 
 def test_event_log_step_rejected(seller, deal):

@@ -170,7 +170,8 @@
       "doneEmail": "TT bilan xat pochta xizmatiga topshirildi — natija hisobotda paydo bo'ladi.",
       "failed": "Yuborilmadi: {{reason}}",
       "invalid": "TTni endi yuborib bo'lmaydi — karta yangilandi."
-    }
+    },
+    "superseded": "Bu {{version}}-versiya, uni {{next}}-versiya almashtirdi. Qaror «Tasdiqlash uchun TT» ro‘yxatidagi amaldagi versiya bo‘yicha qabul qilinadi; bu — tarix."
   },
   "panel": {
     "sheetTitle": "{{number}} tasdiqlash",
@@ -282,5 +283,6 @@
       "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
     },
     "submitNoChannels": "TTni tasdiqlash → Chiquvchilarga"
-  }
+  },
+  "superseded": "{{version}}-versiya bilan almashtirildi"
 }

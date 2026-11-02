@@ -11,6 +11,8 @@ ITEM_KINDS = ("goods", "service")
 VISA_STATES = ("none", "waiting", "done")
 CALC_STATES = ("not_started", "in_progress", "returned", "at_director", "rejected", "approved")
 READY_BLOCKERS = ("not_started", "not_in_calculation", "not_draft", "no_lines", "visas_missing")
+#: Кто отклонил КП (D26G-3): клиент (кабинет, бот, офлайн) или директор в EDS.
+REJECTED_BY = ("client", "director")
 
 
 class CalcDealSerializer(serializers.Serializer):
@@ -42,6 +44,12 @@ class CalcTaskRowSerializer(serializers.Serializer):
     letter_number = serializers.CharField()
     due = serializers.DateField()
     state = serializers.ChoiceField(choices=CALC_STATES)
+    rejected_by = serializers.ChoiceField(
+        choices=REJECTED_BY, allow_null=True, help_text="Кто отклонил КП при `state = rejected`; иначе null"
+    )
+    reject_reason = serializers.CharField(
+        allow_null=True, help_text="Причина клиента или комментарий директора при `state = rejected`"
+    )
     lines = serializers.IntegerField()
     visas = CalcVisaStatesSerializer()
     assignees = CalcAssigneeSerializer(many=True)
@@ -86,6 +94,18 @@ class CalcQuoteSerializer(serializers.Serializer):
     number = serializers.CharField(allow_null=True)
     state = serializers.ChoiceField(choices=CALC_STATES)
     director_comment = serializers.CharField(allow_null=True)
+    rejected_by = serializers.ChoiceField(
+        choices=REJECTED_BY, allow_null=True, help_text="Кто отклонил КП при `state = rejected`; иначе null"
+    )
+    reject_reason = serializers.CharField(
+        allow_null=True, help_text="Причина клиента или комментарий директора при `state = rejected`"
+    )
+    can_revise = serializers.BooleanField(
+        help_text=(
+            "Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» "
+            "(`POST /calc/<deal_id>/new-version/`) и «Отказ по заявке» (`POST /calc/<deal_id>/lost/`)"
+        )
+    )
     vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2)
 
 
@@ -214,9 +234,38 @@ class CalcLinePatchSerializer(serializers.Serializer):
     purchase_currency = serializers.CharField(max_length=3, min_length=3, required=False)
     crew_rate = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False, allow_null=True)
     crew_days = serializers.DecimalField(max_digits=6, decimal_places=1, min_value=0, required=False, allow_null=True)
-    client_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False)
+    client_price = serializers.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        min_value=0,
+        required=False,
+        help_text="Цена клиенту без НДС за единицу: хранится как введена, наценка строки — производная (D26G-5)",
+    )
+    markup_pct = serializers.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0,
+        max_value=500,
+        required=False,
+        help_text="Наценка строки, %: цена клиенту считается из неё и округляется до сума (D26G-5)",
+    )
     product_id = serializers.IntegerField(required=False, allow_null=True)
     kind = serializers.ChoiceField(choices=ITEM_KINDS, required=False)
+
+    def validate(self, attrs):
+        if "client_price" in attrs and "markup_pct" in attrs:
+            raise serializers.ValidationError({"markup_pct": ["PRICE_OR_MARKUP"]})
+        return attrs
+
+
+class CalcLostInSerializer(serializers.Serializer):
+    reason = serializers.CharField(max_length=1000, help_text="Причина отказа по заявке (обязательна)")
+
+    def validate_reason(self, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("REASON_REQUIRED")
+        return value
 
 
 class CalcParseInSerializer(serializers.Serializer):

@@ -15,7 +15,7 @@
   (buyer) + the brand bundle (seller, seller_profile, seller_logo_url).
 {% endcomment %}
 {% block doc_meta %}
-  <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
+  <div class="doc-no">{% if quote.number %}КП № {{ quote.number }}{% if quote.version > 1 %}, версия {{ quote.version }}{% endif %}{% else %}КП № {{ quote.deal_id }}-{{ quote.version }}{% endif %}</div>
   {% comment %}
     Т4 — мета-блок ADZ-класса: label:value с линейками. Менеджер/контакты живут ЗДЕСЬ
     (как «Sales responsible» у ADZ), а не в хвосте документа — клиент видит, кому звонить,

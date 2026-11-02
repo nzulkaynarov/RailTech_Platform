@@ -116,12 +116,19 @@ class QuoteCalculationService:
         # себестоимость → +наценка → −скидка позиции. DT1: позиционная наценка (NOT NULL) бьёт
         # КП-уровневую, NULL — наследует переданную `margin_percent` (маржу КП). Резолвер общий
         # с аудит-историей, поэтому в историю пишется РЕАЛЬНО применённый процент, а не игнор.
-        effective_margin = resolve_effective_margin(item, margin_percent)
-        margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
-        discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
-        item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
+        if item.client_price_fixed is not None:
+            # D26G-5: цену клиенту ввёл человек — она источник истины и не пересчитывается от наценки (иначе
+            # 500 000 через наценку с точностью 0,01 % возвращалось как 500 004 и расходилось в КП, договоре и счёте).
+            item.final_price_excl_vat = Decimal(item.client_price_fixed).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+        else:
+            effective_margin = resolve_effective_margin(item, margin_percent)
+            margin_mult = Decimal("1") + (effective_margin / Decimal("100"))
+            discount_mult = Decimal("1") - (item.discount_percent / Decimal("100"))
+            item.final_price_excl_vat = (item.landed_cost * margin_mult * discount_mult).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
 
         if commit:
             item.save(update_fields=["landed_cost", "final_price_excl_vat", "logistics_cost", "customs_duty"])

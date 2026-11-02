@@ -4727,6 +4727,7 @@ export const getListQuoteApprovalsResponseMock = (
     id: faker.string.uuid(),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
     version: faker.number.int({ min: 1 }),
+    superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
     request_number: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
@@ -4868,6 +4869,7 @@ export const getGetQuoteApprovalResponseMock = (
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   version: faker.number.int({ min: 1 }),
+  superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
   round: faker.number.int({ min: 1 }),
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
@@ -5131,6 +5133,7 @@ export const getDecideQuoteApprovalResponseMock = (
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   version: faker.number.int({ min: 1 }),
+  superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
   round: faker.number.int({ min: 1 }),
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
@@ -5397,6 +5400,7 @@ export const getSendQuoteByChannelResponseMock = (
   id: faker.string.uuid(),
   number: faker.string.alpha({ length: { min: 10, max: 20 } }),
   version: faker.number.int({ min: 1 }),
+  superseded_by: faker.helpers.arrayElement([faker.number.int({ min: 2 }), null]),
   round: faker.number.int({ min: 1 }),
   status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
   stage: faker.helpers.arrayElement(Object.values(StepCode)),
@@ -14334,6 +14338,15 @@ export const getGetCalcSheetResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -14535,6 +14548,15 @@ export const getStartCalcResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -14736,6 +14758,15 @@ export const getAddCalcLinesResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -14937,6 +14968,15 @@ export const getUpdateCalcLineResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -15141,6 +15181,15 @@ export const getDeleteCalcLineResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -15345,6 +15394,15 @@ export const getSignCalcLineResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -15546,6 +15604,15 @@ export const getMarkCalcReadyResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -15669,6 +15736,435 @@ export const getMarkCalcReadyResponseMock = (
       null,
     ]),
     visa: faker.helpers.arrayElement([{ ...getMarkCalcReadyResponseCalcLineVisaMock() }, null]),
+    can_edit: faker.datatype.boolean(),
+  })),
+  totals: {
+    client: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    purchase: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      undefined,
+    ]),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    vat_included: false,
+  },
+  visas: {
+    stock: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    supply: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    engineer: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+  },
+  ready: {
+    allowed: faker.datatype.boolean(),
+    blocker: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "not_started",
+        "not_in_calculation",
+        "not_draft",
+        "no_lines",
+        "visas_missing",
+      ] as const),
+      null,
+    ]),
+    missing: faker.number.int({ min: 0 }),
+  },
+  rights: {
+    goods: faker.datatype.boolean(),
+    services: faker.datatype.boolean(),
+    build: faker.datatype.boolean(),
+    cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseCalcQuoteMock = (
+  overrideResponse: Partial<CalcQuote> = {},
+): CalcQuote => ({
+  ...{
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    version: faker.number.int({ min: 1 }),
+    state: faker.helpers.arrayElement(Object.values(CalcState)),
+    director_comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
+    vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseCalcSupplierMock = (
+  overrideResponse: Partial<CalcSupplier> = {},
+): CalcSupplier => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    min_order_qty: faker.number.int(),
+    price_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    offer_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    offer_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseCalcLineVisaMock = (
+  overrideResponse: Partial<CalcLineVisa> = {},
+): CalcLineVisa => ({
+  ...{
+    by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getNewCalcQuoteVersionResponseMock = (
+  overrideResponse: Partial<Extract<CalcSheet, object>> = {},
+): CalcSheet => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  task: {
+    letter_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    letter_subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    resolution_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    decided_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  },
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+  },
+  quote: faker.helpers.arrayElement([{ ...getNewCalcQuoteVersionResponseCalcQuoteMock() }, null]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    product_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
+    zone: faker.helpers.arrayElement(Object.values(CalcZone)),
+    group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    stock: {
+      on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reserved: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    supplier: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcSupplierMock() },
+      null,
+    ]),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    purchase_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    purchase_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    crew_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    crew_days: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    visa: faker.helpers.arrayElement([
+      { ...getNewCalcQuoteVersionResponseCalcLineVisaMock() },
+      null,
+    ]),
+    can_edit: faker.datatype.boolean(),
+  })),
+  totals: {
+    client: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    purchase: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      undefined,
+    ]),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    vat_included: false,
+  },
+  visas: {
+    stock: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    supply: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    engineer: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+  },
+  ready: {
+    allowed: faker.datatype.boolean(),
+    blocker: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "not_started",
+        "not_in_calculation",
+        "not_draft",
+        "no_lines",
+        "visas_missing",
+      ] as const),
+      null,
+    ]),
+    missing: faker.number.int({ min: 0 }),
+  },
+  rights: {
+    goods: faker.datatype.boolean(),
+    services: faker.datatype.boolean(),
+    build: faker.datatype.boolean(),
+    cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseCalcQuoteMock = (
+  overrideResponse: Partial<CalcQuote> = {},
+): CalcQuote => ({
+  ...{
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    version: faker.number.int({ min: 1 }),
+    state: faker.helpers.arrayElement(Object.values(CalcState)),
+    director_comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
+    vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseCalcSupplierMock = (
+  overrideResponse: Partial<CalcSupplier> = {},
+): CalcSupplier => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    min_order_qty: faker.number.int(),
+    price_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    offer_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    offer_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseCalcLineVisaMock = (
+  overrideResponse: Partial<CalcLineVisa> = {},
+): CalcLineVisa => ({
+  ...{
+    by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getLoseCalcRequestResponseMock = (
+  overrideResponse: Partial<Extract<CalcSheet, object>> = {},
+): CalcSheet => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  task: {
+    letter_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    letter_subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    resolution_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    decided_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  },
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+  },
+  quote: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcQuoteMock() }, null]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    product_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
+    zone: faker.helpers.arrayElement(Object.values(CalcZone)),
+    group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    stock: {
+      on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reserved: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    supplier: faker.helpers.arrayElement([
+      { ...getLoseCalcRequestResponseCalcSupplierMock() },
+      null,
+    ]),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    purchase_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    purchase_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    crew_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    crew_days: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    visa: faker.helpers.arrayElement([{ ...getLoseCalcRequestResponseCalcLineVisaMock() }, null]),
     can_edit: faker.datatype.boolean(),
   })),
   totals: {
@@ -15981,6 +16477,15 @@ export const getReserveCalcLineResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -16185,6 +16690,15 @@ export const getReleaseCalcLineReservationResponseCalcQuoteMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    rejected_by: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["client", "director"] as const),
+      null,
+    ]),
+    reject_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_revise: faker.datatype.boolean(),
     vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
   },
   ...overrideResponse,
@@ -25280,6 +25794,50 @@ export const getMarkCalcReadyMockHandler = (
   );
 };
 
+export const getNewCalcQuoteVersionMockHandler = (
+  overrideResponse?:
+    | CalcSheet
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CalcSheet> | CalcSheet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/new-version",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getNewCalcQuoteVersionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getLoseCalcRequestMockHandler = (
+  overrideResponse?:
+    | CalcSheet
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CalcSheet> | CalcSheet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/lost",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getLoseCalcRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getParseCalcTextMockHandler = (
   overrideResponse?:
     | CalcParseJob
@@ -26912,6 +27470,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDeleteCalcLineMockHandler(),
   getSignCalcLineMockHandler(),
   getMarkCalcReadyMockHandler(),
+  getNewCalcQuoteVersionMockHandler(),
+  getLoseCalcRequestMockHandler(),
   getParseCalcTextMockHandler(),
   getListStockBalancesMockHandler(),
   getGetStockProductMockHandler(),

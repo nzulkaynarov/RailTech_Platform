@@ -229,6 +229,45 @@ async def test_costing_at_the_director_or_closed_is_not_the_executors_work(
     assert "calc_task" not in [i["kind"] for i in await queue_of(web)]
 
 
+async def test_client_rejected_quote_is_a_manager_row_with_the_reason(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """D26G-3 (SPEC-v3 §3.3): клиент отклонил КП — менеджеру строка с причиной; она ведёт на расчёт,
+    где «Новая версия КП» и «Отказ по заявке»."""
+    rejected = task(state="rejected")
+    rejected.update(rejected_by="client", reject_reason="Дорого, конкурент дал на 7% ниже")
+    fb.state["calc_tasks"] = {"results": [rejected]}
+    await web.login(["MANAGER_ALL"])
+
+    [row] = [i for i in await queue_of(web, check) if i["kind"] == "calc_task"]
+
+    assert row["title"] == f"Клиент отклонил КП по заявке {NUMBER}"
+    assert row["subtitle"] == (
+        "Причина: Дорого, конкурент дал на 7% ниже · ООО «Демо-Депо» · Стрелочные приводы"
+        " · по письму ВХ-104/27"
+    )
+    assert row["object"]["path"] == f"/erp/calc/{ENCODED}"
+
+
+@pytest.mark.parametrize("role", ["SUPPLY", "ENGINEER"])
+async def test_client_rejection_is_not_a_row_for_calc_executors_without_clients(
+    web: Web, fb: FeedBackends, role: str
+) -> None:
+    rejected = task(state="rejected")
+    rejected.update(rejected_by="client", reject_reason=None)
+    fb.state["calc_tasks"] = {"results": [rejected]}
+    await web.login([role])
+    assert "calc_task" not in [i["kind"] for i in await queue_of(web)]
+
+
+async def test_director_rejection_is_not_a_row(web: Web, fb: FeedBackends) -> None:
+    rejected = task(state="rejected")
+    rejected.update(rejected_by="director", reject_reason="Не наш профиль")
+    fb.state["calc_tasks"] = {"results": [rejected]}
+    await web.login(["MANAGER_ALL"])
+    assert "calc_task" not in [i["kind"] for i in await queue_of(web)]
+
+
 async def test_overdue_costing_is_red(web: Web, fb: FeedBackends) -> None:
     fb.state["calc_tasks"] = {"results": [task(due="2027-01-10")]}
     await web.login(["SUPPLY"])

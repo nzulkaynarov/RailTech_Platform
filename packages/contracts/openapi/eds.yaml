@@ -3484,10 +3484,17 @@ components:
         quote_version:
           type: integer
           minimum: 1
+          description: Версия КП ERP (`Quote.version`, сквозная в заявке); повторная отправка после возврата — версия +1
         erp_deal_id:
           type: [integer, 'null']
         deal_number:
           type: [string, 'null']
+        superseded_by_version:
+          type: integer
+          minimum: 2
+          description: |
+            Только у КП, которое заменила более новая версия (D26G-2): номер новейшей версии того же КП или той же заявки.
+            Нет поля — версия актуальна. Платформа показывает такую версию в истории как «Заменена».
     ChecklistItem:
       type: object
       additionalProperties: false

@@ -33,7 +33,7 @@ export interface MockCalc {
   number: string;
   title: string;
   client: string;
-  stage: "CALCULATION" | "QUOTE";
+  stage: "CALCULATION" | "QUOTE" | "LOST";
   letterNumber: string;
   letterSubject: string;
   resolution: string;
@@ -49,6 +49,11 @@ export interface MockCalc {
   state: "in_progress" | "returned" | "at_director" | "approved" | "rejected";
   quoteNumber: string | null;
   directorComment: string | null;
+  /** Версия КП (как ERP `Quote.version`): повторный «Расчёт готов» после возврата и «Новая версия КП» — +1 */
+  version?: number;
+  /** Кто отклонил КП при `state = rejected` (D26G-3) и почему */
+  rejectedBy?: "client" | "director" | null;
+  rejectReason?: string | null;
   lines: MockLine[];
 }
 
@@ -272,6 +277,50 @@ export function seedCalcs(): MockCalc[] {
       quoteNumber: null,
       directorComment: null,
       lines: [],
+    },
+    {
+      // D26G-3: клиент отклонил КП в кабинете — заявка вернулась в расчёт, решение за менеджером
+      number: "ЗВ-2026-109",
+      title: "Приводы стрелочные для станции",
+      client: "ООО «Демо-Депо»",
+      stage: "CALCULATION",
+      letterNumber: "ВХ-109/26",
+      letterSubject: "Запрос КП на стрелочные приводы",
+      resolution: "Посчитать приводы со склада, маржа не ниже 15 %.",
+      decidedAt: "2026-10-24T06:00:00Z",
+      decidedBy: "Демо Директоров",
+      due: "2026-10-28",
+      minMargin: "15.00",
+      manager: "Демо Широков",
+      assignees: [{ zone: "goods", name: "Демо Широков" }],
+      requestText: "Нужны 4 привода СП-6М со склада.",
+      requestLines: 1,
+      started: true,
+      state: "rejected",
+      quoteNumber: "КП-2026/119",
+      directorComment: null,
+      version: 1,
+      rejectedBy: "client",
+      rejectReason: "Дорого: у конкурента на 7 % ниже, просим пересмотреть цену привода",
+      lines: [
+        {
+          id: 591,
+          name: "Привод стрелочный электромеханический СП-6М",
+          article: "СП-6М",
+          productId: 32,
+          kind: "goods",
+          quantity: 4,
+          unit: "шт.",
+          onHand: 6,
+          supplier: null,
+          leadDays: 5,
+          purchase: 12_500_000,
+          crewRate: null,
+          crewDays: null,
+          client: 15_000_000,
+          visa: { by: "Демо Широков", at: "2026-10-26T09:00:00Z", zone: "goods" },
+        },
+      ],
     },
   ];
 }

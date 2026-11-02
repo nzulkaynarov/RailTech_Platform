@@ -95,7 +95,7 @@ test.describe("Расчёт по заявке: снабженец и гл. ин�
     const client = line(page, RAIL).getByLabel(`Цена клиенту без НДС за единицу для «${RAIL}»`);
     await client.fill("108000000");
     await client.press("Enter");
-    await expect(line(page, RAIL).getByText("20.0")).toBeVisible();
+    await expect(line(page, RAIL).getByLabel(`Наценка, %: ${RAIL}`)).toHaveValue(/^20([.,]0+)?$/);
     await line(page, RAIL)
       .getByRole("button", { name: `Подтвердить строку «${RAIL}»` })
       .click();

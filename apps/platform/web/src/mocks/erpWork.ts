@@ -1,5 +1,4 @@
 import type {
-  CalcRequestRow,
   MenuCounter,
   ObjectRef,
   PaymentCard,
@@ -8,7 +7,7 @@ import type {
   QueueItem,
 } from "../shared/api/generated/model";
 import { QUEUE, allows } from "../app/rbac.generated";
-import { myCalcRows } from "./erpCalc";
+import { type MockCalcRow, myCalcRows } from "./erpCalc";
 import { companyToday, readInvoices } from "./fixtures/payments";
 import { readProjects, toRow } from "./fixtures/projects";
 import type { MockRole } from "./fixtures/roles";
@@ -69,7 +68,11 @@ function dueLabel(due: string): QueueItem["due_label"] {
 
 // --- расчёт ------------------------------------------------------------------------------------
 
-function calcAction(row: CalcRequestRow, view: readonly MockRole[]): string | null {
+function calcAction(row: MockCalcRow, view: readonly MockRole[]): string | null {
+  // D26G-3: клиент отклонил КП — решение менеджеру (роли с клиентами на полном доступе), как BFF
+  if (row.state === "rejected" && row.rejectedBy === "client") {
+    return full(view, "crm.clients") ? "Клиент отклонил КП по заявке" : null;
+  }
   if (row.state === "not_started") return "Начать расчёт по заявке";
   if (row.state === "returned") return "Доработать расчёт по заявке";
   if (row.state !== "in_progress") return null;
@@ -100,7 +103,16 @@ function calcItems(view: readonly MockRole[]): QueueItem[] {
         role_id: role.id,
         kind: "calc_task",
         title: `${action} ${row.number}`,
-        subtitle: join(row.client, row.title, `по письму ${row.letter_number}`),
+        subtitle: join(
+          row.state === "rejected"
+            ? row.rejectReason
+              ? `Причина: ${row.rejectReason}`
+              : "Причина не указана"
+            : null,
+          row.client,
+          row.title,
+          `по письму ${row.letter_number}`,
+        ),
         due_label: dueLabel(row.due),
         due_at: new Date(`${row.due}T18:59:59Z`).toISOString(),
         object: {

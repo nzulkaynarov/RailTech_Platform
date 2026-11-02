@@ -2966,6 +2966,10 @@
       "director_rejected": {
         "title": "КП отклонено директором",
         "detail": "{{comment}}"
+      },
+      "superseded": {
+        "title": "КП: новая версия",
+        "detail": "КП {{number}}: версия {{version}} заменена версией {{new_version}}"
       }
     },
     "contract": {

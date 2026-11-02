@@ -198,6 +198,7 @@ async def quote_page(
                 id=item.id,
                 number=item.object.quote_number or item.title,
                 version=item.object.quote_version or 1,
+                superseded_by=item.object.superseded_by_version,
                 request_number=item.object.deal_number,
                 client_name=snap.client_name if snap else None,
                 total=money(snap.total, snap.currency) if snap else None,
@@ -545,7 +546,8 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
     version = raw.object.quote_version
     erp_version = erp_quote.get("version") if erp_quote else None
     if erp_quote and isinstance(erp_version, int) and version and erp_version != version:
-        # У ERP уже другая редакция КП: строки закрытого круга не показываем — только снимок EDS.
+        # У ERP уже другая версия КП (версия маршрута EDS — `Quote.version` ERP, D26G-2): строки
+        # заменённой версии не показываем — только снимок EDS.
         erp_quote = None
     deal = deal if isinstance(deal, dict) else None
     channels = _channels(erp_quote, _mail_ready(smtp))
@@ -602,6 +604,7 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         id=raw.id,
         number=number,
         version=raw.object.quote_version or 1,
+        superseded_by=raw.object.superseded_by_version,
         round=raw.round,
         status=raw.status,
         stage=_stage(deal),

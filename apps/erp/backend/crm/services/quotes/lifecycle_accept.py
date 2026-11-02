@@ -142,7 +142,9 @@ def perform_quote_rejection(
 
     rejected_status = QuoteStatus.objects.filter(code=QuoteStatusCode.REJECTED).first()
     quote.status = rejected_status
-    quote.save(update_fields=["status", "updated_at"])
+    # D26G-3: причина клиента — на КП (экран расчёта и «Мои задачи» менеджера); в PDF КП она не печатается.
+    quote.client_reject_reason = reason[:2000]
+    quote.save(update_fields=["status", "client_reject_reason", "updated_at"])
     from integration.services import events
 
     events.publish_quote_outcome("quote.rejected", quote, contact=portal_contact)

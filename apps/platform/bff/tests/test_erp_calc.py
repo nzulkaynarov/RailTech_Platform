@@ -447,8 +447,99 @@ async def test_ready_sends_the_quote_to_the_director(
         "version": 1,
         "state": "at_director",
         "director_comment": None,
+        "rejected_by": None,
+        "reject_reason": None,
+        "can_revise": False,
         "vat_rate": "12.00",
     }
+
+
+# --- клиент отклонил КП: новая версия или отказ (D26G-3) -----------------------------------------
+
+
+def rejected_sheet(**quote: Any) -> dict[str, Any]:
+    return sheet(
+        quote={
+            **sheet()["quote"],
+            "number": "КП-2026/115",
+            "state": "rejected",
+            "rejected_by": "client",
+            "reject_reason": "Дорого",
+            "can_revise": True,
+            **quote,
+        },
+        ready={"allowed": False, "blocker": "not_draft", "missing": 0},
+    )
+
+
+async def test_sheet_says_the_client_rejected_with_the_reason(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER_ALL"])
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=rejected_sheet()))
+
+    response = await call(web, "GET", f"/erp/calc/{ENCODED}")
+
+    assert response.status_code == 200
+    check(response, "/erp/calc/{number}", "get")
+    quote = response.json()["quote"]
+    assert quote["rejected_by"] == "client"
+    assert quote["reject_reason"] == "Дорого"
+    assert quote["can_revise"] is True
+
+
+async def test_new_version_is_proxied_and_conflict_keeps_the_reason(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER_ALL"])
+    reopened = sheet(quote={**sheet()["quote"], "version": 2})
+    route = erp.post(f"{CALC}/104/new-version/").mock(
+        side_effect=[
+            httpx.Response(200, json=reopened),
+            httpx.Response(409, json={"detail": "QUOTE_NOT_REJECTED_BY_CLIENT"}),
+        ]
+    )
+
+    ok = await call(web, "POST", f"/erp/calc/{ENCODED}/new-version")
+    assert ok.status_code == 200
+    assert route.called
+    check(ok, "/erp/calc/{number}/new-version", "post")
+    assert ok.json()["quote"]["version"] == 2
+
+    again = await call(web, "POST", f"/erp/calc/{ENCODED}/new-version")
+    assert again.status_code == 409
+    check(again, "/erp/calc/{number}/new-version", "post")
+    assert again.json()["details"]["reason"] == "quote_not_rejected_by_client"
+    assert "клиент отклонил КП" in again.json()["message"]
+
+
+async def test_lost_needs_a_reason_and_is_proxied(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER_ALL"])
+    closed = sheet(deal={**deal(), "stage_code": "CLOSED_LOST"})
+    route = erp.post(f"{CALC}/104/lost/").mock(return_value=httpx.Response(200, json=closed))
+
+    blank = await call(web, "POST", f"/erp/calc/{ENCODED}/lost", {"reason": "   "})
+    assert blank.status_code == 422
+    check(blank, "/erp/calc/{number}/lost", "post")
+    assert not route.called
+
+    ok = await call(web, "POST", f"/erp/calc/{ENCODED}/lost", {"reason": " Ушёл к конкуренту "})
+    assert ok.status_code == 200
+    check(ok, "/erp/calc/{number}/lost", "post")
+    assert json.loads(route.calls[0].request.content) == {"reason": "Ушёл к конкуренту"}
+
+
+async def test_markup_without_cost_margin_is_refused_and_with_it_is_proxied(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["ENGINEER"])
+    refused = await call(web, "PATCH", f"/erp/calc/{ENCODED}/lines/8", {"markup_pct": "20"})
+    assert refused.status_code == 422
+    check(refused, "/erp/calc/{number}/lines/{line_id}", "patch")
+    assert refused.json()["details"] == {"reason": "cost_forbidden", "fields": ["markup_pct"]}
+    assert erp_data_calls(erp) == []
 
 
 async def test_purchase_without_cost_margin_is_refused_in_bff(

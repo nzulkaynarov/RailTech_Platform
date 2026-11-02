@@ -10,8 +10,17 @@ export interface QuoteApprovalRow {
   id: string;
   /** Номер КП */
   number: string;
-  /** @minimum 1 */
+  /**
+   * Версия КП — та же, что у КП в ERP и на экране расчёта
+   * @minimum 1
+   */
   version: number;
+  /**
+   * Версию заменила более новая (D26G-2, EDS `superseded_by_version`): в истории — «Заменена версией N»; `null` — актуальна
+   * @minimum 2
+   * @nullable
+   */
+  superseded_by: number | null;
   /**
    * Бизнес-номер заявки ЗВ
    * @nullable

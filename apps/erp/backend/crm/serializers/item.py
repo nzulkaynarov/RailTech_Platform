@@ -152,6 +152,9 @@ class QuoteItemSerializer(serializers.ModelSerializer):
             # A SECTION/NOTE is never an "optional priced line" — it is not a line at all.
             if attrs.get("is_optional"):
                 raise serializers.ValidationError({"is_optional": ["SECTION_NOTE_NO_PRICING"]})
+        if "margin_percent" in attrs or "discount_percent" in attrs:
+            # D26G-5: наценку или скидку задали в конструкторе КП — цена снова считается от наценки.
+            attrs["client_price_fixed"] = None
         return attrs
 
     class Meta:

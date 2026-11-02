@@ -139,7 +139,7 @@ def decided(quote, decision="approve", *, version=None, comment=None, outgoing="
     data["approval"]["object"].update(
         {
             "erp_quote_id": quote.pk,
-            "quote_version": version or quote.eds_revision,
+            "quote_version": version or quote.version,
             "quote_number": quote.number,
             "erp_deal_id": quote.deal_id,
         }
