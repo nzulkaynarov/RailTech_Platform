@@ -91,6 +91,7 @@
   flex-direction: column;
   gap: 4px;
   align-items: flex-start;
+  max-width: 100%;
 }
 .pf-calc-visas {
   margin: 0;
@@ -99,6 +100,11 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+/* Тег визы не шире колонки (тег — одна строка, platform-frontend.md §4.2). */
+.pf-calc-visas > li {
+  min-width: 0;
+  max-width: 100%;
 }
 .pf-calc-position,
 .pf-calc-supplier {

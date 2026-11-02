@@ -29,8 +29,11 @@ import { memoPath } from "./api";
 import { useStateLabels } from "./labels";
 import { mayDecideMemos } from "./model";
 
-/** Ширины колонок: номер, тема (гибкая), автор, сумма, срок, получено, статус, действие (UX-1c, S9) */
-const COLS = [130, null, 150, 140, 100, 130, 170, 120] as const;
+/**
+ * Ширины колонок: номер, тема (гибкая), автор, сумма, срок, получено (время — второй строкой), статус, действие
+ * (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
+ */
+const COLS = [136, null, 120, 128, 104, 104, 216, 104] as const;
 
 const PAGE = 25;
 
@@ -170,7 +173,10 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
                 <Amount row={row} />
               </td>
               <td className="pf-num">{row.due_date ? date(row.due_date) : "—"}</td>
-              <td className="pf-num">{date(row.created_at, "datetime")}</td>
+              <td className="pf-num">
+                {date(row.created_at)}
+                <div className="pf-hint">{date(row.created_at, "time")}</div>
+              </td>
               <td>
                 <RowStatus row={row} />
               </td>

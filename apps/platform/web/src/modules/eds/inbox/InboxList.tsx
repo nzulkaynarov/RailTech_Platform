@@ -28,8 +28,12 @@ import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 
 const PAGE = 25;
-/** Ширины колонок: номер, тема (гибкая), клиент, заявка, исполнитель, срок, получено, статус, действие (UX-1c, S9) */
-const COLS = [120, null, 170, 120, 160, 110, 110, 170, 110] as const;
+/**
+ * Ширины колонок по типу (platform-frontend.md §4.2): номер, тема (гибкая), корреспондент (заявка — второй строкой, как в
+ * карточке на телефоне), исполнитель, срок, получено, статус, действие. На 1440 с открытым подменю таблица помещается в
+ * рабочую область (1111 px) без прокрутки вбок (T1).
+ */
+const COLS = [108, null, 160, 136, 104, 104, 168, 104] as const;
 /** Фильтры журнала (P8b, SPEC-v3 §3.2a п. 6): «На контроле» и «Просрочено» — признаки EDS, не статусы. */
 type Flag = "on_control" | "overdue";
 type Filter = LetterStatus | Flag | "all";
@@ -140,7 +144,7 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
     <ScrollRegion label={t("list.scroll")}>
       <table
         className="pf-letters-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(COLS, 240) }}
+        style={{ minWidth: tableMinWidth(COLS, 224) }}
       >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
         <TableCols widths={COLS} />
@@ -149,7 +153,6 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.subject")}</th>
             <th scope="col">{t("list.columns.correspondent")}</th>
-            <th scope="col">{t("list.columns.request")}</th>
             <th scope="col">{t("list.columns.executor")}</th>
             <th scope="col">{t("list.columns.due")}</th>
             <th scope="col">{t("list.columns.received")}</th>
@@ -190,10 +193,17 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
                   </>
                 ) : null}
               </td>
-              <td className="pf-ell" title={row.client_name ?? undefined}>
-                {row.client_name ?? "—"}
+              <td>
+                <div className="pf-ell" title={row.client_name ?? undefined}>
+                  {row.client_name ?? "—"}
+                </div>
+                {row.request_number ? (
+                  <div className="pf-hint pf-num pf-ell">
+                    <span className="pf-sr-only">{t("list.columns.request")}: </span>
+                    {row.request_number}
+                  </div>
+                ) : null}
               </td>
-              <td className="pf-num">{row.request_number ?? "—"}</td>
               <td className="pf-ell" title={row.executor?.name ?? undefined}>
                 {row.executor?.name ?? "—"}
               </td>

@@ -20,8 +20,8 @@ import { ClientPanel } from "./ClientPanel";
 
 import "../crm.css";
 
-/** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9) */
-const COLS = [null, 140, 100, 170, 150] as const;
+/** Ширины колонок: название, ИНН, заявки, ERP, последняя активность (UX-1c, S9; по типу — platform-frontend.md §4.2) */
+const COLS = [null, 140, 144, 170, 184] as const;
 
 function ErpTag({ row }: { row: ClientRow }) {
   const { t } = useTranslation("clients");

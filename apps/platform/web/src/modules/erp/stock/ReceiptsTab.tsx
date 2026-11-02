@@ -16,7 +16,7 @@ import { useStateLabels } from "./api";
 import { ReceiveModal } from "./OrderModals";
 
 /** Ширины колонок: заказ, поставщик, позиция (гибкая), осталось, ожидается, действие (UX-1c, S9) */
-const COLS = [140, 200, null, 120, 140, 150] as const;
+const COLS = [140, 200, null, 156, 140, 150] as const;
 
 function Pending({
   items,
