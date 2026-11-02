@@ -22,12 +22,13 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
     expect(await within(side).findByText("Ящик открывается: писем в папке — 128")).toBeVisible();
   });
 
-  it("форма приёма: пароль приложения и выключатель помощника, «Что произойдёт»", async () => {
+  it("форма приёма: пароль приложения и выключатель помощника, без «Что произойдёт» (сохранение настройки)", async () => {
     const side = await mailPanel();
     fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
     const form = within(side).getByRole("form", { name: "Приём почты" });
     expect(within(form).getByLabelText("Пароль приложения")).toHaveAttribute("type", "password");
-    expect(within(form).getByText(/не удаляются и не помечаются/)).toBeVisible();
+    expect(within(side).getByText(/на сервере они не меняются/)).toBeVisible();
+    expect(within(form).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
     expect(within(form).getByRole("checkbox", { name: /Помощник канцелярии/ })).toBeChecked();
   });
 });

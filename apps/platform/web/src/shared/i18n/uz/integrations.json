@@ -348,20 +348,20 @@
     },
     "inbound": {
       "title": "Qabul: umumiy pochta qutisi (IMAP)",
-      "intro": "Kompaniya umumiy pochta qutisidagi xatlar har 2 daqiqada ish yurituvchining «Kiruvchi pochta» navbatiga tushadi. Serverda xatlar o‘chirilmaydi va o‘qilgan deb belgilanmaydi.",
+      "intro": "Har 2 daqiqada quti xatlari «Kiruvchi pochta»ga tushadi; serverda ular o‘zgarmaydi.",
       "on": "Ulangan",
       "off": "Ulanmagan",
       "mailbox": "Papka",
       "username": "Login (quti manzili)",
       "appPassword": "Ilova paroli",
-      "appPasswordHint": "Pochta xizmati sozlamalaridagi ilova paroli, pochta paroli emas. Bo‘sh — avvalgisi qoladi.",
+      "appPasswordHint": "Pochta sozlamalaridagi ilova paroli, quti paroli emas. Bo‘sh — avvalgisi.",
       "host": "IMAP server",
       "hostHint": "Masalan, imap.yandex.ru; bo‘sh — qabul o‘chirilgan",
       "securityValue": {
         "ssl": "SSL (port 993)",
         "starttls": "STARTTLS (port 143)"
       },
-      "assist": "Devonxona yordamchisi: xat turi va mazmunini «Taklif qilish» (tugma bilan, shaxsiy ma’lumotlarsiz)",
+      "assist": "Devonxona yordamchisi: xat turi va mazmuni tugma bilan, shaxsiy ma’lumotlarsiz",
       "assistLabel": "Devonxona yordamchisi",
       "assistOn": "Yoqilgan — «Taklif qilish» tugmasi bilan",
       "assistOff": "O‘chirilgan",
@@ -373,9 +373,6 @@
       "button": "Qabulni sozlash",
       "settings": "Pochta qabuli",
       "saved": "Qabul sozlamalari saqlandi",
-      "step1": "Platforma har 2 daqiqada qutiga kirib, yangi xatlarni «Kiruvchi pochta» navbatiga oladi.",
-      "step2": "Serverda xatlar o‘chirilmaydi va o‘qilgan deb belgilanmaydi.",
-      "step3": "Ilova paroli shifrlangan holda saqlanadi va boshqa ko‘rsatilmaydi.",
       "reason": {
         "not_configured": "Qabul sozlanmagan: server, login va ilova parolini kiriting",
         "auth_failed": "Server login yoki ilova parolini qabul qilmadi — qayta kiriting",

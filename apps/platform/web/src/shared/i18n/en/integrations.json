@@ -348,20 +348,20 @@
     },
     "inbound": {
       "title": "Receiving: shared mailbox (IMAP)",
-      "intro": "Every 2 minutes, mail from the company's shared mailbox lands in the clerk's Incoming mail queue. Messages are neither deleted nor marked as read on the server.",
+      "intro": "Every 2 minutes mailbox letters reach Incoming mail; the server copy is untouched.",
       "on": "Connected",
       "off": "Not connected",
       "mailbox": "Folder",
       "username": "Login (mailbox address)",
       "appPassword": "App password",
-      "appPasswordHint": "An app password from the mail service settings, not the mailbox password. Empty — keep the current one.",
+      "appPasswordHint": "An app password from the mail settings, not the mailbox password. Empty — keep it.",
       "host": "IMAP server",
       "hostHint": "For example, imap.yandex.ru; empty — receiving is off",
       "securityValue": {
         "ssl": "SSL (port 993)",
         "starttls": "STARTTLS (port 143)"
       },
-      "assist": "Clerk assistant: “Suggest” the type and gist of a letter (on request, without personal data)",
+      "assist": "Clerk assistant: letter type and gist on request, without personal data",
       "assistLabel": "Clerk assistant",
       "assistOn": "On — via the “Suggest” button",
       "assistOff": "Off",
@@ -373,9 +373,6 @@
       "button": "Set up receiving",
       "settings": "Receiving mail",
       "saved": "Receiving settings saved",
-      "step1": "The platform will sign in to the mailbox every 2 minutes and put new mail into the Incoming mail queue.",
-      "step2": "Messages are not deleted or marked as read on the server.",
-      "step3": "The app password is stored encrypted and is never shown again.",
       "reason": {
         "not_configured": "Receiving is not set up: enter the server, login and app password",
         "auth_failed": "The server rejected the login or app password — enter them again",

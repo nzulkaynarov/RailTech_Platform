@@ -56,7 +56,6 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
       pending={save.isPending}
       error={save.error}
       invalid={port === null || mailbox.trim() === ""}
-      consequence={[t("mail.inbound.step1"), t("mail.inbound.step2"), t("mail.inbound.step3")]}
       onCancel={onDone}
       onSubmit={(password) => {
         save.mutate({
