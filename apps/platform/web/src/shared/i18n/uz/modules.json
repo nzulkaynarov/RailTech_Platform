@@ -183,16 +183,16 @@
     "action": "Xodimni taklif qilish",
     "setup": {
       "title": "Birinchi ishga tushirish",
-      "subtitle": "Olti qadam: administrator, ERP ulanishi, kompaniyangiz, hisoblar uchun bank rekvizitlari, mijoz kabineti manzili, qolgan ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
+      "subtitle": "Birinchi ishga tushirishning olti qadami; istalganini keyinroq bajarish mumkin.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator yaratildi: {{name}}.",
       "companyTitle": "Sizning kompaniyangiz",
-      "companyRequired": "O'z kompaniyangizni yarating: hujjatlar uning nomidan rasmiylashtiriladi, ERP'da esa rekvizitlar paydo bo'ladi.",
+      "companyRequired": "O‘z kompaniyangizni yarating: hujjatlar uning nomidan rasmiylashtiriladi.",
       "companyDone": "O'z kompaniyasi yaratilgan.",
-      "companyUnknown": "ERP hozircha javob bermadi. Yangi administratorga ERP'ga kirish kechikib beriladi: bir necha soniyadan keyin takrorlang.",
-      "companyNoRights": "O'z kompaniyasini faqat ERP administratori yarata oladi. Administrator sifatida kiring.",
+      "companyUnknown": "Server hozircha javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
+      "companyNoRights": "O‘z kompaniyasini faqat administrator yarata oladi. Administrator sifatida kiring.",
       "companyRetry": "Qayta tekshirish",
-      "companyWaiting": "ERP kirishni berishini kutmoqdamiz…",
+      "companyWaiting": "Kirish berilishini kutmoqdamiz…",
       "companyName": "Kompaniya nomi",
       "companyNameRequired": "Kompaniya nomini kiriting",
       "companyInn": "STIR (ixtiyoriy)",
@@ -202,22 +202,22 @@
       "companyEmailInvalid": "Elektron pochta manzilini tekshiring",
       "companySubmit": "Kompaniyani yaratish",
       "companyConsequence": [
-        "ERP'da «sotuvchi» turidagi kompaniyangiz paydo bo'ladi, siz uning egasi bo'lasiz.",
+        "«Sotuvchi» turidagi kompaniyangiz paydo bo‘ladi, siz uning egasi bo‘lasiz.",
         "Rekvizitlar, blank va raqamlashni keyinroq Sozlamalar · Kompaniya va blankalar bo‘limida to'ldirish mumkin.",
         "Ustoz kompaniyani bir marta yaratishni taklif qiladi: uni qayta yaratib bo'lmaydi."
       ],
       "companyCreated": "«{{name}}» kompaniyasi yaratildi",
       "companyErrors": {
         "OWN_COMPANY_ALREADY_EXISTS": "O'z kompaniyasi allaqachon yaratilgan.",
-        "FORBIDDEN": "O'z kompaniyasini faqat ERP administratori yarata oladi.",
-        "BACKEND_UNAVAILABLE": "ERP javob bermadi. Yangi administratorga ERP'ga kirish kechikib beriladi: bir necha soniyadan keyin takrorlang.",
+        "FORBIDDEN": "O‘z kompaniyasini faqat administrator yarata oladi.",
+        "BACKEND_UNAVAILABLE": "Server javob bermadi: yangi administratorga kirish kechikib beriladi. Bir necha soniyadan keyin takrorlang.",
         "VALIDATION_FAILED": "Forma maydonlarini tekshiring.",
         "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang.",
         "ERP_NOT_CONNECTED": "ERP ulanmagan. Avval ERP'ni ulang, so'ng kompaniyani yarating.",
         "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Kompaniya allaqachon yaratilgan bo'lishi mumkin: holat yangilanmoqda — forma yo'qolsa, kompaniya bor, aks holda takrorlang."
       },
       "connectionsTitle": "Qolgan ulanishlar",
-      "connectionsLead": "To‘rtta qadam: har birining shakli shu yerda, yon oynada ochiladi; saqlagandan so‘ng — keyingi qadam.",
+      "connectionsLead": "Har bir ulanish shu yerda, yon oynada ochiladi; saqlagandan so‘ng — keyingisi.",
       "progress": "Tayyor: {{done}} / {{total}}",
       "allDone": "Hammasi tayyor: Platforma sozlangan.",
       "loadError": "Sozlash holatini olib bo'lmadi",
@@ -237,7 +237,7 @@
         },
         "erp": {
           "title": "ERP",
-          "text": "CRM va ERP ni ulash: arizalar va hisob-kitoblar tizimlar o'rtasida yuradi. Yangi o'rnatishda kod kerak emas.",
+          "text": "Hisob-kitob va ombor bilan aloqa: arizalar, TT va hisoblar. Yangi o‘rnatishda kod kerak emas.",
           "action": "ERP ni ulash"
         },
         "mail": {
@@ -272,7 +272,7 @@
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
       "erpDone": "ERP ulangan. Aloqani qadam shaklida yoki Sozlamalar · Ulanishlarda tekshirish mumkin.",
-      "erpUnknown": "ERP holati noma'lum: CRM javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
+      "erpUnknown": "ERP holati noma’lum: server javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
       "erpOpen": "ERP sozlamalarini ochish",
       "companyNeedsErp": "Avval ERP'ni ulang",
       "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, shuning uchun ulanmagan paytda uni yaratib bo'lmaydi. Ulangandan keyin forma shu yerda paydo bo'ladi.",
@@ -288,14 +288,14 @@
       "cabinetTitle": "Mijoz kabineti manzili",
       "bankTitle": "Hisoblar uchun bank rekvizitlari",
       "bankDone": "Hisob raqami va MFO kiritilgan: mijozga hisob chiqariladi.",
-      "bankTodo": "Hisob raqami va MFO siz ERP mijozga hisob chiqarmaydi. Ularni «Sozlamalar · Kompaniya va blankalar», «Rekvizitlar» bo‘limida kiriting.",
+      "bankTodo": "Hisob raqami va MFOsiz mijozga hisob chiqarib bo‘lmaydi. Ularni «Sozlamalar · Kompaniya va blankalar», «Rekvizitlar» bo‘limida kiriting.",
       "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
-      "bankUnknown": "ERP'dan hali ma’lumot yo‘q — rekvizitlar holati u javob bergach ko‘rinadi.",
+      "bankUnknown": "Hali ma’lumot yo‘q — rekvizitlar holati server javob bergach ko‘rinadi.",
       "bankOpen": "«Kompaniya va blankalar»ni ochish"
     },
     "org": {
       "title": "Xodimlar",
-      "subtitle": "Xodimlar, rollar va CRM hamda ERP ga kirish. Ikkala tizimning rollari bitta kartochkada beriladi.",
+      "subtitle": "Xodimlar, ularning rollari va kirish huquqi — bitta kartochkada.",
       "readOnly": "Faqat ko'rish: rollar va kirishni administrator o'zgartiradi.",
       "listLabel": "Xodimlar",
       "count": "Xodimlar soni: {{count}}",
@@ -338,7 +338,7 @@
       "open": "Kartochkani ochish: {{name}}",
       "empty": {
         "title": "Hozircha xodimlar yo'q",
-        "text": "Rollar beriladigan yagona joy: ism, lavozim, rollar, CRM va ERP ga kirish, bildirishnomalar uchun Telegram, holat.",
+        "text": "Rollar shu yerda beriladi: ism, lavozim, rollar, kirish, bildirishnomalar uchun Telegram, holat.",
         "action": "Xodimni taklif qilish"
       },
       "noMatch": {
@@ -348,7 +348,7 @@
       },
       "loadError": {
         "title": "Xodimlarni yuklab bo'lmadi",
-        "text": "Ro'yxat CRM dan olinadi. So'rovni takrorlang; xato qolsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring.",
+        "text": "Ro‘yxat yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanishlar»ni tekshiring.",
         "retry": "Takrorlash"
       },
       "cardError": {
@@ -378,12 +378,12 @@
         "needRole": "Kamida bitta rolni tanlang. Kirishni butunlay yopish uchun xodimni o'chiring.",
         "lastAdmin": "Siz yagona administratorsiz: «Administrator» rolini olib bo'lmaydi. Avval boshqa xodimni administrator qiling.",
         "unchanged": "O'zgarishlar yo'q.",
-        "rolesError": "CRM dan rollarni yuklab bo'lmadi."
+        "rolesError": "Rollarni yuklab bo‘lmadi."
       },
       "consequence": {
         "modules": "Xodim quyidagi modullarni ko'radi: {{modules}}.",
         "lost": "Quyidagi modullarni ko'rmaydi: {{modules}}.",
-        "applied": "O'zgarishlar: CRM va ERP da — darhol; xodimning menyusi bir daqiqa ichida yoki keyingi kirishda yangilanadi. CRM jurnalida kim va qachon kiritgani qoladi.",
+        "applied": "O‘zgarishlar darhol kuchga kiradi; xodimning menyusi bir daqiqa ichida yoki keyingi kirishda yangilanadi. Jurnalda kim va qachon kiritgani qoladi.",
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
@@ -440,7 +440,7 @@
           "confirm": "Parol berish",
           "cancel": "Bekor qilish",
           "consequence": [
-            "Avvalgi parol amal qilmay qoladi, xodim Platforma, CRM va ERP'dan chiqadi.",
+            "Avvalgi parol amal qilmay qoladi, xodim barcha tizimlardan chiqadi.",
             "Yangi vaqtinchalik parolni bir marta ko'rasiz va xodimga berasiz.",
             "Kirishda xodim o'z parolini o'rnatishi shart; ro'yxatda u «Taklif qilingan» bo'ladi."
           ]
@@ -449,7 +449,7 @@
       "disable": {
         "button": "Xodimni o'chirish",
         "title": "Xodimni o'chirasizmi?",
-        "sessions": "Platforma, CRM va ERP ga kirish yopiladi.",
+        "sessions": "Barcha tizimlarga kirish yopiladi.",
         "terms": "Ochiq seanslar 15 daqiqa ichida tugaydi.",
         "kept": "Rollar va lavozim saqlanadi: xodimni qayta yoqish mumkin.",
         "confirm": "O'chirish",
@@ -466,7 +466,7 @@
         "EMAIL_EXISTS": "Bunday pochtali xodim allaqachon bor.",
         "ACTIVE_LEADS": "Xodimda ishdagi lidlar bor. Ularni topshiradigan hamkasbni tanlang va takrorlang.",
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
-        "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+        "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
         "OWN_ACCOUNT": "O'z parolingiz profilda almashtiriladi: vaqtinchalik parol boshqa xodimlarga beriladi."
@@ -479,7 +479,7 @@
     },
     "roles": {
       "title": "Rollar va huquqlar",
-      "subtitle": "Har bir rol nimani ko'radi va nima qila oladi. Roldan tashqari modullar relsdan yashirilgan. Bir kishiga bir nechta rol berish mumkin — kirish va navbatlar qo'shiladi.",
+      "subtitle": "Har bir rol nimani ko‘radi va qila oladi. Bir kishining rollari qo‘shiladi.",
       "caption": "Rollar matritsasi: modullar bo'yicha bo'limlar va har bir rolning kirish darajasi",
       "sectionColumn": "Modul · bo'lim",
       "system": "tizim roli",
@@ -510,7 +510,7 @@
       "readOnlyNote": "Faqat ko'rish: rolni va uning matritsasini administrator o'zgartiradi. Xodimlar rollari — «Xodimlar» bo‘limida.",
       "loadError": {
         "title": "Rollarni yuklab bo'lmadi",
-        "text": "Rollar CRM da saqlanadi. Qayta urinib ko'ring; xato qolsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring."
+        "text": "Rollar yuklanmadi. Takrorlang; xato qolsa, «Sozlamalar · Ulanishlar»ni tekshiring."
       },
       "notFound": {
         "title": "Rol topilmadi",
@@ -534,7 +534,7 @@
       "reset": "O'zgarishlarni bekor qilish",
       "renamed": "Rol nomi barcha xodimlari ({{count}}) uchun «{{name}}» bo'ladi; huquqlar o'zgarmaydi.",
       "descriptionOnly": "Faqat rol tavsifi o'zgaradi; xodimlar huquqlari o'zgarmaydi.",
-      "applied": "CRM va ERP dagi huquqlar saqlangandan so'ng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa ichida yangilanadi. CRM jurnalida rolni kim va qachon o'zgartirgani qoladi.",
+      "applied": "Huquqlar saqlangandan so‘ng darhol qayta hisoblanadi; xodimlar menyusi bir daqiqa ichida yangilanadi. Jurnalda rolni kim va qachon o‘zgartirgani qoladi.",
       "preview": {
         "section": "{{section}} ({{level}})",
         "nobody": "Rol hech bir xodimga berilmagan: hech kimning huquqlari o'zgarmaydi.",
@@ -550,7 +550,7 @@
         "fieldsGained": "Maydonlar ko'rinadi: {{list}}.",
         "fieldsLost": "Maydonlar ko'rinmay qoladi: {{list}}.",
         "loading": "Qaysi xodimlarning huquqlari o'zgarishi hisoblanmoqda…",
-        "failed": "Oqibatlarni hisoblab bo'lmadi: CRM javob bermadi. Saqlash baribir natijani ko'rsatadi."
+        "failed": "Oqibatlarni hisoblab bo‘lmadi: server javob bermadi. Saqlash baribir natijani ko‘rsatadi."
       },
       "delete": "Rolni o'chirish",
       "deleteBlocked": "O'chirib bo'lmaydi: rol xodimlarga berilgan ({{count}}). Avval «Xodimlar» bo‘limida ularga boshqa rollar bering.",
@@ -564,7 +564,7 @@
         "NAME_TAKEN": "Bunday nomli rol allaqachon bor. Boshqa nom tanlang.",
         "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. «Sozlamalar» bo‘limiga to‘liq kirishni saqlang yoki administrator tayinlang.",
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator o'zgartiradi.",
-        "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
+        "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
         "ROLE_VERSION_CONFLICT": "Rolni boshqa foydalanuvchi o'zgartirgan — sahifani yangilang.",
         "reload": "Yangilash",

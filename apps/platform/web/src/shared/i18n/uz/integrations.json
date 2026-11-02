@@ -1,5 +1,5 @@
 {
-  "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar ko‘rsatilmaydi: saqlangandan keyin faqat oxirgi 4 belgi qoladi.",
+  "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar saqlangandan keyin ko‘rsatilmaydi.",
   "readOnlySubtitle": "Ko‘rish rejimi: ulanishlar va kalitlarni administrator o‘zgartiradi.",
   "setupLink": "Platformani sozlash",
   "viewOnly": "Faqat ko‘rish",
@@ -13,7 +13,7 @@
   "noActivity": "Hali tekshirilmagan",
   "loadError": {
     "title": "Integratsiyalarni yuklab bo‘lmadi",
-    "text": "CRM javob bermadi. Bir daqiqa kutib, qayta urinib ko‘ring — ma’lumotlar yo‘qolmagan."
+    "text": "Server javob bermadi. Bir daqiqa kutib, qayta urinib ko‘ring — ma’lumotlar yo‘qolmagan."
   },
   "status": {
     "ok": "Ishlayapti",
@@ -24,12 +24,12 @@
   },
   "access": {
     "forbidden": "Rolingizga ochiq emas: bu ma’lumotlar faqat administratorga ochiq.",
-    "unavailable": "CRM javob bermadi: karta ma’lumotlari hozir mavjud emas."
+    "unavailable": "Server javob bermadi: karta ma’lumotlari hozir mavjud emas."
   },
   "cards": {
     "erp": {
       "title": "ERP",
-      "purpose": "Back-ofis: arizalar, tijoriy takliflar, ombor. CRM bilan juftlash va almashinuv kalitlari."
+      "purpose": "Arizalar, hisob-kitob, TT va ombor: aloqa va kalitlar."
     },
     "telegram": {
       "title": "Telegram",
@@ -37,19 +37,19 @@
     },
     "mail": {
       "title": "Pochta",
-      "purpose": "Butun tizim uchun bitta jo‘natuvchi: xodimlarga, kabinet mijozlariga xatlar, ERP dan TK va hujjatlar, EDS xatlari."
+      "purpose": "Xodim va mijozlarga xatlar uchun bitta jo‘natuvchi."
     },
     "services": {
       "title": "Tashqi xizmatlar",
-      "purpose": "Barcha tashqi xizmatlar reyestri: holat, tekshiruv, o‘chirgich."
+      "purpose": "Barcha tashqi xizmatlar: holat, tekshiruv, o‘chirgich."
     },
     "models": {
       "title": "AI modellari",
-      "purpose": "Rollar bo‘yicha modellar va kalitlar: muloqot, bilimlar bazasidan qidiruv, sifat tekshiruvi."
+      "purpose": "Modellar va kalitlar: muloqot, qidiruv, sifat tekshiruvi."
     },
     "spend": {
       "title": "Xarajatlar",
-      "purpose": "AI modellari qancha sarflaydi: bot va butun tizim, byudjetlar."
+      "purpose": "AI modellari xarajati va byudjetlar."
     },
     "storage": {
       "title": "Saqlash va zaxira nusxalar",
@@ -57,7 +57,7 @@
     },
     "system": {
       "title": "Tizim holati",
-      "purpose": "Tizim komponentlari: baza, navbatlar, bot, modellar."
+      "purpose": "Baza, navbatlar, bot va modellar: hammasi ishlayaptimi."
     }
   },
   "notes": {
@@ -87,7 +87,7 @@
       "setup": "Ulanmagan"
     },
     "notConfigured": {
-      "erp": "ERP ulanmagan: xodimlar back-ofisga kira olmaydi, arizalar ERPga tushmaydi.",
+      "erp": "ERP ulanmagan: arizalar hisob-kitobga tushmaydi, TT va ombor mavjud emas.",
       "telegram": "Bot tokeni kiritilmagan: mijozlar Telegramda yoza olmaydi.",
       "mail": "Pochta sozlanmagan: taklifnomalar va parolni tiklash xatlari yuborilmaydi.",
       "services": "Xizmat ulanmagan.",
@@ -121,14 +121,14 @@
   "panel": {
     "forbidden": {
       "title": "Rolingizga ochiq emas",
-      "text": "CRM bu ma’lumotlarni rolingizga bermaydi. Kerak bo‘lsa, administratordan so‘rang."
+      "text": "Bu ma’lumotlar rolingiz uchun yopiq. Kerak bo‘lsa, administratordan so‘rang."
     },
     "loadError": {
       "title": "Yuklab bo‘lmadi",
       "text": "So‘rov rad etildi. Sahifani yangilang yoki keyinroq urinib ko‘ring."
     },
     "unavailable": {
-      "title": "CRM javob bermayapti",
+      "title": "Server javob bermayapti",
       "text": "Ma’lumotlar vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
     }
   },
@@ -160,20 +160,20 @@
       "reconnect": "Qayta ulash",
       "title": "ERPni ulash",
       "url": "ERP manzili",
-      "urlHint": "Masalan, tizim tarmog‘i ichidagi manzil.",
+      "urlHint": "Masalan, shu serverdagi ichki manzil.",
       "code": "Bir martalik juftlash kodi",
-      "codeHint": "ERP sozlamalaridan olinadi. Kodsiz juftlash faqat ERP ruxsat bersa mumkin.",
+      "codeHint": "Kod ERP sozlamalarida; yangi o‘rnatishda u kerak emas.",
       "submit": "ERPni ulash",
-      "step1": "CRM ikkala yo‘nalish uchun almashinuv kalitlarini o‘zi yaratadi va kod orqali ERPga uzatadi.",
+      "step1": "Tizim ikkala yo‘nalish uchun almashinuv kalitlarini o‘zi yaratadi va kod orqali ERPga uzatadi.",
       "step2": "Kalitlar shifrlangan holda saqlanadi; ularni ko‘rmaysiz — faqat oxirgi 4 belgi.",
-      "step3": "Shundan so‘ng CRM darhol aloqani tekshiradi va natijani ko‘rsatadi.",
+      "step3": "Shundan so‘ng aloqa darhol tekshiriladi, natija shu yerda chiqadi.",
       "done": "Juftlash bajarildi."
     },
     "rotate": {
       "button": "Kalitni almashtirish",
       "title": "ERP kalitlarini almashtirish",
       "submit": "Kalitlarni yangilash",
-      "step1": "CRM yangi kalitlarni yaratadi va ERPga uzatadi.",
+      "step1": "Tizim yangi kalitlarni yaratadi va ERPga uzatadi.",
       "step2": "Eski kalitlar o‘tish davrida ishlashda davom etadi, keyin o‘zi o‘chadi — almashinuv uzilmaydi.",
       "step3": "Aloqa darhol tekshiriladi; ERP kalitlarni qabul qilmasa, eskilari kuchda qoladi.",
       "done": "Kalitlar yangilandi."
@@ -203,7 +203,7 @@
       "label": "Bot tokeni",
       "hint": "BotFather beradi. Saqlangandan keyin token ko‘rsatilmaydi.",
       "submit": "Tokenni saqlash",
-      "step1": "CRM tokenni Telegramda tekshiradi (getMe).",
+      "step1": "Token Telegramda tekshiriladi.",
       "step2": "Token shifrlangan holda saqlanadi; ekranda oxirgi 4 belgi qoladi.",
       "step3": "Bot bir necha soniyaga qayta ishga tushadi: mijozlar xabarlari yo‘qolmaydi.",
       "saved": "Token saqlandi"
@@ -283,9 +283,6 @@
       "smtpPassword": "SMTP paroli",
       "smtpPasswordHint": "Avvalgisini o‘zgartirmaslik uchun bo‘sh qoldiring.",
       "submit": "Sozlamalarni saqlash",
-      "step1": "CRM pochta sozlamalarini saqlaydi; SMTP paroli shifrlangan holda, ekranda oxirgi 4 belgi qoladi.",
-      "step2": "Barcha xatlar — xodimlarga, kabinet mijozlariga, ERP dan TK va hujjatlar, EDS xatlari — shu server orqali ketadi.",
-      "step3": "Aloqani va yuborishni tekshiring — natija tugmalar ostida darhol chiqadi.",
       "saved": "Pochta sozlamalari saqlandi"
     },
     "log": {
@@ -385,10 +382,10 @@
       "fallback-model": "Zaxira model",
       "embed-model": "Bilimlar bazasidan qidiruv",
       "judge-model": "Sifat tekshiruvi",
-      "intake-model": "ERP: so‘rovni tahlil qilish",
-      "match-model": "ERP: katalog bilan moslashtirish",
-      "draft-model": "ERP: taklif qoralamasi",
-      "enrich-model": "ERP: kartani boyitish"
+      "intake-model": "Hisob-kitob: so‘rovni tahlil qilish",
+      "match-model": "Hisob-kitob: katalog bilan moslashtirish",
+      "draft-model": "Hisob-kitob: taklif qoralamasi",
+      "enrich-model": "Hisob-kitob: kartani boyitish"
     },
     "health": {
       "ok": "Ishlayapti",
@@ -441,7 +438,7 @@
         "openai": "OpenAI konsolidagi identifikator"
       },
       "key": "Provayder kaliti",
-      "keyHint": "Server sozlamalaridagi kalitdan foydalanish uchun bo‘sh qoldiring. Kiritilgan kalit ko‘rsatilmaydi.",
+      "keyHint": "Bo‘sh — server sozlamalaridagi kalit. Kiritilgan kalit ko‘rsatilmaydi.",
       "base": "API manzili (ixtiyoriy)",
       "baseHint": "Provayderning o‘z shlyuzi uchun kerak.",
       "submit": "Modelni almashtirish",
@@ -499,7 +496,7 @@
     },
     "ensemble": {
       "title": "Butun tizim",
-      "text": "CRM va ERPdan barcha model chaqiruvlari shlyuz jurnali bo‘yicha.",
+      "text": "Barcha model chaqiruvlari shlyuz jurnali bo‘yicha.",
       "groupBy": "Guruhlash",
       "group": {
         "day": "Kun",
@@ -555,10 +552,7 @@
           "folderHint": "Disk ildizidan yo'l; bo'lmasa — papka o'zi yaratiladi. Standart: {{folder}}.",
           "password": "«Fayllar» ilova paroli",
           "passwordHint": "Yandex ID → Xavfsizlik → Ilova parollari'dagi parol. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
-          "passwordKeepHint": "Avvalgi parolni saqlash uchun bo'sh qoldiring.",
-          "step1": "Parol shifrlangan holda saqlanadi; faqat login va «kiritilgan» belgisi ko'rinadi.",
-          "step2": "Login, papka va parol nusxalash xizmatiga uzatiladi — birinchi nusxa bir necha daqiqada boshlanadi.",
-          "step3": "Saqlangandan so'ng darhol tekshiruv: Disk'ga kirish, papka va sinov faylini yozish; o'zgarish amallar jurnaliga tushadi."
+          "passwordKeepHint": "Avvalgi parolni saqlash uchun bo'sh qoldiring."
         }
       },
       "copyState": "Nusxa holati",
@@ -601,9 +595,6 @@
       "form": {
         "title": "Tashqi nusxani ulash",
         "submit": "Saqlash va tekshirish",
-        "step1": "Kalit shifrlangan holda saqlanadi; faqat hisob manzili va kalitning oxirgi belgilari ko'rinadi.",
-        "step2": "Kalit va papka nusxalash xizmatiga uzatiladi — birinchi nusxa bir necha daqiqada boshlanadi.",
-        "step3": "Saqlangandan so'ng darhol Google'da papkaga kirish tekshiriladi; o'zgarish amallar jurnaliga yoziladi.",
         "key": "Xizmat hisobi kaliti (JSON fayl)",
         "keyHint": "3-qadamda yuklab olingan fayl. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
         "keyKeepHint": "Avvalgi kalitni qoldirish uchun fayl tanlamang.",
@@ -677,7 +668,7 @@
     "SERVICE_NOT_SWITCHABLE": "Bu xizmatda o‘chirgich yo‘q.",
     "INTEGRATION_FAILED": "Tekshiruv o‘tmadi: xizmat javob bermadi yoki rad etdi.",
     "FORBIDDEN": "Bu amal rolingizga ochiq emas.",
-    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
+    "BACKEND_UNAVAILABLE": "Server javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
     "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Keyinroq urinib ko‘ring.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Holat o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
@@ -801,7 +792,7 @@
     "key": {
       "title": "{{vendor}} uchun yangi kalit",
       "label": "Yangi kalit",
-      "hint": "Kalit shu provayderning barcha rollariga qo‘llanadi: {{roles}}. Saqlangandan keyin ko‘rsatilmaydi.",
+      "hint": "Kalit provayderning barcha rollariga qo‘llanadi: {{roles}}.",
       "submit": "Kalitni qo‘llash",
       "step1": "Kalit shifrlangan holda saqlanadi va qayta ko‘rsatilmaydi.",
       "step2": "Modellar shlyuzi uni qayta ishga tushirmasdan qo‘llaydi; so‘ng provayder darhol tekshiriladi.",
@@ -824,7 +815,7 @@
       "none": "Manzil berilmagan — kabinetga taklifnomalar va «Kabinetni ochish» tugmasi mijozga yuborilmaydi."
     },
     "label": "Kabinet manzili",
-    "hint": "Masalan https://cabinet.railtech.uz. Bo'sh — server sozlamalaridagi manzil, agar u berilgan bo'lsa.",
+    "hint": "Masalan, https://cabinet.railtech.uz. Bo‘sh — server sozlamalaridagi manzil.",
     "check": "Ochilishini tekshirish",
     "save": "Manzilni saqlash",
     "saved": "Kabinet manzili saqlandi",

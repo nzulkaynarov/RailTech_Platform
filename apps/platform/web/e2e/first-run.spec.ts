@@ -411,7 +411,9 @@ test.describe("Первый запуск: банковские реквизит�
       await spaGoto(page, "/admin/setup");
       const card = stepCard(page, "Банковские реквизиты для счетов");
       await expect(card.getByText("Не сделано")).toBeVisible();
-      await expect(card.getByText(/Без расчётного счёта и МФО ERP не выставит/)).toBeVisible();
+      await expect(
+        card.getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
+      ).toBeVisible();
       await card
         .getByRole("link", { name: "Открыть «Компания и бланки»" })
         .scrollIntoViewIfNeeded();

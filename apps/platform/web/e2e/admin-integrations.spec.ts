@@ -68,7 +68,7 @@ async function tallScreenshot(page: Page, name: string): Promise<void> {
 test.describe("Внешние интеграции: администратор", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("обзор: «Требует внимания» вверху, карточки со статусом словом; «Проверить» чинит почту", async ({
+  test("обзор: карточки со статусом словом, под ними «Требует внимания»; «Проверить» чинит почту", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");

@@ -81,7 +81,7 @@ describe("Admin · Настройки бота: разделы", () => {
       "Форма «Заявка» с сайта",
       "Канал команды",
       "Оповещения о сбоях сервисов",
-      "Сделки",
+      "Причины отказа",
       "Бюджет моделей",
     ]);
     expect(screen.getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
@@ -94,10 +94,15 @@ describe("Admin · Настройки бота: разделы", () => {
     );
     expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
     expect(screen.getByText("Изменений нет")).toBeVisible();
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
+    expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
+    // Ссылка вместо дубля (S4): реквизиты для документов — в «Компания и бланки»
+    expect(
+      screen.getByRole("link", { name: "Реквизиты для документов — в «Компания и бланки»" }),
+    ).toHaveAttribute("href", "/admin/company?tab=details");
   });
 
-  it("сохранение раздела: «Есть несохранённые изменения», «Что произойдёт», сообщение; «Отменить изменения» возвращает значения", async () => {
+  it("сохранение раздела: «Есть несохранённые изменения», сообщение; «Отменить изменения» возвращает значения", async () => {
     await openBot("admin@demo.example");
     const name = await screen.findByLabelText("Название компании");
 
@@ -133,7 +138,7 @@ describe("Admin · Настройки бота: разделы", () => {
     fireEvent.click(screen.getByRole("button", { name: /Сохранить/ }));
 
     expect(
-      await screen.findByText("CRM не приняла значения: проверьте отмеченные поля."),
+      await screen.findByText("Значения не приняты: проверьте отмеченные поля."),
     ).toBeVisible();
     fireEvent.change(screen.getByLabelText("Название компании"), {
       target: { value: "Рельсы Демо" },
@@ -168,7 +173,7 @@ describe("Admin · Настройки бота: разделы", () => {
       "Канал команды": "Дежурные",
       "Оповещения о сбоях сервисов": "Личное сообщение админам в Telegram",
       "Бюджет моделей": "Дневной бюджет",
-      Сделки: "Причины отказа",
+      "Причины отказа": "Причины отказа",
     };
     for (const [name, label] of Object.entries(expectations)) {
       await section(name);
@@ -262,7 +267,7 @@ describe("Admin · Настройки бота: тексты", () => {
     expect(await screen.findByText("Ничего не найдено: измените запрос.")).toBeVisible();
   });
 
-  it("правка текста в боковом окне: три языка, предпросмотр подстановок, «Что произойдёт», сохранение раздела", async () => {
+  it("правка текста в боковом окне: три языка, предпросмотр подстановок, без «Что произойдёт», сохранение раздела", async () => {
     await openBot("admin@demo.example", "?section=texts");
 
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Приветствие" }));
@@ -270,7 +275,7 @@ describe("Admin · Настройки бота: тексты", () => {
     expect(
       await within(panel).findByRole("heading", { level: 3, name: "Приветствие" }),
     ).toBeVisible();
-    expect(within(panel).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    expect(within(panel).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
     const ru = within(panel).getByLabelText("Приветствие · Русский");
     fireEvent.change(ru, { target: { value: "Здравствуйте! Вас приветствует {company}." } });
     expect(
@@ -302,7 +307,7 @@ describe("Admin · Настройки бота: тексты", () => {
 });
 
 describe("Admin · Настройки бота: шаблоны ответов", () => {
-  it("список, создание с «Что произойдёт», правка и удаление", async () => {
+  it("список, создание без «Что произойдёт», правка и удаление (удаление — с ним)", async () => {
     await openBot("admin@demo.example", "?section=templates");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Шаблоны ответов" })).toBeVisible();
@@ -313,7 +318,7 @@ describe("Admin · Настройки бота: шаблоны ответов", 
     fireEvent.click(screen.getByRole("link", { name: "Новый шаблон" }));
     let panel = await panelEl();
     const form = await within(panel).findByRole("form", { name: "Новый шаблон" });
-    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    expect(within(form).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
     expect(within(form).getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
     fireEvent.change(within(form).getByLabelText("Название"), {
       target: { value: "Скидка по запросу" },
@@ -359,7 +364,7 @@ describe("Admin · Настройки бота: шаблоны ответов", 
     });
     fireEvent.click(within(form).getByRole("button", { name: "Создать шаблон" }));
 
-    expect(await within(form).findByRole("alert")).toHaveTextContent("CRM не приняла значения");
+    expect(await within(form).findByRole("alert")).toHaveTextContent("Значения не приняты");
   });
 });
 

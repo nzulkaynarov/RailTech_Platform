@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
 import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { Consequence } from "../../../shared/ui/Consequence";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { withParams } from "./refresh";
@@ -242,9 +241,6 @@ export function TextsSection({ schema, samples, saving, invalid, editable }: Pro
             <LocalizedFields name={[editing]} label={label(editing)} samples={samples} />
             {editable ? (
               <>
-                <Consequence
-                  items={[t("bot:texts.step1"), t("bot:texts.step2"), t("bot:texts.step3")]}
-                />
                 <div className="pf-fp-row">
                   <Button type="primary" loading={saving} onClick={form.submit}>
                     {t("bot:texts.save")}

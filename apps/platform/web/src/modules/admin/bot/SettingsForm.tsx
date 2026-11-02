@@ -65,6 +65,15 @@ function DryRun({ body, disabled }: { body: () => Values; disabled: boolean }) {
 }
 
 /** Форма одного раздела настроек бота по схеме CRM: «Что произойдёт», сохранение, отмена, пробный прогон правил передачи. */
+/**
+ * Ссылки вместо дублей (S4, ресёрч 2026-11-02 «Настройки» §1.4): то, что в разделе бота похоже на общую настройку,
+ * настраивается в своём месте — реквизиты для документов в «Компания и бланки», расходы на модели в «Подключения · Расходы».
+ */
+const SEE_ALSO: Partial<Record<string, string>> = {
+  company: "/admin/company?tab=details",
+  budget: "/admin/integrations?card=spend&panel=open",
+};
+
 export function SettingsForm({
   settingKey,
   title,
@@ -150,14 +159,12 @@ export function SettingsForm({
       {t(`bot:sectionHints.${settingKey}`, { defaultValue: "" }) ? (
         <p className="pf-fp-sub">{t(`bot:sectionHints.${settingKey}`)}</p>
       ) : null}
-      {editable ? (
-        <Consequence
-          items={[
-            t("bot:form.step1", { section: title }),
-            t("bot:form.step2"),
-            t("bot:form.step3"),
-          ]}
-        />
+      {SEE_ALSO[settingKey] ? (
+        <p className="pf-fp-sub">
+          <Link className="pf-focusable" to={SEE_ALSO[settingKey]}>
+            {t(`bot:seeAlso.${settingKey}`)}
+          </Link>
+        </p>
       ) : null}
       <ErrorNote message={save.isError ? botErrorText(t, save.error) : null} />
       <Card size="small">

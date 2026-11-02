@@ -1,5 +1,5 @@
 {
-  "subtitle": "Connection, texts, behaviour and knowledge base of the Telegram bot, quick reply templates and CSV exports. Changes take effect immediately.",
+  "subtitle": "Bot connection, texts and behaviour, reply templates and exports. Applies at once.",
   "readOnlySubtitle": "View only: the bot settings are changed by the administrator.",
   "viewOnly": "View only",
   "common": {
@@ -11,7 +11,7 @@
       "text": "Try again: nothing has been lost."
     },
     "unavailable": {
-      "title": "CRM is not responding",
+      "title": "The server is not responding",
       "text": "Wait a minute and try again: nothing has been lost."
     },
     "forbidden": {
@@ -46,7 +46,7 @@
     "qualification": "Qualification",
     "notifications": "Team channel",
     "budget": "Model budget",
-    "deals": "Deals",
+    "deals": "Loss reasons",
     "web_form": "Website \"Request\" form",
     "service_alerts": "Service failure alerts"
   },
@@ -68,10 +68,7 @@
     "discard": "Discard changes",
     "save": "Save",
     "saved": "Settings \"{{section}}\" saved",
-    "invalidField": "Check the value",
-    "step1": "The values of \"{{section}}\" are saved to CRM as a whole.",
-    "step2": "The bot and staff start working by the new values at once, without a restart.",
-    "step3": "The change goes to the CRM audit log: who and when, the old and the new value."
+    "invalidField": "Check the value"
   },
   "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
   "channelMoved": "The team channel is chosen on the “Connection” tab; here — whom to mention and how often to write to a manager.",
@@ -107,7 +104,7 @@
   },
   "templates": {
     "title": "Reply templates",
-    "intro": "Ready replies a manager inserts into the reply field in the lead card and edits before sending. Placeholders: {name} — the lead's name, {manager} — the manager's name.",
+    "intro": "Ready replies for the lead card. {name} — the lead's name, {manager} — the manager's name.",
     "new": "New template",
     "edit": "Edit template",
     "create": "Create template",
@@ -132,21 +129,18 @@
     "text": "Text — {{language}}",
     "placeholders": "Placeholders: {name} — the lead's name, {manager} — the manager's name. The Russian text is required.",
     "fallbackHint": "Empty — the Russian text is used.",
-    "step1": "The template is saved to CRM and appears for managers in the quick replies list in the lead card.",
-    "step2": "The manager inserts the text into the reply field and edits it before sending: the customer gets what the manager confirmed.",
-    "step3": "The change goes to the CRM audit log: who and when.",
     "dangerTitle": "Deletion",
     "remove": "Delete the template",
     "removeSubmit": "Delete template",
     "removeStep1": "The template disappears from the quick replies list in lead cards.",
     "removeStep2": "It cannot be restored: save the text separately if it is still needed.",
-    "removeStep3": "The deletion goes to the CRM audit log together with the template text."
+    "removeStep3": "The deletion goes to the audit log together with the template text."
   },
   "exports": {
     "title": "CSV exports",
-    "intro": "An Excel file with what is visible in CRM lists: leads, customers, deals. Filters are the same as on the list screens.",
-    "step1": "A CSV file (UTF-8, \";\" separator) is downloaded to your device; it has at most 10,000 rows. CRM prepares it and streams it.",
-    "step2": "The export goes to the CRM audit log: who, what and how many rows.",
+    "intro": "An Excel file with what you see in the lists: leads, customers, deals.",
+    "step1": "A CSV file (UTF-8, \";\" separator) of up to 10,000 rows is downloaded to your device.",
+    "step2": "The export goes to the audit log: who, what and how many rows.",
     "step3": "The file contains customers' personal data: keep it only on a work device and do not forward it in messengers.",
     "readOnly": "View only: the data is exported by the administrator.",
     "done": "File \"{{name}}\" downloaded",
@@ -198,10 +192,10 @@
     "DEFAULT": "The action was not completed. Try again later or contact the administrator.",
     "FORBIDDEN": "This action is not available to your role.",
     "NOT_FOUND": "The object was not found: it may have been changed already. Refresh the page.",
-    "BACKEND_UNAVAILABLE": "CRM is not responding. Wait a minute and try again.",
+    "BACKEND_UNAVAILABLE": "The server is not responding. Wait a minute and try again.",
     "INTEGRATION_FAILED": "A service needed for the action did not respond. Try again later.",
     "TOO_MANY_REQUESTS": "Too many requests. Try again in a minute.",
-    "VALIDATION_FAILED": "CRM did not accept the values: check the marked fields.",
+    "VALIDATION_FAILED": "The values were not accepted: check the marked fields.",
     "CONFLICT": "The object has changed. Refresh the page and try again.",
     "SESSION_EXPIRED": "The session has expired. Sign in again.",
     "reasons": {
@@ -221,9 +215,6 @@
     "caption": "Bot texts of this group",
     "search": "Find a text by name or situation",
     "notFound": "Nothing found: change the query.",
-    "step1": "The edit appears in the section form; it reaches CRM after \"Save\" in the section header.",
-    "step2": "Placeholders such as {name} and {manager} are replaced when sending; CRM rejects stray curly braces.",
-    "step3": "After saving, customers get the new text from the bot's next message.",
     "save": "Save the section",
     "close": "Close",
     "groups": {
@@ -233,7 +224,7 @@
       "clients": "Customers and documents",
       "menu": "Command menu",
       "phone": "Phone number",
-      "erp": "Back-office events (ERP)",
+      "erp": "Quotes, invoices and deliveries",
       "erase": "Deleting the conversation",
       "other": "Other texts",
       "advanced": "More"
@@ -538,7 +529,7 @@
       },
       "erp_quote_sent": {
         "label": "Quote sent to the customer",
-        "when": "ERP event \"quote sent\". {deal} — the deal. Under the text — the \"Open the quote\" and \"Cabinet\" buttons."
+        "when": "When a quote is sent. {deal} — the deal. Under the text — the \"Open the quote\" and \"Cabinet\" buttons."
       },
       "erp_quote_acceptance_code": {
         "label": "Quote confirmation code",
@@ -546,15 +537,15 @@
       },
       "erp_invoice_issued": {
         "label": "Invoice issued",
-        "when": "ERP event \"invoice issued\". {number} — number, {amount} {currency} — amount, {due} — due date."
+        "when": "When an invoice is issued. {number} — number, {amount} {currency} — amount, {due} — due date."
       },
       "erp_invoice_paid": {
         "label": "Invoice paid",
-        "when": "ERP event \"payment received\". {number} — invoice number, {amount} {currency} — amount."
+        "when": "When a payment is received. {number} — invoice number, {amount} {currency} — amount."
       },
       "erp_delivery_status": {
         "label": "Delivery status",
-        "when": "ERP event \"delivery status changed\". {deal} — deal, {summary} — contents, {status} — status in words."
+        "when": "When the delivery status changes. {deal} — deal, {summary} — contents, {status} — status in words."
       },
       "erp_delivery_statuses": {
         "label": "Delivery status names",
@@ -562,11 +553,11 @@
       },
       "erp_delivery_eta_changed": {
         "label": "Delivery date changed",
-        "when": "ERP event \"delivery date changed\". {deal} — deal, {summary} — contents, {eta} — the new date."
+        "when": "When the delivery date changes. {deal} — deal, {summary} — contents, {eta} — the new date."
       },
       "erp_act_issued": {
         "label": "Act generated",
-        "when": "ERP event \"act generated\". {number} — the act number."
+        "when": "When an act is generated. {number} — the act number."
       },
       "erp_btn_quote": {
         "label": "\"Open the quote\" button",
@@ -574,11 +565,11 @@
       },
       "erp_btn_invoice": {
         "label": "\"Open the invoice\" button",
-        "when": "Under the invoice message, if ERP sent a link."
+        "when": "Under the invoice message, if the invoice has a link."
       },
       "erp_btn_cabinet": {
         "label": "\"Cabinet\" button",
-        "when": "Under ERP event messages, if the cabinet address is set in \"Company\"."
+        "when": "Under messages about quotes, invoices and deliveries, if the cabinet address is set in \"Company\"."
       },
       "erp_staff_quote_accepted": {
         "label": "To staff: quote accepted",
@@ -604,7 +595,7 @@
   },
   "fields": {
     "name": "Company name",
-    "crm_base_url": "CRM address (for links in the channel)",
+    "crm_base_url": "Address for links in the team channel",
     "cabinet_url": "Customer cabinet address",
     "phone": "Company phone (the bot gives it when a customer asks)",
     "site": "Company website",
@@ -641,7 +632,7 @@
     "duty_user_ids": "On duty",
     "manager_dm_throttle_minutes": "Pause between personal notifications to a manager",
     "daily_usd": "Daily budget",
-    "erp_daily_usd": "ERP daily budget",
+    "erp_daily_usd": "Costing daily budget",
     "fallback_model_enabled": "Switch to the fallback model",
     "providers": "Daily limit per provider",
     "anthropic": "Anthropic (dialog, qualifier, quality check)",
@@ -664,7 +655,7 @@
     "repeat_minutes": "At most one service failure alert per"
   },
   "hints": {
-    "cabinet_url": "Customer cabinet address (https://…): the \"Cabinet\" button under bot messages about ERP events; empty — no button.",
+    "cabinet_url": "The \"Cabinet\" button under quote and invoice messages; empty — no button.",
     "max_text_chars": "Maximum characters in the \"What do you need\" field.",
     "consent_version": "Change the version — all customers confirm consent again.",
     "high_score_threshold": "A lead with this score or higher is handed off to a manager.",
@@ -680,7 +671,7 @@
     "manager_dm_throttle_minutes": "A lead writes several messages in a row — the manager gets one Telegram notification in this time.",
     "holidays": "On these days SLA is not counted and the bot replies with the off-hours text.",
     "daily_usd": "In US dollars. Above it — the dialog switches to the fallback model.",
-    "erp_daily_usd": "In US dollars per day (Tashkent time), 0 — no limit. ERP spend goes through the shared model gateway; exceeding is highlighted in \"Spend\" and \"System status\".",
+    "erp_daily_usd": "US dollars per day, 0 — no limit. Overspend shows in \"Spend\".",
     "anthropic": "USD per day (Tashkent time), 0 — no limit. Above it — the dialog runs on the fallback model.",
     "gemini": "USD per day (Tashkent time), 0 — no limit. Above it — the bot hands dialogs off to a manager.",
     "min_fill_seconds": "A form sent faster is rejected: this filters out robots.",
@@ -732,12 +723,16 @@
     "kb": "Knowledge base",
     "templates": "Reply templates",
     "exports": "Exports",
-    "none": "CRM did not send this settings section. Reload the page later."
+    "none": "This settings section did not load. Reload the page later."
   },
   "kbEntry": {
     "title": "Knowledge base documents",
     "text": "The documents the bot answers from, the “What the bot finds” search, gaps and the sandbox are on the knowledge base screen. Below — how the bot uses the base.",
     "readOnlyText": "Documents, gaps and the “What the bot finds” search are on the knowledge base screen, read only.",
     "open": "Open the knowledge base"
+  },
+  "seeAlso": {
+    "company": "Details for documents — in “Company & letterhead”",
+    "budget": "Model spend across the system — in “Connections · Spend”"
   }
 }

@@ -15,7 +15,7 @@
   "status": "Holati",
   "actions": "Amallar",
   "required": "Maydonni to'ldiring",
-  "subtitle": "ERP dagi o'z kompaniyangiz sozlamalari",
+  "subtitle": "Kompaniyangiz rekvizitlari, blankasi, raqamlash va ma’lumotnomalari",
   "readOnly": "Rolingiz kompaniya sozlamalarini faqat o'qiy oladi: maydonlar bloklangan.",
   "tabsLabel": "Kompaniya sozlamalari bo'limlari",
   "tabs": {
@@ -37,7 +37,7 @@
     "letter": "Xat"
   },
   "notSet": {
-    "title": "ERP da o'z kompaniyangiz hali yaratilmagan",
+    "title": "Kompaniyangiz hali yaratilmagan",
     "text": "Kompaniya birinchi ishga tushirish ustasida yaratilgach, sozlamalar paydo bo'ladi. Allaqachon yaratgan bo'lsangiz, qayta tekshiring.",
     "action": "Qayta tekshirish"
   },
@@ -58,19 +58,19 @@
     "deleted": "Logotip o'chirildi",
     "deleteTitle": "Kompaniya logotipini o'chirasizmi?",
     "consequence": {
-      "card": "Logotip ERP dagi kompaniya kartasidan yo'qoladi.",
-      "file": "Fayl ERP omboridan o'chiriladi, uni tiklab bo'lmaydi."
+      "card": "Logotip kompaniya kartasidan yo‘qoladi.",
+      "file": "Fayl ombordan o‘chiriladi, uni tiklab bo‘lmaydi."
     }
   },
   "errors": {
     "DEFAULT": "Amalni bajarib bo'lmadi. Keyinroq qayta urinib ko'ring.",
     "FORBIDDEN": "Bo'lim yoki amal rolingizga berilmagan.",
-    "ERP_FORBIDDEN": "ERP amalga ruxsat bermadi: u platforma administratoriga yoki ERP da kompaniya sozlamalari huquqiga ega xodimga mavjud.",
+    "ERP_FORBIDDEN": "Amal mavjud emas: u administratorga yoki kompaniya sozlamalari huquqiga ega xodimga ruxsat etilgan.",
     "MARGIN_FORBIDDEN": "Marja maydonlarini tannarx va marjani ko'rish huquqiga ega rollar o'zgartiradi.",
-    "COMPANY_NOT_SET": "ERP da o'z kompaniyangiz hali yaratilmagan.",
+    "COMPANY_NOT_SET": "Kompaniyangiz hali yaratilmagan.",
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Obyekt o'zgargan yoki ishlatilmoqda. Sahifani yangilab, qayta urinib ko'ring.",
-    "BACKEND_UNAVAILABLE": "ERP javob bermayapti. Keyinroq qayta urinib ko'ring.",
+    "BACKEND_UNAVAILABLE": "Server javob bermayapti. Keyinroq takrorlang.",
     "missingBlocks": {
       "title": "Yetishmayotgan bloklar:",
       "hint": "Ularni shablon matniga qo'ying yoki «Shablon amal qiladi» belgisini olib tashlang: qoralama bloklarsiz saqlanadi."
@@ -97,7 +97,7 @@
   },
   "details": {
     "title": "Kompaniya rekvizitlari",
-    "hint": "Kompaniyangizning yuridik ma'lumotlari. Ular «Rekvizitlarni kompaniya kartasidan olish» yoqilgan hujjat blankiga tushadi.",
+    "hint": "Kompaniyaning yuridik ma’lumotlari: hujjatlar blankasiga tushadi.",
     "logo": "Kompaniya logotipi",
     "name": "To'liq nomi",
     "nameRequired": "Nomini kiriting",
@@ -116,16 +116,12 @@
     "iso": "ISO 9001 sifat sertifikati bor",
     "save": "Rekvizitlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
-    "consequence": {
-      "erp": "Rekvizitlar ERP dagi o'z kompaniyangiz kartasida yangilanadi.",
-      "brand": "«Rekvizitlarni kompaniya kartasidan olish» yoqilgan blank yangi qiymatlarni oladi."
-    },
     "bankReady": "Hisoblar uchun rekvizitlar kiritilgan: «Hisob chiqarish» ishlaydi.",
     "bankMissing": "Hisoblar uchun bank rekvizitlari yo‘q: hisob raqami va MFO siz mijozga hisob chiqarib bo‘lmaydi. Quyidagi maydonlarni to‘ldiring va saqlang."
   },
   "brand": {
     "title": "Hujjatlar blanki va brendi",
-    "hint": "Kompaniyaning TT, shartnoma, hisob, dalolatnoma va xati qanday ko'rinadi. O'ngdagi namuna siz hali saqlamagan tahrirlar bilan o'zgaradi.",
+    "hint": "TT, shartnoma, hisob, dalolatnoma va xat ko‘rinishi. O‘ngdagi namuna saqlanmagan tahrirlar bilan.",
     "logo": "Blank logotipi",
     "legalName": "Blankdagi nomi",
     "inn": "Blankdagi STIR",
@@ -174,10 +170,6 @@
     },
     "save": "Blankni saqlash",
     "invalidField": "Qiymatni tekshiring",
-    "consequence": {
-      "documents": "Yangi TT, shartnoma, hisob va dalolatnomalar shu blankda rasmiylashtiriladi.",
-      "preview": "O'ngdagi namuna saqlanmagan tahrirlarni ko'rsatadi; saqlash uni o'zgartirmaydi."
-    },
     "previewTitle": "Hujjat namunasi",
     "previewKind": "Hujjat turi",
     "previewFrame": "Namuna: {{kind}}",
@@ -215,18 +207,15 @@
     "labelsHint": "Har bir hujjat turi uchun {type} ga nima qo'yiladi.",
     "save": "Raqamlashni saqlash",
     "saved": "Raqamlash saqlandi",
-    "consequence": {
-      "future": "Yangi raqamlar shu sxema bo'yicha beriladi.",
-      "issued": "Allaqachon berilgan raqamlar o'zgarmaydi.",
-      "noPrefix": "Prefikssiz platforma formati amal qiladi."
-    },
     "previewTitle": "Raqamlar namunasi",
     "previewUnavailable": "{seq} tokenli to'g'ri niqobni kiriting.",
-    "previewHint": "Namunani ERP sxema qoralamasi bo'yicha hisoblaydi; hisoblagichlar o'zgarmaydi."
+    "previewHint": "Namuna sxema qoralamasi bo‘yicha; hisoblagichlar o‘zgarmaydi.",
+    "note": "Yangi raqamlar shu sxema bo‘yicha beriladi; berilganlari o‘zgarmaydi.",
+    "noteNoPrefix": "Prefikssiz raqamlar standart formatda beriladi."
   },
   "quote": {
     "title": "TT bo'yicha standart shartlar",
-    "hint": "Yangi TT va hisob-kitobga nimalar qo'yiladi: valyuta, yetkazib berish bazisi, QQS, muddat, kafolat.",
+    "hint": "Yangi TTga nima qo‘yiladi: valyuta, bazis, QQS, muddat, kafolat.",
     "marginHidden": "Marja maydonlari yashirilgan: ularni tannarx va marja huquqiga ega rollar ko'radi.",
     "currency": "Tannarx valyutasi",
     "currencyHint": "«Valyutalar» ma'lumotnomasidan",
@@ -251,14 +240,11 @@
     "fxAgeHint": "1 dan 90 kungacha.",
     "save": "Shartlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
-    "consequence": {
-      "new": "Yangi TT va hisob-kitoblar bu qiymatlarni standart sifatida oladi.",
-      "issued": "Allaqachon rasmiylashtirilgan TT o'zgarmaydi."
-    }
+    "note": "Yangi TT shu qiymatlarni oladi; rasmiylashtirilgan TT o‘zgarmaydi."
   },
   "charges": {
     "title": "TT xarajat moddalari",
-    "hint": "Yetkazib berish bazislari bo'yicha hisob-kitobga qo'yiladigan summa va stavkalar: yuk tashish, sug'urta, bojxona.",
+    "hint": "Hisob-kitob uchun bazislar bo‘yicha summa va stavkalar: yuk, sug‘urta, bojxona.",
     "basis": "Yetkazib berish bazisi",
     "type": "Modda",
     "amount": "Summa",
@@ -285,7 +271,7 @@
   },
   "templates": {
     "title": "Hujjat va xat shablonlari",
-    "hint": "Shartnoma, dalolatnoma va xat matnlari. Platforma namunalari tahrirlanmaydi — ular o'zingizga nusxalanadi.",
+    "hint": "Shartnoma, dalolatnoma va xat matnlari. Platforma namunalari nusxalab olinadi.",
     "part": "Shablon turi",
     "parts": {
       "documents": "Hujjat shablonlari",
@@ -323,7 +309,7 @@
       "invalidField": "Qiymatni tekshiring",
       "consequence": {
         "delete": "Shablon hujjat rasmiylashtirishda tanlash ro'yxatidan yo'qoladi.",
-        "inUse": "Agar u bo'yicha hujjatlar rasmiylashtirilgan bo'lsa, ERP rad etadi — u holda shablonni o'chirib qo'ying."
+        "inUse": "Agar u bo‘yicha hujjatlar rasmiylashtirilgan bo‘lsa, o‘chirib bo‘lmaydi — u holda shablonni o‘chirib qo‘ying."
       },
       "empty": {
         "title": "Hozircha hujjat shablonlari yo'q",
@@ -385,8 +371,8 @@
     }
   },
   "reference": {
-    "title": "ERP ma'lumotnomalari",
-    "hint": "Davlatlar, valyutalar, o'lchov birliklari va yetkazib berish bazislari. Hujjatlar ishlatayotgan qator o'chirilmaydi — u o'chirib qo'yiladi.",
+    "title": "Ma’lumotnomalar",
+    "hint": "Davlatlar, valyutalar, birliklar va bazislar. Ishlatilgan qator o‘chirib qo‘yiladi.",
     "kind": "Ma'lumotnoma",
     "kinds": {
       "countries": "Davlatlar",
@@ -427,7 +413,7 @@
     "invalidField": "Qiymatni tekshiring",
     "consequence": {
       "delete": "Qator tanlash ro'yxatlaridan yo'qoladi.",
-      "disable": "Qatorni hujjatlar ishlatayotgan bo'lsa, ERP rad etadi — u holda uni o'chirib qo'ying."
+      "disable": "Qatorni hujjatlar ishlatayotgan bo‘lsa, o‘chirib bo‘lmaydi — u holda uni o‘chirib qo‘ying."
     },
     "empty": {
       "title": "Hozircha qatorlar yo'q",
@@ -441,7 +427,7 @@
   },
   "categories": {
     "title": "Katalog kategoriyalari va ular bo'yicha so'rovlar",
-    "hint": "Katalog kategoriyalari daraxti. Xodimlar yangi kategoriyani so'rov bilan so'raydi — qarorni platforma administratori qabul qiladi.",
+    "hint": "Katalog kategoriyalari daraxti. Yangi kategoriyani xodimlar so‘rov bilan so‘raydi.",
     "part": "Bo'lim",
     "parts": {
       "categories": "Kategoriyalar",
@@ -461,7 +447,7 @@
     "deleted": "Kategoriya o'chirildi",
     "consequence": {
       "delete": "Kategoriya katalogdan yo'qoladi.",
-      "children": "Ichki kategoriyali kategoriyani ERP o'chirmaydi — avval ularni ko'chiring yoki o'chiring."
+      "children": "Ichki kategoriyali kategoriyani o‘chirib bo‘lmaydi — avval ularni ko‘chiring yoki o‘chiring."
     },
     "empty": {
       "title": "Hozircha kategoriyalar yo'q",
@@ -509,17 +495,13 @@
   },
   "platform": {
     "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uchun umumiy ERP sozlamalari: QQS stavkasi va USD → UZS kursi.",
+    "hint": "Butun platforma uchun QQS stavkasi va USD → UZS kursi.",
     "vat": "QQS stavkasi, %",
     "vatHint": "0 dan 100 gacha.",
     "invalidVat": "Stavka — 0 dan 100 gacha son",
     "currencyUzs": "so'm",
     "updated": "Sozlamalar yangilangan",
     "save": "QQS stavkasini saqlash",
-    "consequence": {
-      "new": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi.",
-      "admin": "Stavkani platforma administratori o'zgartiradi; boshqa rollarga ERP rad etadi."
-    },
     "fx": {
       "title": "USD → UZS kursi",
       "current": "Joriy kurs",
@@ -558,6 +540,7 @@
         "emptyTitle": "Hozircha qo‘lda kiritish bo‘lmagan",
         "emptyText": "Bu yerda qo‘lda kiritilgan kurslar va avtomatik yuklash qo‘lda kiritilgan kursga tegmagan holatlar ko‘rinadi."
       }
-    }
+    },
+    "note": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi."
   }
 }

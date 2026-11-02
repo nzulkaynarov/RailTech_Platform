@@ -15,7 +15,7 @@
   "status": "Status",
   "actions": "Actions",
   "required": "Fill in this field",
-  "subtitle": "Your company settings in ERP",
+  "subtitle": "Your company's details, letterhead, numbering and reference lists",
   "readOnly": "Your role can only read company settings: the fields are locked.",
   "tabsLabel": "Company settings sections",
   "tabs": {
@@ -37,7 +37,7 @@
     "letter": "Letter"
   },
   "notSet": {
-    "title": "Your company has not been created in ERP yet",
+    "title": "Your company has not been created yet",
     "text": "Settings appear once the company is created in the first-run wizard. If you have already created it, check again.",
     "action": "Check again"
   },
@@ -58,19 +58,19 @@
     "deleted": "Logo deleted",
     "deleteTitle": "Delete the company logo?",
     "consequence": {
-      "card": "The logo disappears from the company card in ERP.",
-      "file": "The file is deleted from ERP storage and cannot be restored."
+      "card": "The logo disappears from the company card.",
+      "file": "The file is deleted from storage and cannot be restored."
     }
   },
   "errors": {
     "DEFAULT": "The action failed. Try again later.",
     "FORBIDDEN": "This section or action is not allowed for your role.",
-    "ERP_FORBIDDEN": "ERP did not allow this action: it is available to the platform administrator or an employee with company settings rights in ERP.",
+    "ERP_FORBIDDEN": "This action is not allowed: it is available to the administrator or an employee with company settings rights.",
     "MARGIN_FORBIDDEN": "Margin fields are changed by roles that may see cost and margin.",
-    "COMPANY_NOT_SET": "Your company has not been created in ERP yet.",
+    "COMPANY_NOT_SET": "Your company has not been created yet.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "The object has changed or is in use. Refresh the page and try again.",
-    "BACKEND_UNAVAILABLE": "ERP is not responding. Try again later.",
+    "BACKEND_UNAVAILABLE": "The server is not responding. Try again later.",
     "missingBlocks": {
       "title": "Missing blocks:",
       "hint": "Insert them into the template text or clear \"Template is active\": a draft saves without the blocks."
@@ -97,7 +97,7 @@
   },
   "details": {
     "title": "Company details",
-    "hint": "Your company's legal data. It goes onto the letterhead wherever “Take details from the company card” is on.",
+    "hint": "Your company's legal data: it goes onto the letterhead.",
     "logo": "Company logo",
     "name": "Full name",
     "nameRequired": "Enter the name",
@@ -116,16 +116,12 @@
     "iso": "Has ISO 9001 quality certificate",
     "save": "Save details",
     "invalidField": "Check the value",
-    "consequence": {
-      "erp": "The details are updated in your company card in ERP.",
-      "brand": "Letterheads with “Take details from the company card” on will use the new values."
-    },
     "bankReady": "Bank details for invoices are set: “Issue invoice” will work.",
     "bankMissing": "No bank details for invoices: without the bank account and MFO an invoice cannot be issued to a client. Fill in the fields below and save."
   },
   "brand": {
     "title": "Document letterhead and brand",
-    "hint": "How the company's quote, contract, invoice, act and letter look. The sample on the right follows your edits before you save.",
+    "hint": "How quotes, contracts, invoices, acts and letters look. The sample shows unsaved edits.",
     "logo": "Letterhead logo",
     "legalName": "Name on the letterhead",
     "inn": "Tax ID on the letterhead",
@@ -174,10 +170,6 @@
     },
     "save": "Save letterhead",
     "invalidField": "Check the value",
-    "consequence": {
-      "documents": "New quotes, contracts, invoices and acts are issued on this letterhead.",
-      "preview": "The sample on the right shows unsaved edits; saving does not change it."
-    },
     "previewTitle": "Document sample",
     "previewKind": "Document type",
     "previewFrame": "Sample: {{kind}}",
@@ -215,18 +207,15 @@
     "labelsHint": "What is put into {type} for each document type.",
     "save": "Save numbering",
     "saved": "Numbering saved",
-    "consequence": {
-      "future": "New numbers follow this scheme.",
-      "issued": "Numbers already issued do not change.",
-      "noPrefix": "Without a prefix the platform format applies."
-    },
     "previewTitle": "Number samples",
     "previewUnavailable": "Enter a valid mask containing {seq}.",
-    "previewHint": "ERP calculates the sample from the draft scheme; counters do not change."
+    "previewHint": "The sample follows the draft scheme; counters do not change.",
+    "note": "New numbers follow this scheme; issued ones do not change.",
+    "noteNoPrefix": "Without a prefix, numbers use the default format."
   },
   "quote": {
     "title": "Default quote terms",
-    "hint": "What goes into a new quote and calculation: currency, delivery basis, VAT, term, warranty.",
+    "hint": "What a new quote gets by default: currency, basis, VAT, term, warranty.",
     "marginHidden": "Margin fields are hidden: roles with cost and margin rights see them.",
     "currency": "Cost currency",
     "currencyHint": "From the Currencies list",
@@ -251,14 +240,11 @@
     "fxAgeHint": "From 1 to 90 days.",
     "save": "Save terms",
     "invalidField": "Check the value",
-    "consequence": {
-      "new": "New quotes and calculations take these values by default.",
-      "issued": "Quotes already issued do not change."
-    }
+    "note": "New quotes take these values; issued quotes do not change."
   },
   "charges": {
     "title": "Quote charge items",
-    "hint": "Amounts and rates per delivery basis that go into a calculation: freight, insurance, customs.",
+    "hint": "Amounts and rates per delivery basis for costing: freight, insurance, customs.",
     "basis": "Delivery basis",
     "type": "Item",
     "amount": "Amount",
@@ -285,7 +271,7 @@
   },
   "templates": {
     "title": "Document and email templates",
-    "hint": "Contract, act and email texts. Platform samples are not edited — copy them to your company.",
+    "hint": "Texts of contracts, acts and letters. Platform samples are copied, not edited.",
     "part": "Template type",
     "parts": {
       "documents": "Document templates",
@@ -323,7 +309,7 @@
       "invalidField": "Check the value",
       "consequence": {
         "delete": "The template disappears from the choice list when issuing documents.",
-        "inUse": "If documents were already issued from it, ERP refuses — disable the template instead."
+        "inUse": "If documents were already issued from it, it cannot be deleted — disable the template instead."
       },
       "empty": {
         "title": "No document templates yet",
@@ -385,8 +371,8 @@
     }
   },
   "reference": {
-    "title": "ERP reference lists",
-    "hint": "Countries, currencies, units and delivery bases. A row that documents already use is disabled, not deleted.",
+    "title": "Reference lists",
+    "hint": "Countries, currencies, units and bases. A row in use is disabled, not deleted.",
     "kind": "Reference list",
     "kinds": {
       "countries": "Countries",
@@ -427,7 +413,7 @@
     "invalidField": "Check the value",
     "consequence": {
       "delete": "The row disappears from choice lists.",
-      "disable": "If documents already use the row, ERP refuses — disable it instead."
+      "disable": "If documents already use the row, it cannot be deleted — disable it instead."
     },
     "empty": {
       "title": "No rows yet",
@@ -441,7 +427,7 @@
   },
   "categories": {
     "title": "Catalogue categories and requests for them",
-    "hint": "The catalogue category tree. Employees request a new category; the platform administrator decides.",
+    "hint": "The catalogue category tree. Employees request new categories.",
     "part": "Part",
     "parts": {
       "categories": "Categories",
@@ -461,7 +447,7 @@
     "deleted": "Category deleted",
     "consequence": {
       "delete": "The category disappears from the catalogue.",
-      "children": "ERP will not delete a category with subcategories — move or delete them first."
+      "children": "A category with subcategories cannot be deleted — move or delete them first."
     },
     "empty": {
       "title": "No categories yet",
@@ -509,17 +495,13 @@
   },
   "platform": {
     "title": "Platform settings",
-    "hint": "ERP settings shared by the whole platform: the VAT rate and the USD → UZS exchange rate.",
+    "hint": "The VAT rate and the USD → UZS rate for the whole platform.",
     "vat": "VAT rate, %",
     "vatHint": "From 0 to 100.",
     "invalidVat": "The rate is a number from 0 to 100",
     "currencyUzs": "UZS",
     "updated": "Settings updated",
     "save": "Save VAT rate",
-    "consequence": {
-      "new": "New calculations and documents use this rate.",
-      "admin": "The platform administrator changes the rate; ERP refuses other roles."
-    },
     "fx": {
       "title": "USD → UZS exchange rate",
       "current": "Current rate",
@@ -558,6 +540,7 @@
         "emptyTitle": "No manual entries yet",
         "emptyText": "Rates entered manually appear here, along with cases where the automatic load left a manual rate untouched."
       }
-    }
+    },
+    "note": "New calculations and documents use this rate."
   }
 }

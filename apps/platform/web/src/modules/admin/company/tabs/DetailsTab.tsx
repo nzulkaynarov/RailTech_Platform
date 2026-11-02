@@ -222,7 +222,6 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
           loading={update.isPending}
           disabled={isEmptyObject(changed)}
           error={update.error}
-          consequence={[t("details.consequence.erp"), t("details.consequence.brand")]}
           onDiscard={() => {
             form.resetFields();
             update.reset();

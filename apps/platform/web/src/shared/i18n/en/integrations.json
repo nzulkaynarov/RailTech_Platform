@@ -1,5 +1,5 @@
 {
-  "subtitle": "Connections, keys and service status. Secrets are never shown: after saving, only the last 4 characters remain.",
+  "subtitle": "Connections, keys and service status. Secrets are not shown after saving.",
   "readOnlySubtitle": "View mode: connections and keys are managed by the administrator.",
   "setupLink": "Platform setup",
   "viewOnly": "View only",
@@ -13,7 +13,7 @@
   "noActivity": "Not checked yet",
   "loadError": {
     "title": "Could not load integrations",
-    "text": "CRM did not respond. Wait a minute and try again — no data is lost."
+    "text": "The server did not respond. Wait a minute and try again — no data is lost."
   },
   "status": {
     "ok": "Working",
@@ -24,12 +24,12 @@
   },
   "access": {
     "forbidden": "Not available to your role: this data is open to the administrator only.",
-    "unavailable": "CRM did not respond: the card data is unavailable right now."
+    "unavailable": "The server did not respond: the card data is unavailable right now."
   },
   "cards": {
     "erp": {
       "title": "ERP",
-      "purpose": "Back office: requests, quotes, stock. Pairing with CRM and exchange keys."
+      "purpose": "Requests, costing, quotes and stock: link and keys."
     },
     "telegram": {
       "title": "Telegram",
@@ -37,19 +37,19 @@
     },
     "mail": {
       "title": "Mail",
-      "purpose": "One sender for the whole system: emails to staff, cabinet clients, quotes and documents from ERP, EDS letters."
+      "purpose": "One sender for emails to staff and clients."
     },
     "services": {
       "title": "External services",
-      "purpose": "Registry of all external services: status, check, switch."
+      "purpose": "All external services: status, check, switch."
     },
     "models": {
       "title": "AI models",
-      "purpose": "Models and keys by role: dialogue, knowledge base search, quality check."
+      "purpose": "Models and keys: dialogue, search, quality check."
     },
     "spend": {
       "title": "Spend",
-      "purpose": "What AI models cost: the bot and the whole system, budgets."
+      "purpose": "What AI models cost, and budgets."
     },
     "storage": {
       "title": "Storage and backups",
@@ -57,7 +57,7 @@
     },
     "system": {
       "title": "System status",
-      "purpose": "System components: database, queues, bot, models."
+      "purpose": "Database, queues, bot and models: is everything up."
     }
   },
   "notes": {
@@ -87,7 +87,7 @@
       "setup": "Not connected"
     },
     "notConfigured": {
-      "erp": "ERP is not connected: staff will not get back-office access, requests will not reach ERP.",
+      "erp": "ERP is not connected: requests will not reach costing; quotes and stock are unavailable.",
       "telegram": "The bot token is not set: customers cannot write in Telegram.",
       "mail": "Mail is not configured: invitations and password resets will not be sent.",
       "services": "The service is not connected.",
@@ -121,14 +121,14 @@
   "panel": {
     "forbidden": {
       "title": "Not available to your role",
-      "text": "CRM does not give this data to your role. If you need it, ask the administrator."
+      "text": "This data is not available to your role. If you need it, ask the administrator."
     },
     "loadError": {
       "title": "Could not load",
       "text": "The request was rejected. Refresh the page or try later."
     },
     "unavailable": {
-      "title": "CRM is not responding",
+      "title": "The server is not responding",
       "text": "The data is temporarily unavailable. Try again in a minute."
     }
   },
@@ -160,20 +160,20 @@
       "reconnect": "Connect again",
       "title": "Connect ERP",
       "url": "ERP address",
-      "urlHint": "For example, the address inside the system network.",
+      "urlHint": "For example, an internal address on the same server.",
       "code": "One-time pairing code",
-      "codeHint": "Taken from the ERP settings. Pairing without a code is possible only if ERP allows it.",
+      "codeHint": "The code is in the ERP settings; a new installation needs none.",
       "submit": "Connect ERP",
-      "step1": "CRM generates exchange keys for both directions and hands them to ERP using the code.",
+      "step1": "The system generates exchange keys for both directions and hands them to ERP using the code.",
       "step2": "The keys are stored encrypted; you will not see them — only the last 4 characters.",
-      "step3": "Right after that CRM checks the connection and shows the result.",
+      "step3": "Right after that the connection is checked and the result appears here.",
       "done": "Pairing completed."
     },
     "rotate": {
       "button": "Rotate key",
       "title": "Rotate ERP keys",
       "submit": "Renew keys",
-      "step1": "CRM generates new keys and hands them to ERP.",
+      "step1": "The system generates new keys and hands them to ERP.",
       "step2": "The old keys keep working for a transition period, then expire on their own — the exchange is not interrupted.",
       "step3": "The connection is checked right away; if ERP does not accept the keys, the old ones stay valid.",
       "done": "Keys renewed."
@@ -203,7 +203,7 @@
       "label": "Bot token",
       "hint": "Issued by BotFather. The token is not shown after saving.",
       "submit": "Save token",
-      "step1": "CRM checks the token with Telegram (getMe).",
+      "step1": "The token is checked with Telegram.",
       "step2": "The token is stored encrypted; only the last 4 characters stay on screen.",
       "step3": "The bot restarts for a few seconds: customer messages are not lost.",
       "saved": "Token saved"
@@ -283,9 +283,6 @@
       "smtpPassword": "SMTP password",
       "smtpPasswordHint": "Leave empty to keep the current one.",
       "submit": "Save settings",
-      "step1": "CRM saves the mail settings; the SMTP password is stored encrypted, only the last 4 characters stay on screen.",
-      "step2": "All emails — to staff, cabinet clients, quotes and documents from ERP, EDS letters — will go through this server.",
-      "step3": "Check the connection and sending — the result appears right under the buttons.",
       "saved": "Mail settings saved"
     },
     "log": {
@@ -385,10 +382,10 @@
       "fallback-model": "Fallback model",
       "embed-model": "Knowledge base search",
       "judge-model": "Quality check",
-      "intake-model": "ERP: request parsing",
-      "match-model": "ERP: catalog matching",
-      "draft-model": "ERP: quote draft",
-      "enrich-model": "ERP: card enrichment"
+      "intake-model": "Costing: request parsing",
+      "match-model": "Costing: catalog matching",
+      "draft-model": "Costing: quote draft",
+      "enrich-model": "Costing: card enrichment"
     },
     "health": {
       "ok": "Working",
@@ -441,7 +438,7 @@
         "openai": "the ID from the OpenAI console"
       },
       "key": "Provider key",
-      "keyHint": "Leave empty to use the key from the server settings. The key you enter is not shown.",
+      "keyHint": "Empty — the key from the server settings. The key you enter is not shown.",
       "base": "API address (optional)",
       "baseHint": "Needed for the provider's own gateway.",
       "submit": "Change model",
@@ -499,7 +496,7 @@
     },
     "ensemble": {
       "title": "Whole system",
-      "text": "All model calls from CRM and ERP according to the gateway log.",
+      "text": "All model calls according to the gateway log.",
       "groupBy": "Group by",
       "group": {
         "day": "Day",
@@ -555,10 +552,7 @@
           "folderHint": "Path from the Disk root; if missing, the folder is created. Default: {{folder}}.",
           "password": "“Files” app password",
           "passwordHint": "The password from Yandex ID → Security → App passwords. Stored encrypted and never shown.",
-          "passwordKeepHint": "Leave empty to keep the current password.",
-          "step1": "The password is stored encrypted; only the login and a “set” mark are shown.",
-          "step2": "The login, folder and password go to the copy service — the first copy starts within minutes.",
-          "step3": "Right after saving — a check: Disk sign-in, the folder and writing a test file; the change goes to the audit log."
+          "passwordKeepHint": "Leave empty to keep the current password."
         }
       },
       "copyState": "Copy state",
@@ -601,9 +595,6 @@
       "form": {
         "title": "Offsite copy connection",
         "submit": "Save and check",
-        "step1": "The key is stored encrypted; only the account address and the last characters of the key are shown.",
-        "step2": "The key and folder are handed to the copy service — the first copy starts within a few minutes.",
-        "step3": "Right after saving, access to the folder is checked with Google; the change is recorded in the action log.",
         "key": "Service account key (JSON file)",
         "keyHint": "The file downloaded in step 3. Stored encrypted and never shown.",
         "keyKeepHint": "Do not pick a file to keep the current key.",
@@ -677,7 +668,7 @@
     "SERVICE_NOT_SWITCHABLE": "This service has no switch.",
     "INTEGRATION_FAILED": "The check failed: the service did not respond or refused.",
     "FORBIDDEN": "This action is not available to your role.",
-    "BACKEND_UNAVAILABLE": "CRM is not responding. Try again in a minute.",
+    "BACKEND_UNAVAILABLE": "The server is not responding. Try again in a minute.",
     "TOO_MANY_REQUESTS": "Too many requests. Try again later.",
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "The state has changed. Refresh the page and try again.",
@@ -801,7 +792,7 @@
     "key": {
       "title": "New {{vendor}} key",
       "label": "New key",
-      "hint": "The key is applied to every role of this provider: {{roles}}. It is not shown after saving.",
+      "hint": "The key applies to every role of this provider: {{roles}}.",
       "submit": "Apply key",
       "step1": "The key is stored encrypted and never shown again.",
       "step2": "The model gateway applies it without a restart; then the provider is checked right away.",
@@ -824,7 +815,7 @@
       "none": "No address — cabinet invitations and the \"Open cabinet\" button do not go to the client."
     },
     "label": "Cabinet address",
-    "hint": "For example https://cabinet.railtech.uz. Empty — the address from the server settings, if set there.",
+    "hint": "For example, https://cabinet.railtech.uz. Empty — the server setting is used.",
     "check": "Check availability",
     "save": "Save address",
     "saved": "Cabinet address saved",

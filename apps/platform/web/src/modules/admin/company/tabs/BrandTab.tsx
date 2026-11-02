@@ -260,7 +260,6 @@ function BrandForm({ brand }: { brand: BrandProfile }) {
             loading={update.isPending}
             disabled={isEmptyObject(changed)}
             error={update.error}
-            consequence={[t("brand.consequence.documents"), t("brand.consequence.preview")]}
             onDiscard={() => {
               form.resetFields();
               update.reset();
