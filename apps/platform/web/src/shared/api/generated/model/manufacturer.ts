@@ -12,4 +12,6 @@ export interface Manufacturer {
   country_name: string | null;
   website: string;
   is_active: boolean;
+  /** Компания-изготовитель (поставщик с типом «изготовитель»), если заведена */
+  company_id: CompanyItemRef | null;
 }

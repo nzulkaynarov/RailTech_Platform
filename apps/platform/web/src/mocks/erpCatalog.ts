@@ -18,9 +18,14 @@ import type {
   Manufacturer,
   ManufacturerCreate,
   ManufacturerUpdate,
+  PriceImportApplyIn,
+  PriceImportReport,
+  SupplierCreate,
   SupplierDetail,
+  SupplierOfferCreate,
   SupplierOfferUpdate,
   SupplierRow,
+  SupplierUpdate,
   TechDoc,
   TechDocKind,
 } from "../shared/api/generated/model";
@@ -28,11 +33,13 @@ import {
   COUNTRIES,
   CURRENCIES,
   DEALS,
+  DELIVERY_BASES,
   MOCK_TODAY,
   type MockBrigade,
   type MockItem,
   type MockDoc,
   type MockOffer,
+  type MockProposal,
   type MockSupplier,
   UNITS,
   dealNumber,
@@ -146,6 +153,7 @@ function rowOf(item: MockItem): CatalogItem {
     offers_count: own.length,
     nearest_valid_until: dates.sort()[0] ?? null,
     docs_count: readErpCatalog().docs.filter((d) => d.doc.product?.id === item.id).length,
+    proposals_count: item.proposals.length,
   };
 }
 
@@ -165,11 +173,29 @@ function offerOf(offer: MockOffer, prices: boolean): CatalogOffer {
     in_stock_lead_days: offer.in_stock_lead_days,
     order_lead_days: offer.order_lead_days,
     stock_status: offer.stock_status,
+    delivery_basis: offer.delivery_basis,
+    lead_time: offer.lead_time,
+    source: offer.source,
+    updated_at: offer.updated_at,
     valid_from: offer.valid_from,
     valid_until: offer.valid_until,
     is_active: offer.is_active,
     validity: validityOf(offer.valid_until),
   };
+}
+
+/** Порог публикации мока: название, категория, единица и код ТН ВЭД (как полнота ERP по умолчанию). */
+function missingOf(item: MockItem): string[] {
+  return [
+    ...(item.categoryId ? [] : ["category"]),
+    ...(item.unitId ? [] : ["uom"]),
+    ...(item.hs_code ? [] : ["hs_code"]),
+  ];
+}
+
+function supplierName(id: string | null): { id: string; name: string } | null {
+  const supplier = readErpCatalog().suppliers.find((s) => s.id === id);
+  return supplier ? { id: supplier.id, name: supplier.name } : null;
 }
 
 function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
@@ -179,13 +205,24 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
     description: item.description,
     gost_drawing: item.gost_drawing,
     hs_code: item.hs_code,
-    manufacturer_part_number: "",
+    manufacturer_part_number: item.mpn,
     brand: item.brand,
+    brand_id: item.brandId,
+    source_supplier: supplierName(item.sourceSupplierId),
     offers: state.offers.filter((o) => o.itemId === item.id).map((o) => offerOf(o, who.prices)),
     prices_visible: who.prices,
     tech_docs: state.docs
       .filter((d) => d.doc.product?.id === item.id)
       .map((d) => ({ id: d.doc.id, title: d.doc.title, kind: d.doc.kind })),
+    proposals: item.proposals.map((p) => ({
+      id: p.id,
+      field: p.field,
+      current: p.current,
+      proposed: p.proposed,
+      supplier: supplierName(p.supplierId),
+      created_at: p.created_at,
+    })),
+    publish: { publishable: missingOf(item).length === 0, missing: missingOf(item) },
   };
 }
 
@@ -201,7 +238,11 @@ function supplierRowOf(supplier: MockSupplier): SupplierRow {
     id: supplier.id,
     name: supplier.name,
     tin: supplier.tin,
+    registration_number: supplier.registration_number,
     country: supplier.country,
+    country_id: supplier.country_id,
+    currency: supplier.currency,
+    is_manufacturer: supplier.is_manufacturer,
     offers_count: own.length,
     expired_count: states.filter((s) => s === "expired").length,
     expiring_count: states.filter((s) => s === "expiring").length,
@@ -280,7 +321,255 @@ async function parseUpload(request: Request): Promise<Upload | null> {
   return upload;
 }
 
+function supplierDetailOf(supplier: MockSupplier, who: Caller): SupplierDetail {
+  const state = readErpCatalog();
+  const offers = state.offers.filter((o) => o.supplierId === supplier.id);
+  const brands = new Map<string, string>();
+  for (const offer of offers) {
+    const item = state.items.find((i) => i.id === offer.itemId);
+    if (item?.brandId && item.brand && offer.is_active) brands.set(item.brandId, item.brand);
+  }
+  return {
+    ...supplierRowOf(supplier),
+    contact_person: supplier.contact_person,
+    phone: supplier.phone,
+    email: supplier.email,
+    website: supplier.website,
+    legal_address: supplier.legal_address,
+    offers: offers.map((o) => offerOf(o, who.prices)),
+    prices_visible: who.prices,
+    brands: [...brands].map(([id, name]) => ({ id, name })),
+    manufactured_brands: state.manufacturers
+      .filter((m) => m.company_id === supplier.id)
+      .map((m) => ({ id: m.id, name: m.name })),
+  };
+}
+
+/** Снимок цены в историю (CAT-1): как pghistory в ERP — при создании и каждой правке. */
+function snapshot(offer: MockOffer, by: string | null): void {
+  offer.updated_at = `${MOCK_TODAY}T${String(9 + offer.history.length).padStart(2, "0")}:00:00Z`;
+  offer.history.unshift({
+    at: offer.updated_at,
+    amount: offer.amount,
+    currency: offer.currency,
+    valid_from: offer.valid_from,
+    valid_until: offer.valid_until,
+    delivery_basis: offer.delivery_basis,
+    source: offer.source,
+    by,
+  });
+}
+
+function applyProposal(item: MockItem, proposal: MockProposal): void {
+  if (proposal.field === "name") item.name = proposal.proposed;
+  if (proposal.field === "description") item.description = proposal.proposed;
+  if (proposal.field === "hs_code") item.hs_code = proposal.proposed;
+  if (proposal.field === "gost_drawing") item.gost_drawing = proposal.proposed;
+}
+
+// --- загрузка прайса (CAT-1): детерминированный сценарий вымышленного прайса -----------------------
+
+interface ImportJob {
+  report: PriceImportReport;
+}
+
+const jobs = new Map<string, ImportJob>();
+
+/** Строки «файла» мока: новая позиция, цена на опубликованную карточку с другим наименованием, строка с ошибкой. */
+const IMPORT_ROWS = [
+  {
+    row: 2,
+    name: "Клапан запорный КЗ-50",
+    mpn: "KZ-50",
+    amount: "84.00",
+    currency: "EUR",
+    lead: "30 дн.",
+  },
+  {
+    row: 3,
+    name: "Кабель силовой ВВГнг-LS 3×2,5",
+    mpn: "ВВГ-3-2.5",
+    amount: "11.90",
+    currency: "EUR",
+    lead: "21 дн.",
+  },
+] as const;
+
+function runImport(
+  supplier: MockSupplier,
+  write: boolean,
+  validFrom: string | null,
+  validUntil: string | null,
+  ai: boolean,
+): PriceImportReport {
+  const state = readErpCatalog();
+  const report: PriceImportReport = {
+    checked: !write,
+    items_created: 0,
+    items_matched: 0,
+    offers_created: 0,
+    offers_updated: 0,
+    proposal_count: 0,
+    proposals: [],
+    error_count: 1,
+    errors: [{ row: 4, code: "UNKNOWN_CURRENCY", value: "XYZ" }],
+    warning_count: 0,
+    warnings: [],
+    rows_truncated: 0,
+    unpublishable: 0,
+    rows_token: ai && !write ? "f".repeat(32) : null,
+    ai_used: ai ? true : null,
+  };
+  for (const line of IMPORT_ROWS) {
+    let item = state.items.find((i) => i.mpn === line.mpn);
+    if (item) report.items_matched += 1;
+    else {
+      report.items_created += 1;
+      report.unpublishable += 1;
+      if (write) {
+        const id = nextId();
+        item = {
+          id,
+          sku: `RT-${id.padStart(4, "0")}`,
+          name: line.name,
+          kind: "on_order",
+          unitId: "1",
+          vat_rate: null,
+          categoryId: null,
+          status: "DRAFT",
+          description: "",
+          gost_drawing: "",
+          hs_code: "",
+          brand: null,
+          brandId: null,
+          mpn: line.mpn,
+          sourceSupplierId: supplier.id,
+          proposals: [],
+        };
+        state.items.push(item);
+      }
+    }
+    const foreign = item && (item.status === "PUBLISHED" || item.sourceSupplierId !== supplier.id);
+    if (item && foreign && item.name !== line.name) {
+      report.proposal_count += 1;
+      report.proposals.push({
+        row: line.row,
+        product_id: item.id,
+        product_name: item.name,
+        field: "name",
+        current: item.name,
+        proposed: line.name,
+      });
+      const open = item.proposals.find((p) => p.field === "name" && p.supplierId === supplier.id);
+      if (write && !open)
+        item.proposals.push({
+          id: nextId(),
+          field: "name",
+          current: item.name,
+          proposed: line.name,
+          supplierId: supplier.id,
+          created_at: `${MOCK_TODAY}T10:00:00Z`,
+        });
+    }
+    const existing = item
+      ? state.offers.find((o) => o.itemId === item.id && o.supplierId === supplier.id)
+      : undefined;
+    if (existing) report.offers_updated += 1;
+    else report.offers_created += 1;
+    if (!write || !item) continue;
+    const offer: MockOffer = existing ?? {
+      id: nextId(),
+      itemId: item.id,
+      supplierId: supplier.id,
+      supplier_sku: "",
+      amount: line.amount,
+      currency: line.currency,
+      quota_qty: 0,
+      min_order_qty: 1,
+      in_stock_lead_days: 0,
+      order_lead_days: 30,
+      stock_status: null,
+      valid_from: null,
+      valid_until: null,
+      is_active: true,
+      delivery_basis: null,
+      lead_time: "",
+      source: "price_list",
+      updated_at: "",
+      history: [],
+    };
+    offer.amount = line.amount;
+    offer.currency = line.currency;
+    offer.lead_time = line.lead;
+    offer.source = "price_list";
+    if (validFrom) offer.valid_from = validFrom;
+    if (validUntil) offer.valid_until = validUntil;
+    snapshot(offer, null);
+    if (!existing) state.offers.push(offer);
+  }
+  return report;
+}
+
 export const erpCatalogHandlers = [
+  http.get("*/erp/catalog/price-import/template", () => {
+    const who = guard("read");
+    if (isResponse(who)) return who;
+    return new HttpResponse(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="price-template.xlsx"',
+      },
+    });
+  }),
+  http.post("*/erp/catalog/price-import/apply-checked", async ({ request }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    if (!who.prices) return erpForbidden("SUPPLIER_PRICES_REQUIRED");
+    const data = await body<Partial<PriceImportApplyIn>>(request);
+    const supplier = readErpCatalog().suppliers.find((s) => s.id === data.supplier_id);
+    if (!supplier || !data.rows_token) return invalid("rows_token", "rows_token_invalid");
+    const id = `job-${nextId()}`;
+    jobs.set(id, {
+      report: runImport(supplier, true, data.valid_from ?? null, data.valid_until ?? null, true),
+    });
+    return HttpResponse.json({ job_id: id, mode: "ai" }, { status: 202 });
+  }),
+  http.post("*/erp/catalog/price-import", async ({ request }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    if (!who.prices)
+      return failure(
+        403,
+        "FORBIDDEN",
+        "Прайс загружает тот, кому открыты цены поставщиков.",
+        "bff",
+        {
+          restricted: "supplier_prices",
+        },
+      );
+    const params = new URL(request.url).searchParams;
+    const supplier = readErpCatalog().suppliers.find((s) => s.id === params.get("supplier_id"));
+    if (!supplier) return invalid("supplier_id", "supplier_not_found");
+    const upload = await parseUpload(request);
+    if (!upload?.file) return invalid("file", "no_file_provided");
+    const from = params.get("valid_from");
+    const until = params.get("valid_until");
+    if (from && until && until < from)
+      return invalid("valid_until", "offer_validity_range_invalid");
+    const mode = params.get("mode") === "ai" ? "ai" : "xlsx";
+    const write = params.get("check") === "false";
+    const id = `job-${nextId()}`;
+    jobs.set(id, { report: runImport(supplier, write, from, until, mode === "ai") });
+    return HttpResponse.json({ job_id: id, mode }, { status: 202 });
+  }),
+  http.get("*/erp/catalog/price-import/:job", ({ params }) => {
+    const who = guard("read");
+    if (isResponse(who)) return who;
+    const job = jobs.get(String(params["job"]));
+    if (!job) return notFound();
+    return HttpResponse.json({ state: "done", report: job.report, error: null });
+  }),
+
   http.get("*/erp/catalog/lookups", () => {
     const who = guard("read");
     if (isResponse(who)) return who;
@@ -293,6 +582,7 @@ export const erpCatalogHandlers = [
       })),
       currencies: CURRENCIES,
       countries: COUNTRIES,
+      delivery_bases: DELIVERY_BASES,
     });
   }),
 
@@ -304,12 +594,14 @@ export const erpCatalogHandlers = [
     const q = params.get("q");
     const kind = params.get("kind");
     const category = params.get("category_id");
+    const pending = params.get("proposals") === "pending";
     const rows = readErpCatalog()
       .items.filter(
         (i) =>
           (contains(i.name, q) || contains(i.sku, q) || contains(i.gost_drawing, q)) &&
           (!kind || i.kind === kind) &&
-          (!category || i.categoryId === category),
+          (!category || i.categoryId === category) &&
+          (!pending || i.proposals.length > 0),
       )
       .map(rowOf);
     return HttpResponse.json(pageOf(rows, params));
@@ -343,6 +635,10 @@ export const erpCatalogHandlers = [
       gost_drawing: "",
       hs_code: "",
       brand: null,
+      brandId: null,
+      mpn: "",
+      sourceSupplierId: null,
+      proposals: [],
     };
     state.items.push(item);
     return HttpResponse.json(detailOf(item, who), { status: 201 });
@@ -366,6 +662,38 @@ export const erpCatalogHandlers = [
     if (data.category_id !== undefined) item.categoryId = data.category_id;
     if (data.kind !== undefined) item.kind = data.kind;
     if (data.description !== undefined) item.description = data.description;
+    if (data.brand_id !== undefined) {
+      const brand = readErpCatalog().manufacturers.find((m) => m.id === data.brand_id);
+      if (data.brand_id !== null && !brand) return invalid("brand_id", "brand_not_found");
+      item.brandId = brand?.id ?? null;
+      item.brand = brand?.name ?? null;
+    }
+    if (data.manufacturer_part_number !== undefined) item.mpn = data.manufacturer_part_number;
+    if (data.hs_code !== undefined) item.hs_code = data.hs_code;
+    return HttpResponse.json(detailOf(item, who));
+  }),
+  http.post("*/erp/catalog/items/:id/:action", ({ params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    if (!item) return notFound();
+    if (params["action"] === "publish") {
+      if (missingOf(item).length > 0)
+        return conflict("product_incomplete", "Заполните недостающие поля, затем опубликуйте.");
+      item.status = "PUBLISHED";
+    } else if (params["action"] === "unpublish") {
+      item.status = "DRAFT";
+    } else return notFound();
+    return HttpResponse.json(detailOf(item, who));
+  }),
+  http.post("*/erp/catalog/proposals/:id/:decision", ({ params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.proposals.some((p) => p.id === params["id"]));
+    const proposal = item?.proposals.find((p) => p.id === params["id"]);
+    if (!item || !proposal) return conflict("proposal_decided", "Изменение уже решено.");
+    if (params["decision"] === "accept") applyProposal(item, proposal);
+    item.proposals = item.proposals.filter((p) => p.id !== proposal.id);
     return HttpResponse.json(detailOf(item, who));
   }),
 
@@ -376,7 +704,9 @@ export const erpCatalogHandlers = [
     const params = new URL(request.url).searchParams;
     const q = params.get("q");
     const rows = readErpCatalog()
-      .suppliers.filter((s) => contains(s.name, q) || contains(s.tin, q))
+      .suppliers.filter(
+        (s) => contains(s.name, q) || contains(s.tin, q) || contains(s.registration_number, q),
+      )
       .map(supplierRowOf);
     return HttpResponse.json(pageOf(rows, params));
   }),
@@ -386,19 +716,129 @@ export const erpCatalogHandlers = [
     const state = readErpCatalog();
     const supplier = state.suppliers.find((s) => s.id === params["id"]);
     if (!supplier) return notFound();
-    const detail: SupplierDetail = {
-      ...supplierRowOf(supplier),
-      contact_person: supplier.contact_person,
-      phone: supplier.phone,
-      email: supplier.email,
-      website: supplier.website,
-      legal_address: supplier.legal_address,
-      offers: state.offers
-        .filter((o) => o.supplierId === supplier.id)
-        .map((o) => offerOf(o, who.prices)),
-      prices_visible: who.prices,
+    return HttpResponse.json(supplierDetailOf(supplier, who));
+  }),
+  http.post("*/erp/catalog/suppliers", async ({ request }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const data = await body<Partial<SupplierCreate>>(request);
+    const name = (data.name ?? "").trim();
+    if (!name) return invalid("name", "supplier_name_required");
+    if (!data.tin && !data.registration_number?.trim())
+      return invalid("tin", "supplier_id_required");
+    const state = readErpCatalog();
+    if (
+      state.suppliers.some(
+        (s) =>
+          (data.tin && s.tin === data.tin) ||
+          (data.registration_number &&
+            s.registration_number.toLowerCase() === data.registration_number.trim().toLowerCase()),
+      )
+    )
+      return conflict("supplier_exists", "Такой поставщик уже есть: найдите его в списке.");
+    const country = COUNTRIES.find((c) => c.id === data.country_id);
+    const supplier: MockSupplier = {
+      id: nextId(),
+      name,
+      tin: data.tin ?? "",
+      registration_number: data.registration_number?.trim() ?? "",
+      country: country?.name ?? "",
+      country_id: country?.id ?? null,
+      currency: data.currency ?? null,
+      is_manufacturer: data.is_manufacturer ?? false,
+      contact_person: data.contact_person ?? "",
+      phone: data.phone ?? "",
+      email: data.email ?? "",
+      website: data.website ?? "",
+      legal_address: "",
     };
-    return HttpResponse.json(detail);
+    state.suppliers.push(supplier);
+    return HttpResponse.json(supplierDetailOf(supplier, who), { status: 201 });
+  }),
+  http.patch("*/erp/catalog/suppliers/:id", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const supplier = readErpCatalog().suppliers.find((s) => s.id === params["id"]);
+    if (!supplier) return notFound();
+    const data = await body<SupplierUpdate>(request);
+    if (data.name !== undefined) supplier.name = data.name.trim();
+    if (data.tin !== undefined) supplier.tin = data.tin;
+    if (data.registration_number !== undefined)
+      supplier.registration_number = data.registration_number;
+    if (data.country_id !== undefined) {
+      const country = COUNTRIES.find((c) => c.id === data.country_id);
+      supplier.country_id = country?.id ?? null;
+      supplier.country = country?.name ?? "";
+    }
+    if (data.currency !== undefined) supplier.currency = data.currency;
+    if (data.contact_person !== undefined) supplier.contact_person = data.contact_person;
+    if (data.phone !== undefined) supplier.phone = data.phone;
+    if (data.email !== undefined) supplier.email = data.email;
+    if (data.website !== undefined) supplier.website = data.website;
+    if (data.is_manufacturer !== undefined) supplier.is_manufacturer = data.is_manufacturer;
+    if (!supplier.tin && !supplier.registration_number)
+      return invalid("tin", "supplier_id_required");
+    return HttpResponse.json(supplierDetailOf(supplier, who));
+  }),
+  http.post("*/erp/catalog/suppliers/:id/offers", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    if (!who.prices) return erpForbidden("SUPPLIER_PRICES_REQUIRED");
+    const state = readErpCatalog();
+    const supplier = state.suppliers.find((s) => s.id === params["id"]);
+    if (!supplier) return notFound();
+    const data = await body<Partial<SupplierOfferCreate>>(request);
+    if (!state.items.some((i) => i.id === data.product_id))
+      return invalid("product_id", "product_not_found");
+    if (!data.price || !DECIMAL.test(data.price.amount))
+      return invalid("price", "offer_price_invalid");
+    if (state.offers.some((o) => o.supplierId === supplier.id && o.itemId === data.product_id))
+      return conflict("offer_exists", "Цена этого поставщика на товар уже есть — измените её.");
+    if (data.valid_from && data.valid_until && data.valid_until < data.valid_from)
+      return invalid("valid_until", "offer_validity_range_invalid");
+    const offer: MockOffer = {
+      id: nextId(),
+      itemId: data.product_id ?? "",
+      supplierId: supplier.id,
+      supplier_sku: data.supplier_sku ?? "",
+      amount: Number(data.price.amount).toFixed(2),
+      currency: data.price.currency,
+      quota_qty: data.quota_qty ?? 0,
+      min_order_qty: data.min_order_qty ?? 1,
+      in_stock_lead_days: data.in_stock_lead_days ?? 0,
+      order_lead_days: data.order_lead_days ?? 0,
+      stock_status: null,
+      valid_from: data.valid_from ?? null,
+      valid_until: data.valid_until ?? null,
+      is_active: true,
+      delivery_basis: data.delivery_basis ?? null,
+      lead_time: data.lead_time ?? "",
+      source: data.source ?? "manual",
+      updated_at: `${MOCK_TODAY}T09:00:00Z`,
+      history: [],
+    };
+    snapshot(offer, who.name);
+    state.offers.push(offer);
+    return HttpResponse.json(offerOf(offer, true), { status: 201 });
+  }),
+  http.get("*/erp/catalog/suppliers/:id/offers/:offerId/history", ({ params }) => {
+    const who = guard("read");
+    if (isResponse(who)) return who;
+    const offer = readErpCatalog().offers.find(
+      (o) => o.id === params["offerId"] && o.supplierId === params["id"],
+    );
+    if (!offer) return notFound();
+    return HttpResponse.json({
+      items: offer.history.map((h) => ({
+        at: h.at,
+        price: who.prices ? { amount: h.amount, currency: h.currency } : null,
+        valid_from: h.valid_from,
+        valid_until: h.valid_until,
+        delivery_basis: h.delivery_basis,
+        source: h.source,
+        by: h.by,
+      })),
+    });
   }),
   http.patch("*/erp/catalog/suppliers/:id/offers/:offerId", async ({ request, params }) => {
     const who = guard("full");
@@ -422,8 +862,13 @@ export const erpCatalogHandlers = [
     if (data.valid_from !== undefined) offer.valid_from = data.valid_from;
     if (data.valid_until !== undefined) offer.valid_until = data.valid_until;
     if (data.is_active !== undefined) offer.is_active = data.is_active;
+    if (data.delivery_basis !== undefined) offer.delivery_basis = data.delivery_basis;
+    if (data.lead_time !== undefined) offer.lead_time = data.lead_time;
+    if (data.supplier_sku !== undefined) offer.supplier_sku = data.supplier_sku;
+    if (data.source !== undefined) offer.source = data.source;
     if (offer.valid_from && offer.valid_until && offer.valid_until < offer.valid_from)
       return invalid("valid_until", "offer_validity_range_invalid");
+    snapshot(offer, who.name);
     return HttpResponse.json(offerOf(offer, who.prices));
   }),
 
@@ -658,6 +1103,7 @@ export const erpCatalogHandlers = [
       country_name: country?.name ?? null,
       website: data.website ?? "",
       is_active: data.is_active ?? true,
+      company_id: data.company_id ?? null,
     };
     state.manufacturers.push(row);
     return HttpResponse.json(row, { status: 201 });
@@ -679,6 +1125,7 @@ export const erpCatalogHandlers = [
     }
     if (data.website !== undefined) row.website = data.website;
     if (data.is_active !== undefined) row.is_active = data.is_active;
+    if (data.company_id !== undefined) row.company_id = data.company_id;
     return HttpResponse.json(row);
   }),
 

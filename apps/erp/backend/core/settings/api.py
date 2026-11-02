@@ -174,6 +174,19 @@ SPECTACULAR_SETTINGS = {
         "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
         "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
         "CrewRateUnitEnum": ["day", "hour"],
+        # CAT-1: источник цены поставщика и поле предложения изменений карточки.
+        "SupplierOfferSourceEnum": ["price_list", "rfq_reply", "manual"],
+        # Прежнее имя источника заявки остаётся прежним (иначе drf-spectacular переименовал бы его хешем).
+        "SourceEnum": ["CABINET", "BOT", "EMAIL", "MANUAL"],
+        "ProductFieldProposalFieldEnum": [
+            "name",
+            "description",
+            "category",
+            "hs_code",
+            "uom",
+            "domain_type",
+            "gost_drawing",
+        ],
         # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
         "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
         "CalcStateEnum": "crm.serializers.calc.CALC_STATES",

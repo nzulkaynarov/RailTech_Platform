@@ -248,32 +248,50 @@ def _handle_catalog_import_ai(payload: dict) -> dict:
     from ai.services.price_list import extract_price_rows
 
     from core.storage import get_temp_storage
+    from sourcing.ai_rows import drop_rows, load_rows, save_rows
     from sourcing.catalog_import import run_catalog_import_frame
 
-    storage_path = payload["storage_path"]
-    try:
-        with get_temp_storage().open(storage_path) as stored:
-            raw = stored.read()
+    rows_token = payload.get("rows_token")
+    if rows_token:
+        # CAT-1: «Применить» после проверки — строки, которые человек видел в отчёте, без нового вызова ИИ.
+        stored_rows = load_rows(rows_token)
+        if stored_rows is None:
+            return {"status": "error", "message": "ROWS_TOKEN_EXPIRED"}
+        rows, ai_used = stored_rows["rows"], False
+    else:
+        storage_path = payload["storage_path"]
         try:
-            rows, ai_used = extract_price_rows(raw, payload.get("filename") or "upload")
-        except RuntimeError as exc:
-            logger.warning("AI catalog import: extract failed: %s", exc)
-            return {"status": "error", "message": "AI_EXTRACT_FAILED"}
-    finally:
-        get_temp_storage().delete(storage_path)
+            with get_temp_storage().open(storage_path) as stored:
+                raw = stored.read()
+            try:
+                rows, ai_used = extract_price_rows(raw, payload.get("filename") or "upload")
+            except RuntimeError as exc:
+                logger.warning("AI catalog import: extract failed: %s", exc)
+                return {"status": "error", "message": "AI_EXTRACT_FAILED"}
+        finally:
+            get_temp_storage().delete(storage_path)
 
     if not rows:
         return {"status": "error", "message": "AI_EXTRACT_EMPTY"}
 
+    dry_run = bool(payload.get("dry_run"))
     try:
         result = run_catalog_import_frame(
             pd.DataFrame(rows),
             supplier_company_id=payload.get("supplier_company_id"),
-            dry_run=bool(payload.get("dry_run")),
+            dry_run=dry_run,
+            actor_id=payload.get("actor_id"),
+            valid_from=payload.get("valid_from"),
+            valid_until=payload.get("valid_until"),
+            owner_company_id=payload.get("owner_company_id"),
         )
     except ValueError as exc:
         # File-level fatal (NAME_COLUMN_NOT_FOUND) — same contract as process_catalog_import.
         return {"status": "error", "message": str(exc)}
+    if rows_token:
+        drop_rows(rows_token)
+    elif dry_run:
+        result["rows_token"] = save_rows(rows, payload.get("actor_id"))
     result["ai_used"] = ai_used
     result["ai_rows"] = len(rows)
     return result

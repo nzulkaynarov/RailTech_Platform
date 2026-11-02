@@ -82,6 +82,26 @@ class Company(models.Model):
         verbose_name=_("ИНН"),
         help_text=_("Идентификационный номер налогоплательщика"),
     )
+    # Иностранный контрагент (CAT-1, COUNTERPARTY-CABINET «Международный»): ИНН РУз у него нет — рег. номер страны
+    # регистрации. Не уникален глобально: номера разных стран пересекаются; дубль ловит создание по паре (страна, номер).
+    registration_number = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Рег. номер (нерезидент)"),
+        help_text=_("Регистрационный номер в стране регистрации — для компаний без ИНН РУз"),
+    )
+    # Валюта, в которой контрагент выставляет цены (CAT-1): подставляется в строки прайса без колонки «Валюта».
+    default_currency = models.ForeignKey(
+        "core.Currency",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Валюта цен"),
+        help_text=_("Валюта прайса поставщика по умолчанию"),
+    )
     # INN as STATED for an offline client recorded from the client book — NOT unique (the
     # client-book search-before-create dedups by it). The canonical, unique `inn` above is
     # filled on the company card.

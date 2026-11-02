@@ -30,4 +30,9 @@ export interface CatalogItem {
   nearest_valid_until: string | null;
   /** @minimum 0 */
   docs_count: number;
+  /**
+   * Изменений от поставщиков на одобрении
+   * @minimum 0
+   */
+  proposals_count: number;
 }

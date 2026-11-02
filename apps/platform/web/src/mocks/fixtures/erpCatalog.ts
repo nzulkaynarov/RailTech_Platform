@@ -33,6 +33,31 @@ export interface MockOffer {
   valid_from: string | null;
   valid_until: string | null;
   is_active: boolean;
+  delivery_basis: string | null;
+  lead_time: string;
+  source: "price_list" | "rfq_reply" | "manual";
+  updated_at: string;
+  /** История цены (CAT-1): снимки, новые сверху. */
+  history: {
+    at: string;
+    amount: string;
+    currency: string;
+    valid_from: string | null;
+    valid_until: string | null;
+    delivery_basis: string | null;
+    source: "price_list" | "rfq_reply" | "manual";
+    by: string | null;
+  }[];
+}
+
+/** Изменение карточки из прайса поставщика, ждёт решения (CAT-1). */
+export interface MockProposal {
+  id: string;
+  field: "name" | "description" | "category" | "hs_code" | "uom" | "domain_type" | "gost_drawing";
+  current: string;
+  proposed: string;
+  supplierId: string;
+  created_at: string;
 }
 
 export interface MockItem {
@@ -48,13 +73,21 @@ export interface MockItem {
   gost_drawing: string;
   hs_code: string;
   brand: string | null;
+  brandId: string | null;
+  mpn: string;
+  sourceSupplierId: string | null;
+  proposals: MockProposal[];
 }
 
 export interface MockSupplier {
   id: string;
   name: string;
   tin: string;
+  registration_number: string;
   country: string;
+  country_id: string | null;
+  currency: string | null;
+  is_manufacturer: boolean;
   contact_person: string;
   phone: string;
   email: string;
@@ -90,6 +123,11 @@ export const CURRENCIES = [
   { code: "UZS", symbol: "сум" },
   { code: "USD", symbol: "$" },
   { code: "EUR", symbol: "€" },
+];
+export const DELIVERY_BASES = [
+  { code: "EXW", name: "Ex Works" },
+  { code: "FCA", name: "Free Carrier" },
+  { code: "DAP", name: "Delivered at Place" },
 ];
 export const COUNTRIES = [
   { id: "1", name: "Узбекистан" },
@@ -173,6 +211,11 @@ function offer(
     valid_from: null,
     valid_until: "2027-03-31",
     is_active: true,
+    delivery_basis: "FCA",
+    lead_time: "",
+    source: "manual",
+    updated_at: "2026-10-20T09:00:00Z",
+    history: [],
     ...extra,
   };
 }
@@ -184,6 +227,10 @@ function seedItems(): MockItem[] {
     gost_drawing: "",
     hs_code: "",
     brand: null,
+    brandId: null,
+    mpn: "",
+    sourceSupplierId: null,
+    proposals: [] as MockProposal[],
   };
   return [
     {
@@ -199,6 +246,8 @@ function seedItems(): MockItem[] {
       gost_drawing: "ГОСТ 31996",
       hs_code: "8544",
       brand: "Электрокабель-Тест",
+      brandId: "1",
+      mpn: "ВВГ-3-2.5",
     },
     {
       ...base,
@@ -223,6 +272,7 @@ function seedItems(): MockItem[] {
       gost_drawing: "ГОСТ Р 51685",
       hs_code: "7302",
       brand: "Рельс-Сталь",
+      brandId: "2",
     },
     {
       ...base,
@@ -284,7 +334,11 @@ function seedSuppliers(): MockSupplier[] {
       id: "1",
       name: "ООО «Поставщик Север»",
       tin: "300000777",
+      registration_number: "",
       country: "Узбекистан",
+      country_id: "1",
+      currency: "USD",
+      is_manufacturer: false,
       contact_person: "Отдел продаж",
       phone: "+998 00 000 00 01",
       email: "sales@sever.example",
@@ -295,7 +349,11 @@ function seedSuppliers(): MockSupplier[] {
       id: "2",
       name: "АО «Южный Металл»",
       tin: "300000888",
+      registration_number: "",
       country: "Россия",
+      country_id: "2",
+      currency: "UZS",
+      is_manufacturer: false,
       contact_person: "Менеджер по ЖД-материалам",
       phone: "+7 000 000-00-02",
       email: "rail@yug.example",
@@ -306,7 +364,11 @@ function seedSuppliers(): MockSupplier[] {
       id: "3",
       name: "ИП «Восточный склад»",
       tin: "300000999",
+      registration_number: "",
       country: "Узбекистан",
+      country_id: "1",
+      currency: "UZS",
+      is_manufacturer: false,
       contact_person: "",
       phone: "",
       email: "",
@@ -394,6 +456,7 @@ function seedManufacturers(): Manufacturer[] {
       country_name: "Узбекистан",
       website: "",
       is_active: true,
+      company_id: null,
     },
     {
       id: "2",
@@ -402,6 +465,7 @@ function seedManufacturers(): Manufacturer[] {
       country_name: "Россия",
       website: "https://rail-steel.example",
       is_active: true,
+      company_id: null,
     },
     {
       id: "3",
@@ -410,6 +474,7 @@ function seedManufacturers(): Manufacturer[] {
       country_name: "Германия",
       website: "",
       is_active: false,
+      company_id: null,
     },
   ];
 }
