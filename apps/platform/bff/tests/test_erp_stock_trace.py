@@ -23,6 +23,7 @@ from tests.test_erp_stock import (
     STOCK,
     call,
     order_detail,
+    order_row,
     ref,
     reservation,
 )
@@ -32,6 +33,10 @@ from tests.test_erp_stock import (
 def erp(be: Backends) -> respx.MockRouter:
     """ERP: заявка найдена в лёгком справочнике (как в `test_erp_stock`)."""
     be.router.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json=refs(deal())))
+    rights = {"manage": True, "ship": True, "prices": True}
+    be.router.get(f"{STOCK}/orders/").mock(
+        return_value=httpx.Response(200, json={"results": [order_row()], "rights": rights})
+    )
     return be.router
 
 
