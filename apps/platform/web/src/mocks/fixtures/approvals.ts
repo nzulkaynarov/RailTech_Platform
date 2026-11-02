@@ -168,6 +168,15 @@ const ORDER: readonly QuoteSendChannel[] = ["telegram", "cabinet", "email"];
  * Отчёт об отправке после одобрения (как ERP-11 + BFF): выбранные доступные каналы уходят (почта — «передано почтовому
  * сервису»), кабинет у отправленного КП — «опубликовано», невыбранные — «не выбрано» с «Отправить», если канал доступен.
  */
+/** Решение клиента по отправленному КП, пока клиент не ответил (A1 волны 18a). */
+export const AWAITING_CLIENT = {
+  state: "awaiting",
+  decided_at: null,
+  reason: null,
+  recorded_by_staff: null,
+  can_record: true,
+} as const satisfies NonNullable<QuoteApprovalCard["client_decision"]>;
+
 export function deliveryAfterApproval(
   channels: QuoteChannels | null,
   chosen: readonly QuoteSendChannel[],
@@ -309,6 +318,7 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     channels: channelsOf(seed.channels),
     delivery: null,
     client_comments: [],
+    client_decision: null,
     sources: { crm: "ok", erp: seed.erpDown ? "unavailable" : "ok" },
   };
 }
@@ -344,6 +354,8 @@ function approvedQuote(): QuoteApprovalCard {
         { channel: "email", status: "failed", reason: "mail_failed", can_send: true },
       ],
     },
+    // A1: КП у клиента — ждёт решения; ответил письмом — менеджер записывает «Клиент принял / отклонил»
+    client_decision: AWAITING_CLIENT,
     // КП отправлено клиенту, клиент спросил в кабинете (B-CABFIX-1)
     client_comments: [
       {

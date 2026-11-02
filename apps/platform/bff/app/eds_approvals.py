@@ -35,6 +35,7 @@ from app.schemas_eds_approvals import (
     MemoApprovalCard,
     MemoApprovalPage,
     MemoApprovalRow,
+    OnBehalfRecord,
     QuoteApprovalCard,
     QuoteApprovalPage,
     QuoteApprovalRow,
@@ -43,6 +44,7 @@ from app.schemas_eds_approvals import (
     QuoteChannels,
     QuoteChecklistLine,
     QuoteClientComment,
+    QuoteClientDecision,
     QuoteDelivery,
     QuoteDeliveryLine,
     QuoteInternal,
@@ -488,6 +490,67 @@ def _delivery(
     return QuoteDelivery(state=state, lines=lines, error=erp_reason(error) if error else None)
 
 
+_DECISION_STATES: dict[str, Literal["awaiting", "accepted", "rejected", "expired"]] = {
+    "SENT": "awaiting",
+    "APPROVED": "accepted",
+    "REJECTED": "rejected",
+    "EXPIRED": "expired",
+}
+
+
+def evidence_url(approval_id: str) -> str:
+    return f"/api/v1/eds/quotes/{approval_id}/client-decision/evidence"
+
+
+def _recorded_by_staff(raw: Any, approval_id: str) -> OnBehalfRecord | None:
+    if not isinstance(raw, dict) or not raw.get("channel"):
+        return None
+    try:
+        return OnBehalfRecord.model_validate(
+            {
+                "staff_name": _text(raw.get("recorded_by_name")),
+                "channel": raw.get("channel"),
+                "counterparty_person": raw.get("counterparty_person") or "",
+                "occurred_on": raw.get("occurred_on") or None,
+                "comment": _text(raw.get("comment")),
+                "evidence_name": _text(raw.get("evidence_name")),
+                "evidence_url": evidence_url(approval_id)
+                if raw.get("evidence_attachment_id")
+                else None,
+            }
+        )
+    except ValidationError:
+        return None
+
+
+def _client_decision(
+    erp_quote: dict[str, Any] | None, approval_id: str, may_record: bool
+) -> QuoteClientDecision | None:
+    """Решение клиента по отправленному КП (A1): статус ERP, атрибуция записи сотрудником, можно ли
+    записать (решает ERP: `can_record_client_decision` — SENT и право `deal.manage`)."""
+    if erp_quote is None:
+        return None
+    state = _DECISION_STATES.get(str(erp_quote.get("status_code") or ""))
+    if state is None:
+        return None
+    staff = _recorded_by_staff(erp_quote.get("client_decision"), approval_id)
+    decided_at = None
+    if state != "awaiting":
+        decided_at = (staff and (erp_quote.get("client_decision") or {}).get("recorded_at")) or (
+            erp_quote.get("approved_at") if state == "accepted" else None
+        )
+    reason = _text(erp_quote.get("client_reject_reason")) if state == "rejected" else None
+    return QuoteClientDecision(
+        state=state,
+        decided_at=decided_at,
+        reason=reason,
+        recorded_by_staff=staff,
+        can_record=bool(
+            may_record and state == "awaiting" and erp_quote.get("can_record_client_decision")
+        ),
+    )
+
+
 def _stage(deal: dict[str, Any] | None) -> StepCode:
     """«КП» — пока заявка в ERP не ушла дальше (договор, оплата, выполнено) или не закрыта."""
     if deal is None:
@@ -632,6 +695,9 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         channels=channels,
         delivery=_delivery(raw.status, erp_quote, channels, may_send),
         client_comments=comments,
+        client_decision=_client_decision(
+            erp_quote, raw.id, allows(authed.access, "crm.clients", "full")
+        ),
         sources=feed.sources,
         **extra,
     )
@@ -674,6 +740,49 @@ async def send_quote(authed: Authed, proxy: EdsProxy, approval_id: str, channel:
     if response.status_code >= 400:
         raise from_backend("erp", response)
     return body
+
+
+async def _route_quote_id(authed: Authed, proxy: EdsProxy, approval_id: str) -> tuple[Any, int]:
+    body = await proxy.request("GET", f"{API}/approvals/{approval_id}")
+    raw = parse(RawApproval, strip_restricted(body, authed.fields, MARGIN_RULES), "approval")
+    if raw.template != "quote" or raw.object.erp_quote_id is None:
+        raise not_found("КП не найдено.")
+    return body, raw.object.erp_quote_id
+
+
+async def record_client_decision(
+    authed: Authed, proxy: EdsProxy, approval_id: str, content: bytes, content_type: str
+) -> Any:
+    """«Клиент принял / отклонил» по подтверждению клиента (A1): ERP `record-client-decision` по КП
+    маршрута, форма multipart как есть (поля, файл и право проверяет ERP); ответ — маршрут EDS."""
+    from app.eds_projects import project_error
+
+    body, quote_id = await _route_quote_id(authed, proxy, approval_id)
+    response = await authed.call(
+        "erp",
+        "POST",
+        f"/api/v1/crm/quotes/{quote_id}/record-client-decision/",
+        content=content,
+        content_type=content_type,
+    )
+    if response.status_code != 200:
+        raise project_error(response)
+    return body
+
+
+async def evidence_path(authed: Authed, proxy: EdsProxy, approval_id: str) -> str:
+    """Путь файла подтверждения в ERP: id вложения — из решения клиента КП этого маршрута."""
+    _, quote_id = await _route_quote_id(authed, proxy, approval_id)
+    response = await authed.call("erp", "GET", f"/api/v1/crm/quotes/{quote_id}/")
+    if response.status_code != 200:
+        from app.eds_projects import project_error
+
+        raise project_error(response)
+    meta = response.json().get("client_decision") if response.content else None
+    attachment_id = meta.get("evidence_attachment_id") if isinstance(meta, dict) else None
+    if not isinstance(attachment_id, int):
+        raise not_found("Файла подтверждения нет.")
+    return f"/api/v1/sourcing/attachments/{attachment_id}/download/"
 
 
 def _mail_ready(body: Any) -> bool | None:

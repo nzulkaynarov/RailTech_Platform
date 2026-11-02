@@ -246,6 +246,22 @@ def erp_quote(**over: Any) -> dict[str, Any]:
     return {**base, **over}
 
 
+def staff_decision(decision: str = "accept", **over: Any) -> dict[str, Any]:
+    """`client_decision` ERP: решение клиента записал сотрудник (A1)."""
+    return {
+        "decision": decision,
+        "channel": "email",
+        "counterparty_person": "Каримов А., снабженец",
+        "occurred_on": "2026-11-02",
+        "comment": "Письмо клиента" if decision == "accept" else "Дорого",
+        "recorded_by_name": "Менеджер Демо",
+        "recorded_at": "2026-11-02T10:00:00+05:00",
+        "evidence_attachment_id": 77,
+        "evidence_name": "letter.pdf",
+        **over,
+    }
+
+
 def erp_deal(**over: Any) -> dict[str, Any]:
     return {
         "id": 5,
@@ -319,6 +335,15 @@ class ApprovalsFake(EdsFake):
         be.router.post(url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/deliver/$").mock(
             side_effect=self._deliver
         )
+        # A1: «Клиент принял / отклонил» по подтверждению клиента и файл подтверждения.
+        self.decision_error: tuple[int, str] | None = None
+        self.decisions: list[httpx.Request] = []
+        be.router.post(
+            url__regex=rf"^{re.escape(ERP_URL)}/api/v1/crm/quotes/\d+/record-client-decision/$"
+        ).mock(side_effect=self._record_decision)
+        be.router.get(
+            url__regex=rf"^{re.escape(ERP_URL)}/api/v1/sourcing/attachments/\d+/download/$"
+        ).mock(side_effect=self._evidence)
         be.router.get(f"{CRM_URL}/api/v1/integrations/smtp/ready").mock(
             side_effect=lambda r: (
                 httpx.Response(self.smtp_ready, json={"code": "forbidden"})
@@ -342,6 +367,30 @@ class ApprovalsFake(EdsFake):
                 s for s in report.get("skipped", []) if s["channel"] != body["channel"]
             ]
             self.erp_quote = {**self.erp_quote, "status_code": "SENT", "send_report": report}
+        return httpx.Response(200, json={"id": 1203})
+
+    def _evidence(self, request: httpx.Request) -> httpx.Response:
+        self.erp_paths.append(request.url.path)
+        return httpx.Response(
+            200, content=b"%PDF-1.4 letter", headers={"content-type": "application/pdf"}
+        )
+
+    def _record_decision(self, request: httpx.Request) -> httpx.Response:
+        self.erp_paths.append(request.url.path)
+        self.decisions.append(request)
+        if self.decision_error is not None:
+            status, code = self.decision_error
+            return httpx.Response(status, json={"detail": code})
+        if isinstance(self.erp_quote, dict):
+            accept = b'name="decision"\r\n\r\naccept' in request.content
+            self.erp_quote = {
+                **self.erp_quote,
+                "status_code": "APPROVED" if accept else "REJECTED",
+                "approved_at": "2026-11-02T10:00:00+05:00" if accept else None,
+                "client_reject_reason": "" if accept else "Дорого",
+                "can_record_client_decision": False,
+                "client_decision": staff_decision("accept" if accept else "reject"),
+            }
         return httpx.Response(200, json={"id": 1203})
 
     def _erp(self, request: httpx.Request, value: Any) -> httpx.Response:

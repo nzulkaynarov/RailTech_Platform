@@ -2,7 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot as shot, spaGoto, waitForMotionEnd } from "./support/app";
-import { pickFiles } from "./support/fields";
+import { chooseOption, pickFiles } from "./support/fields";
 
 // EDS · «Проекты: договор, акт, сканы» на MSW (D2-5): бухгалтер ведёт проект ПР-2026-104 от «Сформировать проект договора» до
 // «Подписан (скан)», акт проекта ПР-2026-097 — до «Выполнено»; менеджер читает без кнопок; администратор не видит раздел;
@@ -79,7 +79,11 @@ test.describe("Проекты: бухгалтер", () => {
     await expect(panel.getByText("Проект ещё не отправлен клиенту.")).toBeVisible();
     await panel.getByRole("button", { name: "На согласование клиенту" }).click();
     await expect(panel.getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
+    // A2: согласие клиента — как сообщил и кто со стороны клиента
+    await chooseOption(panel.getByLabel("Как клиент сообщил"), "почта");
+    await panel.getByLabel("Кто со стороны клиента").fill("Каримов А., снабженец");
     await panel.getByRole("button", { name: "Отметить: согласован клиентом" }).click();
+    await expect(panel.getByText("Отмечено сотрудником").first()).toBeVisible();
     await panel.getByRole("button", { name: "Отметить: выставлен у оператора" }).click();
     await expect(
       panel.getByText(/Договор выставлен у оператора\. Когда обе стороны/),

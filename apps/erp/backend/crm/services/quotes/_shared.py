@@ -144,6 +144,7 @@ def _log_quote(
     *,
     event_code: str = "",
     event_params: Optional[dict] = None,
+    reason: str = "",
 ) -> None:
     ActivityLog.objects.create(
         action=action,
@@ -156,6 +157,7 @@ def _log_quote(
         company_id=quote.deal.company_id if quote.deal_id else None,
         event_code=event_code,
         event_params=event_params or {},
+        reason=reason,
     )
 
 

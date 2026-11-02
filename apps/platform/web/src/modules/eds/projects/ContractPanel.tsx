@@ -1,8 +1,9 @@
 import { App, Button } from "antd";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type {
+  OnBehalfChannel,
   ProjectCard,
   ProjectContractActionInAction,
   ProjectContractActionsItem,
@@ -19,6 +20,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ActionToggle } from "../../../shared/ui/FormParts";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { MoneyText } from "../../../shared/ui/MoneyText";
+import { OnBehalfFields, OnBehalfNote } from "../../../shared/ui/OnBehalf";
 import { fileUrl, projectRef } from "./api";
 import { reasonText } from "./errors";
 import { FileLinks } from "./FileLinks";
@@ -70,6 +72,11 @@ function ContractBody({
   const ref = projectRef(objectId);
   const contract = card.contract;
   const [note, setNote] = useState("");
+  // A2: «Согласован клиентом» — как клиент сообщил и кто со стороны клиента (обязательно).
+  const agreedIds = { channel: useId(), person: useId() };
+  const [channel, setChannel] = useState<OnBehalfChannel | null>(null);
+  const [person, setPerson] = useState("");
+  const [agreedTouched, setAgreedTouched] = useState(false);
   // Какое действие сейчас выполняется: кнопка следующего шага, появившаяся с новой карточкой, не должна вертеться.
   const [pending, setPending] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
@@ -83,6 +90,9 @@ function ContractBody({
     setPending(null);
     setError(null);
     setNote("");
+    setChannel(null);
+    setPerson("");
+    setAgreedTouched(false);
     setRejecting(false);
     apply(next);
     void message.success(t(`contract.done.${key}`));
@@ -148,7 +158,15 @@ function ContractBody({
   const allowed = contract.actions;
   const primary = primaryOf(card, allowed);
   const may = (action: ProjectContractActionsItem) => allowed.includes(action);
-  const send = (action: Action, extra: { reason?: string; note?: string } = {}) => {
+  const send = (
+    action: Action,
+    extra: {
+      reason?: string;
+      note?: string;
+      channel?: OnBehalfChannel;
+      counterparty_person?: string;
+    } = {},
+  ) => {
     setError(null);
     setPending(action);
     act.mutate(
@@ -170,6 +188,12 @@ function ContractBody({
           : t("journal.bySystem", { date: date(entry.at, "datetime") })}
         {entry.reason ? (
           <span className="pf-dec-note">{t("journal.reason", { reason: entry.reason })}</span>
+        ) : null}
+        {entry.on_behalf ? (
+          <OnBehalfNote
+            channel={entry.on_behalf.channel}
+            person={entry.on_behalf.counterparty_person}
+          />
         ) : null}
       </>
     ),
@@ -216,10 +240,26 @@ function ContractBody({
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
-          if (!busy)
-            send(primary, primary === "mark_issued" && note.trim() ? { note: note.trim() } : {});
+          if (busy) return;
+          if (primary === "client_agreed") {
+            setAgreedTouched(true);
+            if (!channel || !person.trim()) return;
+            send(primary, { channel, counterparty_person: person.trim() });
+            return;
+          }
+          send(primary, primary === "mark_issued" && note.trim() ? { note: note.trim() } : {});
         }}
       >
+        {primary === "client_agreed" ? (
+          <OnBehalfFields
+            ids={agreedIds}
+            channel={channel}
+            person={person}
+            touched={agreedTouched}
+            onChannel={setChannel}
+            onPerson={setPerson}
+          />
+        ) : null}
         {primary === "mark_issued" ? (
           <NoteField
             label={t("contract.note.label")}

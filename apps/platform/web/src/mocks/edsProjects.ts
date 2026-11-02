@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import type {
   ProjectActActionIn,
   ProjectContractActionIn,
+  ProjectJournalEntry,
   ProjectPage,
   ProjectStage,
 } from "../shared/api/generated/model";
@@ -77,10 +78,14 @@ function logged(
   number: string,
   text: string,
   reason = "",
+  onBehalf: ProjectJournalEntry["on_behalf"] = null,
 ): ProjectState {
   return {
     ...p,
-    journal: [{ at: now(), code, text, actor_name: ACTOR, document, number, reason }, ...p.journal],
+    journal: [
+      { at: now(), code, text, actor_name: ACTOR, document, number, reason, on_behalf: onBehalf },
+      ...p.journal,
+    ],
   };
 }
 
@@ -254,6 +259,12 @@ export const edsProjectsHandlers = [
         fields: ["reason"],
       });
     }
+    // A2: «Согласован клиентом» — канал и лицо со стороны клиента обязательны (BFF отклоняет до ERP).
+    if (body.action === "client_agreed" && (!body.channel || !body.counterparty_person?.trim())) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "bff", {
+        fields: [body.channel ? "counterparty_person" : "channel"],
+      });
+    }
     const rule = TRANSITIONS[body.action];
     if (!rule.from.includes(stateOf(p))) {
       return conflict("contract_transition_not_allowed", "Договор сейчас в другом статусе.");
@@ -280,6 +291,9 @@ export const edsProjectsHandlers = [
       c.number,
       rule.text,
       (body.reason ?? body.note ?? "").trim(),
+      body.action === "client_agreed" && body.channel
+        ? { channel: body.channel, counterparty_person: (body.counterparty_person ?? "").trim() }
+        : null,
     );
     writeProject(next);
     return HttpResponse.json(toCard(next, ok.writer));

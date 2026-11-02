@@ -119,7 +119,7 @@ inline и до БД не доходит (§9.2).
 | `request.created` | `source: crm|cabinet|erp`; с W16-D1-2 необязательные `request_number` (ЗВ), `urgency`, `letter_file_id` (файл письма в EDS), `crm_request_id`, `process` | лента лида; зеркало сделки `open` — заявка CRM по `crm_request_id`, иначе открытая сделка лида; EDS — письмо ВХ со срочностью и файлом |
 | `deal.stage_changed` | `from, to, reason?` | лента; `external_stage` |
 | `quote.sent` | `version, public_url, valid_until`; `channels?` (ERP-11: каналы автоотправки по решению директора) | бот: «КП готово» с кнопками — если `channels` нет или в них есть `telegram` |
-| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?` | лента; при accepted — уведомление ответственному |
+| `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?, recorded_by_staff?` | лента; при accepted — уведомление ответственному. `recorded_by_staff {staff_name, channel, counterparty_person, occurred_on}` — решение клиента записал сотрудник по подтверждению клиента (A1 волны 18a; `actor.type = staff`); нет поля — клиент решил онлайн |
 | `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
 | `contract.signed` | `by: client|company|both` | лента |
 | `invoice.issued` / `invoice.paid` / `invoice.overdue` | `number, amount, due_date, link` | бот: «счёт выставлен»; напоминание — только ERP-письмо, бот дублирует по политике |

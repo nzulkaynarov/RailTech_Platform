@@ -29,7 +29,12 @@ _HTTP = {
     "ACT_SIGN_NOT_ALLOWED": 409,
 }
 _ERRORS = {
-    400: OpenApiResponse(description="REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED"),
+    400: OpenApiResponse(
+        description=(
+            "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / "
+            "COUNTERPARTY_PERSON_REQUIRED"
+        )
+    ),
     403: OpenApiResponse(description="MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED"),
     404: OpenApiResponse(description="Не найдено"),
     409: OpenApiResponse(description="CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот"),
@@ -62,6 +67,8 @@ class ContractFlowMixin:
             reason=data.get("reason", ""),
             note=data.get("note", ""),
             scan=data.get("file"),
+            channel=data.get("channel", ""),
+            counterparty_person=data.get("counterparty_person", ""),
         )
         if error:
             return _fail(error)

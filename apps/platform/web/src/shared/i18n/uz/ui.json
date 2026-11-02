@@ -103,5 +103,23 @@
     "removeRow": "− qator",
     "removeColumn": "− ustun",
     "tableHint": "Birinchi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi."
+  },
+  "onBehalf": {
+    "tag": "Xodim belgilagan",
+    "staff": "{{name}} belgiladi",
+    "person": "tasdiqladi: {{person}}",
+    "channel": {
+      "email": "pochta",
+      "messenger": "messenjer",
+      "phone": "telefon",
+      "in_person": "shaxsan",
+      "paper": "qog'oz"
+    },
+    "channelLabel": "Mijoz qanday xabar berdi",
+    "channelPlaceholder": "Kanalni tanlang",
+    "channelRequired": "Mijoz qanday xabar berganini ko'rsating",
+    "personLabel": "Mijoz tomonidan kim",
+    "personPlaceholder": "F.I.Sh. va lavozimi",
+    "personRequired": "Kim tasdiqlaganini ko'rsating"
   }
 }
