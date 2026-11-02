@@ -358,7 +358,7 @@ def test_item_brand_mpn_hs_are_editable_and_publish_follows_completeness(world):
         "8544429007",
     )
     assert world["clients"]["supply"].patch(path, {"hs_code": "12a"}, format="json").json() == {
-        "detail": "HS_CODE_INVALID"
+        "detail": "ITEM_HS_CODE_INVALID"
     }
     assert world["clients"]["manager"].post(f"{path}publish/").status_code == 403
 

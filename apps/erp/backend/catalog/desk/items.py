@@ -307,7 +307,7 @@ def _brand(brand_id):
 def _hs_code(value) -> str:
     digits = "".join(ch for ch in str(value or "") if ch.isdigit())
     if str(value or "").strip() and (digits != str(value).strip() or len(digits) not in (2, 4, 6, 8, 10)):
-        raise ItemError("HS_CODE_INVALID", "hs_code")
+        raise ItemError("ITEM_HS_CODE_INVALID", "hs_code")
     return digits
 
 
