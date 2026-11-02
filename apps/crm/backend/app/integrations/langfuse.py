@@ -93,3 +93,35 @@ def current_trace_id() -> str | None:
         return None
     trace_id: str | None = lf.get_current_trace_id()
     return trace_id
+
+
+@contextmanager
+def ai_trace(name: str, *, user_id: int, function: str, version: str, input: Any) -> Iterator[Any]:
+    """Трасса вызова ИИ по кнопке сотрудника (W18A-P2): кто вызвал (`user_id`), функция, версия
+    промпта; вход — уже маскированный текст (и ещё раз — mask-функцией клиента)."""
+    lf = client()
+    if lf is None:
+        yield None
+        return
+    from langfuse import propagate_attributes
+
+    with (
+        lf.start_as_current_observation(name=name, as_type="agent", input=input) as span,
+        propagate_attributes(
+            user_id=str(user_id),
+            metadata={"function": function, "prompt_version": version},
+            tags=[function],
+            version=version,
+        ),
+    ):
+        yield span
+
+
+def score(trace_id: str | None, name: str, value: str, comment: str | None = None) -> None:
+    """Оценка трассы (решение человека по подсказке ИИ); без Langfuse или трассы — ничего."""
+    lf = client()
+    if lf is None or not trace_id:
+        return
+    lf.create_score(
+        name=name, value=value, trace_id=trace_id, data_type="CATEGORICAL", comment=comment
+    )

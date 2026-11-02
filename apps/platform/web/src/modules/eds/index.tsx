@@ -7,6 +7,7 @@ import { ApprovalsScreen } from "./approvals/ApprovalsScreen";
 import { DocumentsPage } from "./documents/DocumentsPage";
 import { DraftsScreen } from "./drafts/DraftsScreen";
 import { InboxScreen } from "./inbox/InboxScreen";
+import { MailScreen } from "./mail/MailScreen";
 import { NewDocumentPage } from "./new/NewDocumentPage";
 import { PaymentsScreen } from "./payments/PaymentsScreen";
 import { ProjectsScreen } from "./projects/ProjectsScreen";
@@ -24,6 +25,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <InboxScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "mail") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <MailScreen objectId={match.objectId} />
       </RequireAccess>
     );
   }

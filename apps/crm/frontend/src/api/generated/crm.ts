@@ -97,6 +97,16 @@ import type {
   GetSpendParams,
   HandOver,
   HealthResponse,
+  ImapCheckOut,
+  ImapConnectorIn,
+  ImapStatusOut,
+  InboundMailArchiveIn,
+  InboundMailAssist,
+  InboundMailLeadOut,
+  InboundMailOut,
+  InboundMailPage,
+  InboundMailReply,
+  InboundMailReplyIn,
   InboxParams,
   InboxResponse,
   InvitationOut,
@@ -117,6 +127,7 @@ import type {
   ListDialogsParams,
   ListDocumentsParams,
   ListEmailLogParams,
+  ListInboundMailParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLeadsParams,
@@ -6767,6 +6778,804 @@ export function useExportLeads<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/inbound-mail?${stringifiedParams}`
+    : `/api/v1/inbound-mail`;
+};
+
+/**
+ * Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
+ * приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
+ * Почта»).
+ * @summary List Inbound Mail
+ */
+export const listInboundMail = async (
+  params?: ListInboundMailParams,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailPage> => {
+  return http<InboundMailPage>(getListInboundMailUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListInboundMailQueryKey = (params?: ListInboundMailParams) => {
+  return [`/api/v1/inbound-mail`, ...(params ? [params] : [])] as const;
+};
+
+export const getListInboundMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListInboundMailQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listInboundMail>>> = ({ signal }) =>
+    listInboundMail(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listInboundMail>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListInboundMailQueryResult = NonNullable<Awaited<ReturnType<typeof listInboundMail>>>;
+export type ListInboundMailQueryError = ErrorType<ErrorOut>;
+
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListInboundMailParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof listInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof listInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Inbound Mail
+ */
+
+export function useListInboundMail<
+  TData = Awaited<ReturnType<typeof listInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListInboundMailParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListInboundMailQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}`;
+};
+
+/**
+ * Карточка письма: отправитель, тема, текст, вложения, связка, подсказка помощника, итог.
+ * @summary Get Inbound Mail
+ */
+export const getInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailOut> => {
+  return http<InboundMailOut>(getGetInboundMailUrl(mailId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInboundMailQueryKey = (mailId: number) => {
+  return [`/api/v1/inbound-mail/${mailId}`] as const;
+};
+
+export const getGetInboundMailQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInboundMailQueryKey(mailId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboundMail>>> = ({ signal }) =>
+    getInboundMail(mailId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: mailId !== null && mailId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetInboundMailQueryResult = NonNullable<Awaited<ReturnType<typeof getInboundMail>>>;
+export type GetInboundMailQueryError = ErrorType<ErrorOut>;
+
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMail>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMail>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Inbound Mail
+ */
+
+export function useGetInboundMail<
+  TData = Awaited<ReturnType<typeof getInboundMail>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getInboundMail>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetInboundMailQueryOptions(mailId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getArchiveInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/archive`;
+};
+
+/**
+ * «Архив» с причиной. Письмо уже обработано — 409.
+ * @summary Archive Inbound Mail
+ */
+export const archiveInboundMail = async (
+  mailId: number,
+  inboundMailArchiveIn: InboundMailArchiveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getArchiveInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailArchiveIn),
+  });
+};
+
+export const getArchiveInboundMailMutationKey = () => ["archiveInboundMail"] as const;
+
+export const getArchiveInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof archiveInboundMail>>,
+    TError,
+    ArchiveInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof archiveInboundMail>>,
+  TError,
+  ArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getArchiveInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof archiveInboundMail>>,
+    ArchiveInboundMailMutationVariables
+  > = (props) => {
+    const { mailId, data } = props ?? {};
+
+    return archiveInboundMail(mailId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ArchiveInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof archiveInboundMail>>
+>;
+export type ArchiveInboundMailMutationBody = InboundMailArchiveIn;
+export type ArchiveInboundMailMutationError = ErrorType<ErrorOut>;
+export type ArchiveInboundMailMutationVariables = { mailId: number; data: InboundMailArchiveIn };
+
+/**
+ * @summary Archive Inbound Mail
+ */
+export const useArchiveInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof archiveInboundMail>>,
+      TError,
+      ArchiveInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof archiveInboundMail>>,
+  TError,
+  ArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getArchiveInboundMailMutationOptions(options), queryClient);
+};
+
+export const getAssistInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/assist`;
+};
+
+/**
+ * «Подсказать» (решение юриста 2026-11-02 — только по кнопке): тип, суть и предложенное
+ * действие; в модель — текст без персональных данных, вложения — никогда. Уже есть — она же, без
+ * второго вызова. Модель недоступна — `status = unavailable` (разберите вручную). Помощник
+ * выключен админом — 409 `assist_disabled`.
+ * @summary Assist Inbound Mail
+ */
+export const assistInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailAssist> => {
+  return http<InboundMailAssist>(getAssistInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAssistInboundMailMutationKey = () => ["assistInboundMail"] as const;
+
+export const getAssistInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    TError,
+    AssistInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assistInboundMail>>,
+    AssistInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return assistInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssistInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof assistInboundMail>>
+>;
+
+export type AssistInboundMailMutationError = ErrorType<ErrorOut>;
+export type AssistInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Assist Inbound Mail
+ */
+export const useAssistInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assistInboundMail>>,
+      TError,
+      AssistInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assistInboundMail>>,
+  TError,
+  AssistInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistInboundMailMutationOptions(options), queryClient);
+};
+
+export const getGetInboundMailAttachmentUrl = (mailId: number, index: number) => {
+  return `/api/v1/inbound-mail/${mailId}/attachments/${index}`;
+};
+
+/**
+ * Файл вложения из хранилища CRM (ключ и адрес хранилища наружу не уходят).
+ * @summary Get Inbound Mail Attachment
+ */
+export const getInboundMailAttachment = async (
+  mailId: number,
+  index: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetInboundMailAttachmentUrl(mailId, index), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetInboundMailAttachmentQueryKey = (mailId: number, index: number) => {
+  return [`/api/v1/inbound-mail/${mailId}/attachments/${index}`] as const;
+};
+
+export const getGetInboundMailAttachmentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getInboundMailAttachment>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetInboundMailAttachmentQueryKey(mailId, index);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getInboundMailAttachment>>> = ({
+    signal,
+  }) => getInboundMailAttachment(mailId, index, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: mailId !== null && mailId !== undefined && index !== null && index !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetInboundMailAttachmentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getInboundMailAttachment>>
+>;
+export type GetInboundMailAttachmentQueryError = ErrorType<ErrorOut>;
+
+export function useGetInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof getInboundMailAttachment>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  index: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMailAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMailAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof getInboundMailAttachment>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getInboundMailAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof getInboundMailAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof getInboundMailAttachment>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Inbound Mail Attachment
+ */
+
+export function useGetInboundMailAttachment<
+  TData = Awaited<ReturnType<typeof getInboundMailAttachment>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  mailId: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getInboundMailAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetInboundMailAttachmentQueryOptions(mailId, index, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateLeadFromMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/lead`;
+};
+
+/**
+ * «Создать лид»: лид без ответственного во «Входящих» или заметка в открытом лиде с этим
+ * адресом. Письмо уже обработано — 409.
+ * @summary Create Lead From Mail
+ */
+export const createLeadFromMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailLeadOut> => {
+  return http<InboundMailLeadOut>(getCreateLeadFromMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateLeadFromMailMutationKey = () => ["createLeadFromMail"] as const;
+
+export const getCreateLeadFromMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createLeadFromMail>>,
+    TError,
+    CreateLeadFromMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createLeadFromMail>>,
+  TError,
+  CreateLeadFromMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateLeadFromMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createLeadFromMail>>,
+    CreateLeadFromMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return createLeadFromMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateLeadFromMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createLeadFromMail>>
+>;
+
+export type CreateLeadFromMailMutationError = ErrorType<ErrorOut>;
+export type CreateLeadFromMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Create Lead From Mail
+ */
+export const useCreateLeadFromMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createLeadFromMail>>,
+      TError,
+      CreateLeadFromMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createLeadFromMail>>,
+  TError,
+  CreateLeadFromMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateLeadFromMailMutationOptions(options), queryClient);
+};
+
+export const getReplyInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/reply`;
+};
+
+/**
+ * Ответ отправителю в ту же цепочку (In-Reply-To, References) почтовым сервисом. Почта не
+ * настроена — 409 `smtp_not_configured`.
+ * @summary Reply Inbound Mail
+ */
+export const replyInboundMail = async (
+  mailId: number,
+  inboundMailReplyIn: InboundMailReplyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailReply> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<InboundMailReply>(getReplyInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailReplyIn),
+  });
+};
+
+export const getReplyInboundMailMutationKey = () => ["replyInboundMail"] as const;
+
+export const getReplyInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyInboundMail>>,
+    TError,
+    ReplyInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyInboundMail>>,
+  TError,
+  ReplyInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyInboundMail>>,
+    ReplyInboundMailMutationVariables
+  > = (props) => {
+    const { mailId, data } = props ?? {};
+
+    return replyInboundMail(mailId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof replyInboundMail>>
+>;
+export type ReplyInboundMailMutationBody = InboundMailReplyIn;
+export type ReplyInboundMailMutationError = ErrorType<ErrorOut>;
+export type ReplyInboundMailMutationVariables = { mailId: number; data: InboundMailReplyIn };
+
+/**
+ * @summary Reply Inbound Mail
+ */
+export const useReplyInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replyInboundMail>>,
+      TError,
+      ReplyInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replyInboundMail>>,
+  TError,
+  ReplyInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyInboundMailMutationOptions(options), queryClient);
+};
+
 export const getInboxUrl = (params?: InboxParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -7418,6 +8227,301 @@ export const useRotateErpKeys = <TError = ErrorType<ErrorOut>, TContext = unknow
   TContext
 > => {
   return useMutation(getRotateErpKeysMutationOptions(options), queryClient);
+};
+
+export const getGetImapStatusUrl = () => {
+  return `/api/v1/integrations/imap`;
+};
+
+/**
+ * Приём почты общего ящика: хост, порт, папка, логин; пароль — только «задан» и `last4`;
+ * итог последнего опроса.
+ * @summary Get Imap Status
+ */
+export const getImapStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImapStatusOut> => {
+  return http<ImapStatusOut>(getGetImapStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetImapStatusQueryKey = () => {
+  return [`/api/v1/integrations/imap`] as const;
+};
+
+export const getGetImapStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getImapStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetImapStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getImapStatus>>> = ({ signal }) =>
+    getImapStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getImapStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetImapStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getImapStatus>>>;
+export type GetImapStatusQueryError = ErrorType<ErrorOut>;
+
+export function useGetImapStatus<
+  TData = Awaited<ReturnType<typeof getImapStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImapStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getImapStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImapStatus<
+  TData = Awaited<ReturnType<typeof getImapStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getImapStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getImapStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetImapStatus<
+  TData = Awaited<ReturnType<typeof getImapStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Imap Status
+ */
+
+export function useGetImapStatus<
+  TData = Awaited<ReturnType<typeof getImapStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getImapStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetImapStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPutImapConnectorUrl = () => {
+  return `/api/v1/integrations/imap`;
+};
+
+/**
+ * Сохранить приём (после пароля админа); логин/пароль `null` — оставить прежние, пустой хост
+ * — выключить. Ошибки: `smtp_invalid_host` (422, `host`), `wrong_password` (422),
+ * `secrets_key_missing` (409).
+ * @summary Put Imap Connector
+ */
+export const putImapConnector = async (
+  imapConnectorIn: ImapConnectorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ImapStatusOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImapStatusOut>(getPutImapConnectorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(imapConnectorIn),
+  });
+};
+
+export const getPutImapConnectorMutationKey = () => ["putImapConnector"] as const;
+
+export const getPutImapConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putImapConnector>>,
+    TError,
+    PutImapConnectorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putImapConnector>>,
+  TError,
+  PutImapConnectorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutImapConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putImapConnector>>,
+    PutImapConnectorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putImapConnector(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutImapConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putImapConnector>>
+>;
+export type PutImapConnectorMutationBody = ImapConnectorIn;
+export type PutImapConnectorMutationError = ErrorType<ErrorOut>;
+export type PutImapConnectorMutationVariables = { data: ImapConnectorIn };
+
+/**
+ * @summary Put Imap Connector
+ */
+export const usePutImapConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putImapConnector>>,
+      TError,
+      PutImapConnectorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putImapConnector>>,
+  TError,
+  PutImapConnectorMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutImapConnectorMutationOptions(options), queryClient);
+};
+
+export const getCheckImapConnectorUrl = () => {
+  return `/api/v1/integrations/imap/check`;
+};
+
+/**
+ * «Проверить приём»: вход и папка только на чтение, без чтения писем. Итог — в ответе:
+ * `error_kind` — `not_configured`, `invalid_host`, `unavailable`, `tls_failed`, `auth_failed`,
+ * `mailbox_missing`.
+ * @summary Check Imap Connector
+ */
+export const checkImapConnector = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImapCheckOut> => {
+  return http<ImapCheckOut>(getCheckImapConnectorUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckImapConnectorMutationKey = () => ["checkImapConnector"] as const;
+
+export const getCheckImapConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkImapConnector>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkImapConnector>>, TError, void, TContext> => {
+  const mutationKey = getCheckImapConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkImapConnector>>, void> = () => {
+    return checkImapConnector(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckImapConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkImapConnector>>
+>;
+
+export type CheckImapConnectorMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Check Imap Connector
+ */
+export const useCheckImapConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkImapConnector>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkImapConnector>>, TError, void, TContext> => {
+  return useMutation(getCheckImapConnectorMutationOptions(options), queryClient);
 };
 
 export const getGetOffsiteStatusUrl = () => {

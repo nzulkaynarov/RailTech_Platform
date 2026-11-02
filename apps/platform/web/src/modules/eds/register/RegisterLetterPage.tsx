@@ -1,7 +1,7 @@
 import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
@@ -21,6 +21,7 @@ import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { letterPath, useRefreshLetters } from "../inbox/api";
+import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
@@ -37,6 +38,7 @@ import {
   toRegisterBody,
   validateRegister,
 } from "./registerModel";
+import { useMailPrefill } from "./useMailPrefill";
 
 import "../new/new.css";
 import "./register.css";
@@ -171,6 +173,14 @@ export function RegisterLetterPage() {
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
+  const [params] = useSearchParams();
+  const mailParam = Number(params.get("mail"));
+  const mailId = Number.isInteger(mailParam) && mailParam > 0 ? mailParam : null;
+  const applyMail = useCallback((update: (prev: RegisterValues) => RegisterValues) => {
+    setValues(update);
+  }, []);
+  const fromMail = useMailPrefill(mailId, applyMail);
+  const refreshMail = useRefreshMail();
   const kinds = useListLetterKinds({ query: { staleTime: 5 * 60_000 } });
   const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
   const people = (staff.data?.items ?? []).map((person) => ({
@@ -178,7 +188,8 @@ export function RegisterLetterPage() {
     label: person.position ? `${person.name} · ${person.position}` : person.name,
   }));
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
-  const uploading = values.attachments.some((a) => a.status === "uploading");
+  const uploading =
+    values.attachments.some((a) => a.status === "uploading") || fromMail.state === "loading";
   const title = t("modules:eds.sections.register");
   useDocumentTitle(title);
 
@@ -214,6 +225,7 @@ export function RegisterLetterPage() {
         headers: { "Idempotency-Key": idempotency.current.key },
       });
       void refresh();
+      if (values.sourceMailId !== null) void refreshMail();
       void message.success(t("letters:register.toast", { number: card.number }));
       const search = new URLSearchParams({ letter: card.number, tab: "resolution" });
       if (mobile) search.set("sheet", "resolution");
@@ -244,6 +256,28 @@ export function RegisterLetterPage() {
   return (
     <div className="pf-newdoc">
       <PageHeader title={title} subtitle={t("letters:register.subtitle")} />
+      {fromMail.state !== "idle" ? (
+        <Alert
+          type={
+            fromMail.state === "files_failed" || fromMail.state === "failed" ? "warning" : "info"
+          }
+          showIcon
+          role="status"
+          message={
+            fromMail.state === "loading"
+              ? t("letters:mail.fromMailLoading")
+              : fromMail.state === "failed"
+                ? t("letters:state.loadError.title")
+                : t("letters:mail.fromMail", {
+                    subject: fromMail.subject,
+                    sender: fromMail.sender,
+                  })
+          }
+          description={
+            fromMail.state === "files_failed" ? t("letters:mail.fromMailFailed") : undefined
+          }
+        />
+      ) : null}
       <form
         aria-label={t("letters:register.formLabel")}
         noValidate

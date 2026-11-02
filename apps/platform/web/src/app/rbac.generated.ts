@@ -252,6 +252,7 @@ export const MENU = {
       "eds.memo.approve",
     ],
     inbox: ["eds.inbox", "eds.inbox.register"],
+    mail: ["crm.leads.triage"],
     outbox: ["eds.drafts"],
     projects: ["eds.projects"],
     drafts: ["eds.drafts"],
@@ -401,6 +402,10 @@ export const QUEUE = {
   },
   acquaint: {
     resource: "dashboard.queue",
+    level: "full",
+  },
+  inbound_mail: {
+    resource: "crm.leads.triage",
     level: "full",
   },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;

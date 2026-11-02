@@ -14,6 +14,7 @@ import { registeredQueueItems } from "./edsLetters";
 import { letterNotificationsOf, letterTaskQueueItems, markLetterNoteRead } from "./edsInstructions";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
+import { inboundMailCards, inboundMailCounters, inboundMailQueueItems } from "./inboundMail";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
 import { stockQueueItems } from "./erpStock";
 import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
@@ -167,6 +168,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
       (i) => !(i.kind.endsWith("_lead") && handNumbers.has(i.object.number)),
     ),
     ...ticketQueueItems(view), // обращения живут в CRM, как и лиды
+    ...inboundMailQueueItems(view), // W18A-P2: письма общего ящика ждут разбора (CRM)
     ...stockQueueItems(view), // просроченные заказы поставщикам (ERP, D2-2)
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
@@ -174,7 +176,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ...edsDecisionQueueItems(view), // D26G-4, D26G-9: КП на моём шаге и служебка к оплате (EDS)
     ...handOver, // D17G-1: разобрать лида, переданный лид
   ].filter((i) =>
-    i.kind.endsWith("_lead") || i.kind === "ticket"
+    i.kind.endsWith("_lead") || i.kind === "ticket" || i.kind === "inbound_mail"
       ? !crmDown()
       : EDS_KINDS.includes(i.kind)
         ? !edsDown()
@@ -200,9 +202,12 @@ export const feedHandlers = [
     // Карточки счетов (D2-8) — перед «Проектами в работе», как в BFF; всего не больше четырёх
     // «КП на одобрение» — число строк «Одобрить КП» очереди (D26G-4)
     const quotes = quotesToApprove(roles.view) ?? 0;
-    const base = cardsForView(roles.view).map((c) =>
-      c.key === "quotes_to_approve" ? { ...c, count: quotes } : c,
-    );
+    const base = [
+      ...cardsForView(roles.view).map((c) =>
+        c.key === "quotes_to_approve" ? { ...c, count: quotes } : c,
+      ),
+      ...(crmDown() ? [] : inboundMailCards(roles.view)), // W18A-P2
+    ];
     const at = base.findIndex((c) => c.key === "projects_in_work");
     const merged =
       at < 0
@@ -263,6 +268,8 @@ export const feedHandlers = [
         ...(stockOverdue > 0 && !erpDown()
           ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]
           : []),
+        // «Документы · Входящая почта»: письма общего ящика ждут разбора (W18A-P2)
+        ...(crmDown() ? [] : inboundMailCounters(roles.view)),
         // «Настройки · Обращения сотрудников»: число новых обращений (W15-H7)
         ...(tickets > 0
           ? [{ module: "admin" as const, section: "tickets", count: tickets, attention: true }]

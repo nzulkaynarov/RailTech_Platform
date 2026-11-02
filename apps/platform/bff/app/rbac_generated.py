@@ -198,6 +198,7 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
             "eds.inbox",
             "eds.inbox.register",
         ),
+        "mail": ("crm.leads.triage",),
         "outbox": ("eds.drafts",),
         "projects": ("eds.projects",),
         "drafts": ("eds.drafts",),
@@ -339,6 +340,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
     ),
     "acquaint": (
         "dashboard.queue",
+        "full",
+    ),
+    "inbound_mail": (
+        "crm.leads.triage",
         "full",
     ),
 }

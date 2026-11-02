@@ -138,7 +138,8 @@
       "payments": "Invoices & payments",
       "new": "New document",
       "register": "Register incoming",
-      "tasks": "Instruction"
+      "tasks": "Instruction",
+      "mail": "Incoming mail"
     },
     "action": "New document"
   },

@@ -63,6 +63,17 @@ class FeedBackends:
                 "counts": {"new": 0, "in_progress": 0, "resolved": 0},
             },
             "documents": {"results": []},
+            # Входящая почта общего ящика (W18A-P2): пусто, приём настроен
+            "crm_mail": {
+                "items": [],
+                "total": 0,
+                "mailbox": {
+                    "configured": True,
+                    "last_poll_at": None,
+                    "last_ok_at": None,
+                    "last_error_kind": None,
+                },
+            },
             # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
             "overdue": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
@@ -95,6 +106,7 @@ class FeedBackends:
                 "crm_notifications", router.get(f"{CRM_URL}/api/v1/me/notifications")
             ),
             "tickets": self._crm("crm_tickets", router.get(f"{CRM_URL}/api/v1/staff-tickets")),
+            "mail": self._crm("crm_mail", router.get(f"{CRM_URL}/api/v1/inbound-mail")),
         }
         self.crm_read_status = 204
         self.crm_read = router.post(

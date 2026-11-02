@@ -2104,6 +2104,210 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/imap": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Почта (IMAP): приём общего ящика, пароль — маска
+     * @description CRM `GET /integrations/imap` (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`; итог последнего опроса ящика (`last_poll_at`, `last_ok_at`, `last_error_kind`).
+     */
+    get: operations["getImapConnector"];
+    /**
+     * Сохранить приём почты (IMAP)
+     * @description CRM `PUT /integrations/imap`. `imap_password = null` — оставить прежний пароль приложения, `username = null` — прежний логин; пустой `host` выключает приём. `password` — пароль администратора (повторный ввод), нигде не сохраняется. `assist_enabled` — выключатель помощника канцелярии (тип и суть письма моделью).
+     */
+    put: operations["saveImapConnector"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/imap/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить приём почты
+     * @description CRM `POST /integrations/imap/check`: вход и открытие папки только на чтение, письма не читаются и не помечаются. Итог — в ответе (`ok`, `error_kind`: `not_configured`, `invalid_host`, `unavailable`, `tls_failed`, `auth_failed`, `mailbox_missing`).
+     */
+    post: operations["checkImap"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Входящая почта: очередь писем общего ящика
+     * @description CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта».
+     */
+    get: operations["listInboundMail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Входящая почта: карточка письма
+     * @description CRM `GET /inbound-mail/{id}`: отправитель, тема, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), итог (номер ВХ, лид, причина архива), ответы.
+     */
+    get: operations["getInboundMail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/attachments/{index}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Входящая почта: файл вложения
+     * @description CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит.
+     */
+    get: operations["downloadInboundMailAttachment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/eds-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: вложения письма — файлами EDS для «Зарегистрировать ВХ»
+     * @description Подготовка формы «Зарегистрировать входящее» (P8) из письма: BFF читает вложения письма из CRM и загружает их в EDS (`POST /files`) от имени сотрудника — как если бы он приложил их сам; ответ — файлы EDS для `file_ids` формы. Право — `crm.leads.triage` (полный), регистрация — `eds.inbox.register`. Повтор — новые черновые файлы (непривязанные видит только загрузивший).
+     */
+    post: operations["copyInboundMailFilesToEds"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Подсказать» — тип, суть и предложенное действие
+     * @description CRM `POST /inbound-mail/{id}/assist` — только по кнопке сотрудника (решение юриста 2026-11-02); без неё карточка работает вручную. Модель — алиас `qualifier-model`, текст без персональных данных, вложения не уходят. Подсказка уже есть — она же, без второго вызова. Модель недоступна — `status = unavailable`. Помощник выключен — 409 `CONFLICT`, `details.reason = assist_disabled`. Вызов и решение человека по письму пишутся в журнал ИИ CRM (без текстов).
+     */
+    post: operations["assistInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/lead": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Создать лид»
+     * @description CRM `POST /inbound-mail/{id}/lead`: лид из письма во «Входящих» без ответственного (как запрос с сайта — срок первого ответа, «Забрать» у менеджера); открытый лид с этим адресом есть — письмо заметкой в него (`created = false`). Письмо уходит из очереди. Уже обработано — 409 `CONFLICT`.
+     */
+    post: operations["createLeadFromInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/archive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Архив» с причиной
+     * @description CRM `POST /inbound-mail/{id}/archive`. Письмо уходит из очереди; уже обработано — 409 `CONFLICT`.
+     */
+    post: operations["archiveInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/reply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: ответ отправителю в ту же цепочку
+     * @description CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
+     */
+    post: operations["replyInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations/services": {
     parameters: {
       query?: never;
@@ -7211,7 +7415,8 @@ export interface components {
       | "integration_issue"
       | "instruction"
       | "instruction_extension"
-      | "acquaint";
+      | "acquaint"
+      | "inbound_mail";
     /**
      * @description Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
      * @enum {string}
@@ -9911,6 +10116,194 @@ export interface components {
     LetterDuplicateList: {
       items: components["schemas"]["LetterDuplicate"][];
     };
+    /** @description Приём почты общего ящика (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`. */
+    ImapConnector: {
+      /** @description Есть хост, логин и пароль — ящик опрашивается раз в 2 минуты */
+      configured: boolean;
+      host: string;
+      port: number;
+      /** @enum {string} */
+      security: "ssl" | "starttls";
+      /** @description Папка (по умолчанию INBOX) */
+      mailbox: string;
+      /** @description Помощник канцелярии включён */
+      assist_enabled: boolean;
+      username: string;
+      password_configured: boolean;
+      password_last4: string | null;
+      /** Format: date-time */
+      password_updated_at: string | null;
+      secrets_enabled: boolean;
+      /** Format: date-time */
+      last_poll_at: string | null;
+      /** Format: date-time */
+      last_ok_at: string | null;
+      /** @description Причина последнего сбоя опроса словом-кодом (как `ImapCheck.error_kind`) */
+      last_error_kind: string | null;
+      last_error: string | null;
+    };
+    ImapSettingsIn: {
+      /** @description Пусто — приём выключен */
+      host: string;
+      /** @default 993 */
+      port: number;
+      /**
+       * @default ssl
+       * @enum {string}
+       */
+      security: "ssl" | "starttls";
+      /** @default INBOX */
+      mailbox: string;
+      /** @default true */
+      assist_enabled: boolean;
+      /** @description `null` — оставить прежний */
+      username?: string | null;
+      /** @description Пароль приложения; `null` — оставить прежний */
+      imap_password?: string | null;
+      /** @description Пароль администратора */
+      password: string;
+    };
+    ImapCheck: {
+      ok: boolean;
+      error_kind: string | null;
+      detail: string | null;
+      /** @description Писем в папке */
+      messages: number | null;
+      latency_ms: number | null;
+    };
+    /**
+     * @description new — ждёт разбора; registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
+     * @enum {string}
+     */
+    InboundMailStatus: "new" | "registered" | "lead" | "archived";
+    /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
+    InboundMailAssist: {
+      /**
+       * @description none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть; unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
+       * @enum {string}
+       */
+      status: "none" | "done" | "unavailable" | "off";
+      /** @enum {string|null} */
+      kind: "buyer" | "official" | "supplier_doc" | "other" | null;
+      summary: string | null;
+      /**
+       * @description Предложение по типу (выбирает код)
+       * @enum {string|null}
+       */
+      action: "register" | "lead" | "archive" | null;
+    };
+    InboundMailLink: {
+      id: number;
+      /** @description Номер лида `L-0042` или код клиента */
+      number: string;
+      name: string;
+    };
+    InboundMailItem: {
+      id: number;
+      status: components["schemas"]["InboundMailStatus"];
+      from_email: string;
+      from_name: string;
+      subject: string;
+      /** Format: date-time */
+      received_at: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      preview: string;
+      attachments_count: number;
+      assist: components["schemas"]["InboundMailAssist"];
+      /** @description Известный клиент — по адресу контакта или ИНН в тексте */
+      client: components["schemas"]["InboundMailLink"] | null;
+      /** @description Открытый лид с этим адресом */
+      lead: components["schemas"]["InboundMailLink"] | null;
+    };
+    InboundMailMailbox: {
+      /** @description false — приём не настроен: «Настройки · Подключения · Почта» */
+      configured: boolean;
+      /** Format: date-time */
+      last_poll_at: string | null;
+      /** Format: date-time */
+      last_ok_at: string | null;
+      last_error_kind: string | null;
+    };
+    InboundMailPage: {
+      items: components["schemas"]["InboundMailItem"][];
+      total: number;
+      mailbox: components["schemas"]["InboundMailMailbox"];
+    };
+    InboundMailAttachment: {
+      index: number;
+      name: string;
+      content_type: string;
+      size: number;
+    };
+    InboundMailSkipped: {
+      name: string;
+      /**
+       * @description Не принято: тип не из белого списка, больше 25 МБ, больше 20 файлов
+       * @enum {string}
+       */
+      reason: "type" | "size" | "count";
+    };
+    InboundMailReply: {
+      id: number;
+      to_email: string;
+      subject: string;
+      /** @description queued, sent, failed, skipped_no_smtp — как в журнале почты */
+      status: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      sent_at: string | null;
+    };
+    /** @description Карточка письма общего ящика */
+    InboundMail: {
+      id: number;
+      status: components["schemas"]["InboundMailStatus"];
+      from_email: string;
+      from_name: string;
+      subject: string;
+      /** Format: date-time */
+      received_at: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      preview: string;
+      attachments_count: number;
+      assist: components["schemas"]["InboundMailAssist"];
+      /** @description Известный клиент — по адресу контакта или ИНН в тексте */
+      client: components["schemas"]["InboundMailLink"] | null;
+      /** @description Открытый лид с этим адресом */
+      lead: components["schemas"]["InboundMailLink"] | null;
+      to: string[];
+      /** @description Тело письма только текстом (HTML — без разметки) */
+      text: string;
+      attachments: components["schemas"]["InboundMailAttachment"][];
+      skipped: components["schemas"]["InboundMailSkipped"][];
+      /** @description Письмо больше 60 МБ — сохранены только заголовки */
+      too_large: boolean;
+      inns: string[];
+      /** @description Номер ВХ, если письмо зарегистрировано */
+      letter_number: string | null;
+      /** @description Путь к карточке ВХ */
+      letter_ref: string | null;
+      result_lead: components["schemas"]["InboundMailLink"] | null;
+      archive_reason: string | null;
+      /** Format: date-time */
+      handled_at: string | null;
+      replies: components["schemas"]["InboundMailReply"][];
+    };
+    InboundMailLeadResult: {
+      lead_id: number;
+      /** @example L-0042 */
+      lead_number: string;
+      /** @description false — письмо добавлено заметкой в открытый лид с этим адресом */
+      created: boolean;
+    };
+    InboundMailArchiveIn: {
+      reason: string;
+    };
+    InboundMailReplyIn: {
+      text: string;
+    };
     /** @description Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию */
     LetterRegisterIn: {
       /** @description Код из `GET /eds/letter-kinds` */
@@ -9951,6 +10344,8 @@ export interface components {
       addressee_id?: string | null;
       /** @description Проект резолюции делопроизводителя (P8b) */
       resolution_draft?: components["schemas"]["ResolutionDraftIn"] | null;
+      /** @description Письмо общего ящика, из которого регистрируется ВХ (очередь «Входящая почта», W18A-P2): EDS передаёт его в `letter.registered`, CRM снимает письмо с очереди. С ним `file_ids` может быть пустым (письмо без вложений — текст в `summary`); без него нужен хотя бы один файл. */
+      source_mail_id?: number | null;
       file_ids: string[];
     };
     ResolutionAssigneeIn: {
@@ -11761,6 +12156,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`) или помощник выключен (`assist_disabled`) */
+    InboundMailConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name` — лида ведёт или его передали другому, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
@@ -11844,6 +12248,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+    InboundMailId: number;
     /** @description Идентификатор статьи компании */
     CompanyArticleIdPath: number;
     /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
@@ -15464,6 +15870,334 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getImapConnector: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImapConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveImapConnector: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImapSettingsIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImapConnector"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkImap: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImapCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listInboundMail: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["InboundMailStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getInboundMail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadInboundMailAttachment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+        index: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  copyInboundMailFilesToEds: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файлы EDS (пусто — у письма нет вложений) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"][];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assistInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подсказка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailAssist"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createLeadFromInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailLeadResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  archiveInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailArchiveIn"];
+      };
+    };
+    responses: {
+      /** @description В архиве */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  replyInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailReplyIn"];
+      };
+    };
+    responses: {
+      /** @description Поставлено в очередь отправки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailReply"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
