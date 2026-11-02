@@ -698,7 +698,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 
 | Тип | Когда | Подписчики v1 |
 |---|---|---|
-| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created` | platform-bff |
+| `uz.railtech.eds.letter.registered.v1` | письмо получило ВХ-номер: вручную или по `erp.request.created`; `source.crm_inbound_mail_id` — ВХ из очереди «Входящая почта» (W18A-P2) | platform-bff, crm (письма с `source`) |
 | `uz.railtech.eds.letter.resolved.v1` | резолюция: исполнители (`crm_user_id`, `zone`: `goods`, `services`, `payment_terms`), срок, `min_margin_pct`, `links` (`erp_request_id`, `erp_deal_id`, `deal_number`) | erp (задание расчёта, стадия `CALCULATION` — FSM ERP `CALCULATING`; §10.6), platform-bff |
 | `uz.railtech.eds.letter.returned.v1` | возврат регистратору с комментарием (повторная подача — `POST …/submit`, без события) | platform-bff |
 | `uz.railtech.eds.letter.rejected.v1` | отказ с причиной | erp (сделка → `LOST` с причиной), platform-bff |

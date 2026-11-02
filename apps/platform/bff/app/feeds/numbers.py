@@ -206,6 +206,12 @@ def ticket_ref(number: str) -> ObjectRef:
     )
 
 
+def mail_ref(mail_id: int, sender: str, subject: str | None) -> ObjectRef:
+    """Письмо общего ящика до регистрации (W18A-P2): карточка в «Документы · Входящая почта»;
+    номера ещё нет — вместо него адрес отправителя."""
+    return ObjectRef(kind="letter", number=sender, title=subject, path=f"/eds/mail/{mail_id}")
+
+
 def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:
     """Заказ поставщику (`ЗП-2026-031`): карточка в Расчёт · Склад (D2-2)."""
     return ObjectRef(

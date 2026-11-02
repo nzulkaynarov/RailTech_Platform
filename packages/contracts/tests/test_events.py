@@ -418,8 +418,12 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
         "uz.railtech.erp.contract.status_changed.v1",
         "uz.railtech.erp.letterhead.updated.v1",
     }
-    # от EDS — запрос письма (W18A-P1) и уведомления сотрудникам (P8b)
-    assert _gets(crm) - erp_got == {"uz.railtech.eds.mail.requested.v1", "uz.railtech.eds.notice.requested.v1"}
+    # от EDS — запрос письма (W18A-P1), уведомления сотрудникам (P8b) и ВХ из очереди «Входящая почта» (W18A-P2)
+    assert _gets(crm) - erp_got == {
+        "uz.railtech.eds.mail.requested.v1",
+        "uz.railtech.eds.notice.requested.v1",
+        "uz.railtech.eds.letter.registered.v1",
+    }
 
 
 def test_eds_subscription_c1() -> None:

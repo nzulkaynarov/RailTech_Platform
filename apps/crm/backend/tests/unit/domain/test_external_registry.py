@@ -32,6 +32,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "ai_replies",
         "langfuse",
         "mail",
+        "mail_inbound",
         "s3",
         "docling",
         "erp_sync",

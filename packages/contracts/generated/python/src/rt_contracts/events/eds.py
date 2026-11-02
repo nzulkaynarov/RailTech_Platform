@@ -318,7 +318,7 @@ class LetterRef(BaseModel):
 
 class LetterRegisteredV1(BaseModel):
     """
-    Тип uz.railtech.eds.letter.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff.
+    Тип uz.railtech.eds.letter.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff; crm — только письма из очереди «Входящая почта» (`source`, W18A-P2).
     """
 
     model_config = ConfigDict(
@@ -327,6 +327,10 @@ class LetterRegisteredV1(BaseModel):
     letter: Letter
     links: ErpLinks
     actor: Actor
+    source: Source | None = None
+    """
+    Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.
+    """
 
 
 class LetterRejectedV1(BaseModel):
@@ -570,6 +574,20 @@ class Sender(BaseModel):
     contact: Annotated[str | None, Field(max_length=255)] = None
     """
     Контактное лицо отправителя (для письма по заявке — из payload.contact_name события erp.request.created). Необязательное, с 2026-10-26 (C1-G-7)
+    """
+
+
+class Source(BaseModel):
+    """
+    Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_inbound_mail_id: Annotated[int, Field(ge=1)]
+    """
+    id письма в CRM (`inbound_mail.id`)
     """
 
 

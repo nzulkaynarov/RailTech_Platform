@@ -23,6 +23,7 @@ TASK_MODULES = (
     "app.tasks.erp_users",
     "app.tasks.erp_handoff",
     "app.tasks.erp_requests",
+    "app.tasks.inbound_mail",
 )
 
 queue = procrastinate.App(

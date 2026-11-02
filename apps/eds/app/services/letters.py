@@ -108,7 +108,13 @@ async def _validate_staff(session: AsyncSession, **ids: int | None) -> None:
         raise invalid_fields("Сотрудник не найден или отключён.", **dict.fromkeys(missing, "not_active_employee"))
 
 
-async def _publish_registered(bus: AsyncBus, session: AsyncSession, letter: Letter, actor_id: int | None) -> None:
+async def _publish_registered(
+    bus: AsyncBus,
+    session: AsyncSession,
+    letter: Letter,
+    actor_id: int | None,
+    source: dict[str, Any] | None = None,
+) -> None:
     director = letter.addressee_crm_user_id or await default_director(session)
     directory = await load_directory(session, [director])
     body: dict[str, Any] = {
@@ -125,11 +131,19 @@ async def _publish_registered(bus: AsyncBus, session: AsyncSession, letter: Lett
     if director is not None:
         body["addressee"] = directory.person(director).model_dump()
     data = {"letter": body, "links": _links(letter), "actor": events.actor(actor_id)}
+    if source is not None:  # W18A-P2: письмо общего ящика CRM — CRM снимает его с очереди
+        data["source"] = source
     await events.publish(bus, session, "letter.registered", data, subject=letter.number)
 
 
 async def _insert(
-    session: AsyncSession, bus: AsyncBus, *, actor_id: int | None, values: dict[str, Any], file_ids: list[uuid.UUID]
+    session: AsyncSession,
+    bus: AsyncBus,
+    *,
+    actor_id: int | None,
+    values: dict[str, Any],
+    file_ids: list[uuid.UUID],
+    source: dict[str, Any] | None = None,
 ) -> Letter:
     """Номер, строка письма, вложения, журнал и `letter.registered` — в транзакции вызывающего."""
     now = clock.now()
@@ -149,7 +163,7 @@ async def _insert(
     await journal.record(session, "letter.registered", by=actor_id, letter_id=letter.id)
     if actor_id is not None:
         await files.attach(session, file_ids, actor_id=actor_id, letter_id=letter.id)
-    await _publish_registered(bus, session, letter, actor_id)
+    await _publish_registered(bus, session, letter, actor_id, source)
     log.info("letter_registered", number=letter.number, by=actor_id)
     return letter
 
@@ -260,7 +274,8 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
             await instructions.validate_draft(session, data.resolution_draft), actor_id
         )
     try:
-        return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids)
+        source = data.source.model_dump() if data.source is not None else None
+        return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids, source=source)
     except IntegrityError as exc:  # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
         raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.") from exc
 

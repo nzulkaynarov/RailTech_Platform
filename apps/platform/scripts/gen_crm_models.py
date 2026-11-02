@@ -44,6 +44,13 @@ ROOTS = (
     "BotProfileOut",
     "ActionResult",
     "SmtpStatusOut",
+    # W18A-P2: приём почты общего ящика и очередь «Входящая почта»
+    "ImapStatusOut",
+    "ImapCheckOut",
+    "InboundMailPage",
+    "InboundMailOut",
+    "InboundMailLeadOut",
+    "InboundMailReply",
     "OffsiteStatusOut",
     "OffsiteCheckOut",
     "SmtpCheckOut",

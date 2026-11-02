@@ -24,6 +24,7 @@ Purpose = Literal[
     "test",
     "assist_draft",
     "assist_improve",
+    "mail_assist",
 ]
 
 UsageKind = Literal["work", "test"]
@@ -42,6 +43,7 @@ FEATURE_BY_PURPOSE: dict[Purpose, str] = {
     "test": "test",
     "assist_draft": "assist-draft",
     "assist_improve": "assist-improve",
+    "mail_assist": "mail-assist",
 }
 
 _current_lead: ContextVar[int | None] = ContextVar("llm_usage_lead_id", default=None)
