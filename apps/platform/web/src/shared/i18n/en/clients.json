@@ -79,9 +79,9 @@
     "hiddenFromClient": "hidden from the client",
     "invitation": "Invitation to the portal",
     "noInvitation": "No invitation yet",
-    "resend": "Resend via another channel",
+    "resend": "Send again",
     "resendChannel": "Channel",
-    "resendDone": "Invitation sent",
+    "resendDone": "Invitation handed over for sending — the result will appear here",
     "resendChannels": {
       "email": "Email",
       "telegram": "Telegram",

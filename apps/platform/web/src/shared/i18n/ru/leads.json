@@ -104,7 +104,7 @@
     "notice": {
       "queued": "в очереди",
       "sent": "отправлено {{date}}",
-      "failed": "не ушло: {{reason}}",
+      "failed": "не отправлено: {{reason}}",
       "skipped": "не отправлялось",
       "channel": "канал: {{channel}}"
     },

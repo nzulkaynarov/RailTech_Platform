@@ -11,7 +11,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.crm_leads_support import LETTER_ID, CrmLeadsFake, deal
+from tests.crm_leads_support import LETTER_ID, CrmLeadsFake, client_detail, deal, invitation_out
 
 BASE = "/api/v1/crm/clients"
 
@@ -216,3 +216,41 @@ async def test_resend_invitation_refusal_keeps_the_reason(
     assert response.status_code == 409
     assert response.json()["code"] == "CONFLICT"
     assert response.json()["details"]["reason"] == "client_not_in_erp"
+
+
+async def test_resend_by_email_is_queued_until_the_mail_service_sends_it(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """B-MAIL-1: CRM отвечает «в очереди», пока почта не отправила письмо — BFF не выдаёт это за «отправлено»."""
+    crm.answer(
+        "POST",
+        "clients/12/invitation",
+        body=invitation_out(status="queued", error=None, error_text=None, sent_via=["email"]),
+    )
+    await web.login(["MANAGER"])
+    response = check(
+        await web.send("POST", f"{BASE}/12/invitation", json={"channel": "email"}),
+        "/crm/clients/{id}/invitation",
+        "post",
+    )
+    assert (response.json()["status"], response.json()["sent_at"]) == ("queued", None)
+
+
+async def test_card_shows_mail_not_configured_in_words(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """B-MAIL-1: письмо приглашения не ушло — причина словами CRM доходит до карточки как есть."""
+    reason = "Почта не настроена (Настройки · Подключения · Почта), письмо не отправлено."
+    crm.answer(
+        "GET",
+        "clients/12",
+        body={
+            **client_detail(12),
+            "invitation": invitation_out(error="smtp_not_configured", error_text=reason),
+        },
+    )
+    await web.login(["MANAGER"])
+    response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
+    invitation = response.json()["invitation"]
+    assert (invitation["status"], invitation["error_text"]) == ("failed", reason)
+    assert invitation["can_resend"] is True
