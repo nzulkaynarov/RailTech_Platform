@@ -75,7 +75,9 @@ def generate_contract_from_quote(
         .get(pk=quote_id)
     )
 
-    if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
+    # A7 волны 18a: договор — только из ПРИНЯТОГО КП (клиент в кабинете или сотрудник по подтверждению клиента). Из
+    # отправленного (SENT) прежде пускало: договор без следа «кто принял», КП истекало, «Подписан» не закрывал сделку.
+    if not quote.status or quote.status.code != QuoteStatusCode.APPROVED:
         return None, "CONTRACT_NEEDS_APPROVAL"
 
     # Reuse existing draft contract if present

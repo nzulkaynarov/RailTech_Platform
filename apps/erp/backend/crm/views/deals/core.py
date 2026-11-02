@@ -193,6 +193,10 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
         responses={
             200: DealDetailSerializer,
             400: OpenApiResponse(description="stage_code is required"),
+            403: OpenApiResponse(description="ROLE_NOT_PERMITTED / ONLY_BUYER_CAN_SUBMIT_REQUEST"),
+            409: OpenApiResponse(
+                description="QUOTE_ACCEPTANCE_REQUIRED — «КП отправлено → Проект» только через принятое КП (A7)"
+            ),
             422: OpenApiResponse(description="Invalid stage transition"),
         },
         tags=["CRM"],
@@ -215,7 +219,9 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
 
         guard_error = assert_user_may_change_stage(deal, request.user, stage_code)
         if guard_error:
-            return Response({"detail": guard_error}, status=status.HTTP_403_FORBIDDEN)
+            # A7: проект — только из принятого КП (409, это состояние, а не право).
+            code = status.HTTP_409_CONFLICT if guard_error == "QUOTE_ACCEPTANCE_REQUIRED" else status.HTTP_403_FORBIDDEN
+            return Response({"detail": guard_error}, status=code)
 
         deal, error = transition_deal_stage(deal, stage_code, actor=request.user)
         if error:

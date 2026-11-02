@@ -31,6 +31,7 @@ from crm.serializers import QuoteSerializer
 from crm.services.quotes.editable import assert_quote_items_editable
 from crm.views._pdf import pdf_generating_response
 from crm.views.quotes.approval import QuoteApprovalMixin, _chain_error_response
+from crm.views.quotes.client_decision import QuoteClientDecisionMixin
 
 # Коды отказа «Отправить по каналу» (D17G-2), которые доходят до интерфейса как есть; прочее — INVALID_STATUS.
 _DELIVER_ERRORS = frozenset(
@@ -80,7 +81,14 @@ _QUOTE_PRICING_FIELDS = frozenset(
     partial_update=extend_schema(summary="Partially update quote", tags=["CRM"]),
     destroy=extend_schema(summary="Delete quote", tags=["CRM"]),
 )
-class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
+class QuoteViewSet(
+    RoleGatedViewMixin,
+    QuoteApprovalMixin,
+    QuoteClientDecisionMixin,
+    QuoteFxMixin,
+    OptimisticLockingMixin,
+    viewsets.ModelViewSet,
+):
     """
     CRUD for quotes (commercial proposals).
 
@@ -113,6 +121,8 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         # Виза расчёта — назначенный исполнитель шага (EDS-03, волна 12): право проверяет сервис по назначению.
         "approval_act": SELF_SERVICE,
         "force_approve": ADMIN_ONLY,
+        # A1 волны 18a: решение клиента по подтверждению клиента записывает тот, кто ведёт заявку (без нового права).
+        "record_client_decision": "deal.manage",
     }
 
     serializer_class = QuoteSerializer
@@ -122,7 +132,7 @@ class QuoteViewSet(RoleGatedViewMixin, QuoteApprovalMixin, QuoteFxMixin, Optimis
         # Compute the (cost-gated) unit-economics block ONLY on the single-quote detail —
         # the КП builder reads it there. Off for list endpoints to avoid an items+charges N+1.
         ctx = super().get_serializer_context()
-        ctx["include_economics"] = self.action in ("retrieve", "fx_override")
+        ctx["include_economics"] = self.action in ("retrieve", "fx_override", "record_client_decision")
         return ctx
 
     def get_queryset(self):

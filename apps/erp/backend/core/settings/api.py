@@ -184,6 +184,9 @@ SPECTACULAR_SETTINGS = {
         "StockReservationStatusEnum": "inventory.serializers.RESERVATION_STATUSES",
         "PriceRequestStatusEnum": ["sent", "failed"],
         "SupplierOrderReceiptStateEnum": "supply.serializers.RECEIPT_STATES",
+        # A1, A2 волны 18a «Отметить за контрагента»: канал, которым контрагент сообщил решение, и решение по КП.
+        "OnBehalfChannelEnum": "crm.services.quotes.on_behalf.CHANNELS",
+        "ClientDecisionEnum": ["accept", "reject"],
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},
