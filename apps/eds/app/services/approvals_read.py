@@ -50,8 +50,9 @@ def object_of(
 async def newer_versions(session: AsyncSession, routes: list[ApprovalRoute]) -> dict[uuid.UUID, int]:
     """Маршруты КП, которые заменила более новая версия (D26G-2): {маршрут: новейшая версия}.
 
-    Версия КП — `Quote.version` ERP, сквозная в заявке: новее — маршрут того же КП (доработка после возврата) или той же
-    заявки (новая версия после отказа клиента) с большей версией. Считается при чтении — отдельного статуса у маршрута нет.
+    Версия КП — `Quote.version` ERP, сквозная в заявке: новее — маршрут того же КП (доработка после возврата) или той
+    же заявки (новая версия после отказа клиента) с большей версией. Считается при чтении — своего статуса у маршрута
+    нет.
     """
     quotes = [r for r in routes if r.template == ApprovalTemplate.QUOTE.value and r.quote_version is not None]
     if not quotes:
