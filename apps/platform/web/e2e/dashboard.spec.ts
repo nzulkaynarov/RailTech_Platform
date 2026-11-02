@@ -29,7 +29,7 @@ test.describe("Мои задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/Директор · .* · 5 решений/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/Директор · .* · 8 решений/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -56,7 +56,8 @@ test.describe("Мои задачи", () => {
     await loginAndWait(page, "director@demo.example");
     const main = page.getByRole("main");
 
-    await expect(main.getByText(/Директор · .* · 5 решений/)).toBeVisible();
+    // D26G-4: «Одобрить КП» — все четыре КП на шаге директора в «КП на одобрение» (EDS)
+    await expect(main.getByText(/Директор · .* · 8 решений/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
@@ -65,15 +66,17 @@ test.describe("Мои задачи", () => {
     const queue = main.getByRole("region", { name: "Что сделать сейчас" });
     const rows = queue.getByRole("listitem");
     // D2-8: в очереди директора только решения — строк исполнения ERP нет
-    await expect(rows).toHaveCount(5);
+    await expect(rows).toHaveCount(8);
     // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
     await expect(rows.nth(0)).toContainText("Просрочен заказ");
     await expect(rows.nth(1)).toContainText("срок сегодня");
     await expect(rows.nth(1)).toContainText("Наложить резолюцию на письмо ВХ-104/26");
     // P8: требование ГНК, зарегистрированное делопроизводителем
     await expect(rows.nth(2)).toContainText("Наложить резолюцию на письмо ВХ-108/26");
-    await expect(rows.nth(3)).toContainText("завтра");
-    await expect(rows.nth(4)).toContainText("служебка");
+    await expect(rows.nth(3)).toContainText("служебка");
+    await expect(rows.nth(4)).toContainText("Одобрить КП-2026/115");
+    await expect(cards.nth(1)).toContainText("КП на одобрение");
+    await expect(cards.nth(1)).toContainText("4");
 
     // боковое окно в очереди закрыто по умолчанию (ORCHESTRATOR §3 п. 18) — «Панель» открывает «Сегодня»
     await page.getByRole("button", { name: "Показать панель", exact: true }).click();
@@ -130,8 +133,8 @@ test.describe("Мои задачи", () => {
     await expect(page.getByRole("main").getByRole("status")).toContainText(
       "Не загрузились КП, расчёты, счета и проекты: раздел «Расчёт» не ответил. Остальное показано.",
     );
-    // КП ведёт ERP — строки нет; письмо читает EDS (D1-6) — строка на месте
-    await expect(page.getByText("Одобрить КП-2026/118 (черновик)")).toHaveCount(0);
+    // КП на одобрение и письмо читает EDS (D26G-4, D1-6) — строки на месте
+    await expect(page.getByText("Одобрить КП-2026/118", { exact: true })).toBeVisible();
     await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
     await settledScreenshot(page, "dashboard-erp-down");
     await expectNoViolations(page, "erp down");
@@ -333,4 +336,49 @@ test.describe("Поиск ⌘K", () => {
     await search.fill("нет-такого");
     await expect(page.getByText("По запросу «нет-такого» ничего не найдено.")).toBeVisible();
   });
+});
+
+// D26G-4 (гейт D2-6): КП ждёт одобрения директора в EDS — в «Моих задачах» строка «Одобрить КП-…» на каждое КП «на моём
+// шаге» (как экран «КП на одобрение»), карточка «КП на одобрение» и бейдж меню — то же число; одобрили — строка ушла.
+// Снимки — docs/screens/d26g-4 (`E2E_SCREENSHOT_DIR`).
+test.describe("Мои задачи директора: «Одобрить КП» из EDS (D26G-4)", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const width of [1440, 390] as const) {
+    test(`строки «Одобрить КП», карточка и экран «КП на одобрение» — одно число, ${String(width)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
+      await loginAndWait(page, "director@demo.example");
+      const main = page.getByRole("main");
+      const rows = main
+        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("listitem")
+        .filter({ hasText: /Одобрить КП-2026\// });
+      await expect(rows).toHaveCount(4);
+      await expect(
+        main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link", {
+          name: /КП на одобрение/,
+        }),
+      ).toContainText("4");
+      const dir = process.env["E2E_SCREENSHOT_DIR"];
+      if (dir) {
+        await waitForMotionEnd(page);
+        await page.waitForTimeout(400);
+        await page.screenshot({
+          path: `${dir}/queue-director-quotes-${String(width)}.png`,
+          fullPage: true,
+        });
+      }
+      await expectNoViolations(page, `очередь директора ${String(width)}`);
+
+      await rows
+        .filter({ hasText: "Одобрить КП-2026/115" })
+        .getByRole("link", { name: /Открыть/ })
+        .click();
+      await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F115\?.*tab=approve/);
+      await spaGoto(page, "/eds/drafts");
+      await expect(page.getByRole("heading", { level: 1, name: "КП на одобрение" })).toBeVisible();
+    });
+  }
 });

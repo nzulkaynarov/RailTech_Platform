@@ -119,7 +119,9 @@
     "consequence": {
       "erp": "Rekvizitlar ERP dagi o'z kompaniyangiz kartasida yangilanadi.",
       "brand": "«Rekvizitlarni kompaniya kartasidan olish» yoqilgan blank yangi qiymatlarni oladi."
-    }
+    },
+    "bankReady": "Hisoblar uchun rekvizitlar kiritilgan: «Hisob chiqarish» ishlaydi.",
+    "bankMissing": "Hisoblar uchun bank rekvizitlari yo‘q: hisob raqami va MFO siz mijozga hisob chiqarib bo‘lmaydi. Quyidagi maydonlarni to‘ldiring va saqlang."
   },
   "brand": {
     "title": "Hujjatlar blanki va brendi",

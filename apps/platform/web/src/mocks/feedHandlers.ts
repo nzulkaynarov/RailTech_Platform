@@ -17,6 +17,7 @@ import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
 import { stockQueueItems } from "./erpStock";
 import { erpWorkCards, erpWorkCounters, erpWorkQueueItems } from "./erpWork";
+import { edsDecisionQueueItems, quoteCounter, quotesToApprove } from "./edsQueue";
 import { coveredQueueItems } from "./profileStore";
 import { handOverNotificationsOf, handOverQueueItems } from "./crmMessages";
 
@@ -86,9 +87,10 @@ function edsDown(): boolean {
   }
 }
 
-/** Работа, которую даёт только EDS (письма, служебки): КП в очереди ведёт ERP. */
+/** Работа, которую даёт только EDS (письма, КП на одобрение — D26G-4, служебки). */
 const EDS_KINDS: readonly QueueItem["kind"][] = [
   "resolve_letter",
+  "approve_quote",
   "approve_memo",
   "pay_memo",
   "instruction",
@@ -169,6 +171,7 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ...registeredQueueItems(view), // P8: входящие, зарегистрированные делопроизводителем
     ...letterTaskQueueItems(view), // P8b: поручения, переносы, ознакомления
     ...erpWorkQueueItems(view), // D2-8: расчёт, счета и платёжки, договор и акт (ERP)
+    ...edsDecisionQueueItems(view), // D26G-4, D26G-9: КП на моём шаге и служебка к оплате (EDS)
     ...handOver, // D17G-1: разобрать лида, переданный лид
   ].filter((i) =>
     i.kind.endsWith("_lead") || i.kind === "ticket"
@@ -195,7 +198,11 @@ export const feedHandlers = [
     const denied = noQueue(roles);
     if (denied) return denied;
     // Карточки счетов (D2-8) — перед «Проектами в работе», как в BFF; всего не больше четырёх
-    const base = cardsForView(roles.view);
+    // «КП на одобрение» — число строк «Одобрить КП» очереди (D26G-4)
+    const quotes = quotesToApprove(roles.view) ?? 0;
+    const base = cardsForView(roles.view).map((c) =>
+      c.key === "quotes_to_approve" ? { ...c, count: quotes } : c,
+    );
     const at = base.findIndex((c) => c.key === "projects_in_work");
     const merged =
       at < 0
@@ -204,7 +211,9 @@ export const feedHandlers = [
     const cards = merged
       .slice(0, 4)
       .filter((c) => !erpDown() || c.path.startsWith("/crm"))
-      .filter((c) => !edsDown() || !["/eds/inbox", "/eds/approvals"].includes(c.path));
+      .filter(
+        (c) => !edsDown() || !["/eds/inbox", "/eds/approvals", "/eds/drafts"].includes(c.path),
+      );
     return HttpResponse.json({ cards, sources: sources() });
   }),
 
@@ -246,6 +255,8 @@ export const feedHandlers = [
             (c) =>
               !edsDown() || !(c.module === "eds" && ["inbox", "approvals"].includes(c.section)),
           ),
+        // «КП на одобрение» (D26G-4): из тех же строк, что очередь
+        ...(edsDown() ? [] : quoteCounter(roles.view)),
         // «Мои расчёты» и «Счета и оплаты» (D2-8): из тех же строк, что очередь
         ...(erpDown() ? [] : erpWorkCounters(roles.view)),
         // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)

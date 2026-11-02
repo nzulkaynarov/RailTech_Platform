@@ -310,7 +310,14 @@ def _card(raw: dict[str, Any]) -> PaymentCard:
         can_attach_proof=bool(raw.get("can_attach_proof")),
         can_request_proof=bool(raw.get("can_request_proof")),
         replayed=bool(raw.get("replayed")),
+        bank_details_ready=_ready(raw),
     )
+
+
+def _ready(raw: dict[str, Any]) -> bool:
+    """Признак ERP «реквизиты продавца есть» (D26G-6). ERP его не прислал — не предупреждаем: решит
+    сам гейт выпуска, ложная плашка хуже её отсутствия."""
+    return raw.get("seller_bank_details_ready") is not False
 
 
 class Receivables:
@@ -601,6 +608,7 @@ async def build_board(
         count=count,
         counts=counts,
         memos_to_pay=memos,
+        bank_details_ready=_ready(erp_raw),
         items=items,
         sources=PaymentSources(erp="ok", eds="ok" if memos is not None else "unavailable"),
     )

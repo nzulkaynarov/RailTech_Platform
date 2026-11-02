@@ -77,6 +77,8 @@ class PaymentBoard(BaseModel):
     count: int
     counts: PaymentCounts
     memos_to_pay: int | None
+    # D26G-6: реквизиты своей компании для счетов есть (ERP `seller_bank_details_ready`)
+    bank_details_ready: bool
     items: list[PaymentRow]
     sources: PaymentSources
 
@@ -134,6 +136,8 @@ class PaymentCard(PaymentRow):
     can_attach_proof: bool
     can_request_proof: bool
     replayed: bool
+    # D26G-6: «Выставить счёт» пройдёт гейт реквизитов продавца (ERP `seller_bank_details_ready`)
+    bank_details_ready: bool
 
 
 class PaymentConfirmIn(BaseModel):

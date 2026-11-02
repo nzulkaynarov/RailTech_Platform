@@ -11,6 +11,7 @@ import type {
   SetupStepKey,
 } from "../shared/api/generated/model";
 import { failure, guard } from "./adminUsers";
+import { companyBankReady } from "./fixtures/company";
 import { ROLE_ID } from "./fixtures/roles";
 import { readEmployees, writeEmployees } from "./fixtures/employees";
 import { registerUser } from "./fixtures/users";
@@ -119,7 +120,12 @@ export const setupHandlers = [
       total: 5,
       company: erpNotConnected()
         ? null
-        : { required: !state.companyCreated, can_setup: !state.companyCreated },
+        : {
+            required: !state.companyCreated,
+            can_setup: !state.companyCreated,
+            // D26G-6: своей компании нет — предупреждать не о чем (как ERP `setup/status`)
+            bank_details_ready: !state.companyCreated || companyBankReady(),
+          },
       company_blocker: erpNotConnected() ? "erp_not_connected" : null,
     };
     return HttpResponse.json(body);

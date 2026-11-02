@@ -22,6 +22,7 @@ import { InvoiceRows } from "./InvoiceRows";
 import { MemoRows } from "./MemoRows";
 import { MemoSlot } from "./MemoPanel";
 import { PaymentSlot } from "./PaymentPanel";
+import { BankDetailsNotice } from "./BankDetailsNotice";
 import { TabNav } from "./TabNav";
 import { useStateLabels } from "./labels";
 import { type InvoiceTab, PAGE, showTab } from "./model";
@@ -284,6 +285,7 @@ export function PaymentList() {
           />
         </div>
       )}
+      {tab === "to_issue" && first?.bank_details_ready === false ? <BankDetailsNotice /> : null}
       <Card styles={{ body: { padding: 0 } }}>
         <DataBlock
           busy={memosTab ? memos.isPlaceholderData : board.isPlaceholderData}

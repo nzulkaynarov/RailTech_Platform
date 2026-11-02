@@ -86,7 +86,10 @@ const leadDialog = (id: number, title: string): ObjectRef => ({
   path: `/crm/messages?lead=L-${String(id)}`,
 });
 
-/** Демо-очередь предустановки (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто. */
+/**
+ * Демо-очередь предустановки (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто.
+ * «Одобрить КП» и «Принять к оплате» — из складов EDS (`edsQueue.ts`), не отсюда.
+ */
 function queueFor(preset: PresetCode, now: number): QueueItem[] {
   const role_id = ROLE_ID[preset];
   if (preset === "DIRECTOR") {
@@ -101,16 +104,6 @@ function queueFor(preset: PresetCode, now: number): QueueItem[] {
         due_label: "today",
         due_at: new Date(now + 4 * HOUR).toISOString(),
         object: letter,
-      },
-      {
-        id: "quote:118",
-        role_id,
-        kind: "approve_quote",
-        title: "Одобрить КП-2026/118 (черновик)",
-        subtitle: "АО «Демо-Рейл» · расчёт готов, визы собраны · маржа 23,4 %",
-        due_label: "tomorrow",
-        due_at: new Date(now + 28 * HOUR).toISOString(),
-        object: quote,
       },
       {
         id: "memo:31",
@@ -168,10 +161,11 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           hint: "Документы · Входящие письма",
           path: "/eds/inbox",
         },
+        // Число — строки «Одобрить КП» очереди (`edsQueue.ts`, D26G-4): подставляет `feedHandlers`
         {
           key: "quotes_to_approve",
           label: "КП на одобрение",
-          count: 1,
+          count: 0,
           hint: "Документы · КП на одобрение",
           path: "/eds/drafts",
         },
@@ -274,7 +268,7 @@ export function cardsForView(view: readonly MockRole[]): QueueCard[] {
 
 /**
  * Бейджи подменю: «Моя очередь» считается по очереди роли, остальное — набор из макетов v3. «Мои расчёты» и «Счета и
- * оплаты» считает `erpWork.ts` из тех же строк, что очередь (D2-8, U1).
+ * оплаты» считает `erpWork.ts` из тех же строк, что очередь (D2-8, U1); «КП на одобрение» — `edsQueue.ts` (D26G-4).
  */
 export function menuCountersFor(queueCount: number): MenuCounter[] {
   return [
@@ -283,7 +277,6 @@ export function menuCountersFor(queueCount: number): MenuCounter[] {
     { module: "crm", section: "messages", count: 1, attention: true },
     { module: "crm", section: "leads", count: 2, attention: true },
     { module: "eds", section: "inbox", count: 1, attention: true },
-    { module: "eds", section: "drafts", count: 1, attention: true },
     { module: "eds", section: "approvals", count: 1, attention: true },
   ];
 }

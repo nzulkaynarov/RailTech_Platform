@@ -112,6 +112,8 @@ class ReceivableBoardView(APIView):
         tags=["Finance"],
     )
     def get(self, request):
+        from crm.services.invoice_lifecycle import own_company_bank_details_ready
+
         tab = request.query_params.get("tab") or "awaiting"
         if tab not in receivables.TABS:
             return _error("TAB_INVALID")
@@ -129,6 +131,7 @@ class ReceivableBoardView(APIView):
             "count": total,
             "counts": receivables.counts(day),
             "results": [row(invoice, day) for invoice in page],
+            "seller_bank_details_ready": own_company_bank_details_ready(),
         }
         return Response(ReceivableBoardSerializer(data).data)
 

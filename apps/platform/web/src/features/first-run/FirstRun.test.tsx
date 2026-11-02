@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, screen, waitFor, within } from "@testing-libra
 import { http, HttpResponse } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { MOCK_NO_BANK_KEY } from "../../mocks/fixtures/company";
 import { resetEmployees } from "../../mocks/fixtures/employees";
 import { resetRoles } from "../../mocks/fixtures/roles";
 import { resetExtraUsers } from "../../mocks/fixtures/users";
@@ -329,7 +330,7 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
   });
 
-  it("мастер: порядок «администратор -> ERP -> компания -> остальное», баннер не дублируется, шаги ведут на свои экраны", async () => {
+  it("мастер: порядок «администратор -> ERP -> компания -> реквизиты -> остальное», баннер не дублируется, шаги ведут на свои экраны", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
 
@@ -341,6 +342,7 @@ describe("Баннер настройки и мастер", () => {
       "Администратор",
       "Подключение ERP",
       "Ваша компания",
+      "Банковские реквизиты для счетов",
       "Адрес кабинета клиента",
       "Остальные подключения",
     ]);
@@ -396,7 +398,8 @@ describe("Баннер настройки и мастер", () => {
     renderApp("/admin/setup");
 
     expect(await screen.findByText("Сначала подключите ERP")).toBeVisible();
-    expect(screen.getByText("Ждёт ERP")).toBeVisible();
+    // «Ждёт ERP» — у компании и у шага реквизитов (D26G-6): реквизиты вводятся в карточке компании
+    expect(screen.getAllByText("Ждёт ERP")).toHaveLength(2);
     expect(screen.queryByLabelText("Название компании")).toBeNull();
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Проверить снова" })).toBeNull();
@@ -800,5 +803,49 @@ describe("Баннер настройки и мастер", () => {
 
     expect(await screen.findByText("Не удалось получить состояние настройки")).toBeVisible();
     expect(screen.getByRole("button", { name: "Повторить" })).toBeVisible();
+  });
+});
+
+describe("Банковские реквизиты для счетов (D26G-6)", () => {
+  beforeEach(() => {
+    resetBannerHidden("u-demo-admin");
+  });
+
+  it("компания есть, р/с и МФО нет: шаг мастера «Не сделано» со ссылкой в «Компания и бланки», баннер напоминает", async () => {
+    window.localStorage.setItem(MOCK_NO_BANK_KEY, "1");
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+
+    const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
+    expect(within(banner).getByText(/Нет банковских реквизитов для счетов\./)).toBeVisible();
+    cleanup();
+
+    renderApp("/admin/setup");
+    const title = await screen.findByRole("heading", {
+      level: 2,
+      name: "Банковские реквизиты для счетов",
+    });
+    const card = title.closest(".ant-card") as HTMLElement;
+    expect(within(card).getByText("Не сделано")).toBeVisible();
+    expect(within(card).getByText(/Без расчётного счёта и МФО ERP не выставит/)).toBeVisible();
+    expect(within(card).getByRole("link", { name: "Открыть «Компания и бланки»" })).toHaveAttribute(
+      "href",
+      "/admin/company?tab=details",
+    );
+  });
+
+  it("реквизиты заданы: шаг «Готово», баннера нет", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+
+    const title = await screen.findByRole("heading", {
+      level: 2,
+      name: "Банковские реквизиты для счетов",
+    });
+    const card = title.closest(".ant-card") as HTMLElement;
+    expect(within(card).getByText("Готово")).toBeVisible();
+    expect(
+      within(card).getByText("Расчётный счёт и МФО заданы: счёт клиенту выставится."),
+    ).toBeVisible();
   });
 });

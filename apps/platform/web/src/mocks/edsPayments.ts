@@ -14,6 +14,7 @@ import type {
   PaymentMemoStatus,
 } from "../shared/api/generated/model";
 import { ACCOUNTANT_PERSON, MOCK_USER_CRM_ID, readMemos, writeMemos } from "./fixtures/approvals";
+import { companyBankReady } from "./fixtures/company";
 import {
   ACCOUNTANT_NAME,
   companyToday,
@@ -101,7 +102,14 @@ function withFlags(card: PaymentCard): PaymentCard {
     card.status !== "paid" &&
     card.status !== "cancelled" &&
     held()?.level === "full";
-  return { ...card, can_confirm: open, can_attach_proof: open, can_request_proof: open };
+  return {
+    ...card,
+    can_confirm: open,
+    can_attach_proof: open,
+    can_request_proof: open,
+    // D26G-6: «Выставить счёт» пройдёт гейт реквизитов — как ERP `seller_bank_details_ready`
+    bank_details_ready: card.status !== "draft" || companyBankReady(),
+  };
 }
 
 const money = (amount: string, currency: string) => ({ amount, currency });
@@ -263,6 +271,7 @@ export const edsPaymentsHandlers = [
       count: found.length,
       counts: counts(),
       memos_to_pay: readMemos().filter((m) => isPayable(m) && MEMO_STATUS(m) === "to_pay").length,
+      bank_details_ready: companyBankReady(),
       items: found.slice(offset, offset + limit),
       sources: { erp: "ok", eds: "ok" },
     };
@@ -465,6 +474,19 @@ export const edsPaymentsHandlers = [
         backend_code: "INVOICE_ALREADY_ISSUED",
         reason: "already_issued",
       });
+    }
+    if (!companyBankReady()) {
+      return failure(
+        409,
+        "CONFLICT",
+        "Счёт без расчётного счёта и МФО компании не выставить: заполните их в «Настройки · Компания и бланки».",
+        "erp",
+        {
+          backend_status: 400,
+          backend_code: "SELLER_BANK_DETAILS_REQUIRED",
+          reason: "bank_details_required",
+        },
+      );
     }
     const today = companyToday();
     const due = new Date(`${today}T12:00:00Z`);

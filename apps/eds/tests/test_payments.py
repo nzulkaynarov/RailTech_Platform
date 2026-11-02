@@ -8,7 +8,7 @@ import pytest
 
 from app import clock
 from app.container import Container
-from tests.domain import Person, outbox, validate
+from tests.domain import ALL, Person, outbox, validate
 from tests.helpers import seed_employee
 from tests.test_api_auth import assert_error
 from tests.test_documents import WITH_AMOUNT, create, decide, submit
@@ -262,3 +262,50 @@ async def test_the_list_marks_files_and_the_paid_day(client: httpx.AsyncClient, 
     ).json()
     validate("DocumentPage", page)
     assert next(i for i in page["items"] if i["id"] == doc_id)["paid_on"] == today()
+
+
+# --- D26G-9: шаг «Бухгалтер» на пилоте ведёт менеджер-универсал ---------------------------------------------------
+
+# Права EDS роли «Менеджер-универсал» по каталогу (`eds.payments: full` → `payments.confirm`; сверка — CRM
+# `test_pilot_roles.py`, `test_eds_permissions.py`).
+MANAGER_ALL = ["letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", "files.upload"]
+# Директор по каталогу: оплату видит, но не подтверждает (`eds.payments: read`).
+DIRECTOR_CATALOG = [p for p in ALL if p != "payments.confirm"]
+
+
+async def mine(client: httpx.AsyncClient, headers: dict[str, str]) -> list[str]:
+    body = (await client.get("/api/v1/approvals", params={"template": "memo"}, headers=headers)).json()
+    return [item["id"] for item in body["items"]]
+
+
+async def test_manager_all_sees_the_accountant_step_and_pays_by_the_catalog_rights(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await seed_employee(container, 30, full_name="Менеджер Универсалов", permissions={"eds": MANAGER_ALL})
+    doc_id, approval_id = await to_accountant(client, staff)
+
+    assert approval_id in await mine(client, headers_of(30))  # строка «Оплатить» в «Моих задачах»
+    response = await pay(client, headers_of(30), doc_id)
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "paid" and response.json()["payment"]["paid_by"]["crm_user_id"] == 30
+
+
+async def test_pilot_manager_all_as_the_only_payer_pays_own_memo(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Пилот (Админ, Директор, Делопроизводитель, МУ): других держателей `payments.confirm` нет — автор-МУ закрывает
+    шаг «Бухгалтер» своей записки сам. Есть другой держатель (бухгалтер, второй МУ) — платит он (разделение
+    обязанностей)."""
+    await seed_employee(container, 6, is_active=False, permissions={"eds": []})  # бухгалтера на пилоте нет
+    await seed_employee(container, 3, full_name="Рустам Директоров", permissions={"eds": DIRECTOR_CATALOG})
+    await seed_employee(container, 30, full_name="Менеджер Универсалов", permissions={"eds": MANAGER_ALL})
+    author = Person(30, "Менеджер Универсалов", MANAGER_ALL)
+    doc = await create(client, author, **WITH_AMOUNT)
+    approval_id = (await submit(client, author, doc["id"])).json()["approval_id"]
+    assert (await decide(client, staff["director"], approval_id, "approve")).status_code == 200
+
+    assert approval_id in await mine(client, author.headers)
+    assert approval_id not in await mine(client, staff["director"].headers)
+    response = await pay(client, author, doc["id"])
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "paid"

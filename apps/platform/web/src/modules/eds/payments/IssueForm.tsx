@@ -9,6 +9,7 @@ import { getGetPaymentQueryKey, issuePayment } from "../../../shared/api/generat
 import { Consequence } from "../../../shared/ui/Consequence";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { errorReason, useRefreshPayments } from "./api";
+import { BankDetailsNotice } from "./BankDetailsNotice";
 
 /** Причины отказа «Выставить счёт» словарным ключом (`payments:issue.reasons.*`). */
 type IssueReason =
@@ -34,7 +35,8 @@ function issueReason(error: unknown): IssueReason {
 /**
  * «Выставить счёт» (B-D24-4, SPEC-v3 §3.1 шаг 7): черновик счёта → «Выставлен». Блок «Что произойдёт» — правда о том, что
  * делает ERP при выставлении: дата и срок оплаты, реквизиты и PDF, кабинет клиента, сообщение бота и письмо. Право решает ERP
- * (`finance.invoice`); без реквизитов компании ERP откажет — ответ словами со ссылкой, где их заполнить.
+ * (`finance.invoice`); без реквизитов компании ERP откажет — это видно заранее (`bank_details_ready`, D26G-6): плашка
+ * «кто и где заполняет» и неактивная кнопка; отказ ERP после клика (реквизиты стёрли между чтением и кликом) — словами.
  */
 export function IssueForm({
   card,
@@ -65,6 +67,7 @@ export function IssueForm({
       setFailure(reason);
     },
   });
+  const noBank = !card.bank_details_ready;
   return (
     <form
       className={`pf-dec pf-dec--${variant}`}
@@ -72,7 +75,7 @@ export function IssueForm({
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
-        if (!issue.isPending) issue.mutate();
+        if (!issue.isPending && !noBank) issue.mutate();
       }}
     >
       <p className="pf-hint">{t("issue.lead", { number: card.number })}</p>
@@ -84,9 +87,11 @@ export function IssueForm({
           t("issue.consequence.step4"),
         ]}
       />
+      {/* D26G-6: реквизитов нет — сказано до клика, кнопка неактивна (ERP всё равно откажет) */}
+      {noBank ? <BankDetailsNotice /> : null}
       <ErrorNote message={failure ? t(`issue.reasons.${failure}`) : null} />
       <div className="pf-dec-actions">
-        <Button type="primary" htmlType="submit" block loading={issue.isPending}>
+        <Button type="primary" htmlType="submit" block loading={issue.isPending} disabled={noBank}>
           {t("issue.submit")}
         </Button>
       </div>

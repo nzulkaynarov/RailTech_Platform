@@ -448,5 +448,10 @@
       "unavailable": "ERP hozir javob bermayapti. Birozdan keyin qaytaring.",
       "unknown": "Hisobni chiqarib bo‘lmadi. Qaytaring."
     }
+  },
+  "bankDetails": {
+    "title": "Kompaniyaning bank rekvizitlari yo‘q — hisob chiqarib bo‘lmaydi.",
+    "text": "Administrator to‘ldiradi: Sozlamalar · Kompaniya va blankalar.",
+    "open": "«Kompaniya va blankalar»ni ochish"
   }
 }

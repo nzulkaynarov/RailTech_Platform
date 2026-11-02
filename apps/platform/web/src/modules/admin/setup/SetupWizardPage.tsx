@@ -11,6 +11,7 @@ import { useSetupChecklist } from "../../../features/first-run/useSetupChecklist
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { ERP_RECHECK } from "../../../entities/setup/recheck";
 import {
+  BANK_DETAILS_PATH,
   STEP_TARGET,
   WIZARD_PATH,
   isStepKey,
@@ -20,6 +21,7 @@ import {
 import type { SetupChecklist, SetupStepKey } from "../../../shared/api/generated/model";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { useGetSetupCabinet } from "../../../shared/api/generated/platform-bff";
@@ -64,9 +66,57 @@ function CabinetStatus() {
 }
 
 /**
+ * Шаг «Банковские реквизиты для счетов» (D26G-6): признак ERP (та же проверка, что «Выставить счёт») — без р/с и МФО первый
+ * счёт клиенту не выставить, а менеджер-универсал раздела «Настройки» не видит. Реквизиты вводятся в «Компания и бланки».
+ */
+function BankStep({ data }: { data: SetupChecklist }) {
+  const { t } = useTranslation("modules");
+  const company = data.company;
+  if (company === null || company.required) {
+    const key =
+      company === null && data.company_blocker === "erp_unavailable"
+        ? "admin.setup.bankUnknown"
+        : "admin.setup.bankWaitCompany";
+    return <p style={{ margin: 0 }}>{t(key)}</p>;
+  }
+  if (company.bank_details_ready) return <p style={{ margin: 0 }}>{t("admin.setup.bankDone")}</p>;
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+      <p style={{ margin: 0 }}>{t("admin.setup.bankTodo")}</p>
+      <LinkButton type="primary" to={BANK_DETAILS_PATH}>
+        {t("admin.setup.bankOpen")}
+      </LinkButton>
+    </div>
+  );
+}
+
+/** Состояние шага реквизитов: компании ещё нет — «Не сделано», ERP не сопряжена — «Ждёт ERP», не ответила — «Нет данных». */
+function BankStatus({ data }: { data: SetupChecklist }) {
+  const { t } = useTranslation("modules");
+  const company = data.company;
+  if (company === null) {
+    return (
+      <StatusTag kind="setupStep" status="unknown">
+        {t(
+          data.company_blocker === "erp_not_connected"
+            ? "admin.setup.state.waitingErp"
+            : "admin.setup.state.unknown",
+        )}
+      </StatusTag>
+    );
+  }
+  const state = company.required || !company.bank_details_ready ? "todo" : "done";
+  return (
+    <StatusTag kind="setupStep" status={state}>
+      {t(`admin.setup.state.${state}`)}
+    </StatusTag>
+  );
+}
+
+/**
  * Admin · «Первый запуск» (`/admin/setup`, SPEC-v3 §7.6, W13-A4, порядок — W13C-F1): администратор (уже создан на
- * экране до входа) -> подключение ERP -> своя компания (создаётся в ERP) -> остальные подключения (бот, почта, модели,
- * первый сотрудник). Состояние приносит BFF; сделать шаг можно позже. W15-H4: форма шага открывается в боковом окне
+ * экране до входа) -> подключение ERP -> своя компания (создаётся в ERP) -> банковские реквизиты для счетов (D26G-6) ->
+ * остальные подключения (бот, почта, модели, первый сотрудник). Состояние приносит BFF; сделать шаг можно позже. W15-H4: форма шага открывается в боковом окне
  * мастера (`?step=`), после сохранения — следующий шаг; баннер, скрытый до завтра, возвращается кнопкой здесь.
  * Только администратор: директору чек-лист не отдаётся (BFF — 403).
  */
@@ -228,6 +278,9 @@ export function SetupWizardPage() {
               void checklist.refetch();
             }}
           />
+        </StepCard>
+        <StepCard title={t("admin.setup.bankTitle")} status={<BankStatus data={data} />}>
+          <BankStep data={data} />
         </StepCard>
         <StepCard title={t("admin.setup.cabinetTitle")} status={<CabinetStatus />}>
           <CabinetAddress titled={false} />

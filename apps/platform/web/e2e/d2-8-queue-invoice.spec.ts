@@ -178,3 +178,44 @@ test.describe("D2-8: «Мои задачи» менеджера-универса
     });
   }
 });
+
+// D26G-6, D26G-9 (гейт D2-6): реквизитов компании нет — менеджер-универсал видит это до клика, на вкладке «К выставлению» и у
+// кнопки «Выставить счёт» (неактивна), без ссылки в закрытые для него Настройки; служебка на шаге «Бухгалтер» — строка
+// «Принять к оплате» в его «Моих задачах». Снимки — docs/screens/d26g-4.
+test.describe("D26G-6, D26G-9: реквизиты для счёта и служебка к оплате у менеджера-универсала", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const width of WIDTHS) {
+    test(`нет реквизитов — видно до клика; служебка к оплате — в «Моих задачах», ${String(width)}`, async ({
+      page,
+    }) => {
+      await signInAt(page, UNIVERSAL, width);
+      const memo = queueRow(page, /Принять к оплате СЗ-2026\/015/);
+      await expect(memo).toHaveCount(1);
+      await memo.scrollIntoViewIfNeeded();
+      await shot(page, "queue-manager-all-pay-memo");
+
+      await page.evaluate(`window.localStorage.setItem("rt-pf-mock-no-bank", "1")`);
+      await spaGoto(page, "/eds/payments?show=to_issue");
+      const main = page.getByRole("main");
+      await expect(
+        main.getByText("Нет банковских реквизитов компании — счёт не выставить."),
+      ).toBeVisible();
+      await expect(
+        main.getByText("Заполняет администратор: Настройки · Компания и бланки."),
+      ).toBeVisible();
+      await expect(page.getByRole("link", { name: "Открыть «Компания и бланки»" })).toHaveCount(0);
+      await shot(page, "payments-to-issue-no-bank");
+      await expectNoViolations(page, `к выставлению без реквизитов ${String(width)}`);
+
+      await spaGoto(page, "/eds/payments/143?panel=open&tab=payment");
+      const form = page.getByRole("form", { name: "Выставить счёт" }).first();
+      await expect(
+        form.getByText("Нет банковских реквизитов компании — счёт не выставить."),
+      ).toBeVisible();
+      await expect(form.getByRole("button", { name: "Выставить счёт" })).toBeDisabled();
+      await shot(page, "invoice-issue-no-bank");
+      await expectNoViolations(page, `карточка счёта без реквизитов ${String(width)}`);
+    });
+  }
+});

@@ -12760,7 +12760,7 @@ components:
     SetupCompanyStatus:
       type: object
       additionalProperties: false
-      required: [required, can_setup]
+      required: [required, can_setup, bank_details_ready]
       properties:
         required:
           type: boolean
@@ -12768,6 +12768,11 @@ components:
         can_setup:
           type: boolean
           description: Текущий сотрудник может её создать (суперпользователь ERP)
+        bank_details_ready:
+          type: boolean
+          description: >-
+            Шаг «Банковские реквизиты для счетов» (D26G-6): у своей компании есть р/с или МФО — без них ERP не выставит
+            счёт (ERP `setup/status` `bank_details_ready`; компании нет — `true`)
 
     SetupChecklist:
       type: object
@@ -14518,7 +14523,7 @@ components:
     PaymentBoard:
       type: object
       additionalProperties: false
-      required: [tab, count, counts, memos_to_pay, items, sources]
+      required: [tab, count, counts, memos_to_pay, bank_details_ready, items, sources]
       properties:
         tab: {$ref: '#/components/schemas/PaymentTab'}
         count: {type: integer, minimum: 0, description: 'Всего счетов на вкладке'}
@@ -14527,6 +14532,12 @@ components:
           type: [integer, 'null']
           minimum: 0
           description: 'Служебок ждёт оплаты (до 100); `null` — EDS не ответил'
+        bank_details_ready:
+          type: boolean
+          description: >-
+            У своей компании есть реквизиты для счетов (р/с или МФО; ERP `seller_bank_details_ready`, D26G-6). `false` —
+            «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в
+            «Настройки · Компания и бланки»
         items:
           type: array
           items: {$ref: '#/components/schemas/PaymentRow'}
@@ -14588,7 +14599,7 @@ components:
       required:
         [id, number, project_number, deal_id, client_name, amount, paid, balance, issued_at, due_date, status, days_overdue,
          has_pending_proof, proof_received_at, subtotal, vat, notes, has_pdf, items, payments, proofs, history,
-         payment_doc_requested_at, can_confirm, can_attach_proof, can_request_proof, replayed]
+         payment_doc_requested_at, can_confirm, can_attach_proof, can_request_proof, replayed, bank_details_ready]
       properties:
         id: {type: integer}
         number: {type: string}
@@ -14625,6 +14636,11 @@ components:
         can_attach_proof: {type: boolean}
         can_request_proof: {type: boolean}
         replayed: {type: boolean, description: 'Повтор подтверждения: платёж уже был записан'}
+        bank_details_ready:
+          type: boolean
+          description: >-
+            «Выставить счёт» пройдёт гейт реквизитов продавца (ERP `seller_bank_details_ready`, D26G-6); у выставленного
+            счёта — всегда `true`
     PaymentConfirmIn:
       type: object
       additionalProperties: false

@@ -6897,6 +6897,8 @@ export interface components {
       required: boolean;
       /** @description Текущий сотрудник может её создать (суперпользователь ERP) */
       can_setup: boolean;
+      /** @description Шаг «Банковские реквизиты для счетов» (D26G-6): у своей компании есть р/с или МФО — без них ERP не выставит счёт (ERP `setup/status` `bank_details_ready`; компании нет — `true`) */
+      bank_details_ready: boolean;
     };
     SetupChecklist: {
       /** @description Всегда пять шагов в порядке `SetupStepKey` */
@@ -8059,6 +8061,8 @@ export interface components {
       counts: components["schemas"]["PaymentCounts"];
       /** @description Служебок ждёт оплаты (до 100); `null` — EDS не ответил */
       memos_to_pay: number | null;
+      /** @description У своей компании есть реквизиты для счетов (р/с или МФО; ERP `seller_bank_details_ready`, D26G-6). `false` — «Выставить счёт» откажет `bank_details_required`: экран предупреждает до клика, заполняет администратор в «Настройки · Компания и бланки» */
+      bank_details_ready: boolean;
       items: components["schemas"]["PaymentRow"][];
       sources: components["schemas"]["PaymentSources"];
     };
@@ -8151,6 +8155,8 @@ export interface components {
       can_request_proof: boolean;
       /** @description Повтор подтверждения: платёж уже был записан */
       replayed: boolean;
+      /** @description «Выставить счёт» пройдёт гейт реквизитов продавца (ERP `seller_bank_details_ready`, D26G-6); у выставленного счёта — всегда `true` */
+      bank_details_ready: boolean;
     };
     PaymentConfirmIn: {
       /** @description Сумма по выписке, больше нуля, не больше остатка */

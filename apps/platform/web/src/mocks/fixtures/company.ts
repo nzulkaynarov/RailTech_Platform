@@ -367,7 +367,13 @@ function seed(): CompanyMock {
 
 let memory: CompanyMock | null = null;
 
-export function readCompanyMock(): CompanyMock {
+/**
+ * «У компании нет банковских реквизитов» для сценариев и снимков (D26G-6): `localStorage["rt-pf-mock-no-bank"] = "1"`
+ * один раз стирает р/с и МФО своей компании; дальше их вводит администратор в «Компания и бланки», как на стенде.
+ */
+export const MOCK_NO_BANK_KEY = "rt-pf-mock-no-bank";
+
+function readStored(): CompanyMock {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (raw) return JSON.parse(raw) as CompanyMock;
@@ -378,6 +384,26 @@ export function readCompanyMock(): CompanyMock {
     memory ??= seed();
     return memory;
   }
+}
+
+export function readCompanyMock(): CompanyMock {
+  const state = readStored();
+  try {
+    if (window.localStorage.getItem(MOCK_NO_BANK_KEY) === "1") {
+      window.localStorage.removeItem(MOCK_NO_BANK_KEY);
+      state.company = { ...state.company, bank_account: "", mfo: "" };
+      writeCompanyMock(state);
+    }
+  } catch {
+    // без localStorage переключателя нет
+  }
+  return state;
+}
+
+/** Реквизиты для счетов есть (р/с или МФО) — тот же признак, что ERP `seller_bank_details_ready` (D26G-6). */
+export function companyBankReady(): boolean {
+  const { company } = readCompanyMock();
+  return Boolean(company.bank_account.trim() || company.mfo.trim());
 }
 
 export function writeCompanyMock(state: CompanyMock): void {

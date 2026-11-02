@@ -151,7 +151,8 @@ test.describe("панели", () => {
       "aria-current",
       "page",
     );
-    await expect(menu.getByRole("link", { name: "Мои задачи 5, требует действия" })).toBeVisible();
+    // D26G-4: четыре «Одобрить КП» из «КП на одобрение» (EDS) входят в число «Моих задач»
+    await expect(menu.getByRole("link", { name: "Мои задачи 8, требует действия" })).toBeVisible();
     await expect(
       menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
     ).toBeVisible();
