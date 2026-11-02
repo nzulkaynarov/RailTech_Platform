@@ -171,7 +171,45 @@
       "failed": "Yuborilmadi: {{reason}}",
       "invalid": "TTni endi yuborib bo'lmaydi — karta yangilandi."
     },
-    "superseded": "Bu {{version}}-versiya, uni {{next}}-versiya almashtirdi. Qaror «Tasdiqlash uchun TT» ro‘yxatidagi amaldagi versiya bo‘yicha qabul qilinadi; bu — tarix."
+    "superseded": "Bu {{version}}-versiya, uni {{next}}-versiya almashtirdi. Qaror «Tasdiqlash uchun TT» ro‘yxatidagi amaldagi versiya bo‘yicha qabul qilinadi; bu — tarix.",
+    "clientDecision": {
+      "title": "Mijoz qarori",
+      "state": {
+        "awaiting": "Mijoz qarorini kutmoqda.",
+        "accepted": "Mijoz TTni qabul qildi.",
+        "rejected": "Mijoz TTni rad etdi.",
+        "expired": "TT muddati tugadi."
+      },
+      "accept": "Mijoz qabul qildi",
+      "reject": "Mijoz rad etdi",
+      "acceptedAt": "Qabul qilindi {{date}}",
+      "rejectedAt": "Rad etildi {{date}}",
+      "reason": "Sabab: {{reason}}",
+      "file": "Tasdiq: {{name}}",
+      "dialog": {
+        "accept": "Mijoz TTni qabul qildi",
+        "reject": "Mijoz TTni rad etdi",
+        "date": "Qachon",
+        "dateRequired": "Bugundan kech bo'lmagan sanani ko'rsating",
+        "comment": "Mijoz nima deb javob berdi",
+        "commentReject": "Rad etish sababi",
+        "commentRequired": "Maydonni to'ldiring",
+        "file": "Mijoz tasdig'i",
+        "fileHint": "Mijoz tasdig'ini ilova qiling: xat, yozishma yoki skan",
+        "fileRequired": "Mijoz tasdig'ini ilova qiling",
+        "consequence": {
+          "accept": "TT qabul qilingan bo'ladi: kabinetda qabul qilingandagidek loyiha va shartnoma loyihasi ochiladi.",
+          "reject": "TT rad etilgan bo'ladi: ariza hisob-kitobga qaytadi, zaxiralar bekor qilinadi."
+        },
+        "cancel": "Bekor qilish",
+        "submit": "Yozib qo'yish",
+        "done": {
+          "accept": "Yozildi: mijoz TTni qabul qildi",
+          "reject": "Yozildi: mijoz TTni rad etdi"
+        },
+        "failed": "Yozilmadi: {{reason}}"
+      }
+    }
   },
   "panel": {
     "sheetTitle": "{{number}} tasdiqlash",

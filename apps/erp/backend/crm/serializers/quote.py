@@ -16,6 +16,7 @@ from master_data.serializers import DeliveryBasisSerializer
 
 from .charge import QuoteChargeSerializer
 from .item import QuoteItemSerializer
+from .quote_client_decision import QuoteClientDecisionMetaSerializer, client_decision_of
 
 
 class QuoteEconomicsSerializer(serializers.Serializer):
@@ -246,6 +247,22 @@ class QuoteSerializer(serializers.ModelSerializer):
     # карточке одного КП (как экономика: в списках — null, без запросов на строку) и только сотрудникам продавца.
     channel_availability = serializers.SerializerMethodField()
     can_send = serializers.SerializerMethodField()
+    # A1 волны 18a: решение клиента, записанное сотрудником по подтверждению клиента, и право его записать.
+    client_decision = serializers.SerializerMethodField()
+    can_record_client_decision = serializers.SerializerMethodField()
+
+    @extend_schema_field(QuoteClientDecisionMetaSerializer(allow_null=True))
+    def get_client_decision(self, obj) -> dict | None:
+        return client_decision_of(obj)
+
+    @extend_schema_field(serializers.BooleanField(allow_null=True))
+    def get_can_record_client_decision(self, obj) -> bool | None:
+        """«Клиент принял / отклонил» доступно: КП отправлено и у сотрудника `deal.manage` (только в карточке КП)."""
+        if not self.context.get("include_economics"):
+            return None
+        from crm.services.quotes.client_decision import can_record
+
+        return can_record(getattr(self.context.get("request"), "user", None), obj)
 
     @extend_schema_field(QuoteChannelAvailabilitySerializer(allow_null=True))
     def get_channel_availability(self, obj) -> dict | None:
@@ -394,6 +411,9 @@ class QuoteSerializer(serializers.ModelSerializer):
             "send_report",
             "channel_availability",
             "can_send",
+            "client_decision",
+            "can_record_client_decision",
+            "client_reject_reason",
             "items",
             "charges",
             "economics",
@@ -435,6 +455,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "director_comment",
             "send_channels",
             "send_report",
+            "client_reject_reason",
             "created_at",
             # prepared_by anchors the КП-owning (seller) company and the whole
             # approval chain — the server sets it to the seller building the КП,
@@ -485,6 +506,9 @@ class QuoteSerializer(serializers.ModelSerializer):
         "send_report",
         "channel_availability",
         "can_send",
+        "client_decision",
+        "can_record_client_decision",
+        "client_reject_reason",
     )
 
     def _is_staff(self) -> bool:

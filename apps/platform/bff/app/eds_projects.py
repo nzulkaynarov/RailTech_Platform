@@ -45,12 +45,30 @@ _ERP_REASONS: dict[str, str] = {
     "ACT_AWAITING_REISSUE": "Акт возвращён заказчиком: выпустите его заново.",
     "ACT_INVALID_INVOICE_STATUS": "Акт можно выпустить по выставленному счёту.",
     "CONTRACT_NEEDS_APPROVAL": "Проект договора можно сформировать только из принятого КП.",
+    # A1, A2 волны 18a: решение клиента по КП и согласие с договором записывает сотрудник.
+    "QUOTE_NOT_SENT": "КП уже не ждёт решения клиента. Обновите страницу.",
+    "DEAL_STAGE_CONFLICT": "Заявка сейчас не на стадии КП. Обновите страницу.",
+    "EVIDENCE_REQUIRED": "Приложите подтверждение клиента: письмо, переписку или скан.",
+    "EVIDENCE_INVALID": "Файл не подходит: изображение, PDF или документ до 20 МБ.",
+    "OCCURRED_ON_IN_FUTURE": "Дата не может быть в будущем.",
+    "OCCURRED_ON_INVALID": "Укажите дату.",
+    "COUNTERPARTY_PERSON_REQUIRED": "Укажите, кто со стороны клиента.",
+    "COMMENT_REQUIRED": "Заполните комментарий.",
+    "CHANNEL_INVALID": "Выберите канал.",
 }
 _FIELD_OF: dict[str, str] = {
     "REASON_REQUIRED": "reason",
     "SCAN_REQUIRED": "file",
     "SCAN_INVALID": "file",
     "NO_FILE_PROVIDED": "file",
+    "EVIDENCE_REQUIRED": "file",
+    "EVIDENCE_INVALID": "file",
+    "OCCURRED_ON_IN_FUTURE": "occurred_on",
+    "OCCURRED_ON_INVALID": "occurred_on",
+    "COUNTERPARTY_PERSON_REQUIRED": "counterparty_person",
+    "COMMENT_REQUIRED": "comment",
+    "CHANNEL_INVALID": "channel",
+    "DECISION_INVALID": "decision",
 }
 
 
@@ -218,7 +236,12 @@ class ErpProjects:
         slug = body.action.replace("_", "-")
         payload = {
             k: v.strip()
-            for k, v in (("reason", body.reason), ("note", body.note))
+            for k, v in (
+                ("reason", body.reason),
+                ("note", body.note),
+                ("channel", body.channel),
+                ("counterparty_person", body.counterparty_person),
+            )
             if v and v.strip()
         }
         await self._json("POST", f"{API}/contracts/{card.contract.id}/{slug}/", json=payload)

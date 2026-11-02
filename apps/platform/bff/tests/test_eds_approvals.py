@@ -32,6 +32,7 @@ from tests.eds_approvals_support import (
     memo_route,
     quote_route,
     snapshot,
+    staff_decision,
     step,
 )
 from tests.roles import Role, custom
@@ -555,6 +556,170 @@ async def test_send_needs_the_clients_section_and_rejects_the_cabinet(
     cabinet = await web.send("POST", f"{QUOTE}/send", json={"channel": "cabinet"})
     assert cabinet.status_code == 422
     assert eds.delivered == []
+
+
+# --- КП: решение клиента по его подтверждению (A1 волны 18a) --------------------------------------
+
+
+def _decision_form(decision: str = "accept") -> dict[str, Any]:
+    data = {
+        "decision": decision,
+        "channel": "email",
+        "counterparty_person": "Каримов А., снабженец",
+        "occurred_on": "2026-11-02",
+        "comment": "Письмо клиента",
+    }
+    return {"data": data, "files": {"file": ("letter.pdf", b"%PDF-1.4 letter", "application/pdf")}}
+
+
+async def _post_decision(web: Web, form: dict[str, Any]) -> httpx.Response:
+    return await web.client.post(
+        f"{QUOTE}/client-decision", headers={"X-CSRF-Token": web.csrf}, **form
+    )
+
+
+async def test_sent_quote_card_offers_to_record_the_client_decision(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=True, client_decision=None)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    response = await web.client.get(QUOTE)
+    check(response, "/eds/quotes/{ref}", "get")
+    assert response.json()["client_decision"] == {
+        "state": "awaiting",
+        "decided_at": None,
+        "reason": None,
+        "recorded_by_staff": None,
+        "can_record": True,
+    }
+
+
+async def test_record_decision_without_the_erp_right_is_hidden(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=False)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    body = (await web.client.get(QUOTE)).json()
+    assert body["client_decision"]["can_record"] is False
+
+
+async def test_record_acceptance_goes_to_the_erp_as_is_and_returns_the_card(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=True)
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await _post_decision(web, _decision_form())
+
+    check(response, "/eds/quotes/{id}/client-decision", "post")
+    assert response.status_code == 200, response.text
+    [call] = eds.decisions
+    assert call.url.path == "/api/v1/crm/quotes/1203/record-client-decision/"
+    assert call.headers["content-type"].startswith("multipart/form-data; boundary=")
+    assert b"%PDF-1.4 letter" in call.content
+    decision = response.json()["client_decision"]
+    assert decision["state"] == "accepted"
+    assert decision["can_record"] is False
+    assert decision["recorded_by_staff"] == {
+        "staff_name": "Менеджер Демо",
+        "channel": "email",
+        "counterparty_person": "Каримов А., снабженец",
+        "occurred_on": "2026-11-02",
+        "comment": "Письмо клиента",
+        "evidence_name": "letter.pdf",
+        "evidence_url": f"/api/v1/eds/quotes/{QUOTE_ROUTE}/client-decision/evidence",
+    }
+    assert decision["decided_at"] is not None
+
+
+async def test_rejected_by_staff_carries_the_reason(web: Web, eds: ApprovalsFake) -> None:
+    _approved(
+        eds,
+        "REJECTED",
+        {},
+        client_reject_reason="Дорого",
+        client_decision=staff_decision("reject"),
+    )
+    assert (await web.login(["MANAGER"])).status_code == 200
+    decision = (await web.client.get(QUOTE)).json()["client_decision"]
+    assert decision["state"] == "rejected"
+    assert decision["reason"] == "Дорого"
+    assert decision["recorded_by_staff"]["comment"] == "Дорого"
+
+
+async def test_online_acceptance_has_no_staff_attribution(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "APPROVED", {}, approved_at="2026-11-02T09:00:00+05:00", client_decision=None)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    decision = (await web.client.get(QUOTE)).json()["client_decision"]
+    assert decision["state"] == "accepted"
+    assert decision["recorded_by_staff"] is None
+    assert decision["decided_at"] is not None
+
+
+@pytest.mark.parametrize(
+    ("status", "code", "http", "reason", "field"),
+    [
+        (400, "EVIDENCE_REQUIRED", 422, "evidence_required", "file"),
+        (400, "EVIDENCE_INVALID", 422, "evidence_invalid", "file"),
+        (400, "OCCURRED_ON_IN_FUTURE", 422, "occurred_on_in_future", "occurred_on"),
+        (409, "QUOTE_NOT_SENT", 409, "quote_not_sent", None),
+        (403, "ROLE_NOT_PERMITTED", 403, "role_not_permitted", None),
+    ],
+)
+async def test_record_decision_refusals_of_the_erp_are_translated(
+    web: Web,
+    eds: ApprovalsFake,
+    check: ContractChecker,
+    status: int,
+    code: str,
+    http: int,
+    reason: str,
+    field: str | None,
+) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=True)
+    eds.decision_error = (status, code)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    response = await _post_decision(web, _decision_form())
+    check(response, "/eds/quotes/{id}/client-decision", "post")
+    assert response.status_code == http
+    assert response.json()["details"]["reason"] == reason
+    if field:
+        assert response.json()["details"]["fields"] == [field]
+
+
+async def test_record_decision_must_be_multipart(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=True)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    response = await web.send("POST", f"{QUOTE}/client-decision", json={"decision": "accept"})
+    assert response.status_code == 422
+    assert eds.decisions == []
+
+
+async def test_record_decision_needs_the_clients_section(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "SENT", {}, can_record_client_decision=True)
+    reader = custom(95, "Только КП", {"eds.drafts": "read"})
+    assert (await web.login([reader])).status_code == 200
+    response = await _post_decision(web, _decision_form())
+    assert response.status_code == 403
+    assert eds.decisions == []
+
+
+async def test_evidence_file_is_streamed_as_an_attachment(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "APPROVED", {}, client_decision=staff_decision())
+    assert (await web.login(["MANAGER"])).status_code == 200
+    response = await web.client.get(f"{QUOTE}/client-decision/evidence")
+    assert response.status_code == 200
+    assert response.content == b"%PDF-1.4 letter"
+    assert response.headers["content-disposition"].startswith("attachment;")
+    assert response.headers["content-type"].startswith("application/octet-stream")
+    assert eds.erp_paths[-1] == "/api/v1/sourcing/attachments/77/download/", "id файла — из КП"
+
+
+async def test_evidence_of_an_online_decision_is_not_found(web: Web, eds: ApprovalsFake) -> None:
+    _approved(eds, "APPROVED", {}, client_decision=None)
+    assert (await web.login(["MANAGER"])).status_code == 200
+    response = await web.client.get(f"{QUOTE}/client-decision/evidence")
+    assert response.status_code == 404
 
 
 async def test_quote_stage_follows_the_deal(web: Web, eds: ApprovalsFake) -> None:

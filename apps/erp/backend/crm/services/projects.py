@@ -343,7 +343,16 @@ def _journal_row(log) -> dict:
         "document": _DOC_BY_PREFIX.get(log.event_code.split(".")[0]),
         "number": params.get("number"),
         "reason": log.reason or params.get("reason") or params.get("note") or "",
+        "on_behalf": _on_behalf(params),
     }
+
+
+def _on_behalf(params: dict) -> Optional[dict]:
+    """Значок «Отмечено сотрудником» (A1, A2 волны 18a): канал и лицо со стороны клиента из журнала."""
+    found = params.get("on_behalf")
+    if not isinstance(found, dict) or not found.get("channel"):
+        return None
+    return {"channel": found["channel"], "counterparty_person": found.get("counterparty_person") or ""}
 
 
 def _history_for(journal: list, kind: str, number: Optional[str]) -> list:

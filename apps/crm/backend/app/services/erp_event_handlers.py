@@ -124,8 +124,30 @@ def _quote_sent(env: ErpEvent, deal: Deal | None) -> str:
     return ". ".join(parts) + "."
 
 
+_CHANNEL_WORDS = {
+    "phone": "телефон",
+    "email": "почта",
+    "messenger": "мессенджер",
+    "in_person": "лично",
+    "paper": "бумага",
+}
+
+
+def _staff_note(payload: object) -> str:
+    """Решение записал сотрудник по подтверждению клиента (A1, `recorded_by_staff`)."""
+    staff = getattr(payload, "recorded_by_staff", None)
+    if staff is None:
+        return ""
+    channel = plain(staff.channel)
+    return (
+        f" Отмечено сотрудником {staff.staff_name} по подтверждению клиента: "
+        f"{staff.counterparty_person} ({_CHANNEL_WORDS.get(channel, channel)})."
+    )
+
+
 def _quote_outcome(env: ErpEvent, deal: Deal | None, contact_name: str | None) -> str:
-    """Запись ленты по КП; у принятия и отказа — кто из контактов клиента это сделал (шов 0.3.0)."""
+    """Запись ленты по КП; у принятия и отказа — кто из контактов клиента это сделал (шов 0.3.0)
+    и кто из сотрудников записал решение по подтверждению клиента (A1)."""
     payload = env.payload
     label = f"#{payload.erp_quote_id} v{payload.version}"
     who = f" ({contact_name})" if contact_name else ""
@@ -133,9 +155,9 @@ def _quote_outcome(env: ErpEvent, deal: Deal | None, contact_name: str | None) -
         return f"Клиент открыл КП {label}."
     if env.event == "quote.accepted":
         _set_stage(deal, "accepted")
-        return f"Клиент{who} акцептовал КП {label}."
+        return f"Клиент{who} акцептовал КП {label}.{_staff_note(payload)}"
     reason = f". Причина: {payload.reason}." if payload.reason else "."
-    return f"КП {label} отклонено клиентом{who}{reason}"
+    return f"КП {label} отклонено клиентом{who}{reason}{_staff_note(payload)}"
 
 
 async def _crm_contact_name(

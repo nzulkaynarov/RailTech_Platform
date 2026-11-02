@@ -22,6 +22,7 @@ import { SourceBanner } from "../../../shared/ui/SourceBanner";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { ApprovalSlot } from "./ApprovalPanel";
 import { quoteRef } from "./api";
+import { ClientDecisionCard } from "./ClientDecision";
 import { DeliveryReport } from "./DeliveryReport";
 import { useStateLabels } from "./labels";
 import { QuoteStatusTag } from "./QuoteStatus";
@@ -203,6 +204,7 @@ function Content({
       ) : null}
       <div className="pf-dec-grid pf-dec-grid--quote">
         <div className="pf-dec-main">
+          <ClientDecisionCard quote={quote} />
           <DeliveryReport quote={quote} />
           <Card size="small" title={<h2 className="pf-dec-title">{t("card.lines")}</h2>}>
             <QuoteLines quote={quote} />

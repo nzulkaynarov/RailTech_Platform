@@ -237,12 +237,15 @@ def publish_quote_outcome(
     reason: Optional[str] = None,
     actor: Optional[Dict[str, Any]] = None,
     contact: Optional[Any] = None,
+    recorded_by_staff: Optional[Dict[str, Any]] = None,
 ) -> Optional[Event]:
     """События `quote.viewed`, `quote.accepted`, `quote.rejected`.
 
     `contact` — контакт клиента, принявший или отклонивший КП в Cabinet (Q-FIX22-6): в `payload` уходят `erp_contact_id`
     и `crm_contact_id` (`null`, если контакт не сопоставлен), действующее лицо — клиент с именем контакта. Без контакта
     (публичная страница КП, менеджер) полей нет.
+    `recorded_by_staff` — решение клиента записал сотрудник со слов (A1 волны 18a): кто записал, канал, лицо клиента, дата;
+    действующее лицо тогда — сотрудник (`actor.type = staff`, честно: кто нажал).
     """
     if event_type not in ("quote.viewed", "quote.accepted", "quote.rejected"):
         raise ValueError(f"Не итог КП: {event_type!r}")
@@ -258,6 +261,8 @@ def publish_quote_outcome(
         payload.update(contact_refs(contact))
         if actor is None:
             actor = client_actor(contact)
+    if recorded_by_staff:
+        payload["recorded_by_staff"] = recorded_by_staff
 
     return publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
 

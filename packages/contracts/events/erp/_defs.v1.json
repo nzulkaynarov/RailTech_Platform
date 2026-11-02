@@ -275,6 +275,46 @@
             "null"
           ],
           "description": "Тот же контакт в CRM, если сопоставлен"
+        },
+        "recorded_by_staff": {
+          "$ref": "#/$defs/RecordedByStaff"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RecordedByStaff": {
+      "type": "object",
+      "description": "Решение внешней стороны записал сотрудник по подтверждению клиента — письмо, переписка, скан (A1 волны 18a, «Отметить за контрагента»); нет поля — решение принято онлайн (Cabinet, публичная ссылка)",
+      "required": [
+        "staff_name",
+        "channel",
+        "counterparty_person",
+        "occurred_on"
+      ],
+      "properties": {
+        "staff_name": {
+          "type": "string",
+          "description": "Кто записал: сотрудник своей компании"
+        },
+        "channel": {
+          "type": "string",
+          "enum": [
+            "phone",
+            "email",
+            "messenger",
+            "in_person",
+            "paper"
+          ],
+          "description": "Как сторона сообщила решение"
+        },
+        "counterparty_person": {
+          "type": "string",
+          "description": "Кто со стороны контрагента: ФИО и должность"
+        },
+        "occurred_on": {
+          "type": "string",
+          "format": "date",
+          "description": "Когда клиент сообщил решение, не позже даты записи"
         }
       },
       "additionalProperties": false

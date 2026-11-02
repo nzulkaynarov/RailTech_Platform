@@ -129,8 +129,14 @@ def assert_user_may_change_stage(deal: Deal, actor: Optional[CustomUser], target
         (FIX-13: ERP has no buyer accounts), so the change-stage endpoint never does it;
     (b) on the back-office side moving a deal through the pipeline is part of building the
         сделки, so the staff member needs the `deal.manage` role permission (a view-only role —
-        e.g. Наблюдатель — sees the deal but cannot move it).
-    Returns an error code or None. superuser/internal (actor=None) bypass."""
+        e.g. Наблюдатель — sees the deal but cannot move it);
+    (c) A7 волны 18a: «КП отправлено → Проект» руками не переводится никем (и администратором тоже) — проект открывает
+        только принятое КП: клиент в кабинете или сотрудник по подтверждению клиента (`record-client-decision`). Иначе
+        КП оставалось SENT, договор не формировался и КП истекало (`QUOTE_ACCEPTANCE_REQUIRED`, HTTP 409).
+    Returns an error code or None. superuser/internal (actor=None) bypass (b), not (c)."""
+    current = deal.stage.code if deal.stage_id else None
+    if current == DealStageCode.QUOTE_SENT and target_stage_code == DealStageCode.CONTRACT_SIGNED:
+        return "QUOTE_ACCEPTANCE_REQUIRED"
     if actor is None or getattr(actor, "is_superuser", False):
         return None
     from accounts.services.permissions import member_has_permission, primary_seller_company_id

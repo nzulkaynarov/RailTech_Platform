@@ -179,6 +179,29 @@ class QuoteRequestRef(BaseModel):
     path: str
 
 
+OnBehalfChannel = Literal["phone", "email", "messenger", "in_person", "paper"]
+
+
+class OnBehalfRecord(BaseModel):
+    """Решение клиента записал сотрудник по подтверждению клиента (A1 волны 18a)."""
+
+    staff_name: str | None
+    channel: OnBehalfChannel
+    counterparty_person: str
+    occurred_on: dt.date | None
+    comment: str | None
+    evidence_name: str | None
+    evidence_url: str | None
+
+
+class QuoteClientDecision(BaseModel):
+    state: Literal["awaiting", "accepted", "rejected", "expired"]
+    decided_at: dt.datetime | None
+    reason: str | None
+    recorded_by_staff: OnBehalfRecord | None
+    can_record: bool
+
+
 class QuoteApprovalCard(BaseModel):
     id: str
     number: str
@@ -209,6 +232,7 @@ class QuoteApprovalCard(BaseModel):
     channels: QuoteChannels | None
     delivery: QuoteDelivery | None
     client_comments: list[QuoteClientComment]
+    client_decision: QuoteClientDecision | None = None
     sources: Sources
 
 

@@ -409,6 +409,45 @@ async def test_without_a_crm_contact_the_feed_stays_neutral(
     assert note == expected
 
 
+@pytest.mark.parametrize(
+    ("event_type", "expected"),
+    [
+        (
+            "uz.railtech.erp.quote.accepted.v1",
+            "Клиент акцептовал КП #1203 v2. Отмечено сотрудником Менеджер Демо по подтверждению"
+            " клиента: Каримов А., снабженец (почта).",
+        ),
+        (
+            "uz.railtech.erp.quote.rejected.v1",
+            "КП #1203 v2 отклонено клиентом. Причина: Дорого. Отмечено сотрудником Менеджер Демо"
+            " по подтверждению клиента: Каримов А., снабженец (почта).",
+        ),
+    ],
+)
+async def test_the_feed_says_the_decision_was_recorded_by_staff(
+    harness: Harness, event_type: str, expected: str
+) -> None:
+    """A1: решение записал сотрудник — лента говорит кто, по чьему подтверждению и как."""
+    envelope, _, lead_id = await seeded(harness, event_type)
+    payload = envelope["data"]["payload"]
+    payload.pop("crm_contact_id", None)
+    payload.pop("erp_contact_id", None)
+    payload.pop("reason", None)
+    if event_type.endswith("rejected.v1"):
+        payload["reason"] = "Дорого"
+    payload["recorded_by_staff"] = {
+        "staff_name": "Менеджер Демо",
+        "channel": "email",
+        "counterparty_person": "Каримов А., снабженец",
+        "occurred_on": "2026-11-02",
+    }
+    envelope["data"]["actor"] = {"type": "staff", "name": "Менеджер Демо"}
+    await harness.process(await receive(harness, envelope))
+
+    (note,) = await notes(harness, lead_id)
+    assert note == expected
+
+
 async def test_a_contact_of_another_client_is_never_named_in_the_feed(harness: Harness) -> None:
     other_client, _ = await harness.seed_client(erp_company_id=COMPANY + 7, tg_user_id=9100)
     stranger = await add_contact(harness, other_client, "Посторонний Контакт")

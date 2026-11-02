@@ -103,5 +103,23 @@
     "removeRow": "− row",
     "removeColumn": "− column",
     "tableHint": "The first row is the header: it repeats on every PDF page."
+  },
+  "onBehalf": {
+    "tag": "Recorded by staff",
+    "staff": "recorded by {{name}}",
+    "person": "confirmed by {{person}}",
+    "channel": {
+      "email": "email",
+      "messenger": "messenger",
+      "phone": "phone",
+      "in_person": "in person",
+      "paper": "paper"
+    },
+    "channelLabel": "How the client told us",
+    "channelPlaceholder": "Choose a channel",
+    "channelRequired": "Say how the client told us",
+    "personLabel": "Who on the client side",
+    "personPlaceholder": "Full name and position",
+    "personRequired": "Say who confirmed"
   }
 }
