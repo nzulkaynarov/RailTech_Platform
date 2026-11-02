@@ -8,6 +8,7 @@ import {
   resetResolutionTemplatesMock,
 } from "../../../mocks/resolutionTemplates";
 import { resetFeedMocks } from "../../../mocks/feedHandlers";
+import { readDocflowSettings, resetLetterIntakeMock } from "../../../mocks/letterIntake";
 import { endSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
 import i18n from "../../../shared/i18n";
@@ -24,6 +25,7 @@ beforeEach(() => {
   resetTicketsMock();
   resetDictionariesMock();
   resetResolutionTemplatesMock();
+  resetLetterIntakeMock();
 });
 afterEach(() => {
   cleanup();
@@ -141,6 +143,20 @@ describe("Настройки · Документооборот · Справоч
       scope: "company",
       kind: "execute",
       due_days: 10,
+    });
+  });
+
+  it("распознавание сканов: по умолчанию выключено, администратор включает", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/docflow?tab=ai");
+    const scans = await screen.findByRole("switch", { name: "Распознавать сканы и фото" });
+    expect(scans).not.toBeChecked();
+    expect(
+      screen.getByText("Письма организаций; паспорта и личные документы не загружайте."),
+    ).toBeInTheDocument();
+    fireEvent.click(scans);
+    await waitFor(() => {
+      expect(readDocflowSettings().recognize_scans).toBe(true);
     });
   });
 });
