@@ -113,6 +113,17 @@ async function logInView(page: Page): Promise<void> {
   await log.scrollIntoViewIfNeeded();
 }
 
+/** Текст письма в карточке: абзац, список и таблица с шапкой (не строки «a | b»); полей «Сумма» и пустых «—» нет. */
+async function expectLetterBody(card: Locator): Promise<void> {
+  const table = card.getByRole("table", { name: "Таблица в тексте письма" });
+  await expect(table.getByRole("columnheader", { name: "Счёт-фактура" })).toBeVisible();
+  await expect(table.getByRole("cell", { name: "14 400 000" })).toBeVisible();
+  await expect(card.getByText("реестр счетов-фактур поставщиков")).toBeVisible();
+  await expect(card.getByText(/Счёт-фактура \| Сумма НДС/)).toHaveCount(0);
+  await expect(card.locator("dt", { hasText: /^Сумма$/ })).toHaveCount(0);
+  await table.scrollIntoViewIfNeeded();
+}
+
 test.describe("P4: письмо на бланке", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
@@ -183,9 +194,18 @@ test.describe("P4: письмо на бланке", () => {
     const card = side(page);
     await expect(card.getByText(/Передано на регистрацию: Демо Широков/)).toBeVisible();
     await both(page, "handed-over");
+    // Карточка письма: тело — теми же блоками, что в редакторе (таблица таблицей), без неприменимой «Суммы».
+    await expectLetterBody(card);
+    await both(page, "letter-card", async () => {
+      // на 390 карточка — лист на весь экран; таблицу ищем на странице (скрытое окно в роли не попадает)
+      const table = page.getByRole("table", { name: "Таблица в тексте письма" });
+      await expect(table).toBeVisible();
+      await table.scrollIntoViewIfNeeded();
+    });
     await card.getByRole("button", { name: "Зарегистрировать и отправить" }).click();
     await expect(page.getByText(/Письмо зарегистрировано: ИСХ-\d{3}\/26/)).toBeVisible();
     await expect(card.getByText("Зарегистрировано")).toBeVisible();
+    await expectLetterBody(card); // зарегистрированное письмо — тот же вид текста
 
     // Журнал отправки доходит до «Отправлено» (итог почтового сервиса CRM).
     const log = side(page).getByRole("list", { name: "Журнал отправки" });
