@@ -73,7 +73,7 @@ def public_quote_page_context(quote) -> dict:
         # Mirror the PDF (#375): render the per-line «Срок» column only when at least one line
         # actually carries a lead time — otherwise it is a column of «—» duplicating the single
         # КП-level «Срок поставки» below.
-        "has_line_lead_time": any(item.get("lead_time_days") for item in projected_items),
+        "has_line_lead_time": any(item.get("lead_time_days") or item.get("lead_pending") for item in projected_items),
         "public_quote_url": public_quote_url(quote),
         # D1c: the online page is the PDF's twin — same cover letter, structured «Условия
         # поставки» and 3-line VAT totals (one shared builder), so the QR «оригинал» never
