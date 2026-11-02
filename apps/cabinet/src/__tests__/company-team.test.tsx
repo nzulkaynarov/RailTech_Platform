@@ -84,7 +84,7 @@ describe('Команда', () => {
     expect(within(dialog).getByText(/Укажите имя\. Укажите корректный e-mail\./)).toBeInTheDocument();
 
     await user.type(within(dialog).getByLabelText('Имя и фамилия'), 'Бобур Алиев');
-    await user.type(within(dialog).getByLabelText('E-mail'), 'b.aliev@toshlog.uz');
+    await user.type(within(dialog).getByLabelText('E-mail'), 'b.aliev@toshlog.example');
     await user.click(within(dialog).getByRole('checkbox', { name: 'В Telegram (по номеру телефона)' }));
     await user.click(within(dialog).getByRole('button', { name: 'Отправить приглашение' }));
     expect(within(dialog).getByText('Укажите телефон в международном формате.')).toBeInTheDocument();
@@ -98,7 +98,7 @@ describe('Команда', () => {
     expect(await screen.findByText('Приглашение для Бобур Алиев отправлено')).toBeInTheDocument();
     expect(body.current).toEqual({
       name: 'Бобур Алиев',
-      email: 'b.aliev@toshlog.uz',
+      email: 'b.aliev@toshlog.example',
       phone: '+998901112233',
       language: 'en',
       can_act: true,
@@ -129,7 +129,7 @@ describe('Команда', () => {
     await user.click(screen.getByRole('button', { name: 'Пригласить коллегу' }));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText('Имя и фамилия'), 'Дилшод Раҳимов');
-    await user.type(within(dialog).getByLabelText('E-mail'), 'delivery-fail@toshlog.uz');
+    await user.type(within(dialog).getByLabelText('E-mail'), 'delivery-fail@toshlog.example');
     await user.click(within(dialog).getByRole('button', { name: 'Отправить приглашение' }));
     expect(
       await within(dialog).findByText('Письмо с приглашением не ушло, коллега не добавлен. Повторите попытку — можно сразу.'),

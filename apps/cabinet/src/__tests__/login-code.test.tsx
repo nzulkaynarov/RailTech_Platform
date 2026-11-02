@@ -13,7 +13,7 @@ import { captureBody } from '@/test/screens';
  * код вводится на экране «Мы отправили письмо» или «Вход по коду» (приглашение), «Отправить ещё раз» — через 60 с.
  */
 
-async function sendLetter(user: ReturnType<typeof userEvent.setup>, address = 'a.karimov@toshlog.uz') {
+async function sendLetter(user: ReturnType<typeof userEvent.setup>, address = 'a.karimov@toshlog.example') {
   renderApp('/login');
   await user.type(await screen.findByLabelText('E-mail'), address);
   await user.click(screen.getByRole('button', { name: 'Войти' }));
@@ -42,7 +42,7 @@ describe('вход по коду из письма', () => {
     await user.click(within(codeForm()).getByRole('button', { name: 'Войти' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' })).toBeInTheDocument();
-    expect(body.current).toEqual({ email: 'a.karimov@toshlog.uz', code: '429173' });
+    expect(body.current).toEqual({ email: 'a.karimov@toshlog.example', code: '429173' });
   });
 
   it('неверный код — понятный текст, поле остаётся', async () => {
@@ -92,7 +92,7 @@ describe('вход по коду из письма', () => {
       await screen.findByText('Отправили новое письмо. Код из прежнего больше не действует.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Отправить ещё раз через \d+ с/ })).toBeDisabled();
-    expect(requests).toEqual([{ email: 'a.karimov@toshlog.uz' }, { email: 'a.karimov@toshlog.uz' }]);
+    expect(requests).toEqual([{ email: 'a.karimov@toshlog.example' }, { email: 'a.karimov@toshlog.example' }]);
     portalServer.events.removeAllListeners();
   });
 
@@ -116,12 +116,12 @@ describe('вход по коду из письма', () => {
       }),
     );
     const { router } = renderApp('/login');
-    await user.type(await screen.findByLabelText('E-mail'), 'n.saidova@toshlog.uz');
+    await user.type(await screen.findByLabelText('E-mail'), 'n.saidova@toshlog.example');
     await user.click(screen.getByRole('link', { name: 'Уже есть код из письма? Войти по коду' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Вход по коду' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/code');
-    expect(within(codeForm()).getByLabelText('E-mail')).toHaveValue('n.saidova@toshlog.uz');
+    expect(within(codeForm()).getByLabelText('E-mail')).toHaveValue('n.saidova@toshlog.example');
     expect(screen.getByRole('button', { name: 'Отправить ещё раз' })).toBeEnabled();
     await user.type(within(codeForm()).getByLabelText('Код из письма'), '734002');
     await user.click(within(codeForm()).getByRole('button', { name: 'Войти' }));

@@ -32,13 +32,13 @@ describe('вход с веба', () => {
     });
     const { router } = renderApp('/login');
 
-    await user.type(await screen.findByLabelText('E-mail'), 'a.karimov@toshlog.uz');
+    await user.type(await screen.findByLabelText('E-mail'), 'a.karimov@toshlog.example');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Мы отправили письмо' })).toBeInTheDocument();
-    expect(screen.getByText(/a\.karimov@toshlog\.uz/)).toBeInTheDocument();
+    expect(screen.getByText(/a\.karimov@toshlog\.example/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
-    expect(sentBody).toEqual({ email: 'a.karimov@toshlog.uz' });
+    expect(sentBody).toEqual({ email: 'a.karimov@toshlog.example' });
     portalServer.events.removeAllListeners();
   });
 

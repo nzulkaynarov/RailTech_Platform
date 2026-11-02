@@ -72,7 +72,7 @@ export const company: Schemas['Company'] = {
 export const contactActor: Schemas['TeamMember'] = {
   id: 101,
   name: 'Алишер Каримов',
-  email: 'a.karimov@toshlog.uz',
+  email: 'a.karimov@toshlog.example',
   phone: '+998901234567',
   has_telegram: true,
   language: 'ru',
@@ -87,7 +87,7 @@ export const contactActor: Schemas['TeamMember'] = {
 export const contactViewer: Schemas['TeamMember'] = {
   id: 102,
   name: 'Dilnoza Yusupova',
-  email: 'd.yusupova@toshlog.uz',
+  email: 'd.yusupova@toshlog.example',
   phone: null,
   has_telegram: false,
   language: 'uz',
@@ -101,7 +101,7 @@ export const contactViewer: Schemas['TeamMember'] = {
 const contactAccountant: Schemas['TeamMember'] = {
   id: 103,
   name: 'Нигора Рахимова',
-  email: 'buh@toshlog.uz',
+  email: 'buh@toshlog.example',
   phone: '+998935550011',
   has_telegram: true,
   language: 'ru',

@@ -65,7 +65,7 @@ test.describe('публичные экраны кабинета', () => {
   }) => {
     await page.clock.install();
     await page.goto('/login');
-    await page.getByLabel('E-mail').fill('a.karimov@toshlog.uz');
+    await page.getByLabel('E-mail').fill('a.karimov@toshlog.example');
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Мы отправили письмо' })).toBeVisible();
     await expect(page.getByText('Письмо может идти несколько минут. Проверьте папку «Спам».')).toBeVisible();
