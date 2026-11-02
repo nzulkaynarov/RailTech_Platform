@@ -574,8 +574,8 @@ export interface paths {
      *       (не модель).
      *     * Журнал (`ai_suggestions`): кто, когда, функция, алиас, версия промпта, итог и потом решение человека — без текстов.
      *
-     *     409: `scan_recognition_disabled`, `ai_unavailable` (шлюз не настроен или не ответил), `ai_budget_exceeded`,
-     *     `nothing_recognized`. 422: файл не PDF и не изображение (`file_id` с `unsupported_file`).
+     *     409: `scan_recognition_disabled`, `file_too_large` (скан больше 5 МБ), `ai_unavailable` (шлюз не настроен или не
+     *     ответил), `ai_budget_exceeded`, `nothing_recognized`. 422: файл не PDF и не изображение (`file_id` с `unsupported_file`).
      */
     post: operations["suggestLetterFromFile"];
     delete?: never;
