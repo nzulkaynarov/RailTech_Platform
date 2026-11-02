@@ -15,9 +15,8 @@ import respx
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.test_erp_calc import CALC, deal, refs
+from tests.test_erp_calc import CALC, NUMBER, deal, refs
 from tests.test_erp_stock import (
-    NUMBER,
     ORDER,
     ORDER_ENCODED,
     STOCK,

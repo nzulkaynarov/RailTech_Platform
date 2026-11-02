@@ -16,6 +16,7 @@ import datetime
 from dataclasses import dataclass, field
 from typing import Iterable, Optional
 
+from django.db import transaction
 from django.db.models import Prefetch, Q
 from django.utils import timezone
 
@@ -153,6 +154,7 @@ def free_units(product_ids: Iterable[int]) -> dict[int, list[TraceUnit]]:
     return out
 
 
+@transaction.atomic
 def validate_picks(product, quantity: int, picks: list[UnitPick]) -> list[tuple[TraceUnit, int]]:
     """Проверить выбор единиц строки отгрузки под блокировкой: S/L — сумма = количеству, только свободные этого товара."""
     kind = tracking_of(product)
