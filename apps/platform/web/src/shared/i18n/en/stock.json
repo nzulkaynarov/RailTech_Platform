@@ -1,6 +1,6 @@
 {
   "title": "Stock",
-  "subtitle": "Stock and reservations, supplier orders, receiving and shipments by project",
+  "subtitle": "Stock and reservations, supplier orders, receiving, shipments and traceability",
   "common": {
     "cancel": "Cancel"
   },
