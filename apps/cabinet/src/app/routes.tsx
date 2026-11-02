@@ -18,7 +18,7 @@ import { HomeRedirect, RequireSession, WebOnly } from './guards';
 import { RootErrorPage } from './RootErrorPage';
 
 /**
- * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/new-client`) — только в вебе;
+ * Маршруты Cabinet. Публичные (`/login`, `/login/sent`, `/login/code` — вход по коду из письма, `/new-client`) — только в вебе;
  * `/auth/magic#token=…` — ссылка из письма (токен во фрагменте; ссылок с токеном в пути на проде нет);
  * всё остальное — за сессией портала в оболочке. Непойманная ошибка любого маршрута —
  * `RootErrorPage` (корневой `errorElement`), а не белый экран.
@@ -33,6 +33,7 @@ export const routes: RouteObject[] = [
         children: [
           { path: '/login', element: <LoginPage /> },
           { path: '/login/sent', element: <LoginSentPage /> },
+          { path: '/login/code', element: <LoginSentPage mode="code" /> },
           { path: '/new-client', element: <NewClientPage /> },
         ],
       },

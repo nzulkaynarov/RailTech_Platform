@@ -79,9 +79,9 @@
     "hiddenFromClient": "клиент не видит",
     "invitation": "Приглашение в кабинет",
     "noInvitation": "Приглашения ещё не было",
-    "resend": "Отправить повторно другим каналом",
+    "resend": "Отправить ещё раз",
     "resendChannel": "Канал",
-    "resendDone": "Приглашение отправлено",
+    "resendDone": "Приглашение передано на отправку — итог появится здесь",
     "resendChannels": {
       "email": "Почта",
       "telegram": "Telegram",

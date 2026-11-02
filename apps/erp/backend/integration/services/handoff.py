@@ -219,15 +219,16 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
     return deal
 
 
-def _invite(contact: Optional[Contact], channels: List[str]) -> Tuple[List[str], Optional[str]]:
-    """Приглашение в Cabinet: (каналы, по которым оно РЕАЛЬНО ушло, код причины, если не ушло ничего). Сбой передачу не роняет."""
+def _invite(contact: Optional[Contact], channels: List[str]) -> dict:
+    """Приглашение в Cabinet — блок `invite` ответа без `cabinet_url`: каналы, по которым оно РЕАЛЬНО ушло, код причины,
+    если не ушло ничего, и ключ письма в почте CRM (B-MAIL-1). Сбой передачу не роняет."""
     if contact is None:
-        return [], "CONTACT_CHANNEL_REQUIRED"
+        return {"sent_via": [], "error": "CONTACT_CHANNEL_REQUIRED", "email_request_key": None}
     effective = "both" if len(channels) > 1 else (channels[0] if channels else "email")
     outcome = invite_contact(contact=contact, channel=effective, language=contact.language)
     if outcome.error:
         logger.info("Handoff invite for contact #%s was not sent: %s", contact.id, outcome.error)
-    return list(outcome.sent_via), outcome.error
+    return {"sent_via": list(outcome.sent_via), "error": outcome.error, "email_request_key": outcome.email_request_key}
 
 
 def _log_linked_by_inn(company: Company, deal: Optional[Deal], crm_client_id: int) -> None:
@@ -285,13 +286,12 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
         # Опечатка в ИНН отдала бы постороннему чужие КП, договоры и счета: без приглашения и без права действовать,
         # пока сотрудник не проверит контакты (Q-FIX31-5).
         _log_linked_by_inn(company, deal, crm_client_id)
-        sent_via: List[str] = []
-        invite_error: Optional[str] = "COMPANY_LINKED_BY_INN"
+        invite: dict = {"sent_via": [], "error": "COMPANY_LINKED_BY_INN", "email_request_key": None}
     else:
-        sent_via, invite_error = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
+        invite = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
 
     return {
         "erp_company_id": company.id,
         "erp_request_id": deal.pk if deal else None,
-        "invite": {"sent_via": sent_via, "cabinet_url": _cabinet_url(), "error": invite_error},
+        "invite": {**invite, "cabinet_url": _cabinet_url()},
     }, True

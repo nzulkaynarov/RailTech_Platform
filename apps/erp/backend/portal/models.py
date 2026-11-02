@@ -66,7 +66,10 @@ class PortalSession(models.Model):
 
 
 class MagicLinkToken(models.Model):
-    """Одноразовый токен для входа по email: вход по запросу клиента (15 минут) или приглашение (24 часа)."""
+    """Одноразовое письмо входа: ссылка и код (B-MAIL-1) — вход по запросу клиента (60 минут) или приглашение (24 часа).
+
+    Ссылка и 6-значный код — одна запись: погашение любым из двух гасит оба. В базе — только хеши.
+    """
 
     PURPOSE_LOGIN = "login"
     PURPOSE_INVITE = "invite"
@@ -89,6 +92,14 @@ class MagicLinkToken(models.Model):
         related_name="magic_links",
         verbose_name=_("Контакт клиента"),
     )
+    code_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        verbose_name=_("HMAC-SHA256 кода входа"),
+        help_text=_("Сырой 6-значный код есть только в письме; пусто — у записи нет кода"),
+    )
+    code_attempts = models.PositiveSmallIntegerField(default=0, verbose_name=_("Неверных попыток кода"))
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(db_index=True)
     used_at = models.DateTimeField(null=True, blank=True)

@@ -475,6 +475,34 @@
                 }
             }
         },
+        "/api/portal/v1/auth/code": {
+            "post": {
+                "operationId": "api_portal_v1_auth_code_create",
+                "description": "POST /auth/code {email, code} — вход по 6-значному коду из письма входа или приглашения (B-MAIL-1).\n\nНеверный, устаревший код и неизвестный адрес — 422 `LOGIN_CODE_INVALID`; 5 неверных подряд — 429 `LOGIN_CODE_LOCKED`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/auth/code/": {
+            "post": {
+                "operationId": "api_portal_v1_auth_code_create_2",
+                "description": "POST /auth/code {email, code} — вход по 6-значному коду из письма входа или приглашения (B-MAIL-1).\n\nНеверный, устаревший код и неизвестный адрес — 422 `LOGIN_CODE_INVALID`; 5 неверных подряд — 429 `LOGIN_CODE_LOCKED`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/auth/logout": {
             "post": {
                 "operationId": "api_portal_v1_auth_logout_create",

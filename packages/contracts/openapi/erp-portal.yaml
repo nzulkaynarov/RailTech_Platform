@@ -25,8 +25,13 @@ info:
     `FILE_TOO_LARGE` — 422 на `/uploads`; `DELIVERY_FAILED` — 503 на `/team/invite`; `lines` в `POST /requests` необязателен.
 
     Лимиты частоты (429 `TOO_MANY_REQUESTS`, заголовок `Retry-After`): запросы сессии — 120 в минуту на сессию; вход без
-    сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic`) — 10 в минуту на IP; акцепт КП с кодом и запрос кода —
+    сессии (`/auth/telegram`, `/auth/magic-link`, `/auth/magic`, `/auth/code`) — 10 в минуту на IP; акцепт КП с кодом и запрос кода —
     10 в минуту на сессию; ссылка входа на один e-mail — не чаще 5 в час. Ставки задаются настройками ERP.
+
+    Код входа (B-MAIL-1): письмо входа и приглашения несёт и ссылку, и 6-значный одноразовый код — клиент вводит код на
+    экране «Мы отправили письмо» (`POST /auth/code`), если ссылка не открывается или письмо пришло на другое устройство.
+    Ссылка и код — одна запись, живут 60 минут (приглашение — 24 часа), гасятся вместе; 5 неверных кодов подряд —
+    429 `LOGIN_CODE_LOCKED` до нового запроса.
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -102,7 +107,9 @@ paths:
       tags: [auth]
       operationId: requestMagicLink
       summary: Запросить ссылку для входа по e-mail
-      description: Письмо со ссылкой на 15 минут, одноразовой. Ответ всегда 200, чтобы не раскрывать наличие адреса.
+      description: >-
+        Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и
+        код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -137,7 +144,7 @@ paths:
       summary: Обмен токена из ссылки входа на сессию
       description: |
         Cabinet берёт токен из фрагмента ссылки `/auth/magic#token=…` и шлёт его в теле: токен не появляется ни в пути,
-        ни в журналах. Токен одноразовый и живёт 15 минут (ссылка-приглашение — 24 часа). Заменяет `GET /auth/magic/{token}`.
+        ни в журналах. Токен одноразовый и живёт 60 минут (ссылка-приглашение — 24 часа, B-MAIL-1). Заменяет `GET /auth/magic/{token}`.
       security: []
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -181,6 +188,75 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
+
+  /auth/code:
+    post:
+      tags: [auth]
+      operationId: exchangeLoginCode
+      summary: Вход по коду из письма
+      description: |
+        B-MAIL-1. Клиент вводит адрес и 6-значный код из письма входа или приглашения. Код одноразовый, живёт столько же,
+        сколько ссылка того же письма (60 минут, приглашение — 24 часа), в базе — только хеш, сравнение за постоянное
+        время. Неверный, просроченный, использованный код и неизвестный адрес дают один ответ — 422 `LOGIN_CODE_INVALID`
+        (наличие адреса не раскрывается). Пятая неверная попытка подряд и дальше — 429 `LOGIN_CODE_LOCKED` до нового
+        запроса `POST /auth/magic-link`. Верный код гасит и ссылку того же письма.
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, code]
+              properties:
+                email:
+                  type: string
+                  format: email
+                code:
+                  type: string
+                  pattern: '^\d{6}$'
+              additionalProperties: false
+      responses:
+        '200':
+          description: Сессия выдана (cookie `Set-Cookie`)
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '403':
+          $ref: '#/components/responses/CompanyArchived'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: >-
+            `LOGIN_CODE_INVALID` — код неверный, устарел или уже использован (и для неизвестного адреса);
+            `VALIDATION_ERROR` — тело не по схеме
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: >-
+            `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP
+            (заголовок `Retry-After`)
+          headers:
+            Retry-After:
+              description: Через сколько секунд можно повторить (только у `TOO_MANY_REQUESTS`)
+              schema:
+                type: integer
+                minimum: 1
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /auth/logout:
     post:
@@ -1250,6 +1326,8 @@ components:
         - FORBIDDEN
         - NOT_FOUND
         - MAGIC_LINK_EXPIRED
+        - LOGIN_CODE_INVALID
+        - LOGIN_CODE_LOCKED
         - IDEMPOTENCY_KEY_REQUIRED
         - UNSUPPORTED_MEDIA_TYPE
         - TOO_MANY_REQUESTS

@@ -395,6 +395,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/auth/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /auth/code {email, code} — вход по 6-значному коду из письма входа или приглашения (B-MAIL-1).
+         *
+         *     Неверный, устаревший код и неизвестный адрес — 422 `LOGIN_CODE_INVALID`; 5 неверных подряд — 429 `LOGIN_CODE_LOCKED`.
+         */
+        post: operations["api_portal_v1_auth_code_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/auth/code/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * @description POST /auth/code {email, code} — вход по 6-значному коду из письма входа или приглашения (B-MAIL-1).
+         *
+         *     Неверный, устаревший код и неизвестный адрес — 422 `LOGIN_CODE_INVALID`; 5 неверных подряд — 429 `LOGIN_CODE_LOCKED`.
+         */
+        post: operations["api_portal_v1_auth_code_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -17875,6 +17917,42 @@ export interface operations {
             path: {
                 id: number;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_auth_code_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_auth_code_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

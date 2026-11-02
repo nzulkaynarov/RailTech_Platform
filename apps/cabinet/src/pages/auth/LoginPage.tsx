@@ -31,7 +31,7 @@ export function LoginPage() {
 
   const magicLink = useMutation({
     mutationFn: (address: string) => requestMagicLink(address),
-    onSuccess: (_data, address) => navigate('/login/sent', { state: { email: address } }),
+    onSuccess: (_data, address) => navigate('/login/sent', { state: { email: address, sentAt: Date.now() } }),
   });
 
   if (me) return <Navigate to="/" replace />;
@@ -77,6 +77,13 @@ export function LoginPage() {
               {magicLink.isPending ? t('auth.login.sending') : t('auth.login.submit')}
             </Button>
           </form>
+          <Link
+            to="/login/code"
+            state={{ email: email.trim() }}
+            className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t('auth.login.haveCode')}
+          </Link>
           {telegramLink ? (
             <>
               <p className="text-center text-xs text-muted-foreground">{t('auth.login.or')}</p>

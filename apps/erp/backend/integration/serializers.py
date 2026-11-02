@@ -112,6 +112,8 @@ class HandoffResponseInviteSerializer(serializers.Serializer):
     sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
     cabinet_url = serializers.URLField()
     error = serializers.CharField(allow_null=True, required=False)
+    # B-MAIL-1: ключ письма-приглашения в почте CRM — CRM берёт по нему итог доставки из своего журнала.
+    email_request_key = serializers.CharField(allow_null=True, required=False)
 
 
 class InviteRequestSerializer(serializers.Serializer):
@@ -125,6 +127,8 @@ class InviteResponseSerializer(serializers.Serializer):
     sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
     cabinet_url = serializers.URLField()
     error = serializers.CharField(allow_null=True, required=False)
+    # B-MAIL-1: ключ письма-приглашения в почте CRM — CRM берёт по нему итог доставки из своего журнала.
+    email_request_key = serializers.CharField(allow_null=True, required=False)
 
 
 class HandoffResponseSerializer(serializers.Serializer):

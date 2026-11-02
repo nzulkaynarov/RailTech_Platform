@@ -136,6 +136,12 @@ export function exchangeMagicToken(token: string): Promise<Me> {
   return portalRequest<Me>('/auth/magic', { method: 'POST', body });
 }
 
+/** Вход по 6-значному коду из письма входа или приглашения (B-MAIL-1): адрес и код → сессия. */
+export function exchangeLoginCode(email: string, code: string): Promise<Me> {
+  const body: JsonBody<paths['/auth/code']['post']> = { email, code };
+  return portalRequest<Me>('/auth/code', { method: 'POST', body });
+}
+
 export function logout(): Promise<void> {
   return portalRequest<void>('/auth/logout', { method: 'POST' });
 }

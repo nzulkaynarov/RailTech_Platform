@@ -24,8 +24,10 @@ from app.domain.errors import Reason, UpstreamUnavailableError
 from app.integrations.erp import HandoffPayload, HandoffResult, InviteResult
 from app.main import create_app
 from app.models.clients import Client, ClientContact
+from app.models.email import EmailLog
 from app.models.leads import Lead, TelegramIdentity
 from app.models.notices import ClientNotice
+from app.schemas.notices import InvitationOut
 from app.security import audit
 from app.security.principal import Principal
 from app.services.erp_handoff import ErpHandoffService
@@ -48,9 +50,11 @@ class FakeErp:
         sent_via: list[str] | None = None,
         error: str | None = None,
         invite: InviteResult | Exception | None = None,
+        email_key: str | None = None,
     ) -> None:
         self.sent_via = ["email"] if sent_via is None else sent_via
         self.error = error
+        self.email_key = email_key
         self.invite = invite
         self.handoffs: list[HandoffPayload] = []
         self.invites: list[tuple[int, str, int | None]] = []
@@ -59,7 +63,14 @@ class FakeErp:
         self, payload: HandoffPayload, *, idempotency_key: str | None = None
     ) -> HandoffResult:
         self.handoffs.append(payload)
-        return HandoffResult(7001, None, self.sent_via, CABINET, invite_error=self.error)
+        return HandoffResult(
+            7001,
+            None,
+            self.sent_via,
+            CABINET,
+            invite_error=self.error,
+            invite_email_key=self.email_key,
+        )
 
     async def invite_client(
         self, crm_client_id: int, channel: str, crm_contact_id: int | None
@@ -372,6 +383,109 @@ async def test_event_for_a_contact_without_telegram_fails_without_a_message(
 
     assert outcome == "failed"
     assert bot.sent == []
+
+
+# ── итог письма-приглашения из журнала почты CRM (B-MAIL-1) ──────────────────────────────────
+
+
+async def mail_row(
+    sessions: async_sessionmaker[AsyncSession], key: str, status: str, error: str | None = None
+) -> None:
+    async with sessions() as session, session.begin():
+        session.add(
+            EmailLog(
+                to_email="ivan@client.uz",
+                subject="Приглашение в личный кабинет",
+                template="portal_invitation",
+                lang="ru",
+                status=status,
+                error=error,
+                source="erp",
+                purpose="portal_invitation",
+                request_key=key,
+                sent_at=datetime.now(UTC) if status == "sent" else None,
+            )
+        )
+
+
+async def current_view(
+    sessions: async_sessionmaker[AsyncSession], erp: FakeErp, client_id: int
+) -> InvitationOut:
+    async with sessions() as session:
+        view = await PortalInviteService(sessions, erp).current(session, client_id)
+    assert view is not None
+    return view
+
+
+async def test_email_handed_to_mail_is_queued_until_the_mail_service_sends_it(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    ids = await seed(sessions, telegram=None)
+    erp = FakeErp(sent_via=["email"], email_key="erp:email_log:41")
+    await hand_off(sessions, erp, ids)
+
+    [row] = await notices(sessions)
+    assert row.detail["email_key"] == "erp:email_log:41"
+    queued = await current_view(sessions, erp, ids[0])
+    assert (queued.status, queued.sent_at) == ("queued", None), (
+        "ERP приняла письмо — ещё не «отправлено»"
+    )
+
+    await mail_row(sessions, "erp:email_log:41", "sent")
+    sent = await current_view(sessions, erp, ids[0])
+    assert (sent.status, sent.error, sent.sent_via) == ("sent", None, ["email"])
+    assert sent.sent_at is not None
+
+
+async def test_mail_not_configured_is_shown_with_words_and_another_channel(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    ids = await seed(sessions)
+    erp = FakeErp(sent_via=["email"], email_key="erp:email_log:42")
+    await hand_off(sessions, erp, ids)
+    await mail_row(sessions, "erp:email_log:42", "skipped_no_smtp", "smtp_not_configured")
+
+    view = await current_view(sessions, erp, ids[0])
+
+    assert (view.status, view.error, view.sent_via) == ("failed", "smtp_not_configured", [])
+    assert "Почта не настроена" in (view.error_text or "")
+    assert view.suggested_channel == "telegram"
+
+
+async def test_smtp_refusal_is_email_failed_without_the_server_text(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    ids = await seed(sessions, telegram=None)
+    erp = FakeErp(sent_via=["email"], email_key="erp:email_log:43")
+    await hand_off(sessions, erp, ids)
+    await mail_row(sessions, "erp:email_log:43", "failed", "550 5.7.1 rejected by policy")
+
+    view = await current_view(sessions, erp, ids[0])
+
+    assert (view.status, view.error) == ("failed", "email_failed")
+    assert "550" not in (view.error_text or "")
+
+
+async def test_resend_keeps_the_letter_key_and_answers_queued(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    ids = await seed(sessions, telegram=None, in_erp=True)
+    erp = FakeErp(sent_via=["email"], email_key="erp:email_log:44")
+    await hand_off(sessions, erp, ids)
+    await mail_row(sessions, "erp:email_log:44", "skipped_no_smtp", "smtp_not_configured")
+    erp.invite = InviteResult(["email"], None, "erp:email_log:45")
+    use_erp(client, erp)
+    auth = await manager(sessions, client)
+
+    before = client.get(f"/api/v1/clients/{ids[0]}", headers=auth).json()["invitation"]
+    body = client.post(
+        f"/api/v1/clients/{ids[0]}/invitation", json={"channel": "email"}, headers=auth
+    ).json()
+
+    assert (before["status"], before["error"]) == ("failed", "smtp_not_configured")
+    assert (body["status"], body["error"], body["sent_at"]) == ("queued", None, None)
+    last = (await notices(sessions))[-1]
+    assert last.detail["email_key"] == "erp:email_log:45"
 
 
 # ── API: карточка и повтор ────────────────────────────────────────────────────────────────────

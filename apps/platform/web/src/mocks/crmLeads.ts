@@ -173,12 +173,13 @@ export const crmLeadsHandlers = [
       client.contacts.find((c) => c.is_primary) ??
       client.contacts[0];
     const reachable = via.filter((channel) => contact?.channels.includes(channel));
-    // Канал недоступен — итог `failed` словами, не ошибка запроса (как в CRM).
+    // Канал недоступен — итог `failed` словами, не ошибка запроса (как в CRM). Ушедшее — «в очереди»: письмо ждёт
+    // почтовый сервис, Telegram — бота; итог карточка покажет позже (B-MAIL-1).
     const invitation: ClientInvitation = {
-      status: reachable.length ? "sent" : "failed",
+      status: reachable.length ? "queued" : "failed",
       channel: body.channel,
       sent_via: [...reachable],
-      sent_at: reachable.length ? new Date().toISOString() : null,
+      sent_at: null,
       contact_name: contact?.name ?? null,
       error_text: reachable.length ? null : "У контакта нет такого канала связи.",
       available_channels: ["email", "telegram", "both"],

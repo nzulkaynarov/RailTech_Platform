@@ -96,6 +96,18 @@ class MagicLinkRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
+class LoginCodeSerializer(serializers.Serializer):
+    """`POST /auth/code` (B-MAIL-1): адрес и 6-значный код из письма; лишние поля — не по контракту."""
+
+    email = serializers.EmailField()
+    code = serializers.RegexField(r"^\d{6}$")
+
+    def to_internal_value(self, data):
+        if isinstance(data, dict) and set(data) - set(self.fields):
+            raise serializers.ValidationError({"non_field_errors": "VALIDATION_ERROR"})
+        return super().to_internal_value(data)
+
+
 class MagicLinkTokenSerializer(serializers.Serializer):
     """`POST /auth/magic`: токен из фрагмента ссылки (`minLength 16`, `maxLength 512` по контракту)."""
 

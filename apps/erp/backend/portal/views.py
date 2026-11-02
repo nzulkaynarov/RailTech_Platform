@@ -39,6 +39,7 @@ from portal.serializers import (
     ContractSerializer,
     DeliveryLineSerializer,
     InvoiceSerializer,
+    LoginCodeSerializer,
     MagicLinkRequestSerializer,
     MagicLinkTokenSerializer,
     MeSerializer,
@@ -61,6 +62,7 @@ from portal.services.acceptance import ContactChannelRequired, request_acceptanc
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
 from portal.services.client_feedback import add_quote_comment, submit_payment_proof
 from portal.services.invitation import invite_team_member
+from portal.services.login_code import exchange_login_code
 from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.requests import create_client_request
 from portal.services.telegram_auth import authenticate_telegram_user
@@ -212,6 +214,11 @@ def _exchange_magic_token(request, token: str) -> Response:
         ip_address=request.META.get("REMOTE_ADDR"),
         user_agent=request.META.get("HTTP_USER_AGENT", ""),
     )
+    return _session_response(session, session_token)
+
+
+def _session_response(session, session_token: str) -> Response:
+    """Ответ входа по письму (ссылка или код): `Me` и cookie сессии."""
     me_data = {
         "contact": TeamMemberSerializer(session.contact).data,
         "company": CompanySerializer(session.company).data,
@@ -241,6 +248,32 @@ class MagicLinkTokenExchangeView(APIView):
         if not serializer.is_valid():
             raise PortalValidationError("VALIDATION_ERROR")
         return _exchange_magic_token(request, serializer.validated_data["token"])
+
+
+class LoginCodeExchangeView(APIView):
+    """POST /auth/code {email, code} — вход по 6-значному коду из письма входа или приглашения (B-MAIL-1).
+
+    Неверный, устаревший код и неизвестный адрес — 422 `LOGIN_CODE_INVALID`; 5 неверных подряд — 429 `LOGIN_CODE_LOCKED`.
+    """
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [PortalLoginRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def post(self, request):
+        serializer = LoginCodeSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise PortalValidationError("VALIDATION_ERROR")
+        session, session_token = exchange_login_code(
+            serializer.validated_data["email"],
+            serializer.validated_data["code"],
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", ""),
+        )
+        return _session_response(session, session_token)
 
 
 class LogoutView(APIView):

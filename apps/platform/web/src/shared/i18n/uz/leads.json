@@ -104,7 +104,7 @@
     "notice": {
       "queued": "navbatda",
       "sent": "{{date}} yuborildi",
-      "failed": "yetib bormadi: {{reason}}",
+      "failed": "yuborilmadi: {{reason}}",
       "skipped": "yuborilmagan",
       "channel": "kanal: {{channel}}"
     },

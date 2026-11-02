@@ -1,0 +1,98 @@
+[
+  {
+    "screen": "mail1-01-code-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-01-code-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-02-code-invalid",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-02-code-invalid",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-03-code-locked-resend",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-03-code-locked-resend",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-04-code-entry",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-04-code-entry",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-05-code-entry-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-05-code-entry-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-06-code-entry-en",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "mail1-06-code-entry-en",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

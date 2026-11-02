@@ -25,8 +25,9 @@ from parties.models import Contact
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
 from portal.models import MagicLinkToken
 from portal.services.access import company_has_cabinet_access, company_in_circulation
+from portal.services.login_code import INVITE_LINK_TTL, issue_login, reset_address_failures
 from portal.services.magic_link import build_login_url
-from portal.services.tokens import generate_token, hash_token
+from portal.services.mail_context import responsible_manager_email
 from rest_framework.exceptions import PermissionDenied
 
 from notifications.emails import send_templated_email
@@ -50,6 +51,8 @@ class InviteOutcome:
     errors: Dict[str, str]
     #: Код главной причины, если не ушло ни одним каналом; иначе `None`.
     error: Optional[str]
+    #: Ключ письма в почтовом сервисе CRM (`erp:email_log:<id>`, B-MAIL-1): по нему CRM показывает итог доставки.
+    email_request_key: Optional[str] = None
 
 
 def _mark_invited(contact: Contact, actor, language: Optional[str], *, email_sent: bool) -> None:
@@ -78,43 +81,40 @@ def _mark_invited(contact: Contact, actor, language: Optional[str], *, email_sen
             )
 
 
-def _send_email(contact: Contact, clean_email: str, language: Optional[str]) -> Optional[str]:
-    """Письмо-приглашение с новой ссылкой входа; `None` — ушло, иначе код ошибки."""
+def _send_email(
+    contact: Contact, clean_email: str, language: Optional[str], actor=None
+) -> Tuple[Optional[str], Optional[str]]:
+    """Письмо-приглашение с новыми ссылкой и кодом входа: (код ошибки или `None`, ключ письма в почте CRM)."""
     # Гасим только прежние приглашения: ссылка входа, запрошенная клиентом, остаётся рабочей.
-    MagicLinkToken.objects.filter(contact=contact, purpose=MagicLinkToken.PURPOSE_INVITE, used_at__isnull=True).update(
-        used_at=timezone.now()
-    )
-
-    # Токен приглашения (действителен 24 часа); в базе — только хеш
-    raw_token = generate_token()
-    MagicLinkToken.objects.create(
-        token_hash=hash_token(raw_token),
-        contact=contact,
-        purpose=MagicLinkToken.PURPOSE_INVITE,
-        expires_at=timezone.now() + timezone.timedelta(hours=24),
-    )
-    login_url = build_login_url(raw_token)
+    # Ссылка и код приглашения действительны 24 часа; в базе — только хеши (B-MAIL-1).
+    issued = issue_login(contact, MagicLinkToken.PURPOSE_INVITE, INVITE_LINK_TTL)
+    reset_address_failures(clean_email)
+    login_url = build_login_url(issued.raw_token)
+    reply_to = responsible_manager_email(contact.company_id, actor)
 
     bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", "")
     telegram_url = f"https://t.me/{bot_username}" if bot_username else None
 
     try:
-        send_templated_email(
+        log = send_templated_email(
             "portal_invitation",
             context={
                 "contact_name": contact.name,
                 "company_name": contact.company.name,
                 "invite_url": login_url,
+                "login_code": issued.code,
                 "telegram_url": telegram_url,
             },
             to=[clean_email],
             channel="transactional",
             language=language or contact.language or "ru",
+            reply_to=[reply_to] if reply_to else None,
+            redact=(issued.code,),
         )
     except Exception as exc:  # noqa: BLE001 — письмо не передано почтовому сервису CRM: «отправлено» писать нельзя
-        logger.warning("Failed to send portal invitation email to %s: %s", clean_email, exc)
-        return "EMAIL_DELIVERY_FAILED"
-    return None
+        logger.warning("Failed to send portal invitation email to contact %s: %s", contact.pk, exc)
+        return "EMAIL_DELIVERY_FAILED", None
+    return None, f"erp:email_log:{log.pk}"
 
 
 def _request_telegram(contact: Contact, actor) -> Optional[str]:
@@ -165,12 +165,13 @@ def invite_contact(
 
     sent: List[str] = []
     errors: Dict[str, str] = {}
+    email_key: Optional[str] = None
     clean_email = (contact.email or "").strip().lower()
     if EMAIL in wanted:
         if not clean_email:
             errors[EMAIL] = "CONTACT_EMAIL_REQUIRED"
         else:
-            code = _send_email(contact, clean_email, language)
+            code, email_key = _send_email(contact, clean_email, language, actor)
             if code:
                 errors[EMAIL] = code
             else:
@@ -190,7 +191,7 @@ def invite_contact(
 
     _mark_invited(contact, actor, language, email_sent=EMAIL in sent)
     logger.info("Contact %s invited to portal via %s by %s", contact.id, ",".join(sent), actor or "system")
-    return InviteOutcome(contact, tuple(sent), errors, None)
+    return InviteOutcome(contact, tuple(sent), errors, None, email_key)
 
 
 def invite_contact_to_portal(

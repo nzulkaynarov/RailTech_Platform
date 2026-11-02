@@ -90,14 +90,27 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     expect(await within(requests).findByText("ЗВ-2026-040")).toBeVisible();
   });
 
-  it("«Отправить повторно другим каналом»: выбранный канал уходит, итог — словами", async () => {
+  it("«Отправить ещё раз»: выбранный канал уходит, итог — словами", async () => {
     await open("manager@demo.example", "/crm/clients/3?panel=open&tab=card");
     const panel = await panelEl();
     const invitation = await within(panel).findByRole("region", { name: "Приглашение в кабинет" });
-    fireEvent.click(
-      within(invitation).getByRole("button", { name: "Отправить повторно другим каналом" }),
-    );
-    expect(await within(invitation).findByText("Приглашение отправлено")).toBeVisible();
+    fireEvent.click(within(invitation).getByRole("button", { name: "Отправить ещё раз" }));
+    expect(
+      await within(invitation).findByText("Приглашение передано на отправку — итог появится здесь"),
+    ).toBeVisible();
+  });
+
+  it("B-MAIL-1: письмо приглашения не ушло — причина словами, «Отправить ещё раз» → в очереди", async () => {
+    await open("manager@demo.example", "/crm/clients/6?panel=open&tab=card");
+    const panel = await panelEl();
+    const invitation = await within(panel).findByRole("region", { name: "Приглашение в кабинет" });
+    expect(
+      within(invitation).getByText(
+        "не отправлено: Почта не настроена (Настройки · Подключения · Почта), письмо не отправлено.",
+      ),
+    ).toBeVisible();
+    fireEvent.click(within(invitation).getByRole("button", { name: "Отправить ещё раз" }));
+    expect(await within(invitation).findByText("в очереди")).toBeVisible();
   });
 
   it("бухгалтер (клиенты — чтение): карточка без «Новой заявки», «Повторить» и повторного приглашения", async () => {
@@ -106,6 +119,6 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     await within(panel).findByRole("heading", { name: "ООО Рельс-Сервис Демо" });
     expect(within(panel).queryByRole("link", { name: "Новая заявка для клиента" })).toBeNull();
     expect(within(panel).queryByRole("button", { name: /Повторить отправку/ })).toBeNull();
-    expect(within(panel).queryByRole("button", { name: /Отправить повторно/ })).toBeNull();
+    expect(within(panel).queryByRole("button", { name: /Отправить ещё раз/ })).toBeNull();
   });
 });

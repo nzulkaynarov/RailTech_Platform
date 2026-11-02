@@ -166,7 +166,8 @@ function invitationText(
   return t(`leads:card.notice.${inv.status}`);
 }
 
-/** Приглашение в кабинет: итог последней отправки и «Отправить повторно другим каналом» (D1-9). */
+/** Приглашение в кабинет: итог последнего письма или сообщения (в очереди · отправлено · не отправлено с причиной — B-MAIL-1)
+ * и «Отправить ещё раз» выбранным каналом (D1-9). */
 function Invitation({ card, canWrite }: { card: ClientCard; canWrite: boolean }) {
   const { t } = useTranslation(["clients", "leads", "request"]);
   const fmt = useFormat();

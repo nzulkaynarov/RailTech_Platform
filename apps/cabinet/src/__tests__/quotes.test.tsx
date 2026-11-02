@@ -126,7 +126,7 @@ describe('КП', () => {
     signedIn();
     portalServer.use(
       http.post('*/api/portal/v1/quotes/301/request-code', () =>
-        HttpResponse.json({ channel: 'email', sent_to: 'a***@toshlog.uz', expires_in: 900 }, { status: 202 }),
+        HttpResponse.json({ channel: 'email', sent_to: 'a***@toshlog.example', expires_in: 900 }, { status: 202 }),
       ),
     );
     const user = userEvent.setup();
@@ -135,7 +135,7 @@ describe('КП', () => {
     await user.click(screen.getByRole('button', { name: 'Принять' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Получить код' }));
-    expect(await within(dialog).findByText('Код отправлен на a***@toshlog.uz. Действует 15 мин.')).toBeInTheDocument();
+    expect(await within(dialog).findByText('Код отправлен на a***@toshlog.example. Действует 15 мин.')).toBeInTheDocument();
 
     // Telegram с маскированным именем — адрес показывается.
     portalServer.use(

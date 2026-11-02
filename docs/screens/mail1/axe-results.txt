@@ -1,0 +1,13 @@
+B-MAIL-1 — доказательство UI (снимки 1440 и 390, axe WCAG 2.1 AA)
+
+Платформа (Playwright на MSW, e2e/mail1-invitation-status.spec.ts, проекты chromium 1440 и mobile 390):
+  invitation-not-sent-{1440,390}.png  — карточка клиента: «не отправлено: Почта не настроена …», «Отправить ещё раз»; axe — 0 нарушений
+  invitation-queued-{1440,390}.png    — после «Отправить ещё раз»: «в очереди»; axe — 0 нарушений; на 390 горизонтальной прокрутки нет
+
+Кабинет (Playwright на dev-сборке с MSW, e2e/public-pages.spec.ts -g "B-MAIL-1"; подробно — axe-summary.json):
+  mail1-01-code-sent             — «Мы отправили письмо»: поле кода, подсказка о задержке и «Спаме», «Отправить ещё раз через N с», Telegram
+  mail1-02-code-invalid          — неверный код
+  mail1-03-code-locked-resend    — пять неверных подряд, «Отправить ещё раз» доступна через 60 с
+  mail1-04-code-entry            — «Вход по коду» (код из приглашения)
+  mail1-05-code-entry-uz, mail1-06-code-entry-en — переводы
+  axe: 0 нарушений на всех 12 снимках (1440 и 390), горизонтальной прокрутки нет

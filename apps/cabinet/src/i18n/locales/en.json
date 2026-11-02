@@ -167,16 +167,19 @@
       "demoTitle": "Quick demo sign-in (1 click)",
       "demoHint": "Local test stand with mock data. No password required:",
       "demoActor": "Sign in as Client (Toshkent Logistik LLC)",
-      "demoViewer": "Sign in as Viewer (read-only)"
+      "demoViewer": "Sign in as Viewer (read-only)",
+      "haveCode": "Already have a code from the email? Log in with the code"
     },
     "sent": {
-      "title": "Check your e-mail",
-      "text": "If {{email}} is registered, we have sent a sign-in link. It is valid for 15 minutes and opens once.",
-      "textNoEmail": "If the address is registered, we have sent a sign-in link. It is valid for 15 minutes and opens once.",
+      "title": "We sent you an email",
+      "text": "If {{email}} is registered, the email has a login code and a link. They are valid for 60 minutes.",
       "back": "Use another address",
       "mockLink": "Open the link from the email (mock)",
-      "noLetter": "No e-mail? Check your spam folder and the address. The cabinet opens by a manager's invitation.",
-      "newClientLink": "New client? Leave a request"
+      "newClientLink": "New client? Leave a request",
+      "hint": "The email may take a few minutes. Check your spam folder.",
+      "resend": "Send again",
+      "resendIn": "Send again in {{seconds}} s",
+      "resent": "We sent a new email. The code from the previous one no longer works."
     },
     "magic": {
       "exchanging": "Signing in with the link…",
@@ -202,6 +205,14 @@
       "waitSeconds": "{{n}} sec",
       "waitMinutes": "{{n}} min",
       "FORBIDDEN": "Access is closed, please contact your manager."
+    },
+    "code": {
+      "title": "Log in with a code",
+      "text": "Enter your email and the code from the invitation or login email.",
+      "form": "Log in with the code from the email",
+      "label": "Code from the email",
+      "submit": "Log in",
+      "signingIn": "Logging in…"
     }
   },
   "newClient": {
@@ -740,7 +751,9 @@
     "IDEMPOTENCY_KEY_REQUIRED": "The server rejected the request. Reload the page and try again.",
     "UNSUPPORTED_MEDIA_TYPE": "The server rejected the request. Reload the page and try again.",
     "INVOICE_NOT_OPEN": "The invoice is already paid or cancelled — no payment order needed. Refresh the page.",
-    "TEXT_REQUIRED": "Write the comment text."
+    "TEXT_REQUIRED": "Write the comment text.",
+    "LOGIN_CODE_INVALID": "The code is wrong or expired. Check the email or send a new code.",
+    "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one."
   },
   "widgets": {
     "actionRequired": {

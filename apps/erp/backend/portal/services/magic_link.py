@@ -1,13 +1,13 @@
-"""Magic Link authentication service (CONTRACTS §4, M2-ERP-01; FIX-14).
+"""Magic Link authentication service (CONTRACTS §4, M2-ERP-01; FIX-14; B-MAIL-1).
 
 Токен в базе — только SHA-256-хеш; в логи токен не пишется (максимум префикс из 6 символов).
 Письмо уходит через шаблон ``portal_magic_link`` и попадает в ``EmailLog``; выпускает и отправляет его задача
-Celery (FIX-15), чтобы время ответа не выдавало известный адрес.
+Celery (FIX-15), чтобы время ответа не выдавало известный адрес. В письме — ссылка и 6-значный код входа на 60 минут
+(B-MAIL-1, `portal.services.login_code`); Reply-To — ответственный менеджер клиента, если он известен.
 """
 
 import hashlib
 import logging
-from datetime import timedelta
 from typing import Optional, Tuple
 
 from django.conf import settings
@@ -19,7 +19,9 @@ from parties.models import Contact, active_contact_q
 from portal.exceptions import PortalGone, PortalTooManyRequests
 from portal.models import MagicLinkToken, PortalSession
 from portal.services.access import cabinet_company_q, company_has_cabinet_access
-from portal.services.tokens import generate_token, hash_token, issue_portal_session, token_prefix
+from portal.services.login_code import LOGIN_LINK_TTL, issue_login, reset_address_failures
+from portal.services.mail_context import responsible_manager_email
+from portal.services.tokens import hash_token, issue_portal_session, token_prefix
 from portal.tasks import send_magic_link
 from rest_framework.exceptions import PermissionDenied
 
@@ -27,7 +29,6 @@ from notifications.emails import send_templated_email
 
 logger = logging.getLogger(__name__)
 
-LOGIN_LINK_TTL = timedelta(minutes=15)
 RATE_WINDOW_SECONDS = 3600
 
 
@@ -79,13 +80,15 @@ def find_login_contact(clean_email: str) -> Optional[Contact]:
 
 
 def request_magic_link(email: str) -> bool:
-    """Создаёт одноразовую ссылку на 15 минут и отправляет письмо.
+    """Создаёт одноразовые ссылку и код входа на 60 минут и отправляет письмо.
 
     Всегда возвращает True (200), чтобы не раскрывать наличие адреса в базе; единственное исключение —
     429 по лимиту на адрес, он одинаков для известных и неизвестных адресов.
     """
     clean_email = email.strip().lower()
     _check_address_rate_limit(clean_email)
+    # Новый код — счёт неверных попыток заново; для любого адреса, иначе сброс выдал бы, что адрес известен.
+    reset_address_failures(clean_email)
 
     contact = find_login_contact(clean_email)
     if contact is None:
@@ -106,7 +109,7 @@ def request_magic_link(email: str) -> bool:
 
 
 def deliver_login_link(contact_id: int) -> bool:
-    """Выпускает одноразовую ссылку входа на 15 минут и отправляет письмо; ``False`` — слать некому.
+    """Выпускает одноразовые ссылку и код входа на 60 минут и отправляет письмо; ``False`` — слать некому.
 
     Вызывается задачей `portal.tasks.send_magic_link`. Контакт и компания проверяются заново: между запросом
     и выполнением задачи компанию могли отправить в архив или снять с неё тип CLIENT.
@@ -120,29 +123,24 @@ def deliver_login_link(contact_id: int) -> bool:
         logger.info("Magic link not sent: contact %s is gone, archived or has no e-mail", contact_id)
         return False
 
-    # Гасим только прежние ссылки входа: приглашение из ERP (24 часа) остаётся рабочим.
-    MagicLinkToken.objects.filter(contact=contact, purpose=MagicLinkToken.PURPOSE_LOGIN, used_at__isnull=True).update(
-        used_at=timezone.now()
-    )
-
-    raw_token = generate_token()
-    MagicLinkToken.objects.create(
-        token_hash=hash_token(raw_token),
-        contact=contact,
-        purpose=MagicLinkToken.PURPOSE_LOGIN,
-        expires_at=timezone.now() + LOGIN_LINK_TTL,
-    )
+    # Гасим только прежние ссылки и коды входа: приглашение из ERP (24 часа) остаётся рабочим.
+    issued = issue_login(contact, MagicLinkToken.PURPOSE_LOGIN, LOGIN_LINK_TTL)
+    reply_to = responsible_manager_email(contact.company_id)
 
     email_log = send_templated_email(
         "portal_magic_link",
         context={
             "contact_name": contact.name,
             "company_name": contact.company.name,
-            "login_url": build_login_url(raw_token),
+            "login_url": build_login_url(issued.raw_token),
+            "login_code": issued.code,
+            "expires_minutes": int(LOGIN_LINK_TTL.total_seconds() // 60),
         },
         to=[contact.email.strip().lower()],
         channel="transactional",
         language=contact.language,
+        reply_to=[reply_to] if reply_to else None,
+        redact=(issued.code,),
     )
     logger.info("Magic link sent for contact %s (email log %s)", contact.pk, getattr(email_log, "pk", None))
     return True

@@ -104,7 +104,7 @@
     "notice": {
       "queued": "queued",
       "sent": "sent on {{date}}",
-      "failed": "not delivered: {{reason}}",
+      "failed": "not sent: {{reason}}",
       "skipped": "not sent",
       "channel": "channel: {{channel}}"
     },

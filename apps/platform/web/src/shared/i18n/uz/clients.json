@@ -79,9 +79,9 @@
     "hiddenFromClient": "mijoz ko‘rmaydi",
     "invitation": "Kabinetga taklif",
     "noInvitation": "Hali taklif yuborilmagan",
-    "resend": "Boshqa kanal orqali qayta yuborish",
+    "resend": "Qayta yuborish",
     "resendChannel": "Kanal",
-    "resendDone": "Taklif yuborildi",
+    "resendDone": "Taklif yuborishga topshirildi — natija shu yerda chiqadi",
     "resendChannels": {
       "email": "Pochta",
       "telegram": "Telegram",

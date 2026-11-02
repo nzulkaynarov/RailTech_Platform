@@ -100,3 +100,28 @@ msgstr "Dalolatnoma"
 
 msgid "Накладная"
 msgstr "Yuk xati"
+
+# ── B-MAIL-1: код входа в письмах портала (templates/emails/portal_*.{txt,html}) ──
+
+#, python-format
+msgid "Вы запросили вход в личный кабинет компании «%(company)s» на платформе %(platform)s."
+msgstr "Siz %(platform)s platformasida «%(company)s» kompaniyasining shaxsiy kabinetiga kirishni soʻradingiz."
+
+msgid "Код входа:"
+msgstr "Kirish kodi:"
+
+msgid "Введите код на странице входа или откройте ссылку:"
+msgstr "Kodni kirish sahifasida kiriting yoki havolani oching:"
+
+msgid "Введите код на странице входа или нажмите на кнопку."
+msgstr "Kodni kirish sahifasida kiriting yoki tugmani bosing."
+
+#, python-format
+msgid "Код и ссылка действуют %(minutes)s минут и срабатывают один раз."
+msgstr "Kod va havola %(minutes)s daqiqa amal qiladi va faqat bir marta ishlaydi."
+
+msgid "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы."
+msgstr "Kabinetda — tijorat takliflaringiz, shartnomalar, hisob-fakturalar, yetkazib berishlar va hujjatlar."
+
+msgid "Код и ссылка действуют 24 часа."
+msgstr "Kod va havola 24 soat amal qiladi."

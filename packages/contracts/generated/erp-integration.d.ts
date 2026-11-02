@@ -502,6 +502,8 @@ export interface components {
         cabinet_url: string;
         /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
         error?: string | null;
+        /** @description Ключ письма-приглашения в почтовом сервисе CRM (`request_key` события `uz.railtech.erp.mail.requested.v1`, B-MAIL-1): по нему CRM берёт итог доставки из своего журнала почты (в очереди · отправлено · не отправлено с причиной) и показывает менеджеру в карточке клиента. `null` — письмо не уходило. */
+        email_request_key?: string | null;
       };
     };
     InviteRequest: {
@@ -520,6 +522,8 @@ export interface components {
       cabinet_url: string;
       /** @description Код причины, если приглашение не ушло ни одним каналом (перечень — в описании операции) */
       error?: string | null;
+      /** @description Ключ письма-приглашения в почтовом сервисе CRM (как в `HandoffResponse.invite.email_request_key`, B-MAIL-1); `null` — письмо не уходило */
+      email_request_key?: string | null;
     };
     /**
      * @description Стадия сделки глазами CRM — стабильные коды контракта, не коды FSM ERP. ERP вычисляет её одной функцией

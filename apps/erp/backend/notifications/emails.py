@@ -166,6 +166,7 @@ def send_templated_email(
     ref: Optional[tuple] = None,
     notify: bool = True,
     reply_to: Optional[Iterable[str]] = None,
+    redact: Iterable[str] = (),
 ) -> EmailLog:
     """Render a template bundle and hand the letter to the CRM mail service (W18A-P1).
 
@@ -177,6 +178,8 @@ def send_templated_email(
     `channel` — историческая метка журнала (transactional / system), на доставку не влияет. `purpose` — назначение письма
     в журнале доставки CRM (по умолчанию — код шаблона); `ref` — `(kind, id)` объекта ERP, итог доставки которого нужен
     (КП → `Quote.send_report`); `notify` — получать ли итог (по умолчанию да: журнал ERP узнаёт SENT / FAILED).
+    `redact` — одноразовые секреты письма (код входа, B-MAIL-1): в копии письма в `EmailLog` они заменены на
+    `[REDACTED]`, клиенту уходят как есть.
 
     L2 (spec-bilingual-ru-en): письмо рендерится на языке ПОЛУЧАТЕЛЯ — канон Odoo
     (`partner.lang`) и Stripe (`preferred_locales`). Счёт выставляет продавец, а письмо
@@ -237,8 +240,8 @@ def send_templated_email(
                 from_email=MAIL_SENDER,
                 to_emails=recipients,
                 user=user,
-                body_text=_redact_secrets(text_body),
-                body_html=_redact_secrets(html_body),
+                body_text=_redact_secrets(text_body, redact),
+                body_html=_redact_secrets(html_body, redact),
                 status=EmailLog.STATUS_QUEUED,
                 error="",
             )
@@ -267,8 +270,8 @@ def send_templated_email(
             MAIL_SENDER,
             recipients,
             user,
-            text_body,
-            html_body,
+            _redact_secrets(text_body, redact),
+            _redact_secrets(html_body, redact),
             EmailLog.STATUS_FAILED,
             error_text,
         )
@@ -295,9 +298,13 @@ _SECRET_PATH_RE = re.compile(r"(/auth/magic/)[^/?#&\s\"'<>]+")
 _SECRET_FRAGMENT_RE = re.compile(r"(/auth/magic#token=)[^&\s\"'<>]+")
 
 
-def _redact_secrets(body: Optional[str]) -> str:
+def _redact_secrets(body: Optional[str], extra: Iterable[str] = ()) -> str:
     redacted = _SECRET_QS_RE.sub(r"\1[REDACTED]", body or "")
-    return _SECRET_FRAGMENT_RE.sub(r"\1[REDACTED]", _SECRET_PATH_RE.sub(r"\1[REDACTED]", redacted))
+    redacted = _SECRET_FRAGMENT_RE.sub(r"\1[REDACTED]", _SECRET_PATH_RE.sub(r"\1[REDACTED]", redacted))
+    for secret in extra:
+        if secret:
+            redacted = redacted.replace(secret, "[REDACTED]")
+    return redacted
 
 
 def _record_log(

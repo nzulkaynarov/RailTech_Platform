@@ -31,6 +31,8 @@ export function apiErrorKey(error: unknown): string {
  * (компания в архиве, Q-18); остальное — как везде.
  */
 export function loginErrorKey(error: unknown): string {
+  // B-MAIL-1: пять неверных кодов — свой текст «запросите новый код», а не общий лимит входа.
+  if (isPortalApiError(error, 429) && error.code === 'LOGIN_CODE_LOCKED') return 'apiErrors.LOGIN_CODE_LOCKED';
   if (isPortalApiError(error, 429)) return 'auth.errors.TOO_MANY_REQUESTS';
   if (isPortalApiError(error, 403)) return 'auth.errors.FORBIDDEN';
   return apiErrorKey(error);
@@ -46,7 +48,7 @@ export function waitText(seconds: number, t: TFunction): string {
  * остальное — по `loginErrorKey`.
  */
 export function loginErrorText(error: unknown, t: TFunction): string {
-  if (isPortalApiError(error, 429) && error.retryAfter !== null && error.retryAfter > 0) {
+  if (isPortalApiError(error, 429) && error.code !== 'LOGIN_CODE_LOCKED' && error.retryAfter !== null && error.retryAfter > 0) {
     return t('auth.errors.TOO_MANY_REQUESTS_WAIT', { wait: waitText(error.retryAfter, t) });
   }
   return t(loginErrorKey(error));

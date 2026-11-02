@@ -1007,6 +1007,13 @@ components:
                 `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`,
                 `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель:
                 незнакомый код CRM показывает как «причина не определена».
+            email_request_key:
+              type: [string, 'null']
+              pattern: '^erp:email_log:\d+$'
+              description: >-
+                Ключ письма-приглашения в почтовом сервисе CRM (`request_key` события `uz.railtech.erp.mail.requested.v1`,
+                B-MAIL-1): по нему CRM берёт итог доставки из своего журнала почты (в очереди · отправлено · не отправлено с
+                причиной) и показывает менеджеру в карточке клиента. `null` — письмо не уходило.
           additionalProperties: false
       additionalProperties: false
 
@@ -1039,6 +1046,12 @@ components:
         error:
           type: [string, 'null']
           description: Код причины, если приглашение не ушло ни одним каналом (перечень — в описании операции)
+        email_request_key:
+          type: [string, 'null']
+          pattern: '^erp:email_log:\d+$'
+          description: >-
+            Ключ письма-приглашения в почтовом сервисе CRM (как в `HandoffResponse.invite.email_request_key`, B-MAIL-1);
+            `null` — письмо не уходило
       additionalProperties: false
 
     DealStage:
