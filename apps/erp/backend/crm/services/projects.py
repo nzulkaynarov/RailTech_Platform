@@ -22,6 +22,7 @@ from django.utils import timezone
 from ..constants import ActStatusCode, ContractStatusCode, DealStageCode, InvoiceStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Deal
 from . import act_flow, contract_flow
+from .numbering import number_search_q
 
 #: Сделки-проекты: КП принято клиентом (FSM `CONTRACT_SIGNED`) и дальше. Проигранные в срез не входят.
 PROJECT_STAGES = (DealStageCode.CONTRACT_SIGNED, DealStageCode.CLOSED_WON)
@@ -222,10 +223,10 @@ def _apply_sql_filters(qs: QuerySet, filters: Filters, user) -> QuerySet:
         qs = qs.filter(
             Q(title__icontains=text)
             | Q(company__name__icontains=text)
-            | Q(contracts__number__icontains=text)
-            | Q(invoices__number__icontains=text)
-            | Q(acts__number__icontains=text)
-            | Q(quotes__number__icontains=text)
+            | number_search_q("contracts__number", text)
+            | number_search_q("invoices__number", text)
+            | number_search_q("acts__number", text)
+            | number_search_q("quotes__number", text)
         ).distinct()
     return qs
 

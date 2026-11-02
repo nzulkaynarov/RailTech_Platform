@@ -436,11 +436,15 @@ def send_document_email(self, document_id: int, to_email: str) -> dict:
         _render_pdf_for("generated", document_id)
         document.refresh_from_db()
 
+    from crm.services.pdf_storage import safe_file_name
+
     attachments = []
     if document.pdf_file:
         try:
             document.pdf_file.open("rb")
-            attachments = [(f"Document_{document.number}.pdf", document.pdf_file.read(), "application/pdf")]
+            attachments = [
+                (safe_file_name(f"Document_{document.number}.pdf"), document.pdf_file.read(), "application/pdf")
+            ]
         finally:
             document.pdf_file.close()
 

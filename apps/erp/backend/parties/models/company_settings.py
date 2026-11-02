@@ -14,7 +14,7 @@ class CompanySettings(models.Model):
     pre-fill from `default_*` so the seller team isn't re-entering the same Incoterm,
     valuta, ставку НДС, маржу and validity on every offer. `doc_number_prefix` brands
     the company's own document numbering (contracts/invoices/acts): with prefix "ACME"
-    a contract reads `ACME-CT-2026-00001`; without it the platform default `CT-2026-00001`.
+    a contract reads `ACME-ДОГ-2026/001`; without it the platform default `ДОГ-2026/001`.
     One settings row per company (get-or-create via the `Company.settings` accessor).
     """
 

@@ -346,14 +346,23 @@ describe("Нумерация", () => {
     await openTab("numbering");
     const list = await screen.findByRole("list", { name: "Образец номеров" });
     await waitFor(() => {
-      expect(within(list).getByText(/DEMO-КП-\d{4}-00001/)).toBeInTheDocument();
+      expect(within(list).getByText(/DEMO-КП-\d{4}\/001/)).toBeInTheDocument();
     });
 
     type("Префикс нумерации", "ACME");
     await waitFor(() => {
-      expect(screen.getByText(/ACME-КП-\d{4}-00001/)).toBeInTheDocument();
+      expect(screen.getByText(/ACME-КП-\d{4}\/001/)).toBeInTheDocument();
     });
     expect(readCompanyMock().numbering.prefix).toBe("DEMO");
+  });
+
+  it("умолчание SPEC-v3 §2.2 — формат «Стандартный», прежняя маска узнаётся как «Через дефис»", async () => {
+    await openTab("numbering");
+    expect(await screen.findByRole("radio", { name: /Стандартный/ })).toBeChecked();
+    type("Маска номера", "{prefix}{type}-{YYYY}-{seq}");
+    await waitFor(() => {
+      expect(screen.getByRole("radio", { name: /Через дефис/ })).toBeChecked();
+    });
   });
 
   it("маска без {seq}: сохранить нельзя, образца нет", async () => {

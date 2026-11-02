@@ -29,7 +29,7 @@ def _assign_delivery_note_number(fulfillment, seller_company) -> Tuple[str, bool
     у которого в памяти строка без номера, получает уже присвоенный номер и не тратит второй (FIX-55, m2 D-6)."""
     from django.db import transaction
 
-    from .numbering import next_document_number
+    from .numbering import DELIVERY_NOTE_LABEL, next_document_number
 
     if fulfillment.note_number:
         return fulfillment.note_number, False
@@ -39,7 +39,7 @@ def _assign_delivery_note_number(fulfillment, seller_company) -> Tuple[str, bool
             fulfillment.note_number = current.note_number
             return current.note_number, False
         # Блокировка счётчика живёт до коммита — контракт `next_document_number`.
-        number = next_document_number("DN", "DN", company=seller_company)
+        number = next_document_number("DN", DELIVERY_NOTE_LABEL, company=seller_company)
         fulfillment.note_number = number
         fulfillment.save(update_fields=["note_number", "updated_at"])
     return number, True

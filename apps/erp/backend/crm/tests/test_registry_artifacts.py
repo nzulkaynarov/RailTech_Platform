@@ -134,10 +134,10 @@ def test_platform_samples_exist_for_receipt_and_delivery_note():
 
 @pytest.mark.django_db
 def test_payment_gets_a_receipt_number_and_body_renders(world):
-    """Платёж — запись регистра, но рождается с номером квитанции своей серии (RCP)."""
+    """Платёж — запись регистра, но рождается с номером квитанции своей серии (КВ, SPEC-v3 §2.2)."""
     invoice, payment = _paid_invoice(world)
 
-    assert payment.receipt_number.startswith("RCP")
+    assert payment.receipt_number.startswith("КВ-")
 
     totals = {"ccy": "UZS", "total": Decimal("112.00")}
     body = render_receipt_body(payment, totals, "UZS", company_template_for(None, "RECEIPT"))
