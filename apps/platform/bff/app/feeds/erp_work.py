@@ -70,31 +70,43 @@ def _calc_action(task: dict[str, Any], mine: set[str]) -> str | None:
     return "Рассчитать заявку"
 
 
+def _client_rejected(task: dict[str, Any]) -> bool:
+    return task.get("state") == "rejected" and task.get("rejected_by") == "client"
+
+
 def calc_rows(snap: Snapshot, now: datetime, view: View, role_of: RoleOf) -> list[Work]:
     """Мои задания на расчёт: исполнителю по резолюции; «Завизировать» — если ждут визы строки зоны,
     которую даёт роль. Строка открывает расчёт заявки."""
     if not wants_work(view, "calc_task") or not snap.calc_tasks:
         return []
     mine = _my_groups(view)
+    # Решение после отказа клиента («Новая версия КП» или «Отказ по заявке», D26G-3) — менеджеру
+    # заявки: роли с клиентами на полном доступе, а не снабженцу и гл. инженеру.
+    decides = allows(executor_access(view), "crm.clients", "full")
     role_id = role_of("calc_task")
     out: list[Work] = []
     for task in snap.calc_tasks:
         deal = task.get("deal")
         if not isinstance(deal, dict) or not isinstance(deal.get("id"), int):
             continue
-        action = _calc_action(task, mine)
+        rejected = _client_rejected(task)
+        if rejected and not decides:
+            continue
+        action = "Клиент отклонил КП по заявке" if rejected else _calc_action(task, mine)
         if action is None:
             continue
         number = deal_number(deal)
         title = deal_title(deal)
         due_at = parse_deadline(task.get("due"))
         letter = task.get("letter_number")
+        reason = short(task.get("reject_reason"), 140) if rejected else None
         item = QueueItem(
             id=f"calc:{deal['id']}",
             role_id=role_id,
             kind="calc_task",
             title=f"{action} {number}",
             subtitle=join(
+                (f"Причина: {reason}" if reason else "Причина не указана") if rejected else None,
                 str(deal.get("client_name") or "") or None,
                 short(deal.get("title"), 70) or None,
                 f"по письму {letter}" if isinstance(letter, str) and letter else None,

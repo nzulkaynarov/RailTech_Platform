@@ -74,6 +74,8 @@ class ApprovalObject(BaseModel):
     quote_version: int | None = None
     erp_deal_id: int | None = None
     deal_number: str | None = None
+    # D26G-2: КП этой версии заменено более новой версией (того же КП или той же заявки) — номер новой версии.
+    superseded_by_version: int | None = None
 
     @model_serializer(mode="wrap")
     def _only_applicable(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:

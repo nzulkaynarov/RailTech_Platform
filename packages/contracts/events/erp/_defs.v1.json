@@ -739,7 +739,8 @@
         },
         "version": {
           "type": "integer",
-          "minimum": 1
+          "minimum": 1,
+          "description": "Версия КП ERP (`Quote.version`, сквозная в заявке): повторная отправка после возврата или отзыва — версия +1; EDS открывает маршрут версии, решение по прежней версии ERP не применяет"
         },
         "client_name": {
           "type": "string",

@@ -217,6 +217,10 @@ function groups(calc: MockCalc) {
   return out;
 }
 
+/** Клиент отклонил КП, заявка в расчёте — «Новая версия КП» или «Отказ по заявке» (D26G-3, как ERP `_can_revise`). */
+const canRevise = (calc: MockCalc) =>
+  calc.state === "rejected" && calc.rejectedBy === "client" && calc.stage === "CALCULATION";
+
 const editableOf = (calc: MockCalc) =>
   calc.started && (calc.state === "in_progress" || calc.state === "returned");
 
@@ -258,9 +262,12 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     quote: calc.started
       ? {
           number: calc.quoteNumber,
-          version: 1,
+          version: calc.version ?? 1,
           state: calc.state,
           director_comment: calc.directorComment,
+          rejected_by: calc.state === "rejected" ? (calc.rejectedBy ?? "director") : null,
+          reject_reason: calc.state === "rejected" ? (calc.rejectReason ?? null) : null,
+          can_revise: canRevise(calc) && level(user, "erp.calc") === "full",
           vat_rate: "12.00",
         }
       : null,
@@ -281,6 +288,12 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     },
   };
 }
+
+/** Строка «Моих задач» мока: строка BFF и то, что BFF берёт из ERP (кто отклонил КП и почему). */
+export type MockCalcRow = CalcRequestRow & {
+  rejectedBy: "client" | "director" | null;
+  rejectReason: string | null;
+};
 
 function row(calc: MockCalc): CalcRequestRow {
   const g = groups(calc);
@@ -362,11 +375,15 @@ function mine(calc: MockCalc, user: Me): boolean {
  * «Мои задачи» (D2-8): мои задания на расчёт в стадии расчёта — как ERP `GET /calc/tasks/?mine=1` для BFF. Строки очереди из
  * них строит `erpWork.ts` по тем же правилам, что BFF (`feeds/erp_work.py`).
  */
-export function myCalcRows(userName: string): CalcRequestRow[] {
+export function myCalcRows(userName: string): MockCalcRow[] {
   return read()
     .filter((calc) => calc.stage === "CALCULATION")
     .filter((calc) => calc.assignees.some((a) => a.name !== null && a.name === userName))
-    .map(row);
+    .map((calc) => ({
+      ...row(calc),
+      rejectedBy: calc.state === "rejected" ? (calc.rejectedBy ?? "director") : null,
+      rejectReason: calc.state === "rejected" ? (calc.rejectReason ?? null) : null,
+    }));
 }
 
 export const erpCalcHandlers = [
@@ -530,6 +547,31 @@ export const erpCalcHandlers = [
         if (!line.purchase) line.purchase = product.purchase;
       }
     }
+    if (patch.markup_pct !== undefined) {
+      if (!fields(user).has("cost_margin")) {
+        return failure(
+          422,
+          "VALIDATION_FAILED",
+          "Наценку правит сотрудник с доступом к себестоимости.",
+          {
+            reason: "cost_forbidden",
+            fields: ["markup_pct"],
+          },
+        );
+      }
+      const cost = costOf(line);
+      if (cost <= 0) return conflict("purchase_required", "Сначала укажите закупку.");
+      const markupPct = Number(patch.markup_pct);
+      if (markupPct < 0 || markupPct > 500) {
+        return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", {
+          source: "erp",
+          reason: "markup_out_of_range",
+          fields: ["client_price"],
+        });
+      }
+      // D26G-5: цена из наценки — до сума, как ERP
+      line.client = Math.round(cost * (1 + markupPct / 100));
+    }
     if (patch.client_price !== undefined) {
       const price = Number(patch.client_price);
       const cost = costOf(line);
@@ -604,8 +646,56 @@ export const erpCalcHandlers = [
         { missing },
       );
     }
+    // D26G-2: повторная отправка после возврата — новая версия КП (как ERP `request_director_approval`)
+    if (calc.state === "returned") calc.version = (calc.version ?? 1) + 1;
     calc.state = "at_director";
-    calc.quoteNumber = "КП-2026/115";
+    calc.quoteNumber ??= "КП-2026/115";
+    write(calcs);
+    return HttpResponse.json<CalcSheet>(present(calc, held.user));
+  }),
+
+  http.post("*/api/v1/erp/calc/:number/new-version", ({ params }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    if (!canRevise(calc)) {
+      return conflict(
+        "quote_not_rejected_by_client",
+        "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте.",
+      );
+    }
+    calc.version = (calc.version ?? 1) + 1;
+    calc.state = "in_progress";
+    calc.rejectedBy = null;
+    calc.rejectReason = null;
+    calc.quoteNumber = null;
+    calc.lines = calc.lines.map((line) => ({ ...line, visa: null }));
+    write(calcs);
+    return HttpResponse.json<CalcSheet>(present(calc, held.user));
+  }),
+
+  http.post("*/api/v1/erp/calc/:number/lost", async ({ params, request }) => {
+    const held = guard("erp.calc", "full");
+    if ("error" in held) return held.error;
+    const body = (await request.json()) as { reason?: string };
+    if (!body.reason?.trim()) {
+      return failure(422, "VALIDATION_FAILED", "Укажите причину отказа.", {
+        reason: "reason_required",
+        fields: ["reason"],
+      });
+    }
+    const calcs = read();
+    const calc = find(calcs, String(params["number"]));
+    if (!calc) return notFound();
+    if (!canRevise(calc)) {
+      return conflict(
+        "quote_not_rejected_by_client",
+        "Новая версия КП и отказ по заявке доступны, когда клиент отклонил КП и заявка в расчёте.",
+      );
+    }
+    calc.stage = "LOST";
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, held.user));
   }),

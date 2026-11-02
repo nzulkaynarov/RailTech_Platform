@@ -31,6 +31,7 @@ from tests.eds_approvals_support import (
     memo_doc,
     memo_route,
     quote_route,
+    snapshot,
     step,
 )
 from tests.roles import Role, custom
@@ -71,6 +72,7 @@ async def test_quote_list_maps_rows_with_snapshot_and_the_eds_token(
                 "id": QUOTE_ROUTE,
                 "number": QUOTE_NUMBER,
                 "version": 2,
+                "superseded_by": None,
                 "request_number": "ЗВ-2026-104",
                 "client_name": "ООО «Демо-Рейл»",
                 "total": {"amount": "125000000.00", "currency": "UZS"},
@@ -844,6 +846,44 @@ async def test_a_superseded_version_is_reachable_by_id(web: Web, eds: ApprovalsF
 
     assert card["status"] == "returned"
     assert card["allowed_decisions"] == []
+    assert card["superseded_by"] is None
+
+
+async def test_superseded_version_is_marked_in_the_card_and_the_list(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """D26G-2: версия 2 заменена версией 3 (EDS `superseded_by_version`) — «Заменена» в истории;
+    у ERP версия 3, строки заменённой версии не показываются."""
+    old_object = {**quote_route()["object"], "superseded_by_version": 3}
+    eds.routes[QUOTE_ROUTE] = quote_route(
+        object=old_object, status="returned", can_decide=False, allowed_decisions=[]
+    )
+    eds.erp_quote = erp_quote(version=3)
+    await _director(web)
+
+    response = await web.client.get(QUOTE)
+    check(response, "/eds/quotes/{ref}", "get")
+    card = response.json()
+    assert card["superseded_by"] == 3
+    assert card["version"] == 2
+    assert card["lines"] is None
+
+
+async def test_current_version_after_rework_shows_erp_lines_and_can_be_approved(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    """D26G-2: КП после доработки — версия 3 и в ERP, и в EDS: состав из ERP, «Одобрить»."""
+    current = {**quote_route()["object"], "quote_version": 3}
+    eds.routes[QUOTE_ROUTE] = quote_route(object=current, quote=snapshot(version=3), round=3)
+    eds.erp_quote = erp_quote(version=3)
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["version"] == 3
+    assert card["superseded_by"] is None
+    assert card["lines"] is not None
+    assert "approve" in card["allowed_decisions"]
 
 
 # --- документы на согласовании -------------------------------------------------------------------

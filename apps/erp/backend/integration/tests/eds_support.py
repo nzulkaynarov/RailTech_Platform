@@ -38,7 +38,7 @@ def _decide(quote, decision: str, route_status: str, *, comment=None, outgoing_n
     quote.refresh_from_db()
     return apply_director_decision(
         erp_quote_id=quote.pk,
-        quote_version=quote.eds_revision,
+        quote_version=quote.version,
         decision=decision,
         route_status=route_status,
         comment=comment,

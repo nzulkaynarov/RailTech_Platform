@@ -41,7 +41,7 @@ from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
 
 from ..constants import DealStageCode, QuoteStatusCode
-from ..models import ActivityLog, CalcLine, CalcLineKind, CalcTask
+from ..models import ActivityLog, CalcLine, CalcLineKind, CalcPriceBasis, CalcTask
 from ..models import CalcZone as Zone
 from ..models import Deal, Quote, QuoteItem
 
@@ -397,6 +397,22 @@ def _calc_state(quote: Optional[Quote]) -> str:
     return "approved"
 
 
+def _rejection(quote: Optional[Quote]) -> tuple[Optional[str], Optional[str]]:
+    """Кто отклонил КП и почему (D26G-3): директор в EDS (решение `reject`, комментарий) или клиент (кабинет, бот,
+    офлайн — `client_reject_reason`). Не отклонено — (None, None)."""
+    if quote is None or _calc_state(quote) != "rejected":
+        return None, None
+    if quote.director_decision == "reject":
+        return "director", quote.director_comment or None
+    return "client", quote.client_reject_reason or None
+
+
+def _can_revise(deal: Deal, quote: Optional[Quote], user) -> bool:
+    """«Новая версия КП» и «Отказ по заявке» после отказа клиента: заявка вернулась в расчёт, право `quote.build`."""
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    return _rejection(quote)[0] == "client" and stage in OPEN_STAGES and has_perm(user, Permission.QUOTE_BUILD.value)
+
+
 def _billable(quote: Optional[Quote]) -> list[QuoteItem]:
     if quote is None:
         return []
@@ -500,12 +516,15 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
         items = _billable(quote)
         ctx = _context(items)
         groups = _groups(items, ctx)
+        rejected_by, reject_reason = _rejection(quote)
         rows.append(
             {
                 "deal": _deal_brief(deal),
                 "letter_number": task.letter_number,
                 "due": task.due.isoformat(),
                 "state": _calc_state(quote),
+                "rejected_by": rejected_by,
+                "reject_reason": reject_reason,
                 "lines": len(items),
                 "visas": {name: groups[name]["state"] for name in VISA_GROUPS},
                 "assignees": _assignees(task),
@@ -581,6 +600,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
         blocker = "visas_missing"
     else:
         blocker = None
+    rejected_by, reject_reason = _rejection(quote)
     return {
         "deal": _deal_brief(deal),
         "task": {**_task_brief(task, show_cost=show_cost), "assignees": _assignees(task)},
@@ -594,6 +614,9 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
                 "number": quote.number or None,
                 "state": _calc_state(quote),
                 "director_comment": quote.director_comment or None,
+                "rejected_by": rejected_by,
+                "reject_reason": reject_reason,
+                "can_revise": _can_revise(deal, quote, user),
                 "vat_rate": f"{quote.vat_rate:.2f}",
             }
         ),
@@ -845,6 +868,7 @@ _EDITABLE = (
     "crew_rate",
     "crew_days",
     "client_price",
+    "markup_pct",
     "product_id",
     "kind",
 )
@@ -938,11 +962,7 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         from inventory.services import stock
 
         stock.sync_reservation(item)  # другой товар или меньшее количество — резерв подгоняется (D2-2)
-    if "client_price" in changes:
-        _require(user, Permission.QUOTE_EDIT_PRICING.value)
-        item.refresh_from_db()
-        item.margin_percent = _markup_for(item, Decimal(str(changes["client_price"])))
-        item.save()
+    _apply_price(item, calc, changes, user)
     _log(
         deal,
         user,
@@ -958,6 +978,59 @@ def _has_currency(code: str) -> bool:
     from master_data.models import Currency
 
     return Currency.objects.filter(code=code).exists()
+
+
+def _apply_price(item: QuoteItem, calc: CalcLine, changes: dict, user) -> None:
+    """Цена клиенту строки после правки (D26G-5). Введённая цена — источник истины: хранится как есть
+    (`client_price_fixed`), наценка — производная. Введённая наценка — цена считается из неё и округляется до сума
+    (в валюте КП не UZS — до 0,01) и тоже хранится. Правка закупки без цены: у строки «от наценки» цена
+    пересчитывается от той же наценки, у строки «от цены» цена остаётся, а наценка пересчитывается."""
+    pricing = "client_price" in changes or "markup_pct" in changes
+    if not pricing and item.client_price_fixed is None:
+        return
+    if pricing:
+        _require(user, Permission.QUOTE_EDIT_PRICING.value)
+    item.refresh_from_db()
+    if "markup_pct" in changes:
+        markup = Decimal(str(changes["markup_pct"])).quantize(_CENT, rounding=ROUND_HALF_UP)
+        item.client_price_fixed = _price_for(item, markup)
+        item.margin_percent = markup
+        calc.price_basis = CalcPriceBasis.MARKUP
+    elif "client_price" in changes:
+        price = Decimal(str(changes["client_price"])).quantize(_CENT, rounding=ROUND_HALF_UP)
+        item.margin_percent = _markup_for(item, price)
+        item.client_price_fixed = price
+        calc.price_basis = CalcPriceBasis.CLIENT
+    elif calc.price_basis == CalcPriceBasis.MARKUP and item.margin_percent is not None:
+        try:
+            item.client_price_fixed = _price_for(item, item.margin_percent)
+        except CalcError:
+            pass  # закупку сняли — прежняя цена остаётся до новой закупки
+    else:
+        try:
+            item.margin_percent = _markup_for(item, item.client_price_fixed)
+        except CalcError:
+            pass  # закупка выше цены или пуста — наценка справочная, цена клиенту не меняется
+    calc.save(update_fields=["price_basis", "updated_at"])
+    item.save()
+
+
+def _price_quantum(item: QuoteItem) -> Decimal:
+    currency = item.quote.quote_currency if item.quote.quote_currency_id else None
+    code = (getattr(currency, "code", "") or "UZS").upper()
+    return Decimal("1") if code == "UZS" else _CENT
+
+
+def _price_for(item: QuoteItem, markup: Decimal) -> Decimal:
+    """Цена клиенту без НДС за единицу из наценки строки (с учётом скидки), округлённая до сума."""
+    if markup < 0 or markup > _MARKUP_MAX:
+        raise CalcError("MARKUP_OUT_OF_RANGE", 400)
+    cost = item.landed_cost or Decimal("0")
+    if cost <= 0:
+        raise CalcError("PURCHASE_REQUIRED", 409)
+    discount = Decimal("1") - (item.discount_percent or Decimal("0")) / Decimal("100")
+    price = cost * (Decimal("1") + markup / Decimal("100")) * discount
+    return price.quantize(_price_quantum(item), rounding=ROUND_HALF_UP)
 
 
 def _markup_for(item: QuoteItem, client_price: Decimal) -> Decimal:
@@ -1125,6 +1198,103 @@ def mark_ready(deal_id: int, user) -> dict:
         "calc.ready",
         {"letter_number": task.letter_number, "number": quote.number, "lines": len(items)},
     )
+    return _sheet(deal, task, user)
+
+
+# ── «Клиент отклонил КП»: новая версия или отказ по заявке (D26G-3, SPEC-v3 §3.3) ──────────────────────────────────
+
+
+def _rejected_or_409(deal: Deal, user) -> Quote:
+    quote = calc_quote(deal)
+    if quote is None:
+        raise CalcError("CALC_NOT_STARTED", 409)
+    if not _can_revise(deal, quote, user):
+        raise CalcError("QUOTE_NOT_REJECTED_BY_CLIENT", 409)
+    return quote
+
+
+@transaction.atomic
+def new_version(deal_id: int, user) -> dict:
+    """«Новая версия КП»: клиент отклонил КП — расчёт снова открыт черновиком версии +1 с теми же строками.
+
+    Копия — `duplicate_quote` (позиции, статьи, введённые цены); строкам расчёта переносятся тип и вводные бригады,
+    визы — нет (новая версия собирает визы заново). Резервы строк отклонённой версии переходят на её копии: товар не
+    уходит из-под заявки, пока менеджер готовит новую версию."""
+    from inventory.models import Reservation, ReservationStatus
+
+    from .quotes._shared import _log_quote
+    from .quotes.duplicate import duplicate_quote
+
+    _require_staff(user)
+    _require(user, Permission.QUOTE_BUILD.value)
+    deal = _locked_deal_or_404(deal_id)
+    task = _task_or_404(deal)
+    source = _rejected_or_409(deal, user)
+    copy = duplicate_quote(source.pk, user)
+    old_items = list(source.items.order_by("position", "id").select_related("calc"))
+    new_items = list(copy.items.order_by("position", "id"))
+    for old, new in zip(old_items, new_items, strict=False):
+        line = calc_of(old)
+        if line is not None:
+            CalcLine.objects.create(
+                item=new,
+                kind=line.kind,
+                crew_rate=line.crew_rate,
+                crew_days=line.crew_days,
+                price_basis=line.price_basis,
+            )
+        Reservation.objects.filter(quote_item=old, status=ReservationStatus.ACTIVE).update(quote_item=new)
+    _log_quote(
+        source,
+        user,
+        "КП заменено новой версией",
+        f"КП v{source.version} ({source.number or '—'}) отклонено клиентом → черновик КП v{copy.version}",
+        event_code="quote.superseded",
+        event_params={"version": source.version, "number": source.number, "new_version": copy.version},
+    )
+    _log(
+        deal,
+        user,
+        "Новая версия КП после отказа клиента",
+        f"КП v{copy.version} по {task.letter_number}: расчёт снова открыт",
+        "calc.new_version",
+        {"letter_number": task.letter_number, "version": copy.version, "previous_version": source.version},
+    )
+    return _sheet(deal, task, user)
+
+
+@transaction.atomic
+def lose(deal_id: int, user, reason: str) -> dict:
+    """«Отказ по заявке» после отказа клиента: стадия «Отказ» (CLOSED_LOST) с причиной, событие `deal.lost`;
+    резервы заявки снимаются при переходе (`inventory.services.stock.release_for_lost_deal`, хук стадии)."""
+    from .deals import transition_deal_stage
+
+    _require_staff(user)
+    _require(user, Permission.QUOTE_BUILD.value)
+    reason = (reason or "").strip()
+    if not reason:
+        raise CalcError("REASON_REQUIRED", 400)
+    deal = _locked_deal_or_404(deal_id)
+    task = _task_or_404(deal)
+    quote = _rejected_or_409(deal, user)
+    _deal, err = transition_deal_stage(
+        deal,
+        DealStageCode.CLOSED_LOST,
+        actor=user,
+        reason=f"Отказ по заявке после отказа клиента от КП v{quote.version}: {reason}",
+        lost_reason=reason,
+    )
+    if err:
+        raise CalcError(err, 409)
+    _log(
+        deal,
+        user,
+        "Отказ по заявке",
+        f"{task.letter_number}: {reason}",
+        "calc.lost",
+        {"letter_number": task.letter_number, "reason": reason, "version": quote.version},
+    )
+    deal.refresh_from_db()
     return _sheet(deal, task, user)
 
 

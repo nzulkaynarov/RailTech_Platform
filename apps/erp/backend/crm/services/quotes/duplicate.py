@@ -69,6 +69,8 @@ _COPIED_ITEM_FIELDS = (
     "margin_percent",
     "discount_percent",
     "lead_time_days",
+    # D26G-5: введённая цена клиенту — источник истины строки, новая версия КП её не теряет.
+    "client_price_fixed",
 )
 
 # Content fields cloned onto each new QuoteCharge. resolved_base / resolved_amount are transparency

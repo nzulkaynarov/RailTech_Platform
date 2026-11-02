@@ -262,10 +262,29 @@ async def test_return_sends_comment_and_new_version_opens_new_round(
     await ready(client, container, version=2)
     second = await only_route(client, staff["director"])
     assert (second["round"], second["object"]["quote_version"], second["status"]) == (2, 2, "open")
+    assert "superseded_by_version" not in second["object"], "новая версия актуальна"
     # событие о более старой версии позже новой маршрут не открывает
     await ready(client, container, version=1)
     queue = (await client.get("/api/v1/approvals", params={"mine": 0}, headers=staff["director"].headers)).json()
     assert len(queue["items"]) == 2
+    # D26G-2: прежняя версия в истории — «заменена версией 2» (и в списке, и в карточке)
+    old = next(i for i in queue["items"] if i["object"]["quote_version"] == 1)
+    assert old["object"]["superseded_by_version"] == 2 and old["status"] == "returned"
+    card = await client.get(f"/api/v1/approvals/{old['id']}", headers=staff["director"].headers)
+    validate("Approval", card.json())
+    assert card.json()["object"]["superseded_by_version"] == 2
+
+
+async def test_new_quote_of_the_same_deal_supersedes_the_rejected_version(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """D26G-3: клиент отклонил КП v1 — новая версия ERP — другая строка КП (другой `erp_quote_id`) той же заявки."""
+    await ready(client, container, version=1)
+    await ready(client, container, version=2, erp_quote_id=1204, number="КП-2026/116")
+    page = (await client.get("/api/v1/approvals", params={"mine": 0}, headers=staff["director"].headers)).json()
+    validate("ApprovalPage", page)
+    by_version = {i["object"]["quote_version"]: i["object"] for i in page["items"]}
+    assert by_version[1]["superseded_by_version"] == 2 and "superseded_by_version" not in by_version[2]
 
 
 async def test_quote_snapshot_is_hidden_from_non_deciders(

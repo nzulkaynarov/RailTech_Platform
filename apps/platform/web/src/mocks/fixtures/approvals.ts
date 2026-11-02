@@ -245,6 +245,7 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     id: `40000000-0000-4000-8000-${String(seed.n).padStart(12, "0")}`,
     number,
     version,
+    superseded_by: null,
     round: version,
     status: "open",
     stage: "QUOTE",
@@ -475,8 +476,37 @@ function memo(seed: MemoSeed): MemoApprovalCard {
   };
 }
 
+/**
+ * Версия 1 КП-2026/115, которую директор вернул на доработку: после повторного «Расчёт готов» её заменила версия 2
+ * (D26G-2). В истории — «Заменена версией 2»; состав ERP уже другой версии — строк нет, остаётся снимок.
+ */
+function supersededQuote(): QuoteApprovalCard {
+  const seed = QUOTE_SEEDS[0];
+  if (!seed) throw new Error("нет КП-2026/115");
+  const base = quote({ ...seed, version: 1 });
+  return {
+    ...base,
+    id: "40000000-0000-4000-8000-000000001150",
+    superseded_by: 2,
+    status: "returned",
+    can_decide: false,
+    allowed_decisions: [],
+    created_at: "2026-10-27T15:00:00Z",
+    ready_at: "2026-10-27T14:55:00Z",
+    lines: null,
+    totals: null,
+    steps: [
+      step("Директор", "returned", {
+        decided_by: DIRECTOR_PERSON,
+        decided_at: "2026-10-28T06:30:00Z",
+        comment: "Пересчитать цену привода: у поставщика новая цена",
+      }),
+    ],
+  };
+}
+
 function seedQuotes(): QuoteApprovalCard[] {
-  return [...QUOTE_SEEDS.map(quote), approvedQuote()];
+  return [...QUOTE_SEEDS.map(quote), approvedQuote(), supersededQuote()];
 }
 function seedMemos(): MemoApprovalCard[] {
   return MEMO_SEEDS.map(memo);

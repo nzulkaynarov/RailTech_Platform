@@ -170,7 +170,8 @@
       "doneEmail": "The quote email is handed to the mail service — the result will appear in the report.",
       "failed": "Not sent: {{reason}}",
       "invalid": "The quote can no longer be sent — the card is refreshed."
-    }
+    },
+    "superseded": "This is version {{version}}, superseded by version {{next}}. Decide on the current version in “Quotes for approval”; this is history."
   },
   "panel": {
     "sheetTitle": "Approval {{number}}",
@@ -282,5 +283,6 @@
       "unknown": "something went wrong, what you typed stays in the form"
     },
     "submitNoChannels": "Approve quote → to Outgoing"
-  }
+  },
+  "superseded": "Superseded by version {{version}}"
 }

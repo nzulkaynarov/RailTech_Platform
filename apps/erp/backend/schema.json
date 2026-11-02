@@ -7063,6 +7063,186 @@
                 }
             }
         },
+        "/api/v1/calc/{deal_id}/lost/": {
+            "post": {
+                "operationId": "calc_lost",
+                "description": "POST /api/v1/calc/<deal_id>/lost/ — клиент отклонил КП: «Отказ по заявке» с причиной, резервы снимаются.",
+                "summary": "Отказ по заявке после отказа клиента от КП (D26G-3)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcLostInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcLostInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CalcLostInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcSheet"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/calc/{deal_id}/new-version/": {
+            "post": {
+                "operationId": "calc_new_version",
+                "description": "POST /api/v1/calc/<deal_id>/new-version/ — клиент отклонил КП: черновик новой версии, расчёт снова открыт.",
+                "summary": "Новая версия КП после отказа клиента (D26G-3)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Calc"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcSheet"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку или отказ правила строки"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Нет права (зона строки, роль) или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Заявки, задания расчёта или строки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CalcError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/calc/{deal_id}/parse/": {
             "post": {
                 "operationId": "calc_parse",
@@ -30238,6 +30418,20 @@
                     "lines"
                 ]
             },
+            "CalcLostInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Причина отказа по заявке (обязательна)",
+                        "maxLength": 1000
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
             "CalcParseInRequest": {
                 "type": "object",
                 "properties": {
@@ -30268,6 +30462,27 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "rejected_by": {
+                        "nullable": true,
+                        "description": "Кто отклонил КП при `state = rejected`; иначе null\n\n* `client` - client\n* `director` - director",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/RejectedByEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "reject_reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Причина клиента или комментарий директора при `state = rejected`"
+                    },
+                    "can_revise": {
+                        "type": "boolean",
+                        "description": "Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» (`POST /calc/<deal_id>/new-version/`) и «Отказ по заявке» (`POST /calc/<deal_id>/lost/`)"
+                    },
                     "vat_rate": {
                         "type": "string",
                         "format": "decimal",
@@ -30275,9 +30490,12 @@
                     }
                 },
                 "required": [
+                    "can_revise",
                     "director_comment",
                     "id",
                     "number",
+                    "reject_reason",
+                    "rejected_by",
                     "state",
                     "vat_rate",
                     "version"
@@ -30563,6 +30781,23 @@
                     "state": {
                         "$ref": "#/components/schemas/CalcStateEnum"
                     },
+                    "rejected_by": {
+                        "nullable": true,
+                        "description": "Кто отклонил КП при `state = rejected`; иначе null\n\n* `client` - client\n* `director` - director",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/RejectedByEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "reject_reason": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Причина клиента или комментарий директора при `state = rejected`"
+                    },
                     "lines": {
                         "type": "integer"
                     },
@@ -30582,6 +30817,8 @@
                     "due",
                     "letter_number",
                     "lines",
+                    "reject_reason",
+                    "rejected_by",
                     "state",
                     "visas"
                 ]
@@ -38936,7 +39173,14 @@
                     "client_price": {
                         "type": "string",
                         "format": "decimal",
-                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "description": "Цена клиенту без НДС за единицу: хранится как введена, наценка строки — производная (D26G-5)"
+                    },
+                    "markup_pct": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,3}(?:\\.\\d{0,2})?$",
+                        "description": "Наценка строки, %: цена клиенту считается из неё и округляется до сума (D26G-5)"
                     },
                     "product_id": {
                         "type": "integer",
@@ -44826,6 +45070,14 @@
                     "status_code",
                     "version"
                 ]
+            },
+            "RejectedByEnum": {
+                "enum": [
+                    "client",
+                    "director"
+                ],
+                "type": "string",
+                "description": "* `client` - client\n* `director` - director"
             },
             "RemoveMemberRequest": {
                 "type": "object",

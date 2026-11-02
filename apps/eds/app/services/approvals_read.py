@@ -2,7 +2,7 @@
 
 import uuid
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import not_found
@@ -26,7 +26,9 @@ from app.services import access, approvals, checklist, paging
 from app.services.people import Directory, load_directory
 
 
-def object_of(route: ApprovalRoute, document: Document | None) -> ApprovalObject:
+def object_of(
+    route: ApprovalRoute, document: Document | None, newer: dict[uuid.UUID, int] | None = None
+) -> ApprovalObject:
     if route.template == ApprovalTemplate.QUOTE.value:
         return ApprovalObject(
             kind=ApprovalTemplate.QUOTE,
@@ -35,6 +37,7 @@ def object_of(route: ApprovalRoute, document: Document | None) -> ApprovalObject
             quote_version=route.quote_version,
             erp_deal_id=route.erp_deal_id,
             deal_number=route.deal_number,
+            superseded_by_version=(newer or {}).get(route.id),
         )
     return ApprovalObject(
         kind=ApprovalTemplate(route.template),
@@ -42,6 +45,45 @@ def object_of(route: ApprovalRoute, document: Document | None) -> ApprovalObject
         number=document.number if document else None,
         deal_number=document.deal_number if document else None,
     )
+
+
+async def newer_versions(session: AsyncSession, routes: list[ApprovalRoute]) -> dict[uuid.UUID, int]:
+    """Маршруты КП, которые заменила более новая версия (D26G-2): {маршрут: новейшая версия}.
+
+    Версия КП — `Quote.version` ERP, сквозная в заявке: новее — маршрут того же КП (доработка после возврата) или той же
+    заявки (новая версия после отказа клиента) с большей версией. Считается при чтении — отдельного статуса у маршрута нет.
+    """
+    quotes = [r for r in routes if r.template == ApprovalTemplate.QUOTE.value and r.quote_version is not None]
+    if not quotes:
+        return {}
+    quote_ids = {r.erp_quote_id for r in quotes if r.erp_quote_id is not None}
+    deal_ids = {r.erp_deal_id for r in quotes if r.erp_deal_id is not None}
+    top = func.max(ApprovalRoute.quote_version)
+    by_quote: dict[int, int] = {}
+    by_deal: dict[int, int] = {}
+    if quote_ids:
+        rows = await session.execute(
+            select(ApprovalRoute.erp_quote_id, top)
+            .where(ApprovalRoute.erp_quote_id.in_(quote_ids))
+            .group_by(ApprovalRoute.erp_quote_id)
+        )
+        by_quote = {int(k): int(v) for k, v in rows.all() if v is not None}
+    if deal_ids:
+        rows = await session.execute(
+            select(ApprovalRoute.erp_deal_id, top)
+            .where(ApprovalRoute.erp_deal_id.in_(deal_ids), ApprovalRoute.template == ApprovalTemplate.QUOTE.value)
+            .group_by(ApprovalRoute.erp_deal_id)
+        )
+        by_deal = {int(k): int(v) for k, v in rows.all() if v is not None}
+    out: dict[uuid.UUID, int] = {}
+    for route in quotes:
+        newest = max(
+            by_quote.get(route.erp_quote_id or 0, 0),
+            by_deal.get(route.erp_deal_id, 0) if route.erp_deal_id is not None else 0,
+        )
+        if route.quote_version is not None and newest > route.quote_version:
+            out[route.id] = newest
+    return out
 
 
 def step_of(step: ApprovalStep, directory: Directory) -> StepOut:
@@ -95,7 +137,7 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
         id=route.id,
         template=ApprovalTemplate(route.template),
         title=route.title,
-        object=object_of(route, document),
+        object=object_of(route, document, await newer_versions(session, [route])),
         status=RouteStatus(route.status),
         round=route.round,
         steps=[step_of(s, directory) for s in steps],
@@ -160,12 +202,13 @@ async def list_page(
         ).scalars()
     }
     directory = Directory()
+    newer = await newer_versions(session, page)
     items = [
         ApprovalListItem(
             id=r.id,
             template=ApprovalTemplate(r.template),
             title=r.title,
-            object=object_of(r, documents.get(r.document_id) if r.document_id else None),
+            object=object_of(r, documents.get(r.document_id) if r.document_id else None, newer),
             status=RouteStatus(r.status),
             round=r.round,
             current_step=step_of(current_steps[(r.id, r.current_step)], directory)

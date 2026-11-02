@@ -4420,6 +4420,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/{number}/new-version": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Новая версия КП» после отказа клиента
+     * @description ERP `POST /calc/{deal_id}/new-version/` (D26G-3, SPEC-v3 §3.3). Только когда клиент отклонил КП и заявка вернулась в расчёт (`quote.can_revise`), иначе 409 `details.reason = quote_not_rejected_by_client`. ERP копирует КП в черновик версии +1: строки, введённые цены, тип строк и вводные бригады; визы собираются заново, резервы строк переходят на копии. Прежняя версия остаётся отклонённой в истории. Раздел `erp.calc` — полный.
+     */
+    post: operations["newCalcQuoteVersion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/lost": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Отказ по заявке» после отказа клиента
+     * @description ERP `POST /calc/{deal_id}/lost/` (D26G-3). Только когда клиент отклонил КП (`quote.can_revise`), иначе 409 `quote_not_rejected_by_client`. Причина обязательна (пустая — 422 `reason_required`). Заявка — стадия «Отказ» (CLOSED_LOST), событие `deal.lost` с причиной; резервы заявки ERP снимает при переходе стадии. Раздел `erp.calc` — полный.
+     */
+    post: operations["loseCalcRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/calc/{number}/parse": {
     parameters: {
       query?: never;
@@ -7708,7 +7748,10 @@ export interface components {
        * @example КП-2026/115
        */
       number: string;
+      /** @description Версия КП — та же, что у КП в ERP и на экране расчёта */
       version: number;
+      /** @description Версию заменила более новая (D26G-2, EDS `superseded_by_version`): в истории — «Заменена версией N»; `null` — актуальна */
+      superseded_by: number | null;
       /** @description Бизнес-номер заявки ЗВ */
       request_number: string | null;
       /** @description Из снимка КП; `null` у роли, которой EDS снимок не отдаёт */
@@ -7884,7 +7927,10 @@ export interface components {
        */
       id: string;
       number: string;
+      /** @description Версия КП; состав КП из ERP показывается, только если версия ERP та же */
       version: number;
+      /** @description Версию заменила более новая (D26G-2): карточка — история, «Заменена версией N», решений нет; `null` — актуальна */
+      superseded_by: number | null;
       round: number;
       status: components["schemas"]["ApprovalRouteStatus"];
       stage: components["schemas"]["StepCode"];
@@ -9911,10 +9957,20 @@ export interface components {
     CalcQuote: {
       /** @description Номер КП появляется при «Расчёт готов» */
       number: string | null;
+      /** @description Версия КП ERP — та же, что у КП на одобрение в EDS; повторный «Расчёт готов» после возврата — +1 */
       version: number;
       state: components["schemas"]["CalcState"];
       /** @description Комментарий директора при возврате на доработку */
       director_comment: string | null;
+      /**
+       * @description При `state = rejected` — кто отклонил КП: клиент (кабинет, бот, офлайн) или директор; иначе null (D26G-3)
+       * @enum {string|null}
+       */
+      rejected_by: "client" | "director" | null;
+      /** @description Причина клиента или комментарий директора при `state = rejected` */
+      reject_reason: string | null;
+      /** @description Клиент отклонил КП, заявка в расчёте и у сотрудника право `quote.build`: доступны «Новая версия КП» (`newCalcQuoteVersion`) и «Отказ по заявке» (`loseCalcRequest`) */
+      can_revise: boolean;
       vat_rate: components["schemas"]["DecimalString"];
     };
     /**
@@ -10086,10 +10142,17 @@ export interface components {
       purchase_currency?: string;
       crew_rate?: components["schemas"]["DecimalString"] | null;
       crew_days?: components["schemas"]["DecimalString"] | null;
+      /** @description Цена клиенту без НДС за единицу — хранится как введена, наценка строки производная (D26G-5) */
       client_price?: components["schemas"]["DecimalString"];
+      /** @description Наценка строки, % (0–500; не вместе с `client_price`): цена клиенту считается из неё и округляется до сума. Только с группой полей `cost_margin` (иначе 422 `cost_forbidden`) */
+      markup_pct?: components["schemas"]["DecimalString"];
       product_id?: string | null;
       /** @enum {string} */
       kind?: "goods" | "service";
+    };
+    CalcLostIn: {
+      /** @description Причина отказа по заявке — в журнал и событие `deal.lost` */
+      reason: string;
     };
     CalcParseIn: {
       /** @description Свой текст; без поля — текст заявки */
@@ -19511,6 +19574,73 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  newCalcQuoteVersion: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт снова открыт — черновик новой версии */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  loseCalcRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcLostIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка закрыта с отказом */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

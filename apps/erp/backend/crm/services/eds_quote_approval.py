@@ -1,13 +1,14 @@
 """Одобрение КП директором через маршрут EDS (EDS-03, ADR-0015, runbook волны 12 §2.4–§2.5, решение §4 п. 3).
 
-* `request_director_approval` — визы собраны (или проверяющих нет): КП получает номер (КП-…, коммерческий номер ERP) и
-  новую редакцию `eds_revision`, ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` в транзакции изменения
+* `request_director_approval` — визы собраны (или проверяющих нет): КП получает номер (КП-…, коммерческий номер ERP),
+  повторная отправка (после возврата или отзыва) — новую версию `Quote.version` (D26G-2: версия события и маршрута EDS
+  совпадает с версией КП в ERP), ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` в транзакции изменения
   (откат — события нет). Снимок для маршрута: суммы, маржа, визы по зонам резолюции, порог маржи и срок из задания
   расчёта (`CalcTask`, проекция резолюции EDS — владелец порога EDS). КП остаётся «На утверждении».
 * `apply_director_decision` — `eds.approval.decided` по КП: approve — ИСХ-номер EDS на КП, каналы отправки,
   «Готово к отправке»; с выбранными каналами ERP сразу отправляет КП клиенту по доступным из них (ERP-11,
   `sales/services/quote_auto_send.py`), без каналов — отправляет менеджер заявки (`quote.send`, C1-G-4); return — черновик с комментарием директора (правка и повторная
-  отправка — новая редакция и новое событие); reject — КП отклонено. Идемпотентно: решение по другой редакции —
+  отправка — новая версия и новое событие); reject — КП отклонено. Идемпотентно: решение по другой версии —
   устаревшее (запись в журнал КП, без изменений), повтор применённого решения — без изменений.
 """
 
@@ -20,6 +21,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from django.db import transaction
+from django.db.models import Max
 from django.utils import timezone
 
 from ..constants import QuoteStatusCode
@@ -110,7 +112,7 @@ def build_ready_payload(quote: Quote, *, ready_at: datetime, line_visas: bool = 
     payload: dict[str, Any] = {
         "erp_quote_id": quote.pk,
         "number": quote.number,
-        "version": quote.eds_revision,
+        "version": quote.version,
         "total": _amount(quote.total_incl_vat),
         "currency": projections.currency_code(quote.quote_currency).upper(),
         "cost": _amount(economics.get("total_landed_cost")),
@@ -171,26 +173,42 @@ def request_director_approval(quote: Quote, actor, *, line_visas: bool = False) 
         raise ValueError("QUOTE_CLIENT_REQUIRED")
     if not locked.number:
         locked.number = next_document_number("KP", "КП", locked.seller_company)
+    previous_version = locked.version
+    if locked.eds_revision >= 1:
+        # D26G-2 (SPEC-v3 §3.3): повторная отправка после возврата или отзыва — новая версия КП. Номер — следующий в
+        # заявке (`unique_together (deal, version)`), EDS открывает маршрут новой версии и закрывает прежние; решение
+        # по прежней версии — устаревшее (`apply_director_decision`).
+        top = Quote.objects.filter(deal_id=locked.deal_id).aggregate(top=Max("version"))["top"] or 0
+        locked.version = max(top, locked.version) + 1
     locked.eds_revision += 1
     locked.director_decision = ""
     locked.director_comment = ""
     locked.director_decided_at = None
     locked.outgoing_number = ""
     locked.send_channels = []
-    changed = ["number", "eds_revision", *_DECISION_FIELDS]
+    changed = ["number", "version", "eds_revision", *_DECISION_FIELDS]
     locked.save(update_fields=[*changed, "updated_at"])
     for name in [*changed, "updated_at"]:
         setattr(quote, name, getattr(locked, name))
 
+    if locked.version != previous_version:
+        _log_quote(
+            locked,
+            actor,
+            "КП: новая версия",
+            f"КП {locked.number}: версия {previous_version} заменена версией {locked.version}",
+            event_code="quote.superseded",
+            event_params={"number": locked.number, "version": previous_version, "new_version": locked.version},
+        )
     payload = build_ready_payload(locked, ready_at=timezone.now(), line_visas=line_visas)
     events.publish_quote_ready_for_approval(locked, payload, actor=events.build_actor(user=actor))
     _log_quote(
         locked,
         actor,
         "КП передано директору на одобрение",
-        f"КП {locked.number} (редакция {locked.eds_revision}) → маршрут одобрения EDS",
+        f"КП {locked.number} (версия {locked.version}) → маршрут одобрения EDS",
         event_code="quote.sent_to_director",
-        event_params={"number": locked.number, "revision": locked.eds_revision},
+        event_params={"number": locked.number, "revision": locked.eds_revision, "version": locked.version},
     )
     return quote
 
@@ -235,14 +253,14 @@ def apply_director_decision(
     actor = _erp_user(decided_by.get("crm_user_id"))
     director = decided_by.get("full_name") or ""
     params = {"number": quote.number or quote.id, "decision": decision, "version": quote_version}
-    if quote_version != quote.eds_revision:
+    if quote_version != quote.version:
         _log_quote(
             quote,
             actor,
-            "Решение директора по устаревшей редакции КП не применено",
-            f"{director}: {decision} по редакции {quote_version}, действующая — {quote.eds_revision}",
+            "Решение директора по устаревшей версии КП не применено",
+            f"{director}: {decision} по версии {quote_version}, действующая — {quote.version}",
             event_code="quote.director_decision_stale",
-            event_params={**params, "current_revision": quote.eds_revision},
+            event_params={**params, "current_revision": quote.version},
         )
         return "stale"
     if quote.director_decision == decision:

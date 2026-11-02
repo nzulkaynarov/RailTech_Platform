@@ -24,6 +24,7 @@ Zone = Literal["goods", "services", "payment_terms"]
 LineZone = Literal["goods", "services"]
 LineKind = Literal["goods", "goods_to_order", "service"]
 Group = Literal["stock", "supply", "engineer"]
+RejectedBy = Literal["client", "director"]
 Blocker = Literal["not_started", "not_in_calculation", "not_draft", "no_lines", "visas_missing"]
 
 DECIMAL = r"^-?[0-9]+(\.[0-9]+)?$"
@@ -83,6 +84,11 @@ class CalcQuote(BaseModel):
     version: int
     state: CalcState
     director_comment: str | None
+    # D26G-3: кто отклонил КП (клиент или директор) и почему; «Новая версия КП» и «Отказ по
+    # заявке» — `can_revise`.
+    rejected_by: RejectedBy | None = None
+    reject_reason: str | None = None
+    can_revise: bool = False
     vat_rate: str
 
 
@@ -251,8 +257,15 @@ class CalcLinePatch(BaseModel):
     crew_rate: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
     crew_days: str | None = Field(default=None, pattern=DECIMAL, max_length=10)
     client_price: str | None = Field(default=None, pattern=DECIMAL, max_length=20)
+    markup_pct: str | None = Field(default=None, pattern=DECIMAL, max_length=8)
     product_id: str | None = Field(default=None, pattern=DIGITS, max_length=12)
     kind: Literal["goods", "service"] | None = None
+
+
+class CalcLostIn(BaseModel):
+    model_config = _STRICT
+
+    reason: str = Field(min_length=1, max_length=1000)
 
 
 class CalcParseIn(BaseModel):
@@ -392,6 +405,9 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, 
             version=quote["version"],
             state=quote["state"],
             director_comment=quote.get("director_comment"),
+            rejected_by=quote.get("rejected_by"),
+            reject_reason=quote.get("reject_reason"),
+            can_revise=quote.get("can_revise") is True,
             vat_rate=quote["vat_rate"],
         ),
         lines=[_line(item, cost=cost, zones=zones, offers=offers) for item in raw["lines"]],
