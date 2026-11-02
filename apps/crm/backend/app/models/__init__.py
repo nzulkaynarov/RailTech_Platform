@@ -8,6 +8,7 @@ from app.models import (  # noqa: F401
     deals,
     email,
     external_services,
+    inbound_mail,
     integrations,
     kb,
     leads,

@@ -84,7 +84,7 @@ export const RESOURCES = {
   "eds.inbox.register": {
     module: "eds",
     levels: ["full"],
-    backends: [],
+    backends: ["crm"],
     label: {
       ru: "Документы · Входящие письма · регистрация",
       uz: "Hujjatlar · Kiruvchi xatlar · ro‘yxatga olish",
@@ -252,6 +252,7 @@ export const MENU = {
       "eds.memo.approve",
     ],
     inbox: ["eds.inbox", "eds.inbox.register"],
+    mail: ["eds.inbox.register"],
     outbox: ["eds.drafts"],
     projects: ["eds.projects"],
     drafts: ["eds.drafts"],
@@ -397,6 +398,10 @@ export const QUEUE = {
   },
   instruction_extension: {
     resource: "eds.inbox",
+    level: "full",
+  },
+  inbound_mail: {
+    resource: "eds.inbox.register",
     level: "full",
   },
   acquaint: {

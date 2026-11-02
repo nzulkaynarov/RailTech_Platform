@@ -88,3 +88,5 @@ class EmailLog(TimestampMixin, Base):
     links_ciphertext: Mapped[bytes | None] = mapped_column(LargeBinary)
     # Только метаданные вложений: имя, тип, размер, sha256 (ссылки — в `links_ciphertext`).
     attachments: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    # Ответ в ту же цепочку (W18A-P2): `In-Reply-To` и `References` письма, на которое отвечаем.
+    thread_headers: Mapped[dict[str, str] | None] = mapped_column(JSONB)

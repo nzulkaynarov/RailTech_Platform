@@ -49,6 +49,9 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     # участвует или назначенные его зоне (`invoiced` — «Счета и оплаты»); `domain/chat_access`.
     "chats": ("read", "reply", "note", "assist", "invoiced"),
     "company_articles": ("read", "write"),
+    # Очередь «Входящая почта» (W18A-P2): чтение и действия (лид, архив, ответ); раздел
+    # каталога `eds.inbox.register`.
+    "mail_inbox": ("read", "work"),
 }
 
 

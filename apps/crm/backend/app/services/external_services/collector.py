@@ -182,6 +182,7 @@ class _Run:
             "litellm": self.litellm,
             "langfuse": self.langfuse,
             "mail": self.mail,
+            "mail_inbound": self.mail_inbound,
             "s3": self.s3,
             "docling": self.docling,
             "backup": self.backup,
@@ -477,6 +478,26 @@ class _Run:
         result = rules.mail(facts, self.now)
         extra = {"_smtp": probe_error or "ok", "_smtp_detail": probe_detail}
         return _with_metrics(result, extra)
+
+    async def mail_inbound(self) -> CheckResult:
+        """Приём почты (W18A-P2): итог последнего опроса ящика, без своего входа в ящик."""
+        from app.domain.external_mail_inbound import InboundFacts, mail_inbound
+        from app.integrations.imap import resolve_imap
+        from app.repositories import inbound_mail as mail_repo
+
+        resolved = await resolve_imap(self.d.secrets, self.d.settings)
+        async with self.d.sessions() as session:
+            state = await mail_repo.mailbox(session, resolved.mailbox)
+            waiting = await mail_repo.count(session, "new")
+        facts = InboundFacts(
+            configured=resolved.connection is not None,
+            last_poll_at=state.last_poll_at if state else None,
+            last_ok_at=state.last_ok_at if state else None,
+            error_kind=state.last_error_kind if state else None,
+            error=state.last_error if state else None,
+            waiting=waiting,
+        )
+        return mail_inbound(facts, self.now)
 
     async def s3(self) -> CheckResult:
         endpoint = str(self.d.config.s3_endpoint).rstrip("/")

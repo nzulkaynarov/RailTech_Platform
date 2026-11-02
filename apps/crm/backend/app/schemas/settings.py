@@ -385,6 +385,23 @@ class SmtpSettings(StrictModel):
     from_name: str = Field(default="", max_length=120)
 
 
+class ImapSettings(StrictModel):
+    """Общий ящик входящей почты (W18A-P2, B-INB-5) без секретов.
+
+    Логин и пароль приложения — `integration_secrets` (`imap_username`, `imap_password`, только на
+    запись). Пустой `host` — приём выключен: очередь «Входящая почта» показывает подсказку, куда
+    идти. Письма на сервере не удаляются и не помечаются (папка открывается только на чтение).
+    """
+
+    host: str = Field(default="", max_length=253)
+    port: int = Field(default=993, ge=1, le=65535)
+    # `ssl` — 993 (IMAPS, обычный вариант), `starttls` — 143.
+    security: Literal["ssl", "starttls"] = "ssl"
+    mailbox: str = Field(default="INBOX", min_length=1, max_length=200)
+    # Помощник канцелярии (тип, суть, предложение действия) — выключатель админа, как Q-019.
+    assist_enabled: bool = True
+
+
 class OffsiteCheckSettings(StrictModel):
     """Итог последней «Проверить» внешней копии (OPS-GDRIVE-2): причина словом-кодом, имя папки."""
 
@@ -446,6 +463,7 @@ class IntegrationsSettings(StrictModel):
     # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
     erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+    imap: ImapSettings = Field(default_factory=ImapSettings)
     # Куда идёт внешняя копия бэкапов (OPS-YADISK): `None` — ещё не выбирали (настроенный Google Drive
     # остаётся Google Drive без миграции, иначе по умолчанию — Яндекс Диск).
     offsite_provider: Literal["gdrive", "yandex"] | None = None

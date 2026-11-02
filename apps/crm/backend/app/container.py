@@ -56,6 +56,10 @@ if TYPE_CHECKING:
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
+    from app.services.imap_connector import ImapConnectorService
+    from app.services.inbound_mail import InboundMailService
+    from app.services.inbound_mail_assist import InboundMailAssist
+    from app.services.inbound_mail_ingest import InboundMailIngest
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
     from app.services.kb.markdown_convert import MarkdownConverter
@@ -641,6 +645,72 @@ class Container:
         )
 
     @cached_property
+    def imap_connector(self) -> "ImapConnectorService":
+        """Приём почты общего ящика (W18A-P2): настройки «Подключений», «Проверить приём»."""
+        from app.integrations.imap import ImaplibClient
+        from app.security.reauth import LockoutPolicy
+        from app.services.imap_connector import ImapConnectorService
+
+        return ImapConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            ImaplibClient(),
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def inbound_mail_ingest(self) -> "InboundMailIngest":
+        from app.integrations.imap import ImaplibClient
+        from app.services.inbound_mail_ingest import InboundMailIngest
+
+        return InboundMailIngest(
+            self.session_factory,
+            self.secrets_store,
+            self.settings_service,
+            ImaplibClient(),
+            self.storage,
+            self.settings.s3_bucket_attachments,
+            on_new=_enqueue_mail_assist,
+        )
+
+    @cached_property
+    def inbound_mail_assist(self) -> "InboundMailAssist":
+        """Подсказка помощника канцелярии: `qualifier-model` под бюджетом, без резерва."""
+        from app.agents.llm import ChatModel
+        from app.services.budget import BudgetedModel
+        from app.services.inbound_mail_assist import InboundMailAssist
+
+        model = BudgetedModel(
+            ChatModel(
+                self.llm,
+                "qualifier-model",
+                max_tokens=400,
+                usage=self.usage_recorder,
+                purpose="mail_assist",
+            ),
+            None,
+            self.budget_guard,
+            alias="qualifier-model",
+        )
+        return InboundMailAssist(self.session_factory, self.settings_service, model)
+
+    @cached_property
+    def inbound_mail(self) -> "InboundMailService":
+        from app.services.inbound_mail import InboundMailService
+
+        return InboundMailService(
+            self.session_factory,
+            self.settings_service,
+            self.mail_service,
+            self.storage,
+            self.settings.s3_bucket_attachments,
+            self.imap_connector.configured,
+        )
+
+    @cached_property
     def offsite_connector(self) -> "OffsiteConnectorService":
         from app.integrations import yadisk
         from app.integrations.gdrive import probe
@@ -863,6 +933,12 @@ async def _enqueue_email(email_log_id: int) -> object:
     from app.tasks.mail import enqueue_email
 
     return await enqueue_email(email_log_id)
+
+
+async def _enqueue_mail_assist(mail_ids: list[int]) -> None:
+    from app.tasks.inbound_mail import enqueue_assist
+
+    await enqueue_assist(mail_ids)
 
 
 async def _enqueue_extraction(document_id: int) -> object:

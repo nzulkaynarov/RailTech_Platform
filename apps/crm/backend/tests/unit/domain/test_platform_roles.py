@@ -218,7 +218,8 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("crm.clients", "full"): (CLIENTS_FULL, {"deal.manage", "quote.send"}),
     ("eds.inbox", "read"): NOTHING,
     ("eds.inbox", "full"): (set(), {"deal.assign"}),
-    ("eds.inbox.register", "full"): NOTHING,  # P8: только код EDS `letters.register`
+    # P8: код EDS `letters.register`; W18A-P2: очередь «Входящая почта» общего ящика CRM
+    ("eds.inbox.register", "full"): ({"mail_inbox:read", "mail_inbox:work"}, set()),
     ("eds.drafts", "read"): NOTHING,
     ("eds.drafts", "full"): (set(), {"quote.review"}),
     ("eds.projects", "read"): NOTHING,

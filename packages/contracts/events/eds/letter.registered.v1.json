@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/events/eds/letter.registered.v1.json",
   "title": "Входящее письмо зарегистрировано",
-  "description": "Тип uz.railtech.eds.letter.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff.",
+  "description": "Тип uz.railtech.eds.letter.registered.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Письмо получило номер ВХ-NNN/ГГ в реестре EDS и ждёт резолюции директора: вручную (POST /api/v1/letters) или автоматически по uz.railtech.erp.request.created.v1 (связь с заявкой — links). Подписчики v1: platform-bff; crm — только письма из очереди «Входящая почта» (`source`, W18A-P2).",
   "type": "object",
   "required": [
     "letter",
@@ -88,6 +88,21 @@
     },
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "source": {
+      "type": "object",
+      "description": "Откуда письмо (W18A-P2, необязательное, с 2026-11-02): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — CRM снимает его с очереди и пишет номер ВХ. Нет поля — регистрация не из очереди.",
+      "required": [
+        "crm_inbound_mail_id"
+      ],
+      "properties": {
+        "crm_inbound_mail_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "id письма в CRM (`inbound_mail.id`)"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

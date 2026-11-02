@@ -174,7 +174,12 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         ),
     },
     "eds.inbox": {},
-    "eds.inbox.register": {},
+    "eds.inbox.register": {
+        "full": (
+            "mail_inbox:read",
+            "mail_inbox:work",
+        ),
+    },
     "eds.drafts": {},
     "eds.projects": {},
     "eds.payments": {

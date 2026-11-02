@@ -1,0 +1,120 @@
+"""Запросы входящей почты (W18A-P2): письма очереди, состояние папки, связка с клиентом и лидом."""
+
+from collections.abc import Sequence
+
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.clients import Client, ClientContact
+from app.models.email import EmailLog
+from app.models.inbound_mail import InboundMail, InboundMailbox
+from app.models.leads import Lead
+
+REF_KIND = "inbound_mail"
+
+
+async def exists(session: AsyncSession, message_id: str) -> bool:
+    stmt = select(InboundMail.id).where(InboundMail.message_id == message_id)
+    return (await session.scalars(stmt.limit(1))).first() is not None
+
+
+async def insert_new(session: AsyncSession, values: dict[str, object]) -> int | None:
+    """Новая строка; тот же `message_id` уже есть (гонка двух опросов) — None, без ошибки."""
+    stmt = (
+        insert(InboundMail)
+        .values(**values)
+        .on_conflict_do_nothing(index_elements=[InboundMail.message_id])
+        .returning(InboundMail.id)
+    )
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def get(
+    session: AsyncSession, mail_id: int, *, for_update: bool = False
+) -> InboundMail | None:
+    stmt = select(InboundMail).where(InboundMail.id == mail_id)
+    if for_update:
+        stmt = stmt.with_for_update()
+    return (await session.scalars(stmt)).first()
+
+
+async def page(session: AsyncSession, status: str, limit: int) -> Sequence[InboundMail]:
+    stmt = (
+        select(InboundMail)
+        .where(InboundMail.status == status)
+        .order_by(InboundMail.received_at.desc(), InboundMail.id.desc())
+        .limit(limit)
+    )
+    return (await session.scalars(stmt)).all()
+
+
+async def count(session: AsyncSession, status: str) -> int:
+    stmt = select(func.count()).select_from(InboundMail).where(InboundMail.status == status)
+    return int((await session.execute(stmt)).scalar_one())
+
+
+async def mailbox(
+    session: AsyncSession, name: str, *, for_update: bool = False
+) -> InboundMailbox | None:
+    stmt = select(InboundMailbox).where(InboundMailbox.mailbox == name)
+    if for_update:
+        stmt = stmt.with_for_update()
+    return (await session.scalars(stmt)).first()
+
+
+async def last_mailbox(session: AsyncSession) -> InboundMailbox | None:
+    stmt = select(InboundMailbox).order_by(InboundMailbox.last_poll_at.desc().nulls_last())
+    return (await session.scalars(stmt.limit(1))).first()
+
+
+async def client_by_email(session: AsyncSession, email: str) -> tuple[int, str] | None:
+    stmt = (
+        select(Client.id, Client.name)
+        .join(ClientContact, ClientContact.client_id == Client.id)
+        .where(func.lower(ClientContact.email) == email, Client.is_active.is_(True))
+        .order_by(Client.id)
+        .limit(1)
+    )
+    row = (await session.execute(stmt)).first()
+    return (int(row[0]), str(row[1])) if row is not None else None
+
+
+async def client_by_inns(session: AsyncSession, inns: Sequence[str]) -> tuple[int, str] | None:
+    if not inns:
+        return None
+    stmt = (
+        select(Client.id, Client.name)
+        .where(Client.inn.in_(list(inns)), Client.is_active.is_(True))
+        .order_by(Client.id)
+        .limit(1)
+    )
+    row = (await session.execute(stmt)).first()
+    return (int(row[0]), str(row[1])) if row is not None else None
+
+
+async def names(
+    session: AsyncSession, client_ids: Sequence[int], lead_ids: Sequence[int]
+) -> tuple[dict[int, str], dict[int, str]]:
+    clients: dict[int, str] = {}
+    leads: dict[int, str] = {}
+    if client_ids:
+        rows = await session.execute(
+            select(Client.id, Client.name).where(Client.id.in_(list(client_ids)))
+        )
+        clients = {int(i): str(n) for i, n in rows.all()}
+    if lead_ids:
+        rows = await session.execute(
+            select(Lead.id, Lead.display_name).where(Lead.id.in_(list(lead_ids)))
+        )
+        leads = {int(i): str(n or "") for i, n in rows.all()}
+    return clients, leads
+
+
+async def replies(session: AsyncSession, mail_id: int) -> Sequence[EmailLog]:
+    stmt = (
+        select(EmailLog)
+        .where(EmailLog.ref_kind == REF_KIND, EmailLog.ref_id == str(mail_id))
+        .order_by(EmailLog.created_at, EmailLog.id)
+    )
+    return (await session.scalars(stmt)).all()
