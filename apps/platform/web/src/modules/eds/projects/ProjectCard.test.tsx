@@ -72,7 +72,9 @@ describe("Проект: карточка", () => {
     expect(execution).toHaveTextContent("TRK-4471");
     expect(execution).toHaveTextContent("Здесь отмечают, что товар в пути и доставлен");
     // у бухгалтера раздел «Склад» только для чтения — отметок доставки нет (L0-1)
-    expect(within(execution as HTMLElement).queryByRole("button", { name: "Доставлено" })).toBeNull();
+    expect(
+      within(execution as HTMLElement).queryByRole("button", { name: "Доставлено" }),
+    ).toBeNull();
     expect(screen.getByRole("heading", { name: "Журнал документов" })).toBeVisible();
   });
 
