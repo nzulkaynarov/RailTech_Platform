@@ -78,12 +78,44 @@ def _seller_and_bank_details(invoice):
     seller = _invoice_seller_company(invoice)
     if seller is None:
         return None, ""
+    return seller, _bank_details_line(seller)
+
+
+def _bank_details_line(company) -> str:
+    """Платёжные реквизиты компании строкой («р/с: …, МФО: …»); пусто — платить не по чему."""
     parts = []
-    if getattr(seller, "bank_account", ""):
-        parts.append(f"р/с: {seller.bank_account}")
-    if getattr(seller, "mfo", ""):
-        parts.append(f"МФО: {seller.mfo}")
-    return seller, ", ".join(parts)
+    if getattr(company, "bank_account", ""):
+        parts.append(f"р/с: {company.bank_account}")
+    if getattr(company, "mfo", ""):
+        parts.append(f"МФО: {company.mfo}")
+    return ", ".join(parts)
+
+
+def invoice_bank_details_ready(invoice) -> bool:
+    """Гейт выпуска (`SELLER_BANK_DETAILS_REQUIRED`) этот счёт пропустит: реквизиты продавца есть.
+
+    Подсказка до клика (O3, D26G-6) — тот же расчёт, что гейт, иначе они разойдутся. Выставленный
+    счёт (реквизиты заморожены или он выпущен раньше) и счёт без продавца гейт не трогает — `True`.
+    """
+    if invoice.frozen_bank_details or invoice.status_code != InvoiceStatusCode.DRAFT:
+        return True
+    seller, details = _seller_and_bank_details(invoice)
+    return bool(details) or seller is None
+
+
+def own_company_bank_details_ready() -> bool:
+    """У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт выпуска).
+
+    Признак для «Первого запуска» и вкладки «К выставлению» (D26G-6): продавец каждой сделки —
+    своя компания (`_invoice_seller_company`), поэтому её реквизиты и решают, выставится ли счёт.
+    Своей компании ещё нет — предупреждать не о чем (шаг «Ваша компания» мастера), `True`.
+    """
+    from accounts.models import Company
+    from accounts.services.own_company_setup import own_company_id_or_none
+
+    company_id = own_company_id_or_none()
+    company = Company.objects.filter(pk=company_id).only("bank_account", "mfo").first() if company_id else None
+    return company is None or bool(_bank_details_line(company))
 
 
 @transaction.atomic

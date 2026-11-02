@@ -390,3 +390,63 @@ test.describe("Первый запуск: axe и скриншоты", () => {
     await expect(page).toHaveURL(/\/login$/);
   });
 });
+
+// D26G-6: «Выставить счёт» без р/с и МФО откажет — мастер показывает шаг «Банковские реквизиты для счетов» со статусом и
+// ведёт в «Компания и бланки», где над полями видно, что реквизитов нет. Снимки — docs/screens/d26g-4.
+test.describe("Первый запуск: банковские реквизиты для счетов (D26G-6)", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const width of WIDTHS) {
+    test(`шаг «Банковские реквизиты для счетов» → «Компания и бланки» → «Готово», ${String(width)}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await page.goto("/login");
+      await page.getByLabel("Электронная почта").fill("admin@demo.example");
+      await page.getByLabel("Пароль").fill(secret("pw"));
+      await page.getByRole("button", { name: "Войти" }).click();
+      await expect(page).not.toHaveURL(/\/login/);
+      await page.evaluate(`window.localStorage.setItem("rt-pf-mock-no-bank", "1")`);
+
+      await spaGoto(page, "/admin/setup");
+      const card = stepCard(page, "Банковские реквизиты для счетов");
+      await expect(card.getByText("Не сделано")).toBeVisible();
+      await expect(card.getByText(/Без расчётного счёта и МФО ERP не выставит/)).toBeVisible();
+      await card
+        .getByRole("link", { name: "Открыть «Компания и бланки»" })
+        .scrollIntoViewIfNeeded();
+      await screenShot(page, "setup-bank-step");
+      await expectNoViolations(page, `мастер: реквизиты ${String(width)}`);
+
+      await card.getByRole("link", { name: "Открыть «Компания и бланки»" }).click();
+      await expect(page).toHaveURL(/\/admin\/company\?tab=details/);
+      await expect(
+        page.getByText(/Нет банковских реквизитов для счетов: без расчётного/),
+      ).toBeVisible();
+      await screenShot(page, "company-bank-missing");
+      await expectNoViolations(page, `компания: реквизитов нет ${String(width)}`);
+      await page.getByLabel("Расчётный счёт").fill("20208000900000000001");
+      await page.getByLabel("МФО банка").fill("00001");
+      await page.getByRole("button", { name: /Сохранить реквизиты/ }).click();
+      await expect(
+        page.getByText("Реквизиты для счетов заданы: «Выставить счёт» сработает."),
+      ).toBeVisible();
+
+      await spaGoto(page, "/admin/setup");
+      await expect(
+        stepCard(page, "Банковские реквизиты для счетов").getByText("Готово"),
+      ).toBeVisible();
+    });
+  }
+});
+
+/** Снимок экрана целиком для PR (D26G-4/6/9): только если задан E2E_SCREENSHOT_DIR. */
+async function screenShot(page: Page, name: string): Promise<void> {
+  const dir = process.env["E2E_SCREENSHOT_DIR"];
+  if (!dir) return;
+  await toastsGone(page);
+  await waitForMotionEnd(page);
+  await page.waitForTimeout(300);
+  const width = page.viewportSize()?.width ?? 0;
+  await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, fullPage: true });
+}

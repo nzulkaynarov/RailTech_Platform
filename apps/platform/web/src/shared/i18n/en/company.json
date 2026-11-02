@@ -119,7 +119,9 @@
     "consequence": {
       "erp": "The details are updated in your company card in ERP.",
       "brand": "Letterheads with “Take details from the company card” on will use the new values."
-    }
+    },
+    "bankReady": "Bank details for invoices are set: “Issue invoice” will work.",
+    "bankMissing": "No bank details for invoices: without the bank account and MFO an invoice cannot be issued to a client. Fill in the fields below and save."
   },
   "brand": {
     "title": "Document letterhead and brand",

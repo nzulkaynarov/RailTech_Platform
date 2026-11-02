@@ -464,7 +464,11 @@ export const getCreateFirstAdminResponseMock = (
 export const getGetSetupChecklistResponseSetupCompanyStatusMock = (
   overrideResponse: Partial<SetupCompanyStatus> = {},
 ): SetupCompanyStatus => ({
-  ...{ required: faker.datatype.boolean(), can_setup: faker.datatype.boolean() },
+  ...{
+    required: faker.datatype.boolean(),
+    can_setup: faker.datatype.boolean(),
+    bank_details_ready: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -6651,6 +6655,7 @@ export const getListPaymentsResponseMock = (
     overdue: faker.number.int({ min: 0 }),
   },
   memos_to_pay: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+  bank_details_ready: faker.datatype.boolean(),
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.number.int(),
     number: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -7026,6 +7031,7 @@ export const getGetPaymentResponseMock = (
   can_attach_proof: faker.datatype.boolean(),
   can_request_proof: faker.datatype.boolean(),
   replayed: faker.datatype.boolean(),
+  bank_details_ready: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -7123,6 +7129,7 @@ export const getConfirmPaymentResponseMock = (
   can_attach_proof: faker.datatype.boolean(),
   can_request_proof: faker.datatype.boolean(),
   replayed: faker.datatype.boolean(),
+  bank_details_ready: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -7220,6 +7227,7 @@ export const getAttachPaymentProofResponseMock = (
   can_attach_proof: faker.datatype.boolean(),
   can_request_proof: faker.datatype.boolean(),
   replayed: faker.datatype.boolean(),
+  bank_details_ready: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -7320,6 +7328,7 @@ export const getRequestPaymentDocResponseMock = (
   can_attach_proof: faker.datatype.boolean(),
   can_request_proof: faker.datatype.boolean(),
   replayed: faker.datatype.boolean(),
+  bank_details_ready: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -7417,6 +7426,7 @@ export const getIssuePaymentResponseMock = (
   can_attach_proof: faker.datatype.boolean(),
   can_request_proof: faker.datatype.boolean(),
   replayed: faker.datatype.boolean(),
+  bank_details_ready: faker.datatype.boolean(),
   ...overrideResponse,
 });
 

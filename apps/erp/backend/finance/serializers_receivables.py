@@ -54,6 +54,10 @@ class ReceivableBoardSerializer(serializers.Serializer):
     count = serializers.IntegerField(help_text="Всего счетов на вкладке.")
     counts = ReceivableCountsSerializer(help_text="Счета на каждой вкладке (вкладки не пересекаются).")
     results = ReceivableRowSerializer(many=True)
+    seller_bank_details_ready = serializers.BooleanField(
+        help_text="У своей компании есть реквизиты для счетов (р/с или МФО): без них «Выставить счёт» откажет "
+        "`SELLER_BANK_DETAILS_REQUIRED` (D26G-6, подсказка до клика)."
+    )
 
 
 class ReceivableItemSerializer(serializers.Serializer):
@@ -112,6 +116,9 @@ class ReceivableCardSerializer(ReceivableRowSerializer):
     can_attach_proof = serializers.BooleanField()
     can_request_proof = serializers.BooleanField()
     replayed = serializers.BooleanField(help_text="Повтор подтверждения: платёж уже был записан, ничего не добавлено.")
+    seller_bank_details_ready = serializers.BooleanField(
+        help_text="Гейт выпуска пропустит этот счёт: реквизиты продавца есть (у выставленного счёта — всегда `true`)."
+    )
 
 
 class ConfirmPaymentSerializer(serializers.Serializer):
@@ -177,6 +184,8 @@ def row(invoice: Invoice, day: date | None = None) -> dict[str, Any]:
 
 
 def card(invoice: Invoice, *, may_pay: bool, replayed: bool = False) -> dict[str, Any]:
+    from crm.services.invoice_lifecycle import invoice_bank_details_ready
+
     day = receivables.today()
     data = row(invoice, day)
     open_invoice = invoice.status_code in receivables.OPEN_STATUSES
@@ -236,6 +245,7 @@ def card(invoice: Invoice, *, may_pay: bool, replayed: bool = False) -> dict[str
             "can_attach_proof": may_pay and open_invoice,
             "can_request_proof": may_pay and open_invoice,
             "replayed": replayed,
+            "seller_bank_details_ready": invoice_bank_details_ready(invoice),
         }
     )
     return data

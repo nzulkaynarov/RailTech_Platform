@@ -217,6 +217,7 @@ function build(seed: Seed): PaymentCard {
     can_attach_proof: !seed.draft && paid < total,
     can_request_proof: !seed.draft && paid < total,
     replayed: false,
+    bank_details_ready: true,
   };
 }
 

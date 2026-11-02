@@ -448,5 +448,10 @@
       "unavailable": "ERP is not responding. Try again shortly.",
       "unknown": "Could not issue the invoice. Try again."
     }
+  },
+  "bankDetails": {
+    "title": "The company has no bank details — the invoice cannot be issued.",
+    "text": "An administrator fills them in: Settings · Company & letterhead.",
+    "open": "Open “Company & letterhead”"
   }
 }

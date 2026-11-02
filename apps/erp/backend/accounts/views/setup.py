@@ -25,6 +25,10 @@ from core.permissions import ADMIN_ONLY, IsPlatformAdmin, RoleGatedViewMixin
                     allow_null=True,
                     help_text="Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет.",
                 ),
+                "bank_details_ready": serializers.BooleanField(
+                    help_text="У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт «Выставить "
+                    "счёт»); своей компании нет — true (D26G-6)."
+                ),
             },
         )
     },
@@ -34,6 +38,8 @@ class SetupStatusView(views.APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
+        from crm.services.invoice_lifecycle import own_company_bank_details_ready
+
         required = is_setup_required()
         return Response(
             {
@@ -41,6 +47,8 @@ class SetupStatusView(views.APIView):
                 "can_setup": bool(required and request.user.is_superuser),
                 # Платформа (BFF, W13-A3) берёт отсюда id своей компании: администратор работает без членства.
                 "own_company_id": own_company_id_or_none(),
+                # D26G-6: шаг «Банковские реквизиты для счетов» мастера — та же правда, что гейт выпуска счёта.
+                "bank_details_ready": own_company_bank_details_ready(),
             }
         )
 

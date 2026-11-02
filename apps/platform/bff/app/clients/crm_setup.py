@@ -65,6 +65,8 @@ _SETUP_FIELDS = {"full_name": "name", "code": "code", "email": "email", "passwor
 class ErpSetupStatus(BaseModel):
     setup_required: bool
     can_setup: bool
+    # D26G-6: реквизиты своей компании для счетов; старый ERP поля не шлёт — не предупреждаем
+    bank_details_ready: bool = True
 
 
 class ErpCompanyCreated(BaseModel):
@@ -250,7 +252,11 @@ async def build_checklist(call: Call) -> SetupChecklist:
         if status is None:
             blocker = "erp_unavailable"
         else:
-            company = SetupCompanyStatus(required=status.setup_required, can_setup=status.can_setup)
+            company = SetupCompanyStatus(
+                required=status.setup_required,
+                can_setup=status.can_setup,
+                bank_details_ready=status.bank_details_ready,
+            )
     return SetupChecklist(
         steps=steps,
         done=sum(1 for s in steps if s.state == "done"),

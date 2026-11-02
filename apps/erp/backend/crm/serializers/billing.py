@@ -229,19 +229,12 @@ class InvoiceSerializer(ViewerSidesMixin, serializers.ModelSerializer):
         жёсткого, как onboarding-баннер Odoo рядом с блокировкой проводки). ОДИН источник
         правды с гейтом — тот же `_seller_bank_details`, иначе подсказка и запрет разойдутся.
         """
-        from crm.constants import InvoiceStatusCode
-        from crm.services.invoice_lifecycle import _seller_and_bank_details
+        from crm.services.invoice_lifecycle import invoice_bank_details_ready
 
-        if obj.frozen_bank_details:
-            return True
         # Считаем ТОЛЬКО для черновика: у выставленного счёта реквизиты уже заморожены (или он
         # выпущен до O3), и предупреждать поздно. Резолв продавца — это несколько запросов на
         # строку, а список счетов держит guard на N+1 (test_side_hints_do_not_add_a_query_per_row).
-        if obj.status_code != InvoiceStatusCode.DRAFT:
-            return True
-        seller, details = _seller_and_bank_details(obj)
-        # Продавец не выводится — предупреждать не о чем (гейт такой счёт тоже не трогает).
-        return bool(details) or seller is None
+        return invoice_bank_details_ready(obj)
 
 
 class ActSerializer(ViewerSidesMixin, serializers.ModelSerializer):

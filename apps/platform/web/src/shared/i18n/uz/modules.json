@@ -183,7 +183,7 @@
     "action": "Xodimni taklif qilish",
     "setup": {
       "title": "Birinchi ishga tushirish",
-      "subtitle": "Besh qadam: administrator, ERP ulanishi, kompaniyangiz, mijoz kabineti manzili, qolgan ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
+      "subtitle": "Olti qadam: administrator, ERP ulanishi, kompaniyangiz, hisoblar uchun bank rekvizitlari, mijoz kabineti manzili, qolgan ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator yaratildi: {{name}}.",
       "companyTitle": "Sizning kompaniyangiz",
@@ -266,7 +266,8 @@
         "open": "Sozlashni davom ettirish",
         "hide": "Ertagacha yashirish",
         "hideLabel": "Ertagacha yashirish: sozlash banneri",
-        "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin."
+        "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin.",
+        "bank": "Hisoblar uchun bank rekvizitlari yo‘q."
       },
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
@@ -284,7 +285,13 @@
       "stepSaved": "«{{step}}» qadami tayyor.",
       "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
       "bannerReturn": "Bannerni qaytarish",
-      "cabinetTitle": "Mijoz kabineti manzili"
+      "cabinetTitle": "Mijoz kabineti manzili",
+      "bankTitle": "Hisoblar uchun bank rekvizitlari",
+      "bankDone": "Hisob raqami va MFO kiritilgan: mijozga hisob chiqariladi.",
+      "bankTodo": "Hisob raqami va MFO siz ERP mijozga hisob chiqarmaydi. Ularni «Sozlamalar · Kompaniya va blankalar», «Rekvizitlar» bo‘limida kiriting.",
+      "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
+      "bankUnknown": "ERP'dan hali ma’lumot yo‘q — rekvizitlar holati u javob bergach ko‘rinadi.",
+      "bankOpen": "«Kompaniya va blankalar»ni ochish"
     },
     "org": {
       "title": "Xodimlar",

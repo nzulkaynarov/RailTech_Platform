@@ -69,8 +69,9 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
     // письма, КП и служебка рядом — «Открыть», «Где сделать» нет; плюс просроченный заказ поставщику (D2-2) и
-    // требование ГНК от делопроизводителя (P8); строк исполнения ERP у директора нет (D2-8)
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(5);
+    // требование ГНК от делопроизводителя (P8); строк исполнения ERP у директора нет (D2-8); КП — все четыре на шаге
+    // директора в EDS (D26G-4)
+    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(8);
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
     await shoot(page, "queue-where");
   });
@@ -201,7 +202,9 @@ test.describe("Мои задачи: пустые состояния и част�
     await loginAndWait(page, "director@demo.example");
     await setMock(page, "rt-pf-mock-crm-down", "1");
     await page.reload();
-    await expect(page.getByRole("main").getByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    await expect(
+      page.getByRole("main").getByText("Одобрить КП-2026/118", { exact: true }),
+    ).toBeVisible();
     await expect(page.getByRole("main").getByRole("status").first()).toContainText(
       "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
     );
@@ -212,18 +215,19 @@ test.describe("Мои задачи: пустые состояния и част�
 test.describe("Мои задачи: EDS не отвечает", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("директор: КП и остальное показаны, плашка называет «Документы», писем и служебок нет", async ({
+  test("директор: остальное показано, плашка называет «Документы», писем, КП и служебок нет (D26G-4: КП — тоже EDS)", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
     await setMock(page, "rt-pf-mock-eds-down", "1");
     await page.reload();
     const main = page.getByRole("main");
-    await expect(main.getByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    await expect(main.getByText(/Просрочен заказ/)).toBeVisible();
     await expect(main.getByRole("status").first()).toContainText(
       "Не загрузились письма и документы: раздел «Документы» не ответил. Остальное показано.",
     );
     await expect(main.getByText(/Наложить резолюцию на письмо/)).toHaveCount(0);
+    await expect(main.getByText(/Одобрить КП/)).toHaveCount(0);
     await shoot(page, "queue-partial-eds");
   });
 });

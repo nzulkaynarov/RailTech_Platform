@@ -48,4 +48,6 @@ export interface PaymentCard {
   can_request_proof: boolean;
   /** Повтор подтверждения: платёж уже был записан */
   replayed: boolean;
+  /** «Выставить счёт» пройдёт гейт реквизитов продавца (ERP `seller_bank_details_ready`, D26G-6); у выставленного счёта — всегда `true` */
+  bank_details_ready: boolean;
 }

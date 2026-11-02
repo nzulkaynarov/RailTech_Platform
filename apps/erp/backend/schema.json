@@ -44244,12 +44244,17 @@
                         "items": {
                             "$ref": "#/components/schemas/ReceivableRow"
                         }
+                    },
+                    "seller_bank_details_ready": {
+                        "type": "boolean",
+                        "description": "У своей компании есть реквизиты для счетов (р/с или МФО): без них «Выставить счёт» откажет `SELLER_BANK_DETAILS_REQUIRED` (D26G-6, подсказка до клика)."
                     }
                 },
                 "required": [
                     "count",
                     "counts",
                     "results",
+                    "seller_bank_details_ready",
                     "tab"
                 ]
             },
@@ -44389,6 +44394,10 @@
                     "replayed": {
                         "type": "boolean",
                         "description": "Повтор подтверждения: платёж уже был записан, ничего не добавлено."
+                    },
+                    "seller_bank_details_ready": {
+                        "type": "boolean",
+                        "description": "Гейт выпуска пропустит этот счёт: реквизиты продавца есть (у выставленного счёта — всегда `true`)."
                     }
                 },
                 "required": [
@@ -44420,6 +44429,7 @@
                     "payments",
                     "proof_received_at",
                     "replayed",
+                    "seller_bank_details_ready",
                     "status",
                     "subtotal_excl_vat",
                     "total_incl_vat",
@@ -45089,9 +45099,14 @@
                         "type": "integer",
                         "nullable": true,
                         "description": "Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет."
+                    },
+                    "bank_details_ready": {
+                        "type": "boolean",
+                        "description": "У своей компании есть реквизиты для счетов (р/с или МФО — как требует гейт «Выставить счёт»); своей компании нет — true (D26G-6)."
                     }
                 },
                 "required": [
+                    "bank_details_ready",
                     "can_setup",
                     "own_company_id",
                     "setup_required"

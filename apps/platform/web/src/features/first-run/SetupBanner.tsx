@@ -4,7 +4,7 @@ import { useLocation } from "react-router";
 
 import { canEdit } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
-import { WIZARD_PATH, needsSetup, nextStep } from "../../entities/setup/steps";
+import { WIZARD_PATH, bankDetailsMissing, needsSetup, nextStep } from "../../entities/setup/steps";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { hideBanner, useBannerHidden } from "./hidden";
 import { useSetupChecklist } from "./useSetupChecklist";
@@ -39,6 +39,7 @@ export function SetupBanner() {
         </p>
         <span className="pf-hint">
           {data.company?.required ? `${t("admin.setup.banner.company")} ` : ""}
+          {bankDetailsMissing(data) ? `${t("admin.setup.banner.bank")} ` : ""}
           {next
             ? t("admin.setup.banner.next", { step: t(`admin.setup.steps.${next.key}.title`) })
             : ""}

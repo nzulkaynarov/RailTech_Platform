@@ -465,7 +465,8 @@ async def test_checklist_summarises_five_steps(
         "first_employee": "done",  # в CRM есть активный сотрудник кроме администратора
     }
     assert (body["done"], body["total"]) == (3, 5)
-    assert body["company"] == {"required": True, "can_setup": True}
+    # старый ERP без признака реквизитов — не предупреждаем (ложная плашка хуже её отсутствия)
+    assert body["company"] == {"required": True, "can_setup": True, "bank_details_ready": True}
     assert body["company_blocker"] is None
     assert crm.users.list_route.call_count == 0  # «первый сотрудник» — из чек-листа CRM
     assert response.headers["cache-control"] == "no-store"
@@ -486,7 +487,31 @@ async def test_checklist_everything_done(web: Web, crm: SetupCrm) -> None:
 
     assert set(steps(response).values()) == {"done"}
     assert response.json()["done"] == 5
-    assert response.json()["company"] == {"required": False, "can_setup": False}
+    assert response.json()["company"] == {
+        "required": False,
+        "can_setup": False,
+        "bank_details_ready": True,
+    }
+
+
+async def test_checklist_reports_missing_bank_details_from_erp(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """D26G-6: шаг «Банковские реквизиты для счетов» — признак ERP `setup/status` (тот же расчёт,
+    что гейт «Выставить счёт»): без р/с и МФО первый счёт не выставить."""
+    await web.login(["ADMIN"])
+    crm.erp_status = httpx.Response(
+        200, json={"setup_required": False, "can_setup": False, "bank_details_ready": False}
+    )
+
+    response = await web.client.get("/api/v1/setup/checklist")
+
+    check(response, "/setup/checklist", "get")
+    assert response.json()["company"] == {
+        "required": False,
+        "can_setup": False,
+        "bank_details_ready": False,
+    }
 
 
 async def test_first_employee_ignores_oneself_and_disabled_users(web: Web, crm: SetupCrm) -> None:

@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Checkbox, Form, Input, Select } from "antd";
+import { Alert, App, Checkbox, Form, Input, Select } from "antd";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -72,6 +72,7 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
   const changed = changedFields(initial, watched);
   const countries = useListReferenceItems("countries");
   const [removing, setRemoving] = useState(false);
+  const bankReady = Boolean(company.bank_account.trim() || company.mfo.trim());
 
   const keep = (next: CompanyProfile) => {
     queryClient.setQueryData(getGetCompanyQueryKey(), next);
@@ -181,6 +182,15 @@ function DetailsForm({ company }: { company: CompanyProfile }) {
           <Form.Item name="legal_address" label={t("details.legalAddress")} className="pf-co-wide">
             <Input.TextArea rows={2} autoComplete="street-address" />
           </Form.Item>
+          {/* D26G-6: без р/с и МФО ERP не выставит счёт (гейт «Выставить счёт»); состояние — по сохранённым реквизитам */}
+          <div className="pf-co-wide">
+            <Alert
+              type={bankReady ? "success" : "warning"}
+              showIcon
+              role="status"
+              message={t(bankReady ? "details.bankReady" : "details.bankMissing")}
+            />
+          </div>
           <Form.Item name="bank_account" label={t("details.bankAccount")}>
             <Input maxLength={50} autoComplete="off" inputMode="numeric" />
           </Form.Item>
