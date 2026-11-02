@@ -172,7 +172,10 @@ class TestLoginCode:
         code = last_code()
         known = [enter(anon_portal_client, client_contact.email, wrong(code)) for _ in range(LOGIN_CODE_MAX_ATTEMPTS)]
         # другой IP: лимит входа по IP (10 в минуту) здесь ни при чём
-        unknown = [enter(anon_portal_client, "ghost@example.test", "123456", REMOTE_ADDR="198.51.100.7") for _ in range(LOGIN_CODE_MAX_ATTEMPTS)]
+        unknown = [
+            enter(anon_portal_client, "ghost@example.test", "123456", REMOTE_ADDR="198.51.100.7")
+            for _ in range(LOGIN_CODE_MAX_ATTEMPTS)
+        ]
 
         assert [(r.status_code, r.data["detail"]) for r in known] == [
             (r.status_code, r.data["detail"]) for r in unknown

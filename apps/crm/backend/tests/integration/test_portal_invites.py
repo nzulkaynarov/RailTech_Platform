@@ -27,6 +27,7 @@ from app.models.clients import Client, ClientContact
 from app.models.email import EmailLog
 from app.models.leads import Lead, TelegramIdentity
 from app.models.notices import ClientNotice
+from app.schemas.notices import InvitationOut
 from app.security import audit
 from app.security.principal import Principal
 from app.services.erp_handoff import ErpHandoffService
@@ -407,7 +408,9 @@ async def mail_row(
         )
 
 
-async def current_view(sessions: async_sessionmaker[AsyncSession], erp: FakeErp, client_id: int):
+async def current_view(
+    sessions: async_sessionmaker[AsyncSession], erp: FakeErp, client_id: int
+) -> InvitationOut:
     async with sessions() as session:
         view = await PortalInviteService(sessions, erp).current(session, client_id)
     assert view is not None

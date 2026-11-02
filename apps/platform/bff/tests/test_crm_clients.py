@@ -221,7 +221,9 @@ async def test_resend_invitation_refusal_keeps_the_reason(
 async def test_resend_by_email_is_queued_until_the_mail_service_sends_it(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:
-    """B-MAIL-1: CRM отвечает «в очереди», пока почта не отправила письмо — BFF не выдаёт это за «отправлено»."""
+    """B-MAIL-1: CRM отвечает «в очереди», пока почта не отправила письмо.
+
+    BFF не выдаёт это за «отправлено»."""
     crm.answer(
         "POST",
         "clients/12/invitation",
