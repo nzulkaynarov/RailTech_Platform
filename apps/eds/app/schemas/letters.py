@@ -130,6 +130,12 @@ class LetterCreate(Strict):
     document_due: dt.date | None = None
     related_number: RelatedNumber | None = None  # предыдущий ВХ или наш ИСХ
     resolution_draft: "ResolutionDraftIn | None" = None  # проект резолюции делопроизводителя (P8b)
+    # Откуда письмо (W18A-P2): письмо общего ящика CRM — уходит в `letter.registered.source`, CRM снимает его с очереди
+    source: "LetterSourceIn | None" = None
+
+
+class LetterSourceIn(Strict):  # eds.yaml LetterSourceIn
+    crm_inbound_mail_id: Annotated[int, Field(ge=1)]
 
 
 class RelatedRef(BaseModel):  # eds.yaml LetterRelatedRef

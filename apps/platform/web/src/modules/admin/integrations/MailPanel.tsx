@@ -27,6 +27,7 @@ import {
   PanelState,
   PanelTitle,
 } from "./parts";
+import { InboundMailBlock } from "./InboundMailBlock";
 import { useRefreshIntegrations } from "./refresh";
 
 const MAIL_STATUSES: readonly MailLogItemStatus[] = ["queued", "sent", "failed", "skipped_no_smtp"];
@@ -85,7 +86,6 @@ function SettingsForm({ smtp, onDone }: { smtp: SmtpConnector; onDone: () => voi
       pending={save.isPending}
       error={save.error}
       invalid={host.trim() === "" || port === null}
-      consequence={[t("mail.settings.step1"), t("mail.settings.step2"), t("mail.settings.step3")]}
       onCancel={onDone}
       onSubmit={(password) => {
         save.mutate({
@@ -396,6 +396,7 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
           {t("common.readOnly")}
         </p>
       )}
+      <InboundMailBlock editable={editable} />
       <MailLog />
     </div>
   );

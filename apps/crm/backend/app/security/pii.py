@@ -1,8 +1,10 @@
 """Маскирование персональных данных в логах и трейсах (SPEC §11, docs/systems/crm/BUSINESS.md §8).
 
-Скрываются e-mail и длинные цифровые последовательности (телефоны, ИНН,
-номера карт и счетов). Используется как процессор structlog и mask-функция
-Langfuse. Тексты в БД не маскируются — это рабочие данные CRM.
+Скрываются e-mail, длинные цифровые последовательности (телефоны, ИНН, ПИНФЛ — 14 цифр,
+номера карт и счетов), паспорт РУз (две латинские буквы и 7 цифр, `AA1234567`) и дата рождения
+рядом со словами «дата рождения», «д.р.», «г.р.». Используется как процессор structlog, mask-функция
+Langfuse и перед вызовом модели помощником канцелярии (W18A-P2, решение юриста 2026-11-02: в
+модель — без персональных данных). Тексты в БД не маскируются — это рабочие данные CRM.
 """
 
 import re
@@ -12,6 +14,12 @@ from typing import Any, Final
 _EMAIL: Final = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+", re.UNICODE)
 # ≥ 7 цифр, допускаются пробелы, дефисы, скобки и ведущий плюс: телефоны, ИНН, карты.
 _DIGITS: Final = re.compile(r"(?<!\w)\+?\d(?:[\s\-()]*\d){6,}(?!\w)")
+# Паспорт РУз: серия из двух латинских букв и 7 цифр (пробел между ними допустим).
+_PASSPORT: Final = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}\s?\d{7}(?!\d)")
+_BIRTH: Final = re.compile(
+    r"(?i)((?:дата\s+рождения|д\.\s?р\.|г\.\s?р\.|birth\s*date|date\s+of\s+birth)\s*[:\-]?\s*)"
+    r"\d{1,2}[./\-]\d{1,2}[./\-]\d{2,4}"
+)
 
 SAFE_LOG_KEYS: Final = frozenset(
     {"event", "level", "logger", "timestamp", "request_id", "lead_id", "trace_id", "exception"}
@@ -19,7 +27,8 @@ SAFE_LOG_KEYS: Final = frozenset(
 
 
 def mask_text(text: str) -> str:
-    return _DIGITS.sub("[number]", _EMAIL.sub("[email]", text))
+    text = _BIRTH.sub(r"\1[date]", _EMAIL.sub("[email]", text))
+    return _DIGITS.sub("[number]", _PASSPORT.sub("[passport]", text))
 
 
 def mask_value(value: Any) -> Any:

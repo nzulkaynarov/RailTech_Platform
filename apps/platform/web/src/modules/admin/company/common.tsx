@@ -80,15 +80,17 @@ export function QueryGate<T>({
 
 /**
  * Сохранение вкладки: бар несохранённого (`ContextualSaveBar`) в конце формы с подписью действия («Сохранить
- * реквизиты»), над ним — ошибка последнего сохранения словами и блок «Что произойдёт». Отдельной кнопки под формой
- * нет: бар и есть кнопка (UX-1b, S6). Уход с несохранёнными правками — в том числе на другую вкладку — спрашивает.
+ * реквизиты»), над ним — ошибка последнего сохранения словами и, если нужно, одна строка-пояснение (`note`). Блока
+ * «Что произойдёт» у сохранения настроек нет — он только у переходов состояния и опасных действий (CONVENTIONS §2 п. 8).
+ * Отдельной кнопки под формой нет: бар и есть кнопка (UX-1b, S6). Уход с несохранёнными правками — в том числе на другую
+ * вкладку — спрашивает.
  */
 export function SaveBlock({
   label,
   loading,
   disabled,
   error,
-  consequence,
+  note,
   onClick,
   onDiscard,
   dirty,
@@ -99,7 +101,8 @@ export function SaveBlock({
   /** Есть изменения (для бара сохранения); по умолчанию — «сохранить можно» */
   dirty?: boolean;
   error?: unknown;
-  consequence: readonly ReactNode[];
+  /** Одна строка о последствии, если оно неочевидно («Уже выданные номера не меняются»), ≤ 80 знаков */
+  note?: string;
   /** Своё сохранение; без него — отправка формы, в которой стоит блок */
   onClick?: () => void;
   onDiscard: () => void;
@@ -121,7 +124,7 @@ export function SaveBlock({
         {error ? (
           <Alert type="error" showIcon role="alert" message={companyErrorText(t, error)} />
         ) : null}
-        <Consequence items={consequence} />
+        {note ? <p className="pf-hint">{note}</p> : null}
       </div>
       <ContextualSaveBar
         className="pf-co-save-dock"

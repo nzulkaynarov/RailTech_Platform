@@ -29,6 +29,14 @@ export const eds: ModuleConfig = {
       actionTo: "/eds/documents",
     },
     {
+      // W18A-P2: письма общего ящика до регистрации — первая линия (делопроизводитель) разбирает: ВХ, лид или архив.
+      key: "mail",
+      path: "/eds/mail",
+      detail: "/eds/mail/:id",
+      access: { resource: "crm.leads.triage", level: "full" },
+      defaults: { panelOpen: false },
+    },
+    {
       key: "outbox",
       path: "/eds/outbox",
       detail: "/eds/outbox/:id",

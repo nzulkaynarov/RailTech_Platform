@@ -176,19 +176,6 @@ function SetupForm({ offsite, onDone }: { offsite: OffsiteBackup; onDone: () => 
       pending={save.isPending}
       error={save.error}
       invalid={invalid}
-      consequence={
-        yandex
-          ? [
-              t("storage.offsite.yandex.form.step1"),
-              t("storage.offsite.yandex.form.step2"),
-              t("storage.offsite.yandex.form.step3"),
-            ]
-          : [
-              t("storage.offsite.form.step1"),
-              t("storage.offsite.form.step2"),
-              t("storage.offsite.form.step3"),
-            ]
-      }
       onCancel={onDone}
       onSubmit={(password) => {
         save.mutate({

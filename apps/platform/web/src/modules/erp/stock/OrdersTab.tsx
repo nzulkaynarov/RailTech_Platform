@@ -20,8 +20,8 @@ import { MoneyText } from "../../../shared/ui/MoneyText";
 /** Ширины колонок: номер, поставщик (гибкая), заявки, ожидается, статус, приёмка, [сумма], действие (UX-1c, S9) */
 const colsOf = (prices: boolean) =>
   prices
-    ? ([120, null, 140, 130, 140, 110, 140, 120] as const)
-    : ([120, null, 140, 130, 140, 110, 120] as const);
+    ? ([120, null, 160, 148, 148, 110, 140, 120] as const)
+    : ([120, null, 160, 148, 148, 110, 120] as const);
 
 export function OrderStatusTag({ status }: { status: SupplierOrderStatus }) {
   const { t } = useTranslation("stock");

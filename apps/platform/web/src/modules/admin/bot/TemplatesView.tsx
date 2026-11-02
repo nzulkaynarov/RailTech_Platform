@@ -125,9 +125,6 @@ function TemplateForm({
             />
           </FormField>
         ))}
-        <Consequence
-          items={[t("bot:templates.step1"), t("bot:templates.step2"), t("bot:templates.step3")]}
-        />
         <ErrorNote message={error ? botErrorText(t, error) : null} />
         <div className="pf-fp-row">
           <Button type="primary" htmlType="submit" loading={pending} disabled={invalid}>

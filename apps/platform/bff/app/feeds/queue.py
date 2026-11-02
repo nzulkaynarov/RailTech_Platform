@@ -34,6 +34,7 @@ from app.feeds.numbers import (
     lead_ref,
     letter_ref,
     letter_task_ref,
+    mail_ref,
     memo_ref,
     quote_number,
     quote_ref,
@@ -50,6 +51,7 @@ from app.feeds.snapshot import (
     wants_invoices,
     wants_letter_tasks,
     wants_letters,
+    wants_mail,
     wants_memos,
     wants_projects,
     wants_supplier_overdue,
@@ -545,6 +547,38 @@ def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def mail_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Письма общего ящика ждут разбора (W18A-P2): ВХ, лид или архив. Срока нет — разбор в день
+    поступления; суть — подсказка помощника, если есть, иначе начало текста."""
+    role_id = _role_id(view, "inbound_mail")
+    out: list[Row] = []
+    for mail in snap.mail or []:
+        mail_id = mail.get("id")
+        if not isinstance(mail_id, int):
+            continue
+        received = parse_dt(mail.get("received_at"))
+        raw_assist = mail.get("assist")
+        assist: dict[str, Any] = raw_assist if isinstance(raw_assist, dict) else {}
+        subject = str(mail.get("subject") or "") or "(без темы)"
+        sender = str(mail.get("from_name") or "") or str(mail.get("from_email") or "") or None
+        item = QueueItem(
+            id=f"mail:{mail_id}",
+            role_id=role_id,
+            kind="inbound_mail",
+            title=f"Разобрать письмо: {short(subject, 80)}",
+            subtitle=join(
+                sender,
+                short(assist.get("summary") or mail.get("preview"), 80),
+                ago(received, now),
+            ),
+            due_label="later",
+            due_at=None,
+            object=mail_ref(mail_id, str(mail.get("from_email") or "почта"), subject),
+        )
+        out.append(Row(item, received))
+    return out
+
+
 def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     """Просроченные заказы поставщикам (D2-2, SPEC-v3 §9): ожидаемая дата прошла, товар не
     получен. Строка ведёт на карточку ЗП. Что просрочено, решает ERP (`/stock/overdue/`), BFF
@@ -596,6 +630,8 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
         rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):
         rows_ += ticket_rows(snap, now, view)
+    if wants_mail(view):
+        rows_ += mail_rows(snap, now, view)
     if wants_supplier_overdue(view):
         rows_ += supplier_rows(snap, now, view)
 
@@ -659,6 +695,18 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             count=len(snap.letters),
             hint="Документы · Входящие письма" + (" · не меньше" if snap.letters_more else ""),
             path="/eds/inbox",
+        )
+    if wants_mail(view) and snap.mail is not None:
+        cards["inbound_mail"] = QueueCard(
+            key="inbound_mail",
+            label="Входящая почта",
+            count=snap.mail_total,
+            hint=(
+                "Документы · Входящая почта"
+                if snap.mail_configured
+                else "Почта не подключена — Настройки · Подключения · Почта"
+            ),
+            path="/eds/mail",
         )
     if wants_approvals(view) and snap.quotes is not None:
         # D26G-4: число — те же строки «Одобрить КП», что в очереди (одна логика, без расхождений)
@@ -730,6 +778,12 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
         total = len(snap.memos)
         items.append(
             MenuCounter(module="eds", section="approvals", count=total, attention=total > 0)
+        )
+    if wants_mail(view) and snap.mail is not None:
+        items.append(
+            MenuCounter(
+                module="eds", section="mail", count=snap.mail_total, attention=snap.mail_total > 0
+            )
         )
     if wants_tickets(view):
         items.append(

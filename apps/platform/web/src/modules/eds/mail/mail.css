@@ -1,0 +1,60 @@
+/* Документы · Входящая почта (W18A-P2): очередь писем и карточка письма. */
+.pf-mail {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pf-mail-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pf-mail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pf-mail-row:last-child {
+  border-bottom: none;
+}
+
+.pf-mail-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pf-mail-subject {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.pf-mail-sender,
+.pf-mail-preview {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pf-mail-text {
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+}
+
+.pf-mail-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-mail-what {
+  margin: 0;
+}

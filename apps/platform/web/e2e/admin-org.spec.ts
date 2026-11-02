@@ -108,7 +108,7 @@ test.describe("Оргструктура: выдача ролей", () => {
     const panel = page.locator(PANEL);
 
     await panel.getByRole("button", { name: "Отключить сотрудника" }).click();
-    await expect(panel.getByText("Вход в Платформу, CRM и ERP закроется.")).toBeVisible();
+    await expect(panel.getByText("Вход во все системы закроется.")).toBeVisible();
     await tallScreenshot(page, "org-disable");
     await panel.getByRole("button", { name: "Отключить", exact: true }).click();
     await expect(panel.getByText("Сотрудник отключён и не может войти.")).toBeVisible();

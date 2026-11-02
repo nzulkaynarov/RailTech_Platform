@@ -141,7 +141,7 @@ describe("Admin · Компания: доступ и каркас", () => {
     );
     await openTab("details");
     expect(
-      await screen.findByRole("heading", { name: "Своя компания в ERP ещё не создана" }),
+      await screen.findByRole("heading", { name: "Ваша компания ещё не создана" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Проверить снова" })).toBeInTheDocument();
   });
@@ -241,9 +241,8 @@ describe("Реквизиты и логотип", () => {
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
     expect(readCompanyMock().company.phone).toBe("+998 11 111 11 11");
     expect(readCompanyMock().company.name).toBe("ООО «Демо Рейл»");
-    expect(
-      screen.getByText(/Реквизиты обновятся в карточке своей компании в ERP/),
-    ).toBeInTheDocument();
+    // Сохранение настройки — без блока «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
+    expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
   });
 
   it("неверный ИНН: сообщение у поля, запрос не уходит", async () => {
@@ -366,12 +365,14 @@ describe("Нумерация", () => {
     expect(screen.getByText(/Укажите корректную маску/)).toBeInTheDocument();
   });
 
-  it("сохранение: схема в ERP, «Что произойдёт» говорит про будущие номера", async () => {
+  it("сохранение: схема в ERP, строка-пояснение про будущие номера вместо «Что произойдёт»", async () => {
     await openTab("numbering");
     await screen.findByLabelText("Ширина счётчика");
     fireEvent.change(screen.getByLabelText("Ширина счётчика"), { target: { value: "6" } });
-    expect(screen.getByText("Новые номера пойдут по этой схеме.")).toBeInTheDocument();
-    expect(screen.getByText("Уже выданные номера не меняются.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Новые номера пойдут по этой схеме; выданные не меняются."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
     fireEvent.click(await button("Сохранить нумерацию"));
 
     expect(await screen.findByText("Нумерация сохранена")).toBeInTheDocument();
@@ -798,7 +799,7 @@ describe("Категории и запросы", () => {
     const dialog = await screen.findByRole("dialog", { name: /Отклонить запрос/ });
     fireEvent.change(within(dialog).getByLabelText("Причина отказа"), { target: { value: "Нет" } });
     fireEvent.click(within(dialog).getByRole("button", { name: "Отклонить" }));
-    expect(await within(dialog).findByText(/ERP не разрешила действие/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(readCompanyMock().requests.find((r) => r.id === "2")?.status).toBe("pending");
   });
 });
@@ -820,7 +821,7 @@ describe("Платформенные настройки", () => {
     const vat = await screen.findByLabelText("Ставка НДС, %");
     fireEvent.change(vat, { target: { value: "15" } });
     fireEvent.click(await button("Сохранить ставку НДС"));
-    expect(await screen.findByText(/ERP не разрешила действие/)).toBeInTheDocument();
+    expect(await screen.findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(readCompanyMock().platform.vat_rate).toBe("12.00");
   });
 });
@@ -955,7 +956,7 @@ describe("Курс USD → UZS: ручной ввод", () => {
       target: { value: "12700" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
-    expect(await screen.findByText(/ERP не разрешила действие/)).toBeInTheDocument();
+    expect(await screen.findByText(/Действие недоступно/)).toBeInTheDocument();
     expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
   });
 

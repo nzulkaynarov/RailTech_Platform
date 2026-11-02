@@ -40,7 +40,7 @@ describe("employeeErrorText", () => {
 
   it("недоступность и права", () => {
     expect(employeeErrorText(t, new ApiError(503, "BACKEND_UNAVAILABLE", "x", "crm"))).toMatch(
-      /CRM не отвечает/,
+      /Сервер не отвечает/,
     );
     expect(employeeErrorText(t, new ApiError(403, "FORBIDDEN", "x"))).toMatch(/Недостаточно прав/);
   });

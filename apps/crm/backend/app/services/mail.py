@@ -161,6 +161,8 @@ class MailService:
         *,
         user_id: int | None = None,
         requested_by: int | None = None,
+        ref: tuple[str, str] | None = None,
+        thread_headers: dict[str, str] | None = None,
     ) -> EmailLogView:
         """Письмо с уже готовым текстом (клиентские тексты D1-9 — `domain/client_texts.py`): та же
         очередь,
@@ -173,6 +175,10 @@ class MailService:
             status="queued",
             user_id=user_id,
             requested_by=requested_by,
+            ref_kind=ref[0] if ref else None,
+            ref_id=ref[1] if ref else None,
+            # Ответ в ту же цепочку (W18A-P2): `In-Reply-To`, `References`.
+            thread_headers=thread_headers or None,
         )
         connection = (await self.resolution()).connection
         if connection is None or self._cipher is None:

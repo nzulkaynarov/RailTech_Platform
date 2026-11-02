@@ -221,11 +221,7 @@ function NumberingForm({ scheme }: { scheme: NumberingScheme }) {
           disabled={isEmptyObject(changed) || !maskOk}
           dirty={!isEmptyObject(changed)}
           error={update.error}
-          consequence={[
-            t("numbering.consequence.future"),
-            t("numbering.consequence.issued"),
-            ...(values.prefix.trim() === "" ? [t("numbering.consequence.noPrefix")] : []),
-          ]}
+          note={values.prefix.trim() === "" ? t("numbering.noteNoPrefix") : t("numbering.note")}
           onDiscard={() => {
             form.resetFields();
             update.reset();

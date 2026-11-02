@@ -28,6 +28,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 from starlette.types import Send
 
+from app.api.inbound_mail import mail_card
 from app.clients.eds import EdsLetters, eds_error
 from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
@@ -179,7 +180,20 @@ async def register_letter(
         str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
     ] = None,
 ) -> LetterCard:
-    """«Зарегистрировать входящее» (P8, SPEC-v3 §3.2a): ВХ, «Ждёт резолюции», строка директору."""
+    """«Зарегистрировать входящее» (P8, SPEC-v3 §3.2a): ВХ, «Ждёт резолюции», строка директору.
+
+    Из очереди «Входящая почта» (W18A-P2, `source_mail_id`): письмо уже разобрано (ВХ, лид,
+    архив) — 409 до EDS, второго ВХ нет; с очереди CRM письмо снимает `letter.registered`."""
+    if body.source_mail_id is not None:
+        card = await mail_card(authed, body.source_mail_id)
+        if card.status != "new":
+            raise PlatformError(
+                "CONFLICT",
+                "Письмо уже обработано: обновите очередь.",
+                status_code=409,
+                source="crm",
+                details={"reason": "mail_handled", "status": card.status},
+            )
     raw = await _letters(authed).register(body.for_eds(), idempotency_key)
     return await _card(authed, raw)
 

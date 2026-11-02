@@ -1,5 +1,6 @@
 import { HttpResponse, http } from "msw";
 
+import { markMailRegistered } from "./inboundMail";
 import type {
   LetterCard,
   LetterDuplicateList,
@@ -381,6 +382,8 @@ export const edsLettersHandlers = [
       resolution_draft: draft,
     };
     writeLetters([letter, ...readLetters()]);
+    // W18A-P2: ВХ из очереди «Входящая почта» — CRM снимает письмо с очереди по `letter.registered`
+    if (body.source_mail_id) markMailRegistered(body.source_mail_id, number);
     return HttpResponse.json(present(letter, held.margin), { status: 201 });
   }),
 

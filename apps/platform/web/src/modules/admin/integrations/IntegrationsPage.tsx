@@ -28,6 +28,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { LockIcon } from "../../../shared/ui/icons";
 import { AttentionGroupRow } from "./AttentionGroup";
+import { mergeSameCause } from "./attention";
 import { CabinetAddress } from "./CabinetAddress";
 import { integrationErrorText } from "./errors";
 import { TechnicalDetails } from "./HealthParts";
@@ -292,7 +293,7 @@ function AttentionSection({
           <p className="pf-int-empty">{t("attention.empty")}</p>
         ) : (
           <ul className="pf-int-attention">
-            {items.map((item) => {
+            {mergeSameCause(items).map((item) => {
               if (item.group !== null) {
                 return (
                   <AttentionGroupRow
@@ -406,7 +407,7 @@ export function IntegrationsPage() {
     const data = overview.data;
     body = (
       <>
-        <AttentionSection items={data.attention} editable={editable} />
+        {/* Карточки настроек — первыми, «Требует внимания» — под ними (S3): первый экран — то, что настраивают */}
         <section aria-labelledby="pf-int-cards">
           <h2 className="pf-int-section-title" id="pf-int-cards" style={{ marginBottom: 12 }}>
             {t("integrations:cardsTitle")}
@@ -427,6 +428,7 @@ export function IntegrationsPage() {
             ))}
           </div>
         </section>
+        <AttentionSection items={data.attention} editable={editable} />
         {editable ? (
           <Card>
             <CabinetAddress />

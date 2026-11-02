@@ -34,6 +34,9 @@ subscribers:
       # P8b (SPEC-v3 §3.2a): уведомления сотрудникам по поручениям входящих — колокольчик (staff_notifications) и Telegram;
       # текст готовит EDS, доставляет CRM. Секрет пары eds → crm — тот же RT_BUS_SECRET_EDS_CRM.
       - uz.railtech.eds.notice.requested.v1
+      # W18A-P2 (B-INB-5): ВХ, зарегистрированный из очереди «Входящая почта» (`source.crm_inbound_mail_id`), —
+      # CRM снимает письмо с очереди и показывает номер ВХ. Прочие регистрации CRM пропускает.
+      - uz.railtech.eds.letter.registered.v1
 
   - name: erp
     endpoint: http://erp-backend:8000/bus/v1/events
