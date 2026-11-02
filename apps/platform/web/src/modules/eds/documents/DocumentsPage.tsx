@@ -33,13 +33,14 @@ import "./documents.css";
 
 const PAGE_SIZE = 25;
 /**
- * Ширины колонок (UX-1c, S9): номер, тема (гибкая), тип, статус, сумма, срок, [ответственный — в реестре «Все»], создан,
- * действие.
+ * Ширины колонок по типу (platform-frontend.md §4.2): номер (тип документа — второй строкой, как в «На согласовании»),
+ * тема (гибкая), статус, сумма, срок, [ответственный — в реестре «Все»], создан, действие. На 1440 с открытым подменю —
+ * без прокрутки вбок (T1).
  */
 const colsOf = (scope: Scope) =>
   scope === "all"
-    ? ([130, null, 110, 160, 110, 100, 130, 100, 120] as const)
-    : ([130, null, 110, 160, 110, 100, 100, 120] as const);
+    ? ([148, null, 196, 120, 104, 136, 104, 128] as const)
+    : ([148, null, 196, 120, 104, 104, 128] as const);
 const KIND_TABS = [
   "all",
   "memo",
@@ -189,7 +190,7 @@ function DocumentsTable({
     <ScrollRegion label={t("list.tableScroll")}>
       <table
         className="pf-docs-table pf-fixed-table"
-        style={{ minWidth: tableMinWidth(cols, 140) }}
+        style={{ minWidth: tableMinWidth(cols, 170) }}
       >
         <caption className="pf-sr-only">{t("list.caption")}</caption>
         <TableCols widths={cols} />
@@ -197,7 +198,6 @@ function DocumentsTable({
           <tr>
             <th scope="col">{t("list.columns.number")}</th>
             <th scope="col">{t("list.columns.subject")}</th>
-            <th scope="col">{t("list.columns.kind")}</th>
             <th scope="col">{t("list.columns.status")}</th>
             <th scope="col" className="pf-col-num">
               {t("list.columns.amount")}
@@ -217,12 +217,13 @@ function DocumentsTable({
                 ) : (
                   <span className="pf-hint">{t("list.noNumber")}</span>
                 )}
+                <div className="pf-hint pf-ell" title={t(`kinds.${row.kind}`)}>
+                  <span className="pf-sr-only">{t("list.columns.kind")}: </span>
+                  {t(`kinds.${row.kind}`)}
+                </div>
               </td>
               <td className="pf-docs-subject">
                 <SubjectCell row={row} params={params} selected={selected === row.id} />
-              </td>
-              <td className="pf-ell" title={t(`kinds.${row.kind}`)}>
-                {t(`kinds.${row.kind}`)}
               </td>
               <td>
                 <DocumentStatusTag kind={row.kind} status={row.status} />

@@ -21,8 +21,10 @@ import { VisaIndicators } from "./VisaIndicators";
 
 import "./calc.css";
 
-/** Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9) */
-const COLS = [140, null, 180, 110, 150, 160, 140] as const;
+/**
+ * Ширины колонок: номер, клиент и тема (гибкая), этап, срок, визы, ответственный, действие (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
+ */
+const COLS = [128, null, 164, 120, 180, 136, 156] as const;
 
 function companyToday(): string {
   return new Intl.DateTimeFormat("en-CA", {

@@ -29,8 +29,11 @@ import { useStateLabels } from "./labels";
 import { DocumentStatusTag } from "../documents/status";
 import { SupersededTag } from "./QuoteStatus";
 
-/** Ширины колонок: номер, заявка, клиент (гибкая), сумма, срок, получено, статус, действие (UX-1c, S9) */
-const COLS = [130, 130, null, 140, 100, 130, 170, 120] as const;
+/**
+ * Ширины колонок: номер, заявка, клиент (гибкая), сумма, срок, получено (время — второй строкой), статус, действие
+ * (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
+ */
+const COLS = [132, 120, null, 148, 120, 104, 172, 104] as const;
 
 const PAGE = 25;
 
@@ -164,7 +167,10 @@ function Rows({
                 <Total row={row} />
               </td>
               <td className="pf-num">{row.due ? date(row.due) : "—"}</td>
-              <td className="pf-num">{date(row.created_at, "datetime")}</td>
+              <td className="pf-num">
+                {date(row.created_at)}
+                <div className="pf-hint">{date(row.created_at, "time")}</div>
+              </td>
               <td>
                 <RowStatus row={row} />
               </td>

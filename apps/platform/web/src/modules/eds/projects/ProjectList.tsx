@@ -26,8 +26,11 @@ import { ProjectStatusTag } from "./status";
 import "../decision/decision.css";
 import "./projects.css";
 
-/** Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие (UX-1c, S9) */
-const COLS = [140, null, 190, 140, 120, 100, 150, 110] as const;
+/**
+ * Ширины колонок: номер и сумма, клиент и название (гибкая), шаг, статус клиента, документы, срок, ответственный, действие
+ * (UX-1c, S9). Ширина — по типу колонки (platform-frontend.md §4.2), на 1440 с открытым подменю — без прокрутки вбок (T1).
+ */
+const COLS = [132, null, 184, 116, 180, 100, 136, 104] as const;
 
 const STEPS: readonly ProjectStage[] = ["CONTRACT", "PAYMENT", "DONE"];
 
