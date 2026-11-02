@@ -107,6 +107,16 @@ class ProjectPage(BaseModel):
     limit: int
 
 
+OnBehalfChannel = Literal["phone", "email", "messenger", "in_person", "paper"]
+
+
+class OnBehalfNote(BaseModel):
+    """Действие контрагента записал сотрудник (A1, A2 волны 18a): канал и лицо клиента."""
+
+    channel: OnBehalfChannel
+    counterparty_person: str
+
+
 class ProjectJournalEntry(BaseModel):
     at: dt.datetime
     code: str
@@ -115,6 +125,7 @@ class ProjectJournalEntry(BaseModel):
     document: JournalDocument | None
     number: str | None
     reason: str
+    on_behalf: OnBehalfNote | None = None
 
 
 class ProjectQuote(ProjectQuoteRef):
@@ -194,18 +205,26 @@ class ProjectCard(ProjectRow):
 
 
 class ContractActionIn(BaseModel):
-    """Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422)."""
+    """Действие по договору. `reason` обязательна для `reject`, канал и лицо клиента — для
+    `client_agreed` (A2): пустые BFF отклоняет (422)."""
 
     model_config = ConfigDict(extra="forbid")
 
     action: ContractAction
     reason: str | None = Field(default=None, max_length=1000)
     note: str | None = Field(default=None, max_length=500)
+    channel: OnBehalfChannel | None = None
+    counterparty_person: str | None = Field(default=None, max_length=200)
 
     @model_validator(mode="after")
     def _reason_for_reject(self) -> "ContractActionIn":
         if self.action == "reject" and not (self.reason or "").strip():
             raise ValueError("reason")
+        if self.action == "client_agreed":
+            if self.channel is None:
+                raise ValueError("channel")
+            if not (self.counterparty_person or "").strip():
+                raise ValueError("counterparty_person")
         return self
 
 

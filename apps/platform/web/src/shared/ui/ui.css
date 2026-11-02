@@ -699,3 +699,27 @@ tr > td.pf-col-num {
     text-overflow: ellipsis;
   }
 }
+
+/* «Отмечено сотрудником» (A1, A2 волны 18a): значок и кто, канал, лицо клиента — в строку, переносится на узком экране. */
+.pf-onbehalf {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  max-width: 100%;
+}
+.pf-onbehalf .ant-tag {
+  margin-inline-end: 0;
+}
+
+/* Блок решения контрагента в карточке документа: статус, значок, комментарий и файл — плотной колонкой. */
+.pf-onbehalf-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.pf-onbehalf-block > p {
+  margin: 0;
+}

@@ -322,6 +322,15 @@ class Quote(models.Model):
         verbose_name=_("Причина отказа клиента"),
         help_text=_("Причина, которую клиент указал, отклоняя КП (кабинет, бот, офлайн); не печатается в PDF КП"),
     )
+    client_decision_meta = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Решение клиента со слов"),
+        help_text=_(
+            "A1 волны 18a: решение клиента записал сотрудник — {decision, channel, counterparty_person, occurred_on, "
+            "comment, recorded_by_id, recorded_by_name, recorded_at, evidence_attachment_id}; пусто — решил сам клиент"
+        ),
+    )
     send_channels = models.JSONField(
         default=list,
         blank=True,

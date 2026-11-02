@@ -2853,6 +2853,80 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/quotes/{id}/client-decision:
+    post:
+      tags: [eds-approvals]
+      operationId: recordQuoteClientDecision
+      summary: 'EDS · Отметить решение клиента по отправленному КП по его подтверждению («Клиент принял», «Клиент отклонил»)'
+      description: >-
+        A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по почте, в мессенджере, по телефону, лично или на бумаге, а не
+        в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и обязательный файл `file` —
+        подтверждение клиента: письмо, переписка, скан; изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ; решение юриста
+        2026-11-02: устного принятия мало). Нет файла — 422 `evidence_required`, не тот тип или размер — 422 `evidence_invalid`. Дальше — та же цепочка, что при онлайн-решении клиента: принято —
+        проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП
+        (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата не в будущем,
+        лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии
+        `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/QuoteClientDecisionIn'
+      responses:
+        '200':
+          description: Решение записано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuoteApprovalCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — КП не ждёт решения клиента (уже принято, отклонено, истекло или не отправлено); `details.reason = quote_not_sent`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '413':
+          $ref: '#/components/responses/ProjectPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/quotes/{id}/client-decision/evidence:
+    get:
+      tags: [eds-approvals]
+      operationId: downloadQuoteClientDecisionEvidence
+      summary: 'EDS · Файл подтверждения клиента к решению по КП, записанному сотрудником'
+      description: >-
+        Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла
+        BFF берёт из решения клиента КП этого маршрута, а не из запроса. Файла нет — 404. Чтение — как у карточки КП.
+      parameters:
+        - $ref: '#/components/parameters/ApprovalIdPath'
+      responses:
+        '200':
+          description: Содержимое файла
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/memo-approvals:
     get:
       tags: [eds-approvals]
@@ -13856,6 +13930,9 @@ components:
         reason:
           description: 'Причина или заметка к действию; пусто, если её не было'
           type: string
+        on_behalf:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfNote'}, {type: 'null'}]
+          description: 'Действие контрагента записал сотрудник (КП принято или отклонено по подтверждению клиента, редакция договора согласована); нет или `null` — нет'
       required: [at, code, text, actor_name, document, number, reason]
       additionalProperties: false
     ProjectQuote:
@@ -14124,7 +14201,7 @@ components:
     ProjectContractActionIn:
       type: object
       additionalProperties: false
-      description: 'Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422).'
+      description: 'Действие по договору. `reason` обязательна для `reject`, `channel` и `counterparty_person` — для `client_agreed`: пустые BFF отклоняет (422).'
       properties:
         action:
           enum: [send_to_client, client_agreed, reject, revise, mark_issued]
@@ -14135,7 +14212,21 @@ components:
         note:
           maxLength: 500
           type: [string, 'null']
+        channel:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfChannel'}, {type: 'null'}]
+          description: 'Только `client_agreed`, обязательно: как клиент сообщил согласие (A2 волны 18a)'
+        counterparty_person:
+          maxLength: 200
+          type: [string, 'null']
+          description: 'Только `client_agreed`, обязательно: кто со стороны клиента (ФИО, должность)'
       required: [action]
+    OnBehalfNote:
+      type: object
+      additionalProperties: false
+      required: [channel, counterparty_person]
+      properties:
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string}
     ProjectActActionIn:
       type: object
       additionalProperties: false
@@ -14718,7 +14809,60 @@ components:
           type: array
           items: {$ref: '#/components/schemas/QuoteClientComment'}
           description: Комментарии клиента к КП из кабинета и ответы менеджера, старые первыми (ERP; пусто — нет или ERP не ответил)
+        client_decision:
+          oneOf: [{$ref: '#/components/schemas/QuoteClientDecision'}, {type: 'null'}]
+          description: 'Решение клиента по отправленному КП (A1 волны 18a); `null` — КП ещё не отправлено или ERP не ответила'
         sources: {$ref: '#/components/schemas/Sources'}
+    QuoteClientDecision:
+      type: object
+      additionalProperties: false
+      required: [state, decided_at, reason, recorded_by_staff, can_record]
+      properties:
+        state:
+          type: string
+          enum: [awaiting, accepted, rejected, expired]
+          description: 'Ждёт решения клиента, принято, отклонено, срок истёк'
+        decided_at: {type: [string, 'null'], format: date-time, description: 'Когда решение записано в ERP'}
+        reason: {type: [string, 'null'], description: 'Причина отказа клиента'}
+        recorded_by_staff:
+          oneOf: [{$ref: '#/components/schemas/OnBehalfRecord'}, {type: 'null'}]
+          description: '`null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник по подтверждению клиента'
+        can_record:
+          type: boolean
+          description: 'Показать «Клиент принял» / «Клиент отклонил»: КП ждёт решения и у сотрудника право ERP `deal.manage` (решает ERP)'
+    OnBehalfChannel:
+      type: string
+      enum: [phone, email, messenger, in_person, paper]
+      description: 'Как контрагент сообщил решение: телефон, почта, мессенджер, лично, бумага'
+    OnBehalfRecord:
+      type: object
+      additionalProperties: false
+      required: [staff_name, channel, counterparty_person, occurred_on, comment, evidence_name, evidence_url]
+      description: 'Решение контрагента, записанное сотрудником по его подтверждению («Отмечено сотрудником: кто, канал, лицо клиента, файл»)'
+      properties:
+        staff_name: {type: [string, 'null'], description: 'Сотрудник, который записал'}
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string, description: 'Кто со стороны контрагента (ФИО, должность)'}
+        occurred_on: {type: [string, 'null'], format: date, description: 'Когда клиент сообщил решение'}
+        comment: {type: [string, 'null']}
+        evidence_name: {type: [string, 'null'], description: 'Имя файла подтверждения клиента (письмо, переписка, скан)'}
+        evidence_url:
+          type: [string, 'null']
+          description: 'Ссылка BFF на файл подтверждения (`GET /eds/quotes/{id}/client-decision/evidence`); `null` — файла нет'
+    QuoteClientDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision, channel, counterparty_person, occurred_on, comment, file]
+      description: >-
+        Решение клиента по его подтверждению. `comment` — суть ответа клиента; для `reject` это причина отказа (как у отказа в
+        кабинете). `occurred_on` — не позже сегодняшнего дня. Файл подтверждения обязателен.
+      properties:
+        decision: {type: string, enum: [accept, reject]}
+        channel: {$ref: '#/components/schemas/OnBehalfChannel'}
+        counterparty_person: {type: string, minLength: 1, maxLength: 200}
+        occurred_on: {type: string, format: date}
+        comment: {type: string, minLength: 1, maxLength: 2000}
+        file: {type: string, format: binary, description: 'Подтверждение клиента: письмо, переписка, скан (изображение, PDF, doc, docx, xls, xlsx, csv, txt) до 20 МБ'}
     QuoteClientComment:
       type: object
       additionalProperties: false

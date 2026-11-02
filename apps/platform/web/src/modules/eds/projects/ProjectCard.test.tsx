@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { chooseOption } from "../../../test/fields";
 import { server } from "../../../test/server";
 
 import { panelEl, renderAt, setupProjectTests, signIn } from "../../../test/projectsKit";
@@ -19,6 +20,16 @@ const PDF = () => new File(["%PDF-1.4 demo scan"], "scan.pdf", { type: "applicat
 async function click(panel: HTMLElement, name: string) {
   await within(panel).findAllByText(name);
   fireEvent.click(within(panel).getByRole("button", { name }));
+}
+
+/** A2: «Согласован клиентом» — канал и лицо со стороны клиента, затем кнопка. */
+async function agree(panel: HTMLElement, person = "Каримов А., снабженец") {
+  await within(panel).findAllByText("Отметить: согласован клиентом");
+  await chooseOption(within(panel).getByLabelText("Как клиент сообщил"), "почта");
+  fireEvent.change(within(panel).getByLabelText("Кто со стороны клиента"), {
+    target: { value: person },
+  });
+  fireEvent.click(within(panel).getByRole("button", { name: "Отметить: согласован клиентом" }));
 }
 
 function pick(input: HTMLElement, file: File) {
@@ -111,7 +122,7 @@ describe("Проект: договор (вкладка в боковом окн�
     expect(
       await within(panel).findByText("Проект у клиента на согласовании редакции."),
     ).toBeVisible();
-    await click(panel, "Отметить: согласован клиентом");
+    await agree(panel);
 
     expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
     fireEvent.change(within(panel).getByLabelText(/Оператор или номер/), {
@@ -148,11 +159,30 @@ describe("Проект: договор (вкладка в боковом окн�
     expect(within(history).getAllByRole("listitem")[0]).toHaveTextContent("Демо Бухгалтеров");
   });
 
-  it("скан не того типа: кнопка остаётся неактивной, слово о типе; ошибка ERP показывается словами", async () => {
+  it("A2: «Согласован клиентом» — без канала и лица не отмечается; в истории — «Отмечено сотрудником»", async () => {
     const { panel } = await openTab("accountant@demo.example", 104, "contract");
     await click(panel, "Сформировать проект договора");
     await click(panel, "На согласование клиенту");
     await click(panel, "Отметить: согласован клиентом");
+
+    expect(await within(panel).findByText("Укажите, как клиент сообщил")).toBeVisible();
+    expect(within(panel).getByText("Укажите, кто подтвердил")).toBeVisible();
+    expect(within(panel).getByText("Проект у клиента на согласовании редакции.")).toBeVisible();
+
+    await agree(panel, "Юсупова Н., юрист");
+    expect(await within(panel).findByText(/Клиент согласовал редакцию/)).toBeVisible();
+    const history = within(panel).getByRole("list", { name: "История договора" });
+    const last = within(history).getAllByRole("listitem")[0];
+    expect(last).toHaveTextContent("Редакция договора согласована клиентом");
+    expect(last).toHaveTextContent("Отмечено сотрудником");
+    expect(last).toHaveTextContent("почта · подтвердил: Юсупова Н., юрист");
+  });
+
+  it("скан не того типа: кнопка остаётся неактивной, слово о типе; ошибка ERP показывается словами", async () => {
+    const { panel } = await openTab("accountant@demo.example", 104, "contract");
+    await click(panel, "Сформировать проект договора");
+    await click(panel, "На согласование клиенту");
+    await agree(panel);
     await click(panel, "Отметить: выставлен у оператора");
     const input = await within(panel).findByLabelText("Скан подписанного договора");
 
@@ -219,7 +249,7 @@ describe("Проект: договор (вкладка в боковом окн�
       ),
     );
     const { panel } = await openTab("accountant@demo.example", 105, "contract");
-    await click(panel, "Отметить: согласован клиентом");
+    await agree(panel);
 
     expect(
       await within(panel).findByText(

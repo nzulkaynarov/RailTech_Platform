@@ -6674,6 +6674,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/quotes/{id}/record-client-decision/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Записать решение клиента по отправленному КП по его подтверждению (A1, «Отметить за контрагента»)
+         * @description Клиент принял или отклонил КП не в кабинете, а письмом, в переписке, по телефону, лично или на бумаге. Файл подтверждения обязателен (изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ). Только КП в статусе SENT; дальше — то же ядро, что онлайн-акцепт и отказ клиента (стадия, проект, договор, резерв, события `quote.accepted` / `quote.rejected` с `recorded_by_staff`, уведомления). Право `deal.manage`.
+         */
+        post: operations["crm_quotes_record_client_decision_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quotes/{id}/revoke-public-link/": {
         parameters: {
             query?: never;
@@ -8952,9 +8972,15 @@ export interface components {
             /** @default false */
             is_primary: boolean;
         };
+        /**
+         * @description * `APPROVE` - APPROVE
+         *     * `REJECT` - REJECT
+         * @enum {string}
+         */
+        ApprovalActRequestDecisionEnum: "APPROVE" | "REJECT";
         ApprovalActRequestRequest: {
             step_id: number;
-            decision: components["schemas"]["DecisionEnum"];
+            decision: components["schemas"]["ApprovalActRequestDecisionEnum"];
             /** @default  */
             comment: string;
         };
@@ -9852,6 +9878,39 @@ export interface components {
         };
         ChargesReorderRequestRequest: {
             order: number[];
+        };
+        /**
+         * @description * `accept` - accept
+         *     * `reject` - reject
+         * @enum {string}
+         */
+        ClientDecisionEnum: "accept" | "reject";
+        ClientDecisionInRequest: {
+            decision: components["schemas"]["ClientDecisionEnum"];
+            /**
+             * @description Как клиент сообщил решение
+             *
+             *     * `phone` - phone
+             *     * `email` - email
+             *     * `messenger` - messenger
+             *     * `in_person` - in_person
+             *     * `paper` - paper
+             */
+            channel: components["schemas"]["OnBehalfChannelEnum"];
+            /** @description Кто со стороны клиента */
+            counterparty_person: string;
+            /**
+             * Format: date
+             * @description Когда клиент сообщил решение; не позже сегодня
+             */
+            occurred_on: string;
+            /** @description Суть ответа клиента; для отказа — причина */
+            comment: string;
+            /**
+             * Format: binary
+             * @description Подтверждение клиента: письмо, переписка, скан (до 20 МБ)
+             */
+            file: string;
         };
         /**
          * @description * `contract_review` - contract_review
@@ -10761,6 +10820,18 @@ export interface components {
             reason?: string;
             /** @description Заметка в журнал (оператор ЭДО, ссылка) */
             note?: string;
+            /**
+             * @description Обязателен для `client-agreed`: как клиент сообщил согласие
+             *
+             *     * `phone` - phone
+             *     * `email` - email
+             *     * `messenger` - messenger
+             *     * `in_person` - in_person
+             *     * `paper` - paper
+             */
+            channel?: components["schemas"]["OnBehalfChannelEnum"];
+            /** @description Обязателен для `client-agreed`: кто со стороны клиента */
+            counterparty_person?: string;
         };
         Country: {
             readonly id: number;
@@ -11130,12 +11201,6 @@ export interface components {
             code: string;
             name: string;
         };
-        /**
-         * @description * `APPROVE` - APPROVE
-         *     * `REJECT` - REJECT
-         * @enum {string}
-         */
-        DecisionEnum: "APPROVE" | "REJECT";
         DeliveryBasis: {
             readonly id: number;
             /**
@@ -12564,6 +12629,19 @@ export interface components {
             preferred_channel: components["schemas"]["ContactPreferredChannelEnum"];
             /** @default  */
             telegram_username: string;
+        };
+        /**
+         * @description * `phone` - phone
+         *     * `email` - email
+         *     * `messenger` - messenger
+         *     * `in_person` - in_person
+         *     * `paper` - paper
+         * @enum {string}
+         */
+        OnBehalfChannelEnum: "phone" | "email" | "messenger" | "in_person" | "paper";
+        OnBehalfNote: {
+            channel: components["schemas"]["OnBehalfChannelEnum"];
+            counterparty_person: string;
         };
         OrderActions: {
             edit: boolean;
@@ -15301,6 +15379,8 @@ export interface components {
             number: string | null;
             /** @description Причина или заметка к действию */
             reason: string;
+            /** @description Действие контрагента записал сотрудник (A1, A2 волны 18a): канал и лицо со стороны клиента */
+            on_behalf?: components["schemas"]["OnBehalfNote"] | null;
         };
         ProjectMoney: {
             /** @description Сумма строкой с двумя знаками, `-?\d+\.\d{2}` */
@@ -15589,6 +15669,13 @@ export interface components {
             readonly send_report: unknown;
             readonly channel_availability: components["schemas"]["QuoteChannelAvailability"] | null;
             readonly can_send: boolean | null;
+            readonly client_decision: components["schemas"]["QuoteClientDecisionMeta"] | null;
+            readonly can_record_client_decision: boolean | null;
+            /**
+             * Причина отказа клиента
+             * @description Причина, которую клиент указал, отклоняя КП (кабинет, бот, офлайн); не печатается в PDF КП
+             */
+            readonly client_reject_reason: string;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
@@ -15757,6 +15844,19 @@ export interface components {
             readonly text: string;
             /** Format: date-time */
             readonly created_at: string;
+        };
+        QuoteClientDecisionMeta: {
+            decision: components["schemas"]["ClientDecisionEnum"];
+            channel: components["schemas"]["OnBehalfChannelEnum"];
+            counterparty_person: string;
+            /** Format: date */
+            occurred_on: string | null;
+            comment: string;
+            recorded_by_name: string;
+            /** Format: date-time */
+            recorded_at: string | null;
+            evidence_attachment_id: number | null;
+            evidence_name: string;
         };
         /**
          * @description * `telegram` - telegram
@@ -24922,7 +25022,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25077,7 +25177,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25690,7 +25790,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25787,7 +25887,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -25942,7 +26042,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26007,7 +26107,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26072,7 +26172,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26169,7 +26269,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -26601,8 +26701,25 @@ export interface operations {
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];
-            403: components["responses"]["ForbiddenResponse"];
+            /** @description ROLE_NOT_PERMITTED / ONLY_BUYER_CAN_SUBMIT_REQUEST */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
             404: components["responses"]["NotFoundResponse"];
+            /** @description QUOTE_ACCEPTANCE_REQUIRED — «КП отправлено → Проект» только через принятое КП (A7) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
             /** @description Invalid stage transition */
             422: {
                 headers: {
@@ -29670,6 +29787,69 @@ export interface operations {
             };
             404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_AWAITING_DIRECTOR — визы собраны, КП у директора в EDS */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    crm_quotes_record_client_decision_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Коммерческое предложение. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ClientDecisionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Quote"];
+                };
+            };
+            /** @description DECISION_INVALID / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED / COMMENT_REQUIRED / OCCURRED_ON_INVALID / OCCURRED_ON_IN_FUTURE / EVIDENCE_REQUIRED / EVIDENCE_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description QUOTE_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description QUOTE_NOT_SENT / DEAL_STAGE_CONFLICT */
             409: {
                 headers: {
                     [name: string]: unknown;

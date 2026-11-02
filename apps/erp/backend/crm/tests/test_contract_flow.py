@@ -27,7 +27,8 @@ URL = "/api/v1/crm/contracts/{id}/{action}/"
 # (действие, URL-имя, тело, разрешённые статусы)
 CASES = [
     ("send_to_client", "send-to-client", {}, {S.DRAFT}),
-    ("client_agreed", "client-agreed", {}, {S.PENDING_CLIENT}),
+    # A2 волны 18a: согласие клиента записывает сотрудник — с каналом и лицом со стороны клиента.
+    ("client_agreed", "client-agreed", {"channel": "email", "counterparty_person": "Каримов А."}, {S.PENDING_CLIENT}),
     (
         "reject",
         "reject",
@@ -37,6 +38,7 @@ CASES = [
     ("revise", "revise", {}, {S.REJECTED}),
     ("mark_issued", "mark-issued", {"note": "Didox"}, {S.PENDING_MANAGER}),
 ]
+AGREED = CASES[1][2]
 ALL = [S.DRAFT, S.PENDING_CLIENT, S.PENDING_MANAGER, S.ISSUED_EXTERNAL, S.SIGNED, S.REJECTED, S.CANCELLED]
 
 
@@ -57,7 +59,7 @@ def test_full_chain_from_project_to_signed_scan(pw):  # noqa: F811
 
     assert _post(pw.accountant, contract, "send-to-client").status_code == 200
     assert _status(contract) == S.PENDING_CLIENT
-    assert _post(pw.accountant, contract, "client-agreed").status_code == 200
+    assert _post(pw.accountant, contract, "client-agreed", AGREED).status_code == 200
     assert _status(contract) == S.PENDING_MANAGER and contract.client_signed_at is not None
     assert _post(pw.accountant, contract, "mark-issued", {"note": "Didox, № 77"}).status_code == 200
     assert _status(contract) == S.ISSUED_EXTERNAL
@@ -217,13 +219,13 @@ def test_manage_without_sign_cannot_issue_or_attach(pw, grant):  # noqa: F811
     contract = contract_in(pw, S.PENDING_MANAGER)
     assert _post(preparer, contract, "mark-issued").status_code == 403
     contract = contract_in(pw, S.PENDING_CLIENT)
-    assert _post(preparer, contract, "client-agreed").status_code == 200
+    assert _post(preparer, contract, "client-agreed", AGREED).status_code == 200
 
 
 def test_a_stranger_does_not_see_the_contract_nor_acts_on_it(pw):  # noqa: F811
     contract = contract_in(pw, S.PENDING_CLIENT)
     assert api(pw.stranger).get(f"/api/v1/crm/contracts/{contract.id}/").status_code in (403, 404)
-    assert _post(pw.stranger, contract, "client-agreed").status_code in (403, 404)
+    assert _post(pw.stranger, contract, "client-agreed", AGREED).status_code in (403, 404)
     assert _status(contract) == S.PENDING_CLIENT
 
 
