@@ -116,7 +116,7 @@ def test_preview_renders_all_editable_types_without_counter():
     company = _seller_company("ACME", "6200000005", prefix="ACME")
     resp = _client(_owner(company, "owner@acme5.test")).post(
         PREVIEW_URL,
-        {"pattern": "{prefix}{type}-{YYYY}-{seq}", "padding": 5, "reset_period": "yearly", "start_value": 0},
+        {"pattern": "{prefix}{type}-{YYYY}/{seq}", "padding": 3, "reset_period": "yearly", "start_value": 0},
         format="json",
     )
     assert resp.status_code == 200, resp.content
@@ -126,9 +126,9 @@ def test_preview_renders_all_editable_types_without_counter():
     from django.utils import timezone
 
     year = timezone.now().year
-    assert codes["KP"] == f"ACME-КП-{year}-00001"
-    assert codes["CT"] == f"ACME-CT-{year}-00001"
-    assert codes["INV"] == f"ACME-INV-{year}-00001"
+    assert codes["KP"] == f"ACME-КП-{year}/001"
+    assert codes["CT"] == f"ACME-ДОГ-{year}/001"
+    assert codes["INV"] == f"ACME-СЧ-{year}/001"
     # Dry-run: no counter row was created / touched.
     assert not DocumentSequence.objects.filter(company=company).exists()
 
@@ -168,7 +168,7 @@ def test_preview_reflects_draft_start_value():
     assert resp.status_code == 200, resp.content
     codes = {r["type_code"]: r["number"] for r in resp.json()["results"]}
     # first number = start_value + 1
-    assert codes["CT"] == "CT-1001"
+    assert codes["CT"] == "ДОГ-1001"
 
 
 def test_preview_invalid_pattern_returns_code():

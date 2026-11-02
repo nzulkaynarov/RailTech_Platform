@@ -9,14 +9,19 @@ serialize and each gets a distinct, gap-free number.
 FORMAT is no longer hardcoded. Each company can carry a `DocumentNumberingScheme`
 (token mask + padding + reset period + start value); the number is assembled from that
 mask. A company without its own scheme falls back to the platform default scheme
-(company=NULL, seeded by migration to reproduce the historical format) and finally to
-the code-level DEFAULT_SCHEME below — so numbering works with NO scheme row at all
-(hot path never writes a scheme on read; Rule 1).
+(company=NULL, if such a row exists) and finally to the code-level DEFAULT_SCHEME below —
+so numbering works with NO scheme row at all (hot path never writes a scheme on read; Rule 1).
+
+The shipped default is SPEC-v3 §2.2 (W-6, B-WDOCS2-1): `КП-2026/042`, `ДОГ-2026/104`, `СЧ-2026/142`,
+`АКТ-2026/058`, квитанция `КВ-…`, накладная `НАК-…`, документ по шаблону `ДОК-…`. Until 2026-11 it was
+`КП-2026-00042` / `CT-…` / `INV-…` / `ACT-…`: numbers already issued keep that form (a document is
+never renumbered), counters continue — the new form differs by the «/» separator and the labels, so
+a new number can never repeat an old one. Search finds both forms (`number_search_q`).
 
 Per-company branding: a selling company that sets a `doc_number_prefix` mints under
-its OWN scoped counter and prefix — `ACME-CT-2026-00001`. A company WITHOUT a prefix
+its OWN scoped counter and prefix — `ACME-ДОГ-2026/001`. A company WITHOUT a prefix
 (and the actor=None automation path) uses the SHARED platform counter (company=NULL)
-and the platform scheme `CT-2026-00001`.
+and the platform scheme `ДОГ-2026/001`.
 
 GLOBAL-UNIQUE SAFETY (unchanged): Contract/Invoice/Act.number is globally `unique=True`.
 A per-company counter is used ONLY when the company carries a (non-empty) prefix — the
@@ -25,8 +30,10 @@ companies fall back to the single platform counter AND the platform scheme, so t
 share ONE monotonic sequence under ONE format and can never mint the same number twice.
 """
 
+import re
 from dataclasses import dataclass, field
 
+from django.db.models import Q
 from django.utils import timezone
 
 # Reset-period codes (mirrors DocumentNumberingScheme.RESET_* to avoid importing the
@@ -35,17 +42,21 @@ RESET_NEVER = "never"
 RESET_YEARLY = "yearly"
 RESET_MONTHLY = "monthly"
 
-# Code-level default scheme = the historical hardcoded format, so a company with NO
-# scheme row (and no platform row) still mints `{prefix}-{label}-{year}-{NNNNN}`.
-DEFAULT_PATTERN = "{prefix}{type}-{YYYY}-{seq}"
-DEFAULT_PADDING = 5
+# Code-level default scheme = SPEC-v3 §2.2, so a company with NO scheme row (and no platform
+# row) mints `{prefix}-{label}-{year}/{NNN}` — `КП-2026/042`, `ACME-ДОГ-2026/104`.
+DEFAULT_PATTERN = "{prefix}{type}-{YYYY}/{seq}"
+DEFAULT_PADDING = 3
 DEFAULT_RESET_PERIOD = RESET_YEARLY
 DEFAULT_START_VALUE = 0
 # Shipped {type}-token labels per doc kind (mirrors DocumentNumberingScheme.DEFAULT_TYPE_LABELS).
 # Used as the fallback when a company's scheme leaves a code unset — nothing is hardcoded at
 # the call sites: each caller passes the doc's default label, but the scheme's editable
 # type_labels override it.
-DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "CT", "INV": "INV", "ACT": "ACT", "DOC": "DOC"}
+DEFAULT_TYPE_LABELS = {"KP": "КП", "CT": "ДОГ", "INV": "СЧ", "ACT": "АКТ", "DOC": "ДОК"}
+# Labels of the kinds the Settings editor does not offer (квитанция, накладная): the callers pass
+# them as the fallback of `label_for`.
+RECEIPT_LABEL = "КВ"
+DELIVERY_NOTE_LABEL = "НАК"
 
 
 @dataclass(frozen=True)
@@ -322,3 +333,56 @@ def set_company_scheme(company, *, pattern=None, padding=None, reset_period=None
     row.full_clean()
     row.save()
     return row
+
+
+# ── Search by number: both the SPEC-v3 form and the pre-2026-11 form ──────────────────
+
+# One kind — every label it was ever printed with (SPEC-v3 §2.2 first, then the pre-2026-11
+# default and the Latin keyboard spelling a user may type). A query in any spelling finds
+# documents of that kind in BOTH forms: `КП-2026/042` and `КП-2026-00042`, `ДОГ-2026/7` and
+# `CT-2026-00007`.
+_LABEL_SYNONYMS = (
+    ("КП", "KP"),
+    ("ДОГ", "CT", "DOG"),
+    ("СЧ", "INV", "SCH"),
+    ("АКТ", "ACT", "AKT"),
+    ("КВ", "RCP", "KV"),
+    ("НАК", "DN", "NAK"),
+    ("ДОК", "DOC", "DOK"),
+)
+_STORED_LABELS = {
+    alias: tuple(label for label in group if label not in ("KP", "DOG", "SCH", "AKT", "KV", "NAK", "DOK"))
+    for group in _LABEL_SYNONYMS
+    for alias in group
+}
+_NUMBER_QUERY = re.compile(
+    r"(?:(?P<label>[^\W\d_]{2,4})[\s\-–—/]*)?(?P<year>\d{4})[\s\-–—/]+(?P<seq>\d{1,9})",
+)
+
+
+def number_search_q(field_name: str, text: str) -> Q:
+    """Filter «`field_name` matches the typed number» for document searches.
+
+    Always a case-insensitive substring (any custom mask is found as typed). When the text looks
+    like a document number — `КП-2026/42`, `кп 2026 042`, `CT-2026-00007`, `2026/7` (a company
+    prefix before it is allowed) — it ALSO matches the same kind, year and sequence in either
+    separator and padding, so a number typed in the SPEC-v3 form finds a document issued in the
+    old form and vice versa. Read-only; adds an OR branch, never narrows the substring match.
+    """
+    text = (text or "").strip()
+    query = Q(**{f"{field_name}__icontains": text})
+    match = _NUMBER_QUERY.search(text)
+    if match is None or match.end() != len(text):
+        return query
+    head = text[: match.start()]
+    if head and not re.fullmatch(r"[\w.]+[\s\-–—]+", head):
+        return query
+    raw_label = (match["label"] or "").upper()
+    if raw_label:
+        labels = _STORED_LABELS.get(raw_label, (raw_label,))
+        label_part = "(" + "|".join(re.escape(label) for label in labels) + ")-"
+    else:
+        label_part = ""
+    seq = int(match["seq"])
+    pattern = rf"(^|-){label_part}{match['year']}[-/]0*{seq}$"
+    return query | Q(**{f"{field_name}__iregex": pattern})

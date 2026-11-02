@@ -112,13 +112,13 @@ function seed(): CompanyMock {
       },
     },
     numbering: {
-      pattern: "{prefix}{type}-{YYYY}-{seq}",
-      padding: 5,
+      pattern: "{prefix}{type}-{YYYY}/{seq}",
+      padding: 3,
       reset_period: "yearly",
       start_value: 0,
       prefix: "DEMO",
       is_effective: true,
-      type_labels: { quote: "КП", contract: "ДОГ", invoice: "СЧ", act: "АКТ", letter: "ПИС" },
+      type_labels: { quote: "КП", contract: "ДОГ", invoice: "СЧ", act: "АКТ", letter: "ДОК" },
     },
     quote: {
       default_cost_currency: "USD",

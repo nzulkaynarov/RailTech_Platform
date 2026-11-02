@@ -102,7 +102,7 @@ def build_quote_terms(
 
 def quote_pdf_filename(quote) -> str:
     """PDF filename derived from the КП's OWN number (the seller's numbering scheme) — the file a
-    client saves must match the document it contains («КП-2026-00042_v2.pdf»), not an internal
+    client saves must match the document it contains («КП-2026_042_v2.pdf»), not an internal
     deal-id. Filesystem-unsafe characters collapse to «_» (cyrillic is kept — modern browsers,
     mail clients and Django's RFC-5987 Content-Disposition handle it). A draft with no number
     yet degrades to the legacy deal-scoped name so uniqueness never breaks."""

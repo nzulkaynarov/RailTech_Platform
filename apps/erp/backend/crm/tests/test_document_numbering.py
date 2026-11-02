@@ -15,7 +15,7 @@ def test_numbers_are_sequential_and_formatted():
         first = next_document_number("INV", "INV")
         second = next_document_number("INV", "INV")
         third = next_document_number("INV", "INV")
-    assert [first, second, third] == [f"INV-{year}-00001", f"INV-{year}-00002", f"INV-{year}-00003"]
+    assert [first, second, third] == [f"СЧ-{year}/001", f"СЧ-{year}/002", f"СЧ-{year}/003"]
     assert DocumentSequence.objects.get(doc_type="INV", year=year).last_value == 3
 
 
@@ -26,9 +26,9 @@ def test_counters_are_independent_per_doc_type():
         inv = next_document_number("INV", "INV")
         act = next_document_number("ACT", "ACT")
         ct = next_document_number("CT", "CT")
-    assert inv == f"INV-{year}-00001"
-    assert act == f"ACT-{year}-00001"
-    assert ct == f"CT-{year}-00001"
+    assert inv == f"СЧ-{year}/001"
+    assert act == f"АКТ-{year}/001"
+    assert ct == f"ДОГ-{year}/001"
     assert DocumentSequence.objects.count() == 3
 
 
