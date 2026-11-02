@@ -13,6 +13,7 @@ from app.models.letterhead import DocumentMailing, DocumentRender, Letterhead, L
 from app.models.letters import Letter
 from app.models.numbering import NumberCounter
 from app.models.project_documents import ProjectDocument
+from app.models.resolution_templates import ResolutionTemplate
 
 __all__ = [
     "Acquaintance",
@@ -36,6 +37,7 @@ __all__ = [
     "LetterheadLogo",
     "NumberCounter",
     "ProjectDocument",
+    "ResolutionTemplate",
     "SsoJti",
     "StoredFile",
 ]

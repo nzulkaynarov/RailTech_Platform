@@ -33,7 +33,7 @@ async def test_catalog_and_starter_values_repeat_the_former_code(
     assert catalog.status_code == 200, catalog.text
     validate("DictionaryList", catalog.json())
     kinds = {d["kind"]: d for d in catalog.json()["items"]}
-    assert set(kinds) == {"letter-kinds", "receipt-methods"}
+    assert set(kinds) == {"letter-kinds", "receipt-methods", "resolution-kinds"}
     assert [a["key"] for a in kinds["letter-kinds"]["attrs"]] == ["urgent", "due_days"]
     assert kinds["receipt-methods"]["attrs"] == []
 

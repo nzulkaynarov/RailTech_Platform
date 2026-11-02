@@ -371,8 +371,15 @@ async def decide_instruction_extension(
     return await _card(authed, raw)
 
 
+# EDS-REG: администратору — люди общих шаблонов резолюций.
+StaffReader = Annotated[
+    Authed,
+    Depends(require_any(("eds.inbox.register", "full"), ("eds.inbox", "full"), ("admin", "full"))),
+]
+
+
 @router.get("/staff", response_model=EdsStaffList, operation_id="listEdsStaff")
-async def list_eds_staff(authed: Drafter) -> EdsStaffList:
+async def list_eds_staff(authed: StaffReader) -> EdsStaffList:
     """Активные сотрудники EDS: адресат, исполнитель, «ознакомить» (P8b)."""
     raw = await _letters(authed).employees()
     items = raw.get("items") if isinstance(raw, dict) else None

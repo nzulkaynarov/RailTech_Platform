@@ -956,6 +956,111 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/resolution-templates:
+    get:
+      tags: [letters]
+      operationId: listResolutionTemplates
+      summary: Шаблоны резолюций — общие и свои (EDS-REG, R2)
+      description: |
+        Шаблоны резолюций пути делопроизводства (исследование 2026-11-02 «Маршруты» §4.2, R2; эталоны — шаблоны резолюций
+        Directum RX и 1С:Документооборот): общие (`company`, ведёт администратор) и личные (`personal`, свои у каждого).
+        Шаблон только заполняет форму резолюции — применение не меняет письмо. `editable` — может ли вызывающий менять шаблон.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      responses:
+        '200':
+          description: Общие и свои личные шаблоны по названию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [letters]
+      operationId: createResolutionTemplate
+      summary: Сохранить шаблон резолюции
+      description: |
+        Личный — директору и делопроизводителю (`letters.resolve`, `letters.register`), общий — администратору (`bus.manage`;
+        иначе 403 `FORBIDDEN`, `details.reason = company_template_admin_only`). Название уже есть среди своих личных (или
+        общих) — 409 `name_taken`. Люди — активные сотрудники (иначе 422, поле с `not_active_employee`); у «Для сведения»
+        ответственного и срока нет (`responsible.type = none`, `due_days = null`).
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '201':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/resolution-templates/{template_id}:
+    put:
+      tags: [letters]
+      operationId: updateResolutionTemplate
+      summary: Изменить шаблон резолюции
+      description: |
+        Тело целиком, `scope` не меняется (иначе 422). Личный шаблон меняет только владелец (чужой — 404), общий —
+        администратор.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [letters]
+      operationId: deleteResolutionTemplate
+      summary: Удалить шаблон резолюции
+      description: Личный — владелец, общий — администратор. Резолюции, заполненные из шаблона, не меняются.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/letter-tasks:
     get:
       tags: [letters]
@@ -983,8 +1088,9 @@ paths:
       summary: Активные сотрудники — адресат, исполнитель, «ознакомить» (P8b)
       description: |
         Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
-        пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
-      x-rt-permissions: [letters.register, letters.resolve]
+        пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2). Администратору
+        (`bus.manage`) — для общих шаблонов резолюций (EDS-REG).
+      x-rt-permissions: [letters.register, letters.resolve, bus.manage]
       responses:
         '200':
           description: Сотрудники
@@ -1930,6 +2036,12 @@ components:
       description: Токен доступа EDS из `POST /api/v1/auth/sso/exchange` (HS256, `iss = eds`, `aud = eds-api`, 15 минут); токен сотрудника CRM (`aud = eds`) здесь отклоняется — 401 `UNAUTHORIZED`
 
   parameters:
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
     DictionaryKind:
       name: kind
       in: path
@@ -3174,7 +3286,84 @@ components:
     ResolutionKind:
       type: string
       enum: [execute, reply, info]
-      description: Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения»
+      description: |
+        Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения». Это
+        поведение системы (закрытый список кода); названия на экране — справочник `resolution-kinds` (закрытый: только
+        переименовать и переставить, EDS-REG).
+    ResolutionTemplateScope:
+      type: string
+      enum: [personal, company]
+      description: '`personal` — свой шаблон сотрудника, `company` — общий, ведёт администратор'
+    ResolutionTemplateResponsibleType:
+      type: string
+      enum: [person, addressee, none]
+      description: |
+        Кто ответственный при применении: `person` — этот сотрудник, `addressee` — адресат письма (директор по умолчанию или
+        кому письмо адресовал делопроизводитель), `none` — выбрать при резолюции
+    ResolutionTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [name, scope, kind, text]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        scope: { $ref: '#/components/schemas/ResolutionTemplateScope' }
+        kind: { $ref: '#/components/schemas/ResolutionKind' }
+        text: { type: string, minLength: 1, maxLength: 4000 }
+        responsible_type:
+          $ref: '#/components/schemas/ResolutionTemplateResponsibleType'
+        responsible_crm_user_id:
+          type: [integer, 'null']
+          description: Только при `responsible_type = person`
+        co_executor_ids:
+          type: array
+          maxItems: 20
+          items: { type: integer }
+        acquaint_ids:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+        due_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 365
+          description: Срок — через столько дней (рабочий день); `null` — подсказка срока письма
+    ResolutionTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        [id, name, scope, kind, text, responsible_type, responsible, co_executors, acquaint, due_days, owner, editable]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        name: { type: string }
+        scope: { $ref: '#/components/schemas/ResolutionTemplateScope' }
+        kind: { $ref: '#/components/schemas/ResolutionKind' }
+        text: { type: string }
+        responsible_type: { $ref: '#/components/schemas/ResolutionTemplateResponsibleType' }
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        co_executors:
+          type: array
+          items: { $ref: '#/components/schemas/PersonRef' }
+        acquaint:
+          type: array
+          items: { $ref: '#/components/schemas/PersonRef' }
+        due_days: { type: [integer, 'null'] }
+        owner:
+          description: Владелец личного шаблона; у общего — `null`
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        editable: { type: boolean, description: Вызывающий может изменить и удалить шаблон }
+    ResolutionTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ResolutionTemplate' }
     ResolutionDraftIn:
       type: object
       additionalProperties: false
