@@ -124,6 +124,7 @@
     },
     "toDirector": "Director",
     "text": "Text",
+    "bodyTable": "Table in the letter text",
     "files": "Attachments",
     "noFiles": "No attachments.",
     "download": "Download: {{name}}",

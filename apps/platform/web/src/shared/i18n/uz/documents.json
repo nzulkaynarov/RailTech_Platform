@@ -124,6 +124,7 @@
     },
     "toDirector": "Direktor",
     "text": "Matn",
+    "bodyTable": "Xat matnidagi jadval",
     "files": "Ilovalar",
     "noFiles": "Ilovalar yo‘q.",
     "download": "Yuklab olish: {{name}}",
