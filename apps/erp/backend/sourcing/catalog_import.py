@@ -11,8 +11,15 @@ A seller uploads an .xlsx of their products + commercial terms. We:
 требует ровно эти поля, и прайс-лист на 3000 строк давал 3000 черновиков, о чём отчёт молчал.
 Поэтому же отчёт теперь считает, сколько карточек порог не пройдут и чего им не хватает.
 
-The supplier is the UPLOADER's own company (derived from membership in the
-view) — never a column in the file. Each row is processed in its own savepoint
+The supplier is the company the VIEW resolved: the uploader's own seller company
+(self-service path) or a supplier chosen explicitly by a back-office employee with the
+catalog and supply rights (CAT-1, `supplier_company_id`) — never a column in the file.
+
+CAT-1 — чужие карточки не перезаписываются. Совпадение по бренду+MPN (или ГОСТ/чертежу) с
+карточкой, которую завёл ДРУГОЙ поставщик или которая уже не черновик, обновляет только
+предложение поставщика; расхождения полей уходят в `catalog.ProductFieldProposal` на одобрение
+(SAP Ariba catalog upload: загрузка → сопоставление → одобрение). Срок действия цены — на весь
+файл из формы или колонками «Действует с / до» (Odoo `product.supplierinfo` date_start/date_end). Each row is processed in its own savepoint
 so one bad row can't poison the batch; per-row problems are returned as a
 structured error list. `dry_run=True` runs the full pipeline and rolls back,
 returning the same counts for a preview.
@@ -66,6 +73,9 @@ COLUMN_ALIASES = {
     # целиком — с «наименованием» оно не пересекается ни одной подстрокой.
     "hs_code": ["тн вэд", "тнвэд", "тн-вэд", "hs code", "hs_code", "hs-code", "hscode"],
     "domain_type": ["направление", "домен", "domain"],
+    # CAT-1: срок действия цены построчно (по желанию; на весь файл — поле формы).
+    "valid_from": ["действует с", "valid from"],
+    "valid_until": ["действует до", "valid until", "valid to"],
 }
 
 
@@ -74,6 +84,9 @@ class ImportResult:
     created: int = 0
     updated: int = 0
     offers_upserted: int = 0
+    #: CAT-1: новые предложения и обновлённые цены — отдельно (отчёт «новые / обновлённые цены»).
+    offers_created: int = 0
+    offers_updated: int = 0
     skipped: int = 0
     errors: list = field(default_factory=list)
     #: Мягкие замечания: строка ЗАГРУЖЕНА, но к ней есть вопрос (код ТН ВЭД вне справочника).
@@ -85,6 +98,9 @@ class ImportResult:
     #: Сколько затронутых карточек НЕ пройдут порог публикации и чего им не хватает.
     unpublishable: int = 0
     missing_breakdown: list = field(default_factory=list)
+    #: CAT-1: расхождения с чужой или опубликованной карточкой — на одобрение, карточка не тронута.
+    proposals: list = field(default_factory=list)
+    proposal_count: int = 0
     dry_run: bool = False
 
     def add_error(self, row_number: int, message: str) -> None:
@@ -97,6 +113,11 @@ class ImportResult:
         if len(self.warnings) < MAX_REPORTED_WARNINGS:
             self.warnings.append({"row": row_number, "message": message})
 
+    def add_proposal(self, row_number: int, proposal: dict) -> None:
+        self.proposal_count += 1
+        if len(self.proposals) < MAX_REPORTED_ERRORS:
+            self.proposals.append({"row": row_number, **proposal})
+
     def as_dict(self) -> dict:
         return {
             "status": "success",
@@ -104,6 +125,10 @@ class ImportResult:
             "created": self.created,
             "updated": self.updated,
             "offers_upserted": self.offers_upserted,
+            "offers_created": self.offers_created,
+            "offers_updated": self.offers_updated,
+            "proposal_count": self.proposal_count,
+            "proposals": self.proposals,
             "skipped": self.skipped,
             # `error_count`/`warning_count` считают ВСЕ находки, а списки усечены до
             # MAX_REPORTED_*: интерфейсу этого достаточно, чтобы сказать «показаны первые 200
@@ -188,6 +213,23 @@ def _hs_digits(text: str) -> str:
     return "".join(char for char in text if char.isdigit())
 
 
+def _parse_date(text: str):
+    """Дата ячейки: `ГГГГ-ММ-ДД` (Excel отдаёт дату как `2026-12-31 00:00:00`) или `ДД.ММ.ГГГГ`; пусто — None."""
+    from datetime import date, datetime
+
+    text = (text or "").strip()
+    if not text:
+        return None
+    for fmt, size in (("%Y-%m-%d", 10), ("%d.%m.%Y", 10)):
+        try:
+            return datetime.strptime(text[:size], fmt).date()
+        except ValueError:
+            continue
+    if isinstance(text, date):  # pragma: no cover — ячейки читаются строками (dtype=str)
+        return text
+    raise ValueError("VALID_DATE_INVALID")
+
+
 @dataclass
 class _Ctx:
     """Per-import shared state (caches + lookups) — avoids per-row DB queries."""
@@ -213,6 +255,11 @@ class _Ctx:
     #: считается сводка публикуемости.
     touched_products: dict
     dry_run: bool
+    #: CAT-1: предложения по полям чужих карточек, кто загрузил, срок цены на весь файл.
+    Proposal: object = None
+    actor: object = None
+    valid_from: object = None
+    valid_until: object = None
 
 
 def _resolve_brand(ctx: _Ctx, name: str):
@@ -310,33 +357,138 @@ def _create_product(ctx: _Ctx, fields: dict, brand, uom):
     return product
 
 
-def _apply_product(ctx: _Ctx, fields: dict):
-    """Create or update the canonical Product card. Returns (product, created)."""
+def _find_by_own_offer(ctx: _Ctx, fields: dict, supplier_sku: str):
+    """Строка без бренда+MPN и без ГОСТ: карточка по предложению ЭТОГО поставщика (артикул поставщика, иначе наименование).
+
+    Без этого повторная загрузка того же прайса плодила бы карточку на каждую строку без ключа (Odoo сопоставляет
+    строку прайса с товаром по `product.supplierinfo.product_code` поставщика так же).
+    """
+    if not ctx.supplier or fields["mpn"] or fields["gost"]:
+        return None
+    offers = ctx.SupplierOffer.objects.filter(supplier=ctx.supplier).select_related("product__domain_type")
+    match = offers.filter(supplier_sku__iexact=supplier_sku).first() if supplier_sku else None
+    if match is None:
+        match = offers.filter(product__name__iexact=fields["name"]).order_by("id").first()
+    return match.product if match else None
+
+
+def _is_foreign_card(ctx: _Ctx, product) -> bool:
+    """Карточку завёл другой поставщик (или сотрудник) или она уже не черновик — прайс её полей не меняет (CAT-1)."""
+    status_code = getattr(product.status, "code", None)
+    if status_code and status_code != "DRAFT":
+        return True
+    owner_id = product.owner_company_id
+    return owner_id is not None and owner_id != getattr(ctx.supplier, "pk", None)
+
+
+def _display(value) -> str:
+    if value is None:
+        return ""
+    return str(getattr(value, "name", value) or "")
+
+
+def _card_differences(existing, fields: dict, uom) -> list:
+    """Поля строки, которые расходятся с карточкой: `(поле, было, стало, id справочника)`. Пустая ячейка — не расхождение."""
+    out = []
+    if fields["name"] and fields["name"].strip() != (existing.name or "").strip():
+        out.append(("name", existing.name or "", fields["name"].strip(), None))
+    if fields["description"] and fields["description"] != (existing.description or ""):
+        out.append(("description", existing.description or "", fields["description"], None))
+    if fields["gost"] and fields["gost"].lower() != (existing.gost_drawing or "").lower():
+        out.append(("gost_drawing", existing.gost_drawing or "", fields["gost"], None))
+    if fields["hs_code"] and fields["hs_code"] != (existing.hs_code or ""):
+        out.append(("hs_code", existing.hs_code or "", fields["hs_code"], None))
+    for name, model_field, value in (
+        ("category", "category", fields["category"]),
+        ("uom", "uom", uom),
+        ("domain_type", "domain_type", fields["domain"]),
+    ):
+        if value is not None and getattr(existing, f"{model_field}_id") != value.pk:
+            out.append((name, _display(getattr(existing, model_field)), _display(value), value.pk))
+    return out
+
+
+def _propose(ctx: _Ctx, product, field_name: str, current: str, proposed: str, ref) -> bool:
+    """Открыть или обновить предложение по полю. False — значение уже отклонено человеком (повторно не предлагаем)."""
+    Proposal = ctx.Proposal
+    scope = {"product": product, "field": field_name, "supplier": ctx.supplier}
+    if Proposal.objects.filter(**scope, status=Proposal.Status.REJECTED, proposed_value=proposed).exists():
+        return False
+    pending = Proposal.objects.filter(**scope, status=Proposal.Status.PENDING).first()
+    if pending is None:
+        Proposal.objects.create(
+            **scope, current_value=current, proposed_value=proposed, proposed_ref=ref, created_by=ctx.actor
+        )
+    elif (pending.proposed_value, pending.proposed_ref, pending.current_value) != (proposed, ref, current):
+        pending.proposed_value, pending.proposed_ref, pending.current_value = proposed, ref, current
+        pending.save(update_fields=["proposed_value", "proposed_ref", "current_value", "updated_at"])
+    return True
+
+
+def _propose_differences(ctx: _Ctx, existing, fields: dict, uom) -> list:
+    proposals = []
+    for field_name, current, proposed, ref in _card_differences(existing, fields, uom):
+        if _propose(ctx, existing, field_name, current, proposed, ref):
+            proposals.append(
+                {
+                    "product_id": existing.pk,
+                    "product_name": existing.name,
+                    "field": field_name,
+                    "current": current,
+                    "proposed": proposed,
+                }
+            )
+    return proposals
+
+
+def _apply_product(ctx: _Ctx, fields: dict, supplier_sku: str = ""):
+    """Create or update the canonical Product card. Returns (product, created, proposals)."""
     brand = _resolve_brand(ctx, fields["brand_name"])
     existing = _find_existing_product(ctx, brand, fields["mpn"], fields["gost"])
+    if existing is None:
+        existing = _find_by_own_offer(ctx, fields, supplier_sku)
     uom = ctx.uom.get(fields["uom_code"]) if fields["uom_code"] else None
 
     if existing:
+        if _is_foreign_card(ctx, existing):
+            return existing, False, _propose_differences(ctx, existing, fields, uom)
         _update_product(ctx, existing, fields, brand, uom)
-        return existing, False
-    return _create_product(ctx, fields, brand, uom), True
+        return existing, False, []
+    return _create_product(ctx, fields, brand, uom), True, []
 
 
-def _upsert_offer(ctx: _Ctx, product, offer: dict) -> None:
-    """Upsert the uploader's SupplierOffer for this product (unique per supplier)."""
-    ctx.SupplierOffer.objects.update_or_create(
-        product=product,
-        supplier=ctx.supplier,
-        defaults={
-            "base_price": offer["price"],
-            "currency": offer["currency"],
-            "stock_status": offer["stock"],
-            "supplier_sku": offer["supplier_sku"],
-            "delivery_lead_time": offer["lead"],
-            "min_order_qty": offer["moq"],
-            "is_active": True,
-        },
-    )
+def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
+    """Upsert the supplier's SupplierOffer for this product (unique per supplier). True — предложение новое.
+
+    Срок действия цены пишется, только если он задан (строкой или на весь файл): прайс без срока не стирает срок,
+    поставленный раньше вручную.
+    """
+    defaults = {
+        "base_price": offer["price"],
+        "currency": offer["currency"],
+        "stock_status": offer["stock"],
+        "supplier_sku": offer["supplier_sku"],
+        "delivery_lead_time": offer["lead"],
+        "min_order_qty": offer["moq"],
+        "is_active": True,
+    }
+    for key in ("valid_from", "valid_until"):
+        if offer.get(key) is not None:
+            defaults[key] = offer[key]
+    _, created = ctx.SupplierOffer.objects.update_or_create(product=product, supplier=ctx.supplier, defaults=defaults)
+    return created
+
+
+def _row_validity(ctx: _Ctx, row, columns: dict):
+    """Срок цены строки: колонка строки, иначе поле формы на весь файл. Конец раньше начала — ошибка строки."""
+    from catalog.services import offer_validity_error
+
+    valid_from = _parse_date(_cell(row, columns["valid_from"])) or ctx.valid_from
+    valid_until = _parse_date(_cell(row, columns["valid_until"])) or ctx.valid_until
+    error = offer_validity_error(valid_from, valid_until)
+    if error:
+        raise ValueError(error)
+    return valid_from, valid_until
 
 
 def _row_taxonomy(ctx: _Ctx, row, columns: dict):
@@ -381,6 +533,9 @@ def _row_commercials(ctx: _Ctx, row, columns: dict):
     currency = ctx.currency.get(currency_code) if currency_code else None
     if currency_code and not currency:
         raise ValueError(f"UNKNOWN_CURRENCY:{currency_code}")
+    if currency is None and ctx.supplier is not None:
+        # CAT-1: строка без валюты — валюта цен поставщика из его карточки.
+        currency = getattr(ctx.supplier, "default_currency", None)
 
     stock_code = _cell(row, columns["stock"]).upper()
     stock = ctx.stock.get(stock_code) if stock_code else None
@@ -402,8 +557,10 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
 
     currency, stock, price = _row_commercials(ctx, row, columns)
     taxonomy, warnings = _row_taxonomy(ctx, row, columns)
+    valid_from, valid_until = _row_validity(ctx, row, columns)
+    supplier_sku = _cell(row, columns["supplier_sku"])
 
-    product, created = _apply_product(
+    product, created, proposals = _apply_product(
         ctx,
         {
             "name": name,
@@ -414,25 +571,33 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
             "uom_code": _cell(row, columns["uom"]).lower(),
             **taxonomy,
         },
+        supplier_sku,
     )
 
-    offer_written = False
+    offer_written = None  # None — без предложения, True — новое, False — обновлённая цена
     if ctx.supplier and price is not None:
-        _upsert_offer(
+        offer_written = _upsert_offer(
             ctx,
             product,
             {
                 "price": price,
                 "currency": currency,
                 "stock": stock,
-                "supplier_sku": _cell(row, columns["supplier_sku"]),
+                "supplier_sku": supplier_sku,
                 "lead": _cell(row, columns["lead"]),
                 "moq": _parse_int(_cell(row, columns["moq"]), 1),
+                "valid_from": valid_from,
+                "valid_until": valid_until,
             },
         )
-        offer_written = True
 
-    return {"created": created, "offer": offer_written, "product": product, "warnings": warnings}
+    return {
+        "created": created,
+        "offer": offer_written,
+        "product": product,
+        "warnings": warnings,
+        "proposals": proposals,
+    }
 
 
 def _domain_keys(domains) -> dict:
@@ -445,8 +610,17 @@ def _domain_keys(domains) -> dict:
     return by_key
 
 
-def _build_context(supplier, dry_run: bool, hs_status: dict = None) -> _Ctx:
-    from catalog.models import Category, DomainType, Manufacturer, Product, ProductStatus, StockStatus, SupplierOffer
+def _build_context(supplier, dry_run: bool, hs_status: dict = None, **extra) -> _Ctx:
+    from catalog.models import (
+        Category,
+        DomainType,
+        Manufacturer,
+        Product,
+        ProductFieldProposal,
+        ProductStatus,
+        StockStatus,
+        SupplierOffer,
+    )
     from master_data.models import Currency, UnitOfMeasure
 
     domains = list(DomainType.objects.all())
@@ -472,6 +646,8 @@ def _build_context(supplier, dry_run: bool, hs_status: dict = None) -> _Ctx:
         brand_cache={},
         touched_products={},
         dry_run=dry_run,
+        Proposal=ProductFieldProposal,
+        **extra,
     )
 
 
@@ -496,8 +672,14 @@ def _iterate_rows(ctx: _Ctx, data_frame, columns: dict, result: ImportResult, pr
             result.created += 1
         else:
             result.updated += 1
-        if outcome["offer"]:
+        if outcome["offer"] is not None:
             result.offers_upserted += 1
+            if outcome["offer"]:
+                result.offers_created += 1
+            else:
+                result.offers_updated += 1
+        for proposal in outcome["proposals"]:
+            result.add_proposal(row_number, proposal)
         # Предупреждения записываются ТОЛЬКО после успеха строки: у откатанной строки их нет.
         for message in outcome["warnings"]:
             result.add_warning(row_number, message)
@@ -575,7 +757,16 @@ def _summarize_publishability(ctx: _Ctx, result: ImportResult) -> None:
     result.missing_breakdown = summary["missing_breakdown"]
 
 
-def run_catalog_import_frame(data_frame, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
+def run_catalog_import_frame(
+    data_frame,
+    supplier_company_id=None,
+    dry_run=False,
+    progress_callback=None,
+    *,
+    actor_id=None,
+    valid_from=None,
+    valid_until=None,
+) -> dict:
     """Ядро импорта: DataFrame строк → upsert PIM-карточек + офферов загрузившего.
 
     Выделено из байтовой версии (R5b), чтобы ИИ-путь (`services_ai_catalog` собирает строки из
@@ -588,14 +779,25 @@ def run_catalog_import_frame(data_frame, supplier_company_id=None, dry_run=False
     """
     from accounts.models import Company
 
-    supplier = Company.objects.filter(id=supplier_company_id).first() if supplier_company_id else None
+    supplier = (
+        Company.objects.select_related("default_currency").filter(id=supplier_company_id).first()
+        if supplier_company_id
+        else None
+    )
 
     data_frame.columns = [str(column).lower().strip() for column in data_frame.columns]
     columns = _resolve_columns(list(data_frame.columns))
     if not columns["name"]:
         raise ValueError("NAME_COLUMN_NOT_FOUND")
 
-    ctx = _build_context(supplier, dry_run, hs_status=_prescan_hs_codes(data_frame, columns))
+    ctx = _build_context(
+        supplier,
+        dry_run,
+        hs_status=_prescan_hs_codes(data_frame, columns),
+        actor=_actor(actor_id),
+        valid_from=_as_date(valid_from),
+        valid_until=_as_date(valid_until),
+    )
     result = ImportResult(dry_run=dry_run)
 
     if dry_run:
@@ -611,7 +813,30 @@ def run_catalog_import_frame(data_frame, supplier_company_id=None, dry_run=False
     return result.as_dict()
 
 
-def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=False, progress_callback=None) -> dict:
+def _actor(actor_id):
+    if not actor_id:
+        return None
+    from accounts.models import CustomUser
+
+    return CustomUser.objects.filter(pk=actor_id).first()
+
+
+def _as_date(value):
+    """Срок на весь файл: дата или строка `ГГГГ-ММ-ДД` (задача Celery получает его JSON-строкой)."""
+    if value in (None, ""):
+        return None
+    if hasattr(value, "year"):
+        return value
+    return _parse_date(str(value))
+
+
+def run_catalog_import(
+    file_content: bytes,
+    supplier_company_id=None,
+    dry_run=False,
+    progress_callback=None,
+    **options,
+) -> dict:
     """Parse an .xlsx and upsert PIM products + the uploader's offers.
 
     Тонкая байтовая обёртка над `run_catalog_import_frame`: читает файл (с пределом строк) и
@@ -623,6 +848,7 @@ def run_catalog_import(file_content: bytes, supplier_company_id=None, dry_run=Fa
         supplier_company_id=supplier_company_id,
         dry_run=dry_run,
         progress_callback=progress_callback,
+        **options,
     )
     result["rows_truncated"] = rows_truncated
     return result
