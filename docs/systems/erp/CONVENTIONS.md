@@ -188,6 +188,12 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 - **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид (ТЗ, чертёж, сертификат,
   регламент ПНР, другое), привязка к позиции и/или сделке (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла.
   Выдача — потоком через представление; `ProductDocument` (паспорт в карточке товара) остаётся для старого фронта.
+- **Поставщик и загрузка прайса (CAT-1).** Поставщик — простая карточка `parties.Company` (тип SUPPLIER, «изготовитель» —
+  ещё MANUFACTURER; ИНН или `registration_number` нерезидента, `default_currency`), `catalog/desk/suppliers.save_supplier`.
+  Цена поставщика — `SupplierOffer` с `source` (прайс / ответ на запрос / вручную) и историей `pghistory` (`offer.events`;
+  «кто» — из `pghistory.context`). Загрузка прайса сотрудником — `supplier_company_id` в `sourcing/import-catalog[-ai]/`
+  (`catalog.manage` + `supply.manage` + цены поставщиков). Чужую карточку (не черновик, или `source_supplier` / владелец — не
+  этот поставщик) прайс не меняет: расхождения — `catalog.ProductFieldProposal` (`catalog/desk/proposals.decide`).
 - **Бригады** (`catalog.Brigade`) — справочник исполнителей услуг (название, вид, состав, специализация, ставка за день или час); из справочника
   ставку берёт расчёт услуги (D2-1). Не удаляются — `is_active = false`.
 

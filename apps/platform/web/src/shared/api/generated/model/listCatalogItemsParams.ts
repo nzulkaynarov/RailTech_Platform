@@ -4,6 +4,7 @@
  */
 import type { CatalogItemKind } from "./catalogItemKind";
 import type { CompanyItemRef } from "./companyItemRef";
+import type { ListCatalogItemsProposals } from "./listCatalogItemsProposals";
 
 export type ListCatalogItemsParams = {
   /**
@@ -28,4 +29,8 @@ export type ListCatalogItemsParams = {
    * Категория
    */
   category_id?: CompanyItemRef;
+  /**
+   * `pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1)
+   */
+  proposals?: ListCatalogItemsProposals;
 };
