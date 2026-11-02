@@ -49,17 +49,9 @@ class ResolutionKind(StrEnum):
     INFO = "info"  # Для сведения
 
 
-class ReceiptMethod(StrEnum):
-    """Способ получения (SPEC-v3 §3.2a п. 1)."""
-
-    POST = "post"
-    PAPER = "paper"
-    TAXPAYER_CABINET = "taxpayer_cabinet"
-    COURIER = "courier"
-    EMAIL = "email"
-
-
 KindCode = Annotated[str, Field(pattern=r"^[a-z][a-z_]{0,31}$")]
+# Способ получения (SPEC-v3 §3.2a п. 1) — код справочника `receipt-methods` (EDS-REG): ведёт администратор.
+ReceiptMethod = KindCode
 RelatedNumber = Annotated[str, Field(min_length=1, max_length=32)]
 
 
@@ -148,6 +140,7 @@ class LetterKindItem(BaseModel):
     code: str
     name: dict[str, str]
     urgent: bool
+    due_days: int | None = None
 
 
 class LetterKindList(BaseModel):
@@ -209,7 +202,7 @@ class Letter(BaseModel):
     reject_reason: str | None
     journal: list[JournalEntry]
     kind: str | None = None
-    receipt_method: ReceiptMethod | None = None
+    receipt_method: str | None = None
     signed_by: str | None = None
     document_due: dt.date | None = None
     related: RelatedRef | None = None
