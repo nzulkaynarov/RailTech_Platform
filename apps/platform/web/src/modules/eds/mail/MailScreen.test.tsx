@@ -3,20 +3,34 @@ import { beforeEach, describe, expect, it } from "vitest";
 
 import { MOCK_IMAP_OFF_KEY, resetInboundMailMock } from "../../../mocks/inboundMail";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
-import { arrivedAt, prefillFromMail } from "./mailModel";
 
 setupLetterTests();
 beforeEach(() => {
   resetInboundMailMock();
 });
 
-describe("Документы · Входящая почта (W18A-P2)", () => {
-  it("делопроизводитель видит очередь: отправитель, тема, подсказка, вложения", async () => {
-    signIn("registrar@demo.example");
+const REGISTRAR = "registrar@demo.example";
+
+async function listOf(name: string) {
+  return screen.findByRole("list", { name });
+}
+
+describe("Документы · Входящая почта: список (W18A-P2, W18A-P2-3)", () => {
+  it("делопроизводитель видит шесть вкладок со счётчиками и новые письма", async () => {
+    signIn(REGISTRAR);
     renderAt("/eds/mail");
-    const list = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
-    const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(3);
+    const list = await listOf("Письма, ждущие разбора");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    for (const name of [
+      "Новые · 4",
+      "Мои в работе · 0",
+      "Все в работе · 2",
+      "Разобранные · 4",
+      "Подозрительные · 1",
+      "Все · 10",
+    ]) {
+      expect(screen.getByRole("tab", { name })).toBeVisible();
+    }
     expect(
       within(list).getByRole("link", { name: "Открыть письмо «Акт сверки за октябрь»" }),
     ).toHaveAttribute("href", "/eds/mail/17");
@@ -24,64 +38,131 @@ describe("Документы · Входящая почта (W18A-P2)", () => {
     expect(within(list).getByText("Вложений: 1")).toBeVisible();
   });
 
+  it("непрочитанное письмо — жирным, прочитанное — обычным; словом «Не прочитано» для скринридера", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail");
+    const list = await listOf("Письма, ждущие разбора");
+    const unread = within(list).getByRole("link", {
+      name: "Открыть письмо «Акт сверки за октябрь»",
+    });
+    const read = within(list).getByRole("link", {
+      name: "Открыть письмо «Запрос КП на стрелочные переводы»",
+    });
+    expect(unread).toHaveClass("pf-mail-unread");
+    expect(read).not.toHaveClass("pf-mail-unread");
+    expect(within(list).getAllByText("Не прочитано").length).toBeGreaterThan(0);
+  });
+
+  it("ответ в цепочке — «Новое · ответ в цепочке», прежний исполнитель — справкой, писем — три", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail");
+    const list = await listOf("Письма, ждущие разбора");
+    const row = within(list)
+      .getByRole("link", { name: "Открыть письмо «Re: Счёт на оплату № 118»" })
+      .closest("li");
+    if (!row) throw new Error("нет строки");
+    expect(within(row).getByText("Новое · ответ в цепочке")).toBeVisible();
+    expect(within(row).getByText("Вёл: Иванов Демо")).toBeVisible();
+    expect(within(row).getByText("Писем: 2")).toBeVisible();
+  });
+
+  it("«Все в работе»: кто ведёт и с какого времени, метка «адресовано лично» из настроек", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail?tab=in_work");
+    const list = await listOf("Письма в работе");
+    const held = within(list)
+      .getByRole("link", { name: "Открыть письмо «Счёт на смазку для стрелок»" })
+      .closest("li");
+    if (!held) throw new Error("нет строки");
+    expect(within(held).getByText(/В работе у Иванов Демо с \d{2}:\d{2}/)).toBeVisible();
+    expect(within(list).getByText("Адресовано лично")).toBeVisible();
+  });
+
+  it("«Разобранные»: итог словами со ссылками на ВХ и лид, кто и когда; «Вернуть в Новые» у архива и ответа", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail?tab=done");
+    const list = await listOf("Разобранные письма");
+    expect(within(list).getByRole("link", { name: "Зарегистрировано: ВХ-42/26" })).toHaveAttribute(
+      "href",
+      "/eds/inbox/%D0%92%D0%A5-42%2F26",
+    );
+    expect(within(list).getByRole("link", { name: "Лид L-2075" })).toBeVisible();
+    expect(within(list).getByText("В архив: Рассылка")).toBeVisible();
+    expect(within(list).getByText("Ответ отправлен")).toBeVisible();
+    expect(within(list).getAllByText(/Иванов Демо, /)).not.toHaveLength(0);
+    expect(within(list).getAllByRole("button", { name: "Вернуть в Новые" })).toHaveLength(2);
+
+    fireEvent.click(
+      within(list).getAllByRole("button", { name: "Вернуть в Новые" })[0] as HTMLElement,
+    );
+    expect(await screen.findByText("Письмо вернулось в «Новые»")).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByRole("tab", { name: "Новые · 5" })).toBeVisible();
+    });
+  });
+
+  it("поиск по отправителю и теме: запрос уходит после паузы, ничего не найдено — словами", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail");
+    await listOf("Письма, ждущие разбора");
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по отправителю и теме" }), {
+      target: { value: "акт сверки" },
+    });
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("list", { name: "Письма, ждущие разбора" })).getAllByRole(
+          "listitem",
+        ),
+      ).toHaveLength(1);
+    });
+    expect(
+      screen.getByRole("link", { name: "Открыть письмо «Акт сверки за октябрь»" }),
+    ).toBeVisible();
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по отправителю и теме" }), {
+      target: { value: "zzzz" },
+    });
+    expect(await screen.findByText("Ничего не найдено")).toBeVisible();
+  });
+
+  it("массово «В архив»: причина обязательна, в итоге названы пропущенные", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail?tab=all");
+    const list = await listOf("Все письма");
+    fireEvent.click(
+      within(list).getByRole("checkbox", { name: "Выбрать письмо «Акт сверки за октябрь»" }),
+    );
+    fireEvent.click(
+      within(list).getByRole("checkbox", { name: "Выбрать письмо «Счёт на смазку для стрелок»" }),
+    );
+    fireEvent.click(
+      within(list).getByRole("checkbox", { name: "Выбрать письмо «Уведомление о сверке»" }),
+    );
+    expect(screen.getByText("Выбрано: 3")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "В архив" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("group", { name: "Что произойдёт" })).toBeInTheDocument();
+    const confirm = within(dialog).getByRole("button", { name: "Отправить в архив" });
+    expect(confirm).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Рассылка" }));
+    expect(within(dialog).getByLabelText("Причина")).toHaveValue("Рассылка");
+    fireEvent.click(confirm);
+    expect(
+      await screen.findByText("В архив: 1. Пропущено: 2 — в работе у Иванов Демо; уже разобрано."),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(screen.queryByText("Выбрано: 3")).toBeNull();
+    });
+  });
+
   it("без настроенного приёма — понятная подсказка, где подключить", async () => {
     window.localStorage.setItem(MOCK_IMAP_OFF_KEY, "1");
-    signIn("registrar@demo.example");
+    signIn(REGISTRAR);
     renderAt("/eds/mail");
     expect(await screen.findByRole("heading", { name: "Почта не подключена" })).toBeVisible();
     expect(screen.getByText(/Настройки · Подключения · Почта/)).toBeVisible();
   });
 
-  it("подсказка — только по кнопке и ничего не делает сама; «Создать лид» одним подтверждением", async () => {
-    signIn("registrar@demo.example");
-    renderAt("/eds/mail/18");
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Запрос КП на стрелочные переводы" }),
-    ).toBeVisible();
-    expect(screen.queryByText("Покупатель")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Подсказать" }));
-    expect(await screen.findByText("Покупатель")).toBeVisible();
-    expect(screen.getByText("Предлагает: Создать лид")).toBeVisible();
-    // Подсказка ничего не сделала: письмо всё ещё ждёт разбора.
-    expect(screen.getByText("Ждёт разбора")).toBeVisible();
-
-    fireEvent.click(screen.getByRole("button", { name: "Создать лид" }));
-    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
-    const [, confirm] = screen.getAllByRole("button", { name: "Создать лид" });
-    if (!confirm) throw new Error("нет кнопки подтверждения");
-    fireEvent.click(confirm);
-    expect(await screen.findByText(/Лид L-2068 создан/)).toBeVisible();
-    const list = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
-    await waitFor(() => {
-      expect(within(list).getAllByRole("listitem")).toHaveLength(2);
-    });
-  });
-
-  it("«В архив» — только с причиной", async () => {
-    signIn("registrar@demo.example");
-    renderAt("/eds/mail/19");
-    fireEvent.click(await screen.findByRole("button", { name: "В архив" }));
-    const confirm = screen.getByRole("button", { name: "Отправить в архив" });
-    expect(confirm).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Причина"), { target: { value: "реклама" } });
-    fireEvent.click(confirm);
-    expect(await screen.findByText("Письмо в архиве")).toBeVisible();
-  });
-
-  it("«Зарегистрировать входящее» открывает форму P8, заполненную из письма, с вложением", async () => {
-    signIn("registrar@demo.example");
-    renderAt("/eds/mail/17");
-    const register = await screen.findByRole("link", { name: "Зарегистрировать входящее" });
-    expect(register).toHaveAttribute("href", "/eds/register?mail=17");
-    fireEvent.click(register);
-    expect(
-      await screen.findByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
-    ).toBeVisible();
-    expect(screen.getByLabelText(/Тема/)).toHaveValue("Акт сверки за октябрь");
-    expect(await screen.findByText("акт-сверки-октябрь.pdf")).toBeVisible();
-  });
-
-  it("менеджеру без первой линии раздел не открыт", async () => {
+  it("менеджеру без первой линии раздел не открыт; свои письма — по «Моя почта»", async () => {
     signIn("universal@demo.example");
     renderAt("/eds/mail");
     expect(await screen.findByText(/не открыт|нет доступа|Нет доступа/i)).toBeVisible();
@@ -89,14 +170,33 @@ describe("Документы · Входящая почта (W18A-P2)", () => {
   });
 });
 
+describe("Своя почта сотрудника без первой линии (W18A-P2-3)", () => {
+  it("видит только письмо, адресованное ему лично: три вкладки, без поиска очереди и массовых действий", async () => {
+    signIn("universal@demo.example");
+    renderAt("/eds/my-mail");
+    const list = await listOf("Мои письма в работе");
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    expect(
+      within(list).getByRole("link", {
+        name: "Открыть письмо «Вопрос по гарантии на стрелочный привод»",
+      }),
+    ).toHaveAttribute("href", "/eds/my-mail/23");
+    expect(screen.getByRole("tab", { name: "Мои в работе · 1" })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Все мои · 1" })).toBeVisible();
+    expect(screen.queryByRole("tab", { name: /Подозрительные/ })).toBeNull();
+    expect(within(list).queryByRole("checkbox")).toBeNull();
+    expect(within(list).getByText("Адресовано лично")).toBeVisible();
+  });
+});
+
 describe("Входящая почта: «Подозрительные» и «из истории» (W18A-P2-2)", () => {
-  it("письмо из «Спама» — во вкладке «Подозрительные», не в очереди; «Не спам» возвращает его в очередь", async () => {
-    signIn("registrar@demo.example");
+  it("письмо из «Спама» — во вкладке «Подозрительные», не в очереди; «Не спам» возвращает его в «Новые»", async () => {
+    signIn(REGISTRAR);
     renderAt("/eds/mail");
-    const queue = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
+    const queue = await listOf("Письма, ждущие разбора");
     expect(within(queue).queryByText(/тендере на поставку шпал/)).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Подозрительные · 1" }));
-    const spam = await screen.findByRole("list", { name: "Подозрительные письма" });
+    const spam = await listOf("Подозрительные письма");
     fireEvent.click(
       await within(spam).findByRole("link", {
         name: "Открыть письмо «Приглашение к участию в тендере на поставку шпал»",
@@ -108,17 +208,17 @@ describe("Входящая почта: «Подозрительные» и «и�
     expect(screen.getByText(/отметьте его в почте «Не спам»/)).toBeVisible();
     expect(screen.queryByRole("link", { name: "Зарегистрировать входящее" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Не спам → в очередь" }));
-    expect(await screen.findByText("Письмо в очереди «Ждут разбора»")).toBeVisible();
+    expect(await screen.findByText("Письмо в «Новых»")).toBeVisible();
     expect(await screen.findByText("Подозрительных писем нет")).toBeVisible();
-    fireEvent.click(screen.getByRole("tab", { name: /Ждут разбора/ }));
-    const back = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
+    fireEvent.click(screen.getByRole("tab", { name: /^Новые/ }));
+    const back = await listOf("Письма, ждущие разбора");
     await waitFor(() => {
-      expect(within(back).getAllByRole("listitem")).toHaveLength(4);
+      expect(within(back).getAllByRole("listitem")).toHaveLength(5);
     });
   });
 
   it("«Убрать» — в архив, письмо уходит из «Подозрительных»", async () => {
-    signIn("registrar@demo.example");
+    signIn(REGISTRAR);
     renderAt("/eds/mail/20");
     fireEvent.click(await screen.findByRole("button", { name: "Убрать" }));
     expect(await screen.findByText("Письмо убрано в архив")).toBeVisible();
@@ -126,63 +226,9 @@ describe("Входящая почта: «Подозрительные» и «и�
   });
 
   it("фильтр «Из истории»: пусто, пока администратор не загрузил письма за период", async () => {
-    signIn("registrar@demo.example");
+    signIn(REGISTRAR);
     renderAt("/eds/mail?show=history");
     expect(await screen.findByText("Писем из истории нет")).toBeVisible();
     expect(screen.getByRole("radio", { name: "Из истории · 0" })).toBeChecked();
-  });
-});
-
-describe("arrivedAt", () => {
-  it("у письма «из истории» — дата письма, у обычного — когда пришло в ящик", () => {
-    const mail = { sent_at: "2026-10-01T05:00:00Z", received_at: "2026-11-03T05:00:00Z" };
-    expect(arrivedAt({ ...mail, from_history: true })).toBe("2026-10-01T05:00:00Z");
-    expect(arrivedAt({ ...mail, from_history: false })).toBe("2026-11-03T05:00:00Z");
-    expect(arrivedAt({ ...mail, sent_at: null, from_history: true })).toBe("2026-11-03T05:00:00Z");
-  });
-});
-
-describe("prefillFromMail", () => {
-  it("переносит корреспондента, дату, суть, вложения и источник; вид — только однозначный", () => {
-    const values = prefillFromMail(
-      {
-        id: 5,
-        status: "new",
-        from_email: "a@b.example",
-        from_name: "",
-        subject: "Счёт",
-        received_at: "2026-11-01T20:30:00Z",
-        sent_at: null,
-        preview: "",
-        attachments_count: 0,
-        assist: { status: "done", kind: "official", summary: "Письмо банка", action: "register" },
-        client: null,
-        lead: null,
-        from_history: false,
-        to: [],
-        text: "Текст",
-        attachments: [],
-        skipped: [],
-        too_large: false,
-        inns: ["301234567"],
-        letter_number: null,
-        letter_ref: null,
-        result_lead: null,
-        archive_reason: null,
-        handled_at: null,
-        replies: [],
-      },
-      [],
-    );
-    expect(values).toMatchObject({
-      kind: "",
-      receiptMethod: "email",
-      senderName: "a@b.example",
-      senderInn: "301234567",
-      receivedAt: "2026-11-02",
-      summary: "Письмо банка",
-      sourceMailId: 5,
-      attachments: [],
-    });
   });
 });

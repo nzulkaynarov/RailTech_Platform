@@ -139,7 +139,8 @@
       "new": "New document",
       "register": "Register incoming",
       "tasks": "Instruction",
-      "mail": "Incoming mail"
+      "mail": "Incoming mail",
+      "mymail": "My mail"
     },
     "action": "New document"
   },

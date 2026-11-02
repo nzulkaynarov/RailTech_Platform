@@ -29,6 +29,12 @@ async function shot(page: Page, name: string): Promise<void> {
   await page.screenshot({ path: `${dir}/${name}-${String(width)}.png`, fullPage: true });
 }
 
+/** Вкладка списка: на 390 полоса вкладок прокручивается, поэтому — фокус и Enter, как с клавиатуры. */
+async function openTab(page: Page, name: string | RegExp): Promise<void> {
+  await page.getByRole("tab", { name }).focus();
+  await page.keyboard.press("Enter");
+}
+
 /** Вход другим сотрудником; письма мока (`localStorage`) остаются — как в одной базе. */
 async function signInAs(page: Page, email: string, width: number, fresh = false): Promise<void> {
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
@@ -86,14 +92,14 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
 
       await spaGoto(page, "/eds/mail");
       const queue = page.getByRole("list", { name: "Письма, ждущие разбора" });
-      await expect(queue.getByRole("listitem")).toHaveCount(5);
+      await expect(queue.getByRole("listitem")).toHaveCount(6);
       await page.getByText("Из истории · 2").click();
       await expect(queue.getByRole("listitem")).toHaveCount(2);
       await expect(queue.getByText("Из истории").first()).toBeVisible();
       await shot(page, "mail-history-filter");
       await expectNoViolations(page, `из истории ${String(width)}`);
 
-      await page.getByRole("tab", { name: "Подозрительные · 1" }).click();
+      await openTab(page, "Подозрительные · 1");
       const spam = page.getByRole("list", { name: "Подозрительные письма" });
       await spam
         .getByRole("link", {
@@ -108,11 +114,11 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
       await page.getByRole("button", { name: "Не спам → в очередь" }).click();
       await expect(page.getByText("Подозрительных писем нет")).toBeVisible();
       await shot(page, "mail-spam-empty");
-      await page.getByRole("tab", { name: /Ждут разбора/ }).click();
+      await openTab(page, /^Новые/);
       await expect(page.getByRole("radio", { name: /Все/ })).toBeChecked();
       await expect(
         page.getByRole("list", { name: "Письма, ждущие разбора" }).getByRole("listitem"),
-      ).toHaveCount(6);
+      ).toHaveCount(7);
     }
   });
 });

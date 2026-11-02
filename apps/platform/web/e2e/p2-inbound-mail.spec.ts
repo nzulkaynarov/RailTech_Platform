@@ -57,7 +57,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await spaGoto(page, "/eds/mail");
       await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
       const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
-      await expect(list.getByRole("listitem")).toHaveCount(3);
+      await expect(list.getByRole("listitem")).toHaveCount(4);
       await shot(page, "mail-list");
       await expectNoViolations(page, `список ${String(width)}`);
 
@@ -68,7 +68,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(page.getByText("Покупатель", { exact: true })).toHaveCount(0);
       await page.getByRole("button", { name: "Подсказать" }).click();
       await expect(page.getByText("Предлагает: Создать лид")).toBeVisible();
-      await expect(page.getByText("Ждёт разбора")).toBeVisible();
+      await expect(page.getByText("Новое", { exact: true }).first()).toBeVisible();
       await shot(page, "mail-card-assist");
       await expectNoViolations(page, `карточка ${String(width)}`);
 
@@ -76,7 +76,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await page.getByRole("button", { name: "Создать лид" }).last().click();
       await expect(page.getByText(/Лид L-2068 создан/)).toBeVisible();
-      await expect(list.getByRole("listitem")).toHaveCount(2);
+      await expect(list.getByRole("listitem")).toHaveCount(3);
     }
   });
 
@@ -101,7 +101,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await spaGoto(page, "/eds/mail");
       await expect(
         page.getByRole("list", { name: "Письма, ждущие разбора" }).getByRole("listitem"),
-      ).toHaveCount(2);
+      ).toHaveCount(3);
     }
   });
 

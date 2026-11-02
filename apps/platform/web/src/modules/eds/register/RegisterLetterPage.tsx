@@ -166,6 +166,7 @@ export function RegisterLetterPage() {
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { mobile } = useViewport();
+  const { date } = useFormat();
   const refresh = useRefreshLetters();
   const today = todayInCompanyZone();
   const [values, setValues] = useState<RegisterValues>(() => emptyRegister(today));
@@ -189,7 +190,9 @@ export function RegisterLetterPage() {
   }));
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
   const uploading =
-    values.attachments.some((a) => a.status === "uploading") || fromMail.state === "loading";
+    values.attachments.some((a) => a.status === "uploading") ||
+    fromMail.state === "loading" ||
+    fromMail.state === "busy";
   const title = t("modules:eds.sections.register");
   useDocumentTitle(title);
 
@@ -256,7 +259,28 @@ export function RegisterLetterPage() {
   return (
     <div className="pf-newdoc">
       <PageHeader title={title} subtitle={t("letters:register.subtitle")} />
-      {fromMail.state !== "idle" ? (
+      {fromMail.state === "busy" && fromMail.holder ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="alert"
+          message={t("letters:mail.busy.title", {
+            name: fromMail.holder.name,
+            time: fromMail.holder.since ? date(fromMail.holder.since, "time") : "",
+          })}
+          description={
+            <div className="pf-mail-actions">
+              <Consequence
+                title={t("letters:mail.actions.what")}
+                items={[t("letters:mail.busy.what", { name: fromMail.holder.name })]}
+              />
+              <div>
+                <Button onClick={fromMail.takeOver}>{t("letters:mail.busy.takeOver")}</Button>
+              </div>
+            </div>
+          }
+        />
+      ) : fromMail.state !== "idle" ? (
         <Alert
           type={
             fromMail.state === "files_failed" || fromMail.state === "failed" ? "warning" : "info"
@@ -651,6 +675,24 @@ export function RegisterLetterPage() {
                       />
                     </Field>
                   ) : null}
+                  <Field
+                    id="reg-draft-acquaint"
+                    label={t("letters:register.draft.acquaint")}
+                    hint={t("letters:register.draft.acquaintHint")}
+                  >
+                    <Select
+                      id="reg-draft-acquaint"
+                      mode="multiple"
+                      value={values.draftAcquaintIds}
+                      showSearch
+                      optionFilterProp="label"
+                      options={people}
+                      aria-describedby="reg-draft-acquaint-hint"
+                      onChange={(ids: string[]) => {
+                        set("draftAcquaintIds", ids);
+                      }}
+                    />
+                  </Field>
                   <Field id="reg-draft-text" label={t("letters:office.text.label")}>
                     <Input.TextArea
                       id="reg-draft-text"

@@ -9,4 +9,8 @@ export interface InboundMailReplyIn {
    * @maxLength 20000
    */
   text: string;
+  /** «Ответить всем»: копия — остальные адреса письма, кроме общего ящика */
+  reply_all?: boolean;
+  /** «Ждём ответа»: письмо остаётся «в работе» */
+  awaiting?: boolean;
 }

@@ -12,4 +12,6 @@ export interface InboundMailMailbox {
   last_ok_at: string | null;
   /** @nullable */
   last_error_kind: string | null;
+  /** Пометка «адресовано лично» из настроек приёма */
+  personal_label: string;
 }

@@ -35,6 +35,13 @@ export function Component() {
       </RequireAccess>
     );
   }
+  if (match?.module.code === "eds" && match.section.key === "mymail") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <MailScreen objectId={match.objectId} own />
+      </RequireAccess>
+    );
+  }
   if (match?.module.code === "eds" && match.section.key === "drafts") {
     return (
       <RequireAccess rule={match.section.access}>

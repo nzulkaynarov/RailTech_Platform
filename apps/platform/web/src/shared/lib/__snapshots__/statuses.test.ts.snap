@@ -85,10 +85,10 @@ exports[`карты статусов > снимок карты: изменени
     "warm": "gold",
   },
   "inboundMail": {
-    "archived": "default",
-    "lead": "green",
+    "done": "green",
+    "in_work": "blue",
     "new": "blue",
-    "registered": "blue",
+    "registering": "gold",
     "spam": "gold",
   },
   "incoming": {

@@ -37,6 +37,17 @@ export const eds: ModuleConfig = {
       defaults: { panelOpen: false },
     },
     {
+      // W18A-P2-3: своё письмо общего ящика у сотрудника без раздела первой линии — «в работе» у него или адресовано
+      // лично (решает CRM); из «Моих задач», как поручение.
+      key: "mymail",
+      path: "/eds/my-mail",
+      detail: "/eds/my-mail/:id",
+      access: { resource: "dashboard.queue" },
+      hidden: true,
+      defaults: { panelOpen: false },
+      actionTo: "/dashboard/queue",
+    },
+    {
       key: "outbox",
       path: "/eds/outbox",
       detail: "/eds/outbox/:id",

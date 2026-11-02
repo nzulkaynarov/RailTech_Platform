@@ -400,7 +400,13 @@
         "limited": "Davrda 2000 dan ortiq xat bor — oxirgi 2000 tasi yuklandi. Qisqaroq davrni tanlang.",
         "error": "Yuklash toʻxtadi: {{reason}}",
         "again": "Qayta yuklash xavfsiz: yuklangan xatlar takrorlanmaydi."
-      }
+      },
+      "personal": "«Kimga»da xodim, quti nusxada — xat darhol unga",
+      "personalLabel": "Bunday xat belgisi",
+      "personalLabelHint": "Ro‘yxat va kartochkada ko‘rinadi, 80 belgigacha",
+      "personalState": "«Shaxsan» xatlar",
+      "personalOn": "Darhol xodimga — «{{label}}» belgisi",
+      "personalOff": "O‘chirilgan — hammasi «Yangi»ga"
     }
   },
   "services": {

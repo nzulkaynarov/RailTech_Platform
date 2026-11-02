@@ -34,4 +34,5 @@ export const QueueItemKind = {
   instruction_extension: "instruction_extension",
   acquaint: "acquaint",
   inbound_mail: "inbound_mail",
+  inbound_mail_mine: "inbound_mail_mine",
 } as const;
