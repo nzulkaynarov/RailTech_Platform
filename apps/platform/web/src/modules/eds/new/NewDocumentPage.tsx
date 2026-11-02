@@ -1,4 +1,4 @@
-import { App, Button, Card, Input, Select, Skeleton } from "antd";
+import { Alert, App, Button, Card, Input, Select, Skeleton } from "antd";
 import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
@@ -10,10 +10,14 @@ import { ApiError } from "../../../shared/api/errors";
 import type { EdsDocument, EdsDocumentKind } from "../../../shared/api/generated/model";
 import {
   createEdsDocument,
+  requestEdsDocumentRegistration,
   useGetEdsDocument,
+  useGetEdsLetterhead,
   useUpdateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
+import { BodyEditor } from "../../../shared/ui/BodyEditor/BodyEditor";
+import { bodyLang } from "../../../shared/ui/BodyEditor/bodyModel";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -27,6 +31,7 @@ import {
   savedDocumentId,
   serverFields,
 } from "../documents/errors";
+import { LetterPdfPanel } from "../documents/LetterPdfPanel";
 import { parseDocumentId, useRefreshDocuments } from "../documents/params";
 import { AttachmentsField } from "./AttachmentsField";
 import { DealField } from "./DealField";
@@ -42,6 +47,7 @@ import {
   isLetter,
   kindFromParam,
   routeKind,
+  type SubmitMode,
   todayInCompanyZone,
   toCreateBody,
   toUpdateBody,
@@ -106,36 +112,46 @@ interface ServerNote {
   saved: boolean;
 }
 
+type Action = "draft" | "submit" | "handover";
+
 /**
  * Форма документа (SPEC-v3 §3.2, §7.3): тип, тема, кому, текст, сумма и «нужно до», вложения, связь с проектом. Главная
- * кнопка отправляет на согласование (письмо — регистрирует), вторичная сохраняет черновик. Ошибка сервера — «Не отправлено:
+ * кнопка отправляет на согласование, вторичная сохраняет черновик. Письмо (P4) — на бланке компании: тело блоками, «кому»,
+ * почта адресата, подписант и настоящий PDF рядом; держатель «регистрировать входящие» регистрирует ИСХ и отправляет
+ * адресату, остальные передают черновик на регистрацию делопроизводителю (B-P8B-4). Ошибка сервера — «Не отправлено:
  * причина», введённое остаётся; если документ уже создан, а отправка отклонена, следующая попытка идёт по тому же черновику.
  */
 function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocument | null }) {
-  const { t } = useTranslation(["documents", "modules"]);
+  const { t, i18n } = useTranslation(["documents", "modules"]);
   const { me } = useAuth();
   const { message } = App.useApp();
   const navigate = useNavigate();
   const { mobile } = useViewport();
   const refresh = useRefreshDocuments();
-  // P8: исходящее письмо регистрирует тот, кто регистрирует входящие (`eds.inbox.register`), а не держатель резолюции.
-  const canLetter = canEdit(me, "eds.inbox.register");
+  // P8: исходящее письмо регистрирует тот, кто регистрирует входящие (`eds.inbox.register`); черновик письма (P4) готовит
+  // любой и передаёт делопроизводителю.
+  const canRegister = canEdit(me, "eds.inbox.register");
   const canLink = canSee(me, { anyOf: ["crm.clients", "eds.projects"] });
-  const [values, setValues] = useState<FormValues>(() => ({
-    ...initial,
-    kind: initial.kind === "letter_out" && !canLetter && !draft ? "memo" : initial.kind,
-  }));
+  const canCompany = canEdit(me, "company.settings");
+  const [values, setValues] = useState<FormValues>(initial);
   const [errors, setErrors] = useState<FormErrors>({});
   const [note, setNote] = useState<ServerNote | null>(null);
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
+  // Id сохранённого черновика без ожидания перерисовки: «Показать PDF» сразу после создания идёт по тому же документу.
+  const savedRef = useRef<string | null>(draft?.id ?? null);
   const [creating, setCreating] = useState(false);
+  const [handingOver, setHandingOver] = useState(false);
   // Ключ повтора создания: на экземпляр формы и тело запроса — потерянный ответ не заведёт второй документ.
   const idempotency = useRef<{ body: string; key: string } | null>(null);
   const update = useUpdateEdsDocument();
-  const pending = creating || update.isPending;
+  const pending = creating || update.isPending || handingOver;
   const uploading = values.attachments.some((a) => a.status === "uploading");
   const letter = isLetter(values.kind);
+  const letterhead = useGetEdsLetterhead({ query: { enabled: letter, staleTime: 60_000 } });
   const today = todayInCompanyZone();
+  const lang = bodyLang(i18n.language);
+  const handover = letter && !canRegister;
+  const sendToRecipient = letter && values.recipientEmail.trim() !== "";
 
   const set = <K extends keyof FormValues>(key: K, value: FormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -144,58 +160,111 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
     setValues((prev) => ({ ...prev, attachments: updater(prev.attachments) }));
   };
 
-  const run = async (submit: boolean) => {
+  /** Создать или сохранить документ; `mode` — отправить ли (письмо — зарегистрировать и отправить адресату). */
+  const persist = async (mode: SubmitMode): Promise<EdsDocument> => {
+    const current = savedRef.current;
+    if (current) {
+      const doc = await update.mutateAsync({ id: current, data: toUpdateBody(values, mode, lang) });
+      return doc;
+    }
+    const body = toCreateBody(values, mode, lang);
+    const json = JSON.stringify(body);
+    if (idempotency.current?.body !== json) idempotency.current = { body: json, key: newKey() };
+    setCreating(true);
+    try {
+      const doc = await createEdsDocument(body, {
+        headers: { "Idempotency-Key": idempotency.current.key },
+      });
+      savedRef.current = doc.id;
+      setSavedId(doc.id);
+      return doc;
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const check = (): boolean => {
     const found = validate(values, today);
     setErrors(found);
     setNote(null);
     const first = FIELD_ORDER.find((field) => found[field]);
     if (first) {
       focusField(first);
-      return;
+      return false;
     }
+    return true;
+  };
+
+  const fail = (error: unknown, submit: boolean) => {
+    const id = savedDocumentId(error);
+    if (id) {
+      savedRef.current = id;
+      setSavedId(id);
+    }
+    if (id || savedRef.current) refresh();
+    const fields = serverFields(error);
+    setErrors(Object.fromEntries(fields.map((field) => [field, true])));
+    setNote({
+      text: t(submit ? "documents:form.error.send" : "documents:form.error.save", {
+        reason: reasonText(t, error),
+      }),
+      saved: error instanceof ApiError && error.details["saved"] === true,
+    });
+    const firstField = FIELD_ORDER.find((field) => fields.includes(field));
+    if (firstField) focusField(firstField);
+  };
+
+  const run = async (action: Action) => {
+    if (!check()) return;
+    const submit = action !== "draft";
     try {
-      let doc: EdsDocument;
-      if (savedId) {
-        doc = await update.mutateAsync({ id: savedId, data: toUpdateBody(values, submit) });
-      } else {
-        const body = toCreateBody(values, submit);
-        const json = JSON.stringify(body);
-        if (idempotency.current?.body !== json) idempotency.current = { body: json, key: newKey() };
-        setCreating(true);
+      let doc = await persist(
+        action === "submit" ? { submit: true, send: sendToRecipient } : { submit: false },
+      );
+      if (action === "handover") {
+        setHandingOver(true);
         try {
-          doc = await createEdsDocument(body, {
-            headers: { "Idempotency-Key": idempotency.current.key },
-          });
+          doc = await requestEdsDocumentRegistration(doc.id);
         } finally {
-          setCreating(false);
+          setHandingOver(false);
         }
       }
       refresh();
-      void message.success(
-        !submit
+      const toast =
+        action === "draft"
           ? t("documents:form.toast.draft")
-          : t(letter ? "documents:form.toast.registered" : "documents:form.toast.sent", {
-              number: doc.number ?? "",
-            }),
-      );
+          : action === "handover"
+            ? t("documents:form.toast.handover")
+            : !letter
+              ? t("documents:form.toast.sent", { number: doc.number ?? "" })
+              : t(
+                  sendToRecipient
+                    ? "documents:form.toast.registeredSent"
+                    : "documents:form.toast.registered",
+                  {
+                    number: doc.number ?? "",
+                  },
+                );
+      void message.success(toast);
       void navigate({
         pathname: "/eds/documents",
         search: `?scope=mine&doc=${doc.id}${mobile ? "" : "&panel=open"}`,
       });
     } catch (error) {
-      const id = savedDocumentId(error);
-      if (id) setSavedId(id);
-      if (id || savedId) refresh();
-      const fields = serverFields(error);
-      setErrors(Object.fromEntries(fields.map((field) => [field, true])));
-      setNote({
-        text: t(submit ? "documents:form.error.send" : "documents:form.error.save", {
-          reason: reasonText(t, error),
-        }),
-        saved: error instanceof ApiError && error.details["saved"] === true,
-      });
-      const firstField = FIELD_ORDER.find((field) => fields.includes(field));
-      if (firstField) focusField(firstField);
+      fail(error, submit);
+    }
+  };
+
+  /** «Показать PDF»: сохранить черновик (без перехода) и отдать его id блоку PDF. */
+  const prepare = async (): Promise<string | null> => {
+    if (!check()) return null;
+    try {
+      const doc = await persist({ submit: false });
+      refresh();
+      return doc.id;
+    } catch (error) {
+      fail(error, false);
+      return null;
     }
   };
 
@@ -206,105 +275,173 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
     amount: fieldElementId("amount"),
     due: fieldElementId("due_date"),
     recipient: fieldElementId("recipient"),
+    email: fieldElementId("recipient_email"),
     deal: fieldElementId("erp_deal_id"),
     replyTo: fieldElementId("in_reply_to_number"),
     files: "doc-files",
   };
   const route = routeKind(values);
-  const routeText = t(`documents:form.route.${route}`);
+  const routeText = t(
+    handover ? "documents:form.route.letterHandover" : `documents:form.route.${route}`,
+  );
   const returned = draft?.status === "returned";
   const subtitle = draft
     ? t(returned ? "documents:form.subtitleReturned" : "documents:form.subtitleContinue", {
         number: draft.number ?? "",
       })
-    : t(letter ? "documents:form.subtitleLetter" : "documents:form.subtitle");
+    : t(
+        letter
+          ? handover
+            ? "documents:form.subtitleLetterHandover"
+            : "documents:form.subtitleLetter"
+          : "documents:form.subtitle",
+      );
   const title = t("modules:eds.sections.new");
   useDocumentTitle(title);
-  const consequence = t(`documents:form.consequence.${consequenceKey(values)}`, {
-    returnObjects: true,
-  }) as string[];
+  const consequence = t(
+    `documents:form.consequence.${handover ? "letterHandover" : consequenceKey(values)}`,
+    { returnObjects: true },
+  ) as string[];
+  const head = letterhead.data;
+  const signatoryHint =
+    head?.signatory_name && head.signatory_position
+      ? t("documents:form.signatory.hint", {
+          name: head.signatory_name,
+          position: head.signatory_position,
+        })
+      : t("documents:form.signatory.hintNone");
+  const primaryLabel = !letter
+    ? t("documents:form.submit.approval")
+    : handover
+      ? t("documents:form.submit.handover")
+      : t(sendToRecipient ? "documents:form.submit.letterSend" : "documents:form.submit.letter");
 
-  return (
-    <div className="pf-newdoc">
-      <PageHeader title={title} subtitle={subtitle} />
-      <form
-        aria-label={t("documents:form.formLabel")}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!pending && !uploading) void run(true);
+  const textField = letter ? (
+    <Field
+      id={ids.text}
+      label={t("documents:form.body.label")}
+      hint={t("documents:form.body.hint")}
+      error={errors.text ? fieldText(t, "text") : undefined}
+    >
+      <BodyEditor
+        id={ids.text}
+        value={values.blocks}
+        invalid={Boolean(errors.text)}
+        describedBy={describedBy(ids.text, true, Boolean(errors.text))}
+        onChange={(blocks) => {
+          set("blocks", blocks);
         }}
-      >
-        <Card>
-          <div className="pf-fp-form">
-            <Field
+      />
+    </Field>
+  ) : (
+    <Field
+      id={ids.text}
+      label={t("documents:form.text.label")}
+      hint={t("documents:form.text.hint")}
+      error={errors.text ? fieldText(t, "text") : undefined}
+    >
+      <Input.TextArea
+        id={ids.text}
+        rows={8}
+        maxLength={20000}
+        value={values.text}
+        status={errors.text ? "error" : undefined}
+        aria-invalid={errors.text || undefined}
+        aria-describedby={describedBy(ids.text, true, Boolean(errors.text))}
+        onChange={(event) => {
+          set("text", event.target.value);
+        }}
+      />
+    </Field>
+  );
+
+  const form = (
+    <form
+      aria-label={t("documents:form.formLabel")}
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!pending && !uploading) void run(handover ? "handover" : "submit");
+      }}
+    >
+      <Card>
+        <div className="pf-fp-form">
+          <Field
+            id={ids.kind}
+            label={t("documents:form.type.label")}
+            hint={
+              draft || savedId
+                ? t("documents:form.type.locked")
+                : letter && !canRegister
+                  ? t("documents:form.type.letterHandover")
+                  : undefined
+            }
+          >
+            <Select
               id={ids.kind}
-              label={t("documents:form.type.label")}
-              hint={
-                draft || savedId
-                  ? t("documents:form.type.locked")
-                  : canLetter
-                    ? undefined
-                    : t("documents:form.type.letterLocked")
+              value={values.kind}
+              disabled={draft !== null || savedId !== null}
+              options={KINDS.map((kind) => ({ value: kind, label: t(`documents:kinds.${kind}`) }))}
+              onChange={(kind) => {
+                setErrors({});
+                set("kind", kind);
+              }}
+            />
+          </Field>
+          {letter && letterhead.data && !letterhead.data.configured ? (
+            <Alert
+              type="warning"
+              showIcon
+              message={t("documents:form.letterhead.missing")}
+              action={
+                canCompany ? (
+                  <LinkButton size="small" to="/admin/company?tab=brand">
+                    {t("documents:form.letterhead.open")}
+                  </LinkButton>
+                ) : undefined
               }
-            >
-              <Select
-                id={ids.kind}
-                value={values.kind}
-                disabled={draft !== null || savedId !== null}
-                options={KINDS.map((kind) => ({
-                  value: kind,
-                  disabled: kind === "letter_out" && !canLetter,
-                  label:
-                    kind === "letter_out" && !canLetter
-                      ? t("documents:form.type.letterOption")
-                      : t(`documents:kinds.${kind}`),
-                }))}
-                onChange={(kind) => {
-                  setErrors({});
-                  set("kind", kind);
-                }}
-              />
-            </Field>
-            <Field
+            />
+          ) : null}
+          <Field
+            id={ids.subject}
+            label={t("documents:form.subject.label")}
+            hint={t("documents:form.subject.hint")}
+            error={errors.subject ? fieldText(t, "subject") : undefined}
+          >
+            <Input
               id={ids.subject}
-              label={t("documents:form.subject.label")}
-              hint={t("documents:form.subject.hint")}
-              error={errors.subject ? fieldText(t, "subject") : undefined}
-            >
-              <Input
-                id={ids.subject}
-                value={values.subject}
-                maxLength={300}
-                autoComplete="off"
-                status={errors.subject ? "error" : undefined}
-                aria-invalid={errors.subject || undefined}
-                aria-describedby={describedBy(ids.subject, true, Boolean(errors.subject))}
-                onChange={(event) => {
-                  set("subject", event.target.value);
-                }}
-              />
-            </Field>
-            {letter ? (
-              <>
-                <Field
+              value={values.subject}
+              maxLength={300}
+              autoComplete="off"
+              status={errors.subject ? "error" : undefined}
+              aria-invalid={errors.subject || undefined}
+              aria-describedby={describedBy(ids.subject, true, Boolean(errors.subject))}
+              onChange={(event) => {
+                set("subject", event.target.value);
+              }}
+            />
+          </Field>
+          {letter ? (
+            <>
+              <Field
+                id={ids.recipient}
+                label={t("documents:form.recipient.label")}
+                error={errors.recipient ? fieldText(t, "recipient") : undefined}
+              >
+                <Input
                   id={ids.recipient}
-                  label={t("documents:form.recipient.label")}
-                  error={errors.recipient ? fieldText(t, "recipient") : undefined}
-                >
-                  <Input
-                    id={ids.recipient}
-                    value={values.recipientName}
-                    maxLength={255}
-                    autoComplete="off"
-                    status={errors.recipient ? "error" : undefined}
-                    aria-invalid={errors.recipient || undefined}
-                    aria-describedby={describedBy(ids.recipient, false, Boolean(errors.recipient))}
-                    onChange={(event) => {
-                      set("recipientName", event.target.value);
-                    }}
-                  />
-                </Field>
+                  value={values.recipientName}
+                  maxLength={255}
+                  autoComplete="off"
+                  status={errors.recipient ? "error" : undefined}
+                  aria-invalid={errors.recipient || undefined}
+                  aria-describedby={describedBy(ids.recipient, false, Boolean(errors.recipient))}
+                  onChange={(event) => {
+                    set("recipientName", event.target.value);
+                  }}
+                />
+              </Field>
+              <div className="pf-newdoc-row">
                 <Field
                   id="doc-recipient-inn"
                   label={t("documents:form.recipient.inn")}
@@ -321,184 +458,250 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
                     }}
                   />
                 </Field>
-                {draft ? null : (
-                  <Field
-                    id={ids.replyTo}
-                    label={t("documents:form.replyTo.label")}
-                    hint={t("documents:form.replyTo.hint")}
-                    error={
-                      errors.in_reply_to_number ? fieldText(t, "in_reply_to_number") : undefined
-                    }
-                  >
-                    <Input
-                      id={ids.replyTo}
-                      value={values.inReplyTo}
-                      maxLength={32}
-                      autoComplete="off"
-                      placeholder="ВХ-112/26"
-                      status={errors.in_reply_to_number ? "error" : undefined}
-                      aria-invalid={errors.in_reply_to_number || undefined}
-                      aria-describedby={describedBy(
-                        ids.replyTo,
-                        true,
-                        Boolean(errors.in_reply_to_number),
-                      )}
-                      onChange={(event) => {
-                        set("inReplyTo", event.target.value);
-                      }}
-                    />
-                  </Field>
-                )}
-              </>
-            ) : (
-              <Field
-                id="doc-to"
-                label={t("documents:form.to.label")}
-                hint={t("documents:form.to.hint")}
-              >
-                <Input
-                  id="doc-to"
-                  value={t("documents:form.to.director")}
-                  readOnly
-                  aria-describedby="doc-to-hint"
-                />
-              </Field>
-            )}
-            <Field
-              id={ids.text}
-              label={t("documents:form.text.label")}
-              hint={t("documents:form.text.hint")}
-              error={errors.text ? fieldText(t, "text") : undefined}
-            >
-              <Input.TextArea
-                id={ids.text}
-                rows={8}
-                maxLength={20000}
-                value={values.text}
-                status={errors.text ? "error" : undefined}
-                aria-invalid={errors.text || undefined}
-                aria-describedby={describedBy(ids.text, true, Boolean(errors.text))}
-                onChange={(event) => {
-                  set("text", event.target.value);
-                }}
-              />
-            </Field>
-            {letter ? null : (
-              <div className="pf-newdoc-row">
                 <Field
-                  id={ids.amount}
-                  label={t("documents:form.amount.label")}
-                  hint={t(
-                    values.kind === "memo"
-                      ? "documents:form.amount.hint"
-                      : "documents:form.due.hint",
-                  )}
-                  error={errors.amount ? fieldText(t, "amount") : undefined}
+                  id={ids.email}
+                  label={t("documents:form.email.label")}
+                  hint={t("documents:form.email.hint")}
+                  error={errors.recipient_email ? fieldText(t, "recipient_email") : undefined}
                 >
                   <Input
-                    id={ids.amount}
-                    value={values.amount}
-                    inputMode="decimal"
+                    id={ids.email}
+                    type="email"
+                    inputMode="email"
+                    value={values.recipientEmail}
+                    maxLength={254}
                     autoComplete="off"
-                    placeholder="1 500 000"
-                    status={errors.amount ? "error" : undefined}
-                    aria-invalid={errors.amount || undefined}
-                    aria-describedby={describedBy(ids.amount, true, Boolean(errors.amount))}
+                    status={errors.recipient_email ? "error" : undefined}
+                    aria-invalid={errors.recipient_email || undefined}
+                    aria-describedby={describedBy(ids.email, true, Boolean(errors.recipient_email))}
                     onChange={(event) => {
-                      set("amount", event.target.value);
-                    }}
-                  />
-                </Field>
-                <Field
-                  id={ids.due}
-                  label={t("documents:form.due.label")}
-                  hint={t("documents:form.due.hint")}
-                  error={errors.due_date ? fieldText(t, "due_date") : undefined}
-                >
-                  <DateField
-                    id={ids.due}
-                    min={today}
-                    value={values.dueDate}
-                    status={errors.due_date ? "error" : undefined}
-                    aria-invalid={errors.due_date || undefined}
-                    aria-describedby={describedBy(ids.due, true, Boolean(errors.due_date))}
-                    onChange={(next) => {
-                      set("dueDate", next);
+                      set("recipientEmail", event.target.value);
                     }}
                   />
                 </Field>
               </div>
-            )}
-            <Field
-              id={ids.files}
-              label={t("documents:form.files.label")}
-              hint={t("documents:form.files.hint")}
-            >
-              <AttachmentsField
-                id={ids.files}
-                value={values.attachments}
-                onChange={setAttachments}
-              />
-            </Field>
-            {canLink ? (
               <Field
-                id={ids.deal}
-                label={t("documents:form.deal.label")}
-                hint={t("documents:form.deal.hint")}
-                error={errors.erp_deal_id ? fieldText(t, "erp_deal_id") : undefined}
+                id="doc-recipient-attention"
+                label={t("documents:form.attention.label")}
+                hint={t("documents:form.attention.hint")}
               >
-                <DealField
-                  id={ids.deal}
-                  value={values.deal}
-                  onChange={(choice) => {
-                    set("deal", choice);
+                <Input
+                  id="doc-recipient-attention"
+                  value={values.recipientAttention}
+                  maxLength={300}
+                  autoComplete="off"
+                  aria-describedby="doc-recipient-attention-hint"
+                  onChange={(event) => {
+                    set("recipientAttention", event.target.value);
                   }}
-                  describedBy={describedBy(ids.deal, true, Boolean(errors.erp_deal_id)) ?? ""}
-                  invalid={Boolean(errors.erp_deal_id)}
                 />
               </Field>
-            ) : null}
-            <div className="pf-newdoc-route">
-              <span className="pf-fp-label">{t("documents:form.route.label")}</span>
-              <span>{routeText}</span>
+              {draft ? null : (
+                <Field
+                  id={ids.replyTo}
+                  label={t("documents:form.replyTo.label")}
+                  hint={t("documents:form.replyTo.hint")}
+                  error={errors.in_reply_to_number ? fieldText(t, "in_reply_to_number") : undefined}
+                >
+                  <Input
+                    id={ids.replyTo}
+                    value={values.inReplyTo}
+                    maxLength={32}
+                    autoComplete="off"
+                    placeholder="ВХ-112/26"
+                    disabled={savedId !== null}
+                    status={errors.in_reply_to_number ? "error" : undefined}
+                    aria-invalid={errors.in_reply_to_number || undefined}
+                    aria-describedby={describedBy(
+                      ids.replyTo,
+                      true,
+                      Boolean(errors.in_reply_to_number),
+                    )}
+                    onChange={(event) => {
+                      set("inReplyTo", event.target.value);
+                    }}
+                  />
+                </Field>
+              )}
+            </>
+          ) : (
+            <Field
+              id="doc-to"
+              label={t("documents:form.to.label")}
+              hint={t("documents:form.to.hint")}
+            >
+              <Input
+                id="doc-to"
+                value={t("documents:form.to.director")}
+                readOnly
+                aria-describedby="doc-to-hint"
+              />
+            </Field>
+          )}
+          {textField}
+          {letter ? (
+            <div className="pf-newdoc-row">
+              <Field
+                id="doc-signatory-name"
+                label={t("documents:form.signatory.name")}
+                hint={signatoryHint}
+              >
+                <Input
+                  id="doc-signatory-name"
+                  value={values.signatoryName}
+                  maxLength={255}
+                  autoComplete="off"
+                  placeholder={head?.signatory_name ?? undefined}
+                  aria-describedby="doc-signatory-name-hint"
+                  onChange={(event) => {
+                    set("signatoryName", event.target.value);
+                  }}
+                />
+              </Field>
+              <Field id="doc-signatory-position" label={t("documents:form.signatory.position")}>
+                <Input
+                  id="doc-signatory-position"
+                  value={values.signatoryPosition}
+                  maxLength={255}
+                  autoComplete="off"
+                  placeholder={head?.signatory_position ?? undefined}
+                  onChange={(event) => {
+                    set("signatoryPosition", event.target.value);
+                  }}
+                />
+              </Field>
             </div>
-            <Consequence items={consequence} />
-            <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
-          </div>
-        </Card>
-        <div className="pf-newdoc-actions">
-          {Object.keys(errors).length > 0 && !note ? (
-            <ErrorNote message={t("documents:form.validation.summary")} />
-          ) : null}
-          {note ? (
-            <ErrorNote
-              message={
-                note.saved ? `${note.text}. ${t("documents:form.error.savedNote")}` : note.text
-              }
-            />
-          ) : null}
-          <div className="pf-fp-row">
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={pending}
-              disabled={uploading}
-              title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+          ) : (
+            <div className="pf-newdoc-row">
+              <Field
+                id={ids.amount}
+                label={t("documents:form.amount.label")}
+                hint={t(
+                  values.kind === "memo" ? "documents:form.amount.hint" : "documents:form.due.hint",
+                )}
+                error={errors.amount ? fieldText(t, "amount") : undefined}
+              >
+                <Input
+                  id={ids.amount}
+                  value={values.amount}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  placeholder="1 500 000"
+                  status={errors.amount ? "error" : undefined}
+                  aria-invalid={errors.amount || undefined}
+                  aria-describedby={describedBy(ids.amount, true, Boolean(errors.amount))}
+                  onChange={(event) => {
+                    set("amount", event.target.value);
+                  }}
+                />
+              </Field>
+              <Field
+                id={ids.due}
+                label={t("documents:form.due.label")}
+                hint={t("documents:form.due.hint")}
+                error={errors.due_date ? fieldText(t, "due_date") : undefined}
+              >
+                <DateField
+                  id={ids.due}
+                  min={today}
+                  value={values.dueDate}
+                  status={errors.due_date ? "error" : undefined}
+                  aria-invalid={errors.due_date || undefined}
+                  aria-describedby={describedBy(ids.due, true, Boolean(errors.due_date))}
+                  onChange={(next) => {
+                    set("dueDate", next);
+                  }}
+                />
+              </Field>
+            </div>
+          )}
+          <Field
+            id={ids.files}
+            label={t("documents:form.files.label")}
+            hint={t("documents:form.files.hint")}
+          >
+            <AttachmentsField id={ids.files} value={values.attachments} onChange={setAttachments} />
+          </Field>
+          {canLink ? (
+            <Field
+              id={ids.deal}
+              label={t("documents:form.deal.label")}
+              hint={t("documents:form.deal.hint")}
+              error={errors.erp_deal_id ? fieldText(t, "erp_deal_id") : undefined}
             >
-              {t(letter ? "documents:form.submit.letter" : "documents:form.submit.approval")}
-            </Button>
-            <Button
-              htmlType="button"
-              disabled={pending || uploading}
-              onClick={() => {
-                void run(false);
-              }}
-            >
-              {t("documents:form.submit.draft")}
-            </Button>
+              <DealField
+                id={ids.deal}
+                value={values.deal}
+                onChange={(choice) => {
+                  set("deal", choice);
+                }}
+                describedBy={describedBy(ids.deal, true, Boolean(errors.erp_deal_id)) ?? ""}
+                invalid={Boolean(errors.erp_deal_id)}
+              />
+            </Field>
+          ) : null}
+          <div className="pf-newdoc-route">
+            <span className="pf-fp-label">{t("documents:form.route.label")}</span>
+            <span>{routeText}</span>
           </div>
+          <Consequence items={consequence} />
+          <p className="pf-hint">{t("documents:form.consequence.draft")}</p>
         </div>
-      </form>
+      </Card>
+      <div className="pf-newdoc-actions">
+        {Object.keys(errors).length > 0 && !note ? (
+          <ErrorNote message={t("documents:form.validation.summary")} />
+        ) : null}
+        {note ? (
+          <ErrorNote
+            message={
+              note.saved ? `${note.text}. ${t("documents:form.error.savedNote")}` : note.text
+            }
+          />
+        ) : null}
+        <div className="pf-fp-row">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={pending}
+            disabled={uploading}
+            title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+          >
+            {primaryLabel}
+          </Button>
+          <Button
+            htmlType="button"
+            disabled={pending || uploading}
+            onClick={() => {
+              void run("draft");
+            }}
+          >
+            {t("documents:form.submit.draft")}
+          </Button>
+        </div>
+      </div>
+    </form>
+  );
+
+  return (
+    <div className={letter ? "pf-newdoc pf-newdoc--letter" : "pf-newdoc"}>
+      <PageHeader title={title} subtitle={subtitle} />
+      {letter ? (
+        <div className="pf-newdoc-letter">
+          <div className="pf-newdoc-letter-form">{form}</div>
+          <Card className="pf-newdoc-letter-pdf">
+            <LetterPdfPanel
+              documentId={savedId}
+              initial={draft?.letter?.pdf ?? null}
+              prepare={prepare}
+              canBuild={!uploading}
+              subject={values.subject}
+            />
+          </Card>
+        </div>
+      ) : (
+        form
+      )}
     </div>
   );
 }
@@ -554,7 +757,7 @@ function ContinueDraft({ id }: { id: string }) {
 
 /**
  * EDS · «Создать документ» (`/eds/new?type=memo|statement|report|letter`, SPEC-v3 §6.3) и «Продолжить» черновик
- * (`/eds/new?draft=<id>`). Документ на бланке с PDF и шаблонами — волна D-DOC; здесь простой текст.
+ * (`/eds/new?draft=<id>`). Письмо — на бланке компании с настоящим PDF (P4); служебка, заявление и отчёт — простой текст.
  */
 export function NewDocumentPage() {
   const [params] = useSearchParams();

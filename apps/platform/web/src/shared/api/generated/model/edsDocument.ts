@@ -7,6 +7,7 @@ import type { EdsDecision } from "./edsDecision";
 import type { EdsDocumentKind } from "./edsDocumentKind";
 import type { EdsDocumentStatus } from "./edsDocumentStatus";
 import type { EdsFile } from "./edsFile";
+import type { EdsLetter } from "./edsLetter";
 import type { EdsMoney } from "./edsMoney";
 import type { EdsPerson } from "./edsPerson";
 import type { EdsRecipient } from "./edsRecipient";
@@ -40,4 +41,10 @@ export interface EdsDocument {
   can_edit: boolean;
   created_at: string;
   updated_at: string;
+  /** Только `letter_out` — письмо на бланке (P4) */
+  letter?: EdsLetter | null;
+  /** Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или черновик передан ему на регистрацию (P4, B-P8B-4) */
+  can_register?: boolean;
+  /** Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
+  can_request_registration?: boolean;
 }

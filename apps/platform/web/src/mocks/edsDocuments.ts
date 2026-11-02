@@ -4,6 +4,9 @@ import type {
   EdsDealOptions,
   EdsDocument,
   EdsDocumentIn,
+  EdsDocumentMailing,
+  EdsLetterIn,
+  EdsLetterhead,
   EdsDocumentPage,
   EdsDocumentRow,
   EdsDocumentUpdateIn,
@@ -17,11 +20,14 @@ import {
   type EdsMock,
   MOCK_DEALS,
   type MockDocument,
+  type MockLetter,
   documentId,
   personOf,
   readEds,
   writeEds,
 } from "./fixtures/edsDocuments";
+import { closeReplyInstructions } from "./edsInstructions";
+import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -210,8 +216,118 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     can_edit: editable,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
+    ...letterFields(doc, me),
   };
 }
+
+/** Поля письма на бланке (P4) и права на регистрацию — как считает BFF: раздел `eds.inbox.register` (полный). */
+function letterFields(doc: MockDocument, me: string): Partial<EdsDocument> {
+  if (doc.kind !== "letter_out") return {};
+  const register = canRegister();
+  const letter = doc.letter;
+  const draft = doc.status === "draft";
+  return {
+    letter: letter
+      ? {
+          body: letter.body,
+          recipient_attention: letter.recipient_attention,
+          recipient_email: letter.recipient_email,
+          signatory_name: letter.signatory_name,
+          signatory_position: letter.signatory_position,
+          pdf: letter.pdf,
+          mailings: letter.mailings,
+          registration_requested: letter.registration_requested
+            ? {
+                by: personOf(letter.registration_requested.ownerId),
+                at: letter.registration_requested.at,
+              }
+            : null,
+        }
+      : null,
+    can_register:
+      draft && register && (doc.ownerId === me || Boolean(letter?.registration_requested)),
+    can_request_registration: draft && !register && doc.ownerId === me,
+  };
+}
+
+function canRegister(): boolean {
+  const held = resources();
+  return Boolean(held && held["eds.inbox.register"] === "full");
+}
+
+/** Ответ почтового сервиса в демо: адрес с «nosmtp» — «Почта не настроена», остальное уходит. */
+const NO_SMTP = "Почта не настроена — Настройки · Подключения · Почта";
+
+/**
+ * Фон EDS в демо: PDF «готов» со второго опроса, отправка адресату ждёт итоговый PDF, затем «передано почтовому сервису»
+ * и итог CRM. Каждый опрос карточки или PDF продвигает на шаг.
+ */
+function advance(doc: MockDocument): boolean {
+  const letter = doc.letter;
+  if (!letter) return false;
+  let changed = false;
+  const now = new Date().toISOString();
+  if (letter.pdf?.status === "pending") {
+    letter.pdfPolls += 1;
+    if (letter.pdfPolls >= 2) {
+      letter.pdf = { ...letter.pdf, status: "ready", pages: 1, ready_at: now };
+    }
+    changed = true;
+  }
+  letter.mailings = letter.mailings.map((mailing): EdsDocumentMailing => {
+    if (mailing.status === "awaiting_pdf" && letter.pdf?.status === "ready") {
+      changed = true;
+      return { ...mailing, status: "requested" };
+    }
+    if (mailing.status === "requested") {
+      changed = true;
+      const failed = mailing.to.some((address) => address.includes("nosmtp"));
+      return failed
+        ? { ...mailing, status: "failed", reason: NO_SMTP, finished_at: now }
+        : { ...mailing, status: "sent", finished_at: now };
+    }
+    return mailing;
+  });
+  return changed;
+}
+
+function requestPdf(letter: MockLetter, final: boolean): void {
+  letter.pdf = {
+    status: "pending",
+    final,
+    error: null,
+    pages: null,
+    requested_at: new Date().toISOString(),
+    ready_at: null,
+  };
+  letter.pdfPolls = 0;
+}
+
+function queueMailing(letter: MockLetter): void {
+  if (!letter.recipient_email) return;
+  letter.mailings.push({
+    id: crypto.randomUUID(),
+    to: [letter.recipient_email],
+    status: "awaiting_pdf",
+    reason: null,
+    requested_by: personOf(ownerId()),
+    requested_at: new Date().toISOString(),
+    finished_at: null,
+  });
+}
+
+export const MOCK_LETTERHEAD: EdsLetterhead = {
+  configured: true,
+  company_name: "ООО «RailTech»",
+  requisites: [
+    "г. Ташкент, Мирабадский р-н, ул. Афросиаб, 12",
+    "ИНН 305123456 · р/с 20208000900123456001, АКБ «Капиталбанк», МФО 01088",
+  ],
+  signatory_name: "Каримов А. А.",
+  signatory_position: "Директор",
+  has_logo: false,
+  updated_at: "2026-11-01T06:00:00Z",
+};
 
 interface FormBody {
   subject?: string;
@@ -221,6 +337,8 @@ interface FormBody {
   file_ids?: string[];
   erp_deal_id?: number | null;
   recipient?: { name: string; inn?: string | null } | null;
+  letter?: EdsLetterIn | null;
+  send?: boolean;
 }
 
 /** Проверка формы, как её делают BFF и EDS: тема и текст, сумма больше нуля, «нужно до» не в прошлом, адресат письма. */
@@ -253,6 +371,20 @@ function applyForm(doc: MockDocument, body: FormBody): void {
   if (body.file_ids) {
     doc.file_ids = [...new Set([...doc.file_ids, ...body.file_ids])];
   }
+  if (body.letter && doc.kind === "letter_out") {
+    const prev = doc.letter;
+    doc.letter = {
+      body: body.letter.body,
+      recipient_attention: body.letter.recipient_attention ?? null,
+      recipient_email: body.letter.recipient_email ?? null,
+      signatory_name: body.letter.signatory_name ?? null,
+      signatory_position: body.letter.signatory_position ?? null,
+      pdf: prev?.pdf ?? null,
+      pdfPolls: prev?.pdfPolls ?? 0,
+      mailings: prev?.mailings ?? [],
+      registration_requested: prev?.registration_requested ?? null,
+    };
+  }
   doc.updated_at = new Date().toISOString();
 }
 
@@ -271,11 +403,19 @@ function numberFor(state: EdsMock, kind: MockDocument["kind"]): string {
   }
 }
 
-/** Отправка: служебка, заявление и отчёт открывают маршрут, письмо регистрируется сразу. */
-function submitDocument(doc: MockDocument, state: EdsMock): void {
+/**
+ * Отправка: служебка, заявление и отчёт открывают маршрут, письмо регистрируется сразу; у письма на бланке — итоговый PDF с
+ * номером и, при `send`, строка журнала отправки адресату.
+ */
+function submitDocument(doc: MockDocument, state: EdsMock, send = false): void {
   if (doc.kind === "letter_out") {
     doc.number = numberFor(state, "letter_out");
     doc.status = "sent";
+    if (doc.letter?.body) {
+      requestPdf(doc.letter, true);
+      if (send) queueMailing(doc.letter);
+    }
+    if (doc.replyTo) closeReplyInstructions(doc.replyTo, doc.number);
   } else {
     if (doc.status === "returned") doc.version += 1;
     doc.status = "on_approval";
@@ -373,7 +513,8 @@ export const edsDocumentsHandlers = [
     if (!held) return sessionExpired();
     if (rank(held["eds.memo.create"]) < 2) return forbidden("eds.memo.create", "full");
     const body = (await request.json()) as EdsDocumentIn;
-    if (body.kind === "letter_out" && rank(held["eds.inbox"]) < 2) {
+    // P4 (B-P8B-4): черновик письма готовит любой, регистрирует — раздел `eds.inbox.register`.
+    if (body.kind === "letter_out" && body.submit && !canRegister()) {
       return fail(403, "FORBIDDEN", "Действие не положено вашей роли.", {
         permission: "letters.register",
       });
@@ -405,6 +546,9 @@ export const edsDocumentsHandlers = [
       updated_at: now,
     };
     applyForm(doc, body);
+    if (body.kind === "letter_out" && body.in_reply_to_number) {
+      doc.replyTo = body.in_reply_to_number.trim();
+    }
     state.documents.push(doc);
     if (key) state.idempotency = { ...state.idempotency, [key]: doc.id };
     if (body.submit) {
@@ -412,7 +556,7 @@ export const edsDocumentsHandlers = [
         writeEds(state);
         return backendDown(doc, true);
       }
-      submitDocument(doc, state);
+      submitDocument(doc, state, body.send === true);
     }
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()), { status: 201 });
@@ -428,6 +572,7 @@ export const edsDocumentsHandlers = [
     if (!doc || (doc.ownerId !== ownerId() && !allows(held, REGISTRY))) {
       return fail(404, "NOT_FOUND", "Документ не найден.");
     }
+    if (advance(doc)) writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
   }),
 
@@ -440,8 +585,10 @@ export const edsDocumentsHandlers = [
     if (!doc || (doc.ownerId !== ownerId() && !allows(held, REGISTRY))) {
       return fail(404, "NOT_FOUND", "Документ не найден.");
     }
-    // Чужой черновик EDS не показывает никому (#298) — «не найден»; чужой возвращённый — «только автор».
-    if (doc.ownerId !== ownerId() && doc.status === "draft") {
+    // Чужой черновик EDS не показывает никому (#298) — «не найден» (кроме письма, переданного делопроизводителю на
+    // регистрацию, P4); чужой возвращённый — «только автор».
+    const handedOver = Boolean(doc.letter?.registration_requested) && canRegister();
+    if (doc.ownerId !== ownerId() && doc.status === "draft" && !handedOver) {
       return fail(404, "NOT_FOUND", "Документ не найден.");
     }
     if (doc.ownerId !== ownerId() && doc.status === "returned") {
@@ -464,8 +611,119 @@ export const edsDocumentsHandlers = [
         writeEds(state);
         return backendDown(doc, false);
       }
-      submitDocument(doc, state);
+      if (doc.kind === "letter_out" && !canRegister()) {
+        writeEds(state);
+        return fail(403, "FORBIDDEN", "Действие не положено вашей роли.", {
+          permission: "letters.register",
+          document_id: doc.id,
+          saved: true,
+          created: false,
+        });
+      }
+      submitDocument(doc, state, body.send === true);
     }
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.get("*/eds/letterhead", () => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    return HttpResponse.json(MOCK_LETTERHEAD);
+  }),
+
+  http.post("*/eds/documents/:id/pdf", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.kind !== "letter_out") return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (!doc.letter?.body) {
+      return fail(409, "CONFLICT", "У письма нет текста на бланке.", { reason: "no_body" });
+    }
+    // Тот же ввод — тот же PDF (кэш по хешу в EDS): готовый или строящийся не перезапрашивается.
+    if (
+      !doc.letter.pdf ||
+      doc.letter.pdf.status === "failed" ||
+      doc.letter.pdf.final !== (doc.status === "sent")
+    ) {
+      requestPdf(doc.letter, doc.status === "sent");
+    } else if (doc.letter.pdf.status === "ready" && doc.updated_at > doc.letter.pdf.requested_at) {
+      requestPdf(doc.letter, doc.status === "sent");
+    }
+    writeEds(state);
+    return HttpResponse.json(doc.letter.pdf, { status: 202 });
+  }),
+
+  http.get("*/eds/documents/:id/pdf", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc?.letter?.pdf) {
+      return fail(404, "NOT_FOUND", "PDF не запрашивался.", { reason: "pdf_not_requested" });
+    }
+    if (advance(doc)) writeEds(state);
+    return HttpResponse.json(doc.letter.pdf);
+  }),
+
+  http.get("*/eds/documents/:id/pdf/file", async ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const doc = readEds().documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc?.letter?.pdf) return fail(404, "NOT_FOUND", "PDF не запрашивался.");
+    if (doc.letter.pdf.status !== "ready") {
+      return fail(409, "CONFLICT", "PDF ещё готовится.", { reason: "pdf_not_ready" });
+    }
+    // Демо-PDF — настоящий рендер `rt-docs` образца ответа на требование ГНК (бланк, адресат, список, таблица, подпись).
+    let pdf: ArrayBuffer;
+    try {
+      pdf = await (await fetch(letterSampleUrl)).arrayBuffer();
+    } catch {
+      // vitest (Node): адреса ассета Vite нет — достаточно заголовка PDF
+      pdf = new TextEncoder().encode("%PDF-1.7\n%%EOF\n").buffer;
+    }
+    return new HttpResponse(pdf, {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent("letter.pdf")}`,
+      },
+    });
+  }),
+
+  http.post("*/eds/documents/:id/registration-request", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc || doc.ownerId !== ownerId()) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (doc.status !== "draft") {
+      return fail(409, "CONFLICT", "Письмо уже зарегистрировано.", { reason: "invalid_state" });
+    }
+    if (!doc.letter?.body) {
+      return fail(409, "CONFLICT", "У письма нет текста на бланке.", { reason: "no_body" });
+    }
+    doc.letter.registration_requested ??= { ownerId: ownerId(), at: new Date().toISOString() };
+    writeEds(state);
+    return HttpResponse.json(detail(doc, state, ownerId()));
+  }),
+
+  http.post("*/eds/documents/:id/send", ({ params }) => {
+    const held = resources();
+    if (!held) return sessionExpired();
+    if (!canRegister()) return forbidden("eds.inbox.register", "full");
+    const state = readEds();
+    const doc = state.documents.find((candidate) => candidate.id === params["id"]);
+    if (!doc?.letter) return fail(404, "NOT_FOUND", "Документ не найден.");
+    if (doc.status !== "sent") {
+      return fail(409, "CONFLICT", "Письмо ещё не зарегистрировано.", { reason: "invalid_state" });
+    }
+    if (!doc.letter.recipient_email) {
+      return fail(422, "VALIDATION_FAILED", "Укажите почту адресата.", {
+        fields: ["recipient_email"],
+      });
+    }
+    queueMailing(doc.letter);
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
   }),

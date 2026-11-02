@@ -149,7 +149,7 @@ jobs:
             {"image":"rt-litellm","context":"infra/ai/litellm","target":"","contexts":"","args":"","scope":"litellm"},
             {"image":"rt-platform-bff","context":"apps/platform/bff","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"platform-bff"},
             {"image":"rt-platform-web","context":"apps/platform/web","target":"prod","contexts":"","args":"","scope":"platform-web"},
-            {"image":"rt-eds","context":"apps/eds","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"eds"}
+            {"image":"rt-eds","context":"apps/eds","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts\nrtdocs=packages/rt-docs","args":"","scope":"eds"}
           ]'
           # deploy: rt-cabinet собирает job deploy (его build-args — из variables environment production); build: все девять
           echo "matrix=$(jq -c --arg a "$ACTION" '{include: (if $a == "build" then . else map(select(.image != "rt-cabinet")) end)}' <<<"$images")" >> "$GITHUB_OUTPUT"

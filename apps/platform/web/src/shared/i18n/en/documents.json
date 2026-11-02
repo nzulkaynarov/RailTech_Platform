@@ -164,11 +164,37 @@
     "forbidden": {
       "title": "The document is not open to you",
       "text": "It is not granted to your role."
+    },
+    "letter": {
+      "title": "Letter on letterhead",
+      "attention": "To",
+      "email": "Addressee email",
+      "signatory": "Signatory",
+      "signatoryDefault": "from the letterhead (director)",
+      "mailings": "Sending log",
+      "noMailings": "Not sent to the addressee yet.",
+      "mailing": {
+        "awaiting_pdf": "Waiting for the PDF",
+        "requested": "Handed to the mail service",
+        "sent": "Sent",
+        "failed": "Not sent: {{reason}}",
+        "failedNoReason": "Not sent"
+      },
+      "mailingMeta": "{{to}} · {{date}}",
+      "sendAgain": "Send to the addressee again",
+      "sendRequested": "Sending requested",
+      "handedOver": "Handed over for registration: {{name}}, {{date}}",
+      "register": "Register and send",
+      "registerOnly": "Register",
+      "registered": "Letter registered: {{number}}",
+      "handover": "Hand over for registration",
+      "handoverDone": "Handed over to the records clerk for registration.",
+      "actionFailed": "Not done: {{reason}}"
     }
   },
   "form": {
     "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “My documents”.",
-    "subtitleLetter": "The letter gets an outgoing number. Letterhead, PDF and sending to the addressee come later: for now the text is stored.",
+    "subtitleLetter": "A letter on the company letterhead: see the real PDF, register the outgoing number and send it to the addressee.",
     "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
     "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
     "formLabel": "New document",
@@ -176,7 +202,8 @@
       "label": "Document type",
       "letterLocked": "Letters are registered by a role with access to incoming letters.",
       "letterOption": "Letter — needs access to incoming letters",
-      "locked": "The type cannot be changed after creation."
+      "locked": "The type cannot be changed after creation.",
+      "letterHandover": "You prepare the letter; the records clerk registers and sends it."
     },
     "subject": {
       "label": "Subject",
@@ -228,7 +255,8 @@
       "label": "Approval route",
       "plain": "You → Director",
       "withAmount": "You → Director → Accountant (amount given)",
-      "letter": "No approval: the letter is registered at once"
+      "letter": "No approval: the letter is registered at once",
+      "letterHandover": "You → records clerk: they register the outgoing number and send it"
     },
     "consequence": {
       "memo": [
@@ -252,17 +280,24 @@
         "The decision and its date stay in “My documents”."
       ],
       "letter": [
-        "The letter gets an outgoing number like ИСХ-082/26.",
-        "It appears in “My documents” with the status “Registered”.",
-        "Letterhead, PDF and sending to the addressee come later: for now the text is stored."
+        "The letter gets the outgoing number ИСХ-NNN/YY and the registration date.",
+        "The numbered letterhead PDF goes to the addressee by email, if given.",
+        "A reply “to ВХ” closes the “Prepare a reply” instruction; the sending log is on the letter card."
       ],
-      "draft": "“Save draft” sends nothing: the document stays in “My documents” with a “Continue” button."
+      "draft": "“Save draft” sends nothing: the document stays in “My documents” with a “Continue” button.",
+      "letterHandover": [
+        "The letter draft goes to the records clerk for registration.",
+        "They check the PDF, register the outgoing number and send it to the addressee.",
+        "The outgoing number and the sending log appear on the letter card."
+      ]
     },
     "submit": {
       "approval": "Send for approval",
       "letter": "Register the letter",
       "draft": "Save draft",
-      "uploadWait": "Wait for the files to upload"
+      "uploadWait": "Wait for the files to upload",
+      "letterSend": "Register and send",
+      "handover": "Hand over for registration"
     },
     "validation": {
       "summary": "Fix the marked fields.",
@@ -272,12 +307,15 @@
       "due": "“Needed by” cannot be in the past.",
       "recipient": "Enter the addressee of the letter.",
       "deal": "Project not found — pick another or remove the link.",
-      "replyTo": "No incoming letter with this number. Check the number."
+      "replyTo": "No incoming letter with this number. Check the number.",
+      "recipientEmail": "Check the addressee email, for example office@example.uz."
     },
     "toast": {
       "draft": "Draft saved",
       "sent": "Sent for approval: {{number}}",
-      "registered": "Letter registered: {{number}}"
+      "registered": "Letter registered: {{number}}",
+      "registeredSent": "Letter registered: {{number}}. Sending to the addressee.",
+      "handover": "Handed over to the records clerk for registration."
     },
     "error": {
       "send": "Not sent: {{reason}}",
@@ -295,7 +333,11 @@
         "PAYLOAD_TOO_LARGE": "the file is larger than 25 MB",
         "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Office documents are accepted",
         "REQUEST_TIMEOUT": "the server did not respond in time",
-        "DEFAULT": "the server returned an error, try again"
+        "DEFAULT": "the server returned an error, try again",
+        "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Company and letterheads”",
+        "no_body": "the letter has no letterhead text",
+        "pdf_not_ready": "the PDF is still being prepared",
+        "mail_in_progress": "sending is in progress, wait for the result"
       }
     },
     "loadDraft": "Loading the draft…",
@@ -312,6 +354,46 @@
     "replyTo": {
       "label": "In reply to incoming",
       "hint": "Incoming number, e.g. ВХ-112/26: registering the letter closes the \"Prepare a reply\" instruction."
+    },
+    "subtitleLetterHandover": "A letter on the company letterhead: prepare the text and see the PDF — the records clerk registers and sends it.",
+    "attention": {
+      "label": "To (position and name)",
+      "hint": "Optional. For example: To the Head of the Mirabad District Tax Inspectorate, A. A. Karimov."
+    },
+    "email": {
+      "label": "Addressee email",
+      "hint": "Optional. With an email, the letter goes to the addressee with the letterhead PDF right after registration."
+    },
+    "body": {
+      "label": "Text",
+      "hint": "Paragraphs, lists and tables. The company letterhead adds the requisites, number, date and signature."
+    },
+    "signatory": {
+      "name": "Signatory",
+      "position": "Signatory position",
+      "hint": "Empty — the letterhead signatory: {{name}}, {{position}}.",
+      "hintNone": "Empty — the signatory from the company letterhead (director)."
+    },
+    "letterhead": {
+      "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Company and letterheads”.",
+      "open": "Open “Company and letterheads”"
     }
+  },
+  "preview": {
+    "title": "Letterhead PDF",
+    "show": "Show PDF",
+    "refresh": "Refresh PDF",
+    "hint": "The server builds the PDF on the company letterhead — the addressee gets the same file.",
+    "empty": "Press “Show PDF”: the letter is saved as a draft and appears on the letterhead.",
+    "pending": "Preparing the PDF…",
+    "ready": "PDF ready · {{pages}} p.",
+    "readyFinal": "PDF with the outgoing number ready · {{pages}} p.",
+    "failed": "Error: {{error}}",
+    "failedNoReason": "Error: the PDF was not built",
+    "retry": "Retry",
+    "download": "Download PDF",
+    "name": "Letter “{{subject}}”",
+    "requestFailed": "PDF not requested: {{reason}}",
+    "loadFailed": "Could not load the PDF. Retry."
   }
 }

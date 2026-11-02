@@ -19,6 +19,14 @@ info:
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
 
+    **P4 волны 18a (письмо на бланке, D-DOC2 минимум; добавляющее, версия не растёт).** `letter_out` получает `letter` — тело
+    блоками (`DocumentBody`, контракт `documents/body.schema.json`), «кому», почту адресата, подписанта, последний PDF и журнал
+    отправки. `POST|GET /documents/{id}/pdf` и `GET …/pdf/file` — PDF на бланке из фонового воркера (B-094: параллельность 1,
+    кэш по хешу, в запросе рендера нет), `POST …/registration-request` — исполнитель без `letters.register` передаёт черновик
+    делопроизводителю (B-P8B-4), `POST …/send` — повтор отправки адресату, `GET /letterhead` — проекция бланка ERP (событие
+    `erp.letterhead.updated`). `DocumentSubmitIn.send` — отправить адресату после регистрации. Черновик `letter_out`
+    создаёт любой с `memos.create`; своё письмо автор видит и без `letters.read`.
+
     **0.7.0 (D2-5).** Добавляющее изменение: реестр показывает договоры, счета и акты проектов — `RegistryKind` дополнен значениями
     `contract`, `invoice`, `act`. Это проекция по событиям ERP (`erp.contract.status_changed`, `erp.invoice.issued|paid|overdue`,
     `erp.act.issued|accepted|returned`; общих таблиц нет, владелец полей — ERP); статусы — слова SPEC-v3 §2.4: договор `project`,
@@ -802,7 +810,8 @@ paths:
       summary: Документы (служебные записки, заявления, отчёты, исходящие письма)
       description: |
         Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
-        В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
+        В любом случае чужой черновик (`draft`) виден только автору (кроме письма, переданного на регистрацию, — его видит держатель
+        `letters.register`), а чужое исходящее письмо (`letter_out`) — только с `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - name: kind
@@ -851,8 +860,9 @@ paths:
       summary: Создать документ (черновик)
       description: |
         `memo`, `application`, `report` — право `memos.create`; номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивается при создании,
-        публикуется `document.registered`; маршрут открывает `POST …/submit`. `letter_out` — право `letters.register`; номер
-        `ИСХ-NNN/ГГ` присваивается при отправке (`submit`), до неё `number = null`. Нет права на тип — 403 `FORBIDDEN`.
+        публикуется `document.registered`; маршрут открывает `POST …/submit`. `letter_out` — черновик создаёт любой с
+        `memos.create` или `letters.register` (P4, B-P8B-4: исполнитель готовит ответ), регистрирует только `letters.register`; номер
+        `ИСХ-NNN/ГГ` присваивается при регистрации (`submit`), до неё `number = null`. Нет права на тип — 403 `FORBIDDEN`.
         Документ из сообщения чата — `source_message_id` (ссылка, текст и вложения передаёт клиент).
       x-rt-permissions: [memos.create, letters.register]
       parameters:
@@ -908,7 +918,7 @@ paths:
       operationId: updateDocument
       summary: Править черновик или возвращённый документ (без отправки)
       description: |
-        Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
+        Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft` (поле `letter` — письмо на бланке, P4); другой статус —
         409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
         переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
         к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
@@ -950,7 +960,11 @@ paths:
         после возврата `version` растёт на 1; открывается маршрут (новый круг) — статус `on_approval`, `approval.requested`.
         Шаблоны (runbook §2.5): `memo` — директор (любой с `memos.approve`), затем, если указана сумма, бухгалтер (любой с
         `payments.confirm` — решение архитектора); `application`, `report` — директор. Статусы по решениям — `DocumentStatus`.
-        `letter_out` из `draft`: присваивается `ИСХ-NNN/ГГ`, статус `sent`, `document.registered`, затем `document.archived`. Другой статус — 409 `CONFLICT`
+        `letter_out` из `draft` (регистрация ИСХ, право `letters.register`): автор или — для черновика, переданного на
+        регистрацию (`registration-request`), — любой держатель `letters.register`; присваивается `ИСХ-NNN/ГГ`, статус `sent`,
+        `document.registered`, затем `document.archived`; ИСХ «в ответ на ВХ» закрывает поручения «Подготовить ответ». Письмо с
+        телом (P4): ставится рендер итогового PDF (номер и дата), а при `send = true` — отправка адресату, как только PDF готов
+        (`letter.mailings`). Без `letters.register` — 403 (`details.permission`). Другой статус — 409 `CONFLICT`
         (`details.reason = invalid_state`).
       x-rt-permissions: [memos.create, letters.register]
       parameters:
@@ -1020,6 +1034,185 @@ paths:
           $ref: '#/components/responses/Conflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/documents/{document_id}/pdf:
+    post:
+      tags: [documents]
+      operationId: requestDocumentPdf
+      summary: Построить PDF письма на бланке (фоновый рендер, P4)
+      description: |
+        Только `letter_out` с телом (`letter.body`); иначе 409 `CONFLICT` (`details.reason = no_body`). Видит и строит автор, а
+        держатель `letters.register` — черновик, переданный на регистрацию, и зарегистрированное письмо. PDF строит фоновый
+        воркер EDS (`rt-docs`, WeasyPrint; B-094 — параллельность 1, отдельный процесс с тайм-аутом), **в запросе рендера нет**:
+        ответ сразу — `DocumentPdf` со статусом `pending` (или `ready`, если такой PDF уже есть). Кэш — по SHA-256 тела, бланка,
+        реквизитов письма и подписанта: тот же ввод второй раз не рендерится; неудачный рендер повторяется только этим вызовом.
+        Черновик — без номера и даты регистрации (`final = false`), зарегистрированное письмо — с `ИСХ-NNN/ГГ` и датой
+        (`final = true`, тот же файл уходит адресату). Бланк компании ещё не получен из ERP — 409 (`details.reason =
+        letterhead_missing`, «Бланк компании не задан — Настройки · Компания и бланки»).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '202':
+          description: Рендер поставлен в очередь или PDF уже готов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPdf'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    get:
+      tags: [documents]
+      operationId: getDocumentPdf
+      summary: Состояние PDF письма (опрос)
+      description: |
+        Последний запрошенный PDF документа: `pending` — готовится, `ready` — готов (`GET …/pdf/file`), `failed` — ошибка с
+        причиной словами (`error`). PDF не запрашивался — 404 (`details.reason = pdf_not_requested`).
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Состояние PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentPdf'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/documents/{document_id}/pdf/file:
+    get:
+      tags: [documents]
+      operationId: downloadDocumentPdf
+      summary: Скачать PDF письма (поток)
+      description: |
+        Готовый PDF последнего запроса — тот же файл, что в предпросмотре и во вложении письма адресату. Не готов — 409
+        (`details.reason = pdf_not_ready`), не запрашивался — 404.
+      x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: PDF
+          headers:
+            Content-Disposition:
+              description: '`inline; filename*=UTF-8''''…`'
+              schema:
+                type: string
+            ETag:
+              description: SHA-256 ввода рендера (ключ кэша)
+              schema:
+                type: string
+          content:
+            application/pdf:
+              schema:
+                type: string
+                contentMediaType: application/pdf
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/documents/{document_id}/registration-request:
+    post:
+      tags: [documents]
+      operationId: requestDocumentRegistration
+      summary: Передать письмо на регистрацию делопроизводителю (B-P8B-4)
+      description: |
+        Автор черновика `letter_out` без права `letters.register` (исполнитель поручения «Подготовить ответ») передаёт письмо
+        делопроизводителю: `letter.registration_requested` = кто и когда, журнал `document.registration_requested`. Черновик
+        становится виден держателям `letters.register` (реестр «Все документы», карточка), они строят PDF и регистрируют его
+        (`POST …/submit`). Автор может продолжать править черновик. Повтор — без изменений. Не черновик — 409 (`invalid_state`),
+        не автор — 403 (`not_author`), у письма нет тела — 409 (`no_body`).
+      x-rt-permissions: [memos.create, letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Передано на регистрацию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/documents/{document_id}/send:
+    post:
+      tags: [documents]
+      operationId: sendDocument
+      summary: Отправить зарегистрированное письмо адресату почтой (повтор)
+      description: |
+        Зарегистрированное (`sent`) письмо на бланке ещё раз уходит на `letter.recipient_email` через почтовый сервис CRM
+        (событие `mail.requested`, вложение — итоговый PDF по подписанной ссылке): например, после настройки почты. Новая строка
+        журнала отправки `letter.mailings` (`awaiting_pdf` → `requested` → `sent`/`failed` по итогу CRM `crm.mail.sent|failed`).
+        Право `letters.register`. Нет адреса — 422 (`recipient_email`), не зарегистрировано — 409 (`invalid_state`), отправка
+        уже идёт — 409 (`mail_in_progress`).
+      x-rt-permissions: [letters.register]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Отправка запрошена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letterhead:
+    get:
+      tags: [documents]
+      operationId: getLetterhead
+      summary: Бланк компании (проекция ERP) для формы письма
+      description: |
+        Проекция бланка из события `erp.letterhead.updated` (ERP — владелец реквизитов; админ правит их в Платформе:
+        Настройки · Компания и бланки). `configured = false` — событие ещё не приходило (сохраните «Компания и бланки»);
+        подписант по умолчанию — `signatory_name` и `signatory_position`.
+      x-rt-permissions: []
+      responses:
+        '200':
+          description: Бланк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letterhead'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /api/v1/approvals:
     get:
@@ -3057,6 +3250,177 @@ components:
         | `draft` (`letter_out`) | `POST …/submit` — отправка, `ИСХ-NNN/ГГ` | `sent` | — | `document.archived` |
 
         Архив — признак `archived_at`, итоговый статус сохраняется.
+    DocumentBody:
+      type: object
+      additionalProperties: false
+      required: [version, lang, doc]
+      description: |
+        Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1, ADR-0020): узлы ProseMirror
+        (`paragraph`, `heading`, списки, `table`, …), без цветов, шрифтов и HTML. EDS нормализует и проверяет тело `rt_docs`
+        (схема, глубина ≤ 20, ≤ 1 МБ); отказ — 422 `VALIDATION_FAILED`, `details.fields = [body]`.
+      properties:
+        version:
+          type: integer
+          const: 1
+        lang:
+          type: string
+          enum: [ru, uz, en]
+        page:
+          type: object
+          description: '`orientation`, `density`, `tuning` — см. схему тела'
+        doc:
+          type: object
+          description: 'Корень `{type: doc, content: [...]}`'
+    OutgoingLetterIn:
+      type: object
+      additionalProperties: false
+      required: [body]
+      description: Письмо на бланке (P4) — только `letter_out`
+      properties:
+        body:
+          $ref: '#/components/schemas/DocumentBody'
+        recipient_attention:
+          type: [string, 'null']
+          maxLength: 300
+          description: "«Кому» — должность и ФИО получателя («Начальнику ГНИ Мирабадского района Каримову А. А.»)"
+        recipient_email:
+          type: [string, 'null']
+          format: email
+          maxLength: 254
+          description: Почта адресата — «Отправить адресату»
+        signatory_name:
+          type: [string, 'null']
+          maxLength: 255
+          description: Подписант; `null` — подписант бланка (директор)
+        signatory_position:
+          type: [string, 'null']
+          maxLength: 255
+    OutgoingLetter:
+      type: object
+      additionalProperties: false
+      required:
+        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested]
+      description: Письмо на бланке (P4) — тело и реквизиты, последний PDF, журнал отправки, передача на регистрацию
+      properties:
+        body:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentBody'
+            - type: 'null'
+          description: '`null` — письмо без бланка (до P4, только текст)'
+        recipient_attention:
+          type: [string, 'null']
+        recipient_email:
+          type: [string, 'null']
+        signatory_name:
+          type: [string, 'null']
+        signatory_position:
+          type: [string, 'null']
+        pdf:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentPdf'
+            - type: 'null'
+          description: Последний запрошенный PDF; `null` — не запрашивался
+        mailings:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentMailing'
+          description: Журнал отправки адресату, новые ниже
+        registration_requested:
+          oneOf:
+            - $ref: '#/components/schemas/RegistrationRequest'
+            - type: 'null'
+          description: Автор без `letters.register` передал черновик делопроизводителю (B-P8B-4)
+    DocumentPdf:
+      type: object
+      additionalProperties: false
+      required: [status, final, error, pages, requested_at, ready_at]
+      description: PDF письма на бланке из фонового воркера (B-094)
+      properties:
+        status:
+          type: string
+          enum: [pending, ready, failed]
+          description: '`pending` — готовится, `ready` — готов, `failed` — ошибка (`error`)'
+        final:
+          type: boolean
+          description: '`true` — с номером ИСХ и датой регистрации (уходит адресату); `false` — предпросмотр черновика'
+        error:
+          type: [string, 'null']
+          description: Причина словами («Письмо слишком большое для PDF — сократите текст»)
+        pages:
+          type: [integer, 'null']
+          minimum: 1
+        requested_at:
+          type: string
+          format: date-time
+        ready_at:
+          type: [string, 'null']
+          format: date-time
+    DocumentMailing:
+      type: object
+      additionalProperties: false
+      required: [id, to, status, reason, requested_by, requested_at, finished_at]
+      description: Строка журнала отправки письма адресату (почтовый сервис CRM)
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        to:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        status:
+          type: string
+          enum: [awaiting_pdf, requested, sent, failed]
+          description: '`awaiting_pdf` — ждёт итогового PDF; `requested` — передано почтовому сервису; `sent`/`failed` — итог CRM'
+        reason:
+          type: [string, 'null']
+          description: Причина неудачи словами («Почта не настроена — Настройки · Подключения · Почта»)
+        requested_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        requested_at:
+          type: string
+          format: date-time
+        finished_at:
+          type: [string, 'null']
+          format: date-time
+    RegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [by, at]
+      properties:
+        by:
+          $ref: '#/components/schemas/PersonRef'
+        at:
+          type: string
+          format: date-time
+    Letterhead:
+      type: object
+      additionalProperties: false
+      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at]
+      description: Бланк компании — проекция события ERP `letterhead.updated` (P4)
+      properties:
+        configured:
+          type: boolean
+          description: '`false` — бланк из ERP ещё не получен: PDF письма не строится (409 `letterhead_missing`), пока админ не сохранит «Компания и бланки»'
+        company_name:
+          type: [string, 'null']
+        requisites:
+          type: array
+          items:
+            type: string
+          description: Строки под названием — адрес, ИНН, банк
+        signatory_name:
+          type: [string, 'null']
+        signatory_position:
+          type: [string, 'null']
+        has_logo:
+          type: boolean
+        updated_at:
+          type: [string, 'null']
+          format: date-time
     DocumentCreate:
       type: object
       additionalProperties: false
@@ -3107,6 +3471,14 @@ components:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
           description: Только `letter_out` — входящее письмо, на которое отвечаем
+        letter:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingLetterIn'
+            - type: 'null'
+          description: |
+            Только `letter_out` (P4) — письмо на бланке: тело блоками, «кому», почта адресата, подписант. Создать черновик письма
+            может любой с `memos.create` (исполнитель поручения «Подготовить ответ», B-P8B-4); регистрирует — `letters.register`.
+            Если тело дано, `text` — производный от тела (поиск).
     DocumentSubmitIn:
       type: object
       additionalProperties: false
@@ -3133,6 +3505,12 @@ components:
           maxItems: 50
           items:
             $ref: '#/components/schemas/Uuid'
+        send:
+          type: boolean
+          default: false
+          description: |
+            Только `letter_out` (P4): после регистрации отправить письмо на `letter.recipient_email` почтовым сервисом CRM — с
+            итоговым PDF (номер и дата регистрации) вложением; нет адреса — 422 (`recipient_email`).
     DocumentPaymentIn:
       type: object
       additionalProperties: false
@@ -3207,6 +3585,11 @@ components:
             - $ref: '#/components/schemas/LetterSender'
             - type: 'null'
           description: Только `letter_out` — адресат исходящего письма (другой тип — 422 `recipient`)
+        letter:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingLetterIn'
+            - type: 'null'
+          description: Только `letter_out` (P4) — письмо на бланке целиком (другой тип — 422 `letter`)
     DocumentDecision:
       type: object
       additionalProperties: false
@@ -3303,6 +3686,7 @@ components:
         - created_at
         - updated_at
         - archived_at
+        - letter
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -3353,6 +3737,11 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
+        letter:
+          oneOf:
+            - $ref: '#/components/schemas/OutgoingLetter'
+            - type: 'null'
+          description: Только `letter_out` — письмо на бланке (P4); у остальных типов `null`
         approval_id:
           oneOf:
             - $ref: '#/components/schemas/Uuid'

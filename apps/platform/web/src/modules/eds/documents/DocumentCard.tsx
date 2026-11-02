@@ -18,6 +18,7 @@ import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
 import { reasonText } from "./errors";
+import { LetterSection } from "./LetterSection";
 import { DocumentStatusTag } from "./status";
 
 import "./documents.css";
@@ -171,6 +172,7 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
         <h4>{t("panel.text")}</h4>
         <p className="pf-doc-text">{doc.text}</p>
       </div>
+      {doc.kind === "letter_out" ? <LetterSection doc={doc} /> : null}
       <div className="pf-fp-block">
         <h4>{t("panel.files")}</h4>
         <Files doc={doc} />
@@ -199,6 +201,17 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
   );
 }
 
+const LETTER_POLL_MS = 3000;
+
+function letterInProgress(doc: EdsDocument | undefined): boolean {
+  const letter = doc?.letter;
+  if (!letter) return false;
+  return (
+    letter.pdf?.status === "pending" ||
+    letter.mailings.some((m) => m.status === "awaiting_pdf" || m.status === "requested")
+  );
+}
+
 /** Карточка документа: статус словами, реквизиты, текст, вложения, маршрут и решения с датой и автором (SPEC-v3 §2.4, §7.3). */
 export function DocumentCard({
   id,
@@ -211,7 +224,10 @@ export function DocumentCard({
   onClose: () => void;
 }) {
   const { t } = useTranslation("documents");
-  const query = useGetEdsDocument(id);
+  // Письмо на бланке (P4): пока PDF готовится или отправка адресату ждёт итога, карточка перечитывается сама.
+  const query = useGetEdsDocument(id, {
+    query: { refetchInterval: (q) => (letterInProgress(q.state.data) ? LETTER_POLL_MS : false) },
+  });
   if (query.isPending) return <Skeleton active paragraph={{ rows: 6 }} title={false} />;
   if (query.isError) {
     const error = query.error;

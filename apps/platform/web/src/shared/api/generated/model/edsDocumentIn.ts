@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { EdsDocumentKind } from "./edsDocumentKind";
+import type { EdsLetterIn } from "./edsLetterIn";
 import type { EdsMoney } from "./edsMoney";
 import type { EdsRecipient } from "./edsRecipient";
 
@@ -41,6 +42,10 @@ export interface EdsDocumentIn {
    * @nullable
    */
   in_reply_to_number?: string | null;
+  /** Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант */
+  letter?: EdsLetterIn | null;
+  /** Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке */
+  send?: boolean;
   /** `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик */
   submit?: boolean;
 }

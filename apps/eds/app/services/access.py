@@ -54,12 +54,21 @@ def participates_in(employee: Employee) -> ColumnElement[bool]:
 def document_visible(employee: Employee) -> ColumnElement[bool]:
     """Условие видимости для запроса по `Document` — один предикат для реестра, `/documents`, карточки и файлов (D1-10).
 
-    Не шире прав на вид документа, даже у держателя `registry.read`: чужой черновик (`draft`) видит только автор,
-    исходящее письмо (`letter_out`) — только с `letters.read`. Дальше: `registry.read` — остальное видно, иначе — автор
-    или участник маршрута.
+    Не шире прав на вид документа, даже у держателя `registry.read`: чужой черновик (`draft`) видит только автор
+    (черновик письма, переданный на регистрацию, — ещё держатель `letters.register`), чужое исходящее письмо
+    (`letter_out`) — только с `letters.read`. Дальше: `registry.read` — остальное видно, иначе — автор, участник
+    маршрута или делопроизводитель переданного ему письма.
     """
-    not_foreign_draft = or_(Document.status != "draft", Document.author_crm_user_id == employee.crm_user_id)
-    letters_ok = true() if can_read_letters(employee) else Document.kind != "letter_out"
+    mine = Document.author_crm_user_id == employee.crm_user_id
+    # P4, B-P8B-4: черновик письма, переданный на регистрацию, видит держатель `letters.register`.
+    handed_over = (
+        and_(Document.kind == "letter_out", Document.registration_requested_at.is_not(None))
+        if has(employee, EdsPermission.LETTERS_REGISTER)
+        else literal(False)
+    )
+    not_foreign_draft = or_(Document.status != "draft", mine, handed_over)
+    # Своё письмо автор видит и без `letters.read` (исполнитель готовит ответ, P4).
+    letters_ok = true() if can_read_letters(employee) else or_(Document.kind != "letter_out", mine)
     base = and_(not_foreign_draft, letters_ok)
     if has(employee, EdsPermission.REGISTRY_READ):
         return base
@@ -69,7 +78,7 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
         .join(ApprovalRoute, ApprovalRoute.id == ApprovalStep.approval_id)
         .where(ApprovalRoute.document_id == Document.id, participates_in(employee))
     )
-    return and_(base, or_(Document.author_crm_user_id == employee.crm_user_id, in_route))
+    return and_(base, or_(mine, in_route, handed_over))
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:

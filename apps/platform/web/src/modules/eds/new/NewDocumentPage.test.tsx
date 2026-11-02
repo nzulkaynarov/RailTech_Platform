@@ -1,12 +1,18 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { HttpResponse, http } from "msw";
 
 import { companyToday } from "../../../shared/lib/dates";
 import { fillDate } from "../../../test/fields";
 import { server } from "../../../test/server";
+import { readEds } from "../../../mocks/fixtures/edsDocuments";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
+
+// pdf.js в jsdom не рисует: просмотр страниц проверяют e2e, здесь — состояния блока PDF.
+vi.mock("../../../shared/ui/PdfViewer", () => ({
+  default: ({ name }: { name: string }) => <div data-testid="pdf-pages">{name}</div>,
+}));
 
 setupEdsTests();
 
@@ -44,25 +50,65 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Связь с проектом")).toBeInTheDocument();
   });
 
-  it("?type=letter у роли с доступом к входящим: адресат вместо «Кому», без суммы и срока, кнопка «Зарегистрировать письмо»", async () => {
+  it("?type=letter у роли с доступом к входящим: письмо на бланке — адресат, почта, «кому», блоки, подписант; без суммы и срока", async () => {
     await openForm("director@demo.example", "?type=letter");
 
     expect(screen.getByLabelText("Адресат (организация)")).toBeVisible();
+    expect(screen.getByLabelText("Почта адресата")).toBeVisible();
+    expect(screen.getByLabelText("Кому (должность и ФИО)")).toBeVisible();
     expect(screen.queryByLabelText("Кому")).toBeNull();
     expect(screen.queryByLabelText("Сумма, сум")).toBeNull();
     expect(screen.queryByLabelText("Нужно до")).toBeNull();
+    expect(screen.getByRole("group", { name: "Добавить блок" })).toBeVisible();
+    // подписант по умолчанию — из бланка компании
+    expect(
+      await screen.findByText("Пусто — подписант бланка: Каримов А. А., Директор."),
+    ).toBeVisible();
     expect(screen.getByRole("button", { name: "Зарегистрировать письмо" })).toBeVisible();
+    type("Почта адресата", "gni@example.uz");
+    expect(screen.getByRole("button", { name: "Зарегистрировать и отправить" })).toBeVisible();
     expect(screen.queryByRole("button", { name: "Отправить на согласование" })).toBeNull();
+    expect(screen.getByRole("region", { name: "PDF на бланке" })).toBeVisible();
   });
 
-  it("у роли без доступа к входящим письмо недоступно: ?type=letter открывает служебную записку", async () => {
-    await openForm("manager@demo.example", "?type=letter");
+  it("у роли без права регистрировать письмо готовит черновик и передаёт его на регистрацию (B-P8B-4)", async () => {
+    const { router } = await openForm("manager@demo.example", "?type=letter&reply_to=ВХ-112/26");
 
-    expect(screen.getByLabelText("Кому")).toBeVisible();
     expect(
-      screen.getByText("Письма регистрирует роль с доступом к входящим письмам."),
+      screen.getByText("Письмо подготовите вы, зарегистрирует и отправит делопроизводитель."),
     ).toBeVisible();
-    expect(screen.getByRole("button", { name: "Отправить на согласование" })).toBeVisible();
+    expect(screen.getByLabelText("В ответ на входящее")).toHaveValue("ВХ-112/26");
+    type("Тема", "Ответ на требование");
+    type("Адресат (организация)", "ГНИ Мирабадского района");
+    type("Текст", "Направляем пояснения.");
+    fireEvent.click(screen.getByRole("button", { name: "Передать на регистрацию" }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/documents");
+    });
+    const saved = readEds().documents.find((d) => d.subject === "Ответ на требование");
+    expect(saved?.status).toBe("draft");
+    expect(saved?.letter?.registration_requested).not.toBeNull();
+    expect(saved?.replyTo).toBe("ВХ-112/26");
+  });
+
+  it("«Показать PDF»: черновик сохраняется, PDF готовится в фоне и показывается со страницами", async () => {
+    await openForm("director@demo.example", "?type=letter");
+    type("Тема", "Ответ на требование");
+    type("Адресат (организация)", "ГНИ Мирабадского района");
+    type("Текст", "Направляем пояснения.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Показать PDF" }));
+
+    expect(await screen.findByText("Готовится PDF…")).toBeVisible();
+    expect(await screen.findByText("PDF готов · 1 стр.", {}, { timeout: 5000 })).toBeVisible();
+    expect(await screen.findByTestId("pdf-pages")).toHaveTextContent(
+      "Письмо «Ответ на требование»",
+    );
+    expect(screen.getByRole("button", { name: "Скачать PDF" })).toBeVisible();
+    // черновик создан один раз; тип больше не меняется
+    expect(readEds().documents.filter((d) => d.subject === "Ответ на требование")).toHaveLength(1);
+    expect(screen.getByText("Тип нельзя менять после создания.")).toBeVisible();
   });
 
   it("«Что произойдёт» и маршрут: без суммы — директор; с суммой — ещё и бухгалтер", async () => {

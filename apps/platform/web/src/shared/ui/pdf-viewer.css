@@ -1,0 +1,27 @@
+/* Просмотр PDF: страницы рисуются в canvas (CSP Платформы запрещает встроенные просмотрщики) */
+.pf-doc-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.pf-doc-viewer-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 8px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-doc-viewer-pages:focus-visible {
+  outline: 2px solid #1668dc;
+}
+.pf-doc-viewer-pages canvas {
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+}

@@ -1,0 +1,133 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/letterhead.updated.v1.json",
+  "title": "Бланк компании изменён",
+  "description": "Тип uz.railtech.erp.letterhead.updated.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP — владелец реквизитов своей компании (ADR-0015 п. 5, ADR-0020 п. 5): админ сохранил «Компания и бланки» (реквизиты или логотип документов) — ERP публикует снимок бланка целиком, EDS держит проекцию для писем на бланке (P4 волны 18a). Только своя компания ERP (core.tenant.own_company_id). Логотип — байтами (PNG, JPEG или WebP, не больше 512 КиБ, как Logo в rt-docs): ERP уменьшает картинку до размера бланка; SVG, GIF и слишком большой файл — logo = null и logo_omitted с причиной. Каждое событие — полный снимок: более старое (по time конверта) проекцию не перезаписывает. Подписчики: EDS; CRM тип не получает.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "letterhead"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Своя компания в ERP"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "letterhead": {
+      "type": "object",
+      "required": [
+        "company_name",
+        "inn",
+        "legal_address",
+        "bank_details",
+        "signatory_name",
+        "signatory_position",
+        "footer_text",
+        "accent_color",
+        "font_family",
+        "logo"
+      ],
+      "properties": {
+        "company_name": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Полное юридическое наименование (пусто — не задано)"
+        },
+        "inn": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "legal_address": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "bank_details": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "signatory_name": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "ФИО подписанта — подписант писем по умолчанию (директор)"
+        },
+        "signatory_position": {
+          "type": "string",
+          "maxLength": 255
+        },
+        "footer_text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "accent_color": {
+          "type": "string",
+          "pattern": "^(#[0-9a-fA-F]{6})?$",
+          "description": "Акцентный цвет #rrggbb; пусто — цвет бланка по умолчанию"
+        },
+        "font_family": {
+          "type": "string",
+          "enum": [
+            "sans",
+            "serif"
+          ]
+        },
+        "logo": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "content_type",
+                "data_base64",
+                "sha256",
+                "size"
+              ],
+              "properties": {
+                "content_type": {
+                  "type": "string",
+                  "enum": [
+                    "image/png",
+                    "image/jpeg",
+                    "image/webp"
+                  ]
+                },
+                "data_base64": {
+                  "type": "string",
+                  "minLength": 4,
+                  "maxLength": 700000,
+                  "contentEncoding": "base64"
+                },
+                "sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "size": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 524288
+                }
+              },
+              "additionalProperties": false
+            }
+          ],
+          "description": "Логотип документов байтами; null — логотипа нет или он не подходит (logo_omitted)"
+        },
+        "logo_omitted": {
+          "type": "string",
+          "enum": [
+            "hidden",
+            "unsupported",
+            "too_large"
+          ],
+          "description": "Почему логотипа нет при загруженном файле: hidden — «Показывать логотип» выключено, unsupported — SVG/GIF или файл не читается, too_large — больше 512 КиБ после уменьшения"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -74,5 +74,34 @@
     "drop": "yoki shu yerga torting",
     "tooLarge": "«{{name}}» fayli {{max}} dan katta — kichikroq fayl tanlang",
     "wrongType": "«{{name}}» fayli mos emas: {{accept}} mumkin"
+  },
+  "pdfViewer": {
+    "region": "«{{name}}» fayli sahifalari",
+    "page": "«{{name}}», {{page}}-sahifa, jami {{total}}",
+    "error": "Faylni ko'rish uchun ochib bo'lmadi. Uni yuklab oling.",
+    "truncated": "{{total}} sahifadan {{shown}} tasi ko'rsatilgan. Qolgani yuklab olingan faylda."
+  },
+  "bodyEditor": {
+    "blocks": "Matn bloklari",
+    "kinds": {
+      "paragraph": "Xatboshi",
+      "bullet": "Ro‘yxat",
+      "ordered": "Raqamli ro‘yxat",
+      "table": "Jadval"
+    },
+    "blockLabel": "{{n}}-blok: {{kind}}",
+    "moveUp": "Yuqoriga: {{block}}",
+    "moveDown": "Pastga: {{block}}",
+    "remove": "O‘chirish: {{block}}",
+    "add": "Blok qo‘shish",
+    "listHint": "Har bir band — yangi qatordan.",
+    "tableLabel": "{{n}}-jadval",
+    "headerCell": "Sarlavha, {{col}}-ustun",
+    "cell": "{{row}}-qator, {{col}}-ustun",
+    "addRow": "+ qator",
+    "addColumn": "+ ustun",
+    "removeRow": "− qator",
+    "removeColumn": "− ustun",
+    "tableHint": "Birinchi qator — sarlavha: u PDF ning har bir sahifasida takrorlanadi."
   }
 }

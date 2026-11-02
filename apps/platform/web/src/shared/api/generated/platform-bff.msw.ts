@@ -141,8 +141,12 @@ import type {
   EdsDealOptions,
   EdsDealRef,
   EdsDocument,
+  EdsDocumentBody,
   EdsDocumentPage,
+  EdsDocumentPdf,
   EdsFile,
+  EdsLetter,
+  EdsLetterhead,
   EdsMoney,
   EdsPerson,
   EdsRecipient,
@@ -1890,6 +1894,104 @@ export const getCreateEdsDocumentResponseEdsRecipientMock = (
   ...overrideResponse,
 });
 
+export const getCreateEdsDocumentResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsDocumentResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsDocumentResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    body: faker.helpers.arrayElement([
+      { ...getCreateEdsDocumentResponseEdsDocumentBodyMock() },
+      null,
+    ]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([
+      { ...getCreateEdsDocumentResponseEdsDocumentPdfMock() },
+      null,
+    ]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getCreateEdsDocumentResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateEdsDocumentResponseMock = (
   overrideResponse: Partial<Extract<EdsDocument, object>> = {},
 ): EdsDocument => ({
@@ -1969,6 +2071,9 @@ export const getCreateEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  letter: faker.helpers.arrayElement([{ ...getCreateEdsDocumentResponseEdsLetterMock() }, null]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -2011,6 +2116,98 @@ export const getGetEdsDocumentResponseEdsRecipientMock = (
   ...{
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsDocumentResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsDocumentResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsDocumentResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    body: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsDocumentBodyMock() }, null]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsDocumentPdfMock() }, null]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getGetEdsDocumentResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2088,6 +2285,9 @@ export const getGetEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  letter: faker.helpers.arrayElement([{ ...getGetEdsDocumentResponseEdsLetterMock() }, null]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -2130,6 +2330,104 @@ export const getUpdateEdsDocumentResponseEdsRecipientMock = (
   ...{
     name: faker.string.alpha({ length: { min: 1, max: 255 } }),
     inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateEdsDocumentResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateEdsDocumentResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateEdsDocumentResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    body: faker.helpers.arrayElement([
+      { ...getUpdateEdsDocumentResponseEdsDocumentBodyMock() },
+      null,
+    ]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([
+      { ...getUpdateEdsDocumentResponseEdsDocumentPdfMock() },
+      null,
+    ]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getUpdateEdsDocumentResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2213,6 +2511,9 @@ export const getUpdateEdsDocumentResponseMock = (
   can_edit: faker.datatype.boolean(),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  letter: faker.helpers.arrayElement([{ ...getUpdateEdsDocumentResponseEdsLetterMock() }, null]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   ...overrideResponse,
 });
 
@@ -4692,6 +4993,521 @@ export const getDownloadEdsProjectFileResponseMock = (
     new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
     { detail: "GENERATING", retry_after: faker.number.int(), ...overrideResponse },
   ]);
+
+export const getRequestEdsDocumentPdfResponseMock = (
+  overrideResponse: Partial<Extract<EdsDocumentPdf, object>> = {},
+): EdsDocumentPdf => ({
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  final: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  ...overrideResponse,
+});
+
+export const getGetEdsDocumentPdfResponseMock = (
+  overrideResponse: Partial<Extract<EdsDocumentPdf, object>> = {},
+): EdsDocumentPdf => ({
+  status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+  final: faker.datatype.boolean(),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  ...overrideResponse,
+});
+
+export const getDownloadEdsDocumentPdfResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getRequestEdsDocumentRegistrationResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsDealRefMock = (
+  overrideResponse: Partial<EdsDealRef> = {},
+): EdsDealRef => ({
+  ...{
+    erp_deal_id: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsRecipientMock = (
+  overrideResponse: Partial<EdsRecipient> = {},
+): EdsRecipient => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    body: faker.helpers.arrayElement([
+      { ...getRequestEdsDocumentRegistrationResponseEdsDocumentBodyMock() },
+      null,
+    ]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([
+      { ...getRequestEdsDocumentRegistrationResponseEdsDocumentPdfMock() },
+      null,
+    ]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRequestEdsDocumentRegistrationResponseMock = (
+  overrideResponse: Partial<Extract<EdsDocument, object>> = {},
+): EdsDocument => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
+  number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement([
+    "draft",
+    "on_approval",
+    "returned",
+    "rejected",
+    "approved",
+    "to_accountant",
+    "paid",
+    "sent",
+  ] as const),
+  version: faker.number.int({ min: 1 }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  author: {
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  addressee: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
+    null,
+  ]),
+  amount: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsMoneyMock() },
+    null,
+  ]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  })),
+  deal: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsDealRefMock() },
+    null,
+  ]),
+  recipient: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsRecipientMock() },
+    null,
+  ]),
+  route: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getRequestEdsDocumentRegistrationResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  decisions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      round: faker.number.int({ min: 1 }),
+      step: faker.number.int({ min: 1 }),
+      decision: faker.helpers.arrayElement(["approve", "return", "reject"] as const),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      by: {
+        crm_user_id: faker.number.int(),
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  can_edit: faker.datatype.boolean(),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  letter: faker.helpers.arrayElement([
+    { ...getRequestEdsDocumentRegistrationResponseEdsLetterMock() },
+    null,
+  ]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsDealRefMock = (
+  overrideResponse: Partial<EdsDealRef> = {},
+): EdsDealRef => ({
+  ...{
+    erp_deal_id: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsRecipientMock = (
+  overrideResponse: Partial<EdsRecipient> = {},
+): EdsRecipient => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 1, max: 255 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 32 } }), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsDocumentBodyMock = (
+  overrideResponse: Partial<EdsDocumentBody> = {},
+): EdsDocumentBody => ({
+  ...{
+    version: 1,
+    lang: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+    page: faker.helpers.arrayElement([{}, undefined]),
+    doc: {},
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsDocumentPdfMock = (
+  overrideResponse: Partial<EdsDocumentPdf> = {},
+): EdsDocumentPdf => ({
+  ...{
+    status: faker.helpers.arrayElement(["pending", "ready", "failed"] as const),
+    final: faker.datatype.boolean(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    pages: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    ready_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseEdsLetterMock = (
+  overrideResponse: Partial<EdsLetter> = {},
+): EdsLetter => ({
+  ...{
+    body: faker.helpers.arrayElement([
+      { ...getSendEdsDocumentResponseEdsDocumentBodyMock() },
+      null,
+    ]),
+    recipient_attention: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recipient_email: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    signatory_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    pdf: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsDocumentPdfMock() }, null]),
+    mailings: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.uuid(),
+        to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        status: faker.helpers.arrayElement([
+          "awaiting_pdf",
+          "requested",
+          "sent",
+          "failed",
+        ] as const),
+        reason: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        requested_by: faker.helpers.arrayElement([
+          { ...getSendEdsDocumentResponseEdsPersonMock() },
+          null,
+        ]),
+        requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        finished_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+      }),
+    ),
+    registration_requested: faker.helpers.arrayElement([
+      {
+        by: {
+          crm_user_id: faker.number.int(),
+          full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        },
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSendEdsDocumentResponseMock = (
+  overrideResponse: Partial<Extract<EdsDocument, object>> = {},
+): EdsDocument => ({
+  id: faker.string.uuid(),
+  kind: faker.helpers.arrayElement(Object.values(EdsDocumentKind)),
+  number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement([
+    "draft",
+    "on_approval",
+    "returned",
+    "rejected",
+    "approved",
+    "to_accountant",
+    "paid",
+    "sent",
+  ] as const),
+  version: faker.number.int({ min: 1 }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  author: {
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  addressee: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsPersonMock() }, null]),
+  amount: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  })),
+  deal: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsDealRefMock() }, null]),
+  recipient: faker.helpers.arrayElement([
+    { ...getSendEdsDocumentResponseEdsRecipientMock() },
+    null,
+  ]),
+  route: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getSendEdsDocumentResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  decisions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      round: faker.number.int({ min: 1 }),
+      step: faker.number.int({ min: 1 }),
+      decision: faker.helpers.arrayElement(["approve", "return", "reject"] as const),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      by: {
+        crm_user_id: faker.number.int(),
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  can_edit: faker.datatype.boolean(),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  letter: faker.helpers.arrayElement([{ ...getSendEdsDocumentResponseEdsLetterMock() }, null]),
+  can_register: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  can_request_registration: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  ...overrideResponse,
+});
+
+export const getGetEdsLetterheadResponseMock = (
+  overrideResponse: Partial<Extract<EdsLetterhead, object>> = {},
+): EdsLetterhead => ({
+  configured: faker.datatype.boolean(),
+  company_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  requisites: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  signatory_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  signatory_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  has_logo: faker.datatype.boolean(),
+  updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  ...overrideResponse,
+});
 
 export const getUploadEdsDocumentFileResponseMock = (
   overrideResponse: Partial<Extract<EdsFile, object>> = {},
@@ -20949,6 +21765,149 @@ export const getDownloadEdsProjectFileMockHandler = (
   );
 };
 
+export const getRequestEdsDocumentPdfMockHandler = (
+  overrideResponse?:
+    | EdsDocumentPdf
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsDocumentPdf> | EdsDocumentPdf),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/documents/:id/pdf",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestEdsDocumentPdfResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEdsDocumentPdfMockHandler = (
+  overrideResponse?:
+    | EdsDocumentPdf
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsDocumentPdf> | EdsDocumentPdf),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/documents/:id/pdf",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsDocumentPdfResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadEdsDocumentPdfMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/documents/:id/pdf/file",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadEdsDocumentPdfResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    },
+    options,
+  );
+};
+
+export const getRequestEdsDocumentRegistrationMockHandler = (
+  overrideResponse?:
+    | EdsDocument
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsDocument> | EdsDocument),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/documents/:id/registration-request",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRequestEdsDocumentRegistrationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendEdsDocumentMockHandler = (
+  overrideResponse?:
+    | EdsDocument
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EdsDocument> | EdsDocument),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/documents/:id/send",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendEdsDocumentResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEdsLetterheadMockHandler = (
+  overrideResponse?:
+    | EdsLetterhead
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsLetterhead> | EdsLetterhead),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/letterhead",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsLetterheadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUploadEdsDocumentFileMockHandler = (
   overrideResponse?:
     | EdsFile
@@ -26714,6 +27673,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getActEdsProjectActMockHandler(),
   getScanEdsProjectActMockHandler(),
   getDownloadEdsProjectFileMockHandler(),
+  getRequestEdsDocumentPdfMockHandler(),
+  getGetEdsDocumentPdfMockHandler(),
+  getDownloadEdsDocumentPdfMockHandler(),
+  getRequestEdsDocumentRegistrationMockHandler(),
+  getSendEdsDocumentMockHandler(),
+  getGetEdsLetterheadMockHandler(),
   getUploadEdsDocumentFileMockHandler(),
   getDownloadEdsDocumentFileMockHandler(),
   getListQuoteApprovalsMockHandler(),

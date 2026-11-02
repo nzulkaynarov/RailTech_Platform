@@ -2041,10 +2041,11 @@ paths:
         EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же
         ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT`
         (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей);
-        право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register`
-        (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной
+        право на тип решает EDS: `memo`, `application`, `report` — `memos.create`; черновик `letter_out` (Письмо) — тоже
+        `memos.create` (P4: исполнитель готовит ответ), регистрация (`submit = true`) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной
         записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует:
-        EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC).
+        EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено»; письмо на бланке (`letter`, P4) получает итоговый PDF,
+        а с `send = true` уходит адресату почтой (журнал — `letter.mailings`).
         Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в
         `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
       parameters:
@@ -2441,6 +2442,178 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/pdf:
+    post:
+      tags: [eds-documents]
+      operationId: requestEdsDocumentPdf
+      summary: 'EDS · Письмо на бланке: построить PDF (предпросмотр)'
+      description: >-
+        EDS `POST /documents/{id}/pdf` (P4). PDF строит фоновый воркер EDS (`rt-docs`), ответ сразу — состояние `pending` или
+        `ready` (кэш по хешу тела и бланка); экран опрашивает `GET /eds/documents/{id}/pdf`. Только письмо с телом
+        (`letter.body`). Бланк компании ещё не получен — 409 `CONFLICT` (`details.reason = letterhead_missing`): админ сохраняет
+        «Компания и бланки» (Настройки), и бланк приходит в EDS сам.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '202':
+          description: Рендер поставлен в очередь или PDF уже готов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocumentPdf'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    get:
+      tags: [eds-documents]
+      operationId: getEdsDocumentPdf
+      summary: 'EDS · Письмо на бланке: состояние PDF (опрос)'
+      description: >-
+        EDS `GET /documents/{id}/pdf`: `pending` — готовится, `ready` — готов (`GET …/pdf/file`), `failed` — ошибка с причиной
+        словами (`error`). Не запрашивался — 404.
+      parameters:
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Состояние PDF
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocumentPdf'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/pdf/file:
+    get:
+      tags: [eds-documents]
+      operationId: downloadEdsDocumentPdf
+      summary: 'EDS · Письмо на бланке: PDF (поток)'
+      description: >-
+        EDS `GET /documents/{id}/pdf/file` — готовый PDF, построенный EDS (`application/pdf`, `inline`): предпросмотр в окне
+        браузера и «Скачать PDF». Тот же файл уходит адресату. Не готов — 409 (`details.reason = pdf_not_ready`).
+      parameters:
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: PDF
+          headers:
+            Content-Disposition:
+              description: "`inline; filename*=UTF-8''…`"
+              schema: {type: string}
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/registration-request:
+    post:
+      tags: [eds-documents]
+      operationId: requestEdsDocumentRegistration
+      summary: 'EDS · Письмо: передать на регистрацию делопроизводителю'
+      description: >-
+        EDS `POST /documents/{id}/registration-request` (B-P8B-4). Исполнитель без права регистрировать исходящие
+        (`eds.inbox.register`) готовит письмо-ответ и передаёт черновик делопроизводителю: тот видит его в «Все документы»,
+        смотрит PDF и регистрирует ИСХ (`PUT /eds/documents/{id}` с `submit = true`). Не черновик — 409, не автор — 403.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Передано на регистрацию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}/send:
+    post:
+      tags: [eds-documents]
+      operationId: sendEdsDocument
+      summary: 'EDS · Письмо: отправить адресату ещё раз'
+      description: >-
+        EDS `POST /documents/{id}/send`: зарегистрированное письмо на бланке снова уходит на почту адресата через почтовый
+        сервис CRM (например, после настройки почты). Итог — строка `letter.mailings` («отправлено» или причина словами:
+        «Почта не настроена — Настройки · Подключения · Почта»). Раздел `eds.inbox.register` (полный).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Отправка запрошена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letterhead:
+    get:
+      tags: [eds-documents]
+      operationId: getEdsLetterhead
+      summary: 'EDS · Бланк компании для письма'
+      description: >-
+        EDS `GET /letterhead` — проекция бланка ERP (реквизиты и подписант по умолчанию из «Компания и бланки»).
+        `configured = false` — бланк ещё не пришёл: экран объясняет, что админ сохраняет «Компания и бланки».
+      responses:
+        '200':
+          description: Бланк
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsLetterhead'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -14062,6 +14235,106 @@ components:
         can_edit: {type: boolean, description: 'Автор, статус `draft` или `returned`: экран открывает форму «Продолжить»'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        letter: {oneOf: [{$ref: '#/components/schemas/EdsLetter'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке (P4)'}
+        can_register:
+          type: boolean
+          description: >-
+            Письмо-черновик можно зарегистрировать как ИСХ: у сотрудника раздел `eds.inbox.register` (полный), и он автор или
+            черновик передан ему на регистрацию (P4, B-P8B-4)
+        can_request_registration:
+          type: boolean
+          description: Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю
+    EdsDocumentBody:
+      type: object
+      additionalProperties: false
+      required: [version, lang, doc]
+      description: >-
+        Тело документа на бланке — контракт `packages/contracts/documents/body.schema.json` (D-DOC1): абзацы, заголовки,
+        списки, таблицы; без цветов, шрифтов и HTML. Проверяет EDS (422, `details.fields = [body]`).
+      properties:
+        version: {type: integer, const: 1}
+        lang: {type: string, enum: [ru, uz, en]}
+        page: {type: object}
+        doc: {type: object, description: 'Корень `{type: doc, content: [...]}`'}
+    EdsLetterIn:
+      type: object
+      additionalProperties: false
+      required: [body]
+      description: Письмо на бланке (P4) — только `letter_out`
+      properties:
+        body: {$ref: '#/components/schemas/EdsDocumentBody'}
+        recipient_attention: {type: [string, 'null'], maxLength: 300, description: '«Кому» — должность и ФИО получателя'}
+        recipient_email: {type: [string, 'null'], format: email, maxLength: 254, description: 'Почта адресата — «Отправить адресату»'}
+        signatory_name: {type: [string, 'null'], maxLength: 255, description: '`null` — подписант бланка (директор)'}
+        signatory_position: {type: [string, 'null'], maxLength: 255}
+    EdsDocumentPdf:
+      type: object
+      additionalProperties: false
+      required: [status, final, error, pages, requested_at, ready_at]
+      properties:
+        status: {type: string, enum: [pending, ready, failed], description: '`pending` — готовится, `ready` — готов, `failed` — ошибка'}
+        final: {type: boolean, description: '`true` — с номером ИСХ и датой регистрации (этот PDF уходит адресату)'}
+        error: {type: [string, 'null'], description: Причина ошибки словами}
+        pages: {type: [integer, 'null'], minimum: 1}
+        requested_at: {type: string, format: date-time}
+        ready_at: {type: [string, 'null'], format: date-time}
+    EdsDocumentMailing:
+      type: object
+      additionalProperties: false
+      required: [id, to, status, reason, requested_by, requested_at, finished_at]
+      description: Строка журнала отправки письма адресату
+      properties:
+        id: {type: string, format: uuid}
+        to:
+          type: array
+          items: {type: string}
+        status: {type: string, enum: [awaiting_pdf, requested, sent, failed], description: '`awaiting_pdf` — ждёт итогового PDF; `requested` — у почтового сервиса; `sent`/`failed` — итог'}
+        reason: {type: [string, 'null'], description: 'Причина словами («Почта не настроена — Настройки · Подключения · Почта»)'}
+        requested_by: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]}
+        requested_at: {type: string, format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
+    EdsLetter:
+      type: object
+      additionalProperties: false
+      required:
+        [body, recipient_attention, recipient_email, signatory_name, signatory_position, pdf, mailings, registration_requested]
+      description: Письмо на бланке (P4)
+      properties:
+        body: {oneOf: [{$ref: '#/components/schemas/EdsDocumentBody'}, {type: 'null'}], description: '`null` — письмо без бланка (только текст)'}
+        recipient_attention: {type: [string, 'null']}
+        recipient_email: {type: [string, 'null']}
+        signatory_name: {type: [string, 'null']}
+        signatory_position: {type: [string, 'null']}
+        pdf: {oneOf: [{$ref: '#/components/schemas/EdsDocumentPdf'}, {type: 'null'}], description: 'Последний PDF; `null` — не строился'}
+        mailings:
+          type: array
+          items: {$ref: '#/components/schemas/EdsDocumentMailing'}
+          description: Журнал отправки адресату
+        registration_requested:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [by, at]
+              properties:
+                by: {$ref: '#/components/schemas/EdsPerson'}
+                at: {type: string, format: date-time}
+            - type: 'null'
+          description: Исполнитель передал черновик на регистрацию делопроизводителю
+    EdsLetterhead:
+      type: object
+      additionalProperties: false
+      required: [configured, company_name, requisites, signatory_name, signatory_position, has_logo, updated_at]
+      description: Бланк компании (проекция ERP в EDS)
+      properties:
+        configured: {type: boolean, description: '`false` — бланк ещё не получен: PDF письма не строится'}
+        company_name: {type: [string, 'null']}
+        requisites:
+          type: array
+          items: {type: string}
+        signatory_name: {type: [string, 'null']}
+        signatory_position: {type: [string, 'null']}
+        has_logo: {type: boolean}
+        updated_at: {type: [string, 'null'], format: date-time}
     EdsDocumentIn:
       type: object
       additionalProperties: false
@@ -14087,6 +14360,8 @@ components:
           description: >-
             Только `letter_out` (P8b): «В ответ на ВХ» — номер входящего письма. Регистрация такого ИСХ закрывает поручения
             «Подготовить ответ» этого письма (решает EDS). Номера нет — 422, `details.fields = [in_reply_to_number]`.
+        letter: {oneOf: [{$ref: '#/components/schemas/EdsLetterIn'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке (P4): тело блоками, «кому», почта, подписант'}
+        send: {type: boolean, default: false, description: 'Только письмо (P4): после регистрации отправить адресату почтой с PDF на бланке'}
         submit:
           type: boolean
           default: false
@@ -14108,6 +14383,8 @@ components:
           items: {type: string, format: uuid}
         erp_deal_id: {type: [integer, 'null']}
         recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
+        letter: {oneOf: [{$ref: '#/components/schemas/EdsLetterIn'}, {type: 'null'}], description: 'Только `letter_out` — письмо на бланке целиком (P4)'}
+        send: {type: boolean, default: false, description: 'Только письмо (P4): после регистрации отправить адресату почтой'}
         submit: {type: boolean, default: false}
     ApprovalRouteStatus:
       type: string

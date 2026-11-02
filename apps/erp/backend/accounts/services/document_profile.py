@@ -10,10 +10,12 @@ import logging
 from typing import Optional, Tuple
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 
 from core.validators import is_hex_color, validate_image_upload
 
 from ..models import Company, CompanyDocumentProfile, CustomUser
+from .letterhead_event import publish_letterhead
 
 logger = logging.getLogger(__name__)
 
@@ -118,9 +120,13 @@ def update_document_profile(
         if field in data:
             setattr(profile, field, _as_bool(data[field]))
             changed.append(field)
-    if changed:
-        profile.save(update_fields=[*changed, "updated_at"])
-        _invalidate_branded_pdfs(company)
+    with transaction.atomic():
+        if changed:
+            profile.save(update_fields=[*changed, "updated_at"])
+            _invalidate_branded_pdfs(company)
+        # P4: бланк своей компании → EDS (письма на бланке). Публикуется и при сохранении без правок — так админ
+        # «досылает» бланк в EDS кнопкой «Сохранить», если события ещё не было (данные до P4).
+        publish_letterhead(company, profile, user)
     return profile, None
 
 
@@ -183,6 +189,8 @@ def upload_document_profile_logo(
     if profile.logo:
         profile.logo.delete(save=False)
     profile.logo = logo_file
-    profile.save(update_fields=["logo", "updated_at"])
-    _invalidate_branded_pdfs(company)
+    with transaction.atomic():
+        profile.save(update_fields=["logo", "updated_at"])
+        _invalidate_branded_pdfs(company)
+        publish_letterhead(company, profile, user)  # P4: новый логотип — в бланк EDS
     return profile, None

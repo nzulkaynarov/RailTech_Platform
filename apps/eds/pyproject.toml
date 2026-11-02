@@ -16,6 +16,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "rt-bus[fastapi,sqlalchemy]",
     "rt-contracts",
+    "rt-docs",
     "sqlalchemy[asyncio]>=2.1.4",
     "structlog>=26.1.0",
     "tzdata>=2026.1",
@@ -74,3 +75,5 @@ ignore_missing_imports = true
 [tool.uv.sources]
 rt-bus = { path = "../../packages/rt-bus", editable = true }
 rt-contracts = { path = "../../packages/contracts/generated/python", editable = true }
+# Документы на бланке (ADR-0020, P4): тело → PDF (WeasyPrint); pango и harfbuzz — в образе, рендер — только в воркере.
+rt-docs = { path = "../../packages/rt-docs", editable = true }

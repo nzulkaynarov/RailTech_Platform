@@ -4,8 +4,10 @@
 # Debian и uv, чтобы cpu-baseline-check и прод проверяли одну линию образов; Wolfi/Alpine не используются, S0-7).
 #
 # Шина событий (ADR-0014, решение L14): пакеты `packages/rt-bus` и `packages/contracts` лежат вне контекста сборки
-# (`apps/eds`) и приходят именованными контекстами `rtbus` и `contracts`:
-#   docker build --build-context rtbus=packages/rt-bus --build-context contracts=packages/contracts …
+# (`apps/eds`) и приходят именованными контекстами `rtbus` и `contracts`; документы на бланке (P4, ADR-0020) —
+# пакет `packages/rt-docs` контекстом `rtdocs`:
+#   docker build --build-context rtbus=packages/rt-bus --build-context contracts=packages/contracts \
+#     --build-context rtdocs=packages/rt-docs …
 # (в compose — `additional_contexts`, в Actions — `build-contexts`). Пути path-зависимостей в pyproject.toml/uv.lock
 # относительные (`../../packages/…`), поэтому `uv sync` идёт в дереве как в репозитории (/repo/apps/eds); код — в /app.
 
@@ -21,16 +23,25 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PATH="/opt/venv/bin:$PATH" \
     PYTHONPATH=/app \
     RT_BUS_CONTRACTS_DIR=/opt/rt/contracts/events \
-    RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml
+    RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml \
+    RT_DOCS_CONTRACTS_DIR=/opt/rt/contracts/documents \
+    XDG_CACHE_HOME=/tmp/.cache
+# Системные библиотеки WeasyPrint (rt-docs, P4): pango и harfbuzz — та же линия, что образ тестов rt-docs
+# (packages/rt-docs/docker/test.Dockerfile). Шрифты документа вшиты в пакет, системные рендер не видит.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=uv /uv /usr/local/bin/uv
 WORKDIR /app
 RUN groupadd --system app && useradd --system --gid app --home-dir /app app
 
 FROM base AS deps
 COPY --from=rtbus . /repo/packages/rt-bus
+COPY --from=rtdocs . /repo/packages/rt-docs
 COPY --from=contracts generated/python /repo/packages/contracts/generated/python
 COPY --from=contracts events /opt/rt/contracts/events
 COPY --from=contracts bus /opt/rt/contracts/bus
+COPY --from=contracts documents /opt/rt/contracts/documents
 WORKDIR /repo/apps/eds
 COPY pyproject.toml uv.lock ./
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev --no-install-project
