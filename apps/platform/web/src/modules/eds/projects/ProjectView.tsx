@@ -23,6 +23,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { isActionable } from "../../bridge";
 import { fileUrl, projectRef } from "./api";
 import { FileLinks } from "./FileLinks";
+import { DeliveryActions } from "./DeliveryMarks";
 import { useStateLabels } from "./labels";
 import { journalText } from "./model";
 import { ProjectStatusTag, QuoteAcceptedTag } from "./status";
@@ -260,7 +261,7 @@ function Documents({ card, objectId }: { card: ProjectCard; objectId: string }) 
   );
 }
 
-function Execution({ card }: { card: ProjectCard }) {
+function Execution({ card, objectId }: { card: ProjectCard; objectId: string }) {
   const { t } = useTranslation("projects");
   const { date } = useFormat();
   const f = card.fulfillment;
@@ -294,11 +295,20 @@ function Execution({ card }: { card: ProjectCard }) {
                 },
                 { label: t("card.execution.carrier"), value: f.carrier },
                 { label: t("card.execution.tracking"), value: f.tracking_number },
+                {
+                  label: t("card.execution.proof"),
+                  value: f.proof_url ? (
+                    <a className="pf-focusable" href={f.proof_url} download>
+                      {f.proof_name ?? t("card.execution.proofFile")}
+                    </a>
+                  ) : null,
+                },
               ]}
             />
           ) : (
             <p className="pf-hint">{t("card.execution.none")}</p>
           )}
+          {f ? <DeliveryActions objectId={objectId} fulfillment={f} /> : null}
         </section>
         <section aria-label={t("card.execution.lines")}>
           <h3 className="pf-dec-subhead">{t("card.execution.lines")}</h3>
@@ -388,7 +398,7 @@ function Content({ card, objectId }: { card: ProjectCard; objectId: string }) {
       <div className="pf-dec-grid pf-dec-grid--quote">
         <div className="pf-dec-main">
           <Documents card={card} objectId={objectId} />
-          <Execution card={card} />
+          <Execution card={card} objectId={objectId} />
           <Card size="small" title={<h2 className="pf-dec-title">{t("card.journal.title")}</h2>}>
             {card.journal.length === 0 ? (
               <p className="pf-hint">{t("card.journal.empty")}</p>
