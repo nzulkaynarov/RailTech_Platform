@@ -183,7 +183,7 @@
     "action": "Invite employee",
     "setup": {
       "title": "First run",
-      "subtitle": "Five steps: administrator, ERP connection, your company, client cabinet address, other connections. Any step can wait.",
+      "subtitle": "Six steps: administrator, ERP connection, your company, bank details for invoices, client cabinet address, other connections. Any step can wait.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator created: {{name}}.",
       "companyTitle": "Your company",
@@ -266,7 +266,8 @@
         "open": "Continue setup",
         "hide": "Hide until tomorrow",
         "hideLabel": "Hide until tomorrow: setup banner",
-        "hidden": "The banner is hidden until tomorrow. Bring it back in the “First-time setup” wizard."
+        "hidden": "The banner is hidden until tomorrow. Bring it back in the “First-time setup” wizard.",
+        "bank": "No bank details for invoices."
       },
       "erpTitle": "ERP connection",
       "erpLead": "The company is created in ERP, so ERP is connected first. A new installation needs no pairing code — the \"Connect ERP\" button is enough.",
@@ -284,7 +285,13 @@
       "stepSaved": "Step “{{step}}” is done.",
       "bannerHidden": "The setup banner is hidden until tomorrow.",
       "bannerReturn": "Bring the banner back",
-      "cabinetTitle": "Client cabinet address"
+      "cabinetTitle": "Client cabinet address",
+      "bankTitle": "Bank details for invoices",
+      "bankDone": "Bank account and MFO are set: invoices to clients can be issued.",
+      "bankTodo": "Without the bank account and MFO, ERP will not issue an invoice to a client. Enter them in “Settings · Company & letterhead”, the “Details” tab.",
+      "bankWaitCompany": "Create your company first: bank details are entered in its card.",
+      "bankUnknown": "No data from ERP yet — the bank details state will appear once it answers.",
+      "bankOpen": "Open “Company & letterhead”"
     },
     "org": {
       "title": "Employees",

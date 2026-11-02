@@ -48,11 +48,26 @@ export function nextStep(checklist: SetupChecklist): SetupStep | undefined {
 }
 
 /**
- * Нужен ли баннер: есть несделанный шаг или в ERP ещё нет своей компании. Шаг «нет данных» сам по себе баннер не
+ * Нужен ли баннер: есть несделанный шаг, в ERP ещё нет своей компании или у неё нет реквизитов для счетов. Шаг «нет данных» сам по себе баннер не
  * показывает: бэкенд не ответил, и подталкивать к действию без причины нельзя.
  */
 export function needsSetup(checklist: SetupChecklist): boolean {
-  return nextStep(checklist) !== undefined || checklist.company?.required === true;
+  return (
+    nextStep(checklist) !== undefined ||
+    checklist.company?.required === true ||
+    bankDetailsMissing(checklist)
+  );
+}
+
+/** Где администратор вводит р/с и МФО своей компании (D26G-6): «Настройки · Компания и бланки», вкладка «Реквизиты». */
+export const BANK_DETAILS_PATH = "/admin/company?tab=details";
+
+/**
+ * Своя компания есть, а банковских реквизитов для счетов нет (D26G-6, признак ERP — та же проверка, что «Выставить
+ * счёт»): шаг мастера не сделан, баннер остаётся — без них первый счёт клиенту не выставить.
+ */
+export function bankDetailsMissing(checklist: SetupChecklist): boolean {
+  return checklist.company?.required === false && !checklist.company.bank_details_ready;
 }
 
 /**

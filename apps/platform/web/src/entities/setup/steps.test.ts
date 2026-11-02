@@ -1,11 +1,22 @@
 import { describe, expect, it } from "vitest";
 
 import type { SetupChecklist, SetupStepState } from "../../shared/api/generated/model";
-import { STEP_TARGET, needsSetup, nextStep, staysOnCompany, stepAfter } from "./steps";
+import {
+  STEP_TARGET,
+  bankDetailsMissing,
+  needsSetup,
+  nextStep,
+  staysOnCompany,
+  stepAfter,
+} from "./steps";
 
 function checklist(
   states: SetupStepState[],
-  company: SetupChecklist["company"] = { required: false, can_setup: false },
+  company: SetupChecklist["company"] = {
+    required: false,
+    can_setup: false,
+    bank_details_ready: true,
+  },
 ): SetupChecklist {
   const keys = ["erp", "bot", "mail", "models", "first_employee"] as const;
   const steps = keys.map((key, index) => ({ key, state: states[index] ?? "done" }));
@@ -20,11 +31,19 @@ function checklist(
 
 describe("после ERP мастер остаётся на компании (W15-G-10)", () => {
   it("компании нет — форма; ERP не выдала доступ — ждём; компания готова или ERP не сопряжена — дальше", () => {
-    expect(staysOnCompany(checklist(["done"], { required: true, can_setup: true }))).toBe(true);
+    expect(
+      staysOnCompany(
+        checklist(["done"], { required: true, can_setup: true, bank_details_ready: true }),
+      ),
+    ).toBe(true);
     expect(
       staysOnCompany({ ...checklist(["done"], null), company_blocker: "erp_unavailable" }),
     ).toBe(true);
-    expect(staysOnCompany(checklist(["done"], { required: false, can_setup: false }))).toBe(false);
+    expect(
+      staysOnCompany(
+        checklist(["done"], { required: false, can_setup: false, bank_details_ready: true }),
+      ),
+    ).toBe(false);
     expect(
       staysOnCompany({ ...checklist(["todo"], null), company_blocker: "erp_not_connected" }),
     ).toBe(false);
@@ -60,9 +79,20 @@ describe("шаги чек-листа", () => {
 
   it("баннер нужен, пока есть несделанное или нет своей компании", () => {
     expect(needsSetup(checklist(["done", "done", "todo", "done", "done"]))).toBe(true);
-    expect(needsSetup(checklist([], { required: true, can_setup: true }))).toBe(true);
+    expect(
+      needsSetup(checklist([], { required: true, can_setup: true, bank_details_ready: true })),
+    ).toBe(true);
     expect(needsSetup(checklist([]))).toBe(false);
     expect(needsSetup(checklist([], null))).toBe(false);
+  });
+
+  it("без банковских реквизитов для счетов баннер остаётся: первый счёт не выставить (D26G-6)", () => {
+    const noBank = { required: false, can_setup: false, bank_details_ready: false };
+    expect(needsSetup(checklist([], noBank))).toBe(true);
+    expect(bankDetailsMissing(checklist([], noBank))).toBe(true);
+    expect(bankDetailsMissing(checklist([]))).toBe(false);
+    // своей компании ещё нет — сначала шаг «Ваша компания», реквизиты потом
+    expect(bankDetailsMissing(checklist([], null))).toBe(false);
   });
 
   it("«нет данных» баннер не включает", () => {
