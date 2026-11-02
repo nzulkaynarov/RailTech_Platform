@@ -50,7 +50,15 @@ function Banner({ sheet }: { sheet: CalcSheet }) {
   if (!quote) return null;
   if (quote.state === "at_director") {
     return (
-      <Alert type="info" showIcon message={t("sheet.atDirector", { number: quote.number ?? "" })} />
+      <Alert
+        type="info"
+        showIcon
+        message={
+          quote.version > 1
+            ? t("sheet.atDirectorVersion", { number: quote.number ?? "", version: quote.version })
+            : t("sheet.atDirector", { number: quote.number ?? "" })
+        }
+      />
     );
   }
   if (quote.state === "returned") {

@@ -56,6 +56,7 @@
     "steps": "Ariza yo‘li",
     "openTask": "Topshiriq va vizalar",
     "atDirector": "{{number}} TK qoralamasi direktorda ma’qullashda. Direktor qaror qilguncha qatorlar o‘zgartirilmaydi.",
+    "atDirectorVersion": "{{number}} TK qoralamasi, {{version}}-versiya, direktorda ma’qullashda. Direktor qaror qilguncha qatorlar o‘zgartirilmaydi.",
     "returned": "Direktor TKni qayta ishlashga qaytardi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
     "rejected": "Direktor TKni rad etdi. Hisob-kitob yopildi.",
     "approved": "Direktor TKni ma’qulladi. Hisob-kitob o‘zgartirish uchun yopiq.",

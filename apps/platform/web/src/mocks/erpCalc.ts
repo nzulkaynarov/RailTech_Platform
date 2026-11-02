@@ -670,7 +670,7 @@ export const erpCalcHandlers = [
     calc.state = "in_progress";
     calc.rejectedBy = null;
     calc.rejectReason = null;
-    calc.quoteNumber = null;
+    // Версии одного КП несут один номер (SPEC-v3 §2.2): «КП-2026/119, версия 2»
     calc.lines = calc.lines.map((line) => ({ ...line, visa: null }));
     write(calcs);
     return HttpResponse.json<CalcSheet>(present(calc, held.user));

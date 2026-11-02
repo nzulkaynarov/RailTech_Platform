@@ -41,12 +41,11 @@ class Quote(models.Model):
         max_length=40,
         null=True,
         blank=True,
-        unique=True,
         db_index=True,
         verbose_name=_("Номер КП"),
         help_text=_(
-            "Человекочитаемый сквозной номер КП, выдаётся при отправке клиенту "
-            "(напр. ACME-КП-2026-00001). Пусто, пока КП не отправлено."
+            "Человекочитаемый сквозной номер КП (напр. КП-2026/00001), выдаётся при передаче директору. "
+            "Версии одного КП несут один номер (SPEC-v3 §2.1–2.2): уникальна пара номер + версия."
         ),
     )
     status = models.ForeignKey(
@@ -352,6 +351,14 @@ class Quote(models.Model):
         verbose_name_plural = _("Коммерческие предложения")
         unique_together = [("deal", "version")]
         ordering = ["-version"]
+        constraints = [
+            # D26G-3: «Новая версия КП» после отказа клиента — новая строка с тем же номером и версией +1.
+            models.UniqueConstraint(
+                fields=["number", "version"],
+                condition=models.Q(number__isnull=False),
+                name="uniq_quote_number_version",
+            ),
+        ]
 
     def __str__(self):
         return f"КП v{self.version} — {self.deal}"

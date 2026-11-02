@@ -218,7 +218,8 @@ def test_new_version_reopens_the_calc_with_lines_and_crew(world):  # noqa: F811
     assert body["quote"]["rejected_by"] is None and body["quote"]["can_revise"] is False
     assert body["ready"]["blocker"] == "visas_missing", "визы новой версии собираются заново"
     copy = Quote.objects.get(deal=world["deal"], version=2)
-    assert copy.status.code == "DRAFT" and copy.number is None
+    assert copy.status.code == "DRAFT" and copy.number == quote.number, "версии одного КП — один номер"
+    assert body["quote"]["number"] == quote.number
     lines = {line["zone"]: line for line in body["lines"]}
     assert lines["goods"]["client_price"] == "99000000.00" and lines["services"]["crew_rate"] == "1500000.00"
     assert all(line["visa"] is None for line in body["lines"])
@@ -274,3 +275,39 @@ def test_lost_and_new_version_conform_to_the_v1_schema(world):  # noqa: F811
         "post",
         status=409,
     )
+
+
+def test_new_version_after_client_rejection_keeps_the_number_and_old_decision_is_stale(world):  # noqa: F811
+    """SPEC-v3 §2.1–2.2: «Новая версия КП» — тот же КП-ГГГГ/NNN, версия 2; событие — версия 2 с тем же номером;
+    решение директора по прежней версии (другая строка КП) не применяется к новой."""
+    quote, goods_id, service_id = _sent_and_rejected(world)
+    supply, engineer = _api(world["supply"]), _api(world["engineer"])
+    body = supply.post(_url(world, "new-version/")).json()
+    lines = {line["zone"]: line["id"] for line in body["lines"]}
+    assert supply.post(_url(world, f"lines/{lines['goods']}/visa/")).status_code == 200
+    assert engineer.post(_url(world, f"lines/{lines['services']}/visa/")).status_code == 200
+    ready = supply.post(_url(world, "ready/"))
+    assert ready.status_code == 200, ready.json()
+    assert ready.json()["quote"]["number"] == quote.number and ready.json()["quote"]["version"] == 2
+
+    copy = Quote.objects.get(deal=world["deal"], version=2)
+    assert copy.number == quote.number and copy.pk != quote.pk
+    events = bus_support.published("quote.ready_for_approval")
+    assert [(e["data"]["payload"]["number"], e["data"]["payload"]["version"]) for e in events] == [
+        (quote.number, 1),
+        (quote.number, 2),
+    ]
+    bus_support.assert_matches_contract(events[-1])
+    assert _decide(copy, "approve", 1) == "stale", "решение по версии 1 к версии 2 не применяется"
+    assert _decide(copy, "approve", 2) == "applied"
+
+
+def test_number_and_version_pair_is_unique(world):  # noqa: F811
+    from django.db import IntegrityError, transaction
+
+    quote, _goods, _service = _sent_and_rejected(world)
+    supply = _api(world["supply"])
+    supply.post(_url(world, "new-version/"))
+    copy = Quote.objects.get(deal=world["deal"], version=2)
+    with pytest.raises(IntegrityError), transaction.atomic():
+        Quote.objects.filter(pk=copy.pk).update(version=quote.version, deal=Deal.objects.create(title="Другая"))

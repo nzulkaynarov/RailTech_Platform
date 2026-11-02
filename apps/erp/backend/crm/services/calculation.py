@@ -1292,7 +1292,8 @@ def _rejected_or_409(deal: Deal, user) -> Quote:
 
 @transaction.atomic
 def new_version(deal_id: int, user) -> dict:
-    """«Новая версия КП»: клиент отклонил КП — расчёт снова открыт черновиком версии +1 с теми же строками.
+    """«Новая версия КП»: клиент отклонил КП — расчёт снова открыт черновиком версии +1 с теми же строками и тем же
+    номером КП (новая строка КП: прежняя версия остаётся в истории отклонённой клиентом).
 
     Копия — `duplicate_quote` (позиции, статьи, введённые цены); строкам расчёта переносятся тип и вводные бригады,
     визы — нет (новая версия собирает визы заново). Резервы заявки сняты ещё при отказе клиента
@@ -1307,6 +1308,9 @@ def new_version(deal_id: int, user) -> dict:
     task = _task_or_404(deal)
     source = _rejected_or_409(deal, user)
     copy = duplicate_quote(source.pk, user)
+    # Версии одного КП несут один номер (SPEC-v3 §2.1–2.2): «КП-2026/NNN, версия 2»; уникальна пара номер + версия.
+    copy.number = source.number
+    copy.save(update_fields=["number", "updated_at"])
     old_items = list(source.items.order_by("position", "id").select_related("calc"))
     new_items = list(copy.items.order_by("position", "id"))
     for old, new in zip(old_items, new_items, strict=False):
@@ -1323,7 +1327,7 @@ def new_version(deal_id: int, user) -> dict:
         source,
         user,
         "КП заменено новой версией",
-        f"КП v{source.version} ({source.number or '—'}) отклонено клиентом → черновик КП v{copy.version}",
+        f"КП {source.number or '—'}: версия {source.version} отклонена клиентом → черновик версии {copy.version}",
         event_code="quote.superseded",
         event_params={"version": source.version, "number": source.number, "new_version": copy.version},
     )

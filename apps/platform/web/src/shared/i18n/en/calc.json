@@ -56,6 +56,7 @@
     "steps": "Request path",
     "openTask": "Task and sign-offs",
     "atDirector": "Draft quote {{number}} is with the director for approval. Lines are locked until the director decides.",
+    "atDirectorVersion": "Draft quote {{number}}, version {{version}}, is with the director for approval. Lines are locked until the director decides.",
     "returned": "The director returned the quote for rework: “{{comment}}”. Fix the lines and sign them off again.",
     "rejected": "The director rejected the quote. Costing is closed.",
     "approved": "The director approved the quote. Costing is locked.",
