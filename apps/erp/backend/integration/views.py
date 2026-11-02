@@ -139,7 +139,12 @@ class InviteClientContactView(BaseIntegrationView):
 
         outcome = invite_contact(contact, channel=data["channel"], language=contact.language)
         out = InviteResponseSerializer(
-            {"sent_via": list(outcome.sent_via), "cabinet_url": _cabinet_url(), "error": outcome.error}
+            {
+                "sent_via": list(outcome.sent_via),
+                "cabinet_url": _cabinet_url(),
+                "error": outcome.error,
+                "email_request_key": outcome.email_request_key,
+            }
         )
         return Response(data=out.data, status=status.HTTP_200_OK)
 

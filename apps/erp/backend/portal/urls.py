@@ -21,6 +21,7 @@ from portal.views import (
     DocumentListView,
     InvoiceListView,
     InvoiceProofView,
+    LoginCodeExchangeView,
     LogoutView,
     MagicLinkRequestView,
     MagicLinkTokenExchangeView,
@@ -47,6 +48,8 @@ urlpatterns = [
     path("auth/magic-link/", MagicLinkRequestView.as_view(), name="portal-auth-magic-link-slash"),
     path("auth/magic", MagicLinkTokenExchangeView.as_view(), name="portal-auth-magic"),
     path("auth/magic/", MagicLinkTokenExchangeView.as_view(), name="portal-auth-magic-slash"),
+    path("auth/code", LoginCodeExchangeView.as_view(), name="portal-auth-code"),
+    path("auth/code/", LoginCodeExchangeView.as_view(), name="portal-auth-code-slash"),
     path("auth/logout", LogoutView.as_view(), name="portal-auth-logout"),
     path("auth/logout/", LogoutView.as_view(), name="portal-auth-logout-slash"),
     # Me

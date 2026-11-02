@@ -58,7 +58,12 @@ def test_telegram_invite_publishes_event_for_the_crm_bot_and_sends_no_mail(api):
     resp = invite(api, 1001, {"channel": "telegram"})
 
     assert resp.status_code == 200
-    assert resp.json() == {"sent_via": ["telegram"], "cabinet_url": "http://cabinet.localhost", "error": None}
+    assert resp.json() == {
+        "sent_via": ["telegram"],
+        "cabinet_url": "http://cabinet.localhost",
+        "error": None,
+        "email_request_key": None,
+    }
     event = bus_support.only("invite.requested")
     bus_support.assert_matches_contract(event)
     assert event["data"]["crm_client_id"] == 1001
@@ -66,6 +71,30 @@ def test_telegram_invite_publishes_event_for_the_crm_bot_and_sends_no_mail(api):
     assert "token" not in str(event).lower(), "в событии нет ссылок входа и токенов"
     assert mail.outbox == []
     assert Contact.objects.get().invited_at is not None
+
+
+@pytest.mark.django_db
+def test_email_invite_returns_the_key_of_the_letter_in_crm_mail(api):
+    """B-MAIL-1: по ключу письма CRM берёт итог доставки приглашения из своего журнала почты."""
+    from notifications.models import EmailLog
+
+    handed_off(api)
+
+    resp = invite(api, 1001, {"channel": "email"})
+
+    log = EmailLog.objects.filter(template="portal_invitation").latest("pk")
+    assert resp.json()["sent_via"] == ["email"]
+    assert resp.json()["email_request_key"] == f"erp:email_log:{log.pk}"
+
+
+@pytest.mark.django_db
+def test_handoff_returns_the_key_of_the_invitation_letter(api):
+    from notifications.models import EmailLog
+
+    resp = handoff(api, payload(channels=("email",)))
+
+    log = EmailLog.objects.filter(template="portal_invitation").latest("pk")
+    assert resp.json()["invite"]["email_request_key"] == f"erp:email_log:{log.pk}"
 
 
 @pytest.mark.django_db

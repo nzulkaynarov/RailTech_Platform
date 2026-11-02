@@ -1,16 +1,17 @@
 {% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
 
 {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вас пригласили в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
+{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}
 
-{% translate "В личном кабинете вы можете рассматривать и принимать коммерческие предложения, согласовывать договоры, отслеживать поставки и скачивать документы онлайн." %}
+{% translate "Код входа:" %} {{ login_code }}
 
-{% translate "Для входа в личный кабинет перейдите по ссылке:" %}
+{% translate "Введите код на странице входа или откройте ссылку:" %}
 {{ invite_url }}
 {% if telegram_url %}
 {% translate "Вы также можете войти через Telegram:" %}
 {{ telegram_url }}
 {% endif %}
-{% translate "Ссылка действительна в течение 24 часов." %}
+{% translate "Код и ссылка действуют 24 часа." %}
 {% translate "Если вы не ожидали это приглашение, просто проигнорируйте письмо." %}
 
 — {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

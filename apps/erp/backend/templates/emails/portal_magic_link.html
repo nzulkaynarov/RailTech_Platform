@@ -7,18 +7,28 @@
     {% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
   </h1>
   <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#374151;">
-    {% blocktranslate with company=company_name %}Для входа в личный кабинет компании <strong>«{{ company }}»</strong> нажмите на кнопку.{% endblocktranslate %}
+    {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вы запросили вход в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
   </p>
-  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0;">
+  <p style="margin:0 0 4px 0; font-size:14px; color:#374151;">{% translate "Код входа:" %}</p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">
+    <tr><td style="border-radius:8px; background-color:#f3f4f6; padding:12px 24px;">
+      <span style="font-size:32px; font-weight:700; letter-spacing:8px; color:#111827; font-family:Menlo,Consolas,monospace;">{{ login_code }}</span>
+    </td></tr>
+  </table>
+  <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#374151;">
+    {% translate "Введите код на странице входа или нажмите на кнопку." %}
+  </p>
+  <table role="presentation" cellpadding="0" cellspacing="0" style="margin:16px 0 24px 0;">
     <tr><td style="border-radius:8px; background-color:#2563eb;">
       <a href="{{ login_url }}" style="display:inline-block; padding:12px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% translate "Войти в личный кабинет" %}</a>
     </td></tr>
   </table>
-  <p style="margin:24px 0 0 0; font-size:13px; color:#6b7280; line-height:1.4;">
+  <p style="margin:0; font-size:13px; color:#6b7280; line-height:1.4;">
     {% translate "Если кнопка не работает, скопируйте ссылку в адресную строку браузера:" %}<br>
     <a href="{{ login_url }}" style="color:#2563eb; word-break:break-all;">{{ login_url }}</a>
   </p>
-  <p style="margin:16px 0 0 0; font-size:12px; color:#9ca3af;">
-    {% translate "Ссылка действительна в течение 15 минут и может быть использована только один раз. Если вы не запрашивали вход, просто проигнорируйте письмо." %}
+  <p style="margin:16px 0 0 0; font-size:12px; color:#6b7280;">
+    {% blocktranslate with minutes=expires_minutes|default:60 %}Код и ссылка действуют {{ minutes }} минут и срабатывают один раз.{% endblocktranslate %}
+    {% translate "Если вы не запрашивали вход, просто проигнорируйте письмо." %}
   </p>
 {% endblock %}

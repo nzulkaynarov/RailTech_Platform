@@ -6754,3 +6754,28 @@ msgstr "The %(platform)s team"
 
 msgid "Это автоматическое письмо от платформы %(platform)s — отвечать на него не нужно."
 msgstr "This is an automated email from the %(platform)s platform — no reply is needed."
+
+# ── B-MAIL-1: код входа в письмах портала (templates/emails/portal_*.{txt,html}) ──
+
+#, python-format
+msgid "Вы запросили вход в личный кабинет компании «%(company)s» на платформе %(platform)s."
+msgstr "You requested to log in to the client portal of «%(company)s» on %(platform)s."
+
+msgid "Код входа:"
+msgstr "Login code:"
+
+msgid "Введите код на странице входа или откройте ссылку:"
+msgstr "Enter the code on the login page or open the link:"
+
+msgid "Введите код на странице входа или нажмите на кнопку."
+msgstr "Enter the code on the login page or press the button."
+
+#, python-format
+msgid "Код и ссылка действуют %(minutes)s минут и срабатывают один раз."
+msgstr "The code and the link are valid for %(minutes)s minutes and work only once."
+
+msgid "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы."
+msgstr "Your quotes, contracts, invoices, deliveries and documents are in the portal."
+
+msgid "Код и ссылка действуют 24 часа."
+msgstr "The code and the link are valid for 24 hours."

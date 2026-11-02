@@ -26,35 +26,42 @@ INVITATION = {
     "contact_name": "Azamat",
     "company_name": "Acme Trading",
     "invite_url": INVITE_URL,
+    "login_code": "042917",
     "telegram_url": "https://t.me/acme_bot",
 }
-MAGIC_LINK = {"contact_name": "Azamat", "company_name": "Acme Trading", "login_url": LOGIN_URL}
+MAGIC_LINK = {
+    "contact_name": "Azamat",
+    "company_name": "Acme Trading",
+    "login_url": LOGIN_URL,
+    "login_code": "042917",
+    "expires_minutes": 60,
+}
 
 #: (язык, тема, фразы, которые обязаны быть в тексте письма).
 EXPECTED = {
     ("portal_invitation", "ru"): (
         "Приглашение в личный кабинет «Acme Trading»",
-        ["Здравствуйте, Azamat!", "Вас пригласили в личный кабинет компании «Acme Trading»", "24 часов"],
+        ["Здравствуйте, Azamat!", "Вас пригласили в личный кабинет компании «Acme Trading»", "Код входа: 042917", "24 часа"],
     ),
     ("portal_invitation", "en"): (
         "Invitation to «Acme Trading» client portal",
-        ["Hello, Azamat!", "You have been invited to the client portal of «Acme Trading»", "valid for 24 hours"],
+        ["Hello, Azamat!", "You have been invited to the client portal of «Acme Trading»", "Login code: 042917", "valid for 24 hours"],
     ),
     ("portal_invitation", "uz"): (
         "«Acme Trading» shaxsiy kabinetiga taklifnoma",
-        ["Assalomu alaykum, Azamat!", "«Acme Trading» kompaniyasining shaxsiy kabinetiga taklif qilishdi", "24 soat"],
+        ["Assalomu alaykum, Azamat!", "«Acme Trading» kompaniyasining shaxsiy kabinetiga taklif qilishdi", "Kirish kodi: 042917", "24 soat"],
     ),
     ("portal_magic_link", "ru"): (
         "Вход в личный кабинет",
-        ["Здравствуйте, Azamat!", "Для входа в личный кабинет компании «Acme Trading»", "15 минут"],
+        ["Здравствуйте, Azamat!", "Вы запросили вход в личный кабинет компании «Acme Trading»", "Код входа: 042917", "60 минут"],
     ),
     ("portal_magic_link", "en"): (
         "Log in to your client portal",
-        ["Hello, Azamat!", "To log in to the client portal of «Acme Trading»", "valid for 15 minutes"],
+        ["Hello, Azamat!", "You requested to log in to the client portal of «Acme Trading»", "Login code: 042917", "valid for 60 minutes"],
     ),
     ("portal_magic_link", "uz"): (
         "Shaxsiy kabinetga kirish",
-        ["Assalomu alaykum, Azamat!", "«Acme Trading» kompaniyasining shaxsiy kabinetiga kirish", "15 daqiqa"],
+        ["Assalomu alaykum, Azamat!", "«Acme Trading» kompaniyasining shaxsiy kabinetiga kirishni", "Kirish kodi: 042917", "60 daqiqa"],
     ),
 }
 CONTEXTS = {"portal_invitation": INVITATION, "portal_magic_link": MAGIC_LINK}
