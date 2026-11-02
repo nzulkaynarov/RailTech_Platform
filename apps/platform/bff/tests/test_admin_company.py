@@ -1572,9 +1572,7 @@ async def test_categories_follow_pages_and_crud(
         "/api/v1/admin/company/categories/3",
         json={"tracking": "serial", "requires_conformity_doc": True},
     )
-    bad = await web.send(
-        "PATCH", "/api/v1/admin/company/categories/3", json={"tracking": "unit"}
-    )
+    bad = await web.send("PATCH", "/api/v1/admin/company/categories/3", json={"tracking": "unit"})
     blocked = await web.send("DELETE", "/api/v1/admin/company/categories/1")
 
     assert listing.call_count == 2

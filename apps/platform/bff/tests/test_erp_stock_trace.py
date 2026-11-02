@@ -1,28 +1,38 @@
-"""Прослеживаемость (L0-3, ADR-0021): серийные и партии в приёмке и отгрузке, поиск, цена поставщика в строке ЗП.
+"""Прослеживаемость (L0-3, ADR-0021): серийные и партии в приёмке и отгрузке, поиск, цена ЗП.
 
-ERP — на respx, ответы BFF — по схемам platform-bff.yaml. BFF не решает: класс учёта, обязательность номеров, число
-серийных и свободные единицы проверяет ERP. Здесь — поля передаются в ERP как ввели, id единиц — строками, номера
-заказов и проектов вместо внутренних id, раздел `erp.stock` (поиск — чтение).
+ERP — на respx, ответы BFF — по схемам platform-bff.yaml. BFF не решает: класс учёта, обязательность
+номеров, число серийных и свободные единицы проверяет ERP. Здесь — поля передаются в ERP как ввели,
+id единиц — строками, номера заказов и проектов вместо внутренних id, раздел `erp.stock` (поиск —
+чтение).
 """
 
 import json
 from typing import Any
 
 import httpx
+import pytest
 import respx
 
+from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.test_erp_calc import CALC, deal, refs
 from tests.test_erp_stock import (
     NUMBER,
     ORDER,
     ORDER_ENCODED,
     STOCK,
     call,
-    erp,  # noqa: F401 — фикстура ERP склада
     order_detail,
     ref,
     reservation,
 )
+
+
+@pytest.fixture
+def erp(be: Backends) -> respx.MockRouter:
+    """ERP: заявка найдена в лёгком справочнике (как в `test_erp_stock`)."""
+    be.router.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json=refs(deal())))
+    return be.router
 
 
 def traced_unit(**extra: Any) -> dict[str, Any]:
@@ -64,7 +74,7 @@ def traced_unit(**extra: Any) -> dict[str, Any]:
 async def test_search_shows_origin_and_destinations(
     web: Web,
     erp: respx.MockRouter,
-    check: ContractChecker,  # noqa: F811
+    check: ContractChecker,
 ) -> None:
     await web.login(["MANAGER"])  # «Склад» — чтение: поиск доступен
     route = erp.get(f"{STOCK}/trace/").mock(
@@ -74,15 +84,17 @@ async def test_search_shows_origin_and_destinations(
     check(found, "/erp/stock/trace", "get")
     assert dict(route.calls.last.request.url.params) == {"q": "ENG-0002"}
     [unit] = found.json()["items"]
-    assert unit["id"] == "501" and unit["product"]["id"] == "3"
+    assert unit["id"] == "501"
+    assert unit["product"]["id"] == "3"
     assert unit["origin"]["order_path"] == f"/erp/stock/{ORDER_ENCODED}"
     assert unit["origin"]["supplier"] == "ООО Вымышленный Поставщик"
     assert unit["origin"]["request"]["number"] == NUMBER
     assert unit["destinations"][0]["request"]["path"] == "/eds/projects/%D0%9F%D0%A0-2026-104"
-    assert "receipt_id" not in unit["origin"] and "order_id" not in unit["origin"]
+    assert "receipt_id" not in unit["origin"]
+    assert "order_id" not in unit["origin"]
 
 
-async def test_search_needs_a_query_and_the_section(web: Web, erp: respx.MockRouter) -> None:  # noqa: F811
+async def test_search_needs_a_query_and_the_section(web: Web, erp: respx.MockRouter) -> None:
     await web.login(["MANAGER"])
     assert (await web.client.get("/api/v1/erp/stock/trace")).status_code == 422
     await web.login(["ADMIN"])
@@ -92,7 +104,7 @@ async def test_search_needs_a_query_and_the_section(web: Web, erp: respx.MockRou
 async def test_receipt_passes_serials_lot_and_document(
     web: Web,
     erp: respx.MockRouter,
-    check: ContractChecker,  # noqa: F811
+    check: ContractChecker,
 ) -> None:
     await web.login(["SUPPLY"])
     detail = order_detail()
@@ -141,7 +153,7 @@ async def test_receipt_passes_serials_lot_and_document(
     assert received.json()["receipts"][0]["lines"][0]["units"] == ["ENG-1", "ENG-2"]
 
 
-async def test_erp_refusals_on_numbers_are_translated(web: Web, erp: respx.MockRouter) -> None:  # noqa: F811
+async def test_erp_refusals_on_numbers_are_translated(web: Web, erp: respx.MockRouter) -> None:
     await web.login(["SUPPLY"])
     post = erp.post(f"{STOCK}/orders/31/receipts/").mock(
         return_value=httpx.Response(409, json={"detail": "SERIAL_EXISTS", "number": "ENG-1"})
@@ -160,7 +172,7 @@ async def test_erp_refusals_on_numbers_are_translated(web: Web, erp: respx.MockR
 async def test_reservations_carry_free_units_and_ship_sends_the_picks(
     web: Web,
     erp: respx.MockRouter,
-    check: ContractChecker,  # noqa: F811
+    check: ContractChecker,
 ) -> None:
     await web.login(["SUPPLY"])
     unit = {"id": 501, "kind": "serial", "number": "ENG-1", "expiry_date": None, "available": 1}
@@ -172,7 +184,8 @@ async def test_reservations_carry_free_units_and_ship_sends_the_picks(
     listed = await web.client.get("/api/v1/erp/stock/reservations", params={"request": NUMBER})
     check(listed, "/erp/stock/reservations", "get")
     row = listed.json()["items"][0]
-    assert row["tracking"] == "serial" and row["units"] == [{**unit, "id": "501"}]
+    assert row["tracking"] == "serial"
+    assert row["units"] == [{**unit, "id": "501"}]
 
     shipment = {
         "id": 12,
