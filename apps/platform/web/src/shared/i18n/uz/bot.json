@@ -1,5 +1,5 @@
 {
-  "subtitle": "Telegram-botning ulanishi, matnlari, xulq-atvori va bilimlar bazasi, tezkor javob shablonlari va CSV yuklamalar. O‘zgarishlar darhol kuchga kiradi.",
+  "subtitle": "Bot ulanishi, matnlari va xulqi, javob shablonlari va yuklamalar. Darhol kuchga kiradi.",
   "readOnlySubtitle": "Faqat ko‘rish: bot sozlamalarini administrator o‘zgartiradi.",
   "viewOnly": "Faqat ko‘rish",
   "common": {
@@ -11,7 +11,7 @@
       "text": "Qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
     },
     "unavailable": {
-      "title": "CRM javob bermayapti",
+      "title": "Server javob bermayapti",
       "text": "Bir daqiqa kutib, qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
     },
     "forbidden": {
@@ -46,7 +46,7 @@
     "qualification": "Kvalifikatsiya",
     "notifications": "Jamoa kanali",
     "budget": "Modellar byudjeti",
-    "deals": "Bitimlar",
+    "deals": "Rad etish sabablari",
     "web_form": "Saytdan «Ariza» formasi",
     "service_alerts": "Xizmat nosozliklari haqida ogohlantirishlar"
   },
@@ -68,10 +68,7 @@
     "discard": "O‘zgarishlarni bekor qilish",
     "save": "Saqlash",
     "saved": "«{{section}}» sozlamalari saqlandi",
-    "invalidField": "Qiymatni tekshiring",
-    "step1": "«{{section}}» bo‘limi qiymatlari CRMda to‘liq saqlanadi.",
-    "step2": "Bot va xodimlar yangi qiymatlar bo‘yicha darhol, qayta ishga tushirmasdan ishlay boshlaydi.",
-    "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon, eski va yangi qiymat."
+    "invalidField": "Qiymatni tekshiring"
   },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
   "channelMoved": "Jamoa kanali «Ulanish» yorlig‘ida tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
@@ -107,7 +104,7 @@
   },
   "templates": {
     "title": "Javob shablonlari",
-    "intro": "Menejer lid kartochkasidagi javob maydoniga qo‘yadigan va yuborishdan oldin tahrirlaydigan tayyor javoblar. O‘rinbosarlar: {name} — lid ismi, {manager} — menejer ismi.",
+    "intro": "Lid kartochkasi uchun tayyor javoblar. {name} — lid ismi, {manager} — menejer ismi.",
     "new": "Yangi shablon",
     "edit": "Shablonni o‘zgartirish",
     "create": "Shablon yaratish",
@@ -132,21 +129,18 @@
     "text": "Matn — {{language}}",
     "placeholders": "O‘rinbosarlar: {name} — lid ismi, {manager} — menejer ismi. Ruscha matn majburiy.",
     "fallbackHint": "Bo‘sh bo‘lsa — ruscha matn qo‘yiladi.",
-    "step1": "Shablon CRMda saqlanadi va menejerlarda lid kartochkasidagi tezkor javoblar ro‘yxatida paydo bo‘ladi.",
-    "step2": "Menejer matnni javob maydoniga qo‘yadi va yuborishdan oldin tahrirlaydi: mijozga menejer tasdiqlagan narsa ketadi.",
-    "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
     "dangerTitle": "O‘chirish",
     "remove": "Shablonni o‘chirish",
     "removeSubmit": "Shablonni o‘chirish",
     "removeStep1": "Shablon lid kartochkalaridagi tezkor javoblar ro‘yxatidan yo‘qoladi.",
     "removeStep2": "Uni qaytarib bo‘lmaydi: matn hali kerak bo‘lsa, alohida saqlab qo‘ying.",
-    "removeStep3": "O‘chirish shablon matni bilan birga CRM audit jurnaliga tushadi."
+    "removeStep3": "O‘chirish shablon matni bilan birga audit jurnaliga tushadi."
   },
   "exports": {
     "title": "CSV yuklamalar",
-    "intro": "CRM ro‘yxatlarida ko‘rinadigan narsalar bilan Excel uchun fayl: lidlar, mijozlar, bitimlar. Filtrlar — ro‘yxat ekranlaridagi kabi.",
-    "step1": "CSV fayl (UTF-8, ajratgich «;») qurilmangizga yuklab olinadi; unda 10 000 qatordan oshmaydi. Uni CRM tayyorlaydi va oqim bilan beradi.",
-    "step2": "Yuklama CRM audit jurnaliga tushadi: kim, nima va nechta qator.",
+    "intro": "Ro‘yxatlarda ko‘rinadigan narsalar bilan Excel uchun fayl: lidlar, mijozlar, bitimlar.",
+    "step1": "CSV fayl (UTF-8, ajratgich «;») 10 000 qatorgacha qurilmangizga yuklab olinadi.",
+    "step2": "Yuklama audit jurnaliga tushadi: kim, nima va nechta qator.",
     "step3": "Faylda mijozlarning shaxsiy ma’lumotlari bor: uni faqat ish qurilmasida saqlang va messenjerlarda yubormang.",
     "readOnly": "Faqat ko‘rish: ma’lumotlarni administrator yuklaydi.",
     "done": "«{{name}}» fayli yuklab olindi",
@@ -198,10 +192,10 @@
     "DEFAULT": "Amal bajarilmadi. Keyinroq qayta urinib ko‘ring yoki administratorga murojaat qiling.",
     "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
     "NOT_FOUND": "Obyekt topilmadi: ehtimol, u allaqachon o‘zgartirilgan. Sahifani yangilang.",
-    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
+    "BACKEND_UNAVAILABLE": "Server javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
     "INTEGRATION_FAILED": "Amal uchun kerakli xizmat javob bermadi. Keyinroq qayta urinib ko‘ring.",
     "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir daqiqadan so‘ng qayta urinib ko‘ring.",
-    "VALIDATION_FAILED": "CRM qiymatlarni qabul qilmadi: belgilangan maydonlarni tekshiring.",
+    "VALIDATION_FAILED": "Qiymatlar qabul qilinmadi: belgilangan maydonlarni tekshiring.",
     "CONFLICT": "Obyekt o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
     "SESSION_EXPIRED": "Sessiya tugadi. Qayta kiring.",
     "reasons": {
@@ -221,9 +215,6 @@
     "caption": "Ushbu guruhdagi bot matnlari",
     "search": "Matnni nomi yoki vaziyati bo‘yicha topish",
     "notFound": "Hech narsa topilmadi: so‘rovni o‘zgartiring.",
-    "step1": "Tuzatish bo‘lim formasida paydo bo‘ladi; CRMga matn bo‘lim sarlavhasidagi «Saqlash» tugmasidan keyin tushadi.",
-    "step2": "{name} va {manager} kabi o‘rinbosarlar yuborishda almashtiriladi; ortiqcha figurali qavslarni CRM rad etadi.",
-    "step3": "Saqlangandan so‘ng mijozlar yangi matnni botning keyingi xabaridan boshlab oladi.",
     "save": "Bo‘limni saqlash",
     "close": "Yopish",
     "groups": {
@@ -233,7 +224,7 @@
       "clients": "Mijozlar va hujjatlar",
       "menu": "Buyruqlar menyusi",
       "phone": "Telefon raqami",
-      "erp": "Orqa ofis hodisalari (ERP)",
+      "erp": "TT, hisoblar va yetkazib berish",
       "erase": "Yozishmani o‘chirish",
       "other": "Boshqa matnlar",
       "advanced": "Qo‘shimcha"
@@ -538,7 +529,7 @@
       },
       "erp_quote_sent": {
         "label": "TT mijozga yuborildi",
-        "when": "ERP hodisasi «TT yuborildi». {deal} — bitim. Matn ostida «TTni ochish» va «Kabinet» tugmalari."
+        "when": "TT yuborilganda. {deal} — bitim. Matn ostida «TTni ochish» va «Kabinet» tugmalari."
       },
       "erp_quote_acceptance_code": {
         "label": "TTni tasdiqlash kodi",
@@ -546,15 +537,15 @@
       },
       "erp_invoice_issued": {
         "label": "Hisob chiqarildi",
-        "when": "ERP hodisasi «hisob chiqarildi». {number} — raqam, {amount} {currency} — summa, {due} — to‘lov muddati."
+        "when": "Hisob chiqarilganda. {number} — raqam, {amount} {currency} — summa, {due} — to‘lov muddati."
       },
       "erp_invoice_paid": {
         "label": "Hisob to‘landi",
-        "when": "ERP hodisasi «to‘lov olindi». {number} — hisob raqami, {amount} {currency} — summa."
+        "when": "To‘lov olinganda. {number} — hisob raqami, {amount} {currency} — summa."
       },
       "erp_delivery_status": {
         "label": "Yetkazib berish holati",
-        "when": "ERP hodisasi «yetkazib berish holati o‘zgardi». {deal} — bitim, {summary} — tarkib, {status} — holat so‘z bilan."
+        "when": "Yetkazib berish holati o‘zgarganda. {deal} — bitim, {summary} — tarkib, {status} — holat so‘z bilan."
       },
       "erp_delivery_statuses": {
         "label": "Yetkazib berish holatlari nomlari",
@@ -562,11 +553,11 @@
       },
       "erp_delivery_eta_changed": {
         "label": "Yetkazib berish muddati o‘zgardi",
-        "when": "ERP hodisasi «yetkazib berish muddati o‘zgardi». {deal} — bitim, {summary} — tarkib, {eta} — yangi sana."
+        "when": "Yetkazib berish muddati o‘zgarganda. {deal} — bitim, {summary} — tarkib, {eta} — yangi sana."
       },
       "erp_act_issued": {
         "label": "Dalolatnoma shakllantirildi",
-        "when": "ERP hodisasi «dalolatnoma shakllantirildi». {number} — dalolatnoma raqami."
+        "when": "Dalolatnoma shakllantirilganda. {number} — dalolatnoma raqami."
       },
       "erp_btn_quote": {
         "label": "«TTni ochish» tugmasi",
@@ -574,11 +565,11 @@
       },
       "erp_btn_invoice": {
         "label": "«Hisobni ochish» tugmasi",
-        "when": "Hisob haqidagi xabar ostida, ERP havola yuborgan bo‘lsa."
+        "when": "Hisob haqidagi xabar ostida, hisobga havola bo‘lsa."
       },
       "erp_btn_cabinet": {
         "label": "«Kabinet» tugmasi",
-        "when": "ERP hodisalari haqidagi xabarlar ostida, «Kompaniya»da kabinet manzili kiritilgan bo‘lsa."
+        "when": "TT, hisoblar va yetkazib berish haqidagi xabarlar ostida, «Kompaniya»da kabinet manzili kiritilgan bo‘lsa."
       },
       "erp_staff_quote_accepted": {
         "label": "Xodimga: TT qabul qilindi",
@@ -604,7 +595,7 @@
   },
   "fields": {
     "name": "Kompaniya nomi",
-    "crm_base_url": "CRM manzili (kanaldagi havolalar uchun)",
+    "crm_base_url": "Jamoa kanalidagi havolalar manzili",
     "cabinet_url": "Mijoz kabineti manzili",
     "phone": "Kompaniya telefoni (bot mijoz so‘rovi bo‘yicha aytadi)",
     "site": "Kompaniya sayti",
@@ -641,7 +632,7 @@
     "duty_user_ids": "Navbatchilar",
     "manager_dm_throttle_minutes": "Menejerga shaxsiy bildirishnomalar orasidagi tanaffus",
     "daily_usd": "Kunlik byudjet",
-    "erp_daily_usd": "ERP kunlik byudjeti",
+    "erp_daily_usd": "Hisob-kitob kunlik byudjeti",
     "fallback_model_enabled": "Zaxira modelga o‘tish",
     "providers": "Provayder bo‘yicha kunlik limit",
     "anthropic": "Anthropic (suhbat, kvalifikator, sifat tekshiruvi)",
@@ -664,7 +655,7 @@
     "repeat_minutes": "Xizmat nosozligi haqida ogohlantirish bir martadan tez-tez emas"
   },
   "hints": {
-    "cabinet_url": "Mijoz kabineti manzili (https://…): ERP hodisalari haqidagi bot xabarlari ostidagi «Kabinet» tugmasi; bo‘sh bo‘lsa — tugma yo‘q.",
+    "cabinet_url": "TT va hisoblar haqidagi xabarlar ostidagi «Kabinet» tugmasi; bo‘sh — tugma yo‘q.",
     "max_text_chars": "«Nima kerak» maydonidagi belgilarning maksimal soni.",
     "consent_version": "Versiyani o‘zgartiring — barcha mijozlar rozilikni qaytadan tasdiqlaydi.",
     "high_score_threshold": "Shu yoki undan yuqori baholi lid menejerga uzatiladi.",
@@ -680,7 +671,7 @@
     "manager_dm_throttle_minutes": "Lid ketma-ket bir nechta xabar yozadi — menejer shu vaqt ichida Telegramda bitta bildirishnoma oladi.",
     "holidays": "Bu kunlarda SLA hisoblanmaydi, bot ish vaqtidan tashqari matn bilan javob beradi.",
     "daily_usd": "AQSH dollarida. Yuqorisi — suhbat zaxira modelga o‘tadi.",
-    "erp_daily_usd": "Sutkasiga AQSH dollarida (Toshkent vaqti bilan), 0 — limitsiz. ERP xarajatlari umumiy model shlyuzi orqali; oshib ketsa «Xarajatlar» va «Tizim holati»da ajratiladi.",
+    "erp_daily_usd": "Sutkasiga AQSH dollarida, 0 — limitsiz. Oshib ketsa «Xarajatlar»da ko‘rinadi.",
     "anthropic": "Sutkasiga USD (Toshkent vaqti bilan), 0 — limitsiz. Yuqorisi — suhbat zaxira modelda.",
     "gemini": "Sutkasiga USD (Toshkent vaqti bilan), 0 — limitsiz. Yuqorisi — bot suhbatlarni menejerga uzatadi.",
     "min_fill_seconds": "Tezroq yuborilgan forma rad etiladi: shunday qilib robotlar saralanadi.",
@@ -732,12 +723,16 @@
     "kb": "Bilimlar bazasi",
     "templates": "Javob shablonlari",
     "exports": "Yuklamalar",
-    "none": "CRM bu sozlamalar bo‘limini yubormadi. Sahifani keyinroq yangilang."
+    "none": "Bu sozlamalar bo‘limi yuklanmadi. Sahifani keyinroq yangilang."
   },
   "kbEntry": {
     "title": "Bilimlar bazasi hujjatlari",
     "text": "Bot javob beradigan hujjatlar, «Bot nimani topadi» qidiruvi, bo‘shliqlar va qum qutisi — bilimlar bazasi ekranida. Quyida — bot bazadan qanday foydalanadi.",
     "readOnlyText": "Hujjatlar, bo‘shliqlar va «Bot nimani topadi» qidiruvi — bilimlar bazasi ekranida, faqat o‘qish uchun.",
     "open": "Bilimlar bazasini ochish"
+  },
+  "seeAlso": {
+    "company": "Hujjatlar uchun rekvizitlar — «Kompaniya va blankalar»da",
+    "budget": "Butun tizim bo‘yicha model xarajatlari — «Ulanishlar · Xarajatlar»da"
   }
 }

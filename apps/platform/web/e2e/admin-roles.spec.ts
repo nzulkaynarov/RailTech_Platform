@@ -62,7 +62,9 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(matrix(page).getByRole("combobox")).toHaveCount(0);
     await expect(panel.getByRole("button", { name: "Сохранить роль" })).toHaveCount(0);
 
-    // Создать роль с нуля: столбец новой роли — поля выбора уровня и флажки полей.
+    // Создать роль с нуля: столбец новой роли — поля выбора уровня и флажки полей. Окно поверх закрывает правый край
+    // рабочей области с кнопками заголовка (подзаголовок теперь в одну строку, S2) — сначала закрыть его, как сделает человек.
+    await page.getByRole("button", { name: "Скрыть боковое окно" }).click();
     await page.getByRole("button", { name: "Создать роль" }).click();
     await expect(panel.getByRole("heading", { level: 3, name: "Новая роль" })).toBeVisible();
     await panel.getByLabel("Название").fill(MIXED);

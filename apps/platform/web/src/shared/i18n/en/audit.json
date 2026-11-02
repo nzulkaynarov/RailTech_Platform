@@ -1,7 +1,7 @@
 {
   "page": {
     "title": "Activity log",
-    "subtitle": "Who changed what and when in CRM and the Platform. Entries are read-only: they cannot be edited or deleted."
+    "subtitle": "Who changed what and when. Entries are read-only."
   },
   "filters": {
     "label": "Log filters",

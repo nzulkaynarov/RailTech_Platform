@@ -28,7 +28,7 @@ const TABS = [
   ["quote", "Условия КП по умолчанию"],
   ["charges", "Статьи расхода КП"],
   ["templates", "Шаблоны документов и писем"],
-  ["reference", "Справочники ERP"],
+  ["reference", "Справочники"],
   ["categories", "Категории каталога и запросы на них"],
   ["platform", "Платформенные настройки"],
 ] as const;
@@ -127,9 +127,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeHidden();
 
     await page.getByLabel("Телефон").fill("+998 11 111 11 11");
-    await expect(
-      page.getByText("Реквизиты обновятся в карточке своей компании в ERP."),
-    ).toBeVisible();
+    await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await page.getByRole("button", { name: "Сохранить реквизиты" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
 
@@ -207,7 +205,9 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await expect(samples.getByText(/ACME-КП-\d{4}-00001/)).toBeVisible();
     await page.getByLabel("Ширина счётчика").fill("6");
     await expect(samples.getByText(/ACME-КП-\d{4}-000001/)).toBeVisible();
-    await expect(page.getByText("Уже выданные номера не меняются.")).toBeVisible();
+    await expect(
+      page.getByText("Новые номера пойдут по этой схеме; выданные не меняются."),
+    ).toBeVisible();
 
     await page.getByLabel("Маска номера").fill("{type}-");
     await expect(page.getByText("В маске обязателен токен {seq}")).toBeVisible();
@@ -457,7 +457,7 @@ test.describe("Компания: категории, запросы, платф�
     const approve = page.getByRole("dialog", { name: /Одобрить запрос/ });
     await choose(page, approve.getByLabel("Категория, которую вы завели для запроса"), "Крепёж");
     await approve.getByRole("button", { name: "Одобрить" }).click();
-    await expect(approve.getByText(/ERP не разрешила действие/)).toBeVisible();
+    await expect(approve.getByText(/Действие недоступно/)).toBeVisible();
   });
 
   test("платформенные настройки: администратор меняет НДС; директору ERP откажет", async ({
@@ -475,7 +475,7 @@ test.describe("Компания: категории, запросы, платф�
     await openCompany(page, "platform");
     await page.getByLabel("Ставка НДС, %").fill("13");
     await page.getByRole("button", { name: "Сохранить ставку НДС" }).click();
-    await expect(page.getByText(/ERP не разрешила действие/)).toBeVisible();
+    await expect(page.getByText(/Действие недоступно/)).toBeVisible();
   });
 });
 

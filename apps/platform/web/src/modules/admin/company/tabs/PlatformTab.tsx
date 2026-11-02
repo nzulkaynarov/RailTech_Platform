@@ -90,7 +90,7 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
         loading={update.isPending}
         disabled={!changed}
         error={update.error}
-        consequence={[t("platform.consequence.new"), t("platform.consequence.admin")]}
+        note={t("platform.note")}
         onDiscard={() => {
           form.resetFields();
           update.reset();

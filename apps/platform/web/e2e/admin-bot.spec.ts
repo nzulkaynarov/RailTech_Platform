@@ -58,7 +58,7 @@ function nav(page: Page): Locator {
 test.describe("Настройки бота: администратор", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("разделы по группам; «Компания»: изменить, отменить, сохранить с «Что произойдёт»", async ({
+  test("разделы по группам; «Компания»: изменить, отменить, сохранить без «Что произойдёт»", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
@@ -67,7 +67,8 @@ test.describe("Настройки бота: администратор", () => {
     await expect(page.getByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
     await expect(nav(page).getByRole("link")).toHaveCount(12);
     await expect(page.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
-    await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
+    await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await settledScreenshot(page, "company");
 
     await page.getByLabel("Название компании").fill("RailTech Групп (демо)");
@@ -82,7 +83,7 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "company-saved");
   });
 
-  test("поле, которое CRM не приняла, подсвечивается; несохранённые изменения при смене раздела", async ({
+  test("поле, которое не приняли, подсвечивается; несохранённые изменения при смене раздела", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
@@ -90,9 +91,7 @@ test.describe("Настройки бота: администратор", () => {
 
     await page.getByLabel("Название компании").fill("   ");
     await page.getByRole("button", { name: "Сохранить" }).click();
-    await expect(
-      page.getByText("CRM не приняла значения: проверьте отмеченные поля."),
-    ).toBeVisible();
+    await expect(page.getByText("Значения не приняты: проверьте отмеченные поля.")).toBeVisible();
     await settledScreenshot(page, "company-error");
 
     await nav(page).getByRole("link", { name: "Рабочие часы" }).click();
@@ -197,7 +196,9 @@ test.describe("Настройки бота: администратор", () => {
     await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
   });
 
-  test("шаблоны ответов: создать, изменить, удалить с «Что произойдёт»", async ({ page }) => {
+  test("шаблоны ответов: создать, изменить, удалить (удаление — с «Что произойдёт»)", async ({
+    page,
+  }) => {
     await loginAndWait(page, "admin@demo.example");
     await openBot(page, "templates");
 
@@ -207,7 +208,7 @@ test.describe("Настройки бота: администратор", () => {
     await settledScreenshot(page, "templates");
     await page.getByRole("link", { name: "Новый шаблон" }).click();
     const form = side(page).getByRole("form", { name: "Новый шаблон" });
-    await expect(form.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    await expect(form.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await form.getByLabel("Название").fill("Скидка по запросу");
     await form.getByLabel("Текст — Русский").fill("{name}, скидку согласует {manager}.");
     await settledScreenshot(page, "templates-new");
@@ -245,7 +246,7 @@ test.describe("Настройки бота: администратор", () => {
     await bad.getByLabel("Название").fill("Ошибка");
     await bad.getByLabel("Текст — Русский").fill("Привет, {fio}");
     await bad.getByRole("button", { name: "Создать шаблон" }).click();
-    await expect(bad.getByRole("alert")).toContainText("CRM не приняла значения");
+    await expect(bad.getByRole("alert")).toContainText("Значения не приняты");
   });
 });
 

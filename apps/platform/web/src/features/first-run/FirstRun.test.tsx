@@ -403,7 +403,7 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.queryByLabelText("Название компании")).toBeNull();
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Проверить снова" })).toBeNull();
-    expect(screen.queryByText(/ERP пока не ответила/)).toBeNull();
+    expect(screen.queryByText(/Сервер пока не ответил/)).toBeNull();
     const company = screen
       .getByRole("heading", { level: 2, name: "Ваша компания" })
       .closest(".ant-card");
@@ -502,7 +502,7 @@ describe("Баннер настройки и мастер", () => {
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
 
-    expect(await screen.findByText(/ERP пока не ответила/)).toBeVisible();
+    expect(await screen.findByText(/Сервер пока не ответил/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Проверить снова" })).toBeVisible();
     expect(screen.queryByText("Сначала подключите ERP")).toBeNull();
   });
@@ -684,11 +684,11 @@ describe("Баннер настройки и мастер", () => {
       signInAs("admin@demo.example");
       renderApp("/admin/setup");
 
-      expect(await screen.findByText("Ждём, пока ERP выдаст доступ…")).toBeVisible();
+      expect(await screen.findByText("Ждём выдачи доступа…")).toBeVisible();
       // форма появляется сама, мастер остаётся на шаге компании
       expect(await screen.findByLabelText("Название компании")).toBeVisible();
-      expect(screen.queryByText("Ждём, пока ERP выдаст доступ…")).toBeNull();
-      expect(screen.queryByText(/ERP пока не ответила/)).toBeNull();
+      expect(screen.queryByText("Ждём выдачи доступа…")).toBeNull();
+      expect(screen.queryByText(/Сервер пока не ответил/)).toBeNull();
     } finally {
       Object.assign(ERP_RECHECK, saved);
     }
@@ -718,9 +718,9 @@ describe("Баннер настройки и мастер", () => {
     try {
       signInAs("admin@demo.example");
       renderApp("/admin/setup");
-      await screen.findByText("Ждём, пока ERP выдаст доступ…");
+      await screen.findByText("Ждём выдачи доступа…");
       await waitFor(() => {
-        expect(screen.queryByText("Ждём, пока ERP выдаст доступ…")).toBeNull();
+        expect(screen.queryByText("Ждём выдачи доступа…")).toBeNull();
       });
       // имя может начинаться с иконки «loading», пока antd не доиграл выход анимации (в jsdom она не кончается)
       expect(await screen.findByRole("button", { name: /Проверить снова/ })).toBeVisible();
@@ -827,7 +827,9 @@ describe("Банковские реквизиты для счетов (D26G-6)",
     });
     const card = title.closest(".ant-card") as HTMLElement;
     expect(within(card).getByText("Не сделано")).toBeVisible();
-    expect(within(card).getByText(/Без расчётного счёта и МФО ERP не выставит/)).toBeVisible();
+    expect(
+      within(card).getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
+    ).toBeVisible();
     expect(within(card).getByRole("link", { name: "Открыть «Компания и бланки»" })).toHaveAttribute(
       "href",
       "/admin/company?tab=details",

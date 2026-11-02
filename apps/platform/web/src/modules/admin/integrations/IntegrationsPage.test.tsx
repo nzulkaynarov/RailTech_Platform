@@ -26,16 +26,16 @@ function tile(name: string): HTMLElement {
 }
 
 describe("Admin · Внешние интеграции: обзор", () => {
-  it("администратор: «Требует внимания» вверху, восемь карточек, у каждой статус словом и последняя проверка", async () => {
+  it("администратор: восемь карточек, под ними «Требует внимания», у каждой статус словом и последняя проверка", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
     const attention = await screen.findByRole("heading", { level: 2, name: "Требует внимания" });
-    // «Требует внимания» стоит раньше карточек
+    // Карточки настроек стоят раньше «Требует внимания» (S3): первый экран — то, что настраивают
     const cards = screen.getByRole("heading", { level: 2, name: "Сервисы" });
     expect(
-      attention.compareDocumentPosition(cards) & Node.DOCUMENT_POSITION_FOLLOWING,
+      cards.compareDocumentPosition(attention) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
     const titles = screen
@@ -208,7 +208,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     ).toBeVisible();
     expect(await within(side).findByRole("table", { name: "Провайдеры за сегодня" })).toBeVisible();
     expect(
-      await within(side).findByRole("heading", { level: 4, name: "Весь ансамбль" }),
+      await within(side).findByRole("heading", { level: 4, name: "Вся система" }),
     ).toBeVisible();
     expect(await within(side).findByRole("table", { name: "Расходы по группам" })).toBeVisible();
   });

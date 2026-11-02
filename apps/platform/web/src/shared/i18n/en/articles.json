@@ -1,7 +1,7 @@
 {
   "admin": {
     "title": "Company articles",
-    "subtitle": "Internal how-we-do-it guides: who approves, where the templates are, what the schedule is. Published articles are visible to all employees in Help.",
+    "subtitle": "How-we-do-it guides; everyone sees published ones in Help.",
     "listLabel": "Company articles",
     "new": "New article",
     "filtersLabel": "Article filter",
