@@ -18802,8 +18802,8 @@ components:
         in_work: {type: integer, minimum: 0, description: Все в работе}
         done: {type: integer, minimum: 0, description: Разобранные}
         spam: {type: integer, minimum: 0, description: Подозрительные}
-        all: {type: integer, minimum: 0, description: Все, кроме подозрительных}
-        unread_new: {type: integer, minimum: 0, description: Новых, которые этот сотрудник ещё не открывал}
+        all: {type: integer, minimum: 0, description: 'Все, кроме подозрительных'}
+        unread_new: {type: integer, minimum: 0, description: 'Новых, которые этот сотрудник ещё не открывал'}
     InboundMailAttachment:
       type: object
       additionalProperties: false

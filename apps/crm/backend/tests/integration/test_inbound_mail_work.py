@@ -24,7 +24,6 @@ from app.models.email import EmailLog
 from app.models.inbound_mail import InboundMail
 from app.security import audit
 from app.security.principal import Principal
-from app.services import inbound_mail_work as work
 from app.services.inbound_mail import InboundMailService, MailAccess
 from tests.fake_imap import FakeImapServer
 from tests.integration.test_inbound_mail import BUCKET, SECRETS_KEY, Stand, _staff
@@ -278,7 +277,7 @@ async def test_two_people_cannot_act_on_one_mail_at_once(
         await asyncio.sleep(0.3)
         await original(*args, **kwargs)
 
-    monkeypatch.setattr(work.audit, "record", slow_record)
+    monkeypatch.setattr(audit, "record", slow_record)
 
     results = await asyncio.gather(
         service.take(ivanov, mail.id),

@@ -2196,8 +2196,8 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Входящая почта: очередь писем общего ящика
-     * @description CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `spam` — «Подозрительные» (из спам-папки, W18A-P2-2). `history = false` — без писем «из истории» (строки «Моих задач»), `true` — только они; `counts` — числа вкладок.
+     * Входящая почта: письма общего ящика по представлениям
+     * @description CRM `GET /inbound-mail` (W18A-P2, B-INB-5; обращение — W18A-P2-3). Любой сотрудник: первая линия (`crm.leads.triage` — полный, делопроизводитель) видит всю очередь, остальной сотрудник — только письма, где он исполнитель или названный в «адресовано лично» (решает CRM). Представления (`view`): `new` — Новые (по умолчанию), `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом, кто и когда), `spam` — Подозрительные (W18A-P2-2), `all` — все, кроме подозрительных. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `history = false` — без писем «из истории», `true` — только они; `q` — поиск по отправителю и теме; `counts` — числа вкладок в рамках прав сотрудника.
      */
     get: operations["listInboundMail"];
     put?: never;
@@ -2217,11 +2217,91 @@ export interface paths {
     };
     /**
      * Входящая почта: карточка письма
-     * @description CRM `GET /inbound-mail/{id}`: отправитель, тема, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), итог (номер ВХ, лид, причина архива), ответы.
+     * @description CRM `GET /inbound-mail/{id}`: отправитель, адресаты («Кому» и копия — сотрудник по адресу и сам общий ящик), все письма записи (цепочка) и наши ответы, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), исполнитель («в работе у …»), итог (номер ВХ, лид, причина архива) и журнал действий без текстов писем. Чужое письмо сотруднику без раздела первой линии — 403.
      */
     get: operations["getInboundMail"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: отметить прочитанным
+     * @description CRM `POST /inbound-mail/{id}/read` — открыл карточку; отметка на человека, жирный шрифт в списке снимается только у него.
+     */
+    post: operations["markInboundMailRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/take": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: взять в работу
+     * @description CRM `POST /inbound-mail/{id}/take` (первая линия). Письмо «в работе» у сотрудника с этого времени; первое действие (ответ, «Создать лид», регистрация ВХ) берёт его само. Ведёт другой — 409 `CONFLICT`, `details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`; `takeover = true` — «Забрать себе» (с запросом подтверждения на экране, запись в журнал). Разобрано или подозрительное — 409, `mail_handled`.
+     */
+    post: operations["takeInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/release": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: вернуть в «Новые»
+     * @description CRM `POST /inbound-mail/{id}/release`: своё «в работе» или разобранное архивом либо ответом (первая линия; запись в журнал). Исполнитель без раздела первой линии возвращает своё письмо делопроизводителю. Нельзя — 409 (`mail_not_returnable`); ведёт другой — `mail_in_work_by_other`.
+     */
+    post: operations["releaseInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/bulk-archive": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: в архив несколько писем
+     * @description CRM `POST /inbound-mail/bulk-archive` (первая линия): выбранные письма «Разобрано: архив» с одной причиной (рассылки, уведомления). Письма в работе у другого, регистрируемые и уже разобранные пропускаются и названы в `skipped`; остальные архивируются.
+     */
+    post: operations["bulkArchiveInboundMail"];
     delete?: never;
     options?: never;
     head?: never;
@@ -2237,7 +2317,7 @@ export interface paths {
     };
     /**
      * Входящая почта: файл вложения
-     * @description CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит.
+     * @description CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит; `id` — письмо записи (корень или ответ клиента в цепочке, `InboundMailMessage.id`).
      */
     get: operations["downloadInboundMailAttachment"];
     put?: never;
@@ -2379,7 +2459,7 @@ export interface paths {
     put?: never;
     /**
      * Входящая почта: ответ отправителю в ту же цепочку
-     * @description CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
+     * @description CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) на последнее письмо записи с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Письмо берётся в работу и после отправки «Разобрано: ответ отправлен»; `awaiting` («Ждём ответа») оставляет его «в работе»; `reply_all` сохраняет копию (остальные адреса письма, кроме общего ящика). Исполнитель без раздела первой линии отвечает на своё письмо. Ведёт другой — 409 `mail_in_work_by_other`. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
      */
     post: operations["replyInboundMail"];
     delete?: never;
@@ -4095,7 +4175,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Зарегистрировать входящее (делопроизводитель, P8)
-     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть.
+     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе».
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -7704,7 +7784,8 @@ export interface components {
       | "instruction"
       | "instruction_extension"
       | "acquaint"
-      | "inbound_mail";
+      | "inbound_mail"
+      | "inbound_mail_mine";
     /**
      * @description Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
      * @enum {string}
@@ -10416,6 +10497,10 @@ export interface components {
       mailbox: string;
       /** @description Помощник канцелярии включён */
       assist_enabled: boolean;
+      /** @description «Адресовано лично»: сотрудник в «Кому», общий ящик в копии — письмо сразу ему */
+      personal_rule: boolean;
+      /** @description Пометка у такого письма */
+      personal_label: string;
       username: string;
       password_configured: boolean;
       password_last4: string | null;
@@ -10504,6 +10589,10 @@ export interface components {
       folders?: components["schemas"]["ImapFolderIn"][] | null;
       /** @default true */
       assist_enabled: boolean;
+      /** @default true */
+      personal_rule: boolean;
+      /** @default Адресовано лично */
+      personal_label: string;
       /** @description `null` — оставить прежний */
       username?: string | null;
       /** @description Пароль приложения; `null` — оставить прежний */
@@ -10520,10 +10609,20 @@ export interface components {
       latency_ms: number | null;
     };
     /**
-     * @description new — ждёт разбора; spam — «Подозрительные» (из спам-папки, W18A-P2-2); registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
+     * @description Представление списка: new — Новые; mine — мои в работе; in_work — все в работе; done — Разобранные; spam — Подозрительные (из спам-папки, W18A-P2-2); all — все, кроме подозрительных
      * @enum {string}
      */
-    InboundMailStatus: "new" | "spam" | "registered" | "lead" | "archived";
+    InboundMailView: "new" | "mine" | "in_work" | "done" | "spam" | "all";
+    /**
+     * @description new — Новое (с `thread_reply` — «ответ в цепочке»); in_work — В работе (исполнитель `assignee`, с `assigned_at`); registering — Регистрируется (ВХ создаётся, ждём подтверждения; `eds_waiting` — событие не пришло в срок); done — Разобрано (итог — `result`); spam — Подозрительные
+     * @enum {string}
+     */
+    InboundMailStatus: "new" | "in_work" | "registering" | "done" | "spam";
+    /**
+     * @description Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной
+     * @enum {string}
+     */
+    InboundMailOutcome: "registered" | "lead" | "replied" | "archived";
     /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
     InboundMailAssist: {
       /**
@@ -10546,6 +10645,25 @@ export interface components {
       number: string;
       name: string;
     };
+    InboundMailPerson: {
+      id: number;
+      name: string;
+    };
+    /** @description Итог «Разобрано»; `outcome = null` — письмо разобрано до W18A-P2-3 */
+    InboundMailResult: {
+      outcome: components["schemas"]["InboundMailOutcome"] | null;
+      by: components["schemas"]["InboundMailPerson"] | null;
+      /** Format: date-time */
+      at: string | null;
+      /** @description Номер ВХ, если письмо зарегистрировано */
+      letter_number: string | null;
+      /** @description Путь к карточке ВХ */
+      letter_ref: string | null;
+      /** @description Лид, в который ушло письмо (или в заметку которого) */
+      lead: components["schemas"]["InboundMailLink"] | null;
+      /** @description Причина архива */
+      reason: string | null;
+    };
     InboundMailItem: {
       id: number;
       status: components["schemas"]["InboundMailStatus"];
@@ -10556,6 +10674,11 @@ export interface components {
       received_at: string;
       /** Format: date-time */
       sent_at: string | null;
+      /**
+       * Format: date-time
+       * @description Последнее входящее письмо записи
+       */
+      activity_at: string;
       preview: string;
       attachments_count: number;
       assist: components["schemas"]["InboundMailAssist"];
@@ -10565,6 +10688,22 @@ export interface components {
       lead: components["schemas"]["InboundMailLink"] | null;
       /** @description Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
       from_history: boolean;
+      /** @description «В работе у …»; у Нового с `thread_reply` — прежний исполнитель, справкой */
+      assignee: components["schemas"]["InboundMailPerson"] | null;
+      /** Format: date-time */
+      assigned_at: string | null;
+      /** @description Адресовано лично сотруднику (правило «Почта · Приём») */
+      personal: boolean;
+      /** @description «Новое (ответ в цепочке)»: клиент ответил на разобранное письмо */
+      thread_reply: boolean;
+      /** @description Не прочитано этим сотрудником */
+      unread: boolean;
+      /** @description Входящих писем в записи (цепочка) */
+      messages_count: number;
+      /** @description Регистрация начата, подтверждения не пришло в срок («ждёт подтверждения») */
+      eds_waiting: boolean;
+      /** @description Итог у Разобрано */
+      result: components["schemas"]["InboundMailResult"] | null;
     };
     InboundMailMailbox: {
       /** @description false — приём не настроен: «Настройки · Подключения · Почта» */
@@ -10574,6 +10713,8 @@ export interface components {
       /** Format: date-time */
       last_ok_at: string | null;
       last_error_kind: string | null;
+      /** @description Пометка «адресовано лично» из настроек приёма */
+      personal_label: string;
     };
     InboundMailPage: {
       items: components["schemas"]["InboundMailItem"][];
@@ -10581,14 +10722,24 @@ export interface components {
       mailbox: components["schemas"]["InboundMailMailbox"];
       counts: components["schemas"]["InboundMailCounts"];
     };
-    /** @description Числа вкладок списка «Входящая почта» */
+    /** @description Числа вкладок списка «Входящая почта» в рамках прав сотрудника */
     InboundMailCounts: {
-      /** @description Ждут разбора (вместе с «из истории») */
+      /** @description Новые (вместе с «из истории») */
       new: number;
       /** @description Из них — «из истории» */
       history: number;
+      /** @description Мои в работе */
+      mine: number;
+      /** @description Все в работе */
+      in_work: number;
+      /** @description Разобранные */
+      done: number;
       /** @description Подозрительные */
       spam: number;
+      /** @description Все, кроме подозрительных */
+      all: number;
+      /** @description Новых, которые этот сотрудник ещё не открывал */
+      unread_new: number;
     };
     InboundMailAttachment: {
       index: number;
@@ -10614,6 +10765,34 @@ export interface components {
       created_at: string;
       /** Format: date-time */
       sent_at: string | null;
+      /** @description Кто ответил */
+      by: components["schemas"]["InboundMailPerson"] | null;
+    };
+    /** @description Адрес письма; сотрудник — по адресу активного пользователя */
+    InboundMailAddress: {
+      email: string;
+      staff: components["schemas"]["InboundMailPerson"] | null;
+      /** @description Это сам общий ящик */
+      mailbox: boolean;
+    };
+    /** @description Входящее письмо записи (первое — само письмо, дальше ответы клиента); вложения качаются по `id` */
+    InboundMailMessage: {
+      id: number;
+      from_email: string;
+      from_name: string;
+      /** Format: date-time */
+      at: string;
+      text: string;
+      attachments: components["schemas"]["InboundMailAttachment"][];
+    };
+    /** @description Строка журнала письма: кто и что сделал; подпись — по коду `action` (take, takeover, release, reply, lead, archive, register_start, register_cancel, thread_reply, personal, not_spam, discard) */
+    InboundMailEvent: {
+      /** Format: date-time */
+      at: string;
+      action: string;
+      actor: components["schemas"]["InboundMailPerson"] | null;
+      /** @description Причина архива; текстов писем нет */
+      detail: string | null;
     };
     /** @description Карточка письма общего ящика */
     InboundMail: {
@@ -10626,6 +10805,8 @@ export interface components {
       received_at: string;
       /** Format: date-time */
       sent_at: string | null;
+      /** Format: date-time */
+      activity_at: string;
       preview: string;
       attachments_count: number;
       assist: components["schemas"]["InboundMailAssist"];
@@ -10635,7 +10816,17 @@ export interface components {
       lead: components["schemas"]["InboundMailLink"] | null;
       /** @description Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
       from_history: boolean;
-      to: string[];
+      assignee: components["schemas"]["InboundMailPerson"] | null;
+      /** Format: date-time */
+      assigned_at: string | null;
+      personal: boolean;
+      thread_reply: boolean;
+      unread: boolean;
+      messages_count: number;
+      eds_waiting: boolean;
+      result: components["schemas"]["InboundMailResult"] | null;
+      to: components["schemas"]["InboundMailAddress"][];
+      cc: components["schemas"]["InboundMailAddress"][];
       /** @description Тело письма только текстом (HTML — без разметки) */
       text: string;
       attachments: components["schemas"]["InboundMailAttachment"][];
@@ -10643,15 +10834,15 @@ export interface components {
       /** @description Письмо больше 60 МБ — сохранены только заголовки */
       too_large: boolean;
       inns: string[];
-      /** @description Номер ВХ, если письмо зарегистрировано */
-      letter_number: string | null;
-      /** @description Путь к карточке ВХ */
-      letter_ref: string | null;
-      result_lead: components["schemas"]["InboundMailLink"] | null;
-      archive_reason: string | null;
-      /** Format: date-time */
-      handled_at: string | null;
+      /** @description Все входящие письма записи по времени, самое первое — первым */
+      messages: components["schemas"]["InboundMailMessage"][];
+      /** @description Наши ответы из журнала почты (текст после отправки не хранится) */
       replies: components["schemas"]["InboundMailReply"][];
+      journal: components["schemas"]["InboundMailEvent"][];
+      /** @description Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя) */
+      reply_all_copy: string[];
+      /** @description Пометка «адресовано лично» из настроек */
+      personal_label: string;
     };
     InboundMailLeadResult: {
       lead_id: number;
@@ -10665,6 +10856,39 @@ export interface components {
     };
     InboundMailReplyIn: {
       text: string;
+      /**
+       * @description «Ответить всем»: копия — остальные адреса письма, кроме общего ящика
+       * @default false
+       */
+      reply_all: boolean;
+      /**
+       * @description «Ждём ответа»: письмо остаётся «в работе»
+       * @default false
+       */
+      awaiting: boolean;
+    };
+    InboundMailTakeIn: {
+      /**
+       * @description «Забрать себе» у того, кто ведёт письмо
+       * @default false
+       */
+      takeover: boolean;
+    };
+    InboundMailBulkArchiveIn: {
+      ids: number[];
+      reason: string;
+    };
+    InboundMailBulkArchiveResult: {
+      archived: number[];
+      skipped: {
+        id: number;
+        /**
+         * @description В работе у другого, уже разобрано, ВХ регистрируется, письма нет
+         * @enum {string}
+         */
+        reason: "in_work_by_other" | "handled" | "registering" | "missing";
+        assignee: components["schemas"]["InboundMailPerson"] | null;
+      }[];
     };
     /** @description Карточка «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1); адресат — директор по умолчанию */
     LetterRegisterIn: {
@@ -12740,7 +12964,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — письмо уже обработано (ВХ, лид или архив), почта не настроена (`details.reason = smtp_not_configured`) или помощник выключен (`assist_disabled`) */
+    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), не возвращается в «Новые» (`mail_not_returnable`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
     InboundMailConflict: {
       headers: {
         [name: string]: unknown;
@@ -16612,8 +16836,9 @@ export interface operations {
   listInboundMail: {
     parameters: {
       query?: {
-        status?: components["schemas"]["InboundMailStatus"];
+        view?: components["schemas"]["InboundMailView"];
         history?: boolean;
+        q?: string;
       };
       header?: never;
       path?: never;
@@ -16659,6 +16884,127 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markInboundMailRead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  takeInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailTakeIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  releaseInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  bulkArchiveInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailBulkArchiveIn"];
+      };
+    };
+    responses: {
+      /** @description Что архивировано и что пропущено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailBulkArchiveResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
