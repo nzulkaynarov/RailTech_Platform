@@ -1,4 +1,4 @@
-import { Button, Drawer, Input, Select } from "antd";
+import { App, Button, Checkbox, Drawer, Input, Select } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -11,15 +11,21 @@ import type {
   CatalogItem,
   CatalogItemDetail,
   CatalogItemKind,
+  CatalogProposal,
   ListCatalogItemsParams,
 } from "../../../shared/api/generated/model";
 import {
   getGetCatalogItemQueryKey,
   getListCatalogItemsQueryKey,
+  useAcceptCatalogProposal,
   useCreateCatalogItem,
   useGetCatalogItem,
   useGetCatalogLookups,
   useListCatalogItems,
+  useListManufacturers,
+  usePublishCatalogItem,
+  useRejectCatalogProposal,
+  useUnpublishCatalogItem,
   useUpdateCatalogItem,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -36,7 +42,7 @@ import {
   PriceCell,
   ValidityTag,
 } from "./common";
-import { errorFields } from "./errors";
+import { catalogErrorText, errorFields } from "./errors";
 import { useDebounced } from "./useDebounced";
 import { KINDS } from "./kinds";
 import { queryLabels } from "./labels";
@@ -63,10 +69,13 @@ export function ItemsPanel() {
   const [creating, setCreating] = useState(false);
   const q = useDebounced(text.trim());
   const lookups = useGetCatalogLookups();
+  // CAT-1: «На одобрении» — позиции с изменениями от поставщиков; фильтр в адресе (на него ведёт отчёт загрузки).
+  const pending = params.get("proposals") === "pending";
   const query = useListCatalogItems({
     ...(q ? { q } : {}),
     ...(kind ? { kind } : {}),
     ...(category ? { category_id: category } : {}),
+    ...(pending ? { proposals: "pending" as const } : {}),
     page,
     page_size: PAGE_SIZE,
   } satisfies ListCatalogItemsParams);
@@ -74,6 +83,7 @@ export function ItemsPanel() {
   const searchId = useId();
   const kindId = useId();
   const categoryId = useId();
+  const pendingId = useId();
   const open = (id: string | null) => {
     setParams(
       (prev) => {
@@ -103,6 +113,11 @@ export function ItemsPanel() {
             {row.name}
           </Button>
           <span className="pf-cat-sub">{row.sku}</span>
+          {row.proposals_count > 0 ? (
+            <StatusTag kind="validity" status="expiring">
+              {t("proposals.count", { count: row.proposals_count })}
+            </StatusTag>
+          ) : null}
         </>
       ),
     },
@@ -205,6 +220,26 @@ export function ItemsPanel() {
             options={(lookups.data?.categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
           />
         </div>
+        <div className="pf-cat-control pf-cat-control-check">
+          <Checkbox
+            id={pendingId}
+            checked={pending}
+            onChange={(event) => {
+              setParams(
+                (prev) => {
+                  const next = new URLSearchParams(prev);
+                  if (event.target.checked) next.set("proposals", "pending");
+                  else next.delete("proposals");
+                  return next;
+                },
+                { replace: true },
+              );
+              setPage(1);
+            }}
+          >
+            {t("proposals.filter")}
+          </Checkbox>
+        </div>
         <span className="pf-cat-spacer" />
         {canEdit(me, "erp.stock") ? (
           <Button
@@ -222,7 +257,9 @@ export function ItemsPanel() {
           data.items.length === 0 ? (
             <EmptyState
               title={t("items.empty.title")}
-              text={q || kind || category ? t("items.empty.filtered") : t("items.empty.text")}
+              text={
+                q || kind || category || pending ? t("items.empty.filtered") : t("items.empty.text")
+              }
             />
           ) : (
             <>
@@ -303,8 +340,10 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   value: t(`itemStatus.${card.status ?? "DRAFT"}`),
                 },
                 { label: t("items.fields.brand"), value: card.brand },
+                { label: t("items.fields.mpn"), value: card.manufacturer_part_number },
                 { label: t("items.fields.gost"), value: card.gost_drawing },
                 { label: t("items.fields.hs"), value: card.hs_code },
+                { label: t("items.fields.source"), value: card.source_supplier?.name },
               ]}
             />
             {canEdit(me, "erp.stock") ? (
@@ -316,7 +355,20 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 >
                   {t("items.edit")}
                 </Button>
+                <PublishButton card={card} />
               </div>
+            ) : null}
+            {card.status !== "PUBLISHED" && card.publish.missing.length > 0 ? (
+              <p className="pf-cat-note">
+                {t("publish.missing", {
+                  fields: card.publish.missing
+                    .map((code) => t(`publish.fields.${code}`, { defaultValue: code }))
+                    .join(", "),
+                })}
+              </p>
+            ) : null}
+            {card.proposals.length > 0 ? (
+              <ProposalsList card={card} editable={canEdit(me, "erp.stock")} />
             ) : null}
             <h3 className="pf-cat-section">{t("items.offers")}</h3>
             {!card.prices_visible ? <p className="pf-cat-note">{t("offers.pricesNote")}</p> : null}
@@ -355,6 +407,109 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         )}
       </QueryState>
     </Drawer>
+  );
+}
+
+/** «Опубликовать» / «Снять с публикации»: порог полноты решает ERP (`catalog/publishing.py`). */
+function PublishButton({ card }: { card: CatalogItemDetail }) {
+  const { t } = useTranslation("catalog");
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const done = (saved: CatalogItemDetail) => {
+    queryClient.setQueryData(getGetCatalogItemQueryKey(saved.id), saved);
+    void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
+  };
+  const fail = (error: unknown) => {
+    void message.error(catalogErrorText(t, error));
+  };
+  const publish = usePublishCatalogItem({ mutation: { onSuccess: done, onError: fail } });
+  const unpublish = useUnpublishCatalogItem({ mutation: { onSuccess: done, onError: fail } });
+  if (card.status === "PUBLISHED") {
+    return (
+      <Button
+        loading={unpublish.isPending}
+        onClick={() => {
+          unpublish.mutate({ id: card.id });
+        }}
+      >
+        {t("publish.unpublish")}
+      </Button>
+    );
+  }
+  return (
+    <Button
+      disabled={!card.publish.publishable}
+      loading={publish.isPending}
+      onClick={() => {
+        publish.mutate({ id: card.id });
+      }}
+    >
+      {t("publish.publish")}
+    </Button>
+  );
+}
+
+/** Изменения карточки из прайсов поставщиков (CAT-1): было → предлагается, «Принять» или «Отклонить». */
+function ProposalsList({ card, editable }: { card: CatalogItemDetail; editable: boolean }) {
+  const { t } = useTranslation("catalog");
+  const { message } = App.useApp();
+  const queryClient = useQueryClient();
+  const done = (saved: CatalogItemDetail) => {
+    queryClient.setQueryData(getGetCatalogItemQueryKey(saved.id), saved);
+    void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
+  };
+  const fail = (error: unknown) => {
+    void message.error(catalogErrorText(t, error));
+  };
+  const accept = useAcceptCatalogProposal({ mutation: { onSuccess: done, onError: fail } });
+  const reject = useRejectCatalogProposal({ mutation: { onSuccess: done, onError: fail } });
+  const label = (p: CatalogProposal) => t(`proposalField.${p.field}`);
+  return (
+    <>
+      <h3 className="pf-cat-section">{t("proposals.title")}</h3>
+      <ul className="pf-cat-proposals">
+        {card.proposals.map((p) => (
+          <li key={p.id} className="pf-cat-proposal">
+            <div>
+              <strong>{label(p)}</strong>
+              {p.supplier ? <span className="pf-cat-sub">{p.supplier.name}</span> : null}
+            </div>
+            <div className="pf-cat-proposal-values">
+              <span>
+                {t("proposals.current")}: {p.current || "—"}
+              </span>
+              <span>
+                {t("proposals.proposed")}: {p.proposed}
+              </span>
+            </div>
+            {editable ? (
+              <div className="pf-cat-actions">
+                <Button
+                  size="small"
+                  aria-label={t("proposals.acceptNamed", { field: label(p) })}
+                  loading={accept.isPending && accept.variables.id === p.id}
+                  onClick={() => {
+                    accept.mutate({ id: p.id });
+                  }}
+                >
+                  {t("proposals.accept")}
+                </Button>
+                <Button
+                  size="small"
+                  aria-label={t("proposals.rejectNamed", { field: label(p) })}
+                  loading={reject.isPending && reject.variables.id === p.id}
+                  onClick={() => {
+                    reject.mutate({ id: p.id });
+                  }}
+                >
+                  {t("proposals.reject")}
+                </Button>
+              </div>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -440,6 +595,10 @@ function ItemForm({
   const [category, setCategory] = useState<string | null>(item?.category?.id ?? null);
   const [vat, setVat] = useState(item?.vat_rate ?? "");
   const [description, setDescription] = useState(item?.description ?? "");
+  const [brand, setBrand] = useState<string | null>(item?.brand_id ?? null);
+  const [mpn, setMpn] = useState(item?.manufacturer_part_number ?? "");
+  const [hs, setHs] = useState(item?.hs_code ?? "");
+  const brands = useListManufacturers({ page: 1, page_size: 200 });
   const ids = {
     name: useId(),
     kind: useId(),
@@ -447,7 +606,11 @@ function ItemForm({
     category: useId(),
     vat: useId(),
     text: useId(),
+    brand: useId(),
+    mpn: useId(),
+    hs: useId(),
   };
+  const hsValid = /^(\d{2}|\d{4}|\d{6}|\d{8}|\d{10})?$/.test(hs.trim());
   const done = (saved: CatalogItemDetail) => {
     void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
     void queryClient.invalidateQueries({ queryKey: getGetCatalogItemQueryKey(saved.id) });
@@ -479,6 +642,11 @@ function ItemForm({
       ...(category !== (item.category?.id ?? null) ? { category_id: category } : {}),
       ...(vatValue !== item.vat_rate ? { vat_rate: vatValue } : {}),
       ...(description.trim() !== item.description ? { description: description.trim() } : {}),
+      ...(brand !== item.brand_id ? { brand_id: brand } : {}),
+      ...(mpn.trim() !== item.manufacturer_part_number
+        ? { manufacturer_part_number: mpn.trim() }
+        : {}),
+      ...(hs.trim() !== item.hs_code ? { hs_code: hs.trim() } : {}),
     };
     if (Object.keys(changed).length === 0) {
       onClose();
@@ -497,7 +665,7 @@ function ItemForm({
       }
       loading={mutation.isPending}
       error={mutation.error}
-      disabled={name.trim() === ""}
+      disabled={name.trim() === "" || !hsValid}
       onOk={submit}
       onCancel={onClose}
     >
@@ -557,6 +725,48 @@ function ItemForm({
           options={(lookups.data?.categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
         />
       </FormField>
+      {item ? (
+        <>
+          <div className="pf-cat-form-row">
+            <FormField id={ids.brand} label={t("items.form.brand")}>
+              <Select
+                id={ids.brand}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                value={brand}
+                status={fields.includes("brand_id") ? "error" : undefined}
+                onChange={(value: string | null | undefined) => {
+                  setBrand(value ?? null);
+                }}
+                options={(brands.data?.items ?? []).map((m) => ({ value: m.id, label: m.name }))}
+              />
+            </FormField>
+            <FormField id={ids.mpn} label={t("items.form.mpn")}>
+              <Input
+                id={ids.mpn}
+                maxLength={120}
+                value={mpn}
+                onChange={(event) => {
+                  setMpn(event.target.value);
+                }}
+              />
+            </FormField>
+          </div>
+          <FormField id={ids.hs} label={t("items.form.hs")} hint={t("items.form.hsHint")}>
+            <Input
+              id={ids.hs}
+              inputMode="numeric"
+              maxLength={10}
+              value={hs}
+              status={!hsValid || fields.includes("hs_code") ? "error" : undefined}
+              onChange={(event) => {
+                setHs(event.target.value);
+              }}
+            />
+          </FormField>
+        </>
+      ) : null}
       <FormField id={ids.text} label={t("items.form.description")}>
         <Input.TextArea
           id={ids.text}

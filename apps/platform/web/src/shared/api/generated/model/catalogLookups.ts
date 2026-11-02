@@ -4,11 +4,14 @@
  */
 import type { CatalogLookupsCategoriesItem } from "./catalogLookupsCategoriesItem";
 import type { CatalogLookupsCurrenciesItem } from "./catalogLookupsCurrenciesItem";
+import type { CatalogLookupsDeliveryBasesItem } from "./catalogLookupsDeliveryBasesItem";
 import type { CatalogNamedRef } from "./catalogNamedRef";
 import type { CatalogUnit } from "./catalogUnit";
 
 export interface CatalogLookups {
   units: CatalogUnit[];
+  /** Базисы поставки Incoterms */
+  delivery_bases: CatalogLookupsDeliveryBasesItem[];
   categories: CatalogLookupsCategoriesItem[];
   currencies: CatalogLookupsCurrenciesItem[];
   countries: CatalogNamedRef[];

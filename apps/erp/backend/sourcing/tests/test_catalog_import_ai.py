@@ -114,9 +114,20 @@ def test_template_xlsx_free_path_no_ai_and_identical_report(lookups, company_fac
 
     assert result["ai_used"] is False
     assert result["ai_rows"] == 1
-    ai_report = {key: value for key, value in result.items() if key not in ("ai_used", "ai_rows")}
+    # CAT-1: проверка (dry_run) оставляет строки для «Применить» без второго вызова ИИ — ключ `rows_token`.
+    ai_report = {key: value for key, value in result.items() if key not in ("ai_used", "ai_rows", "rows_token")}
     assert ai_report == standard
     assert not core_storage.get_temp_storage().exists(storage_path)  # staging удалён после задачи
+
+    from sourcing.ai_rows import load_rows
+
+    token = result["rows_token"]
+    assert load_rows(token)["rows"][0]["Артикул производителя"] == "KB-100"
+    applied = run_ai_job(
+        "catalog_import_ai", {"rows_token": token, "supplier_company_id": supplier.id, "dry_run": False}
+    )
+    assert applied["created"] == 1 and applied["dry_run"] is False and "rows_token" not in applied
+    assert load_rows(token) is None  # применённые строки не лежат дальше
 
 
 @pytest.mark.django_db

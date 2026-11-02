@@ -66,6 +66,7 @@ import type {
   CatalogCategoryIn,
   CatalogCategoryList,
   CatalogCategoryUpdate,
+  CatalogConflictResponse,
   CatalogItemCreate,
   CatalogItemDetail,
   CatalogItemPage,
@@ -152,6 +153,7 @@ import type {
   FxRateOverview,
   GetAiSpendReportParams,
   GetCrmThreadParams,
+  GetPriceImportParams,
   GetQueueCardsParams,
   GetQueueParams,
   GetRoleJournalParams,
@@ -285,6 +287,10 @@ import type {
   PaymentProofUpload,
   PlatformSettings,
   PlatformSettingsUpdate,
+  PriceImportApplyIn,
+  PriceImportJob,
+  PriceImportStatus,
+  PriceImportUpload,
   PriceRequest,
   PriceRequestAnswerIn,
   PriceRequestIn,
@@ -357,6 +363,7 @@ import type {
   SmtpConnector,
   SmtpSettingsIn,
   SpendReport,
+  StartPriceImportParams,
   StockAdjustIn,
   StockBalanceList,
   StockConflictResponse,
@@ -369,7 +376,10 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  SupplierCreate,
   SupplierDetail,
+  SupplierOfferCreate,
+  SupplierOfferHistory,
   SupplierOfferUpdate,
   SupplierOrderCancelIn,
   SupplierOrderConfirmIn,
@@ -381,6 +391,7 @@ import type {
   SupplierOrderReceiptIn,
   SupplierOrderSendIn,
   SupplierPage,
+  SupplierUpdate,
   SystemStatus,
   TeamNoteIn,
   TechDoc,
@@ -40223,6 +40234,434 @@ export const useUpdateCatalogItem = <
   return useMutation(getUpdateCatalogItemMutationOptions(options), queryClient);
 };
 
+export const getPublishCatalogItemUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}/publish`;
+};
+
+/**
+ * ERP `POST catalog/items/{id}/publish/` — право `catalog.publish`; порог полноты (`catalog/publishing.py`). Не хватает полей — 409 `CONFLICT` с `details.reason = PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: опубликовать позицию
+ */
+export const publishCatalogItem = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  return http<CatalogItemDetail>(getPublishCatalogItemUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPublishCatalogItemMutationKey = () => ["publishCatalogItem"] as const;
+
+export const getPublishCatalogItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishCatalogItem>>,
+    TError,
+    PublishCatalogItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishCatalogItem>>,
+  TError,
+  PublishCatalogItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishCatalogItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishCatalogItem>>,
+    PublishCatalogItemMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return publishCatalogItem(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishCatalogItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishCatalogItem>>
+>;
+
+export type PublishCatalogItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | BackendUnavailableResponse
+>;
+export type PublishCatalogItemMutationVariables = { id: string };
+
+/**
+ * @summary Расчёт · Номенклатура: опубликовать позицию
+ */
+export const usePublishCatalogItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishCatalogItem>>,
+      TError,
+      PublishCatalogItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishCatalogItem>>,
+  TError,
+  PublishCatalogItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishCatalogItemMutationOptions(options), queryClient);
+};
+
+export const getUnpublishCatalogItemUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}/unpublish`;
+};
+
+/**
+ * ERP `POST catalog/items/{id}/unpublish/` — право `catalog.publish`; карточка снова черновик. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: снять позицию с публикации
+ */
+export const unpublishCatalogItem = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  return http<CatalogItemDetail>(getUnpublishCatalogItemUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnpublishCatalogItemMutationKey = () => ["unpublishCatalogItem"] as const;
+
+export const getUnpublishCatalogItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unpublishCatalogItem>>,
+    TError,
+    UnpublishCatalogItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unpublishCatalogItem>>,
+  TError,
+  UnpublishCatalogItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnpublishCatalogItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unpublishCatalogItem>>,
+    UnpublishCatalogItemMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return unpublishCatalogItem(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnpublishCatalogItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unpublishCatalogItem>>
+>;
+
+export type UnpublishCatalogItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UnpublishCatalogItemMutationVariables = { id: string };
+
+/**
+ * @summary Расчёт · Номенклатура: снять позицию с публикации
+ */
+export const useUnpublishCatalogItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unpublishCatalogItem>>,
+      TError,
+      UnpublishCatalogItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unpublishCatalogItem>>,
+  TError,
+  UnpublishCatalogItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnpublishCatalogItemMutationOptions(options), queryClient);
+};
+
+export const getAcceptCatalogProposalUrl = (id: string) => {
+  return `/api/v1/erp/catalog/proposals/${id}/accept`;
+};
+
+/**
+ * ERP `POST catalog/field-proposals/{id}/accept/` — право `catalog.manage`: значение из прайса поставщика записывается в карточку; уже решённое — 409. Ответ — карточка позиции. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: принять изменение от поставщика
+ */
+export const acceptCatalogProposal = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  return http<CatalogItemDetail>(getAcceptCatalogProposalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getAcceptCatalogProposalMutationKey = () => ["acceptCatalogProposal"] as const;
+
+export const getAcceptCatalogProposalMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof acceptCatalogProposal>>,
+    TError,
+    AcceptCatalogProposalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof acceptCatalogProposal>>,
+  TError,
+  AcceptCatalogProposalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAcceptCatalogProposalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof acceptCatalogProposal>>,
+    AcceptCatalogProposalMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return acceptCatalogProposal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AcceptCatalogProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof acceptCatalogProposal>>
+>;
+
+export type AcceptCatalogProposalMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | BackendUnavailableResponse
+>;
+export type AcceptCatalogProposalMutationVariables = { id: string };
+
+/**
+ * @summary Расчёт · Номенклатура: принять изменение от поставщика
+ */
+export const useAcceptCatalogProposal = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof acceptCatalogProposal>>,
+      TError,
+      AcceptCatalogProposalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof acceptCatalogProposal>>,
+  TError,
+  AcceptCatalogProposalMutationVariables,
+  TContext
+> => {
+  return useMutation(getAcceptCatalogProposalMutationOptions(options), queryClient);
+};
+
+export const getRejectCatalogProposalUrl = (id: string) => {
+  return `/api/v1/erp/catalog/proposals/${id}/reject`;
+};
+
+/**
+ * ERP `POST catalog/field-proposals/{id}/reject/` — право `catalog.manage`: карточка не меняется, это значение поставщика больше не предлагается. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: отклонить изменение от поставщика
+ */
+export const rejectCatalogProposal = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  return http<CatalogItemDetail>(getRejectCatalogProposalUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRejectCatalogProposalMutationKey = () => ["rejectCatalogProposal"] as const;
+
+export const getRejectCatalogProposalMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectCatalogProposal>>,
+    TError,
+    RejectCatalogProposalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectCatalogProposal>>,
+  TError,
+  RejectCatalogProposalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectCatalogProposalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectCatalogProposal>>,
+    RejectCatalogProposalMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return rejectCatalogProposal(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectCatalogProposalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof rejectCatalogProposal>>
+>;
+
+export type RejectCatalogProposalMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RejectCatalogProposalMutationVariables = { id: string };
+
+/**
+ * @summary Расчёт · Номенклатура: отклонить изменение от поставщика
+ */
+export const useRejectCatalogProposal = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectCatalogProposal>>,
+      TError,
+      RejectCatalogProposalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectCatalogProposal>>,
+  TError,
+  RejectCatalogProposalMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectCatalogProposalMutationOptions(options), queryClient);
+};
+
 export const getListCatalogSuppliersUrl = (params?: ListCatalogSuppliersParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -40396,6 +40835,134 @@ export function useListCatalogSuppliers<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getCreateCatalogSupplierUrl = () => {
+  return `/api/v1/erp/catalog/suppliers`;
+};
+
+/**
+ * ERP `POST catalog/suppliers/` — право `supply.manage`. Простая карточка компании (CAT-1): название, страна, ИНН или рег. номер нерезидента (хотя бы одно — иначе 422 с `details.reason = SUPPLIER_ID_REQUIRED`), контакт, валюта цен. Такой ИНН или пара «страна — рег. номер» уже есть — 409 (`SUPPLIER_EXISTS`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщики: добавить поставщика
+ */
+export const createCatalogSupplier = async (
+  supplierCreate: SupplierCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierDetail>(getCreateCatalogSupplierUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierCreate),
+  });
+};
+
+export const getCreateCatalogSupplierMutationKey = () => ["createCatalogSupplier"] as const;
+
+export const getCreateCatalogSupplierMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCatalogSupplier>>,
+    TError,
+    CreateCatalogSupplierMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCatalogSupplier>>,
+  TError,
+  CreateCatalogSupplierMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCatalogSupplierMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCatalogSupplier>>,
+    CreateCatalogSupplierMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCatalogSupplier(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCatalogSupplierMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCatalogSupplier>>
+>;
+export type CreateCatalogSupplierMutationBody = SupplierCreate;
+export type CreateCatalogSupplierMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCatalogSupplierMutationVariables = { data: SupplierCreate };
+
+/**
+ * @summary Расчёт · Поставщики: добавить поставщика
+ */
+export const useCreateCatalogSupplier = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCatalogSupplier>>,
+      TError,
+      CreateCatalogSupplierMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCatalogSupplier>>,
+  TError,
+  CreateCatalogSupplierMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCatalogSupplierMutationOptions(options), queryClient);
+};
+
 export const getGetCatalogSupplierUrl = (id: string) => {
   return `/api/v1/erp/catalog/suppliers/${id}`;
 };
@@ -40561,6 +41128,429 @@ export function useGetCatalogSupplier<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getUpdateCatalogSupplierUrl = (id: string) => {
+  return `/api/v1/erp/catalog/suppliers/${id}`;
+};
+
+/**
+ * ERP `PATCH catalog/suppliers/{id}/` — право `supply.manage`; те же поля, что при создании. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: изменить карточку
+ */
+export const updateCatalogSupplier = async (
+  id: string,
+  supplierUpdate: SupplierUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierDetail>(getUpdateCatalogSupplierUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierUpdate),
+  });
+};
+
+export const getUpdateCatalogSupplierMutationKey = () => ["updateCatalogSupplier"] as const;
+
+export const getUpdateCatalogSupplierMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCatalogSupplier>>,
+    TError,
+    UpdateCatalogSupplierMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCatalogSupplier>>,
+  TError,
+  UpdateCatalogSupplierMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCatalogSupplierMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCatalogSupplier>>,
+    UpdateCatalogSupplierMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCatalogSupplier(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCatalogSupplierMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCatalogSupplier>>
+>;
+export type UpdateCatalogSupplierMutationBody = SupplierUpdate;
+export type UpdateCatalogSupplierMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCatalogSupplierMutationVariables = { id: string; data: SupplierUpdate };
+
+/**
+ * @summary Расчёт · Поставщик: изменить карточку
+ */
+export const useUpdateCatalogSupplier = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCatalogSupplier>>,
+      TError,
+      UpdateCatalogSupplierMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCatalogSupplier>>,
+  TError,
+  UpdateCatalogSupplierMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCatalogSupplierMutationOptions(options), queryClient);
+};
+
+export const getCreateSupplierOfferUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/offers`;
+};
+
+/**
+ * ERP `POST catalog/suppliers/{id}/offers/` — право `supply.manage` и поле `supplier_prices` (иначе 403). Товар, цена, валюта, Incoterms, MOQ, сроки поставки, действует с/до, источник. Одна цена на пару «поставщик — товар»: вторая — 409 (`OFFER_EXISTS`), её правят. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: добавить цену
+ */
+export const createSupplierOffer = async (
+  id: CompanyItemRef,
+  supplierOfferCreate: SupplierOfferCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogOffer> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogOffer>(getCreateSupplierOfferUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOfferCreate),
+  });
+};
+
+export const getCreateSupplierOfferMutationKey = () => ["createSupplierOffer"] as const;
+
+export const getCreateSupplierOfferMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSupplierOffer>>,
+    TError,
+    CreateSupplierOfferMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSupplierOffer>>,
+  TError,
+  CreateSupplierOfferMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSupplierOfferMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSupplierOffer>>,
+    CreateSupplierOfferMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createSupplierOffer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSupplierOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSupplierOffer>>
+>;
+export type CreateSupplierOfferMutationBody = SupplierOfferCreate;
+export type CreateSupplierOfferMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateSupplierOfferMutationVariables = {
+  id: CompanyItemRef;
+  data: SupplierOfferCreate;
+};
+
+/**
+ * @summary Расчёт · Поставщик: добавить цену
+ */
+export const useCreateSupplierOffer = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSupplierOffer>>,
+      TError,
+      CreateSupplierOfferMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSupplierOffer>>,
+  TError,
+  CreateSupplierOfferMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSupplierOfferMutationOptions(options), queryClient);
+};
+
+export const getGetSupplierOfferHistoryUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}/history`;
+};
+
+/**
+ * ERP `catalog/suppliers/{id}/offers/{offer_id}/history/`: снимки цены, срока действия, базиса и источника, новые сверху. Сумма — только с полем `supplier_prices`, иначе `null`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Поставщик: история цены
+ */
+export const getSupplierOfferHistory = async (
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOfferHistory> => {
+  return http<SupplierOfferHistory>(getGetSupplierOfferHistoryUrl(id, offerId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSupplierOfferHistoryQueryKey = (id: CompanyItemRef, offerId: CompanyItemRef) => {
+  return [`/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}/history`] as const;
+};
+
+export const getGetSupplierOfferHistoryQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSupplierOfferHistoryQueryKey(id, offerId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierOfferHistory>>> = ({
+    signal,
+  }) => getSupplierOfferHistory(id, offerId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined && offerId !== null && offerId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSupplierOfferHistoryQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSupplierOfferHistory>>
+>;
+export type GetSupplierOfferHistoryQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSupplierOfferHistory<
+  TData = Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOfferHistory>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOfferHistory<
+  TData = Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOfferHistory>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOfferHistory<
+  TData = Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Поставщик: история цены
+ */
+
+export function useGetSupplierOfferHistory<
+  TData = Awaited<ReturnType<typeof getSupplierOfferHistory>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierOfferHistory>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSupplierOfferHistoryQueryOptions(id, offerId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {
   return `/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}`;
 };
@@ -40694,6 +41684,554 @@ export const useUpdateSupplierOffer = <
 > => {
   return useMutation(getUpdateSupplierOfferMutationOptions(options), queryClient);
 };
+
+export const getDownloadPriceImportTemplateUrl = () => {
+  return `/api/v1/erp/catalog/price-import/template`;
+};
+
+/**
+ * ERP `sourcing/catalog-template/` потоком: колонки, пример строки и лист допустимых кодов (валюты, наличие, единицы, категории). Вложением с `nosniff`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Загрузка прайса: шаблон xlsx
+ */
+export const downloadPriceImportTemplate = async (
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadPriceImportTemplateUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadPriceImportTemplateQueryKey = () => {
+  return [`/api/v1/erp/catalog/price-import/template`] as const;
+};
+
+export const getDownloadPriceImportTemplateQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof downloadPriceImportTemplate>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadPriceImportTemplateQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadPriceImportTemplate>>> = ({
+    signal,
+  }) => downloadPriceImportTemplate({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadPriceImportTemplateQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadPriceImportTemplate>>
+>;
+export type DownloadPriceImportTemplateQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadPriceImportTemplate<
+  TData = Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPriceImportTemplate>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPriceImportTemplate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPriceImportTemplate<
+  TData = Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPriceImportTemplate>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPriceImportTemplate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPriceImportTemplate<
+  TData = Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPriceImportTemplate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Загрузка прайса: шаблон xlsx
+ */
+
+export function useDownloadPriceImportTemplate<
+  TData = Awaited<ReturnType<typeof downloadPriceImportTemplate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPriceImportTemplate>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadPriceImportTemplateQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getStartPriceImportUrl = (params: StartPriceImportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/price-import?${stringifiedParams}`
+    : `/api/v1/erp/catalog/price-import`;
+};
+
+/**
+ * ERP `POST sourcing/import-catalog/` (`mode=xlsx`) или `sourcing/import-catalog-ai/` (`mode=ai`) с `supplier_company_id`, сроком цен на весь файл и `dry_run`. Проверка (`check=true`) ничего не пишет и возвращает тот же отчёт. Чужие и опубликованные карточки прайс не меняет — расхождения уходят в изменения на одобрение. BFF читает тело до 21 МБ и передаёт multipart как есть (B-D23-6). Нужны поле `supplier_prices` (иначе 403) и раздел `erp.stock` — полный. ИИ выключен — 503.
+ * @summary Расчёт · Загрузка прайса: проверить или применить файл
+ */
+export const startPriceImport = async (
+  priceImportUpload: PriceImportUpload,
+  params: StartPriceImportParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceImportJob> => {
+  const formData = new FormData();
+  formData.append(`file`, priceImportUpload.file);
+
+  return http<PriceImportJob>(getStartPriceImportUrl(params), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getStartPriceImportMutationKey = () => ["startPriceImport"] as const;
+
+export const getStartPriceImportMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startPriceImport>>,
+    TError,
+    StartPriceImportMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startPriceImport>>,
+  TError,
+  StartPriceImportMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartPriceImportMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startPriceImport>>,
+    StartPriceImportMutationVariables
+  > = (props) => {
+    const { data, params } = props ?? {};
+
+    return startPriceImport(data, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartPriceImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startPriceImport>>
+>;
+export type StartPriceImportMutationBody = PriceImportUpload;
+export type StartPriceImportMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type StartPriceImportMutationVariables = {
+  data: PriceImportUpload;
+  params: StartPriceImportParams;
+};
+
+/**
+ * @summary Расчёт · Загрузка прайса: проверить или применить файл
+ */
+export const useStartPriceImport = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startPriceImport>>,
+      TError,
+      StartPriceImportMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startPriceImport>>,
+  TError,
+  StartPriceImportMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartPriceImportMutationOptions(options), queryClient);
+};
+
+export const getApplyCheckedPriceImportUrl = () => {
+  return `/api/v1/erp/catalog/price-import/apply-checked`;
+};
+
+/**
+ * ERP `POST sourcing/import-catalog-ai/` с `rows_token` из отчёта проверки: применяются ровно строки, которые сотрудник видел, без второго вызова ИИ. Токен другого сотрудника или истёкший — 422. Раздел `erp.stock` — полный, поле `supplier_prices`.
+ * @summary Расчёт · Загрузка прайса: применить проверенные строки (ИИ)
+ */
+export const applyCheckedPriceImport = async (
+  priceImportApplyIn: PriceImportApplyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceImportJob> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceImportJob>(getApplyCheckedPriceImportUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceImportApplyIn),
+  });
+};
+
+export const getApplyCheckedPriceImportMutationKey = () => ["applyCheckedPriceImport"] as const;
+
+export const getApplyCheckedPriceImportMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof applyCheckedPriceImport>>,
+    TError,
+    ApplyCheckedPriceImportMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof applyCheckedPriceImport>>,
+  TError,
+  ApplyCheckedPriceImportMutationVariables,
+  TContext
+> => {
+  const mutationKey = getApplyCheckedPriceImportMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof applyCheckedPriceImport>>,
+    ApplyCheckedPriceImportMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return applyCheckedPriceImport(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ApplyCheckedPriceImportMutationResult = NonNullable<
+  Awaited<ReturnType<typeof applyCheckedPriceImport>>
+>;
+export type ApplyCheckedPriceImportMutationBody = PriceImportApplyIn;
+export type ApplyCheckedPriceImportMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type ApplyCheckedPriceImportMutationVariables = { data: PriceImportApplyIn };
+
+/**
+ * @summary Расчёт · Загрузка прайса: применить проверенные строки (ИИ)
+ */
+export const useApplyCheckedPriceImport = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof applyCheckedPriceImport>>,
+      TError,
+      ApplyCheckedPriceImportMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof applyCheckedPriceImport>>,
+  TError,
+  ApplyCheckedPriceImportMutationVariables,
+  TContext
+> => {
+  return useMutation(getApplyCheckedPriceImportMutationOptions(options), queryClient);
+};
+
+export const getGetPriceImportUrl = (jobId: string, params?: GetPriceImportParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/price-import/${jobId}?${stringifiedParams}`
+    : `/api/v1/erp/catalog/price-import/${jobId}`;
+};
+
+/**
+ * ERP `sourcing/import-status/{id}/` (`mode=xlsx`) или `sourcing/ai-status/{id}/` (`mode=ai`) — только своя загрузка. Пока идёт — `state = running`; готово — отчёт: новые позиции и цены, обновлённые цены, изменения на одобрение, ошибки по строкам. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Загрузка прайса: состояние и отчёт
+ */
+export const getPriceImport = async (
+  jobId: string,
+  params?: GetPriceImportParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceImportStatus> => {
+  return http<PriceImportStatus>(getGetPriceImportUrl(jobId, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPriceImportQueryKey = (jobId: string, params?: GetPriceImportParams) => {
+  return [`/api/v1/erp/catalog/price-import/${jobId}`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetPriceImportQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPriceImport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  params?: GetPriceImportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPriceImportQueryKey(jobId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPriceImport>>> = ({ signal }) =>
+    getPriceImport(jobId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPriceImportQueryResult = NonNullable<Awaited<ReturnType<typeof getPriceImport>>>;
+export type GetPriceImportQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useGetPriceImport<
+  TData = Awaited<ReturnType<typeof getPriceImport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  params: undefined | GetPriceImportParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPriceImport>>,
+          TError,
+          Awaited<ReturnType<typeof getPriceImport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPriceImport<
+  TData = Awaited<ReturnType<typeof getPriceImport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  params?: GetPriceImportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPriceImport>>,
+          TError,
+          Awaited<ReturnType<typeof getPriceImport>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPriceImport<
+  TData = Awaited<ReturnType<typeof getPriceImport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  params?: GetPriceImportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Загрузка прайса: состояние и отчёт
+ */
+
+export function useGetPriceImport<
+  TData = Awaited<ReturnType<typeof getPriceImport>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  params?: GetPriceImportParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPriceImport>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPriceImportQueryOptions(jobId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListBrigadesUrl = (params?: ListBrigadesParams) => {
   const normalizedParams = new URLSearchParams();

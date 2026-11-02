@@ -18,4 +18,16 @@ export interface CatalogItemUpdate {
   unit_id?: CompanyItemRef | null;
   category_id?: CompanyItemRef | null;
   vat_rate?: DecimalString | null;
+  /** Изготовитель (бренд) */
+  brand_id?: CompanyItemRef | null;
+  /**
+   * Артикул изготовителя
+   * @maxLength 120
+   */
+  manufacturer_part_number?: string;
+  /**
+   * Код ТН ВЭД: 2–10 цифр; пусто — снять
+   * @pattern ^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$
+   */
+  hs_code?: string;
 }
