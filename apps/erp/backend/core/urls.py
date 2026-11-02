@@ -31,6 +31,7 @@ from inventory.views import (
     StockReservationView,
     StockShipmentListView,
     StockSupplierListView,
+    StockTraceView,
 )
 from portal.exceptions import portal_not_found
 from portal.public_views import (
@@ -339,6 +340,7 @@ urlpatterns = (
             "api/v1/stock/reservations/<int:reservation_id>/", StockReservationView.as_view(), name="stock-reservation"
         ),
         path("api/v1/stock/shipments/", StockShipmentListView.as_view(), name="stock-shipments"),
+        path("api/v1/stock/trace/", StockTraceView.as_view(), name="stock-trace"),
         path("api/v1/stock/suppliers/", StockSupplierListView.as_view(), name="stock-suppliers"),
         path("api/v1/stock/orders/", OrderListView.as_view(), name="stock-orders"),
         path("api/v1/stock/orders/from-deal/", OrderFromDealView.as_view(), name="stock-order-from-deal"),

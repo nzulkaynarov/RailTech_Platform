@@ -28711,6 +28711,56 @@
                 }
             }
         },
+        "/api/v1/stock/trace/": {
+            "get": {
+                "operationId": "stock_trace_search",
+                "description": "Точное совпадение номера первым, затем по части номера (от 2 знаков, до 50 единиц). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Читает сотрудник своей компании.",
+                "summary": "Прослеживаемость: поиск по серийному номеру или партии",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Серийный номер или номер партии (от 2 знаков)"
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockTraceList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/system-settings/": {
             "get": {
                 "operationId": "system_settings_retrieve",
@@ -31284,6 +31334,20 @@
                         "nullable": true,
                         "title": "Иконка",
                         "description": "Иконка категории для отображения в каталоге"
+                    },
+                    "tracking": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TrackingClassEnum"
+                            }
+                        ],
+                        "title": "Учёт единиц",
+                        "description": "Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров\n\n* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
+                    },
+                    "requires_conformity_doc": {
+                        "type": "boolean",
+                        "title": "Нужен документ соответствия",
+                        "description": "При приёмке — № сертификата или декларации и срок действия"
                     }
                 },
                 "required": [
@@ -31475,6 +31539,20 @@
                         "nullable": true,
                         "title": "Иконка",
                         "description": "Иконка категории для отображения в каталоге"
+                    },
+                    "tracking": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TrackingClassEnum"
+                            }
+                        ],
+                        "title": "Учёт единиц",
+                        "description": "Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров\n\n* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
+                    },
+                    "requires_conformity_doc": {
+                        "type": "boolean",
+                        "title": "Нужен документ соответствия",
+                        "description": "При приёмке — № сертификата или декларации и срок действия"
                     }
                 },
                 "required": [
@@ -35809,12 +35887,37 @@
                     "cell": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "units": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Принятые серийные или номер партии"
+                    },
+                    "expiry_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "doc_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "doc_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
                     }
                 },
                 "required": [
                     "cell",
+                    "doc_number",
+                    "doc_valid_until",
+                    "expiry_date",
                     "name",
-                    "quantity"
+                    "quantity",
+                    "units"
                 ]
             },
             "EmailTemplate": {
@@ -38034,6 +38137,27 @@
                     "quote_item_id": {
                         "type": "integer",
                         "nullable": true
+                    },
+                    "offer": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/OrderLineOffer"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Цена поставщика, из которой создана строка"
+                    },
+                    "tracking": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TrackingClassEnum"
+                            }
+                        ],
+                        "description": "Учёт единиц товара по категории\n\n* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
+                    },
+                    "requires_doc": {
+                        "type": "boolean",
+                        "description": "Категория требует документ соответствия на приёмке"
                     }
                 },
                 "required": [
@@ -38042,11 +38166,14 @@
                     "id",
                     "line_total",
                     "name",
+                    "offer",
                     "position",
                     "product_id",
                     "quantity",
                     "quote_item_id",
                     "received_quantity",
+                    "requires_doc",
+                    "tracking",
                     "unit",
                     "unit_price"
                 ]
@@ -38104,6 +38231,34 @@
                 "required": [
                     "product_id",
                     "quantity"
+                ]
+            },
+            "OrderLineOffer": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "incoterms": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Базис поставки цены поставщика"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Цена действует до"
+                    },
+                    "expired": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "expired",
+                    "id",
+                    "incoterms",
+                    "valid_until"
                 ]
             },
             "OrderList": {
@@ -39448,6 +39603,20 @@
                         "nullable": true,
                         "title": "Иконка",
                         "description": "Иконка категории для отображения в каталоге"
+                    },
+                    "tracking": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TrackingClassEnum"
+                            }
+                        ],
+                        "title": "Учёт единиц",
+                        "description": "Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров\n\n* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
+                    },
+                    "requires_conformity_doc": {
+                        "type": "boolean",
+                        "title": "Нужен документ соответствия",
+                        "description": "При приёмке — № сертификата или декларации и срок действия"
                     }
                 }
             },
@@ -41412,6 +41581,12 @@
                             }
                         ],
                         "nullable": true
+                    },
+                    "tracking": {
+                        "$ref": "#/components/schemas/TrackingClassEnum"
+                    },
+                    "requires_doc": {
+                        "type": "boolean"
                     }
                 },
                 "required": [
@@ -41425,7 +41600,9 @@
                     "overdue",
                     "quantity",
                     "received_quantity",
+                    "requires_doc",
                     "supplier_name",
+                    "tracking",
                     "unit"
                 ]
             },
@@ -44706,9 +44883,6 @@
             "ReceiptLine": {
                 "type": "object",
                 "properties": {
-                    "order_line_id": {
-                        "type": "integer"
-                    },
                     "name": {
                         "type": "string"
                     },
@@ -44718,13 +44892,41 @@
                     "cell": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "units": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "description": "Принятые серийные или номер партии"
+                    },
+                    "expiry_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "doc_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "doc_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "order_line_id": {
+                        "type": "integer"
                     }
                 },
                 "required": [
                     "cell",
+                    "doc_number",
+                    "doc_valid_until",
+                    "expiry_date",
                     "name",
                     "order_line_id",
-                    "quantity"
+                    "quantity",
+                    "units"
                 ]
             },
             "ReceiptLineInRequest": {
@@ -44742,6 +44944,39 @@
                         "type": "string",
                         "default": "",
                         "maxLength": 32
+                    },
+                    "serials": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 100
+                        },
+                        "description": "Серийные номера (S): их число = количеству",
+                        "maxItems": 1000
+                    },
+                    "lot": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Партия (L)",
+                        "maxLength": 100
+                    },
+                    "expiry_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Годен до (L)"
+                    },
+                    "doc_number": {
+                        "type": "string",
+                        "default": "",
+                        "description": "№ сертификата или декларации",
+                        "maxLength": 100
+                    },
+                    "doc_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Документ соответствия действует до"
                     }
                 },
                 "required": [
@@ -45925,6 +46160,18 @@
                     "target": {
                         "type": "string",
                         "description": "`TRANSITION_NOT_ALLOWED`: куда хотели перейти"
+                    },
+                    "expected": {
+                        "type": "integer",
+                        "description": "`SERIALS_REQUIRED`, `SERIALS_COUNT_MISMATCH`, `UNITS_*`: сколько номеров нужно"
+                    },
+                    "given": {
+                        "type": "integer",
+                        "description": "`*_COUNT_MISMATCH`: сколько передано"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "`SERIAL_DUPLICATE`, `SERIAL_EXISTS`, `UNIT_NOT_AVAILABLE`: номер, о котором речь"
                     }
                 },
                 "required": [
@@ -46127,6 +46374,21 @@
                     "created_by_name": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "tracking": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/TrackingClassEnum"
+                            }
+                        ],
+                        "description": "Учёт единиц товара по его категории\n\n* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
+                    },
+                    "units": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockTraceUnitShort"
+                        },
+                        "description": "Свободные серийные или партии товара — выбор при отгрузке (S/L); у N пусто"
                     }
                 },
                 "required": [
@@ -46140,7 +46402,9 @@
                     "quote_item_id",
                     "remaining",
                     "shipped_quantity",
-                    "status"
+                    "status",
+                    "tracking",
+                    "units"
                 ]
             },
             "StockReservationList": {
@@ -46304,11 +46568,36 @@
                     "quantity": {
                         "type": "integer",
                         "minimum": 1
+                    },
+                    "units": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockShipUnitInRequest"
+                        },
+                        "description": "Обязательно для товаров S/L (ADR-0021)"
                     }
                 },
                 "required": [
                     "quantity",
                     "reservation_id"
+                ]
+            },
+            "StockShipUnitInRequest": {
+                "type": "object",
+                "properties": {
+                    "unit_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "default": 1,
+                        "description": "Серийный — 1"
+                    }
+                },
+                "required": [
+                    "unit_id"
                 ]
             },
             "StockShipment": {
@@ -46378,13 +46667,21 @@
                     "cell": {
                         "type": "string",
                         "nullable": true
+                    },
+                    "units": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockShipmentUnit"
+                        },
+                        "description": "Серийные или партии, ушедшие этой строкой"
                     }
                 },
                 "required": [
                     "cell",
                     "name",
                     "product_id",
-                    "quantity"
+                    "quantity",
+                    "units"
                 ]
             },
             "StockShipmentList": {
@@ -46403,6 +46700,21 @@
                 "required": [
                     "results",
                     "rights"
+                ]
+            },
+            "StockShipmentUnit": {
+                "type": "object",
+                "properties": {
+                    "number": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "number",
+                    "quantity"
                 ]
             },
             "StockStatus": {
@@ -46469,6 +46781,224 @@
                 },
                 "required": [
                     "results"
+                ]
+            },
+            "StockTraceDestination": {
+                "type": "object",
+                "properties": {
+                    "shipment_id": {
+                        "type": "integer"
+                    },
+                    "shipment_number": {
+                        "type": "string"
+                    },
+                    "shipped_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "deal": {
+                        "$ref": "#/components/schemas/StockDealRef"
+                    }
+                },
+                "required": [
+                    "deal",
+                    "quantity",
+                    "shipment_id",
+                    "shipment_number",
+                    "shipped_at"
+                ]
+            },
+            "StockTraceList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockTraceUnit"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "StockTraceOrigin": {
+                "type": "object",
+                "properties": {
+                    "receipt_id": {
+                        "type": "integer"
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "supplier_doc": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "order_id": {
+                        "type": "integer"
+                    },
+                    "order_number": {
+                        "type": "string"
+                    },
+                    "supplier_name": {
+                        "type": "string"
+                    },
+                    "manufacturer": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "doc_number": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "№ сертификата или декларации на приёмке"
+                    },
+                    "doc_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "deal": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StockDealRef"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Проект, под который заказывали"
+                    }
+                },
+                "required": [
+                    "deal",
+                    "doc_number",
+                    "doc_valid_until",
+                    "manufacturer",
+                    "order_id",
+                    "order_number",
+                    "receipt_id",
+                    "received_at",
+                    "supplier_doc",
+                    "supplier_name"
+                ]
+            },
+            "StockTraceProduct": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article",
+                    "id",
+                    "name"
+                ]
+            },
+            "StockTraceUnit": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TraceKindEnum"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Серийный номер или номер партии изготовителя"
+                    },
+                    "expiry_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Годен до (партия)"
+                    },
+                    "available": {
+                        "type": "integer",
+                        "description": "Сколько ещё на складе: серийный — 1, партия — остаток партии"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "shipped_quantity": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/TraceStatusEnum"
+                    },
+                    "product": {
+                        "$ref": "#/components/schemas/StockTraceProduct"
+                    },
+                    "origin": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StockTraceOrigin"
+                            }
+                        ],
+                        "description": "Откуда: приёмка, заказ, поставщик, изготовитель, документ"
+                    },
+                    "destinations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockTraceDestination"
+                        },
+                        "description": "Куда: отгрузки, клиент, проект"
+                    }
+                },
+                "required": [
+                    "available",
+                    "destinations",
+                    "expiry_date",
+                    "id",
+                    "kind",
+                    "number",
+                    "origin",
+                    "product",
+                    "quantity",
+                    "shipped_quantity",
+                    "status"
+                ]
+            },
+            "StockTraceUnitShort": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TraceKindEnum"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Серийный номер или номер партии изготовителя"
+                    },
+                    "expiry_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true,
+                        "description": "Годен до (партия)"
+                    },
+                    "available": {
+                        "type": "integer",
+                        "description": "Сколько ещё на складе: серийный — 1, партия — остаток партии"
+                    }
+                },
+                "required": [
+                    "available",
+                    "expiry_date",
+                    "id",
+                    "kind",
+                    "number"
                 ]
             },
             "SupplierOffer": {
@@ -47084,6 +47614,31 @@
                 "required": [
                     "access"
                 ]
+            },
+            "TraceKindEnum": {
+                "enum": [
+                    "serial",
+                    "lot"
+                ],
+                "type": "string",
+                "description": "* `serial` - serial\n* `lot` - lot"
+            },
+            "TraceStatusEnum": {
+                "enum": [
+                    "in_stock",
+                    "shipped"
+                ],
+                "type": "string",
+                "description": "* `in_stock` - in_stock\n* `shipped` - shipped"
+            },
+            "TrackingClassEnum": {
+                "enum": [
+                    "serial",
+                    "lot",
+                    "none"
+                ],
+                "type": "string",
+                "description": "* `serial` - Серийный\n* `lot` - Партия\n* `none` - Только количество"
             },
             "TypeEnum": {
                 "enum": [

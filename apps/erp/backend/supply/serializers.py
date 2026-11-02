@@ -2,7 +2,7 @@
 Ответы собирают `supply.services` и `inventory.services.overview` словарями; сериализаторы — их явная схема для OpenAPI
 (`/api/v1/stock/*`) и проверка тел запросов."""
 
-from inventory.serializers import StockDealRefSerializer, StockRightsSerializer
+from inventory.serializers import TRACKING_CLASSES, StockDealRefSerializer, StockRightsSerializer
 from rest_framework import serializers
 
 ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
@@ -60,6 +60,13 @@ class OrderListSerializer(serializers.Serializer):
     rights = OrderRightsSerializer()
 
 
+class OrderLineOfferSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    incoterms = serializers.CharField(allow_null=True, help_text="Базис поставки цены поставщика")
+    valid_until = serializers.DateField(allow_null=True, help_text="Цена действует до")
+    expired = serializers.BooleanField()
+
+
 class OrderLineSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     position = serializers.IntegerField()
@@ -73,13 +80,23 @@ class OrderLineSerializer(serializers.Serializer):
     line_total = serializers.DecimalField(max_digits=16, decimal_places=2, allow_null=True)
     deal = StockDealRefSerializer(allow_null=True)
     quote_item_id = serializers.IntegerField(allow_null=True)
+    offer = OrderLineOfferSerializer(allow_null=True, help_text="Цена поставщика, из которой создана строка")
+    tracking = serializers.ChoiceField(choices=TRACKING_CLASSES, help_text="Учёт единиц товара по категории")
+    requires_doc = serializers.BooleanField(help_text="Категория требует документ соответствия на приёмке")
 
 
-class ReceiptLineSerializer(serializers.Serializer):
-    order_line_id = serializers.IntegerField()
+class DoneReceiptLineSerializer(serializers.Serializer):
     name = serializers.CharField()
     quantity = serializers.IntegerField()
     cell = serializers.CharField(allow_null=True)
+    units = serializers.ListField(child=serializers.CharField(), help_text="Принятые серийные или номер партии")
+    expiry_date = serializers.DateField(allow_null=True)
+    doc_number = serializers.CharField(allow_null=True)
+    doc_valid_until = serializers.DateField(allow_null=True)
+
+
+class ReceiptLineSerializer(DoneReceiptLineSerializer):
+    order_line_id = serializers.IntegerField()
 
 
 class OrderReceiptSerializer(serializers.Serializer):
@@ -125,12 +142,8 @@ class PendingReceiptLineSerializer(serializers.Serializer):
     quantity = serializers.IntegerField()
     received_quantity = serializers.IntegerField()
     deal = StockDealRefSerializer(allow_null=True)
-
-
-class DoneReceiptLineSerializer(serializers.Serializer):
-    name = serializers.CharField()
-    quantity = serializers.IntegerField()
-    cell = serializers.CharField(allow_null=True)
+    tracking = serializers.ChoiceField(choices=TRACKING_CLASSES)
+    requires_doc = serializers.BooleanField()
 
 
 class DoneReceiptSerializer(serializers.Serializer):
@@ -253,6 +266,22 @@ class ReceiptLineInSerializer(serializers.Serializer):
     order_line_id = serializers.IntegerField(min_value=1)
     quantity = serializers.IntegerField(min_value=1)
     cell = serializers.CharField(required=False, allow_blank=True, max_length=32, default="")
+    # ADR-0021: по классу категории; для N не передаются.
+    serials = serializers.ListField(
+        child=serializers.CharField(max_length=100, allow_blank=True),
+        required=False,
+        default=list,
+        max_length=1000,
+        help_text="Серийные номера (S): их число = количеству",
+    )
+    lot = serializers.CharField(required=False, allow_blank=True, max_length=100, default="", help_text="Партия (L)")
+    expiry_date = serializers.DateField(required=False, allow_null=True, default=None, help_text="Годен до (L)")
+    doc_number = serializers.CharField(
+        required=False, allow_blank=True, max_length=100, default="", help_text="№ сертификата или декларации"
+    )
+    doc_valid_until = serializers.DateField(
+        required=False, allow_null=True, default=None, help_text="Документ соответствия действует до"
+    )
 
 
 class ReceiptInSerializer(serializers.Serializer):

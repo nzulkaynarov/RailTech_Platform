@@ -69,7 +69,8 @@ class StockStatusSerializer(serializers.ModelSerializer):
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ["id", "name", "parent", "domain_type", "icon"]
+        # ADR-0021: учёт единиц и документ соответствия — данные категории, товар наследует.
+        fields = ["id", "name", "parent", "domain_type", "icon", "tracking", "requires_conformity_doc"]
 
 
 @extend_schema_serializer(component_name="CatalogUnitOfMeasure")
