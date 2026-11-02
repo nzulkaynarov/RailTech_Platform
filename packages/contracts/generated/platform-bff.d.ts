@@ -5208,6 +5208,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/stock/trace": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Прослеживаемость: поиск по серийному номеру или партии
+     * @description ERP `GET /stock/trace/?q=` (ADR-0021, L0-3): единицы прослеживаемости по номеру — точное совпадение первым, затем по части номера (от 2 знаков, до 50). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Короче 2 знаков — пустой список. Раздел `erp.stock` — чтение.
+     */
+    get: operations["searchStockTrace"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/stock/overdue": {
     parameters: {
       query?: never;
@@ -9412,17 +9432,29 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
       parent_id: components["schemas"]["CompanyItemRef"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description При приёмке нужен № сертификата или декларации и срок действия */
+      requires_conformity_doc: boolean;
     };
+    /**
+     * @description Учёт единиц категории (ADR-0021): `serial` — каждая единица по серийному номеру, `lot` — партия и срок годности, `none` — только количество (по умолчанию). Товар наследует класс своей категории
+     * @enum {string}
+     */
+    TrackingClass: "serial" | "lot" | "none";
     CatalogCategoryList: {
       items: components["schemas"]["CatalogCategory"][];
     };
     CatalogCategoryIn: {
       name: string;
       parent_id?: components["schemas"]["CompanyItemRef"] | null;
+      tracking?: components["schemas"]["TrackingClass"];
+      requires_conformity_doc?: boolean;
     };
     CatalogCategoryUpdate: {
       name?: string;
       parent_id?: components["schemas"]["CompanyItemRef"] | null;
+      tracking?: components["schemas"]["TrackingClass"];
+      requires_conformity_doc?: boolean;
     };
     /**
      * @description На рассмотрении, одобрен, отклонён
@@ -10975,6 +11007,23 @@ export interface components {
       /** Format: date-time */
       created_at: string;
       created_by: string | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Свободные серийные или партии товара — выбор при отгрузке (S/L); у `none` пусто */
+      units: components["schemas"]["StockTraceUnitRef"][];
+    };
+    StockTraceUnitRef: {
+      id: string;
+      /** @enum {string} */
+      kind: "serial" | "lot";
+      /** @description Серийный номер или номер партии изготовителя */
+      number: string;
+      /**
+       * Format: date
+       * @description Годен до (партия)
+       */
+      expiry_date: string | null;
+      /** @description Ещё на складе: серийный — 1, партия — остаток партии */
+      available: number;
     };
     StockReservationList: {
       items: components["schemas"]["StockReservation"][];
@@ -11109,12 +11158,38 @@ export interface components {
       request: components["schemas"]["StockRequestRef"] | null;
       /** @description Строка расчёта, под которую заказано */
       line_id: string | null;
+      /** @description Цена поставщика, из которой создана строка (ADR-0021 п. 6) — базис и срок цены; сама цена — в `unit_price` */
+      offer: components["schemas"]["SupplierOrderLineOffer"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Категория требует документ соответствия на приёмке */
+      requires_doc: boolean;
+    };
+    SupplierOrderLineOffer: {
+      /**
+       * @description Базис поставки по Incoterms
+       * @example FCA
+       */
+      incoterms: string | null;
+      /**
+       * Format: date
+       * @description Цена действует до
+       */
+      valid_until: string | null;
+      expired: boolean;
     };
     SupplierOrderReceiptLine: {
       order_line_id: string;
       name: string;
       quantity: number;
       cell: string | null;
+      /** @description Серийные номера или номер партии */
+      units: string[];
+      /** Format: date */
+      expiry_date: string | null;
+      /** @description № сертификата или декларации */
+      doc_number: string | null;
+      /** Format: date */
+      doc_valid_until: string | null;
     };
     SupplierOrderReceipt: {
       id: string;
@@ -11248,6 +11323,22 @@ export interface components {
         order_line_id: string;
         quantity: number;
         cell?: string;
+        /** @description Серийные номера (`tracking = serial`): их число = количеству, без повторов; иначе 422 */
+        serials?: string[];
+        /** @description Партия (`tracking = lot`) — обязательна */
+        lot?: string;
+        /**
+         * Format: date
+         * @description Годен до (партия)
+         */
+        expiry_date?: string | null;
+        /** @description № сертификата или декларации (`requires_doc`) — обязателен */
+        doc_number?: string;
+        /**
+         * Format: date
+         * @description Документ действует до — обязателен и не в прошлом при `requires_doc`
+         */
+        doc_valid_until?: string | null;
       }[];
       supplier_doc?: string;
       note?: string;
@@ -11266,6 +11357,9 @@ export interface components {
       quantity: number;
       received_quantity: number;
       request: components["schemas"]["StockRequestRef"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Спросить № сертификата или декларации и срок действия */
+      requires_doc: boolean;
     };
     StockDoneReceipt: {
       id: string;
@@ -11281,6 +11375,13 @@ export interface components {
         name: string;
         quantity: number;
         cell: string | null;
+        /** @description Серийные номера или номер партии */
+        units: string[];
+        /** Format: date */
+        expiry_date: string | null;
+        doc_number: string | null;
+        /** Format: date */
+        doc_valid_until: string | null;
       }[];
     };
     /** @description Приёмка — строки подтверждённых заказов, ждущие товара, и последние приёмки */
@@ -11294,6 +11395,11 @@ export interface components {
       name: string;
       quantity: number;
       cell: string | null;
+      /** @description Серийные или партии, ушедшие строкой (ADR-0021) */
+      units: {
+        number: string;
+        quantity: number;
+      }[];
     };
     StockShipment: {
       id: string;
@@ -11321,10 +11427,62 @@ export interface components {
       lines: {
         reservation_id: string;
         quantity: number;
+        /** @description Серийные или партии строки (`tracking` резерва `serial`/`lot` — обязательно; сумма = количеству; только свободные единицы этого товара из `units` резерва). Без них — 422 `units_required` */
+        units?: {
+          unit_id: string;
+          /**
+           * @description Сколько из партии; серийный — 1
+           * @default 1
+           */
+          quantity: number;
+        }[];
       }[];
       tracking?: string;
       carrier?: string;
       note?: string;
+    };
+    StockTraceList: {
+      items: components["schemas"]["StockTraceUnit"][];
+    };
+    StockTraceUnit: {
+      id: string;
+      /** @enum {string} */
+      kind: "serial" | "lot";
+      number: string;
+      /** Format: date */
+      expiry_date: string | null;
+      quantity: number;
+      shipped_quantity: number;
+      /** @enum {string} */
+      status: "in_stock" | "shipped";
+      product: {
+        id: string;
+        name: string;
+        article: string;
+      };
+      /** @description Откуда — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия, проект заказа */
+      origin: {
+        /** Format: date-time */
+        received_at: string;
+        /** @description Накладная поставщика */
+        supplier_doc: string | null;
+        order_number: string;
+        order_path: string;
+        supplier: string;
+        manufacturer: string | null;
+        doc_number: string | null;
+        /** Format: date */
+        doc_valid_until: string | null;
+        request: components["schemas"]["StockRequestRef"] | null;
+      };
+      /** @description Куда — отгрузки клиенту с проектом */
+      destinations: {
+        shipment_number: string;
+        /** Format: date-time */
+        shipped_at: string;
+        quantity: number;
+        request: components["schemas"]["StockRequestRef"];
+      }[];
     };
     PriceRequestLine: {
       line_id: string | null;
@@ -12192,7 +12350,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`) */
+    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает) */
     StockConflict: {
       headers: {
         [name: string]: unknown;
@@ -21711,6 +21869,33 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchStockTrace: {
+    parameters: {
+      query: {
+        /** @description Серийный номер или номер партии */
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Найденные единицы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockTraceList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
