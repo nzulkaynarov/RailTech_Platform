@@ -182,7 +182,7 @@ const KIND_CODE: Record<DocumentKind, string> = {
   contract: "ДОГ",
   invoice: "СЧ",
   act: "АКТ",
-  letter: "ПИС",
+  letter: "ДОК",
 };
 const KINDS = Object.keys(KIND_WORD) as DocumentKind[];
 
@@ -197,7 +197,7 @@ function sampleHtml(kind: DocumentKind, brand: CompanyMock["brand"]): string {
 <div style="border-bottom:3px solid ${esc(brand.accent_color)};padding-bottom:8px;margin-bottom:16px">
 <strong style="color:${esc(brand.accent_color)}">${esc(brand.legal_name)}</strong>
 <div style="color:${esc(brand.secondary_color)};font-size:12px">ИНН ${esc(brand.inn)}</div></div>
-<h2 style="margin:0 0 8px">${esc(KIND_WORD[kind])} № ${esc(KIND_CODE[kind])}-2026-00001</h2>
+<h2 style="margin:0 0 8px">${esc(KIND_WORD[kind])} № ${esc(KIND_CODE[kind])}-2026/001</h2>
 <p>Образец документа на бланке компании. Позиции, суммы и сроки подставляются при оформлении.</p>
 <p style="margin-top:32px">${esc(brand.signatory_position)} ______ ${esc(brand.signatory_name)}</p>
 <p style="color:${esc(brand.secondary_color)};font-size:12px">${esc(brand.footer_text)}</p></body></html>`;
@@ -219,7 +219,7 @@ function renderNumber(
 
 function applyVariables(text: string): string {
   return text
-    .replaceAll("{{number}}", "СЧ-2026-00001")
+    .replaceAll("{{number}}", "СЧ-2026/001")
     .replaceAll("{{amount}}", "12 500 000 сум")
     .replaceAll("{{valid_until}}", "09.11.2026")
     .replaceAll("{{due_date}}", "05.11.2026");

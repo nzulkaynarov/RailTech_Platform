@@ -1,7 +1,7 @@
 """N1 — configurable document numbering scheme.
 
-Covers: the default scheme reproduces the historical format at ZERO visual diff (prefixed
-and prefix-less); custom pattern + padding; reset never/yearly/monthly period keys;
+Covers: the default scheme is SPEC-v3 §2.2 `КП-2026/001`, `ДОГ-…`, `СЧ-…`, `АКТ-…` (prefixed and
+prefix-less; B-WDOCS2-1 — until 2026-11 it was `CT-2026-00001`); custom pattern + padding; reset never/yearly/monthly period keys;
 sequential/no-gap minting inside one transaction; global-unique safety for two prefix-less
 companies (shared platform counter); and pattern validation ({seq} mandatory).
 
@@ -36,29 +36,29 @@ def _at(year, month=6, day=15):
     return timezone.make_aware(dt.datetime(year, month, day, 12, 0, 0))
 
 
-# ── Zero-diff: default scheme reproduces the historical format ──────────────────────
+# ── Default scheme = SPEC-v3 §2.2 ──────────────────────────────────────────────────
 
 
-def test_default_scheme_reproduces_prefix_less_format():
+def test_default_scheme_is_spec_prefix_less_format():
     year = timezone.now().year
     with transaction.atomic():
         first = next_document_number("INV", "INV")
         second = next_document_number("INV", "INV")
-    assert first == f"INV-{year}-00001"
-    assert second == f"INV-{year}-00002"
+    assert first == f"СЧ-{year}/001"
+    assert second == f"СЧ-{year}/002"
 
 
-def test_default_scheme_reproduces_prefixed_format():
+def test_default_scheme_is_spec_prefixed_format():
     year = timezone.now().year
     acme = _company("ACME", "6100000001", prefix="ACME")
     with transaction.atomic():
         # The {type} token now renders from the scheme's editable type_labels (default
-        # KP→"КП"), so the branded historical shape is unchanged at zero config.
+        # KP→"КП"), the company prefix stays in front.
         number = next_document_number("KP", "КП", company=acme)
-    assert number == f"ACME-КП-{year}-00001"
+    assert number == f"ACME-КП-{year}/001"
     with transaction.atomic():
         contract = next_document_number("CT", "CT", company=acme)
-    assert contract == f"ACME-CT-{year}-00001"
+    assert contract == f"ACME-ДОГ-{year}/001"
 
 
 def test_default_scheme_used_without_any_scheme_row():
@@ -68,7 +68,7 @@ def test_default_scheme_used_without_any_scheme_row():
     year = timezone.now().year
     with transaction.atomic():
         number = next_document_number("ACT", "ACT")
-    assert number == f"ACT-{year}-00001"
+    assert number == f"АКТ-{year}/001"
 
 
 # ── Custom pattern + padding ────────────────────────────────────────────────────────
@@ -81,8 +81,8 @@ def test_custom_pattern_and_padding():
     with transaction.atomic():
         first = next_document_number("CT", "CT", company=acme)
         second = next_document_number("CT", "CT", company=acme)
-    assert first == f"CT/{year}/000001"
-    assert second == f"CT/{year}/000002"
+    assert first == f"ДОГ/{year}/000001"
+    assert second == f"ДОГ/{year}/000002"
 
 
 def test_custom_start_value_offsets_first_number():
@@ -92,7 +92,7 @@ def test_custom_start_value_offsets_first_number():
     with transaction.atomic():
         first = next_document_number("CT", "CT", company=acme)
     # first number = start_value + 1
-    assert first == f"ACME-CT-{year}-01001"
+    assert first == f"ACME-ДОГ-{year}-1001"
 
 
 def test_two_digit_year_and_month_tokens():
@@ -101,7 +101,7 @@ def test_two_digit_year_and_month_tokens():
     with mock.patch.object(timezone, "now", return_value=_at(2026, 3)):
         with transaction.atomic():
             number = next_document_number("INV", "INV", company=acme)
-    assert number == "ACME-INV2603-001"
+    assert number == "ACME-СЧ2603-001"
 
 
 # ── Reset period ────────────────────────────────────────────────────────────────────
@@ -116,8 +116,8 @@ def test_reset_yearly_new_counter_each_year():
     with mock.patch.object(timezone, "now", return_value=_at(2026)):
         with transaction.atomic():
             n2026 = next_document_number("CT", "CT", company=acme)
-    assert n2025 == "ACME-CT-2025-00001"
-    assert n2026 == "ACME-CT-2026-00001"  # counter reset for the new year
+    assert n2025 == "ACME-ДОГ-2025/001"
+    assert n2026 == "ACME-ДОГ-2026/001"  # counter reset for the new year
 
 
 def test_reset_monthly_new_counter_each_month():
@@ -130,9 +130,9 @@ def test_reset_monthly_new_counter_each_month():
     with mock.patch.object(timezone, "now", return_value=_at(2026, 2)):
         with transaction.atomic():
             feb1 = next_document_number("CT", "CT", company=acme)
-    assert jan1 == "ACME-CT-202601-00001"
-    assert jan2 == "ACME-CT-202601-00002"
-    assert feb1 == "ACME-CT-202602-00001"  # fresh counter for February
+    assert jan1 == "ACME-ДОГ-202601-001"
+    assert jan2 == "ACME-ДОГ-202601-002"
+    assert feb1 == "ACME-ДОГ-202602-001"  # fresh counter for February
     # Distinct period keys → distinct counter rows.
     assert DocumentSequence.objects.filter(company=acme, doc_type="CT").count() == 2
 
@@ -146,8 +146,8 @@ def test_reset_never_single_counter_across_years():
     with mock.patch.object(timezone, "now", return_value=_at(2026)):
         with transaction.atomic():
             n2026 = next_document_number("CT", "CT", company=acme)
-    assert n2025 == "ACME-CT-00001"
-    assert n2026 == "ACME-CT-00002"  # keeps counting across the year boundary
+    assert n2025 == "ACME-ДОГ-001"
+    assert n2026 == "ACME-ДОГ-002"  # keeps counting across the year boundary
     assert DocumentSequence.objects.filter(company=acme, doc_type="CT").count() == 1
     assert DocumentSequence.objects.get(company=acme, doc_type="CT").period == "ALL"
 
@@ -162,7 +162,7 @@ def test_sequential_no_gap_within_transaction():
     with transaction.atomic():
         for _ in range(5):
             minted.append(next_document_number("ACT", "ACT", company=acme))
-    assert minted == [f"ACME-ACT-{year}-{i:05d}" for i in range(1, 6)]
+    assert minted == [f"ACME-АКТ-{year}/{i:03d}" for i in range(1, 6)]
     assert len(set(minted)) == 5
 
 
@@ -179,8 +179,8 @@ def test_two_prefixless_companies_share_platform_counter_no_collision():
     with transaction.atomic():
         n1 = next_document_number("CT", "CT", company=one)
         n2 = next_document_number("CT", "CT", company=two)
-    assert n1 == f"CT-{year}-00001"
-    assert n2 == f"CT-{year}-00002"
+    assert n1 == f"ДОГ-{year}/001"
+    assert n2 == f"ДОГ-{year}/002"
     assert n1 != n2
     assert not DocumentSequence.objects.filter(company=one).exists()
     assert not DocumentSequence.objects.filter(company=two).exists()
@@ -192,8 +192,8 @@ def test_prefixless_company_falls_back_to_platform_counter():
     with transaction.atomic():
         platform_first = next_document_number("INV", "INV", company=None)
         plain_next = next_document_number("INV", "INV", company=plain)
-    assert platform_first == f"INV-{year}-00001"
-    assert plain_next == f"INV-{year}-00002"
+    assert platform_first == f"СЧ-{year}/001"
+    assert plain_next == f"СЧ-{year}/002"
 
 
 # ── Editability API ─────────────────────────────────────────────────────────────────

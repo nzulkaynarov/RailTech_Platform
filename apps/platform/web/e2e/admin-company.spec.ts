@@ -199,12 +199,12 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "numbering");
     const samples = page.getByRole("list", { name: "Образец номеров" });
-    await expect(samples.getByText(/DEMO-КП-\d{4}-00001/)).toBeVisible();
+    await expect(samples.getByText(/DEMO-КП-\d{4}\/001/)).toBeVisible();
 
     await page.getByLabel("Префикс нумерации").fill("ACME");
-    await expect(samples.getByText(/ACME-КП-\d{4}-00001/)).toBeVisible();
+    await expect(samples.getByText(/ACME-КП-\d{4}\/001/)).toBeVisible();
     await page.getByLabel("Ширина счётчика").fill("6");
-    await expect(samples.getByText(/ACME-КП-\d{4}-000001/)).toBeVisible();
+    await expect(samples.getByText(/ACME-КП-\d{4}\/000001/)).toBeVisible();
     await expect(
       page.getByText("Новые номера пойдут по этой схеме; выданные не меняются."),
     ).toBeVisible();
@@ -537,7 +537,7 @@ test.describe("Компания: axe и снимки", () => {
         if (tab === "brand") await expect(page.locator('iframe[title^="Образец"]')).toBeVisible();
         if (tab === "numbering") {
           await expect(
-            page.getByRole("list", { name: "Образец номеров" }).getByText(/00001/).first(),
+            page.getByRole("list", { name: "Образец номеров" }).getByText(/\/001/).first(),
           ).toBeVisible();
         }
         await expectNoViolations(page, `${tab} ${String(width)}`);
