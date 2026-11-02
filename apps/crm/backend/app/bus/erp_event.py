@@ -29,6 +29,8 @@ NOT_FOR_CRM: Final = frozenset(
     {
         "uz.railtech.erp.quote.ready_for_approval.v1",
         "uz.railtech.erp.contract.status_changed.v1",
+        # W18A-P4: снимок бланка своей компании (с логотипом) — проекция EDS для писем на бланке.
+        "uz.railtech.erp.letterhead.updated.v1",
     }
 )
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
