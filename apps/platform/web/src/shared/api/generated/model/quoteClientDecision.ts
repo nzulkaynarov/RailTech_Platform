@@ -18,7 +18,7 @@ export interface QuoteClientDecision {
    * @nullable
    */
   reason: string | null;
-  /** `null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник со слов клиента */
+  /** `null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник по подтверждению клиента */
   recorded_by_staff: OnBehalfRecord | null;
   /** Показать «Клиент принял» / «Клиент отклонил»: КП ждёт решения и у сотрудника право ERP `deal.manage` (решает ERP) */
   can_record: boolean;

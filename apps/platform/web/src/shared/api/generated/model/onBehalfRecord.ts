@@ -5,7 +5,7 @@
 import type { OnBehalfChannel } from "./onBehalfChannel";
 
 /**
- * Решение контрагента, записанное сотрудником («Отмечено сотрудником: кто, канал, со слов кого»)
+ * Решение контрагента, записанное сотрудником по его подтверждению («Отмечено сотрудником: кто, канал, лицо клиента, файл»)
  */
 export interface OnBehalfRecord {
   /**
@@ -17,12 +17,20 @@ export interface OnBehalfRecord {
   /** Кто со стороны контрагента (ФИО, должность) */
   counterparty_person: string;
   /**
-   * Когда сообщили (со слов)
+   * Когда клиент сообщил решение
    * @nullable
    */
   occurred_on: string | null;
   /** @nullable */
   comment: string | null;
-  /** Приложен файл (скрин переписки, письмо) */
-  has_evidence: boolean;
+  /**
+   * Имя файла подтверждения клиента (письмо, переписка, скан)
+   * @nullable
+   */
+  evidence_name: string | null;
+  /**
+   * Ссылка BFF на файл подтверждения (`GET /eds/quotes/{id}/client-decision/evidence`); `null` — файла нет
+   * @nullable
+   */
+  evidence_url: string | null;
 }

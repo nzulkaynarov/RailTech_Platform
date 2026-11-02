@@ -5830,7 +5830,14 @@ export const getGetQuoteApprovalResponseOnBehalfRecordMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
-    has_evidence: faker.datatype.boolean(),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6140,7 +6147,14 @@ export const getDecideQuoteApprovalResponseOnBehalfRecordMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
-    has_evidence: faker.datatype.boolean(),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6453,7 +6467,14 @@ export const getSendQuoteByChannelResponseOnBehalfRecordMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
-    has_evidence: faker.datatype.boolean(),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6763,7 +6784,14 @@ export const getRecordQuoteClientDecisionResponseOnBehalfRecordMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
-    has_evidence: faker.datatype.boolean(),
+    evidence_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    evidence_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6950,6 +6978,9 @@ export const getRecordQuoteClientDecisionResponseMock = (
   },
   ...overrideResponse,
 });
+
+export const getDownloadQuoteClientDecisionEvidenceResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getListMemoApprovalsResponseEdsPersonMock = (
   overrideResponse: Partial<EdsPerson> = {},
@@ -23184,6 +23215,29 @@ export const getRecordQuoteClientDecisionMockHandler = (
   );
 };
 
+export const getDownloadQuoteClientDecisionEvidenceMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/quotes/:id/client-decision/evidence",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadQuoteClientDecisionEvidenceResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
 export const getListMemoApprovalsMockHandler = (
   overrideResponse?:
     | MemoApprovalPage
@@ -28865,6 +28919,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDecideQuoteApprovalMockHandler(),
   getSendQuoteByChannelMockHandler(),
   getRecordQuoteClientDecisionMockHandler(),
+  getDownloadQuoteClientDecisionEvidenceMockHandler(),
   getListMemoApprovalsMockHandler(),
   getGetMemoApprovalMockHandler(),
   getDecideMemoApprovalMockHandler(),

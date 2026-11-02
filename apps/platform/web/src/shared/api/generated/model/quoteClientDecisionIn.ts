@@ -6,7 +6,7 @@ import type { OnBehalfChannel } from "./onBehalfChannel";
 import type { QuoteClientDecisionInDecision } from "./quoteClientDecisionInDecision";
 
 /**
- * Решение клиента со слов. `comment` — что сказал клиент; для `reject` это причина отказа (как у отказа в кабинете). `occurred_on` — не позже сегодняшнего дня. Файл — по желанию.
+ * Решение клиента по его подтверждению. `comment` — суть ответа клиента; для `reject` это причина отказа (как у отказа в кабинете). `occurred_on` — не позже сегодняшнего дня. Файл подтверждения обязателен.
  */
 export interface QuoteClientDecisionIn {
   decision: QuoteClientDecisionInDecision;
@@ -22,6 +22,6 @@ export interface QuoteClientDecisionIn {
    * @maxLength 2000
    */
   comment: string;
-  /** PDF или изображение (jpg, png, webp) до 20 МБ */
-  file?: Blob | File;
+  /** Подтверждение клиента: письмо, переписка, скан (изображение, PDF, doc, docx, xls, xlsx, csv, txt) до 20 МБ */
+  file: Blob | File;
 }

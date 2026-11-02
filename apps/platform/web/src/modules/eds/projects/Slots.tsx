@@ -5,6 +5,7 @@ import type { ProjectCard } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { History, type HistoryItem } from "../../../shared/ui/History";
+import { OnBehalfNote } from "../../../shared/ui/OnBehalf";
 import { DecisionSlot } from "../decision/DecisionSlot";
 import { ActPanel } from "./ActPanel";
 import { ContractPanel } from "./ContractPanel";
@@ -70,6 +71,12 @@ export function JournalList({ card }: { card: ProjectCard }) {
         {entry.number ? <span> · {entry.number}</span> : null}
         {entry.reason ? (
           <span className="pf-dec-note">{t("journal.reason", { reason: entry.reason })}</span>
+        ) : null}
+        {entry.on_behalf ? (
+          <OnBehalfNote
+            channel={entry.on_behalf.channel}
+            person={entry.on_behalf.counterparty_person}
+          />
         ) : null}
       </>
     ),

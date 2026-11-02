@@ -10034,8 +10034,8 @@ export const getRecordQuoteClientDecisionUrl = (id: string) => {
 };
 
 /**
- * A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по телефону, почте, в мессенджере, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и необязательный файл `file` — скрин переписки, письмо; PDF или изображение до 20 МБ). Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата со слов не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
- * @summary EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
+ * A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по почте, в мессенджере, по телефону, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и обязательный файл `file` — подтверждение клиента: письмо, переписка, скан; изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ; решение юриста 2026-11-02: устного принятия мало). Нет файла — 422 `evidence_required`, не тот тип или размер — 422 `evidence_invalid`. Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+ * @summary EDS · Отметить решение клиента по отправленному КП по его подтверждению («Клиент принял», «Клиент отклонил»)
  */
 export const recordQuoteClientDecision = async (
   id: string,
@@ -10048,9 +10048,7 @@ export const recordQuoteClientDecision = async (
   formData.append(`counterparty_person`, quoteClientDecisionIn.counterparty_person);
   formData.append(`occurred_on`, quoteClientDecisionIn.occurred_on);
   formData.append(`comment`, quoteClientDecisionIn.comment);
-  if (quoteClientDecisionIn.file !== undefined) {
-    formData.append(`file`, quoteClientDecisionIn.file);
-  }
+  formData.append(`file`, quoteClientDecisionIn.file);
 
   return http<QuoteApprovalCard>(getRecordQuoteClientDecisionUrl(id), {
     ...options,
@@ -10124,7 +10122,7 @@ export type RecordQuoteClientDecisionMutationVariables = {
 };
 
 /**
- * @summary EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
+ * @summary EDS · Отметить решение клиента по отправленному КП по его подтверждению («Клиент принял», «Клиент отклонил»)
  */
 export const useRecordQuoteClientDecision = <
   TError = ErrorType<
@@ -10156,6 +10154,178 @@ export const useRecordQuoteClientDecision = <
 > => {
   return useMutation(getRecordQuoteClientDecisionMutationOptions(options), queryClient);
 };
+
+export const getDownloadQuoteClientDecisionEvidenceUrl = (id: string) => {
+  return `/api/v1/eds/quotes/${id}/client-decision/evidence`;
+};
+
+/**
+ * Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла BFF берёт из решения клиента КП этого маршрута, а не из запроса. Файла нет — 404. Чтение — как у карточки КП.
+ * @summary EDS · Файл подтверждения клиента к решению по КП, записанному сотрудником
+ */
+export const downloadQuoteClientDecisionEvidence = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadQuoteClientDecisionEvidenceUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadQuoteClientDecisionEvidenceQueryKey = (id: string) => {
+  return [`/api/v1/eds/quotes/${id}/client-decision/evidence`] as const;
+};
+
+export const getDownloadQuoteClientDecisionEvidenceQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadQuoteClientDecisionEvidenceQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>> = ({
+    signal,
+  }) => downloadQuoteClientDecisionEvidence(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadQuoteClientDecisionEvidenceQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>
+>;
+export type DownloadQuoteClientDecisionEvidenceQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadQuoteClientDecisionEvidence<
+  TData = Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+          TError,
+          Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadQuoteClientDecisionEvidence<
+  TData = Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+          TError,
+          Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadQuoteClientDecisionEvidence<
+  TData = Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Файл подтверждения клиента к решению по КП, записанному сотрудником
+ */
+
+export function useDownloadQuoteClientDecisionEvidence<
+  TData = Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<typeof downloadQuoteClientDecisionEvidence>>,
+        TError,
+        TData
+      >
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadQuoteClientDecisionEvidenceQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListMemoApprovalsUrl = (params?: ListMemoApprovalsParams) => {
   const normalizedParams = new URLSearchParams();
