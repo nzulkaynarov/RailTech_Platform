@@ -6,8 +6,9 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterCard } from "../../../shared/api/generated/model";
-import { useGetLetter, useListLetterKinds } from "../../../shared/api/generated/platform-bff";
+import type { DictionaryItem, LetterCard } from "../../../shared/api/generated/model";
+import { useGetLetter } from "../../../shared/api/generated/platform-bff";
+import { localName, useLetterDictionary } from "../dictionaries";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
@@ -146,17 +147,20 @@ function Links({ letter }: { letter: LetterCard }) {
 function useRegistryItems(letter: LetterCard) {
   const { t, i18n } = useTranslation("letters");
   const { date } = useFormat();
-  const kinds = useListLetterKinds({
-    query: { enabled: Boolean(letter.kind), staleTime: 5 * 60_000 },
-  });
+  // Справочники — со скрытыми значениями (EDS-REG): у старого письма вид или способ мог быть скрыт администратором.
+  const kinds = useLetterDictionary("letter-kinds", true, Boolean(letter.kind));
+  const methods = useLetterDictionary("receipt-methods", true, Boolean(letter.receipt_method));
   if (!letter.kind && !letter.receipt_method) return [];
-  const lang = i18n.language.slice(0, 2) as "ru" | "uz" | "en";
-  const kind = kinds.data?.items.find((item) => item.code === letter.kind);
+  const label = (items: DictionaryItem[] | undefined, code: string | null | undefined) => {
+    if (!code) return null;
+    const found = items?.find((item) => item.code === code);
+    return found ? localName(found.name, i18n.language) : code;
+  };
   return [
-    { label: t("card.fields.kind"), value: kind ? kind.name[lang] || kind.name.ru : letter.kind },
+    { label: t("card.fields.kind"), value: label(kinds.data?.items, letter.kind) },
     {
       label: t("card.fields.receiptMethod"),
-      value: letter.receipt_method ? t(`register.method.${letter.receipt_method}`) : null,
+      value: label(methods.data?.items, letter.receipt_method),
     },
     { label: t("card.fields.signedBy"), value: letter.signed_by },
     {

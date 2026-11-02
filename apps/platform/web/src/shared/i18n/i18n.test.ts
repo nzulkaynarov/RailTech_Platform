@@ -114,6 +114,7 @@ const SETTINGS_SUBTITLES = [
   "modules:admin.roles.subtitle",
   "articles:admin.subtitle",
   "audit:page.subtitle",
+  "letters:settings.subtitle",
 ] as const;
 const CARD_PURPOSES = [
   "erp",

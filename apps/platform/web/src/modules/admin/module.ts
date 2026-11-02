@@ -59,6 +59,15 @@ export const admin: ModuleConfig = {
       actionTo: "/admin/org",
     },
     {
+      // «Документооборот» (EDS-REG): справочники писем — виды входящих документов, способы получения; вкладки `?tab=`.
+      key: "docflow",
+      path: "/admin/docflow",
+      access: { resource: "admin" },
+      tabs: [{ key: "card" }],
+      defaults: { panelOpen: false },
+      actionTo: "/admin/org",
+    },
+    {
       // Telegram-бот в одном месте (W15-H4): подключение, тексты, поведение, база знаний, шаблоны ответов, выгрузки.
       key: "bot",
       path: "/admin/bot",

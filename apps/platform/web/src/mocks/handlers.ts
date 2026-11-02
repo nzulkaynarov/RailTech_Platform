@@ -21,6 +21,7 @@ import { erpCatalogHandlers } from "./erpCatalog";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsInstructionsHandlers } from "./edsInstructions";
+import { dictionariesHandlers } from "./dictionaries";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
@@ -173,6 +174,7 @@ export const handlers = [
   ...edsDocumentsHandlers,
   ...edsInstructionsHandlers, // P8b: до писем — `*/eds/letters/*` иначе перехватил бы POST-пути
   ...edsLettersHandlers,
+  ...dictionariesHandlers,
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,
   ...erpCalcHandlers,

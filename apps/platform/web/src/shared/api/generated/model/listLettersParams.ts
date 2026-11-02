@@ -24,6 +24,11 @@ export type ListLettersParams = {
    */
   overdue?: boolean;
   /**
+   * Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG)
+   * @pattern ^[a-z][a-z_]{0,31}$
+   */
+  kind?: string;
+  /**
    * Непрозрачный курсор из `next_cursor`
    * @maxLength 500
    */

@@ -99,6 +99,12 @@ import type {
   CreatedId,
   CsrfFailedResponse,
   DeputyUpdate,
+  DictionaryItem,
+  DictionaryItemIn,
+  DictionaryItemList,
+  DictionaryItemPatch,
+  DictionaryList,
+  DictionaryOrderIn,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -215,6 +221,7 @@ import type {
   ListCategoryRequestsParams,
   ListCrmClientsParams,
   ListCrmLeadsParams,
+  ListDictionaryItemsParams,
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
   ListEdsProjectsParams,
@@ -28873,6 +28880,798 @@ export const useRegisterLetter = <
   TContext
 > => {
   return useMutation(getRegisterLetterMutationOptions(options), queryClient);
+};
+
+export const getListDictionariesUrl = () => {
+  return `/api/v1/dictionaries`;
+};
+
+/**
+ * Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
+ * @summary Справочники · каталог
+ */
+export const listDictionaries = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryList> => {
+  return http<DictionaryList>(getListDictionariesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDictionariesQueryKey = () => {
+  return [`/api/v1/dictionaries`] as const;
+};
+
+export const getListDictionariesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDictionariesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDictionaries>>> = ({ signal }) =>
+    listDictionaries({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDictionaries>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDictionariesQueryResult = NonNullable<Awaited<ReturnType<typeof listDictionaries>>>;
+export type ListDictionariesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaries>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaries>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочники · каталог
+ */
+
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDictionariesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListDictionaryItemsUrl = (kind: string, params?: ListDictionaryItemsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/dictionaries/${kind}?${stringifiedParams}`
+    : `/api/v1/dictionaries/${kind}`;
+};
+
+/**
+ * Значения в порядке показа: по умолчанию действующие (формы), `include_hidden=true` — все со скрытыми и признаком `used` (экран администратора; названия у старых писем). Доступ — по домену вида: справочники документооборота читают `eds.inbox`, `eds.inbox.register` и `admin`. Неизвестный вид — 404.
+ * @summary Справочники · значения
+ */
+export const listDictionaryItems = async (
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItemList> => {
+  return http<DictionaryItemList>(getListDictionaryItemsUrl(kind, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDictionaryItemsQueryKey = (
+  kind: string,
+  params?: ListDictionaryItemsParams,
+) => {
+  return [`/api/v1/dictionaries/${kind}`, ...(params ? [params] : [])] as const;
+};
+
+export const getListDictionaryItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDictionaryItemsQueryKey(kind, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDictionaryItems>>> = ({ signal }) =>
+    listDictionaryItems(kind, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: kind !== null && kind !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListDictionaryItemsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDictionaryItems>>
+>;
+export type ListDictionaryItemsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params: undefined | ListDictionaryItemsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaryItems>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaryItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaryItems>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaryItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочники · значения
+ */
+
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDictionaryItemsQueryOptions(kind, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateDictionaryItemUrl = (kind: string) => {
+  return `/api/v1/dictionaries/${kind}`;
+};
+
+/**
+ * Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+ * @summary Справочники · добавить значение
+ */
+export const createDictionaryItem = async (
+  kind: string,
+  dictionaryItemIn: DictionaryItemIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItem>(getCreateDictionaryItemUrl(kind), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryItemIn),
+  });
+};
+
+export const getCreateDictionaryItemMutationKey = () => ["createDictionaryItem"] as const;
+
+export const getCreateDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDictionaryItem>>,
+    TError,
+    CreateDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDictionaryItem>>,
+  TError,
+  CreateDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDictionaryItem>>,
+    CreateDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, data } = props ?? {};
+
+    return createDictionaryItem(kind, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDictionaryItem>>
+>;
+export type CreateDictionaryItemMutationBody = DictionaryItemIn;
+export type CreateDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateDictionaryItemMutationVariables = { kind: string; data: DictionaryItemIn };
+
+/**
+ * @summary Справочники · добавить значение
+ */
+export const useCreateDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDictionaryItem>>,
+      TError,
+      CreateDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDictionaryItem>>,
+  TError,
+  CreateDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDictionaryItemMutationOptions(options), queryClient);
+};
+
+export const getReorderDictionaryItemsUrl = (kind: string) => {
+  return `/api/v1/dictionaries/${kind}/order`;
+};
+
+/**
+ * Раздел `admin` — полный. Все коды справочника (со скрытыми) в новом порядке.
+ * @summary Справочники · порядок
+ */
+export const reorderDictionaryItems = async (
+  kind: string,
+  dictionaryOrderIn: DictionaryOrderIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItemList> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItemList>(getReorderDictionaryItemsUrl(kind), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryOrderIn),
+  });
+};
+
+export const getReorderDictionaryItemsMutationKey = () => ["reorderDictionaryItems"] as const;
+
+export const getReorderDictionaryItemsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderDictionaryItems>>,
+    TError,
+    ReorderDictionaryItemsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>,
+  TError,
+  ReorderDictionaryItemsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReorderDictionaryItemsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reorderDictionaryItems>>,
+    ReorderDictionaryItemsMutationVariables
+  > = (props) => {
+    const { kind, data } = props ?? {};
+
+    return reorderDictionaryItems(kind, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReorderDictionaryItemsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>
+>;
+export type ReorderDictionaryItemsMutationBody = DictionaryOrderIn;
+export type ReorderDictionaryItemsMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReorderDictionaryItemsMutationVariables = { kind: string; data: DictionaryOrderIn };
+
+/**
+ * @summary Справочники · порядок
+ */
+export const useReorderDictionaryItems = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reorderDictionaryItems>>,
+      TError,
+      ReorderDictionaryItemsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>,
+  TError,
+  ReorderDictionaryItemsMutationVariables,
+  TContext
+> => {
+  return useMutation(getReorderDictionaryItemsMutationOptions(options), queryClient);
+};
+
+export const getUpdateDictionaryItemUrl = (kind: string, code: string) => {
+  return `/api/v1/dictionaries/${kind}/${code}`;
+};
+
+/**
+ * Раздел `admin` — полный. Код не меняется. В закрытом справочнике меняются только названия.
+ * @summary Справочники · переименовать, скрыть, вернуть
+ */
+export const updateDictionaryItem = async (
+  kind: string,
+  code: string,
+  dictionaryItemPatch: DictionaryItemPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItem>(getUpdateDictionaryItemUrl(kind, code), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryItemPatch),
+  });
+};
+
+export const getUpdateDictionaryItemMutationKey = () => ["updateDictionaryItem"] as const;
+
+export const getUpdateDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDictionaryItem>>,
+    TError,
+    UpdateDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDictionaryItem>>,
+  TError,
+  UpdateDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDictionaryItem>>,
+    UpdateDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, code, data } = props ?? {};
+
+    return updateDictionaryItem(kind, code, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDictionaryItem>>
+>;
+export type UpdateDictionaryItemMutationBody = DictionaryItemPatch;
+export type UpdateDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateDictionaryItemMutationVariables = {
+  kind: string;
+  code: string;
+  data: DictionaryItemPatch;
+};
+
+/**
+ * @summary Справочники · переименовать, скрыть, вернуть
+ */
+export const useUpdateDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDictionaryItem>>,
+      TError,
+      UpdateDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDictionaryItem>>,
+  TError,
+  UpdateDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDictionaryItemMutationOptions(options), queryClient);
+};
+
+export const getDeleteDictionaryItemUrl = (kind: string, code: string) => {
+  return `/api/v1/dictionaries/${kind}/${code}`;
+};
+
+/**
+ * Раздел `admin` — полный. Значение уже использовано — 409 `value_in_use` (его скрывают).
+ * @summary Справочники · удалить неиспользованное
+ */
+export const deleteDictionaryItem = async (
+  kind: string,
+  code: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteDictionaryItemUrl(kind, code), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDictionaryItemMutationKey = () => ["deleteDictionaryItem"] as const;
+
+export const getDeleteDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDictionaryItem>>,
+    TError,
+    DeleteDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>,
+  TError,
+  DeleteDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDictionaryItem>>,
+    DeleteDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, code } = props ?? {};
+
+    return deleteDictionaryItem(kind, code, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>
+>;
+
+export type DeleteDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type DeleteDictionaryItemMutationVariables = { kind: string; code: string };
+
+/**
+ * @summary Справочники · удалить неиспользованное
+ */
+export const useDeleteDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDictionaryItem>>,
+      TError,
+      DeleteDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>,
+  TError,
+  DeleteDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteDictionaryItemMutationOptions(options), queryClient);
 };
 
 export const getListLetterKindsUrl = () => {
