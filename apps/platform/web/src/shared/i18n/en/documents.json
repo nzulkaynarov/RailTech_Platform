@@ -69,7 +69,7 @@
       "created": "Created",
       "action": "Action"
     },
-    "noNumber": "number is assigned on sending",
+    "noNumber": "number is assigned on registration",
     "open": "Open document: {{subject}}",
     "continue": "Continue",
     "continueLabel": "Continue document: {{subject}}",

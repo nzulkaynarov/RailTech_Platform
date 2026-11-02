@@ -69,7 +69,7 @@
       "created": "Yaratilgan",
       "action": "Amal"
     },
-    "noNumber": "raqam yuborilganda beriladi",
+    "noNumber": "raqam ro‘yxatga olishda beriladi",
     "open": "Hujjatni ochish: {{subject}}",
     "continue": "Davom ettirish",
     "continueLabel": "Hujjatni davom ettirish: {{subject}}",
