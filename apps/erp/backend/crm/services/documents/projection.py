@@ -85,7 +85,18 @@ def _note_row(item) -> dict:
     }
 
 
-def _item_row(item, line_no: int, projected_unit: dict, projected_line_total: dict) -> dict:
+def _lead_pending(item, quote) -> bool:
+    """Срок строки неизвестен (D26G-8): у строки срока нет, а у КП пометка «срок уточняется» от «Расчёт готов»."""
+    from crm.services.calculation import LEAD_PENDING_NOTE
+
+    return (
+        not item.lead_time_days
+        and quote.delivery_lead_time_days == 0
+        and (quote.delivery_note or "") == LEAD_PENDING_NOTE
+    )
+
+
+def _item_row(item, line_no: int, projected_unit: dict, projected_line_total: dict, *, quote=None) -> dict:
     """A priced line carrying ONE all-in delivered price (document charges already spread in).
 
     NEVER a separate «Доп. расходы» line: a goods-vs-charges breakout would let the buyer
@@ -101,6 +112,7 @@ def _item_row(item, line_no: int, projected_unit: dict, projected_line_total: di
         "quantity": item.quantity,
         "unit": item.unit,
         "lead_time_days": item.lead_time_days,
+        "lead_pending": quote is not None and _lead_pending(item, quote),
         "final_price_excl_vat": projected_unit.get(item.id, Decimal("0")),
         "line_total": projected_line_total.get(item.id, Decimal("0")),
     }
@@ -143,7 +155,7 @@ def client_projection_items(quote) -> list:
             rows.append(_note_row(item))
         else:
             line_no += 1
-            rows.append(_item_row(item, line_no, projected_unit, projected_line_total))
+            rows.append(_item_row(item, line_no, projected_unit, projected_line_total, quote=quote))
 
     _annotate_section_subtotals(rows)
     return [row for row in rows if _keep_row(row)]

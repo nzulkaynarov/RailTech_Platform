@@ -8,6 +8,13 @@
   снимаются (`release_for_lost_deal`, хук в `transition_deal_stage`), отгрузка по ней — 409 `DEAL_LOST`; подсчёт для
   верности ещё и не считает резервы проигранных. Резерв строки расчёта один; повторное «Зарезервировать» меняет
   количество (не больше свободного остатка плюс уже удерживаемого этой строкой, 409 `NOT_ENOUGH_STOCK`).
+* **Закрыта для склада** (`deal_closed_for_stock`, D26G-1) только проигранная заявка или выполненная (SPEC-v3 §2.3
+  ст. 7: `CLOSED_WON` и исполнение закрыто целиком). `CLOSED_WON` ставится при подписании договора — до оплаты и
+  поставки, поэтому выигранная заявка открыта для исполнения: резерв, приёмка под проект и отгрузка по ней идут.
+* **Принятие КП** (SPEC-v3 §3.1 ш. 6): `reserve_for_quote` резервирует свободный остаток под строки-товары принятого КП
+  (системное действие, идемпотентно: резерв строки один и не больше количества строки) и возвращает дефицит — по нему
+  `supply.services.provision` заводит черновик заказа поставщику. Отклонение КП и отмена проекта снимают резервы
+  заявки — `release_for_deal`.
 * Резерв, отгрузка, корректировка и приёмка одного товара идут под блокировкой строки товара (`select_for_update` на
   `catalog.Product`, товары блокируются по возрастанию id): две вкладки не отдадут один остаток двум проектам.
 * **Отгрузка** — по резервам одной заявки, после подписания договора (есть `Fulfillment`, иначе 409
@@ -47,7 +54,7 @@ logger = logging.getLogger(__name__)
 
 MAX_CELL = 32
 LOST_STAGE = "CLOSED_LOST"
-CLOSED_STAGES = ("CLOSED_LOST", "CLOSED_WON")
+WON_STAGE = "CLOSED_WON"
 
 
 # ── справочные вещи ────────────────────────────────────────────────────────────────────────────────────────────────
@@ -81,6 +88,20 @@ def lock_products(product_ids: Iterable[int]) -> None:
     ids = sorted({pid for pid in product_ids if pid})
     if ids:
         list(Product.objects.select_for_update().filter(pk__in=ids).order_by("pk").values_list("pk", flat=True))
+
+
+def deal_closed_for_stock(deal) -> bool:
+    """Заявка закрыта для резерва и приёмки под проект: проиграна (`CLOSED_LOST`) или выполнена — `CLOSED_WON` и
+    исполнение закрыто целиком (`deal_execution_is_complete`: счета оплачены, акты подписаны, поставка принята).
+    `CLOSED_WON` сам по себе — договор подписан, исполнение только начинается (SPEC-v3 §2.3)."""
+    stage = deal.stage.code if deal.stage_id else ""
+    if stage == LOST_STAGE:
+        return True
+    if stage == WON_STAGE:
+        from crm.services.deal_documents import deal_execution_is_complete
+
+        return deal_execution_is_complete(deal)
+    return False
 
 
 def active_reservations():
@@ -240,8 +261,7 @@ def reserve(user, deal_id: int, item_id: int, quantity: int) -> Reservation:
     """Зарезервировать товар под строку расчёта (или изменить уже удерживаемое количество)."""
     require_supply(user)
     item = _item_for_reservation(deal_id, item_id)
-    stage = item.quote.deal.stage.code if item.quote.deal.stage_id else ""
-    if stage in CLOSED_STAGES:
+    if deal_closed_for_stock(item.quote.deal):
         raise StockError("DEAL_CLOSED", 409)
     if not item.product_id:
         raise StockError("PRODUCT_REQUIRED", 409)
@@ -293,14 +313,7 @@ def release(user, reservation_id: int) -> Reservation:
         raise StockError("RESERVATION_NOT_FOUND", 404)
     if reservation.status != ReservationStatus.ACTIVE:
         raise StockError("RESERVATION_NOT_ACTIVE", 409)
-    reservation.released_at = timezone.now()
-    reservation.released_by = user if getattr(user, "pk", None) else None
-    if reservation.shipped_quantity:
-        reservation.quantity = reservation.shipped_quantity
-        reservation.status = ReservationStatus.FULFILLED
-    else:
-        reservation.status = ReservationStatus.RELEASED
-    reservation.save(update_fields=["quantity", "status", "released_at", "released_by"])
+    _close(reservation, user)
     _log_deal(
         reservation.deal,
         user,
@@ -312,27 +325,113 @@ def release(user, reservation_id: int) -> Reservation:
     return reservation
 
 
+def _close(reservation: Reservation, user=None) -> None:
+    """Снять активный резерв: неотгруженное возвращается в свободный остаток, отгруженная часть остаётся фактом."""
+    reservation.released_at = timezone.now()
+    if getattr(user, "pk", None):
+        reservation.released_by = user
+    if reservation.shipped_quantity:
+        reservation.quantity = reservation.shipped_quantity
+        reservation.status = ReservationStatus.FULFILLED
+    else:
+        reservation.status = ReservationStatus.RELEASED
+    reservation.save(update_fields=["quantity", "status", "released_at", "released_by"])
+
+
 @transaction.atomic
-def release_for_lost_deal(deal) -> int:
-    """Заявка проиграна (CLOSED_LOST): её резервы снимаются, единицы возвращаются в свободный остаток — другая заявка не
-    резервирует те же единицы, а отгрузка по проигранной невозможна. Отгруженная часть остаётся фактом. Вызывает
-    `crm.services.deals.transition_deal_stage` внутри своей транзакции; системное действие, прав не проверяет."""
+def release_for_deal(deal, *, reason: str = "", user=None) -> int:
+    """Снять все резервы заявки (D26G-1): клиент отклонил КП, проект отменён или проигран. Единицы возвращаются в
+    свободный остаток, отгруженная часть остаётся фактом; черновики заказов поставщику, заведённые только под эту заявку,
+    отменяются (`supply.services.provision.cancel_drafts_for_deal`) — отправленные и подтверждённые не трогаются.
+    Системное действие, прав не проверяет; повторный вызов ничего не меняет. Возвращает число снятых резервов.
+
+    Точка входа для отклонения КП (`perform_quote_rejection`), отмены проекта и проигрыша (`transition_deal_stage`)."""
+    from supply.services.provision import cancel_drafts_for_deal
+
     active = Reservation.objects.filter(deal=deal, status=ReservationStatus.ACTIVE)
     peek = list(active.values_list("product_id", flat=True))
-    if not peek:
-        return 0
-    lock_products(peek)  # порядок «товар → резерв», как у reserve()
     released = 0
-    for reservation in active.select_for_update():
-        reservation.released_at = timezone.now()
-        if reservation.shipped_quantity:
-            reservation.quantity = reservation.shipped_quantity
-            reservation.status = ReservationStatus.FULFILLED
-        else:
-            reservation.status = ReservationStatus.RELEASED
-        reservation.save(update_fields=["quantity", "status", "released_at"])
-        released += 1
+    if peek:
+        lock_products(peek)  # порядок «товар → резерв», как у reserve()
+        for reservation in active.select_for_update():
+            _close(reservation, user)
+            released += 1
+    cancelled = cancel_drafts_for_deal(deal, reason=reason)
+    if released or cancelled:
+        detail = f"резервов: {released}" + (f", черновиков заказа отменено: {cancelled}" if cancelled else "")
+        _log_deal(
+            deal,
+            user,
+            "Резервы сняты",
+            f"{detail}" + (f" · {reason}" if reason else ""),
+            "stock.released_for_deal",
+            {"released": released, "cancelled_orders": cancelled, "reason": reason},
+        )
     return released
+
+
+def release_for_lost_deal(deal) -> int:
+    """Заявка проиграна (CLOSED_LOST): её резервы снимаются, единицы возвращаются в свободный остаток — другая заявка не
+    резервирует те же единицы, а отгрузка по проигранной невозможна. Вызывает `crm.services.deals.transition_deal_stage`
+    внутри своей транзакции."""
+    return release_for_deal(deal, reason="Заявка закрыта: отказ")
+
+
+@transaction.atomic
+def reserve_for_quote(quote, *, user=None) -> dict[int, int]:
+    """КП принято (SPEC-v3 §3.1 ш. 6): свободный остаток резервируется под строки-товары КП с карточкой каталога; вернуть
+    дефицит по строкам `{quote_item_id: недостающее количество}`. Системное действие, прав не проверяет.
+
+    Идемпотентно: резерв строки один, растёт только до количества строки, повторный вызов ничего не добавляет. Резерв,
+    взятый вручную до принятия, засчитывается. Товар без учёта на складе (нет строки остатка) — весь в дефиците."""
+    from crm.services.calculation import zone_of
+
+    deal = quote.deal
+    if deal_closed_for_stock(deal):
+        return {}
+    items = [
+        item
+        for item in quote.items.billable().select_related("product__domain_type", "calc")
+        if item.product_id and not item.product.is_service and zone_of(item) == "goods" and item.quantity > 0
+    ]
+    if not items:
+        return {}
+    lock_products(item.product_id for item in items)
+    shortage: dict[int, int] = {}
+    reserved_now: list[str] = []
+    for item in items:
+        current = (
+            Reservation.objects.select_for_update().filter(quote_item=item, status=ReservationStatus.ACTIVE).first()
+        )
+        need = max(item.quantity - (current.quantity if current else 0), 0)
+        free = availability([item.product_id])[item.product_id].free
+        add = min(need, free)
+        if add > 0:
+            if current is None:
+                current = Reservation.objects.create(
+                    product_id=item.product_id,
+                    deal=deal,
+                    quote_item=item,
+                    quantity=add,
+                    created_by=user if getattr(user, "pk", None) else None,
+                )
+            else:
+                current.quantity += add
+                current.save(update_fields=["quantity"])
+            reserved_now.append(f"{item.product.name}: {add}")
+        missing = item.quantity - (current.quantity if current else 0)
+        if missing > 0:
+            shortage[item.pk] = missing
+    if reserved_now:
+        _log_deal(
+            deal,
+            user,
+            "Резерв на складе по принятому КП",
+            "; ".join(reserved_now),
+            "stock.reserved_on_accept",
+            {"lines": len(reserved_now)},
+        )
+    return shortage
 
 
 @transaction.atomic
@@ -341,13 +440,7 @@ def sync_reservation(item) -> None:
     остаётся фактом). Вызывает `crm.services.calculation.update_line` внутри своей транзакции."""
     for reservation in Reservation.objects.select_for_update().filter(quote_item=item, status=ReservationStatus.ACTIVE):
         if reservation.product_id != item.product_id:
-            reservation.released_at = timezone.now()
-            if reservation.shipped_quantity:
-                reservation.quantity = reservation.shipped_quantity
-                reservation.status = ReservationStatus.FULFILLED
-            else:
-                reservation.status = ReservationStatus.RELEASED
-            reservation.save(update_fields=["quantity", "status", "released_at"])
+            _close(reservation)
         elif reservation.quantity > item.quantity:
             reservation.quantity = max(item.quantity, reservation.shipped_quantity, 1)
             if reservation.shipped_quantity >= reservation.quantity:
@@ -359,13 +452,7 @@ def sync_reservation(item) -> None:
 def release_for_item(item) -> None:
     """Строка расчёта удаляется — её резерв снимается (вызывает `crm.services.calculation.delete_line`)."""
     for reservation in Reservation.objects.select_for_update().filter(quote_item=item, status=ReservationStatus.ACTIVE):
-        reservation.released_at = timezone.now()
-        if reservation.shipped_quantity:
-            reservation.quantity = reservation.shipped_quantity
-            reservation.status = ReservationStatus.FULFILLED
-        else:
-            reservation.status = ReservationStatus.RELEASED
-        reservation.save(update_fields=["quantity", "status", "released_at"])
+        _close(reservation)
 
 
 # ── отгрузки ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -564,13 +651,17 @@ __all__ = [
     "add_stock",
     "adjust",
     "availability",
+    "deal_closed_for_stock",
     "default_warehouse",
     "goods_fully_shipped",
     "lock_products",
     "next_number",
     "person_name",
     "release",
+    "release_for_deal",
     "release_for_item",
+    "release_for_lost_deal",
+    "reserve_for_quote",
     "sync_reservation",
     "require_staff",
     "reserve",

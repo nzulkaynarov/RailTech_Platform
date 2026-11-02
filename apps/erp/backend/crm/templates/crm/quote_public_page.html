@@ -300,7 +300,7 @@
                   {% endif %}
                 </td>
                 <td class="center" data-label="Кол-во">{{ item.quantity|qty:item.unit }}</td>
-                {% if show_lead_time and has_line_lead_time %}<td class="center" data-label="Срок / наличие">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% else %}В наличии{% endif %}</td>{% endif %}
+                {% if show_lead_time and has_line_lead_time %}<td class="center" data-label="Срок / наличие">{% if item.lead_time_days %}до {{ item.lead_time_days }} дн.{% elif quote.effective_delivery_lead_time_days %}до {{ quote.effective_delivery_lead_time_days }} дн.{% elif item.lead_pending %}уточняется{% else %}В наличии{% endif %}</td>{% endif %}
                 <td class="num" data-label="Цена за ед. без НДС">{{ item.final_price_excl_vat|money }}</td>
                 <td class="num cell-total" data-label="Сумма без НДС">{{ item.line_total|money }}</td>
               </tr>
