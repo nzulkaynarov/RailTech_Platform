@@ -28,6 +28,7 @@ from app.api import (
     crm_messages,
     crm_requests,
     dashboard,
+    dictionaries,
     eds_approvals,
     eds_documents,
     eds_letters,
@@ -129,6 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
+    app.include_router(dictionaries.router, prefix=API_PREFIX)
     app.include_router(inbound_mail.router, prefix=API_PREFIX)
     app.include_router(inbound_mail.admin_router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)
