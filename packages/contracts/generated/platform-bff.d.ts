@@ -1422,10 +1422,30 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * EDS · Отметить решение клиента по отправленному КП со слов («Клиент принял», «Клиент отклонил»)
-     * @description A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по телефону, почте, в мессенджере, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и необязательный файл `file` — скрин переписки, письмо; PDF или изображение до 20 МБ). Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата со слов не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
+     * EDS · Отметить решение клиента по отправленному КП по его подтверждению («Клиент принял», «Клиент отклонил»)
+     * @description A1 волны 18a («Отметить за контрагента»): клиент сообщил решение по почте, в мессенджере, по телефону, лично или на бумаге, а не в кабинете. ERP `POST /crm/quotes/{id}/record-client-decision/` по КП маршрута (multipart: поля и обязательный файл `file` — подтверждение клиента: письмо, переписка, скан; изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ; решение юриста 2026-11-02: устного принятия мало). Нет файла — 422 `evidence_required`, не тот тип или размер — 422 `evidence_invalid`. Дальше — та же цепочка, что при онлайн-решении клиента: принято — проект, договор, резерв, события и уведомления; отклонено — заявка на расчёт, резервы сняты. Только отправленное КП (иначе 409 `CONFLICT`, `details.reason = quote_not_sent`); право ERP `deal.manage` (иначе 403); дата не в будущем, лицо со стороны клиента и комментарий обязательны (422 `VALIDATION_FAILED`, `details.fields`). В журнале и событии `quote.accepted` / `quote.rejected` — кто записал, канал и лицо (`recorded_by_staff`). Ответ — обновлённая карточка КП.
      */
     post: operations["recordQuoteClientDecision"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/quotes/{id}/client-decision/evidence": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Файл подтверждения клиента к решению по КП, записанному сотрудником
+     * @description Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла BFF берёт из решения клиента КП этого маршрута, а не из запроса. Файла нет — 404. Чтение — как у карточки КП.
+     */
+    get: operations["downloadQuoteClientDecisionEvidence"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -7500,7 +7520,7 @@ export interface components {
       number: string | null;
       /** @description Причина или заметка к действию; пусто, если её не было */
       reason: string;
-      /** @description Действие контрагента записал сотрудник со слов (КП принято или отклонено, редакция договора согласована); нет или `null` — нет */
+      /** @description Действие контрагента записал сотрудник (КП принято или отклонено по подтверждению клиента, редакция договора согласована); нет или `null` — нет */
       on_behalf?: components["schemas"]["OnBehalfNote"] | null;
     };
     ProjectQuote: {
@@ -8237,7 +8257,7 @@ export interface components {
       decided_at: string | null;
       /** @description Причина отказа клиента */
       reason: string | null;
-      /** @description `null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник со слов клиента */
+      /** @description `null` — клиент решил сам (кабинет, ссылка); иначе — решение записал сотрудник по подтверждению клиента */
       recorded_by_staff: components["schemas"]["OnBehalfRecord"] | null;
       /** @description Показать «Клиент принял» / «Клиент отклонил»: КП ждёт решения и у сотрудника право ERP `deal.manage` (решает ERP) */
       can_record: boolean;
@@ -8247,7 +8267,7 @@ export interface components {
      * @enum {string}
      */
     OnBehalfChannel: "phone" | "email" | "messenger" | "in_person" | "paper";
-    /** @description Решение контрагента, записанное сотрудником («Отмечено сотрудником: кто, канал, со слов кого») */
+    /** @description Решение контрагента, записанное сотрудником по его подтверждению («Отмечено сотрудником: кто, канал, лицо клиента, файл») */
     OnBehalfRecord: {
       /** @description Сотрудник, который записал */
       staff_name: string | null;
@@ -8256,14 +8276,16 @@ export interface components {
       counterparty_person: string;
       /**
        * Format: date
-       * @description Когда сообщили (со слов)
+       * @description Когда клиент сообщил решение
        */
       occurred_on: string | null;
       comment: string | null;
-      /** @description Приложен файл (скрин переписки, письмо) */
-      has_evidence: boolean;
+      /** @description Имя файла подтверждения клиента (письмо, переписка, скан) */
+      evidence_name: string | null;
+      /** @description Ссылка BFF на файл подтверждения (`GET /eds/quotes/{id}/client-decision/evidence`); `null` — файла нет */
+      evidence_url: string | null;
     };
-    /** @description Решение клиента со слов. `comment` — что сказал клиент; для `reject` это причина отказа (как у отказа в кабинете). `occurred_on` — не позже сегодняшнего дня. Файл — по желанию. */
+    /** @description Решение клиента по его подтверждению. `comment` — суть ответа клиента; для `reject` это причина отказа (как у отказа в кабинете). `occurred_on` — не позже сегодняшнего дня. Файл подтверждения обязателен. */
     QuoteClientDecisionIn: {
       /** @enum {string} */
       decision: "accept" | "reject";
@@ -8274,9 +8296,9 @@ export interface components {
       comment: string;
       /**
        * Format: binary
-       * @description PDF или изображение (jpg, png, webp) до 20 МБ
+       * @description Подтверждение клиента: письмо, переписка, скан (изображение, PDF, doc, docx, xls, xlsx, csv, txt) до 20 МБ
        */
-      file?: string;
+      file: string;
     };
     QuoteClientComment: {
       /**
@@ -14372,6 +14394,33 @@ export interface operations {
       };
       413: components["responses"]["ProjectPayloadTooLarge"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadQuoteClientDecisionEvidence: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -6734,7 +6734,7 @@ paths:
                 $ref: '#/components/schemas/ActFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -6915,7 +6915,7 @@ paths:
                 $ref: '#/components/schemas/ActFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -7698,7 +7698,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -7801,7 +7801,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -7965,7 +7965,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -8025,7 +8025,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -8085,7 +8085,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -8188,7 +8188,7 @@ paths:
                 $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED
           content:
             application/json:
               schema:
@@ -8662,6 +8662,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED / ONLY_BUYER_CAN_SUBMIT_REQUEST
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: QUOTE_ACCEPTANCE_REQUIRED — «КП отправлено → Проект» только через принятое КП (A7)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
         '422':
           description: Invalid stage transition
           content:
@@ -8670,8 +8682,6 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
-        '403':
-          $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
   /api/v1/crm/deals/{id}/claim/:
@@ -12385,6 +12395,65 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/quotes/{id}/record-client-decision/:
+    post:
+      operationId: crm_quotes_record_client_decision_create
+      description: Клиент принял или отклонил КП не в кабинете, а письмом, в переписке, по телефону, лично или на бумаге.
+        Файл подтверждения обязателен (изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ). Только КП в статусе SENT;
+        дальше — то же ядро, что онлайн-акцепт и отказ клиента (стадия, проект, договор, резерв, события `quote.accepted`
+        / `quote.rejected` с `recorded_by_staff`, уведомления). Право `deal.manage`.
+      summary: Записать решение клиента по отправленному КП по его подтверждению (A1, «Отметить за контрагента»)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Коммерческое предложение.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClientDecisionInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+          description: ''
+        '400':
+          description: DECISION_INVALID / CHANNEL_INVALID / COUNTERPARTY_PERSON_REQUIRED / COMMENT_REQUIRED / OCCURRED_ON_INVALID
+            / OCCURRED_ON_IN_FUTURE / EVIDENCE_REQUIRED / EVIDENCE_INVALID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: QUOTE_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: QUOTE_NOT_SENT / DEAL_STAGE_CONFLICT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/quotes/{id}/revoke-public-link/:
     post:
       operationId: crm_quotes_revoke_public_link_create
@@ -17926,13 +17995,21 @@ components:
       required:
       - company
       - workspace_role
+    ApprovalActRequestDecisionEnum:
+      enum:
+      - APPROVE
+      - REJECT
+      type: string
+      description: |-
+        * `APPROVE` - APPROVE
+        * `REJECT` - REJECT
     ApprovalActRequestRequest:
       type: object
       properties:
         step_id:
           type: integer
         decision:
-          $ref: '#/components/schemas/DecisionEnum'
+          $ref: '#/components/schemas/ApprovalActRequestDecisionEnum'
         comment:
           type: string
           minLength: 1
@@ -19613,6 +19690,55 @@ components:
             type: integer
       required:
       - order
+    ClientDecisionEnum:
+      enum:
+      - accept
+      - reject
+      type: string
+      description: |-
+        * `accept` - accept
+        * `reject` - reject
+    ClientDecisionInRequest:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/ClientDecisionEnum'
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/OnBehalfChannelEnum'
+          description: |-
+            Как клиент сообщил решение
+
+            * `phone` - phone
+            * `email` - email
+            * `messenger` - messenger
+            * `in_person` - in_person
+            * `paper` - paper
+        counterparty_person:
+          type: string
+          minLength: 1
+          description: Кто со стороны клиента
+          maxLength: 200
+        occurred_on:
+          type: string
+          format: date
+          description: Когда клиент сообщил решение; не позже сегодня
+        comment:
+          type: string
+          minLength: 1
+          description: Суть ответа клиента; для отказа — причина
+          maxLength: 2000
+        file:
+          type: string
+          format: binary
+          description: 'Подтверждение клиента: письмо, переписка, скан (до 20 МБ)'
+      required:
+      - channel
+      - comment
+      - counterparty_person
+      - decision
+      - file
+      - occurred_on
     ClientStatusEnum:
       enum:
       - contract_review
@@ -20960,6 +21086,21 @@ components:
         note:
           type: string
           description: Заметка в журнал (оператор ЭДО, ссылка)
+        channel:
+          allOf:
+          - $ref: '#/components/schemas/OnBehalfChannelEnum'
+          description: |-
+            Обязателен для `client-agreed`: как клиент сообщил согласие
+
+            * `phone` - phone
+            * `email` - email
+            * `messenger` - messenger
+            * `in_person` - in_person
+            * `paper` - paper
+        counterparty_person:
+          type: string
+          description: 'Обязателен для `client-agreed`: кто со стороны клиента'
+          maxLength: 200
     Country:
       type: object
       properties:
@@ -21533,14 +21674,6 @@ components:
       required:
       - code
       - name
-    DecisionEnum:
-      enum:
-      - APPROVE
-      - REJECT
-      type: string
-      description: |-
-        * `APPROVE` - APPROVE
-        * `REJECT` - REJECT
     DeliveryBasis:
       type: object
       properties:
@@ -24259,6 +24392,30 @@ components:
       required:
       - company_name
       - contact_name
+    OnBehalfChannelEnum:
+      enum:
+      - phone
+      - email
+      - messenger
+      - in_person
+      - paper
+      type: string
+      description: |-
+        * `phone` - phone
+        * `email` - email
+        * `messenger` - messenger
+        * `in_person` - in_person
+        * `paper` - paper
+    OnBehalfNote:
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/OnBehalfChannelEnum'
+        counterparty_person:
+          type: string
+      required:
+      - channel
+      - counterparty_person
     OrderActions:
       type: object
       properties:
@@ -28238,6 +28395,11 @@ components:
         reason:
           type: string
           description: Причина или заметка к действию
+        on_behalf:
+          allOf:
+          - $ref: '#/components/schemas/OnBehalfNote'
+          nullable: true
+          description: 'Действие контрагента записал сотрудник (A1, A2 волны 18a): канал и лицо со стороны клиента'
       required:
       - actor_name
       - at
@@ -28698,6 +28860,20 @@ components:
           type: boolean
           nullable: true
           readOnly: true
+        client_decision:
+          allOf:
+          - $ref: '#/components/schemas/QuoteClientDecisionMeta'
+          nullable: true
+          readOnly: true
+        can_record_client_decision:
+          type: boolean
+          nullable: true
+          readOnly: true
+        client_reject_reason:
+          type: string
+          readOnly: true
+          title: Причина отказа клиента
+          description: Причина, которую клиент указал, отклоняя КП (кабинет, бот, офлайн); не печатается в PDF КП
         items:
           type: array
           items:
@@ -28736,11 +28912,14 @@ components:
       - approval_steps
       - approved_at
       - approved_by
+      - can_record_client_decision
       - can_send
       - channel_availability
       - charges
       - charges_total
       - client_comments
+      - client_decision
+      - client_reject_reason
       - created_at
       - deal
       - delivery_basis_data
@@ -29001,6 +29180,42 @@ components:
       - created_at
       - id
       - text
+    QuoteClientDecisionMeta:
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/ClientDecisionEnum'
+        channel:
+          $ref: '#/components/schemas/OnBehalfChannelEnum'
+        counterparty_person:
+          type: string
+        occurred_on:
+          type: string
+          format: date
+          nullable: true
+        comment:
+          type: string
+        recorded_by_name:
+          type: string
+        recorded_at:
+          type: string
+          format: date-time
+          nullable: true
+        evidence_attachment_id:
+          type: integer
+          nullable: true
+        evidence_name:
+          type: string
+      required:
+      - channel
+      - comment
+      - counterparty_person
+      - decision
+      - evidence_attachment_id
+      - evidence_name
+      - occurred_on
+      - recorded_at
+      - recorded_by_name
     QuoteDeliverRequestChannelEnum:
       enum:
       - telegram
