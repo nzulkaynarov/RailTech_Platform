@@ -471,12 +471,12 @@ class ReceiptInput:
 
 def _reserve_for_project(line: SupplierOrderLine, quantity: int, user) -> None:
     """Принятое по строке с проектом закрепляется за ним: резерв строки КП растёт на принятое, но не выше количества
-    строки КП (лишнее остаётся свободным на складе). Проигранная или закрытая заявка резерв не получает."""
+    строки КП (лишнее остаётся свободным на складе). Проигранная или выполненная заявка резерв не получает; выигранная
+    (`CLOSED_WON`, договор подписан) — получает: исполнение по ней идёт (`stock.deal_closed_for_stock`, D26G-1)."""
     item = line.quote_item
     if item is None or line.deal_id is None or item.product_id != line.product_id:
         return
-    stage = line.deal.stage.code if line.deal.stage_id else ""
-    if stage in stock.CLOSED_STAGES:
+    if stock.deal_closed_for_stock(line.deal):
         return
     current = Reservation.objects.select_for_update().filter(quote_item=item, status=ReservationStatus.ACTIVE).first()
     held = current.quantity if current else 0
