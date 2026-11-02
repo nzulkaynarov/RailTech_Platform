@@ -3,9 +3,11 @@
  * RailTech CRM API
  */
 import type { InboundMailbox } from "./inboundMailbox";
+import type { InboundMailCounts } from "./inboundMailCounts";
 import type { InboundMailItem } from "./inboundMailItem";
 
 export interface InboundMailPage {
+  counts: InboundMailCounts;
   items: InboundMailItem[];
   mailbox: InboundMailbox;
   total: number;

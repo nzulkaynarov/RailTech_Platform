@@ -3,12 +3,18 @@
 `inbound_mail` — одно письмо (UNIQUE `message_id` — дедупликация: повторный опрос, копия письма в
 ящике, смена UIDVALIDITY дубля не дают). Тело — только текст; вложения из белого списка — в бакете
 вложений CRM (`attachments`: имя, тип, размер, ключ хранилища), отброшенные — `skipped` с причиной.
-Статус: `new` (в очереди) → `registered` (ВХ в EDS, по событию `eds.letter.registered`) | `lead`
-(лид или заметка в лиде) | `archived` (с причиной). Подсказка помощника — `assist_*`: тип, суть и
-предложенное действие; ничего сама не делает.
+Статус: `spam` (из спам-папки — «Подозрительные», W18A-P2-2; «Не спам» → `new`, «Убрать» →
+`archived`) | `new` (в очереди) → `registered` (ВХ в EDS, по событию `eds.letter.registered`) |
+`lead` (лид или заметка в лиде) | `archived` (с причиной). Подсказка помощника — `assist_*`: тип,
+суть и предложенное действие; ничего сама не делает.
+
+`from_history` — письмо из «Загрузить письма за период» старше окна задач: в списке, не в «Моих
+задачах».
 
 `inbound_mailbox` — что уже забрано из папки: UIDVALIDITY и последний UID (на сервере письма не
-помечаются), итог последнего опроса — для строки здоровья «Подключений».
+помечаются), итог последнего опроса — для строки здоровья «Подключений»; строка на каждую папку.
+
+`inbound_mail_import` — загрузка истории (W18A-P2-2): период, ход (найдено, разобрано, новых), итог.
 """
 
 from datetime import datetime
@@ -33,14 +39,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 
-MAIL_STATUSES = ("new", "registered", "lead", "archived")
+MAIL_STATUSES = ("new", "spam", "registered", "lead", "archived")
+IMPORT_STATUSES = ("running", "done", "error")
 ASSIST_STATUSES = ("none", "done", "unavailable")
 
 
 class InboundMail(TimestampMixin, Base):
     __tablename__ = "inbound_mail"
     __table_args__ = (
-        CheckConstraint("status IN ('new', 'registered', 'lead', 'archived')", name="status"),
+        CheckConstraint(
+            "status IN ('new', 'spam', 'registered', 'lead', 'archived')", name="status"
+        ),
         CheckConstraint("assist_status IN ('none', 'done', 'unavailable')", name="assist_status"),
         Index("uq_inbound_mail_message_id", "message_id", unique=True),
         Index("ix_inbound_mail_status_received", "status", "received_at"),
@@ -78,6 +87,7 @@ class InboundMail(TimestampMixin, Base):
     )
     inns: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
     status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="new")
+    from_history: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     # Подсказка — только по кнопке «Подсказать» (юрист 2026-11-02): `none` — не запрашивали.
     assist_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="none")
     assist_kind: Mapped[str | None] = mapped_column(String(16))
@@ -109,3 +119,24 @@ class InboundMailbox(Base):
     last_error_kind: Mapped[str | None] = mapped_column(String(32))
     last_error: Mapped[str | None] = mapped_column(String(200))
     fetched_total: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+
+
+class InboundMailImport(TimestampMixin, Base):
+    __tablename__ = "inbound_mail_import"
+    __table_args__ = (
+        CheckConstraint("status IN ('running', 'done', 'error')", name="status"),
+        CheckConstraint("days BETWEEN 1 AND 366", name="days"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    days: Mapped[int] = mapped_column(Integer, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="running")
+    found: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    processed: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    created: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    limited: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    error_kind: Mapped[str | None] = mapped_column(String(32))
+    requested_by: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
 
-MailStatus = Literal["new", "registered", "lead", "archived"]
+MailStatus = Literal["new", "spam", "registered", "lead", "archived"]
 AssistStatus = Literal["none", "done", "unavailable", "off"]
 AssistKind = Literal["buyer", "official", "supplier_doc", "other"]
 AssistAction = Literal["register", "lead", "archive"]
@@ -55,6 +55,10 @@ class InboundMailItem(BaseModel):
     lead: InboundMailLink | None = Field(
         default=None, description="Открытый лид с этим адресом (связка) или лид-итог"
     )
+    from_history: bool = Field(
+        default=False,
+        description="Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»",
+    )
 
 
 class InboundMailReply(BaseModel):
@@ -91,10 +95,19 @@ class InboundMailbox(BaseModel):
     last_error_kind: str | None = None
 
 
+class InboundMailCounts(BaseModel):
+    """Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные."""
+
+    new: int
+    history: int
+    spam: int
+
+
 class InboundMailPage(BaseModel):
     items: list[InboundMailItem]
     total: int
     mailbox: InboundMailbox
+    counts: InboundMailCounts
 
 
 class InboundMailArchiveIn(BaseModel):
@@ -110,6 +123,60 @@ class InboundMailLeadOut(BaseModel):
     created: bool = Field(
         description="false — письмо добавлено заметкой в открытый лид с этим адресом"
     )
+
+
+class ImapFolderIn(BaseModel):
+    """Папка опроса: имя как на сервере (modified UTF-7), `spam` — письма «Подозрительные»."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(min_length=1, max_length=200)
+    spam: bool = False
+
+
+class ImapFolderOut(ImapFolderIn):
+    label: str = Field(description="Имя для человека (modified UTF-7 раскодирован)")
+
+
+class ImapServerFolder(BaseModel):
+    name: str
+    label: str
+    junk: bool = Field(description="Сервер отметил папку флагом \\Junk (RFC 6154)")
+    selectable: bool
+
+
+class ImapFoldersOut(BaseModel):
+    """«Найти папки»: список папок ящика (`LIST`) или причина словом-кодом."""
+
+    ok: bool
+    error_kind: str | None = None
+    detail: str | None = None
+    folders: list[ImapServerFolder] = Field(default_factory=list)
+    spam_suggestion: str | None = Field(
+        default=None, description="Спам-папка по флагу \\Junk или единственному привычному имени"
+    )
+
+
+class ImapHistoryIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    days: Literal[7, 14, 30, 90]
+
+
+class ImapHistoryOut(BaseModel):
+    """Загрузка писем за период: ход и итог. `found` — сколько берём (не больше 2000), `limited` —
+    в периоде писем больше, взяты новые."""
+
+    id: int
+    days: int
+    status: Literal["running", "done", "error"]
+    found: int
+    processed: int
+    created: int
+    limited: bool
+    error_kind: str | None
+    started_at: datetime
+    finished_at: datetime | None
 
 
 class ImapStatusOut(BaseModel):
@@ -130,6 +197,12 @@ class ImapStatusOut(BaseModel):
     last_ok_at: datetime | None
     last_error_kind: str | None
     last_error: str | None
+    folders: list[ImapFolderOut] = Field(
+        default_factory=list, description="Папки опроса; по умолчанию одна — `mailbox`"
+    )
+    history: ImapHistoryOut | None = Field(
+        default=None, description="Последняя загрузка писем за период"
+    )
 
 
 class ImapConnectorIn(BaseModel):
@@ -141,6 +214,11 @@ class ImapConnectorIn(BaseModel):
     port: int = Field(default=993, ge=1, le=65535)
     security: Literal["ssl", "starttls"] = "ssl"
     mailbox: str = Field(default="INBOX", min_length=1, max_length=200)
+    folders: list[ImapFolderIn] | None = Field(
+        default=None,
+        max_length=10,
+        description="Папки опроса; `null` — прежние. Задано — `mailbox` = первая не спам",
+    )
     assist_enabled: bool = True
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)

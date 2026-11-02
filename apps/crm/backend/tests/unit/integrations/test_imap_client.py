@@ -78,3 +78,38 @@ async def test_invalid_host() -> None:
     with pytest.raises(ImapProbeError) as caught:
         await ImaplibClient().check(conn)
     assert caught.value.kind == "invalid_host"
+
+
+# --- папки и загрузка истории (W18A-P2-2) -----------------------------------------------------
+
+
+async def test_folders_lists_names_and_junk_flag() -> None:
+    with FakeImapServer() as server:
+        server.folder("Spam", "\\HasNoChildren \\Junk")
+        server.folder("&BCEEPwQwBDw-")
+        folders = await PlainClient().folders(_conn(server.port))
+    assert [(f.name, f.label, f.junk) for f in folders] == [
+        ("INBOX", "INBOX", False),
+        ("Spam", "Spam", True),
+        ("&BCEEPwQwBDw-", "Спам", False),
+    ]
+    assert server.box.writes == []
+
+
+async def test_search_since_and_fetch_uids_in_other_folder() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    now = datetime.now(UTC)
+    with FakeImapServer() as server:
+        spam = server.folder("Spam", "\\Junk", uidvalidity=77)
+        spam.add(1, _raw(1), now - timedelta(days=40))
+        spam.add(2, _raw(2), now - timedelta(days=10))
+        spam.add(3, _raw(3), now)
+        client = PlainClient()
+        uidvalidity, uids = await client.search_since(_conn(server.port, mailbox="Spam"), 14)
+        assert (uidvalidity, uids) == (77, [2, 3])
+        got = await client.fetch_uids(_conn(server.port, mailbox="Spam"), [3, 2, 99])
+    assert [m.uid for m in got] == [3, 2], "UID 99 нет на сервере — пропущен"
+    assert b"<m3@example.test>" in got[0].raw
+    assert spam.writes == []
+    assert not server.box.selected_readwrite

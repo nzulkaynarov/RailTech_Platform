@@ -11,6 +11,8 @@ export interface InboundMailItem {
   attachments_count: number;
   client?: InboundMailLink | null;
   from_email: string;
+  /** Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
+  from_history?: boolean;
   from_name: string;
   id: number;
   /** Открытый лид с этим адресом (связка) или лид-итог */
