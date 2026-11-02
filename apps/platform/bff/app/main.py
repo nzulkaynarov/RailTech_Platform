@@ -31,6 +31,7 @@ from app.api import (
     dictionaries,
     eds_approvals,
     eds_documents,
+    eds_letter_intake,
     eds_letters,
     eds_payments,
     eds_projects,
@@ -131,6 +132,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
+    app.include_router(eds_letter_intake.router, prefix=API_PREFIX)
     app.include_router(eds_resolution_templates.router, prefix=API_PREFIX)
     app.include_router(dictionaries.router, prefix=API_PREFIX)
     app.include_router(inbound_mail.router, prefix=API_PREFIX)

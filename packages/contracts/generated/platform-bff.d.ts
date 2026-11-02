@@ -4440,6 +4440,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letter-intake": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
+     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только если включено «Распознавать сканы». Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+     */
+    post: operations["suggestLetterFromFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/ai-suggestions/{id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Решение человека по предложению ИИ (журнал)
+     * @description `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную. Раздел `eds.inbox.register` — полный; решение пишет только тот, кто вызывал помощника.
+     */
+    post: operations["decideAiSuggestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/docflow-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Настройки документооборота
+     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
+     */
+    get: operations["getDocflowSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * EDS · Изменить настройки документооборота
+     * @description `admin: full`.
+     */
+    patch: operations["updateDocflowSettings"];
+    trace?: never;
+  };
   "/eds/staff": {
     parameters: {
       query?: never;
@@ -10070,6 +10134,44 @@ export interface components {
      * @enum {string}
      */
     LetterResolutionKind: "execute" | "reply" | "info";
+    LetterIntakeIn: {
+      /** Format: uuid */
+      file_id: string;
+    };
+    /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
+    LetterIntakeFields: {
+      sender_name: string | null;
+      sender_inn: string | null;
+      sender_ref_number: string | null;
+      /** Format: date */
+      sender_ref_date: string | null;
+      subject: string | null;
+      summary: string | null;
+      /** @description Действующий код справочника `letter-kinds` */
+      kind: string | null;
+      /** Format: date */
+      document_due: string | null;
+    };
+    LetterIntakeSuggestion: {
+      /** Format: uuid */
+      suggestion_id: string;
+      /** @enum {string} */
+      source: "text" | "image";
+      fields: components["schemas"]["LetterIntakeFields"];
+      alias: string;
+      prompt_version: string;
+    };
+    AiDecisionIn: {
+      /** @enum {string} */
+      decision: "accepted" | "edited" | "manual";
+    };
+    DocflowSettings: {
+      recognize_scans: boolean;
+      ai_available: boolean;
+    };
+    DocflowSettingsPatch: {
+      recognize_scans: boolean;
+    };
     /**
      * @description `personal` — свой шаблон, `company` — общий, ведёт администратор
      * @enum {string}
@@ -12545,6 +12647,8 @@ export interface components {
     DictionaryCodePath: string;
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
+    /** @description UUID предложения ИИ (EDS) */
+    AiSuggestionIdPath: string;
     /** @description UUID шаблона резолюции (EDS) */
     ResolutionTemplateIdPath: string;
     /** @description UUID поручения (EDS, P8b) */
@@ -20718,6 +20822,125 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  suggestLetterFromFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterIntakeIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение полей */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterIntakeSuggestion"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decideAiSuggestion: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID предложения ИИ (EDS) */
+        id: components["parameters"]["AiSuggestionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AiDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Записано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getDocflowSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateDocflowSettings: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocflowSettingsPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

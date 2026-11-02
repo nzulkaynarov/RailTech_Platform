@@ -550,6 +550,85 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letter-intake": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Заполнить из файла» — ИИ-помощник регистрации входящего (EDS-REG)
+     * @description Только по кнопке делопроизводителя (решение юриста 2026-11-02): файл письма уже загружен (`POST /files`), EDS читает
+     *     его и предлагает поля карточки — человек правит и регистрирует обычным `POST /letters`. Ничего не сохраняется в письмо.
+     *
+     *     * PDF с текстовым слоем — текст извлекает EDS, маскирует персональные данные кодом (e-mail, телефоны и длинные
+     *       номера, паспорт, дата рождения) и в модель уходит только маскированный текст; номер вида «исх. №» из маски код
+     *       возвращает сам, локально.
+     *     * Скан или фото без текста — модель с поддержкой изображений, только если администратор включил «Распознавать
+     *       сканы» (`GET /docflow-settings`), иначе 409 `scan_recognition_disabled`.
+     *     * Модель — алиас LiteLLM `intake-model` (ключ EDS), промпт — файл с версией, ответ — JSON по схеме; вид документа
+     *       код принимает только из действующих значений справочника `letter-kinds`, ИНН корреспондента ищет код в тексте
+     *       (не модель).
+     *     * Журнал (`ai_suggestions`): кто, когда, функция, алиас, версия промпта, итог и потом решение человека — без текстов.
+     *
+     *     409: `scan_recognition_disabled`, `ai_unavailable` (шлюз не настроен или не ответил), `ai_budget_exceeded`,
+     *     `nothing_recognized`. 422: файл не PDF и не изображение (`file_id` с `unsupported_file`).
+     */
+    post: operations["suggestLetterFromFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/ai-suggestions/{suggestion_id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Решение человека по предложению ИИ (журнал)
+     * @description `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную (отказался). Только тот,
+     *     кто вызвал помощника; повтор с тем же решением — тот же ответ, другое решение заменяет прежнее.
+     */
+    post: operations["decideAiSuggestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/docflow-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Настройки документооборота
+     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено); `ai_available` — ключ шлюза задан.
+     */
+    get: operations["getDocflowSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Изменить настройки документооборота
+     * @description Администратор (`bus.manage`); изменение — строка журнала `docflow_settings.updated`.
+     */
+    patch: operations["updateDocflowSettings"];
+    trace?: never;
+  };
   "/api/v1/letter-tasks": {
     parameters: {
       query?: never;
@@ -1675,6 +1754,46 @@ export interface components {
      * @enum {string}
      */
     ResolutionKind: "execute" | "reply" | "info";
+    LetterIntakeIn: {
+      file_id: components["schemas"]["Uuid"];
+    };
+    /** @description Предложенные поля карточки; `null` — не найдено. ИНН — найден кодом в тексте файла, не моделью */
+    LetterIntakeFields: {
+      sender_name: string | null;
+      sender_inn: string | null;
+      sender_ref_number: string | null;
+      /** Format: date */
+      sender_ref_date: string | null;
+      subject: string | null;
+      summary: string | null;
+      kind: components["schemas"]["LetterKindCode"] | null;
+      /** Format: date */
+      document_due: string | null;
+    };
+    LetterIntakeSuggestion: {
+      suggestion_id: components["schemas"]["Uuid"];
+      /**
+       * @description `text` — текстовый слой PDF (маскированный), `image` — скан или фото (модель с изображением)
+       * @enum {string}
+       */
+      source: "text" | "image";
+      fields: components["schemas"]["LetterIntakeFields"];
+      /** @example intake-model */
+      alias: string;
+      prompt_version: string;
+    };
+    AiDecisionIn: {
+      /** @enum {string} */
+      decision: "accepted" | "edited" | "manual";
+    };
+    DocflowSettings: {
+      recognize_scans: boolean;
+      /** @description Ключ шлюза моделей задан (помощник может работать) */
+      ai_available: boolean;
+    };
+    DocflowSettingsPatch: {
+      recognize_scans: boolean;
+    };
     /**
      * @description `personal` — свой шаблон сотрудника, `company` — общий, ведёт администратор
      * @enum {string}
@@ -3263,6 +3382,111 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  suggestLetterFromFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterIntakeIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение полей */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterIntakeSuggestion"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  decideAiSuggestion: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        suggestion_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AiDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Записано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  getDocflowSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  updateDocflowSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocflowSettingsPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   listMyLetterTasks: {

@@ -1,5 +1,6 @@
 """Модели сервиса. Новая модель импортируется здесь — иначе Alembic её не увидит."""
 
+from app.models.ai import AiSuggestion, DocflowSettings
 from app.models.approvals import ApprovalRoute, ApprovalStep
 from app.models.base import Base
 from app.models.dictionaries import DictionaryItem
@@ -17,10 +18,12 @@ from app.models.resolution_templates import ResolutionTemplate
 
 __all__ = [
     "Acquaintance",
+    "AiSuggestion",
     "ApprovalRoute",
     "ApprovalStep",
     "Base",
     "DictionaryItem",
+    "DocflowSettings",
     "Document",
     "DocumentMailing",
     "DocumentPayment",

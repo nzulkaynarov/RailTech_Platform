@@ -1061,6 +1061,127 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/letter-intake:
+    post:
+      tags: [letters]
+      operationId: suggestLetterFromFile
+      summary: «Заполнить из файла» — ИИ-помощник регистрации входящего (EDS-REG)
+      description: |
+        Только по кнопке делопроизводителя (решение юриста 2026-11-02): файл письма уже загружен (`POST /files`), EDS читает
+        его и предлагает поля карточки — человек правит и регистрирует обычным `POST /letters`. Ничего не сохраняется в письмо.
+
+        * PDF с текстовым слоем — текст извлекает EDS, маскирует персональные данные кодом (e-mail, телефоны и длинные
+          номера, паспорт, дата рождения) и в модель уходит только маскированный текст; номер вида «исх. №» из маски код
+          возвращает сам, локально.
+        * Скан или фото без текста — модель с поддержкой изображений, только если администратор включил «Распознавать
+          сканы» (`GET /docflow-settings`), иначе 409 `scan_recognition_disabled`.
+        * Модель — алиас LiteLLM `intake-model` (ключ EDS), промпт — файл с версией, ответ — JSON по схеме; вид документа
+          код принимает только из действующих значений справочника `letter-kinds`, ИНН корреспондента ищет код в тексте
+          (не модель).
+        * Журнал (`ai_suggestions`): кто, когда, функция, алиас, версия промпта, итог и потом решение человека — без текстов.
+
+        409: `scan_recognition_disabled`, `file_too_large` (скан больше 5 МБ), `ai_unavailable` (шлюз не настроен или не
+        ответил), `ai_budget_exceeded`, `nothing_recognized`. 422: файл не PDF и не изображение (`file_id` с `unsupported_file`).
+      x-rt-permissions: [letters.register]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterIntakeIn'
+      responses:
+        '200':
+          description: Предложение полей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterIntakeSuggestion'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/ai-suggestions/{suggestion_id}/decision:
+    post:
+      tags: [letters]
+      operationId: decideAiSuggestion
+      summary: Решение человека по предложению ИИ (журнал)
+      description: |
+        `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную (отказался). Только тот,
+        кто вызвал помощника; повтор с тем же решением — тот же ответ, другое решение заменяет прежнее.
+      x-rt-permissions: [letters.register]
+      parameters:
+        - name: suggestion_id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiDecisionIn'
+      responses:
+        '204':
+          description: Записано
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/docflow-settings:
+    get:
+      tags: [dictionaries]
+      operationId: getDocflowSettings
+      summary: Настройки документооборота
+      description: '`recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено); `ai_available` — ключ шлюза задан.'
+      x-rt-permissions: [letters.register, bus.manage]
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags: [dictionaries]
+      operationId: updateDocflowSettings
+      summary: Изменить настройки документооборота
+      description: Администратор (`bus.manage`); изменение — строка журнала `docflow_settings.updated`.
+      x-rt-permissions: [bus.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocflowSettingsPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
   /api/v1/letter-tasks:
     get:
       tags: [letters]
@@ -3290,6 +3411,64 @@ components:
         Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения». Это
         поведение системы (закрытый список кода); названия на экране — справочник `resolution-kinds` (закрытый: только
         переименовать и переставить, EDS-REG).
+    LetterIntakeIn:
+      type: object
+      additionalProperties: false
+      required: [file_id]
+      properties:
+        file_id: { $ref: '#/components/schemas/Uuid' }
+    LetterIntakeFields:
+      type: object
+      additionalProperties: false
+      required:
+        [sender_name, sender_inn, sender_ref_number, sender_ref_date, subject, summary, kind, document_due]
+      description: Предложенные поля карточки; `null` — не найдено. ИНН — найден кодом в тексте файла, не моделью
+      properties:
+        sender_name: { type: [string, 'null'], maxLength: 255 }
+        sender_inn: { type: [string, 'null'], pattern: '^\d{9,14}$' }
+        sender_ref_number: { type: [string, 'null'], maxLength: 64 }
+        sender_ref_date: { type: [string, 'null'], format: date }
+        subject: { type: [string, 'null'], maxLength: 300 }
+        summary: { type: [string, 'null'], maxLength: 2000 }
+        kind:
+          oneOf:
+            - $ref: '#/components/schemas/LetterKindCode'
+            - type: 'null'
+        document_due: { type: [string, 'null'], format: date }
+    LetterIntakeSuggestion:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, source, fields, alias, prompt_version]
+      properties:
+        suggestion_id: { $ref: '#/components/schemas/Uuid' }
+        source:
+          type: string
+          enum: [text, image]
+          description: '`text` — текстовый слой PDF (маскированный), `image` — скан или фото (модель с изображением)'
+        fields: { $ref: '#/components/schemas/LetterIntakeFields' }
+        alias: { type: string, examples: [intake-model] }
+        prompt_version: { type: string }
+    AiDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [accepted, edited, manual]
+    DocflowSettings:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans, ai_available]
+      properties:
+        recognize_scans: { type: boolean }
+        ai_available: { type: boolean, description: Ключ шлюза моделей задан (помощник может работать) }
+    DocflowSettingsPatch:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans]
+      properties:
+        recognize_scans: { type: boolean }
     ResolutionTemplateScope:
       type: string
       enum: [personal, company]

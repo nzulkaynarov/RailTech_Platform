@@ -35,6 +35,14 @@ class Settings(BaseSettings):
     s3_region: str = "us-east-1"
     s3_bucket: str = "eds-private"
 
+    # ИИ-помощник «Заполнить из файла» (EDS-REG): шлюз LiteLLM по алиасам (ADR-0005), свой виртуальный ключ EDS
+    # с дневным бюджетом — регистрирует `python -m app ai-key-sync` (сервис eds-ai-gateway, мастер-ключ только там).
+    # Ключа нет — помощник выключен (`ai_unavailable`), форма заполняется вручную.
+    litellm_base_url: str = Field(default="http://litellm:4000", validation_alias="LITELLM_BASE_URL")
+    litellm_api_key: SecretStr = Field(default=SecretStr(""), validation_alias="EDS_LITELLM_API_KEY")
+    ai_daily_budget_usd: float = Field(default=1.0, ge=0, validation_alias="EDS_AI_DAILY_BUDGET_USD")
+    ai_timeout_s: float = Field(default=60.0, gt=0, le=300, validation_alias="EDS_AI_TIMEOUT_S")
+
     # Задач очереди одновременно в одном воркере: pump шины держит воркер до 20 с, пока подписчик не отвечает.
     worker_concurrency: int = Field(default=4, ge=1, le=32)
     health_timeout_s: float = Field(default=2.0, gt=0, le=10)

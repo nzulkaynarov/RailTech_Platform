@@ -95,7 +95,7 @@ x-crm-backend: &crm-backend
 # EDS (apps/eds, волна 12, ADR-0015): один образ для eds-api, eds-worker и eds-migrate. Внешнего маршрута нет — Caddy на EDS
 # не ведёт ни с одного домена; сотрудники приходят через BFF Платформы, системы — по шине rt_bus (приёмник POST /bus/v1/events).
 x-eds-backend: &eds-backend
-  build:
+  build: &eds-build
     context: ../../apps/eds
     target: prod
     # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки; rt-docs — письма на бланке (P4).
@@ -126,6 +126,11 @@ x-eds-backend: &eds-backend
     RT_BUS_SECRET_EDS_CRM: ${RT_BUS_SECRET_EDS_CRM:-}
     RT_BUS_ENDPOINT_ERP: ${RT_BUS_ENDPOINT_ERP:-}
     RT_BUS_ENDPOINT_PLATFORM_BFF: ${RT_BUS_ENDPOINT_PLATFORM_BFF:-}
+    # ИИ-помощник «Заполнить из файла» (EDS-REG): шлюз LiteLLM своим виртуальным ключом EDS (регистрирует eds-ai-gateway).
+    # Пусто — помощник выключен, форма регистрации заполняется вручную.
+    LITELLM_BASE_URL: http://litellm:4000
+    EDS_LITELLM_API_KEY: ${EDS_LITELLM_API_KEY:-}
+    EDS_AI_DAILY_BUDGET_USD: ${EDS_AI_DAILY_BUDGET_USD:-1}
 
 services:
   # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
@@ -792,6 +797,23 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+
+  # Виртуальный ключ EDS в LiteLLM (EDS-REG): регистрирует EDS_LITELLM_API_KEY с дневным бюджетом EDS_AI_DAILY_BUDGET_USD
+  # и только алиасами EDS. Одноразовый, идемпотентный, всегда завершается кодом 0; мастер-ключ — только здесь. Без базы и
+  # секретов EDS: окружение — только шлюз.
+  eds-ai-gateway:
+    build: *eds-build
+    command: ["python", "-m", "app", "ai-key-sync"]
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      EDS_LITELLM_API_KEY: ${EDS_LITELLM_API_KEY:-}
+      EDS_AI_DAILY_BUDGET_USD: ${EDS_AI_DAILY_BUDGET_USD:-1}
+    restart: "no"
+    depends_on:
+      litellm:
+        condition: service_healthy
 
   # Воркер Procrastinate: ретранслятор шины (outbox → доставка), обработка inbox (проекция сотрудников), уборка jti.
   eds-worker:
