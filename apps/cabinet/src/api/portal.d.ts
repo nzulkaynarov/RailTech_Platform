@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * Запросить ссылку для входа по e-mail
-         * @description Письмо со ссылкой на 15 минут, одноразовой. Ответ всегда 200, чтобы не раскрывать наличие адреса.
+         * @description Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
          */
         post: operations["requestMagicLink"];
         delete?: never;
@@ -56,9 +56,33 @@ export interface paths {
         /**
          * Обмен токена из ссылки входа на сессию
          * @description Cabinet берёт токен из фрагмента ссылки `/auth/magic#token=…` и шлёт его в теле: токен не появляется ни в пути,
-         *     ни в журналах. Токен одноразовый и живёт 15 минут (ссылка-приглашение — 24 часа). Заменяет `GET /auth/magic/{token}`.
+         *     ни в журналах. Токен одноразовый и живёт 60 минут (ссылка-приглашение — 24 часа, B-MAIL-1). Заменяет `GET /auth/magic/{token}`.
          */
         post: operations["exchangeMagicLinkToken"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вход по коду из письма
+         * @description B-MAIL-1. Клиент вводит адрес и 6-значный код из письма входа или приглашения. Код одноразовый, живёт столько же,
+         *     сколько ссылка того же письма (60 минут, приглашение — 24 часа), в базе — только хеш, сравнение за постоянное
+         *     время. Неверный, просроченный, использованный код и неизвестный адрес дают один ответ — 422 `LOGIN_CODE_INVALID`
+         *     (наличие адреса не раскрывается). Пятая неверная попытка подряд и дальше — 429 `LOGIN_CODE_LOCKED` до нового
+         *     запроса `POST /auth/magic-link`. Верный код гасит и ссылку того же письма.
+         */
+        post: operations["exchangeLoginCode"];
         delete?: never;
         options?: never;
         head?: never;
@@ -613,7 +637,7 @@ export interface components {
          * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
          * @enum {string}
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT";
+        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT";
         Reason: {
             reason: string;
         };
@@ -1196,6 +1220,65 @@ export interface operations {
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationError"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    exchangeLoginCode: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Сессия выдана (cookie `Set-Cookie`) */
+            200: {
+                headers: {
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            403: components["responses"]["CompanyArchived"];
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description `LOGIN_CODE_INVALID` — код неверный, устарел или уже использован (и для неизвестного адреса); `VALIDATION_ERROR` — тело не по схеме */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP (заголовок `Retry-After`) */
+            429: {
+                headers: {
+                    /** @description Через сколько секунд можно повторить (только у `TOO_MANY_REQUESTS`) */
+                    "Retry-After"?: number;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     logout: {

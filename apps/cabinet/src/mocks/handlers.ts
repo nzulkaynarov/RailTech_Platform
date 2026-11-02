@@ -214,6 +214,16 @@ export const handlers = [
     setMockSession(session);
     return json(me(session));
   }),
+  // B-MAIL-1: код из письма. Мок: `000000` — неверный, `111111` — пять неверных подряд (блок), остальные 6 цифр — вход.
+  http.post(`${API}/auth/code`, async ({ request }) => {
+    const body = await readJson<{ email?: string; code?: string }>(request);
+    if (!body.email?.includes('@') || !/^\d{6}$/.test(body.code ?? '')) return error(422, 'VALIDATION_ERROR');
+    if (body.code === '000000') return error(422, 'LOGIN_CODE_INVALID');
+    if (body.code === '111111') return error(429, 'LOGIN_CODE_LOCKED');
+    const session = sessionFromToken(body.email, 'magic_link');
+    setMockSession(session);
+    return json(me(session));
+  }),
   http.post(
     `${API}/auth/logout`,
     withSession(() => {

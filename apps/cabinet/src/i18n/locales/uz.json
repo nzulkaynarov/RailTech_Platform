@@ -167,16 +167,19 @@
       "demoTitle": "Tezkor demo kirish (1 marta bosish)",
       "demoHint": "Sinov maʼlumotlari bilan lokal stend. Parol talab qilinmaydi:",
       "demoActor": "Buyurtmachi sifatida kirish (MChJ «Toshkent Logistik»)",
-      "demoViewer": "Kuzatuvchi sifatida kirish (faqat oʻqish)"
+      "demoViewer": "Kuzatuvchi sifatida kirish (faqat oʻqish)",
+      "haveCode": "Xatdagi kod bormi? Kod bilan kirish"
     },
     "sent": {
-      "title": "Pochtangizni tekshiring",
-      "text": "Agar {{email}} manzili roʻyxatdan oʻtgan boʻlsa, kirish havolasini yubordik. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
-      "textNoEmail": "Agar manzil roʻyxatdan oʻtgan boʻlsa, kirish havolasini yubordik. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
+      "title": "Sizga xat yubordik",
+      "text": "Agar {{email}} manzili roʻyxatdan oʻtgan boʻlsa, xatda kirish kodi va havola bor. Ular 60 daqiqa amal qiladi.",
       "back": "Boshqa manzil kiritish",
       "mockLink": "Xatdagi havolani ochish (mok)",
-      "noLetter": "Xat kelmadimi? «Spam» jildini va manzilni tekshiring. Kabinet menejer taklifnomasi bilan ochiladi.",
-      "newClientLink": "Yangi mijozmisiz? Soʻrov qoldiring"
+      "newClientLink": "Yangi mijozmisiz? Soʻrov qoldiring",
+      "hint": "Xat bir necha daqiqada kelishi mumkin. «Spam» jildini tekshiring.",
+      "resend": "Qayta yuborish",
+      "resendIn": "{{seconds}} soniyadan keyin qayta yuborish",
+      "resent": "Yangi xat yubordik. Oldingi xatdagi kod endi ishlamaydi."
     },
     "magic": {
       "exchanging": "Havola orqali kirilmoqda…",
@@ -202,6 +205,14 @@
       "waitSeconds": "{{n}} soniya",
       "waitMinutes": "{{n}} daqiqa",
       "FORBIDDEN": "Kirish yopilgan, menejerga murojaat qiling."
+    },
+    "code": {
+      "title": "Kod bilan kirish",
+      "text": "Manzilingiz va xatdagi kodni kiriting — taklif yoki kirish xatidan.",
+      "form": "Xatdagi kod bilan kirish",
+      "label": "Xatdagi kod",
+      "submit": "Kirish",
+      "signingIn": "Kirilmoqda…"
     }
   },
   "newClient": {
@@ -740,7 +751,9 @@
     "IDEMPOTENCY_KEY_REQUIRED": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
     "UNSUPPORTED_MEDIA_TYPE": "Soʻrov server tomonidan rad etildi. Sahifani yangilab, qayta urinib koʻring.",
     "INVOICE_NOT_OPEN": "Hisob-faktura allaqachon toʻlangan yoki bekor qilingan — toʻlov topshiriqnomasi kerak emas. Sahifani yangilang.",
-    "TEXT_REQUIRED": "Izoh matnini yozing."
+    "TEXT_REQUIRED": "Izoh matnini yozing.",
+    "LOGIN_CODE_INVALID": "Kod notoʻgʻri yoki eskirgan. Xatni tekshiring yoki yangi kod yuboring.",
+    "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing."
   },
   "widgets": {
     "actionRequired": {
