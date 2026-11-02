@@ -4,6 +4,8 @@
  */
 import type { DecimalString } from "./decimalString";
 import type { StockRequestRef } from "./stockRequestRef";
+import type { SupplierOrderLineOffer } from "./supplierOrderLineOffer";
+import type { TrackingClass } from "./trackingClass";
 
 export interface SupplierOrderLine {
   /** @pattern ^[0-9]+$ */
@@ -32,4 +34,9 @@ export interface SupplierOrderLine {
    * @pattern ^[0-9]+$
    */
   line_id: string | null;
+  /** Цена поставщика, из которой создана строка (ADR-0021 п. 6) — базис и срок цены; сама цена — в `unit_price` */
+  offer: SupplierOrderLineOffer | null;
+  tracking: TrackingClass;
+  /** Категория требует документ соответствия на приёмке */
+  requires_doc: boolean;
 }

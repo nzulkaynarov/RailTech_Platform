@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { CompanyItemRef } from "./companyItemRef";
+import type { TrackingClass } from "./trackingClass";
 
 export interface CatalogCategoryUpdate {
   /**
@@ -11,4 +12,6 @@ export interface CatalogCategoryUpdate {
    */
   name?: string;
   parent_id?: CompanyItemRef | null;
+  tracking?: TrackingClass;
+  requires_conformity_doc?: boolean;
 }
