@@ -68,14 +68,14 @@ async def newer_versions(session: AsyncSession, routes: list[ApprovalRoute]) -> 
             .where(ApprovalRoute.erp_quote_id.in_(quote_ids))
             .group_by(ApprovalRoute.erp_quote_id)
         )
-        by_quote = {int(k): int(v) for k, v in rows.all() if v is not None}
+        by_quote = {int(k): int(v) for k, v in rows.all() if k is not None and v is not None}
     if deal_ids:
         rows = await session.execute(
             select(ApprovalRoute.erp_deal_id, top)
             .where(ApprovalRoute.erp_deal_id.in_(deal_ids), ApprovalRoute.template == ApprovalTemplate.QUOTE.value)
             .group_by(ApprovalRoute.erp_deal_id)
         )
-        by_deal = {int(k): int(v) for k, v in rows.all() if v is not None}
+        by_deal = {int(k): int(v) for k, v in rows.all() if k is not None and v is not None}
     out: dict[uuid.UUID, int] = {}
     for route in quotes:
         newest = max(
