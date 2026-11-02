@@ -6,7 +6,8 @@ from typing import Any
 import httpx
 import pytest
 
-from tests.domain import Person, validate
+from app.container import Container
+from tests.domain import Person, outbox, validate
 from tests.test_api_auth import assert_error
 
 pytestmark = pytest.mark.pg
@@ -142,3 +143,26 @@ async def test_kinds_and_duplicates_need_reading_or_registering_letters(
         assert_error(denied, 403, "FORBIDDEN")
     allowed = await client.get("/api/v1/letter-kinds", headers=staff["manager"].headers)
     assert allowed.status_code == 200
+
+
+async def test_letter_from_the_shared_mailbox_carries_its_source_in_the_event(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    """W18A-P2: ВХ из очереди «Входящая почта» — `source.crm_inbound_mail_id` в `letter.registered` (CRM снимает
+    письмо с очереди); без вложений — можно, текст письма в кратком содержании; обычная регистрация — без `source`."""
+    response = await register(
+        client,
+        staff["registrar"],
+        kind="supplier",
+        receipt_method="email",
+        summary="Поставщик прислал акт сверки за октябрь",
+        source={"crm_inbound_mail_id": 42},
+    )
+    assert response.status_code == 201, response.text
+    plain = await register(client, staff["registrar"], sender_ref={"number": "04-12/9999", "date": "2026-10-28"})
+    assert plain.status_code == 201, plain.text
+    first, second = await outbox(container, "letter.registered")
+    assert first["data"]["source"] == {"crm_inbound_mail_id": 42}
+    assert "source" not in second["data"]
+    bad = await register(client, staff["registrar"], source={"crm_inbound_mail_id": 0})
+    assert_error(bad, 422, "VALIDATION_FAILED")
