@@ -201,9 +201,11 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await loginAndWait(page, "admin@demo.example");
     for (const [from, to, title] of LEGACY) {
       await spaGoto(page, from);
+      // Ждём сам адрес, а не заголовок: соседние адреса ведут на одну страницу («Справочники»), и её заголовок от прошлого
+      // шага виден раньше, чем сработает переход
+      const escaped = to.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      await expect(page, from).toHaveURL(new RegExp(`${escaped}$`));
       await h1(page, title);
-      const url = new URL(page.url());
-      expect(`${url.pathname}${url.search}`, from).toBe(to);
     }
   });
 

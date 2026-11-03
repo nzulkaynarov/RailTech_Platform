@@ -42,6 +42,9 @@ async function signOut(page: Page): Promise<void> {
 async function fillFromFile(page: Page, name: string, mimeType: string): Promise<void> {
   // Новая форма: уйти со страницы и вернуться (тот же адрес форму не сбрасывает).
   await spaGoto(page, "/eds/inbox");
+  // Форма сбрасывается, только если экран регистрации успел смениться: без ожидания два перехода подряд склеиваются, и
+  // в форме остаётся прошлый файл (флейк CI: помощник читал прежний PDF вместо скана)
+  await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
   await spaGoto(page, "/eds/register");
   await expect(
     page.getByRole("heading", { level: 1, name: "Зарегистрировать входящее" }),
