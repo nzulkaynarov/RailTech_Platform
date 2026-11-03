@@ -8,7 +8,8 @@
 почта нормализованы до публикации.
 
 Типы: `uz.railtech.crm.{client,contact,lead}.*.v1`, `uz.railtech.identity.user.*.v1`,
-`uz.railtech.crm.mail.{sent,failed}.v1` — итог письма, запрошенного ERP или EDS (W18A-P1).
+`uz.railtech.crm.mail.{sent,failed}.v1` — итог письма, запрошенного ERP или EDS (W18A-P1),
+`uz.railtech.crm.ai_policy.changed.v1` — политика защиты данных для ИИ (PD-BIZ, проекция EDS).
 Сообщение переписки (`lead.message_added`, D1-1) — сигнал без текста: подписчик (BFF
 Платформы) перезапрашивает переписку API CRM.
 """
@@ -46,6 +47,7 @@ USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
+AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
 
 
 def _require_transaction(session: AsyncSession) -> None:
@@ -306,6 +308,17 @@ async def mail_result(session: AsyncSession, row: EmailLog) -> None:
             data["detail"] = detail[:500]
         event_type = MAIL_FAILED
     await _publish(session, event_type, data, f"email_log/{row.id}")
+
+
+async def ai_policy_changed(session: AsyncSession, policy: str, actor: Actor) -> None:
+    """Политика защиты данных для ИИ сохранена (PD-BIZ): снимок для EDS, в той же транзакции."""
+    _require_transaction(session)
+    data = {
+        "pii_policy": policy,
+        "changed_at": snapshots.utc(await snapshots.db_now(session)),
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, AI_POLICY_CHANGED, data, "ai_policy/pii")
 
 
 _ADDRESS = re.compile(r"[^\s,:;<>]+@[^\s,:;<>]+")
