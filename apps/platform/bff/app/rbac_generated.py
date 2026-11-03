@@ -347,6 +347,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "crm.leads.triage",
         "full",
     ),
+    "inbound_mail_mine": (
+        "dashboard.queue",
+        "full",
+    ),
 }
 
 # Системные роли (неизменны): название, матрица, поля с ограничением.

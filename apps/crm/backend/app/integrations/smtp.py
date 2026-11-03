@@ -14,7 +14,7 @@ import ssl
 import time
 from dataclasses import dataclass
 from email.message import EmailMessage
-from email.utils import formatdate, make_msgid
+from email.utils import formatdate, getaddresses, make_msgid
 from typing import Literal, Protocol
 
 import structlog
@@ -187,10 +187,13 @@ def build_message(
     reply_to: str | None = None,
     attachments: tuple[MailAttachment, ...] = (),
     headers: tuple[tuple[str, str], ...] = (),
+    cc: tuple[str, ...] = (),
 ) -> EmailMessage:
     message = EmailMessage()
     message["From"] = connection.sender
     message["To"] = to
+    if cc:  # «Ответить всем» (W18A-P2-3): копия — заголовок и получатели конверта
+        message["Cc"] = ", ".join(cc)
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)
     message["Message-ID"] = make_msgid(domain=connection.from_email.rpartition("@")[2] or None)
@@ -210,6 +213,12 @@ def build_message(
             filename=item.filename,
         )
     return message
+
+
+def envelope_recipients(message: EmailMessage) -> list[str]:
+    """Получатели конверта (RCPT TO): «Кому» и копия письма, без повторов."""
+    found = getaddresses([str(message.get("To", "")), str(message.get("Cc", ""))])
+    return list(dict.fromkeys(addr for _, addr in found if addr))
 
 
 class SmtplibTransport:
@@ -232,6 +241,7 @@ class SmtplibTransport:
         reply_to: str | None = None,
         attachments: tuple[MailAttachment, ...] = (),
         headers: tuple[tuple[str, str], ...] = (),
+        cc: tuple[str, ...] = (),
     ) -> None:
         message = build_message(
             connection,
@@ -242,6 +252,7 @@ class SmtplibTransport:
             reply_to=reply_to,
             attachments=attachments,
             headers=headers,
+            cc=cc,
         )
         await asyncio.to_thread(self._send, connection, message)
 
@@ -256,7 +267,7 @@ class SmtplibTransport:
         with self._session(connection) as client:
             self._login(client, connection)
             try:
-                client.send_message(message)
+                client.send_message(message, to_addrs=envelope_recipients(message))
             except smtplib.SMTPRecipientsRefused as exc:
                 permanent = all(code >= 500 for code, _ in exc.recipients.values())
                 raise SmtpProbeError(

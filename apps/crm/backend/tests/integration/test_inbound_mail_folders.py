@@ -31,7 +31,7 @@ from app.services.imap_connector import ImapConnectorService
 from app.services.inbound_mail import InboundMailService
 from app.services.inbound_mail_history import InboundMailHistory
 from tests.fake_imap import FakeImapServer, Mailbox, PlainClient
-from tests.integration.test_inbound_mail import BUCKET, SECRETS_KEY, Stand, _principal, _staff
+from tests.integration.test_inbound_mail import BUCKET, SECRETS_KEY, Stand, _staff
 
 pytestmark = pytest.mark.integration
 
@@ -75,7 +75,7 @@ class FolderStand(Stand):
 
     async def load_history(self, days: int) -> InboundMailImport:
         if self.who is None:
-            self.who = await _principal(self.sessions)
+            self.who = await self.principal()
         started = await self.history.start(self.who, days)
         assert self.queued[-1] == started.id
         assert await self.history.run(started.id) == "done"
@@ -107,12 +107,14 @@ async def test_spam_folder_lands_in_suspect_tab_not_queue(stand: FolderStand) ->
     by_subject = {m.subject: m for m in await stand.mails()}
     assert by_subject["Письмо 1"].status == "new"
     assert (by_subject["Письмо 2"].status, by_subject["Письмо 2"].mailbox) == ("spam", "Spam")
-    page = await stand.service().page("new")
+    page = await stand.service().page(await stand.clerk(), "new")
     assert [i.subject for i in page.items] == ["Письмо 1"], (
         "спам не в очереди и не в «Моих задачах»"
     )
     assert (page.counts.new, page.counts.spam) == (1, 1)
-    assert [i.subject for i in (await stand.service().page("spam")).items] == ["Письмо 2"]
+    assert [i.subject for i in (await stand.service().page(await stand.clerk(), "spam")).items] == [
+        "Письмо 2"
+    ]
     async with stand.sessions() as session:
         states = (await session.scalars(select(InboundMailbox))).all()
     assert {(s.mailbox, s.uidvalidity, s.last_uid) for s in states} == {
@@ -158,7 +160,7 @@ async def test_not_spam_and_discard(stand: FolderStand) -> None:
     stand.spam.add(2, _mail(6))
     await stand.ingest.poll()
     first, second = await stand.mails()
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     service = stand.service()
 
     await service.not_spam(who, first.id)
@@ -166,7 +168,8 @@ async def test_not_spam_and_discard(stand: FolderStand) -> None:
 
     first, second = await stand.mails()
     assert first.status == "new", "«Не спам» — обычное «Ждёт разбора»"
-    assert (second.status, second.archive_reason, second.handled_by) == (
+    assert (second.status, second.outcome, second.archive_reason, second.handled_by) == (
+        "done",
         "archived",
         "Спам",
         who.user_id,
@@ -211,12 +214,14 @@ async def test_history_loads_old_mail_once_and_keeps_tasks_clean(stand: FolderSt
     assert (by_subject["Письмо 13"].status, by_subject["Письмо 13"].from_history) == ("spam", True)
 
     service = stand.service()
-    tasks = await service.page("new", history=False)
+    tasks = await service.page(await stand.clerk(), "new", history=False)
     assert [i.subject for i in tasks.items] == ["Письмо 12"], (
         f"«Мои задачи» — только письма за {TASK_WINDOW_DAYS} дня"
     )
-    assert [i.subject for i in (await service.page("new", history=True)).items] == ["Письмо 11"]
-    everything = await service.page("new")
+    assert [
+        i.subject for i in (await service.page(await stand.clerk(), "new", history=True)).items
+    ] == ["Письмо 11"]
+    everything = await service.page(await stand.clerk(), "new")
     assert [i.subject for i in everything.items] == ["Письмо 12", "Письмо 11"], "по дате письма"
     assert (everything.counts.new, everything.counts.history) == (2, 1)
 
@@ -243,7 +248,7 @@ async def test_history_limit_takes_newest_and_says_so(
 
 
 async def test_history_start_is_single_and_validated(stand: FolderStand) -> None:
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     with pytest.raises(ConflictError):
         await stand.history.start(who, 30)  # приём не настроен
     await stand.configure()
@@ -263,7 +268,7 @@ async def test_two_starts_at_once_give_one_import(stand: FolderStand) -> None:
     """Два «Загрузить» одновременно (двойной клик, две вкладки) — одна загрузка: advisory-блокировка
     (мутационная проверка — в PR: без неё обе проходят проверку «уже идёт» и строк две)."""
     await stand.configure()
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     gate = asyncio.Barrier(2)
     original = repo_mail.running_import
 
@@ -343,6 +348,7 @@ def client(
             stand.storage,
             BUCKET,
             container.imap_connector.configured,
+            container.imap_connector.address,
         )
         yield test_client, stand
 
@@ -359,13 +365,11 @@ async def test_api_spam_tab_and_actions_by_rights(
     await stand.ingest.poll()
     ids = [m.id for m in await stand.mails()]
 
-    page = http.get("/api/v1/inbound-mail", params={"status": "spam"}, headers=clerk).json()
+    page = http.get("/api/v1/inbound-mail", params={"view": "spam"}, headers=clerk).json()
     assert sorted(i["id"] for i in page["items"]) == sorted(ids)
-    assert page["counts"] == {"new": 0, "history": 0, "spam": 2}
+    assert (page["counts"]["new"], page["counts"]["history"], page["counts"]["spam"]) == (0, 0, 2)
     assert page["items"][0]["from_history"] is False
-    tasks = http.get(
-        "/api/v1/inbound-mail", params={"status": "new", "history": "false"}, headers=clerk
-    )
+    tasks = http.get("/api/v1/inbound-mail", params={"view": "tasks"}, headers=clerk)
     assert (tasks.status_code, tasks.json()["items"]) == (200, [])
 
     assert http.post(f"/api/v1/inbound-mail/{ids[0]}/not-spam", headers=seller).status_code == 403

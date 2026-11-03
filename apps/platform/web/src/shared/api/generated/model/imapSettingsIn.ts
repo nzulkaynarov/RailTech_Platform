@@ -29,6 +29,12 @@ export interface ImapSettingsIn {
    */
   folders?: ImapFolderIn[] | null;
   assist_enabled?: boolean;
+  personal_rule?: boolean;
+  /**
+   * @minLength 1
+   * @maxLength 80
+   */
+  personal_label?: string;
   /**
    * `null` — оставить прежний
    * @maxLength 255

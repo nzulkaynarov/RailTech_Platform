@@ -19,6 +19,14 @@ export interface ImapConnector {
   mailbox: string;
   /** Помощник канцелярии включён */
   assist_enabled: boolean;
+  /** «Адресовано лично»: сотрудник в «Кому», общий ящик в копии — письмо сразу ему */
+  personal_rule: boolean;
+  /**
+   * Пометка у такого письма
+   * @minLength 1
+   * @maxLength 80
+   */
+  personal_label: string;
   username: string;
   password_configured: boolean;
   /** @nullable */

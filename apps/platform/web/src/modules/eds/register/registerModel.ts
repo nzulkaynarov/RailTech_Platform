@@ -29,6 +29,8 @@ export interface RegisterValues {
   draftResponsibleId: string;
   draftDue: string;
   draftText: string;
+  /** «Ознакомить» проекта резолюции (W18A-P2-3): сотрудники из копии письма, `crm_user_id` */
+  draftAcquaintIds: string[];
   /** Письмо общего ящика (W18A-P2): ВХ из очереди «Входящая почта»; без вложений — можно */
   sourceMailId: number | null;
 }
@@ -79,6 +81,7 @@ export function emptyRegister(today: string): RegisterValues {
     draftResponsibleId: "",
     draftDue: "",
     draftText: "",
+    draftAcquaintIds: [],
     sourceMailId: null,
   };
 }
@@ -149,6 +152,6 @@ export function draftOf(values: RegisterValues): LetterRegisterIn["resolution_dr
     due: executor && values.draftDue ? values.draftDue : null,
     text: text(values.draftText),
     co_executor_ids: [],
-    acquaint_ids: [],
+    acquaint_ids: values.draftAcquaintIds,
   };
 }

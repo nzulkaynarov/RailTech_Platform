@@ -27,8 +27,9 @@ from app.models.leads import Lead, LeadNote
 from app.repositories import inbound_mail as repo_mail
 from app.repositories import platform_roles as prepo
 from app.security.audit import Actor
+from app.security.principal import Principal
 from app.security.secrets_store import IMAP_PASSWORD, IMAP_USERNAME, SecretCipher, SecretsStore
-from app.services.inbound_mail import InboundMailService
+from app.services.inbound_mail import InboundMailService, MailAccess
 from app.services.inbound_mail_assist import InboundMailAssist
 from app.services.inbound_mail_ingest import InboundMailIngest
 from app.services.settings import SettingsService
@@ -93,6 +94,7 @@ class Stand:
         self.settings = settings or SettingsService(sessions)
         self.storage = FakeStorage()
         self.new: list[int] = []
+        self._people: dict[str, Principal] = {}
         self.ingest = InboundMailIngest(
             sessions,
             self.store,
@@ -113,6 +115,16 @@ class Stand:
         async with self.sessions() as session, session.begin():
             await self.store.put(session, IMAP_USERNAME, USERNAME, None)
             await self.store.put(session, IMAP_PASSWORD, PASSWORD, None)
+
+    async def principal(self, email: str = "clerk-p@railtech.uz") -> Principal:
+        """Сотрудник первой линии (один на тест): действия над письмами идут от его имени."""
+        if email not in self._people:
+            account, _ = await make_user(self.sessions, email, ["viewer"])
+            self._people[email] = Principal(account.id, "Делопроизводитель", ("viewer",))
+        return self._people[email]
+
+    async def clerk(self) -> MailAccess:
+        return MailAccess(await self.principal(), True)
 
     async def mails(self) -> list[InboundMail]:
         async with self.sessions() as session:
@@ -236,7 +248,7 @@ async def _one_mail(stand: Stand, n: int = 1, **kw: Any) -> int:
 
 async def test_create_lead_once_then_conflict(stand: Stand) -> None:
     mail_id = await _one_mail(stand)
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     result = await stand.service().create_lead(who, mail_id)
     assert result.created is True
     async with stand.sessions() as session:
@@ -247,8 +259,13 @@ async def test_create_lead_once_then_conflict(stand: Stand) -> None:
     assert (lead.source, lead.owner_mode, lead.assigned_user_id) == ("email", "paused", None)
     assert lead.email == "buyer@example.test"
     assert lead.first_response_due_at is not None
-    assert (mail.status, mail.lead_id, mail.handled_by) == ("lead", lead.id, who.user_id)
-    page = await stand.service().page("new")
+    assert (mail.status, mail.outcome, mail.lead_id, mail.handled_by) == (
+        "done",
+        "lead",
+        lead.id,
+        who.user_id,
+    )
+    page = await stand.service().page(await stand.clerk(), "new")
     assert page.items == [], "письмо ушло из очереди"
     from app.domain.errors import ConflictError
 
@@ -259,7 +276,7 @@ async def test_create_lead_once_then_conflict(stand: Stand) -> None:
 async def test_second_mail_from_known_sender_becomes_a_note(stand: Stand) -> None:
     first = await _one_mail(stand, 1)
     second = await _one_mail(stand, 2)
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     lead_id = (await stand.service().create_lead(who, first)).lead_id
     result = await stand.service().create_lead(who, second)
     assert (result.lead_id, result.created) == (lead_id, False)
@@ -271,10 +288,10 @@ async def test_second_mail_from_known_sender_becomes_a_note(stand: Stand) -> Non
 
 async def test_archive_with_reason(stand: Stand) -> None:
     mail_id = await _one_mail(stand)
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     await stand.service().archive(who, mail_id, "реклама")
     (mail,) = await stand.mails()
-    assert (mail.status, mail.archive_reason) == ("archived", "реклама")
+    assert (mail.status, mail.outcome, mail.archive_reason) == ("done", "archived", "реклама")
 
 
 def _registered(mail_id: int | None, number: str = "ВХ-12/26") -> Event:
@@ -298,8 +315,12 @@ async def test_letter_registered_event_removes_mail_from_queue_idempotently(stan
     async with stand.sessions() as session, session.begin():
         await service.accept_registered(session, _registered(None))  # регистрация не из очереди
     (mail,) = await stand.mails()
-    assert (mail.status, mail.eds_letter_number) == ("registered", "ВХ-12/26")
-    assert (await service.page("new")).items == []
+    assert (mail.status, mail.outcome, mail.eds_letter_number) == (
+        "done",
+        "registered",
+        "ВХ-12/26",
+    )
+    assert (await service.page(await stand.clerk(), "new")).items == []
 
 
 async def test_reply_goes_into_the_same_thread(stand: Stand) -> None:
@@ -313,8 +334,10 @@ async def test_reply_goes_into_the_same_thread(stand: Stand) -> None:
 
             return type("V", (), {"id": 1, "status": "queued", "created_at": datetime.now(UTC)})()
 
-    who = await _principal(stand.sessions)
-    await stand.service(Mail()).reply(who, mail_id, "Добрый день, КП пришлём завтра.")
+    who = await stand.principal()
+    await stand.service(Mail()).reply(
+        MailAccess(who, True), mail_id, "Добрый день, КП пришлём завтра."
+    )
     (one,) = sent
     assert one["to"] == "buyer@example.test"
     assert one["subject"] == "Re: Запрос КП 1"
@@ -339,7 +362,7 @@ async def test_assist_by_button_suggests_but_does_nothing(
     mail_id = await _one_mail(stand)
     (mail,) = await stand.mails()
     assert mail.assist_status == "none", "без кнопки модель не зовётся: опрос подсказку не просит"
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     assist = InboundMailAssist(stand.sessions, stand.settings, model)
 
     out = await assist.suggest(who, mail_id)
@@ -380,13 +403,13 @@ async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:
     current["imap"]["assist_enabled"] = False
     await stand.settings.update("integrations", current, None)
     model = FakeModel('{"kind": "buyer", "summary": "x"}')
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     from app.domain.errors import ConflictError
 
     with pytest.raises(ConflictError):
         await InboundMailAssist(stand.sessions, stand.settings, model).suggest(who, mail_id)
     assert model.prompts == []
-    assert (await stand.service().page("new")).items[0].assist.status == "off"
+    assert (await stand.service().page(await stand.clerk(), "new")).items[0].assist.status == "off"
 
 
 @pytest.mark.parametrize(
@@ -401,7 +424,7 @@ async def test_human_decision_is_logged(
     stand: Stand, suggest: str | None, action: str, decision: str
 ) -> None:
     mail_id = await _one_mail(stand)
-    who = await _principal(stand.sessions)
+    who = await stand.principal()
     if suggest is not None:
         await InboundMailAssist(stand.sessions, stand.settings, FakeModel(suggest)).suggest(
             who, mail_id
@@ -418,13 +441,6 @@ async def test_human_decision_is_logged(
         ).one()
     assert row.after is not None
     assert (row.after["decision"], row.after["action"]) == (decision, action)
-
-
-async def _principal(sessions: async_sessionmaker[AsyncSession]) -> Any:
-    from app.security.principal import Principal
-
-    account, _ = await make_user(sessions, "clerk-p@railtech.uz", ["viewer"])
-    return Principal(user_id=account.id, full_name="clerk", roles=("viewer",))
 
 
 # --- API и права -------------------------------------------------------------------------------
@@ -472,7 +488,9 @@ async def test_api_registrar_sees_queue_manager_does_not(
     empty = http.get("/api/v1/inbound-mail", headers=clerk)
     assert empty.status_code == 200, empty.text
     assert empty.json()["mailbox"]["configured"] is False, "без IMAP — подсказка на экране"
-    assert http.get("/api/v1/inbound-mail", headers=seller).status_code == 403
+    # Не первая линия: очередь не видит — только письма, где он исполнитель или адресат.
+    own = http.get("/api/v1/inbound-mail", headers=seller)
+    assert (own.status_code, own.json()["items"]) == (200, [])
 
     mail_id = await _one_mail(stand, attach=True)
     page = http.get("/api/v1/inbound-mail", headers=clerk).json()
@@ -484,6 +502,7 @@ async def test_api_registrar_sees_queue_manager_does_not(
     file = http.get(f"/api/v1/inbound-mail/{mail_id}/attachments/0", headers=clerk)
     assert (file.status_code, file.content) == (200, PDF)
 
+    assert http.get(f"/api/v1/inbound-mail/{mail_id}", headers=seller).status_code == 403
     assert http.post(f"/api/v1/inbound-mail/{mail_id}/lead", headers=seller).status_code == 403
     done = http.post(
         f"/api/v1/inbound-mail/{mail_id}/archive", json={"reason": "спам"}, headers=clerk

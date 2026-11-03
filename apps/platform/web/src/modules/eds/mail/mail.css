@@ -32,7 +32,7 @@
 }
 
 .pf-mail-subject {
-  font-weight: 600;
+  font-weight: 400;
   overflow-wrap: anywhere;
 }
 
@@ -70,4 +70,115 @@
 .pf-mail-body .ant-segmented {
   align-self: flex-start;
   max-width: 100%;
+}
+
+/* Общий ящик как обращение (W18A-P2-3): поиск, выбор писем, переписка, журнал. */
+.pf-mail-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.pf-mail-search {
+  flex: 1 1 240px;
+  max-width: 420px;
+}
+
+.pf-mail-pick {
+  padding: 0;
+}
+
+.pf-mail-bulk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.pf-mail-row {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.pf-mail-row-main {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-mail-select {
+  margin-top: 2px;
+}
+
+.pf-mail-return {
+  flex: 0 0 auto;
+}
+
+.pf-mail-unread {
+  font-weight: 700;
+}
+
+.pf-mail-result {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pf-mail-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pf-mail-thread {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-mail-entry {
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.pf-mail-entry:first-child {
+  padding-top: 0;
+  border-top: none;
+}
+
+.pf-mail-entry-head {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pf-mail-journal {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pf-mail-journal li {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .pf-mail-row {
+    flex-wrap: wrap;
+  }
 }

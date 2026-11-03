@@ -3,22 +3,32 @@
 Очередь, карточка, «Подсказать» и действия — CRM (`/api/v1/inbound-mail*`, права `mail_inbox:*`)
 токеном сотрудника; BFF проверяет раздел первой линии `crm.leads.triage` (полный), маппит номера
 (лид `L-0042`, путь ВХ) и ошибки. «Зарегистрировать ВХ» — форма P8 (`POST /eds/letters` с
-`source_mail_id`); чтобы форма открылась с вложениями, `POST /inbound-mail/{id}/eds-files` читает
-файлы письма из CRM и загружает их в EDS (`POST /files`) от имени того же сотрудника — как если бы
-он приложил их сам. Приём — карточка «Почта» «Подключений» (`/admin/integrations/imap*`).
+`source_mail_id`: сначала CRM помечает письмо «Регистрируется»); чтобы форма открылась с вложениями,
+`POST /inbound-mail/{id}/eds-files` читает файлы письма из CRM и загружает их в EDS (`POST
+/files`) от
+имени того же сотрудника — как если бы он приложил их сам. Приём — карточка «Почта» «Подключений»
+(`/admin/integrations/imap*`).
 
 W18A-P2-2 (контракт 0.35.0): вкладка «Подозрительные» (`status=spam`), «Не спам» и «Убрать»;
 `history` — фильтр «из истории»; «Найти папки» и «Загрузить письма за период» в «Подключениях».
+
+W18A-P2-3 (контракт 0.36.0): обращение — представления (`view`), «в работе», цепочки, адресаты.
+Список,
+карточка, ответ и «Вернуть в Новые» открыты любому сотруднику: CRM показывает ему только письма,
+где он
+исполнитель или «адресовано лично» (403 на чужое); действия первой линии — `crm.leads.triage`.
 """
 
+from datetime import datetime
 from typing import Annotated, Any
 from urllib.parse import quote
+from zoneinfo import ZoneInfo
 
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, Response
 
 from app.clients import crm_models as crm
-from app.deps import Authed, require
+from app.deps import Authed, require, require_any_section
 from app.eds_documents import EdsProxy
 from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.feeds.numbers import lead_number
@@ -33,11 +43,15 @@ from app.schemas_inbound_mail import (
     InboundMail,
     InboundMailArchiveIn,
     InboundMailAssist,
+    InboundMailBulkArchiveIn,
+    InboundMailBulkArchiveResult,
     InboundMailLeadResult,
     InboundMailPage,
     InboundMailReply,
     InboundMailReplyIn,
-    MailStatus,
+    InboundMailTakeIn,
+    MailView,
+    to_bulk,
     to_connector,
     to_folders,
     to_history,
@@ -50,6 +64,7 @@ admin_router = APIRouter(prefix="/admin/integrations", tags=["integrations"])
 
 CRM = "/api/v1/inbound-mail"
 Clerk = Annotated[Authed, Depends(require("crm.leads.triage", "full"))]
+Member = Annotated[Authed, Depends(require_any_section)]
 AdminRead = Annotated[Authed, Depends(require("admin", "read"))]
 AdminWrite = Annotated[Authed, Depends(require("admin", "full"))]
 MailId = Annotated[int, Path(ge=1)]
@@ -59,18 +74,42 @@ _MESSAGES = {
     "wrong_password": "Пароль указан неверно.",
     "secrets_key_missing": "На сервере не задан ключ шифрования секретов: пароль не сохранить.",
     "assist_disabled": "Помощник канцелярии выключен администратором — разберите письмо вручную.",
+    "mail_handled": "Письмо уже обработано: обновите очередь.",
+    "mail_registering": "Письмо уже регистрируется — дождитесь результата.",
+    "mail_not_returnable": "Это письмо нельзя вернуть в «Новые».",
 }
 _HANDLED = "Письмо уже обработано: обновите очередь."
+_TZ = ZoneInfo("Asia/Tashkent")
 _NOT_CONFIGURED = "Сначала настройте приём почты: сервер, логин и пароль приложения."
 
 
+def _since(value: object) -> str:
+    try:
+        return datetime.fromisoformat(str(value)).astimezone(_TZ).strftime("%H:%M")
+    except ValueError:
+        return ""
+
+
 def error_of(response: httpx.Response) -> PlatformError:
-    """4xx CRM → `Error`; причина CRM — в `details.reason`, текст — словами для сотрудника."""
+    """4xx CRM → `Error`; причина CRM — в `details.reason`, текст — словами для сотрудника.
+
+    «Уже в работе у …» (W18A-P2-3): имя и время взятия — в `details.assignee_name` и `assigned_at`,
+    чтобы экран предложил «Забрать себе»."""
     reason = backend_reason(response)
     err = from_backend("crm", response)
     if reason and err.body.details is not None:
         err.body.details["reason"] = reason
-    if reason in _MESSAGES:
+    if reason == "mail_in_work_by_other":
+        try:
+            backend = response.json()["details"]
+        except (ValueError, KeyError, TypeError):
+            backend = {}
+        name, since = str(backend.get("assignee_name") or ""), _since(backend.get("assigned_at"))
+        if err.body.details is not None:
+            err.body.details.update(assignee_name=name, assigned_at=backend.get("assigned_at"))
+        who = f"у {name}" if name else "у коллеги"
+        err.body.message = f"Письмо уже в работе {who}" + (f" с {since}." if since else ".")
+    elif reason in _MESSAGES:
         err.body.message = _MESSAGES[reason]
     elif response.status_code == 409:
         err.body.message = _HANDLED
@@ -95,20 +134,72 @@ async def mail_card(authed: Authed, mail_id: int) -> crm.InboundMailOut:
 
 @router.get("/inbound-mail", response_model=InboundMailPage, operation_id="listInboundMail")
 async def list_inbound_mail(
-    authed: Clerk,
-    status: Annotated[MailStatus, Query()] = "new",
+    authed: Member,
+    view: Annotated[MailView, Query()] = "new",
     history: Annotated[bool | None, Query()] = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
 ) -> InboundMailPage:
-    params: dict[str, str] = {"status": status}
+    params: dict[str, str] = {"view": view}
     if history is not None:
         params["history"] = "true" if history else "false"
+    if q and q.strip():
+        params["q"] = q.strip()
     raw = await _json(authed, "GET", CRM, params=params)
     return to_page(crm.InboundMailPage.model_validate(raw))
 
 
 @router.get("/inbound-mail/{id}", response_model=InboundMail, operation_id="getInboundMail")
-async def get_inbound_mail(authed: Clerk, id: MailId) -> InboundMail:
+async def get_inbound_mail(authed: Member, id: MailId) -> InboundMail:
     return to_mail(await mail_card(authed, id))
+
+
+@router.post("/inbound-mail/{id}/read", status_code=204, operation_id="markInboundMailRead")
+async def mark_read(authed: Member, id: MailId) -> Response:
+    """Открыл карточку — прочитано (отметка на человека)."""
+    await _json(authed, "POST", f"{CRM}/{id}/read")
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{id}/take", status_code=204, operation_id="takeInboundMail")
+async def take(body: InboundMailTakeIn, authed: Clerk, id: MailId) -> Response:
+    """«Взять в работу»; `takeover` — «Забрать себе» у того, кто ведёт письмо (запись в журнал)."""
+    await _json(authed, "POST", f"{CRM}/{id}/take", json={"takeover": body.takeover})
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{id}/release", status_code=204, operation_id="releaseInboundMail")
+async def release(authed: Member, id: MailId) -> Response:
+    """«Вернуть в Новые»: своё «в работе» или разобранное архивом/ответом (запись в журнал)."""
+    await _json(authed, "POST", f"{CRM}/{id}/release")
+    return Response(status_code=204)
+
+
+@router.post(
+    "/inbound-mail/bulk-archive",
+    response_model=InboundMailBulkArchiveResult,
+    operation_id="bulkArchiveInboundMail",
+)
+async def bulk_archive(
+    body: InboundMailBulkArchiveIn, authed: Clerk
+) -> InboundMailBulkArchiveResult:
+    """«В архив» нескольких писем с причиной; пропущенные (в работе у другого, разобранные)
+    названы."""
+    raw = await _json(
+        authed, "POST", f"{CRM}/bulk-archive", json={"ids": body.ids, "reason": body.reason.strip()}
+    )
+    return to_bulk(crm.InboundMailBulkArchiveOut.model_validate(raw))
+
+
+async def mail_registration(
+    authed: Authed, mail_id: int, state: str, *, quiet: bool = False
+) -> None:
+    """CRM: ВХ из письма создаётся (`start` — 409, если ведёт другой или уже разобрано) или EDS
+    отказал (`cancel`, без ошибок)."""
+    response = await authed.call(
+        "crm", "POST", f"{CRM}/{mail_id}/registration", json={"state": state}
+    )
+    if response.status_code >= 300 and not quiet:
+        raise error_of(response)
 
 
 def _disposition(name: str) -> str:
@@ -130,15 +221,16 @@ async def _file(authed: Authed, mail_id: int, index: int) -> httpx.Response:
     operation_id="downloadInboundMailAttachment",
 )
 async def download_attachment(
-    authed: Clerk,
+    authed: Member,
     id: MailId,
     index: Annotated[int, Path(ge=0, le=49)],
 ) -> Response:
-    card = await mail_card(authed, id)
-    item = next((a for a in card.attachments if a.index == index), None)
     response = await _file(authed, id, index)
     headers = {
-        "Content-Disposition": _disposition(item.name if item else "file"),
+        # Имя уже очищено CRM (`attachment; filename=…; filename*=UTF-8''…`).
+        "Content-Disposition": response.headers.get(
+            "content-disposition", 'attachment; filename="file"'
+        ),
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
     }
@@ -226,8 +318,14 @@ async def discard(authed: Clerk, id: MailId) -> Response:
 @router.post(
     "/inbound-mail/{id}/reply", response_model=InboundMailReply, operation_id="replyInboundMail"
 )
-async def reply(body: InboundMailReplyIn, authed: Clerk, id: MailId) -> InboundMailReply:
-    raw = await _json(authed, "POST", f"{CRM}/{id}/reply", json={"text": body.text})
+async def reply(body: InboundMailReplyIn, authed: Member, id: MailId) -> InboundMailReply:
+    payload = {
+        "text": body.text,
+        "to": body.to,
+        "reply_all": body.reply_all,
+        "awaiting": body.awaiting,
+    }
+    raw = await _json(authed, "POST", f"{CRM}/{id}/reply", json=payload)
     return InboundMailReply.model_validate(crm.InboundMailReply.model_validate(raw).model_dump())
 
 
@@ -252,6 +350,8 @@ async def save_imap(body: ImapSettingsIn, authed: AdminWrite) -> ImapConnector:
         "mailbox": body.mailbox,
         "folders": [f.model_dump() for f in body.folders] if body.folders is not None else None,
         "assist_enabled": body.assist_enabled,
+        "personal_rule": body.personal_rule,
+        "personal_label": body.personal_label,
         "username": body.username,
         "imap_password": body.imap_password.get_secret_value() if body.imap_password else None,
         "password": body.password.get_secret_value(),

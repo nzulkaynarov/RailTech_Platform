@@ -28,7 +28,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import ValidationError
 from starlette.types import Send
 
-from app.api.inbound_mail import mail_card
+from app.api.inbound_mail import mail_registration
 from app.clients.eds import EdsLetters, eds_error
 from app.deps import Authed, require, require_any, require_any_section
 from app.errors import PlatformError, backend_unavailable
@@ -185,19 +185,19 @@ async def register_letter(
 ) -> LetterCard:
     """«Зарегистрировать входящее» (P8, SPEC-v3 §3.2a): ВХ, «Ждёт резолюции», строка директору.
 
-    Из очереди «Входящая почта» (W18A-P2, `source_mail_id`): письмо уже разобрано (ВХ, лид,
-    архив) — 409 до EDS, второго ВХ нет; с очереди CRM письмо снимает `letter.registered`."""
-    if body.source_mail_id is not None:
-        card = await mail_card(authed, body.source_mail_id)
-        if card.status != "new":
-            raise PlatformError(
-                "CONFLICT",
-                "Письмо уже обработано: обновите очередь.",
-                status_code=409,
-                source="crm",
-                details={"reason": "mail_handled", "status": card.status},
-            )
-    raw = await _letters(authed).register(body.for_eds(), idempotency_key)
+    Из очереди «Входящая почта» (W18A-P2, `source_mail_id`): сначала CRM помечает письмо
+    «Регистрируется» и берёт его для этого сотрудника — письмо уже разобрано или в работе у другого,
+    409 до EDS, второго ВХ нет (W18A-P2-3); отказ EDS возвращает письмо «в работе». «Разобрано: ВХ»
+    ставит событие `letter.registered`."""
+    mail_id = body.source_mail_id
+    if mail_id is not None:
+        await mail_registration(authed, mail_id, "start")
+    try:
+        raw = await _letters(authed).register(body.for_eds(), idempotency_key)
+    except BaseException:
+        if mail_id is not None:
+            await mail_registration(authed, mail_id, "cancel", quiet=True)
+        raise
     return await _card(authed, raw)
 
 

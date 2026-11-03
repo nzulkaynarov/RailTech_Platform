@@ -370,7 +370,9 @@
       "legend": "Rezolyutsiya loyihasi (ixtiyoriy)",
       "hint": "Direktor loyihani bir bosishda tasdiqlaydi yoki tuzatadi.",
       "kind": "Rezolyutsiya turi",
-      "none": "Loyihasiz"
+      "none": "Loyihasiz",
+      "acquaint": "Tanishtirish",
+      "acquaintHint": "Xat nusxasidagi xodimlar; majburiy emas"
     },
     "ai": {
       "group": "Fayldan to‘ldirish",
@@ -619,7 +621,14 @@
   },
   "mail": {
     "subtitle": "Umumiy qutidagi xatlar: har birini ko‘rib chiqing — kiruvchi sifatida ro‘yxatga oling, lid yarating yoki arxivga yuboring",
-    "caption": "Ko‘rib chiqishni kutayotgan xatlar",
+    "caption": {
+      "new": "Ko‘rib chiqishni kutayotgan xatlar",
+      "mine": "Mening ishimdagi xatlar",
+      "in_work": "Ishdagi xatlar",
+      "done": "Ko‘rib chiqilgan xatlar",
+      "spam": "Shubhali xatlar",
+      "all": "Barcha xatlar"
+    },
     "open": "«{{subject}}» xatini ochish",
     "noSubject": "(mavzusiz)",
     "attachments": "Ilovalar: {{count}}",
@@ -630,14 +639,50 @@
     },
     "empty": {
       "title": "Yangi xatlar yo‘q",
-      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi."
+      "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi.",
+      "new": {
+        "title": "Yangi xatlar yo‘q",
+        "text": "Umumiy qutidagi xatlar kelganidan keyin 2 daqiqa ichida shu yerda paydo bo‘ladi."
+      },
+      "mine": {
+        "title": "Sizning ishingizda xat yo‘q",
+        "text": "«Yangi»dan xatni ishga oling — u shu yerda paydo bo‘ladi."
+      },
+      "in_work": {
+        "title": "Ishda xat yo‘q",
+        "text": "Ishga olingan xatlar hamma uchun shu yerda ko‘rinadi."
+      },
+      "done": {
+        "title": "Ko‘rib chiqilgan xatlar hali yo‘q",
+        "text": "Bu yerda natijali xatlar: kiruvchi raqam, lid, javob yoki arxiv."
+      },
+      "all": {
+        "title": "Xat yo‘q",
+        "text": "Umumiy quti xatlari kelgach shu yerda paydo bo‘ladi."
+      },
+      "spam": {
+        "title": "Shubhali xatlar yoʻq",
+        "text": "Bu yerga «Spam» jildidan xatlar tushadi, agar u qabul sozlamalarida tanlangan boʻlsa."
+      },
+      "history": {
+        "title": "Tarixdan xat yo‘q",
+        "text": "Administrator eski xatlarni Sozlamalar · Ulanishlar · Pochta bo‘limida yuklaydi."
+      },
+      "search": {
+        "title": "Hech narsa topilmadi",
+        "text": "So‘rovni o‘zgartiring: jo‘natuvchi va mavzu bo‘yicha qidiramiz."
+      }
     },
     "status": {
-      "new": "Kutmoqda",
+      "new": "Yangi",
       "registered": "Ro‘yxatga olingan",
       "lead": "Lidlarga o‘tkazildi",
       "archived": "Arxivda",
-      "spam": "Shubhali"
+      "spam": "Shubhali",
+      "newReply": "Yangi · zanjirda javob",
+      "in_work": "Ishda",
+      "registering": "Ro‘yxatga olinmoqda",
+      "done": "Ko‘rib chiqildi"
     },
     "kind": {
       "buyer": "Xaridor",
@@ -656,7 +701,10 @@
       "received": "Olingan",
       "client": "Ma’lum mijoz",
       "lead": "Ochiq lid",
-      "inns": "Matndagi STIR"
+      "inns": "Matndagi STIR",
+      "cc": "Nusxa",
+      "assignee": "Yuritadi",
+      "previous": "Olib borgan"
     },
     "text": "Xat matni",
     "files": "Ilovalar",
@@ -702,10 +750,10 @@
       "archived": "Arxivda: {{reason}}"
     },
     "reply": {
-      "title": "Jo‘natuvchiga javob",
+      "title": "Javob berish",
       "label": "Javob matni",
       "send": "Javobni yuborish",
-      "what": "Javob kompaniyaning umumiy manzilidan o‘sha zanjirda jo‘natuvchiga ketadi.",
+      "what": "Xat kompaniyaning umumiy manzilidan, shu zanjirdagi javob sifatida ketadi.",
       "sent": "Javob pochta navbatiga qo‘yildi",
       "history": "Javoblar",
       "status": {
@@ -713,15 +761,25 @@
         "sent": "yuborildi",
         "failed": "yuborilmadi",
         "skipped_no_smtp": "pochta sozlanmagan"
-      }
+      },
+      "sendAll": "Hammaga javob berish",
+      "awaiting": "Javob kutamiz — xat ishda qoladi",
+      "copy": "Nusxa boradi: {{list}}",
+      "sentAwaiting": "Javob yuborildi, xat ishda qoladi",
+      "to": "Kimga"
     },
     "fromMail": "«{{subject}}» xatidan, {{sender}}",
     "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
     "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling.",
     "tabs": {
-      "new": "Koʻrib chiqilishi kerak",
+      "new": "Yangi",
       "spam": "Shubhali",
-      "label": "Xatlar"
+      "label": "Xatlar",
+      "mine": "Mening ishimda",
+      "in_work": "Hammasi ishda",
+      "done": "Ko‘rib chiqilgan",
+      "all": "Hammasi",
+      "ownAll": "Mening xatlarim"
     },
     "filter": {
       "label": "Koʻrsatish",
@@ -743,13 +801,97 @@
       "title": "Shubhali xat",
       "what": "Pochta qutisining «Spam» jildiga kelgan. Joʻnatuvchi va matnni tekshiring.",
       "notSpam": "Spam emas → navbatga",
-      "notSpamDone": "Xat «Koʻrib chiqilishi kerak» navbatida",
+      "notSpamDone": "Xat «Yangi»da",
       "discard": "Olib tashlash",
       "discardDone": "Xat arxivga olindi",
       "hint": "Bu joʻnatuvchining xatlari Spamga tushmasligi uchun pochtada uni «Spam emas» deb belgilang.",
-      "notSpamWhat": "Xat oddiy xat kabi «Koʻrib chiqilishi kerak» boʻlimiga tushadi",
+      "notSpamWhat": "Xat oddiy xat kabi «Yangi» boʻlimiga tushadi",
       "discardWhat": "«Olib tashlash» — «Spam» sababi bilan arxivga, hech narsa oʻchirilmaydi"
-    }
+    },
+    "search": {
+      "label": "Jo‘natuvchi va mavzu bo‘yicha qidirish",
+      "placeholder": "Jo‘natuvchi yoki mavzu"
+    },
+    "unread": "O‘qilmagan",
+    "select": "«{{subject}}» xatini tanlash",
+    "inWorkBy": "{{name}} ishida, {{time}} dan",
+    "previous": "Olib borgan: {{name}}",
+    "messages": "Xatlar: {{count}}",
+    "waiting": "Tasdiq kutilmoqda",
+    "outcome": {
+      "registered": "Ro‘yxatga olindi: {{number}}",
+      "lead": "Lid {{number}}",
+      "replied": "Javob yuborildi",
+      "archived": "Arxivga: {{reason}}",
+      "unknown": "Ko‘rib chiqildi"
+    },
+    "returnToNew": "«Yangi»ga qaytarish",
+    "returned": "Xat «Yangi»ga qaytdi",
+    "release": "«Yangi»ga qaytarish",
+    "releaseOwn": "Devonxonaga qaytarish",
+    "take": "Ishga olish",
+    "takeDone": "Xat sizning ishingizda",
+    "ownHint": "Xatni boshqa xodim yuritadi yoki u faqat ma’lumot uchun: ochib o‘qish mumkin.",
+    "registering": "Kiruvchi raqam yaratilmoqda…",
+    "registeringWaiting": "Tasdiq kutilmoqda: ro‘yxatga olish 10 daqiqada tasdiqlanmadi.",
+    "refresh": "Yangilash",
+    "busy": {
+      "title": "Xat allaqachon {{name}} ishida, {{time}} dan",
+      "what": "Xat sizga o‘tadi, {{name}}da u «Mening ishimda»dan yo‘qoladi, amal jurnalga yoziladi",
+      "takeOver": "O‘zimga olish"
+    },
+    "bulk": {
+      "label": "Tanlangan xatlar",
+      "selected": "Tanlandi: {{count}}",
+      "all": "Hammasini tanlash",
+      "clear": "Tanlovni bekor qilish",
+      "archive": "Arxivga",
+      "title": "Arxivga: {{count}}",
+      "hint": "Masalan: reklama, xabarnoma",
+      "reasonNewsletter": "Reklama",
+      "reasonNotice": "Xabarnoma",
+      "what": "Tanlangan xatlar shu sabab bilan arxivga o‘tadi; hamkasb band qilgan va ko‘rib chiqilganlari joyida qoladi.",
+      "confirm": "Arxivga yuborish",
+      "done": "Arxivga: {{count}}.",
+      "skipped": "O‘tkazib yuborildi: {{count}} — {{reasons}}.",
+      "colleague": "hamkasb",
+      "skip": {
+        "in_work_by_other": "{{name}} ishida",
+        "handled": "allaqachon ko‘rib chiqilgan",
+        "registering": "kiruvchi raqam yaratilmoqda",
+        "missing": "xat endi yo‘q"
+      }
+    },
+    "address": {
+      "staff": "{{name}} (xodim), {{email}}",
+      "mailbox": "{{email}} (umumiy quti)"
+    },
+    "thread": {
+      "title": "Yozishma",
+      "incoming": "{{sender}}, {{when}}",
+      "outgoing": "Javob yuborildi: {{who}}, {{when}} → {{to}}, «{{subject}}»",
+      "newParticipant": "Yozishmada yangi ishtirokchi"
+    },
+    "journal": {
+      "title": "Jurnal",
+      "system": "Tizim",
+      "action": {
+        "take": "ishga oldi",
+        "takeover": "o‘ziga oldi",
+        "release": "«Yangi»ga qaytardi",
+        "reply": "javob berdi",
+        "lead": "lid yaratdi",
+        "archive": "arxivga yubordi",
+        "register_start": "kiruvchini ro‘yxatga olishni boshladi",
+        "register_cancel": "ro‘yxatga olishni bekor qildi",
+        "thread_reply": "mijoz zanjirda javob berdi",
+        "personal": "xat shaxsan yo‘llangan",
+        "not_spam": "shubhalilardan qaytardi",
+        "discard": "arxivga olib tashladi"
+      }
+    },
+    "inWorkSince": "{{name}}, {{time}} dan",
+    "replyTag": "Zanjirda javob"
   },
   "settings": {
     "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",

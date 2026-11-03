@@ -4,11 +4,11 @@
  */
 
 /**
- * Числа вкладок списка «Входящая почта»
+ * Числа вкладок списка «Входящая почта» в рамках прав сотрудника
  */
 export interface InboundMailCounts {
   /**
-   * Ждут разбора (вместе с «из истории»)
+   * Новые (вместе с «из истории»)
    * @minimum 0
    */
   new: number;
@@ -18,8 +18,33 @@ export interface InboundMailCounts {
    */
   history: number;
   /**
+   * Мои в работе
+   * @minimum 0
+   */
+  mine: number;
+  /**
+   * Все в работе
+   * @minimum 0
+   */
+  in_work: number;
+  /**
+   * Разобранные
+   * @minimum 0
+   */
+  done: number;
+  /**
    * Подозрительные
    * @minimum 0
    */
   spam: number;
+  /**
+   * Все, кроме подозрительных
+   * @minimum 0
+   */
+  all: number;
+  /**
+   * Новых, которые этот сотрудник ещё не открывал
+   * @minimum 0
+   */
+  unread_new: number;
 }

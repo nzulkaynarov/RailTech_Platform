@@ -3,10 +3,18 @@
 `inbound_mail` — одно письмо (UNIQUE `message_id` — дедупликация: повторный опрос, копия письма в
 ящике, смена UIDVALIDITY дубля не дают). Тело — только текст; вложения из белого списка — в бакете
 вложений CRM (`attachments`: имя, тип, размер, ключ хранилища), отброшенные — `skipped` с причиной.
-Статус: `spam` (из спам-папки — «Подозрительные», W18A-P2-2; «Не спам» → `new`, «Убрать» →
-`archived`) | `new` (в очереди) → `registered` (ВХ в EDS, по событию `eds.letter.registered`) |
-`lead` (лид или заметка в лиде) | `archived` (с причиной). Подсказка помощника — `assist_*`: тип,
-суть и предложенное действие; ничего сама не делает.
+Состояния (W18A-P2-3; домен — `domain/inbound_mail_flow.py`): `new` → `in_work` (исполнитель
+`assignee_id`, с `assigned_at`) → `registering` (ВХ создаётся в EDS, `registering_at`) → `done` с
+итогом `outcome` (`registered` — по событию `eds.letter.registered`, `lead`, `replied` — ответ
+отправлен, `archived` — с причиной; кто и когда — `handled_by`, `handled_at`). `spam` — из
+спам-папки («Подозрительные», W18A-P2-2; «Не спам» → `new`, «Убрать» → `done/archived`). Подсказка
+помощника — `assist_*`: тип, суть и предложенное действие; ничего сама не делает.
+
+Цепочка: ответ клиента (по `In-Reply-To`/`References`) — строка с `thread_root_id`, в списке её нет;
+запись-корень получает `activity_at` и, если была разобрана, снова `new` с `thread_reply`.
+Адресаты: «Кому» (`to_addrs`) и копия (`cc_addrs`) раздельно; сотрудники из них — `to_staff_ids` /
+`cc_staff_ids`; `personal` — «адресовано лично» (исполнитель — первый сотрудник в «Кому»).
+`inbound_mail_read` — «прочитано» на человека.
 
 `from_history` — письмо из «Загрузить письма за период» старше окна задач: в списке, не в «Моих
 задачах».
@@ -39,7 +47,8 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
 
-MAIL_STATUSES = ("new", "spam", "registered", "lead", "archived")
+MAIL_STATUSES = ("new", "in_work", "registering", "done", "spam")
+MAIL_OUTCOMES = ("registered", "lead", "replied", "archived")
 IMPORT_STATUSES = ("running", "done", "error")
 ASSIST_STATUSES = ("none", "done", "unavailable")
 
@@ -48,11 +57,17 @@ class InboundMail(TimestampMixin, Base):
     __tablename__ = "inbound_mail"
     __table_args__ = (
         CheckConstraint(
-            "status IN ('new', 'spam', 'registered', 'lead', 'archived')", name="status"
+            "status IN ('new', 'in_work', 'registering', 'done', 'spam')", name="status"
+        ),
+        CheckConstraint(
+            "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived')",
+            name="outcome",
         ),
         CheckConstraint("assist_status IN ('none', 'done', 'unavailable')", name="assist_status"),
         Index("uq_inbound_mail_message_id", "message_id", unique=True),
-        Index("ix_inbound_mail_status_received", "status", "received_at"),
+        Index("ix_inbound_mail_status_activity", "status", "activity_at"),
+        Index("ix_inbound_mail_assignee_status", "assignee_id", "status"),
+        Index("ix_inbound_mail_thread_root", "thread_root_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -105,6 +120,45 @@ class InboundMail(TimestampMixin, Base):
         BigInteger, ForeignKey("users.id", ondelete="SET NULL")
     )
     handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    outcome: Mapped[str | None] = mapped_column(String(16))
+    # «В работе у …» (Help Scout «assigned to»): кто и с какого времени; `registering_at` — ВХ
+    # создаётся.
+    assignee_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    registering_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Цепочка: корень записи (NULL — это сама запись списка) и «Новое (ответ в цепочке)».
+    thread_root_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("inbound_mail.id", ondelete="CASCADE")
+    )
+    thread_reply: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    activity_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+    cc_addrs: Mapped[list[str]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    to_staff_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    cc_staff_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False, server_default="[]")
+    personal: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    # Письмо в цепочке от адреса, которого в ней не было («новый участник переписки», W18A-P2-3).
+    new_participant: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+
+
+class InboundMailRead(Base):
+    """«Прочитано» на человека: письмо непрочитано, пока нет отметки или она старше
+    `activity_at`."""
+
+    __tablename__ = "inbound_mail_read"
+
+    mail_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("inbound_mail.id", ondelete="CASCADE"), primary_key=True
+    )
+    user_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    read_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
 
 
 class InboundMailbox(Base):

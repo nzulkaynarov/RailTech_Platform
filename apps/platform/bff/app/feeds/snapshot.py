@@ -78,7 +78,7 @@ class Snapshot:
     # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
     tickets: list[dict[str, Any]] = field(default_factory=list)
     tickets_total: int = 0
-    # Входящая почта общего ящика (CRM `inbound-mail?status=new`, W18A-P2): канцелярии — «Мои
+    # Входящая почта общего ящика (CRM `inbound-mail?view=tasks`, W18A-P2): канцелярии — «Мои
     # задачи»; `None` — не читали или CRM не ответил (строк и бейджа нет), `mail_configured` —
     # настроен ли приём (иначе карточка подсказывает «Настройки · Подключения · Почта»).
     mail: list[dict[str, Any]] | None = None
@@ -142,6 +142,12 @@ def wants_tickets(view: View) -> bool:
 
 def wants_mail(view: View) -> bool:
     return view.wants("inbound_mail")
+
+
+def wants_mail_mine(view: View) -> bool:
+    """Письма «в работе» у сотрудника или адресованные ему лично — у любого сотрудника
+    (W18A-P2-3)."""
+    return view.wants("inbound_mail_mine")
 
 
 def wants_supplier_overdue(view: View) -> bool:
@@ -226,9 +232,10 @@ OVERDUE_PATH = "/api/v1/stock/overdue/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
 MAIL_PATH = "/api/v1/inbound-mail"
-# Строки «Моих задач» — без писем «из истории» (W18A-P2-2): загруженные «за период» и старше
-# 3 дней (`TASK_WINDOW_DAYS` CRM) — только в списке «Входящая почта»; решает CRM, BFF просит фильтр.
-MAIL_PARAMS = {"status": "new", "history": "false"}
+# Строки «Моих задач» (W18A-P2-3): Новые (без писем «из истории», W18A-P2-2) и мои в работе — всё
+# остальное
+# (чужие «в работе», «Разобрано») строкой не приходит; решает CRM (`view=tasks`), BFF только просит.
+MAIL_PARAMS = {"view": "tasks"}
 
 
 async def load_snapshot(
@@ -299,7 +306,7 @@ async def load_snapshot(
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
 
     async def load_mail() -> None:
-        if tickets and wants_mail(view):
+        if tickets and (wants_mail(view) or wants_mail_mine(view)):
             payload = await feed.get("crm", MAIL_PATH, MAIL_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if isinstance(payload, dict):
                 snap.mail = rows(payload)

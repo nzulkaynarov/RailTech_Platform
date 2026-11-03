@@ -1,5 +1,6 @@
 """Схемы входящей почты общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0;
-папки «Спам» и загрузка писем за период — W18A-P2-2, 0.35.0)."""
+папки «Спам» и загрузка писем за период — W18A-P2-2, 0.35.0; обращение — статусы, «в работе»,
+цепочки, адресаты — W18A-P2-3, 0.36.0)."""
 
 from datetime import datetime
 from typing import Literal
@@ -9,7 +10,9 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from app.clients import crm_models as crm
 from app.feeds.numbers import lead_number, letter_ref
 
-MailStatus = Literal["new", "spam", "registered", "lead", "archived"]
+MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
+MailOutcome = Literal["registered", "lead", "replied", "archived"]
+MailView = Literal["new", "mine", "in_work", "done", "spam", "all"]
 
 
 class _Out(BaseModel):
@@ -70,6 +73,8 @@ class ImapConnector(_Out):
     security: Literal["ssl", "starttls"]
     mailbox: str
     assist_enabled: bool
+    personal_rule: bool
+    personal_label: str
     username: str
     password_configured: bool
     password_last4: str | None
@@ -92,6 +97,8 @@ class ImapSettingsIn(BaseModel):
     mailbox: str = Field(default="INBOX", min_length=1, max_length=200)
     folders: list[ImapFolderIn] | None = Field(default=None, max_length=10)
     assist_enabled: bool = True
+    personal_rule: bool = True
+    personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
@@ -118,6 +125,21 @@ class InboundMailLink(_Out):
     name: str
 
 
+class InboundMailPerson(_Out):
+    id: int
+    name: str
+
+
+class InboundMailResult(_Out):
+    outcome: MailOutcome | None
+    by: InboundMailPerson | None
+    at: datetime | None
+    letter_number: str | None
+    letter_ref: str | None
+    lead: InboundMailLink | None
+    reason: str | None
+
+
 class InboundMailItem(_Out):
     id: int
     status: MailStatus
@@ -126,12 +148,21 @@ class InboundMailItem(_Out):
     subject: str
     received_at: datetime
     sent_at: datetime | None
+    activity_at: datetime
     preview: str
     attachments_count: int
     assist: InboundMailAssist
     client: InboundMailLink | None
     lead: InboundMailLink | None
     from_history: bool
+    assignee: InboundMailPerson | None
+    assigned_at: datetime | None
+    personal: bool
+    thread_reply: bool
+    unread: bool
+    messages_count: int
+    eds_waiting: bool
+    result: InboundMailResult | None
 
 
 class InboundMailMailbox(_Out):
@@ -139,12 +170,18 @@ class InboundMailMailbox(_Out):
     last_poll_at: datetime | None
     last_ok_at: datetime | None
     last_error_kind: str | None
+    personal_label: str
 
 
 class InboundMailCounts(_Out):
     new: int
     history: int
+    mine: int
+    in_work: int
+    done: int
     spam: int
+    all: int
+    unread_new: int
 
 
 class InboundMailPage(_Out):
@@ -173,21 +210,47 @@ class InboundMailReply(_Out):
     status: str
     created_at: datetime
     sent_at: datetime | None
+    by: InboundMailPerson | None
+
+
+class InboundMailAddress(_Out):
+    email: str
+    staff: InboundMailPerson | None
+    mailbox: bool
+
+
+class InboundMailMessage(_Out):
+    id: int
+    from_email: str
+    from_name: str
+    at: datetime
+    text: str
+    attachments: list[InboundMailAttachment]
+    new_participant: bool
+
+
+class InboundMailEvent(_Out):
+    at: datetime
+    action: str
+    actor: InboundMailPerson | None
+    detail: str | None
 
 
 class InboundMail(InboundMailItem):
-    to: list[str]
+    to: list[InboundMailAddress]
+    cc: list[InboundMailAddress]
     text: str
     attachments: list[InboundMailAttachment]
     skipped: list[InboundMailSkipped]
     too_large: bool
     inns: list[str]
-    letter_number: str | None
-    letter_ref: str | None
-    result_lead: InboundMailLink | None
-    archive_reason: str | None
-    handled_at: datetime | None
+    messages: list[InboundMailMessage]
     replies: list[InboundMailReply]
+    journal: list[InboundMailEvent]
+    reply_all_copy: list[str]
+    personal_label: str
+    reply_to: str
+    reply_options: list[str]
 
 
 class InboundMailLeadResult(_Out):
@@ -206,6 +269,33 @@ class InboundMailReplyIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=20000)
+    to: str | None = Field(default=None, max_length=255)
+    reply_all: bool = False
+    awaiting: bool = False
+
+
+class InboundMailTakeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    takeover: bool = False
+
+
+class InboundMailBulkArchiveIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    ids: list[int] = Field(min_length=1, max_length=200)
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class InboundMailSkippedItem(_Out):
+    id: int
+    reason: Literal["in_work_by_other", "handled", "registering", "missing"]
+    assignee: InboundMailPerson | None
+
+
+class InboundMailBulkArchiveResult(_Out):
+    archived: list[int]
+    skipped: list[InboundMailSkippedItem]
 
 
 def _lead(link: crm.InboundMailLink | None) -> InboundMailLink | None:
@@ -222,6 +312,25 @@ def _assist(src: crm.InboundMailAssist) -> InboundMailAssist:
     return InboundMailAssist.model_validate(src.model_dump(mode="json"))
 
 
+def _person(src: crm.InboundMailPerson | None) -> InboundMailPerson | None:
+    return InboundMailPerson(id=src.id, name=src.name) if src else None
+
+
+def _result(src: crm.InboundMailResult | None, subject: str) -> InboundMailResult | None:
+    if src is None:
+        return None
+    number = src.letter_number
+    return InboundMailResult(
+        outcome=src.outcome,
+        by=_person(src.by),
+        at=src.at,
+        letter_number=number,
+        letter_ref=letter_ref(number, subject).path if number else None,
+        lead=_lead(src.lead),
+        reason=src.reason,
+    )
+
+
 def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
     return InboundMailItem(
         id=src.id,
@@ -231,12 +340,21 @@ def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
         subject=src.subject,
         received_at=src.received_at,
         sent_at=src.sent_at,
+        activity_at=src.activity_at,
         preview=src.preview,
         attachments_count=src.attachments_count,
         assist=_assist(src.assist),
         client=_client(src.client),
         lead=_lead(src.lead),
         from_history=bool(src.from_history),
+        assignee=_person(src.assignee),
+        assigned_at=src.assigned_at,
+        personal=bool(src.personal),
+        thread_reply=bool(src.thread_reply),
+        unread=bool(src.unread),
+        messages_count=src.messages_count,
+        eds_waiting=bool(src.eds_waiting),
+        result=_result(src.result, src.subject),
     )
 
 
@@ -249,22 +367,56 @@ def to_page(src: crm.InboundMailPage) -> InboundMailPage:
     )
 
 
+def _address(src: crm.InboundMailAddress) -> InboundMailAddress:
+    return InboundMailAddress(email=src.email, staff=_person(src.staff), mailbox=bool(src.mailbox))
+
+
 def to_mail(src: crm.InboundMailOut) -> InboundMail:
-    number = src.eds_letter_number
     return InboundMail(
         **to_item(src).model_dump(),
-        to=list(src.to),
+        to=[_address(a) for a in src.to],
+        cc=[_address(a) for a in src.cc],
         text=src.text,
         attachments=[InboundMailAttachment.model_validate(a.model_dump()) for a in src.attachments],
         skipped=[InboundMailSkipped.model_validate(s.model_dump()) for s in src.skipped],
         too_large=src.too_large,
         inns=list(src.inns),
-        letter_number=number,
-        letter_ref=letter_ref(number, src.subject).path if number else None,
-        result_lead=_lead(src.result_lead),
-        archive_reason=src.archive_reason,
-        handled_at=src.handled_at,
-        replies=[InboundMailReply.model_validate(r.model_dump()) for r in src.replies],
+        messages=[
+            InboundMailMessage(
+                id=m.id,
+                from_email=m.from_email,
+                from_name=m.from_name,
+                at=m.at,
+                text=m.text,
+                new_participant=bool(m.new_participant),
+                attachments=[
+                    InboundMailAttachment.model_validate(a.model_dump()) for a in m.attachments
+                ],
+            )
+            for m in src.messages
+        ],
+        replies=[
+            InboundMailReply(**{**r.model_dump(exclude={"by"}), "by": _person(r.by)})
+            for r in src.replies
+        ],
+        journal=[
+            InboundMailEvent(at=e.at, action=e.action, actor=_person(e.actor), detail=e.detail)
+            for e in src.journal
+        ],
+        reply_all_copy=list(src.reply_all_copy),
+        personal_label=src.personal_label,
+        reply_to=src.reply_to,
+        reply_options=list(src.reply_options),
+    )
+
+
+def to_bulk(src: crm.InboundMailBulkArchiveOut) -> InboundMailBulkArchiveResult:
+    return InboundMailBulkArchiveResult(
+        archived=list(src.archived),
+        skipped=[
+            InboundMailSkippedItem(id=s.id, reason=s.reason, assignee=_person(s.assignee))
+            for s in src.skipped
+        ],
     )
 
 

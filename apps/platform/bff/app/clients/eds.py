@@ -102,9 +102,11 @@ class EdsLetters:
     def __init__(self, call: Call) -> None:
         self._call = call
 
-    async def _json(self, method: str, path: str, ok: int = 200, **kw: Any) -> Any:
+    async def _json(
+        self, method: str, path: str, ok: int | tuple[int, ...] = 200, **kw: Any
+    ) -> Any:
         response = await self._call("eds", method, path, **kw)
-        if response.status_code != ok:
+        if response.status_code not in ((ok,) if isinstance(ok, int) else ok):
             raise eds_error(response)
         try:
             return response.json()
@@ -137,10 +139,12 @@ class EdsLetters:
         return None
 
     async def register(self, body: dict[str, Any], idempotency_key: str | None) -> dict[str, Any]:
-        """Регистрация входящего (P8): EDS `POST /letters`; ключ повтора — как есть."""
+        """Регистрация входящего (P8): EDS `POST /letters`; ключ повтора — как есть.
+
+        Письмо общего ящика, у которого уже есть ВХ, EDS отдаёт с 200 (W18A-P2-3) — тот же ВХ."""
         headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
         letter: dict[str, Any] = await self._json(
-            "POST", "/api/v1/letters", ok=201, json=body, headers=headers
+            "POST", "/api/v1/letters", ok=(200, 201), json=body, headers=headers
         )
         return letter
 

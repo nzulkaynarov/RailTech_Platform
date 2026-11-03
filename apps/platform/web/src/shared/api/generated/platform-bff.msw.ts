@@ -39,6 +39,7 @@ import {
   EdsRegistryKind,
   EmployeeStatus,
   ErpSyncState,
+  InboundMailOutcome,
   InboundMailStatus,
   IntegrationAccess,
   IntegrationCardKey,
@@ -192,10 +193,13 @@ import type {
   ImapHistory,
   InboundMail,
   InboundMailAssist,
+  InboundMailBulkArchiveResult,
   InboundMailLeadResult,
   InboundMailLink,
   InboundMailPage,
+  InboundMailPerson,
   InboundMailReply,
+  InboundMailResult,
   IntegrationsOverview,
   KbChunkList,
   KbDocument,
@@ -9256,6 +9260,8 @@ export const getGetImapConnectorResponseMock = (
   security: faker.helpers.arrayElement(["ssl", "starttls"] as const),
   mailbox: faker.string.alpha({ length: { min: 10, max: 20 } }),
   assist_enabled: faker.datatype.boolean(),
+  personal_rule: faker.datatype.boolean(),
+  personal_label: faker.string.alpha({ length: { min: 1, max: 80 } }),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
   password_configured: faker.datatype.boolean(),
   password_last4: faker.helpers.arrayElement([
@@ -9327,6 +9333,8 @@ export const getSaveImapConnectorResponseMock = (
   security: faker.helpers.arrayElement(["ssl", "starttls"] as const),
   mailbox: faker.string.alpha({ length: { min: 10, max: 20 } }),
   assist_enabled: faker.datatype.boolean(),
+  personal_rule: faker.datatype.boolean(),
+  personal_label: faker.string.alpha({ length: { min: 1, max: 80 } }),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
   password_configured: faker.datatype.boolean(),
   password_last4: faker.helpers.arrayElement([
@@ -9436,6 +9444,46 @@ export const getListInboundMailResponseInboundMailLinkMock = (
   ...overrideResponse,
 });
 
+export const getListInboundMailResponseInboundMailPersonMock = (
+  overrideResponse: Partial<InboundMailPerson> = {},
+): InboundMailPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getListInboundMailResponseInboundMailResultMock = (
+  overrideResponse: Partial<InboundMailResult> = {},
+): InboundMailResult => ({
+  ...{
+    outcome: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(InboundMailOutcome)),
+      null,
+    ]),
+    by: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailPersonMock() },
+      null,
+    ]),
+    at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    letter_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    letter_ref: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lead: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailLinkMock() },
+      null,
+    ]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getListInboundMailResponseMock = (
   overrideResponse: Partial<Extract<InboundMailPage, object>> = {},
 ): InboundMailPage => ({
@@ -9447,6 +9495,7 @@ export const getListInboundMailResponseMock = (
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
     received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    activity_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
     attachments_count: faker.number.int({ min: 0 }),
     assist: {
@@ -9473,6 +9522,23 @@ export const getListInboundMailResponseMock = (
       null,
     ]),
     from_history: faker.datatype.boolean(),
+    assignee: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailPersonMock() },
+      null,
+    ]),
+    assigned_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    personal: faker.datatype.boolean(),
+    thread_reply: faker.datatype.boolean(),
+    unread: faker.datatype.boolean(),
+    messages_count: faker.number.int({ min: 1 }),
+    eds_waiting: faker.datatype.boolean(),
+    result: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailResultMock() },
+      null,
+    ]),
   })),
   total: faker.number.int({ min: 0 }),
   mailbox: {
@@ -9489,11 +9555,17 @@ export const getListInboundMailResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    personal_label: faker.string.alpha({ length: { min: 10, max: 20 } }),
   },
   counts: {
     new: faker.number.int({ min: 0 }),
     history: faker.number.int({ min: 0 }),
+    mine: faker.number.int({ min: 0 }),
+    in_work: faker.number.int({ min: 0 }),
+    done: faker.number.int({ min: 0 }),
     spam: faker.number.int({ min: 0 }),
+    all: faker.number.int({ min: 0 }),
+    unread_new: faker.number.int({ min: 0 }),
   },
   ...overrideResponse,
 });
@@ -9509,6 +9581,40 @@ export const getGetInboundMailResponseInboundMailLinkMock = (
   ...overrideResponse,
 });
 
+export const getGetInboundMailResponseInboundMailPersonMock = (
+  overrideResponse: Partial<InboundMailPerson> = {},
+): InboundMailPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getGetInboundMailResponseInboundMailResultMock = (
+  overrideResponse: Partial<InboundMailResult> = {},
+): InboundMailResult => ({
+  ...{
+    outcome: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(InboundMailOutcome)),
+      null,
+    ]),
+    by: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailPersonMock() }, null]),
+    at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    letter_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    letter_ref: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
+    reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetInboundMailResponseMock = (
   overrideResponse: Partial<Extract<InboundMail, object>> = {},
 ): InboundMail => ({
@@ -9519,6 +9625,7 @@ export const getGetInboundMailResponseMock = (
   subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
   received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  activity_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   preview: faker.string.alpha({ length: { min: 10, max: 200 } }),
   attachments_count: faker.number.int({ min: 0 }),
   assist: {
@@ -9539,9 +9646,39 @@ export const getGetInboundMailResponseMock = (
   client: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   from_history: faker.datatype.boolean(),
-  to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-  ),
+  assignee: faker.helpers.arrayElement([
+    { ...getGetInboundMailResponseInboundMailPersonMock() },
+    null,
+  ]),
+  assigned_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  personal: faker.datatype.boolean(),
+  thread_reply: faker.datatype.boolean(),
+  unread: faker.datatype.boolean(),
+  messages_count: faker.number.int({ min: 1 }),
+  eds_waiting: faker.datatype.boolean(),
+  result: faker.helpers.arrayElement([
+    { ...getGetInboundMailResponseInboundMailResultMock() },
+    null,
+  ]),
+  to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    staff: faker.helpers.arrayElement([
+      { ...getGetInboundMailResponseInboundMailPersonMock() },
+      null,
+    ]),
+    mailbox: faker.datatype.boolean(),
+  })),
+  cc: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    staff: faker.helpers.arrayElement([
+      { ...getGetInboundMailResponseInboundMailPersonMock() },
+      null,
+    ]),
+    mailbox: faker.datatype.boolean(),
+  })),
   text: faker.string.alpha({ length: { min: 10, max: 20 } }),
   attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -9561,26 +9698,25 @@ export const getGetInboundMailResponseMock = (
   inns: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
     faker.string.alpha({ length: { min: 10, max: 20 } }),
   ),
-  letter_number: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
-  letter_ref: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
-  result_lead: faker.helpers.arrayElement([
-    { ...getGetInboundMailResponseInboundMailLinkMock() },
-    null,
-  ]),
-  archive_reason: faker.helpers.arrayElement([
-    faker.string.alpha({ length: { min: 10, max: 20 } }),
-    null,
-  ]),
-  handled_at: faker.helpers.arrayElement([
-    faker.date.past().toISOString().slice(0, 19) + "Z",
-    null,
-  ]),
+  messages: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      from_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      attachments: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        index: faker.number.int({ min: 0 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        size: faker.number.int({ min: 0 }),
+      })),
+      new_participant: faker.datatype.boolean(),
+    }),
+  ),
   replies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.number.int(),
@@ -9590,6 +9726,64 @@ export const getGetInboundMailResponseMock = (
       created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
       sent_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      by: faker.helpers.arrayElement([
+        { ...getGetInboundMailResponseInboundMailPersonMock() },
+        null,
+      ]),
+    }),
+  ),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor: faker.helpers.arrayElement([
+        { ...getGetInboundMailResponseInboundMailPersonMock() },
+        null,
+      ]),
+      detail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  reply_all_copy: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  personal_label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  reply_to: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  reply_options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
+  ...overrideResponse,
+});
+
+export const getBulkArchiveInboundMailResponseInboundMailPersonMock = (
+  overrideResponse: Partial<InboundMailPerson> = {},
+): InboundMailPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getBulkArchiveInboundMailResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailBulkArchiveResult, object>> = {},
+): InboundMailBulkArchiveResult => ({
+  archived: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.number.int(),
+  ),
+  skipped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      reason: faker.helpers.arrayElement([
+        "in_work_by_other",
+        "handled",
+        "registering",
+        "missing",
+      ] as const),
+      assignee: faker.helpers.arrayElement([
+        { ...getBulkArchiveInboundMailResponseInboundMailPersonMock() },
         null,
       ]),
     }),
@@ -9636,6 +9830,13 @@ export const getCreateLeadFromInboundMailResponseMock = (
   ...overrideResponse,
 });
 
+export const getReplyInboundMailResponseInboundMailPersonMock = (
+  overrideResponse: Partial<InboundMailPerson> = {},
+): InboundMailPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
 export const getReplyInboundMailResponseMock = (
   overrideResponse: Partial<Extract<InboundMailReply, object>> = {},
 ): InboundMailReply => ({
@@ -9645,6 +9846,7 @@ export const getReplyInboundMailResponseMock = (
   status: faker.string.alpha({ length: { min: 10, max: 20 } }),
   created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  by: faker.helpers.arrayElement([{ ...getReplyInboundMailResponseInboundMailPersonMock() }, null]),
   ...overrideResponse,
 });
 
@@ -27029,6 +27231,84 @@ export const getGetInboundMailMockHandler = (
   );
 };
 
+export const getMarkInboundMailReadMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/read",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getTakeInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/take",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getReleaseInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/release",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getBulkArchiveInboundMailMockHandler = (
+  overrideResponse?:
+    | InboundMailBulkArchiveResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<InboundMailBulkArchiveResult> | InboundMailBulkArchiveResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/bulk-archive",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getBulkArchiveInboundMailResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDownloadInboundMailAttachmentMockHandler = (
   overrideResponse?:
     Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
@@ -32779,6 +33059,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getStartImapHistoryMockHandler(),
   getListInboundMailMockHandler(),
   getGetInboundMailMockHandler(),
+  getMarkInboundMailReadMockHandler(),
+  getTakeInboundMailMockHandler(),
+  getReleaseInboundMailMockHandler(),
+  getBulkArchiveInboundMailMockHandler(),
   getDownloadInboundMailAttachmentMockHandler(),
   getCopyInboundMailFilesToEdsMockHandler(),
   getAssistInboundMailMockHandler(),

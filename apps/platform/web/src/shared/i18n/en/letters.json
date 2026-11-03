@@ -370,7 +370,9 @@
       "legend": "Draft resolution (optional)",
       "hint": "The director approves the draft in one click or edits it.",
       "kind": "Resolution type",
-      "none": "No draft"
+      "none": "No draft",
+      "acquaint": "Acquaint",
+      "acquaintHint": "Staff from the letter’s copy; optional"
     },
     "ai": {
       "group": "Fill from file",
@@ -619,7 +621,14 @@
   },
   "mail": {
     "subtitle": "Shared mailbox letters: handle each — register it as incoming, create a lead or archive it",
-    "caption": "Letters waiting to be handled",
+    "caption": {
+      "new": "Letters waiting to be handled",
+      "mine": "My letters in progress",
+      "in_work": "Letters in progress",
+      "done": "Handled letters",
+      "spam": "Suspicious letters",
+      "all": "All letters"
+    },
     "open": "Open the letter “{{subject}}”",
     "noSubject": "(no subject)",
     "attachments": "Attachments: {{count}}",
@@ -630,14 +639,50 @@
     },
     "empty": {
       "title": "No new letters",
-      "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
+      "text": "Shared mailbox letters appear here within 2 minutes after they arrive.",
+      "new": {
+        "title": "No new letters",
+        "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
+      },
+      "mine": {
+        "title": "Nothing in progress with you",
+        "text": "Take a letter from New and it will show up here."
+      },
+      "in_work": {
+        "title": "Nothing in progress",
+        "text": "Letters that someone took are visible here to everyone."
+      },
+      "done": {
+        "title": "No handled letters yet",
+        "text": "Letters with an outcome land here: incoming number, lead, reply or archive."
+      },
+      "all": {
+        "title": "No letters",
+        "text": "Shared mailbox letters will appear here once they arrive."
+      },
+      "spam": {
+        "title": "No suspicious mail",
+        "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
+      },
+      "history": {
+        "title": "No letters from history",
+        "text": "The administrator loads old letters in Settings · Connections · Mail."
+      },
+      "search": {
+        "title": "Nothing found",
+        "text": "Change the query: we search by sender and subject."
+      }
     },
     "status": {
-      "new": "Waiting",
+      "new": "New",
       "registered": "Registered",
       "lead": "Sent to leads",
       "archived": "Archived",
-      "spam": "Suspicious"
+      "spam": "Suspicious",
+      "newReply": "New · reply in thread",
+      "in_work": "In progress",
+      "registering": "Registering",
+      "done": "Handled"
     },
     "kind": {
       "buyer": "Buyer",
@@ -656,7 +701,10 @@
       "received": "Received",
       "client": "Known client",
       "lead": "Open lead",
-      "inns": "TIN in the text"
+      "inns": "TIN in the text",
+      "cc": "Copy",
+      "assignee": "Handled by",
+      "previous": "Handled by"
     },
     "text": "Letter text",
     "files": "Attachments",
@@ -702,10 +750,10 @@
       "archived": "Archived: {{reason}}"
     },
     "reply": {
-      "title": "Reply to the sender",
+      "title": "Reply",
       "label": "Reply text",
       "send": "Send reply",
-      "what": "The reply goes to the sender from the company's shared address in the same thread.",
+      "what": "The letter goes from the company’s shared address as a reply in the same thread.",
       "sent": "The reply is queued for sending",
       "history": "Replies",
       "status": {
@@ -713,15 +761,25 @@
         "sent": "sent",
         "failed": "not sent",
         "skipped_no_smtp": "mail is not set up"
-      }
+      },
+      "sendAll": "Reply all",
+      "awaiting": "Awaiting an answer — keep the letter in progress",
+      "copy": "Copy goes to: {{list}}",
+      "sentAwaiting": "Reply sent, the letter stays in progress",
+      "to": "To"
     },
     "fromMail": "From the letter “{{subject}}” by {{sender}}",
     "fromMailLoading": "Copying the letter attachments…",
     "fromMailFailed": "Could not copy the attachments — attach the files manually.",
     "tabs": {
-      "new": "To sort",
+      "new": "New",
       "spam": "Suspicious",
-      "label": "Mail"
+      "label": "Mail",
+      "mine": "Mine in progress",
+      "in_work": "All in progress",
+      "done": "Handled",
+      "all": "All",
+      "ownAll": "All mine"
     },
     "filter": {
       "label": "Show",
@@ -743,13 +801,97 @@
       "title": "Suspicious mail",
       "what": "Arrived in the mailbox Spam folder. Check the sender and the text.",
       "notSpam": "Not spam → to queue",
-      "notSpamDone": "The mail is in the “To sort” queue",
+      "notSpamDone": "The mail is in “New”",
       "discard": "Remove",
       "discardDone": "The mail is archived",
       "hint": "To keep this sender out of Spam, mark them “Not spam” in your mail.",
-      "notSpamWhat": "The mail goes to “To sort” like any other",
+      "notSpamWhat": "The mail goes to “New” like any other",
       "discardWhat": "“Remove” archives it with the reason “Spam”; nothing is deleted"
-    }
+    },
+    "search": {
+      "label": "Search by sender and subject",
+      "placeholder": "Sender or subject"
+    },
+    "unread": "Unread",
+    "select": "Select letter “{{subject}}”",
+    "inWorkBy": "With {{name}} since {{time}}",
+    "previous": "Handled by: {{name}}",
+    "messages": "Letters: {{count}}",
+    "waiting": "Awaiting confirmation",
+    "outcome": {
+      "registered": "Registered: {{number}}",
+      "lead": "Lead {{number}}",
+      "replied": "Reply sent",
+      "archived": "Archived: {{reason}}",
+      "unknown": "Handled"
+    },
+    "returnToNew": "Return to New",
+    "returned": "The letter is back in New",
+    "release": "Return to New",
+    "releaseOwn": "Return to the clerk",
+    "take": "Take it",
+    "takeDone": "The letter is with you",
+    "ownHint": "Another colleague handles this letter, or it is for your information: you can open and read it.",
+    "registering": "Creating the incoming number…",
+    "registeringWaiting": "Awaiting confirmation: registration was not confirmed within 10 minutes.",
+    "refresh": "Refresh",
+    "busy": {
+      "title": "The letter is already with {{name}} since {{time}}",
+      "what": "The letter moves to you, it disappears from {{name}}’s “Mine in progress”, the action goes to the journal",
+      "takeOver": "Take it over"
+    },
+    "bulk": {
+      "label": "Selected letters",
+      "selected": "Selected: {{count}}",
+      "all": "Select all",
+      "clear": "Clear selection",
+      "archive": "Archive",
+      "title": "Archive: {{count}}",
+      "hint": "For example: newsletter, notification",
+      "reasonNewsletter": "Newsletter",
+      "reasonNotice": "Notification",
+      "what": "The selected letters go to the archive with this reason; those a colleague holds and those already handled stay where they are.",
+      "confirm": "Send to archive",
+      "done": "Archived: {{count}}.",
+      "skipped": "Skipped: {{count}} — {{reasons}}.",
+      "colleague": "a colleague",
+      "skip": {
+        "in_work_by_other": "with {{name}}",
+        "handled": "already handled",
+        "registering": "incoming number is being created",
+        "missing": "letter is gone"
+      }
+    },
+    "address": {
+      "staff": "{{name}} (staff), {{email}}",
+      "mailbox": "{{email}} (shared mailbox)"
+    },
+    "thread": {
+      "title": "Conversation",
+      "incoming": "{{sender}}, {{when}}",
+      "outgoing": "Reply sent: {{who}}, {{when}} → {{to}}, “{{subject}}”",
+      "newParticipant": "New participant"
+    },
+    "journal": {
+      "title": "Journal",
+      "system": "System",
+      "action": {
+        "take": "took it",
+        "takeover": "took it over",
+        "release": "returned to New",
+        "reply": "replied",
+        "lead": "created a lead",
+        "archive": "archived it",
+        "register_start": "started registering the incoming",
+        "register_cancel": "cancelled the registration",
+        "thread_reply": "the client replied in the thread",
+        "personal": "letter addressed personally",
+        "not_spam": "returned from suspicious",
+        "discard": "moved to the archive"
+      }
+    },
+    "inWorkSince": "{{name}}, since {{time}}",
+    "replyTag": "Reply in thread"
   },
   "settings": {
     "subtitle": "Letter lists, resolution templates and the registration AI assistant.",

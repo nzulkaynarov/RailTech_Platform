@@ -3777,6 +3777,16 @@ components:
           title: Password
           type: string
           writeOnly: true
+        personal_label:
+          default: Адресовано лично
+          maxLength: 80
+          minLength: 1
+          title: Personal Label
+          type: string
+        personal_rule:
+          default: true
+          title: Personal Rule
+          type: boolean
         port:
           default: 993
           maximum: 65535.0
@@ -4027,6 +4037,16 @@ components:
             type: string
           - type: 'null'
           title: Password Updated At
+        personal_label:
+          default: Адресовано лично
+          description: Пометка у такого письма
+          title: Personal Label
+          type: string
+        personal_rule:
+          default: true
+          description: '«Адресовано лично»: сотрудник в «Кому», ящик в копии — письмо ему'
+          title: Personal Rule
+          type: boolean
         port:
           title: Port
           type: integer
@@ -4059,6 +4079,24 @@ components:
       - last_error_kind
       - last_error
       title: ImapStatusOut
+      type: object
+    InboundMailAddress:
+      description: 'Адрес письма: сотрудник CRM по адресу и/или сам общий ящик.'
+      properties:
+        email:
+          title: Email
+          type: string
+        mailbox:
+          default: false
+          title: Mailbox
+          type: boolean
+        staff:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+      required:
+      - email
+      title: InboundMailAddress
       type: object
     InboundMailArchiveIn:
       properties:
@@ -4133,11 +4171,61 @@ components:
       - size
       title: InboundMailAttachment
       type: object
-    InboundMailCounts:
-      description: 'Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные.'
+    InboundMailBulkArchiveIn:
       properties:
+        ids:
+          items:
+            type: integer
+          maxItems: 200
+          minItems: 1
+          title: Ids
+          type: array
+        reason:
+          maxLength: 500
+          minLength: 3
+          title: Reason
+          type: string
+      required:
+      - ids
+      - reason
+      title: InboundMailBulkArchiveIn
+      type: object
+    InboundMailBulkArchiveOut:
+      properties:
+        archived:
+          items:
+            type: integer
+          title: Archived
+          type: array
+        skipped:
+          items:
+            $ref: '#/components/schemas/InboundMailSkippedItem'
+          title: Skipped
+          type: array
+      required:
+      - archived
+      - skipped
+      title: InboundMailBulkArchiveOut
+      type: object
+    InboundMailCounts:
+      description: 'Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
+
+        работе, разобранные, подозрительные, все.'
+      properties:
+        all:
+          title: All
+          type: integer
+        done:
+          title: Done
+          type: integer
         history:
           title: History
+          type: integer
+        in_work:
+          title: In Work
+          type: integer
+        mine:
+          title: Mine
           type: integer
         new:
           title: New
@@ -4145,14 +4233,63 @@ components:
         spam:
           title: Spam
           type: integer
+        unread_new:
+          description: Новых, которые этот сотрудник ещё не открывал
+          title: Unread New
+          type: integer
       required:
       - new
       - history
+      - mine
+      - in_work
+      - done
       - spam
+      - all
+      - unread_new
       title: InboundMailCounts
+      type: object
+    InboundMailEvent:
+      description: 'Строка журнала письма: действие кодом (подпись — на стороне интерфейса).'
+      properties:
+        action:
+          title: Action
+          type: string
+        actor:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+        at:
+          format: date-time
+          title: At
+          type: string
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+      required:
+      - at
+      - action
+      title: InboundMailEvent
       type: object
     InboundMailItem:
       properties:
+        activity_at:
+          description: Время последнего входящего письма записи
+          format: date-time
+          title: Activity At
+          type: string
+        assigned_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Assigned At
+        assignee:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+          description: «В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой
         assist:
           $ref: '#/components/schemas/InboundMailAssist'
         attachments_count:
@@ -4162,6 +4299,11 @@ components:
           anyOf:
           - $ref: '#/components/schemas/InboundMailLink'
           - type: 'null'
+        eds_waiting:
+          default: false
+          description: Регистрация начата, событие о ВХ не пришло в срок
+          title: Eds Waiting
+          type: boolean
         from_email:
           title: From Email
           type: string
@@ -4181,6 +4323,16 @@ components:
           - $ref: '#/components/schemas/InboundMailLink'
           - type: 'null'
           description: Открытый лид с этим адресом (связка) или лид-итог
+        messages_count:
+          default: 1
+          description: Входящих писем в записи (цепочка)
+          title: Messages Count
+          type: integer
+        personal:
+          default: false
+          description: Адресовано лично сотруднику (правило ящика)
+          title: Personal
+          type: boolean
         preview:
           description: Начало текста письма (до 200 символов)
           title: Preview
@@ -4189,6 +4341,11 @@ components:
           format: date-time
           title: Received At
           type: string
+        result:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailResult'
+          - type: 'null'
+          description: Итог у `done`
         sent_at:
           anyOf:
           - format: date-time
@@ -4198,15 +4355,25 @@ components:
         status:
           enum:
           - new
+          - in_work
+          - registering
+          - done
           - spam
-          - registered
-          - lead
-          - archived
           title: Status
           type: string
         subject:
           title: Subject
           type: string
+        thread_reply:
+          default: false
+          description: '«Новое (ответ в цепочке)»: клиент ответил на разобранное'
+          title: Thread Reply
+          type: boolean
+        unread:
+          default: false
+          description: Не прочитано этим сотрудником
+          title: Unread
+          type: boolean
       required:
       - id
       - status
@@ -4215,6 +4382,7 @@ components:
       - subject
       - received_at
       - sent_at
+      - activity_at
       - preview
       - attachments_count
       - assist
@@ -4247,13 +4415,62 @@ components:
       - name
       title: InboundMailLink
       type: object
+    InboundMailMessage:
+      description: Входящее письмо записи (первое — корень); вложения качаются по `id` письма.
+      properties:
+        at:
+          format: date-time
+          title: At
+          type: string
+        attachments:
+          items:
+            $ref: '#/components/schemas/InboundMailAttachment'
+          title: Attachments
+          type: array
+        from_email:
+          title: From Email
+          type: string
+        from_name:
+          title: From Name
+          type: string
+        id:
+          title: Id
+          type: integer
+        new_participant:
+          default: false
+          description: Письмо от адреса, которого в цепочке не было («новый участник переписки»)
+          title: New Participant
+          type: boolean
+        text:
+          title: Text
+          type: string
+      required:
+      - id
+      - from_email
+      - from_name
+      - at
+      - text
+      - attachments
+      title: InboundMailMessage
+      type: object
     InboundMailOut:
       properties:
-        archive_reason:
+        activity_at:
+          description: Время последнего входящего письма записи
+          format: date-time
+          title: Activity At
+          type: string
+        assigned_at:
           anyOf:
-          - type: string
+          - format: date-time
+            type: string
           - type: 'null'
-          title: Archive Reason
+          title: Assigned At
+        assignee:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+          description: «В работе у …»; у `new` с `thread_reply` — прежний исполнитель, справкой
         assist:
           $ref: '#/components/schemas/InboundMailAssist'
         attachments:
@@ -4264,6 +4481,11 @@ components:
         attachments_count:
           title: Attachments Count
           type: integer
+        cc:
+          items:
+            $ref: '#/components/schemas/InboundMailAddress'
+          title: Cc
+          type: array
         client:
           anyOf:
           - $ref: '#/components/schemas/InboundMailLink'
@@ -4273,11 +4495,11 @@ components:
           - type: string
           - type: 'null'
           title: Eds Letter Id
-        eds_letter_number:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Eds Letter Number
+        eds_waiting:
+          default: false
+          description: Регистрация начата, событие о ВХ не пришло в срок
+          title: Eds Waiting
+          type: boolean
         from_email:
           title: From Email
           type: string
@@ -4289,17 +4511,6 @@ components:
         from_name:
           title: From Name
           type: string
-        handled_at:
-          anyOf:
-          - format: date-time
-            type: string
-          - type: 'null'
-          title: Handled At
-        handled_by:
-          anyOf:
-          - type: integer
-          - type: 'null'
-          title: Handled By
         id:
           title: Id
           type: integer
@@ -4308,11 +4519,36 @@ components:
             type: string
           title: Inns
           type: array
+        journal:
+          items:
+            $ref: '#/components/schemas/InboundMailEvent'
+          title: Journal
+          type: array
         lead:
           anyOf:
           - $ref: '#/components/schemas/InboundMailLink'
           - type: 'null'
           description: Открытый лид с этим адресом (связка) или лид-итог
+        messages:
+          description: Все входящие письма записи по времени, корень первым
+          items:
+            $ref: '#/components/schemas/InboundMailMessage'
+          title: Messages
+          type: array
+        messages_count:
+          default: 1
+          description: Входящих писем в записи (цепочка)
+          title: Messages Count
+          type: integer
+        personal:
+          default: false
+          description: Адресовано лично сотруднику (правило ящика)
+          title: Personal
+          type: boolean
+        personal_label:
+          description: Пометка «адресовано лично» из настроек
+          title: Personal Label
+          type: string
         preview:
           description: Начало текста письма (до 200 символов)
           title: Preview
@@ -4322,14 +4558,32 @@ components:
           title: Received At
           type: string
         replies:
+          description: Наши ответы из журнала почты
           items:
             $ref: '#/components/schemas/InboundMailReply'
           title: Replies
           type: array
-        result_lead:
+        reply_all_copy:
+          description: Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)
+          items:
+            type: string
+          title: Reply All Copy
+          type: array
+        reply_options:
+          description: 'Кому можно ответить: адреса цепочки (кроме общего ящика)'
+          items:
+            type: string
+          title: Reply Options
+          type: array
+        reply_to:
+          description: 'Кому ответ по умолчанию: отправитель корня цепочки'
+          title: Reply To
+          type: string
+        result:
           anyOf:
-          - $ref: '#/components/schemas/InboundMailLink'
+          - $ref: '#/components/schemas/InboundMailResult'
           - type: 'null'
+          description: Итог у `done`
         sent_at:
           anyOf:
           - format: date-time
@@ -4344,10 +4598,10 @@ components:
         status:
           enum:
           - new
+          - in_work
+          - registering
+          - done
           - spam
-          - registered
-          - lead
-          - archived
           title: Status
           type: string
         subject:
@@ -4356,13 +4610,23 @@ components:
         text:
           title: Text
           type: string
+        thread_reply:
+          default: false
+          description: '«Новое (ответ в цепочке)»: клиент ответил на разобранное'
+          title: Thread Reply
+          type: boolean
         to:
           items:
-            type: string
+            $ref: '#/components/schemas/InboundMailAddress'
           title: To
           type: array
         too_large:
           title: Too Large
+          type: boolean
+        unread:
+          default: false
+          description: Не прочитано этим сотрудником
+          title: Unread
           type: boolean
       required:
       - id
@@ -4372,22 +4636,25 @@ components:
       - subject
       - received_at
       - sent_at
+      - activity_at
       - preview
       - attachments_count
       - assist
       - to
+      - cc
       - text
       - attachments
       - skipped
       - too_large
       - inns
       - eds_letter_id
-      - eds_letter_number
-      - result_lead
-      - archive_reason
-      - handled_at
-      - handled_by
+      - messages
       - replies
+      - journal
+      - reply_all_copy
+      - personal_label
+      - reply_to
+      - reply_options
       title: InboundMailOut
       type: object
     InboundMailPage:
@@ -4411,8 +4678,38 @@ components:
       - counts
       title: InboundMailPage
       type: object
+    InboundMailPerson:
+      properties:
+        id:
+          title: Id
+          type: integer
+        name:
+          title: Name
+          type: string
+      required:
+      - id
+      - name
+      title: InboundMailPerson
+      type: object
+    InboundMailRegistrationIn:
+      properties:
+        state:
+          description: start — ВХ создаётся в EDS (письмо «Регистрируется»); cancel — EDS отказал
+          enum:
+          - start
+          - cancel
+          title: State
+          type: string
+      required:
+      - state
+      title: InboundMailRegistrationIn
+      type: object
     InboundMailReply:
       properties:
+        by:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
         created_at:
           format: date-time
           title: Created At
@@ -4446,14 +4743,75 @@ components:
       type: object
     InboundMailReplyIn:
       properties:
+        awaiting:
+          default: false
+          description: '«Ждём ответа»: письмо остаётся «в работе», а не «Разобрано: ответ отправлен»'
+          title: Awaiting
+          type: boolean
+        reply_all:
+          default: false
+          description: '«Ответить всем»: копия — остальные адреса письма'
+          title: Reply All
+          type: boolean
         text:
           maxLength: 20000
           minLength: 1
           title: Text
           type: string
+        to:
+          anyOf:
+          - maxLength: 255
+            type: string
+          - type: 'null'
+          description: 'Кому: один из `reply_options` карточки; не задан — `reply_to`'
+          title: To
       required:
       - text
       title: InboundMailReplyIn
+      type: object
+    InboundMailResult:
+      description: 'Итог «Разобрано»: что сделано, кто и когда; ВХ и лид — для ссылки из списка.'
+      properties:
+        at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: At
+        by:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+        lead:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailLink'
+          - type: 'null'
+        letter_number:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Letter Number
+        outcome:
+          anyOf:
+          - enum:
+            - registered
+            - lead
+            - replied
+            - archived
+            type: string
+          - type: 'null'
+          description: registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной;
+            `null` у писем, разобранных до W18A-P2-3
+          title: Outcome
+        reason:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Причина архива
+          title: Reason
+      required:
+      - outcome
+      title: InboundMailResult
       type: object
     InboundMailSkipped:
       properties:
@@ -4468,6 +4826,37 @@ components:
       - name
       - reason
       title: InboundMailSkipped
+      type: object
+    InboundMailSkippedItem:
+      properties:
+        assignee:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailPerson'
+          - type: 'null'
+        id:
+          title: Id
+          type: integer
+        reason:
+          enum:
+          - in_work_by_other
+          - handled
+          - registering
+          - missing
+          title: Reason
+          type: string
+      required:
+      - id
+      - reason
+      title: InboundMailSkippedItem
+      type: object
+    InboundMailTakeIn:
+      properties:
+        takeover:
+          default: false
+          description: «Забрать себе» у того, кто уже ведёт письмо (журнал)
+          title: Takeover
+          type: boolean
+      title: InboundMailTakeIn
       type: object
     InboundMailbox:
       description: Состояние приёма для подсказки в очереди и строки здоровья.
@@ -4492,6 +4881,11 @@ components:
             type: string
           - type: 'null'
           title: Last Poll At
+        personal_label:
+          default: Адресовано лично
+          description: Пометка письма «адресовано лично» (настройка)
+          title: Personal Label
+          type: string
       required:
       - configured
       title: InboundMailbox
@@ -6879,6 +7273,10 @@ components:
       - erp_request_conflict
       - request_not_failed
       - request_not_retryable
+      - mail_in_work_by_other
+      - mail_handled
+      - mail_not_returnable
+      - mail_registering
       title: Reason
       type: string
     ReasonCount:
@@ -9135,7 +9533,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.18.0
+  version: 0.19.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -11388,27 +11786,37 @@ paths:
       - export
   /api/v1/inbound-mail:
     get:
-      description: 'Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
+      description: 'Очередь «Входящая почта» по представлению (до 200, новые сверху) и состояние приёма:
 
-        приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
+        `new` — Новые, `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом),
 
-        Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
+        `spam` — Подозрительные, `all` — все (кроме подозрительных), `tasks` — для «Моих задач»: новые
 
-        (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок.'
+        не
+
+        «из истории» и мои в работе. `mailbox.configured = false` — приём не настроен. `history=false` —
+
+        без писем «из истории» (за последние 3 дня), `true` — только они; `q` — поиск по отправителю и
+
+        теме;
+
+        `counts` — числа вкладок в рамках прав сотрудника.'
       operationId: list_inbound_mail
       parameters:
       - in: query
-        name: status
+        name: view
         required: false
         schema:
           default: new
           enum:
           - new
+          - mine
+          - in_work
+          - done
           - spam
-          - registered
-          - lead
-          - archived
-          title: Status
+          - all
+          - tasks
+          title: View
           type: string
       - in: query
         name: history
@@ -11418,6 +11826,15 @@ paths:
           - type: boolean
           - type: 'null'
           title: History
+      - in: query
+        name: q
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 100
+            type: string
+          - type: 'null'
+          title: Q
       responses:
         '200':
           content:
@@ -11436,9 +11853,41 @@ paths:
       summary: List Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/bulk-archive:
+    post:
+      description: '«В архив» нескольких писем с одной причиной; чужие «в работе», регистрируемые и уже
+
+        разобранные пропускаются и перечислены в `skipped`.'
+      operationId: bulk_archive_inbound_mail
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailBulkArchiveIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailBulkArchiveOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Bulk Archive Inbound Mail
+      tags:
+      - inbound-mail
   /api/v1/inbound-mail/{mail_id}:
     get:
-      description: 'Карточка письма: отправитель, тема, текст, вложения, связка, подсказка помощника, итог.'
+      description: 'Карточка письма: отправитель, адресаты (сотрудники по адресу), все письма записи, наши
+
+        ответы, вложения, связка, подсказка помощника, итог и журнал действий.'
       operationId: get_inbound_mail
       parameters:
       - in: path
@@ -11536,7 +11985,9 @@ paths:
       - inbound-mail
   /api/v1/inbound-mail/{mail_id}/attachments/{index}:
     get:
-      description: Файл вложения из хранилища CRM (ключ и адрес хранилища наружу не уходят).
+      description: 'Файл вложения письма записи (корня или ответа в цепочке); ключ и адрес хранилища наружу не
+
+        уходят.'
       operationId: get_inbound_mail_attachment
       parameters:
       - in: path
@@ -11654,11 +12105,107 @@ paths:
       summary: Not Spam Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/read:
+    post:
+      description: Отметить прочитанным этим сотрудником (открыл карточку).
+      operationId: read_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Read Inbound Mail
+      tags:
+      - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/registration:
+    post:
+      description: 'Регистрация ВХ из письма начата (`start`: письмо «Регистрируется», берётся автоматически;
+
+        ведёт
+
+        другой — 409 `mail_in_work_by_other`) или EDS отказал (`cancel`: снова «в работе»). Итог
+
+        «Разобрано: ВХ» ставит событие EDS.'
+      operationId: registration_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailRegistrationIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Registration Inbound Mail
+      tags:
+      - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/release:
+    post:
+      description: '«Вернуть в Новые»: своё «в работе» или разобранное архивом/ответом (первая линия; запись в
+
+        журнал). Нельзя — 409 `mail_not_returnable`; ведёт другой — 409 `mail_in_work_by_other`.'
+      operationId: release_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Release Inbound Mail
+      tags:
+      - inbound-mail
   /api/v1/inbound-mail/{mail_id}/reply:
     post:
-      description: 'Ответ отправителю в ту же цепочку (In-Reply-To, References) почтовым сервисом. Почта не
+      description: 'Ответ на последнее письмо записи в ту же цепочку (In-Reply-To, References) почтовым
 
-        настроена — 409 `smtp_not_configured`.'
+        сервисом; `reply_all` — копия остальным адресам письма. Письмо берётся в работу и после
+
+        отправки «Разобрано: ответ отправлен», при `awaiting` («Ждём ответа») остаётся «в работе».
+
+        Почта не настроена — 409 `smtp_not_configured`.'
       operationId: reply_inbound_mail
       parameters:
       - in: path
@@ -11690,6 +12237,42 @@ paths:
       security:
       - HTTPBearer: []
       summary: Reply Inbound Mail
+      tags:
+      - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/take:
+    post:
+      description: '«Взять в работу» (повтор своего — без изменений). Ведёт другой — 409
+
+        `mail_in_work_by_other` (`details.assignee_name`, `assigned_at`); `takeover=true` — «Забрать
+
+        себе» у того, кто ведёт (в журнал). Разобрано или подозрительное — 409 `mail_handled`.'
+      operationId: take_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailTakeIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Take Inbound Mail
       tags:
       - inbound-mail
   /api/v1/inbox:

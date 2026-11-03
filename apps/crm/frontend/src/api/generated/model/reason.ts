@@ -144,4 +144,8 @@ export const Reason = {
   erp_request_conflict: "erp_request_conflict",
   request_not_failed: "request_not_failed",
   request_not_retryable: "request_not_retryable",
+  mail_in_work_by_other: "mail_in_work_by_other",
+  mail_handled: "mail_handled",
+  mail_not_returnable: "mail_not_returnable",
+  mail_registering: "mail_registering",
 } as const;

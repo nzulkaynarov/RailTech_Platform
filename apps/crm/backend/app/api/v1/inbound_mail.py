@@ -1,17 +1,22 @@
-"""Входящая почта (W18A-P2, B-INB-5): очередь, карточка, действия; приём в «Подключениях».
+"""Входящая почта (W18A-P2, B-INB-5; обращение — W18A-P2-3): очередь, карточка, действия; приём.
 
-Очередь и действия — `mail_inbox:read|work` (раздел каталога `crm.leads.triage`); настройки
-приёма — `integrations:read|write`, как SMTP карточки «Почта». Папки «Спам» и загрузка писем за
-период — W18A-P2-2.
+Первая линия — `mail_inbox:read|work` (раздел каталога `crm.leads.triage`); остальной сотрудник
+видит
+и ведёт только свои письма (исполнитель или «адресовано лично»): очередь и карточка по тем же
+адресам,
+действия первой линии ему недоступны (403). Настройки приёма — `integrations:read|write`, как SMTP
+карточки «Почта». Папки «Спам» и загрузка писем за период — W18A-P2-2.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.responses import Response
 
-from app.api.deps import ContainerDep, require
+from app.api.deps import ContainerDep, PrincipalDep, get_rbac, require
+from app.domain.errors import PasswordChangeRequiredError
+from app.repositories.inbound_mail_views import View
 from app.schemas.inbound_mail import (
     ImapCheckOut,
     ImapConnectorIn,
@@ -21,21 +26,40 @@ from app.schemas.inbound_mail import (
     ImapStatusOut,
     InboundMailArchiveIn,
     InboundMailAssist,
+    InboundMailBulkArchiveIn,
+    InboundMailBulkArchiveOut,
     InboundMailLeadOut,
     InboundMailOut,
     InboundMailPage,
+    InboundMailRegistrationIn,
     InboundMailReply,
     InboundMailReplyIn,
+    InboundMailTakeIn,
 )
 from app.security.principal import Principal
+from app.security.rbac import Rbac
+from app.services.inbound_mail import MailAccess
 
 router = APIRouter(prefix="/api/v1", tags=["inbound-mail"])
 
-Reader = Annotated[Principal, Depends(require("mail_inbox", "read"))]
 Worker = Annotated[Principal, Depends(require("mail_inbox", "work"))]
 AdminReader = Annotated[Principal, Depends(require("integrations", "read"))]
 AdminWriter = Annotated[Principal, Depends(require("integrations", "write"))]
 MailId = Annotated[int, Path(ge=1)]
+
+
+async def mail_access(
+    principal: PrincipalDep, rbac: Annotated[Rbac, Depends(get_rbac)]
+) -> MailAccess:
+    """Любой сотрудник: первая линия (`mail_inbox:read`) видит всю очередь, остальные — свои
+    письма."""
+    if principal.must_change_password:
+        raise PasswordChangeRequiredError("change the temporary password first")
+    full = rbac.allowed(principal.rbac_roles, "mail_inbox", "read", principal.platform_role_ids)
+    return MailAccess(principal, full)
+
+
+Access = Annotated[MailAccess, Depends(mail_access)]
 
 
 def _disposition(name: str) -> str:
@@ -45,22 +69,37 @@ def _disposition(name: str) -> str:
 
 @router.get("/inbound-mail", response_model=InboundMailPage)
 async def list_inbound_mail(
-    _: Reader,
+    access: Access,
     container: ContainerDep,
-    status: Literal["new", "spam", "registered", "lead", "archived"] = Query("new"),
-    history: bool | None = Query(None),
+    view: Annotated[View, Query()] = "new",
+    history: Annotated[bool | None, Query()] = None,
+    q: Annotated[str | None, Query(max_length=100)] = None,
 ) -> InboundMailPage:
-    """Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
-    приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
-    Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
-    (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок."""
-    return await container.inbound_mail.page(status, history)
+    """Очередь «Входящая почта» по представлению (до 200, новые сверху) и состояние приёма:
+    `new` — Новые, `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом),
+    `spam` — Подозрительные, `all` — все (кроме подозрительных), `tasks` — для «Моих задач»: новые
+    не
+    «из истории» и мои в работе. `mailbox.configured = false` — приём не настроен. `history=false` —
+    без писем «из истории» (за последние 3 дня), `true` — только они; `q` — поиск по отправителю и
+    теме;
+    `counts` — числа вкладок в рамках прав сотрудника."""
+    return await container.inbound_mail.page(access, view, history, q)
 
 
 @router.get("/inbound-mail/{mail_id}", response_model=InboundMailOut)
-async def get_inbound_mail(mail_id: MailId, _: Reader, container: ContainerDep) -> InboundMailOut:
-    """Карточка письма: отправитель, тема, текст, вложения, связка, подсказка помощника, итог."""
-    return await container.inbound_mail.get(mail_id)
+async def get_inbound_mail(
+    mail_id: MailId, access: Access, container: ContainerDep
+) -> InboundMailOut:
+    """Карточка письма: отправитель, адресаты (сотрудники по адресу), все письма записи, наши
+    ответы, вложения, связка, подсказка помощника, итог и журнал действий."""
+    return await container.inbound_mail.get(access, mail_id)
+
+
+@router.post("/inbound-mail/{mail_id}/read", status_code=204)
+async def read_inbound_mail(mail_id: MailId, access: Access, container: ContainerDep) -> Response:
+    """Отметить прочитанным этим сотрудником (открыл карточку)."""
+    await container.inbound_mail.mark_read(access, mail_id)
+    return Response(status_code=204)
 
 
 @router.get(
@@ -71,11 +110,12 @@ async def get_inbound_mail(mail_id: MailId, _: Reader, container: ContainerDep) 
 async def get_inbound_mail_attachment(
     mail_id: MailId,
     index: Annotated[int, Path(ge=0, lt=50)],
-    _: Reader,
+    access: Access,
     container: ContainerDep,
 ) -> Response:
-    """Файл вложения из хранилища CRM (ключ и адрес хранилища наружу не уходят)."""
-    data, name, mime = await container.inbound_mail.attachment(mail_id, index)
+    """Файл вложения письма записи (корня или ответа в цепочке); ключ и адрес хранилища наружу не
+    уходят."""
+    data, name, mime = await container.inbound_mail.attachment(access, mail_id, index)
     headers = {"Content-Disposition": _disposition(name), "Cache-Control": "private, no-store"}
     return Response(data, media_type=mime, headers=headers)
 
@@ -89,6 +129,48 @@ async def assist_inbound_mail(
     второго вызова. Модель недоступна — `status = unavailable` (разберите вручную). Помощник
     выключен админом — 409 `assist_disabled`."""
     return await container.inbound_mail_assist.suggest(who, mail_id)
+
+
+@router.post("/inbound-mail/{mail_id}/take", status_code=204)
+async def take_inbound_mail(
+    mail_id: MailId, body: InboundMailTakeIn, who: Worker, container: ContainerDep
+) -> Response:
+    """«Взять в работу» (повтор своего — без изменений). Ведёт другой — 409
+    `mail_in_work_by_other` (`details.assignee_name`, `assigned_at`); `takeover=true` — «Забрать
+    себе» у того, кто ведёт (в журнал). Разобрано или подозрительное — 409 `mail_handled`."""
+    await container.inbound_mail.take(who, mail_id, body.takeover)
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{mail_id}/release", status_code=204)
+async def release_inbound_mail(
+    mail_id: MailId, access: Access, container: ContainerDep
+) -> Response:
+    """«Вернуть в Новые»: своё «в работе» или разобранное архивом/ответом (первая линия; запись в
+    журнал). Нельзя — 409 `mail_not_returnable`; ведёт другой — 409 `mail_in_work_by_other`."""
+    await container.inbound_mail.release(access, mail_id)
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{mail_id}/registration", status_code=204)
+async def registration_inbound_mail(
+    mail_id: MailId, body: InboundMailRegistrationIn, who: Worker, container: ContainerDep
+) -> Response:
+    """Регистрация ВХ из письма начата (`start`: письмо «Регистрируется», берётся автоматически;
+    ведёт
+    другой — 409 `mail_in_work_by_other`) или EDS отказал (`cancel`: снова «в работе»). Итог
+    «Разобрано: ВХ» ставит событие EDS."""
+    await container.inbound_mail.registration(who, mail_id, body.state)
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/bulk-archive", response_model=InboundMailBulkArchiveOut)
+async def bulk_archive_inbound_mail(
+    body: InboundMailBulkArchiveIn, who: Worker, container: ContainerDep
+) -> InboundMailBulkArchiveOut:
+    """«В архив» нескольких писем с одной причиной; чужие «в работе», регистрируемые и уже
+    разобранные пропускаются и перечислены в `skipped`."""
+    return await container.inbound_mail.bulk_archive(who, body.ids, body.reason)
 
 
 @router.post("/inbound-mail/{mail_id}/lead", response_model=InboundMailLeadOut)
@@ -125,11 +207,15 @@ async def discard_inbound_mail(mail_id: MailId, who: Worker, container: Containe
 
 @router.post("/inbound-mail/{mail_id}/reply", response_model=InboundMailReply)
 async def reply_inbound_mail(
-    mail_id: MailId, body: InboundMailReplyIn, who: Worker, container: ContainerDep
+    mail_id: MailId, body: InboundMailReplyIn, access: Access, container: ContainerDep
 ) -> InboundMailReply:
-    """Ответ отправителю в ту же цепочку (In-Reply-To, References) почтовым сервисом. Почта не
-    настроена — 409 `smtp_not_configured`."""
-    return await container.inbound_mail.reply(who, mail_id, body.text)
+    """Ответ на последнее письмо записи в ту же цепочку (In-Reply-To, References) почтовым
+    сервисом; `reply_all` — копия остальным адресам письма. Письмо берётся в работу и после
+    отправки «Разобрано: ответ отправлен», при `awaiting` («Ждём ответа») остаётся «в работе».
+    Почта не настроена — 409 `smtp_not_configured`."""
+    return await container.inbound_mail.reply(
+        access, mail_id, body.text, reply_all=body.reply_all, awaiting=body.awaiting, to=body.to
+    )
 
 
 @router.get("/integrations/imap", response_model=ImapStatusOut)
@@ -154,6 +240,8 @@ async def put_imap_connector(
         security=body.security,
         mailbox=body.mailbox,
         assist_enabled=body.assist_enabled,
+        personal_rule=body.personal_rule,
+        personal_label=body.personal_label,
         username=body.username,
         password=secret,
         admin_password=body.password.get_secret_value(),

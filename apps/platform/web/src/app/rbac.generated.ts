@@ -409,6 +409,10 @@ export const QUEUE = {
     resource: "crm.leads.triage",
     level: "full",
   },
+  inbound_mail_mine: {
+    resource: "dashboard.queue",
+    level: "full",
+  },
 } as const satisfies Record<string, { resource: ResourceKey; level: AccessLevel }>;
 
 /** Роль каталога: название, матрица и поля с ограничением. */

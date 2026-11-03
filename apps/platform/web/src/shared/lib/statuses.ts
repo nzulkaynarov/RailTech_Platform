@@ -224,8 +224,8 @@ export const STATUS_TONE = {
   },
   /** Модель ИИ */
   modelHealth: { ok: OK, problem: NO, unknown: NONE },
-  /** Письмо общего ящика (W18A-P2): ждёт разбора, подозрительное (из «Спама», P2-2), ВХ, лид, архив */
-  inboundMail: { new: GO, spam: W, registered: GO, lead: OK, archived: OFF },
+  /** Письмо общего ящика (W18A-P2-3): новое, в работе, регистрируется, разобрано, подозрительное (из «Спама», P2-2) */
+  inboundMail: { new: GO, in_work: GO, registering: W, done: OK, spam: W },
   /** Письмо в журнале почты */
   mail: { queued: NONE, sent: GO, failed: NO, skipped_no_smtp: OFF },
   /** Подписчик шины */

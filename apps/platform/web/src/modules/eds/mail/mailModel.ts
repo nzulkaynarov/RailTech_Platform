@@ -1,7 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 
-import type { EdsFile, InboundMail } from "../../../shared/api/generated/model";
+import { ApiError } from "../../../shared/api/errors";
+import type {
+  EdsFile,
+  InboundMail,
+  InboundMailCounts,
+  InboundMailMessage,
+  InboundMailReply,
+  InboundMailView,
+} from "../../../shared/api/generated/model";
 import type { Attachment } from "../new/formModel";
 import type { RegisterValues } from "../register/registerModel";
 
@@ -9,8 +17,53 @@ export const ADMIN_MAIL_PATH = "/admin/integrations?card=mail&panel=open";
 /** Вкладка «Подозрительные» списка «Входящая почта» (W18A-P2-2). */
 export const SPAM_TAB_PATH = "/eds/mail?tab=spam";
 
-export function mailPath(id: number): string {
-  return `/eds/mail/${String(id)}`;
+/** Список писем первой линии и «моих» писем сотрудника без раздела первой линии (W18A-P2-3). */
+export const MAIL_LIST_PATH = "/eds/mail";
+export const OWN_MAIL_LIST_PATH = "/eds/my-mail";
+
+export function listPath(own: boolean): string {
+  return own ? OWN_MAIL_LIST_PATH : MAIL_LIST_PATH;
+}
+
+export function mailPath(id: number, own = false): string {
+  return `${listPath(own)}/${String(id)}`;
+}
+
+export type MailTab = InboundMailView;
+
+/** Вкладки по порядку: первая линия — шесть, сотрудник со своим письмом — три. */
+export const CLERK_TABS: readonly MailTab[] = ["new", "mine", "in_work", "done", "spam", "all"];
+export const OWN_TABS: readonly MailTab[] = ["mine", "done", "all"];
+/** Вкладки, где можно выбрать письма и отправить в архив пачкой (первая линия). */
+export const BULK_TABS: readonly MailTab[] = ["new", "in_work", "all", "spam"];
+
+/** «Вернуть в Новые» у разобранного архивом или ответом (ничего не потеряно); остальное возвращать нельзя. */
+export function canReturn(mail: Pick<InboundMail, "status" | "result">): boolean {
+  const outcome = mail.result?.outcome;
+  return mail.status === "done" && (outcome === "archived" || outcome === "replied");
+}
+
+/** Ключ слова статуса: «Новое · ответ в цепочке» у разобранного, на которое ответил клиент. */
+export function statusKey(mail: Pick<InboundMail, "status" | "thread_reply">): string {
+  return mail.status === "new" && mail.thread_reply
+    ? "mail.status.newReply"
+    : `mail.status.${mail.status}`;
+}
+
+export function tabCount(counts: InboundMailCounts, tab: MailTab): number {
+  return counts[tab];
+}
+
+/** Письмо уже ведёт другой сотрудник (409 `mail_in_work_by_other` BFF): имя и время взятия из `details`. */
+export function inWorkByOther(error: unknown): { name: string; since: string | null } | null {
+  if (!(error instanceof ApiError) || error.status !== 409) return null;
+  if (error.details["reason"] !== "mail_in_work_by_other") return null;
+  const name = error.details["assignee_name"];
+  const since = error.details["assigned_at"];
+  return {
+    name: typeof name === "string" ? name : "",
+    since: typeof since === "string" ? since : null,
+  };
 }
 
 export function registerFromMailPath(id: number): string {
@@ -50,7 +103,14 @@ export function prefillFromMail(
     status: "done",
   }));
   const summary = mail.assist.summary ?? mail.text.slice(0, SUMMARY_MAX);
+  // Адресат — сотрудник из «Кому», «ознакомить» — сотрудники из копии (1С:Документооборот, Directum: «Адресат» и «Для сведения»)
+  const addressee = mail.to.find((a) => a.staff)?.staff;
+  const acquaint = [
+    ...new Set(mail.cc.flatMap((a) => (a.staff ? [String(a.staff.id)] : []))),
+  ].filter((id) => id !== String(addressee?.id));
   return {
+    ...(addressee ? { addresseeId: String(addressee.id) } : {}),
+    ...(acquaint.length > 0 ? { draftKind: "info" as const, draftAcquaintIds: acquaint } : {}),
     kind: (mail.assist.kind && KIND_BY_ASSIST[mail.assist.kind]) ?? "",
     receiptMethod: "email",
     senderName: mail.client?.name ?? (mail.from_name || mail.from_email),
@@ -81,4 +141,21 @@ export function useRefreshMail(): () => Promise<void> {
       }),
     [client],
   );
+}
+
+export type TimelineEntry =
+  | { kind: "in"; at: string; message: InboundMailMessage }
+  | { kind: "out"; at: string; reply: InboundMailReply };
+
+/** Переписка записи одним списком по времени: входящие письма и наши ответы из журнала почты. */
+export function timeline(mail: Pick<InboundMail, "messages" | "replies">): TimelineEntry[] {
+  const entries: TimelineEntry[] = [
+    ...mail.messages.map((message) => ({ kind: "in" as const, at: message.at, message })),
+    ...mail.replies.map((reply) => ({
+      kind: "out" as const,
+      at: reply.sent_at ?? reply.created_at,
+      reply,
+    })),
+  ];
+  return entries.sort((a, b) => a.at.localeCompare(b.at));
 }

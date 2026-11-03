@@ -60,6 +60,7 @@ QueueItemKind = Literal[
     "acquaint",
     # W18A-P2: письмо общего ящика ждёт разбора — ВХ, лид или архив
     "inbound_mail",
+    "inbound_mail_mine",
 ]
 DueLabel = Literal["overdue", "today", "tomorrow", "later", "memo"]
 NotificationTab = Literal["all", "decisions", "clients", "system"]

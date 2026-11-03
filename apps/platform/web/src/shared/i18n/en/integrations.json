@@ -400,7 +400,13 @@
         "limited": "The period has more than 2000 messages — the latest 2000 were loaded. Pick a shorter period.",
         "error": "Loading stopped: {{reason}}",
         "again": "Loading again is safe: mail already loaded is not repeated."
-      }
+      },
+      "personal": "Staff member in “To”, mailbox in copy — straight to them",
+      "personalLabel": "Label for such letters",
+      "personalLabelHint": "Shown in the list and the card, up to 80 characters",
+      "personalState": "Personal letters",
+      "personalOn": "Straight to the person — label “{{label}}”",
+      "personalOff": "Off — everything goes to New"
     }
   },
   "services": {

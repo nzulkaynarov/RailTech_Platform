@@ -69,6 +69,10 @@ class ImapConnectorService:
     async def configured(self) -> bool:
         return (await self.resolution()).connection is not None
 
+    async def address(self) -> str | None:
+        """Адрес самого общего ящика — логин приёма (его нет в «Ответить всем»)."""
+        return (await self.resolution()).username.strip().lower() or None
+
     async def status(self) -> ImapStatusOut:
         resolved = await self.resolution()
         secret = None
@@ -81,13 +85,16 @@ class ImapConnectorService:
         async with self._sessions() as session:
             state = summary(await repo.mailboxes(session, names))
             last_import = await repo.last_import(session)
+        imap = (await self._settings.get()).integrations.imap
         return ImapStatusOut(
             configured=resolved.connection is not None,
             host=resolved.host,
             port=resolved.port,
             security=resolved.security,
             mailbox=resolved.mailbox,
-            assist_enabled=(await self._settings.get()).integrations.imap.assist_enabled,
+            assist_enabled=imap.assist_enabled,
+            personal_rule=imap.personal_rule,
+            personal_label=imap.personal_label,
             username=resolved.username,
             password_configured=bool(resolved.password),
             password_last4=secret.last4 if secret else None,
@@ -113,7 +120,9 @@ class ImapConnectorService:
         security: str,
         mailbox: str,
         assist_enabled: bool,
-        username: str | None,
+        personal_rule: bool = True,
+        personal_label: str = "Адресовано лично",
+        username: str | None = None,
         password: str | None,
         admin_password: str,
         folders: list[ImapFolderIn] | None = None,
@@ -143,6 +152,8 @@ class ImapConnectorService:
             "mailbox": primary,
             "folders": kept,
             "assist_enabled": assist_enabled,
+            "personal_rule": personal_rule,
+            "personal_label": personal_label.strip() or "Адресовано лично",
         }
         await self._settings.update(SETTINGS_KEY, payload, who.user_id)
         async with self._sessions() as session, session.begin():

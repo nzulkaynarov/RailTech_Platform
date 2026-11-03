@@ -49,6 +49,13 @@ class Letter(Base):
             unique=True,
             postgresql_where=text("erp_request_id IS NOT NULL"),
         ),
+        # Одно письмо общего ящика CRM — один ВХ (W18A-P2-3): повтор регистрации возвращает его.
+        Index(
+            "uq_letters_source_mail_id",
+            "source_mail_id",
+            unique=True,
+            postgresql_where=text("source_mail_id IS NOT NULL"),
+        ),
         Index("ix_letters_erp_deal_id", "erp_deal_id"),
         Index("ix_letters_registered_at_id", "registered_at", "id"),
         Index("ix_letters_status", "status"),
@@ -77,6 +84,7 @@ class Letter(Base):
     manager_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
     urgent: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
     erp_request_id: Mapped[int | None] = mapped_column(BigInteger)
+    source_mail_id: Mapped[int | None] = mapped_column(BigInteger)  # письмо общего ящика CRM
     erp_deal_id: Mapped[int | None] = mapped_column(BigInteger)
     deal_number: Mapped[str | None] = mapped_column(String(64))
     crm_client_id: Mapped[int | None] = mapped_column(BigInteger)

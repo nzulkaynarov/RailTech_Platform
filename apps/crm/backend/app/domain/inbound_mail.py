@@ -85,6 +85,7 @@ class ParsedMail:
     from_email: str
     from_name: str
     to: tuple[str, ...]
+    cc: tuple[str, ...]
     subject: str
     sent_at: datetime | None
     in_reply_to: str | None
@@ -220,23 +221,27 @@ def _files(message: EmailMessage) -> tuple[tuple[MailFile, ...], tuple[SkippedFi
     return tuple(files), tuple(skipped)
 
 
+def _addresses(message: EmailMessage, name: str) -> tuple[str, ...]:
+    """Адреса заголовка («Кому» и «Копия» хранятся раздельно, W18A-P2-3), в нижнем регистре."""
+    found = (addr.strip().lower() for _, addr in getaddresses([_header(message, name)]))
+    return tuple(dict.fromkeys(a for a in found if a))
+
+
 def parse_message(raw: bytes) -> ParsedMail:
     message = message_from_bytes(raw, policy=policy.default)
     if not isinstance(message, EmailMessage):  # policy.default всегда даёт EmailMessage
         raise TypeError(type(message).__name__)
     senders = getaddresses([_header(message, "From")])
     from_name, from_email = senders[0] if senders else ("", "")
-    to = tuple(
-        addr.strip().lower()
-        for _, addr in getaddresses([_header(message, "To"), _header(message, "Cc")])
-        if addr.strip()
-    )
+    to = _addresses(message, "To")
+    cc = _addresses(message, "Cc")
     files, skipped = _files(message)
     return ParsedMail(
         message_id=normalize_message_id(_header(message, "Message-ID"), raw),
         from_email=from_email.strip().lower()[:255],
         from_name=from_name.strip()[:255],
         to=to[:20],
+        cc=cc[:20],
         subject=_header(message, "Subject")[:MAX_SUBJECT_CHARS],
         sent_at=_sent_at(message),
         in_reply_to=_header(message, "In-Reply-To")[:998] or None,

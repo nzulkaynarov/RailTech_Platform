@@ -206,10 +206,12 @@ def ticket_ref(number: str) -> ObjectRef:
     )
 
 
-def mail_ref(mail_id: int, sender: str, subject: str | None) -> ObjectRef:
+def mail_ref(mail_id: int, sender: str, subject: str | None, *, own: bool = False) -> ObjectRef:
     """Письмо общего ящика до регистрации (W18A-P2): карточка в «Документы · Входящая почта»;
-    номера ещё нет — вместо него адрес отправителя."""
-    return ObjectRef(kind="letter", number=sender, title=subject, path=f"/eds/mail/{mail_id}")
+    номера ещё нет — вместо него адрес отправителя. Сотруднику без раздела первой линии (`own`,
+    W18A-P2-3) — его письмо в рабочем экране `/eds/my-mail/…`."""
+    path = f"/eds/my-mail/{mail_id}" if own else f"/eds/mail/{mail_id}"
+    return ObjectRef(kind="letter", number=sender, title=subject, path=path)
 
 
 def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:

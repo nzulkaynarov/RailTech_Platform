@@ -106,11 +106,15 @@ import type {
   ImapStatusOut,
   InboundMailArchiveIn,
   InboundMailAssist,
+  InboundMailBulkArchiveIn,
+  InboundMailBulkArchiveOut,
   InboundMailLeadOut,
   InboundMailOut,
   InboundMailPage,
+  InboundMailRegistrationIn,
   InboundMailReply,
   InboundMailReplyIn,
+  InboundMailTakeIn,
   InboxParams,
   InboxResponse,
   InvitationOut,
@@ -6907,10 +6911,14 @@ export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
 };
 
 /**
- * Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
- * приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
- * Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
- * (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок.
+ * Очередь «Входящая почта» по представлению (до 200, новые сверху) и состояние приёма:
+ * `new` — Новые, `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом),
+ * `spam` — Подозрительные, `all` — все (кроме подозрительных), `tasks` — для «Моих задач»: новые
+ * не
+ * «из истории» и мои в работе. `mailbox.configured = false` — приём не настроен. `history=false` —
+ * без писем «из истории» (за последние 3 дня), `true` — только они; `q` — поиск по отправителю и
+ * теме;
+ * `counts` — числа вкладок в рамках прав сотрудника.
  * @summary List Inbound Mail
  */
 export const listInboundMail = async (
@@ -7027,12 +7035,121 @@ export function useListInboundMail<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getBulkArchiveInboundMailUrl = () => {
+  return `/api/v1/inbound-mail/bulk-archive`;
+};
+
+/**
+ * «В архив» нескольких писем с одной причиной; чужие «в работе», регистрируемые и уже
+ * разобранные пропускаются и перечислены в `skipped`.
+ * @summary Bulk Archive Inbound Mail
+ */
+export const bulkArchiveInboundMail = async (
+  inboundMailBulkArchiveIn: InboundMailBulkArchiveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailBulkArchiveOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<InboundMailBulkArchiveOut>(getBulkArchiveInboundMailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailBulkArchiveIn),
+  });
+};
+
+export const getBulkArchiveInboundMailMutationKey = () => ["bulkArchiveInboundMail"] as const;
+
+export const getBulkArchiveInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+    TError,
+    BulkArchiveInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+  TError,
+  BulkArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBulkArchiveInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+    BulkArchiveInboundMailMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkArchiveInboundMail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkArchiveInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>
+>;
+export type BulkArchiveInboundMailMutationBody = InboundMailBulkArchiveIn;
+export type BulkArchiveInboundMailMutationError = ErrorType<ErrorOut>;
+export type BulkArchiveInboundMailMutationVariables = { data: InboundMailBulkArchiveIn };
+
+/**
+ * @summary Bulk Archive Inbound Mail
+ */
+export const useBulkArchiveInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+      TError,
+      BulkArchiveInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+  TError,
+  BulkArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getBulkArchiveInboundMailMutationOptions(options), queryClient);
+};
+
 export const getGetInboundMailUrl = (mailId: number) => {
   return `/api/v1/inbound-mail/${mailId}`;
 };
 
 /**
- * Карточка письма: отправитель, тема, текст, вложения, связка, подсказка помощника, итог.
+ * Карточка письма: отправитель, адресаты (сотрудники по адресу), все письма записи, наши
+ * ответы, вложения, связка, подсказка помощника, итог и журнал действий.
  * @summary Get Inbound Mail
  */
 export const getInboundMail = async (
@@ -7354,7 +7471,8 @@ export const getGetInboundMailAttachmentUrl = (mailId: number, index: number) =>
 };
 
 /**
- * Файл вложения из хранилища CRM (ключ и адрес хранилища наружу не уходят).
+ * Файл вложения письма записи (корня или ответа в цепочке); ключ и адрес хранилища наружу не
+ * уходят.
  * @summary Get Inbound Mail Attachment
  */
 export const getInboundMailAttachment = async (
@@ -7752,13 +7870,302 @@ export const useNotSpamInboundMail = <TError = ErrorType<ErrorOut>, TContext = u
   return useMutation(getNotSpamInboundMailMutationOptions(options), queryClient);
 };
 
+export const getReadInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/read`;
+};
+
+/**
+ * Отметить прочитанным этим сотрудником (открыл карточку).
+ * @summary Read Inbound Mail
+ */
+export const readInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getReadInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReadInboundMailMutationKey = () => ["readInboundMail"] as const;
+
+export const getReadInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof readInboundMail>>,
+    TError,
+    ReadInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof readInboundMail>>,
+  TError,
+  ReadInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReadInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof readInboundMail>>,
+    ReadInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return readInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReadInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof readInboundMail>>
+>;
+
+export type ReadInboundMailMutationError = ErrorType<ErrorOut>;
+export type ReadInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Read Inbound Mail
+ */
+export const useReadInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof readInboundMail>>,
+      TError,
+      ReadInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof readInboundMail>>,
+  TError,
+  ReadInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getReadInboundMailMutationOptions(options), queryClient);
+};
+
+export const getRegistrationInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/registration`;
+};
+
+/**
+ * Регистрация ВХ из письма начата (`start`: письмо «Регистрируется», берётся автоматически;
+ * ведёт
+ * другой — 409 `mail_in_work_by_other`) или EDS отказал (`cancel`: снова «в работе»). Итог
+ * «Разобрано: ВХ» ставит событие EDS.
+ * @summary Registration Inbound Mail
+ */
+export const registrationInboundMail = async (
+  mailId: number,
+  inboundMailRegistrationIn: InboundMailRegistrationIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getRegistrationInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailRegistrationIn),
+  });
+};
+
+export const getRegistrationInboundMailMutationKey = () => ["registrationInboundMail"] as const;
+
+export const getRegistrationInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof registrationInboundMail>>,
+    TError,
+    RegistrationInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof registrationInboundMail>>,
+  TError,
+  RegistrationInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRegistrationInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof registrationInboundMail>>,
+    RegistrationInboundMailMutationVariables
+  > = (props) => {
+    const { mailId, data } = props ?? {};
+
+    return registrationInboundMail(mailId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RegistrationInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof registrationInboundMail>>
+>;
+export type RegistrationInboundMailMutationBody = InboundMailRegistrationIn;
+export type RegistrationInboundMailMutationError = ErrorType<ErrorOut>;
+export type RegistrationInboundMailMutationVariables = {
+  mailId: number;
+  data: InboundMailRegistrationIn;
+};
+
+/**
+ * @summary Registration Inbound Mail
+ */
+export const useRegistrationInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof registrationInboundMail>>,
+      TError,
+      RegistrationInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof registrationInboundMail>>,
+  TError,
+  RegistrationInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getRegistrationInboundMailMutationOptions(options), queryClient);
+};
+
+export const getReleaseInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/release`;
+};
+
+/**
+ * «Вернуть в Новые»: своё «в работе» или разобранное архивом/ответом (первая линия; запись в
+ * журнал). Нельзя — 409 `mail_not_returnable`; ведёт другой — 409 `mail_in_work_by_other`.
+ * @summary Release Inbound Mail
+ */
+export const releaseInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getReleaseInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReleaseInboundMailMutationKey = () => ["releaseInboundMail"] as const;
+
+export const getReleaseInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseInboundMail>>,
+    TError,
+    ReleaseInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseInboundMail>>,
+  TError,
+  ReleaseInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReleaseInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseInboundMail>>,
+    ReleaseInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return releaseInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseInboundMail>>
+>;
+
+export type ReleaseInboundMailMutationError = ErrorType<ErrorOut>;
+export type ReleaseInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Release Inbound Mail
+ */
+export const useReleaseInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof releaseInboundMail>>,
+      TError,
+      ReleaseInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof releaseInboundMail>>,
+  TError,
+  ReleaseInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getReleaseInboundMailMutationOptions(options), queryClient);
+};
+
 export const getReplyInboundMailUrl = (mailId: number) => {
   return `/api/v1/inbound-mail/${mailId}/reply`;
 };
 
 /**
- * Ответ отправителю в ту же цепочку (In-Reply-To, References) почтовым сервисом. Почта не
- * настроена — 409 `smtp_not_configured`.
+ * Ответ на последнее письмо записи в ту же цепочку (In-Reply-To, References) почтовым
+ * сервисом; `reply_all` — копия остальным адресам письма. Письмо берётся в работу и после
+ * отправки «Разобрано: ответ отправлен», при `awaiting` («Ждём ответа») остаётся «в работе».
+ * Почта не настроена — 409 `smtp_not_configured`.
  * @summary Reply Inbound Mail
  */
 export const replyInboundMail = async (
@@ -7859,6 +8266,116 @@ export const useReplyInboundMail = <TError = ErrorType<ErrorOut>, TContext = unk
   TContext
 > => {
   return useMutation(getReplyInboundMailMutationOptions(options), queryClient);
+};
+
+export const getTakeInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/take`;
+};
+
+/**
+ * «Взять в работу» (повтор своего — без изменений). Ведёт другой — 409
+ * `mail_in_work_by_other` (`details.assignee_name`, `assigned_at`); `takeover=true` — «Забрать
+ * себе» у того, кто ведёт (в журнал). Разобрано или подозрительное — 409 `mail_handled`.
+ * @summary Take Inbound Mail
+ */
+export const takeInboundMail = async (
+  mailId: number,
+  inboundMailTakeIn: InboundMailTakeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getTakeInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailTakeIn),
+  });
+};
+
+export const getTakeInboundMailMutationKey = () => ["takeInboundMail"] as const;
+
+export const getTakeInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof takeInboundMail>>,
+    TError,
+    TakeInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof takeInboundMail>>,
+  TError,
+  TakeInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTakeInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof takeInboundMail>>,
+    TakeInboundMailMutationVariables
+  > = (props) => {
+    const { mailId, data } = props ?? {};
+
+    return takeInboundMail(mailId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TakeInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof takeInboundMail>>
+>;
+export type TakeInboundMailMutationBody = InboundMailTakeIn;
+export type TakeInboundMailMutationError = ErrorType<ErrorOut>;
+export type TakeInboundMailMutationVariables = { mailId: number; data: InboundMailTakeIn };
+
+/**
+ * @summary Take Inbound Mail
+ */
+export const useTakeInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof takeInboundMail>>,
+      TError,
+      TakeInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof takeInboundMail>>,
+  TError,
+  TakeInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getTakeInboundMailMutationOptions(options), queryClient);
 };
 
 export const getInboxUrl = (params?: InboxParams) => {

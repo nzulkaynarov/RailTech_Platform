@@ -176,7 +176,10 @@ function ownQueue(view: readonly MockRole[]): QueueItem[] {
     ...edsDecisionQueueItems(view), // D26G-4, D26G-9: КП на моём шаге и служебка к оплате (EDS)
     ...handOver, // D17G-1: разобрать лида, переданный лид
   ].filter((i) =>
-    i.kind.endsWith("_lead") || i.kind === "ticket" || i.kind === "inbound_mail"
+    i.kind.endsWith("_lead") ||
+    i.kind === "ticket" ||
+    i.kind === "inbound_mail" ||
+    i.kind === "inbound_mail_mine"
       ? !crmDown()
       : EDS_KINDS.includes(i.kind)
         ? !edsDown()

@@ -41,6 +41,8 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
   const [username, setUsername] = useState(imap.username);
   const [appPassword, setAppPassword] = useState("");
   const [assist, setAssist] = useState(imap.assist_enabled);
+  const [personal, setPersonal] = useState(imap.personal_rule);
+  const [personalLabel, setPersonalLabel] = useState(imap.personal_label);
   const save = useSaveImapConnector({
     mutation: {
       onSuccess: (data) => {
@@ -58,7 +60,9 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
       submitLabel={t("mail.settings.submit")}
       pending={save.isPending}
       error={save.error}
-      invalid={port === null || foldersOf(folders).every((f) => f.spam)}
+      invalid={
+        port === null || foldersOf(folders).every((f) => f.spam) || personalLabel.trim() === ""
+      }
       onCancel={onDone}
       onSubmit={(password) => {
         save.mutate({
@@ -69,6 +73,8 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
             mailbox: folders.regular[0] ?? "INBOX",
             folders: foldersOf(folders),
             assist_enabled: assist,
+            personal_rule: personal,
+            personal_label: personalLabel.trim(),
             username: username.trim() === "" ? null : username.trim(),
             imap_password: appPassword === "" ? null : appPassword,
             password,
@@ -151,6 +157,31 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
       >
         {t("mail.inbound.assist")}
       </Checkbox>
+      <Checkbox
+        checked={personal}
+        onChange={(event) => {
+          setPersonal(event.target.checked);
+        }}
+      >
+        {t("mail.inbound.personal")}
+      </Checkbox>
+      {personal ? (
+        <Field
+          id="imap-personal-label"
+          label={t("mail.inbound.personalLabel")}
+          hint={t("mail.inbound.personalLabelHint")}
+        >
+          <Input
+            id="imap-personal-label"
+            value={personalLabel}
+            maxLength={80}
+            autoComplete="off"
+            onChange={(event) => {
+              setPersonalLabel(event.target.value);
+            }}
+          />
+        </Field>
+      ) : null}
     </ActionForm>
   );
 }
@@ -194,6 +225,12 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
           {
             label: t("mail.inbound.assistLabel"),
             value: imap.assist_enabled ? t("mail.inbound.assistOn") : t("mail.inbound.assistOff"),
+          },
+          {
+            label: t("mail.inbound.personalState"),
+            value: imap.personal_rule
+              ? t("mail.inbound.personalOn", { label: imap.personal_label })
+              : t("mail.inbound.personalOff"),
           },
           { label: t("mail.inbound.lastPoll"), value: last },
         ]}

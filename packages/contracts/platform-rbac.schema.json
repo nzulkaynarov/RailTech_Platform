@@ -168,7 +168,8 @@
         "instruction",
         "instruction_extension",
         "acquaint",
-        "inbound_mail"
+        "inbound_mail",
+        "inbound_mail_mine"
       ]
     },
     "resourceKey": {

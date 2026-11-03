@@ -182,11 +182,14 @@ import type {
   InboundMail,
   InboundMailArchiveIn,
   InboundMailAssist,
+  InboundMailBulkArchiveIn,
+  InboundMailBulkArchiveResult,
   InboundMailConflictResponse,
   InboundMailLeadResult,
   InboundMailPage,
   InboundMailReply,
   InboundMailReplyIn,
+  InboundMailTakeIn,
   InstructionCompleteIn,
   InstructionExtensionDecisionIn,
   InstructionExtensionIn,
@@ -15585,8 +15588,8 @@ export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
 };
 
 /**
- * CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `spam` — «Подозрительные» (из спам-папки, W18A-P2-2). `history = false` — без писем «из истории» (строки «Моих задач»), `true` — только они; `counts` — числа вкладок.
- * @summary Входящая почта: очередь писем общего ящика
+ * CRM `GET /inbound-mail` (W18A-P2, B-INB-5; обращение — W18A-P2-3). Любой сотрудник: первая линия (`crm.leads.triage` — полный, делопроизводитель) видит всю очередь, остальной сотрудник — только письма, где он исполнитель или названный в «адресовано лично» (решает CRM). Представления (`view`): `new` — Новые (по умолчанию), `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом, кто и когда), `spam` — Подозрительные (W18A-P2-2), `all` — все, кроме подозрительных. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `history = false` — без писем «из истории», `true` — только они; `q` — поиск по отправителю и теме; `counts` — числа вкладок в рамках прав сотрудника.
+ * @summary Входящая почта: письма общего ящика по представлениям
  */
 export const listInboundMail = async (
   params?: ListInboundMailParams,
@@ -15681,7 +15684,7 @@ export function useListInboundMail<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 /**
- * @summary Входящая почта: очередь писем общего ящика
+ * @summary Входящая почта: письма общего ящика по представлениям
  */
 
 export function useListInboundMail<
@@ -15709,7 +15712,7 @@ export const getGetInboundMailUrl = (id: number) => {
 };
 
 /**
- * CRM `GET /inbound-mail/{id}`: отправитель, тема, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), итог (номер ВХ, лид, причина архива), ответы.
+ * CRM `GET /inbound-mail/{id}`: отправитель, адресаты («Кому» и копия — сотрудник по адресу и сам общий ящик), все письма записи (цепочка) и наши ответы, текст (только текст), вложения, связка с клиентом и лидом, подсказка помощника (тип, суть, предложенное действие — ничего не делает сама), исполнитель («в работе у …»), итог (номер ВХ, лид, причина архива) и журнал действий без текстов писем. Чужое письмо сотруднику без раздела первой линии — 403.
  * @summary Входящая почта: карточка письма
  */
 export const getInboundMail = async (
@@ -15841,12 +15844,465 @@ export function useGetInboundMail<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getMarkInboundMailReadUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/read`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/read` — открыл карточку; отметка на человека, жирный шрифт в списке снимается только у него.
+ * @summary Входящая почта: отметить прочитанным
+ */
+export const markInboundMailRead = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getMarkInboundMailReadUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkInboundMailReadMutationKey = () => ["markInboundMailRead"] as const;
+
+export const getMarkInboundMailReadMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markInboundMailRead>>,
+    TError,
+    MarkInboundMailReadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markInboundMailRead>>,
+  TError,
+  MarkInboundMailReadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkInboundMailReadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markInboundMailRead>>,
+    MarkInboundMailReadMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return markInboundMailRead(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkInboundMailReadMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markInboundMailRead>>
+>;
+
+export type MarkInboundMailReadMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type MarkInboundMailReadMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: отметить прочитанным
+ */
+export const useMarkInboundMailRead = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markInboundMailRead>>,
+      TError,
+      MarkInboundMailReadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof markInboundMailRead>>,
+  TError,
+  MarkInboundMailReadMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkInboundMailReadMutationOptions(options), queryClient);
+};
+
+export const getTakeInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/take`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/take` (первая линия). Письмо «в работе» у сотрудника с этого времени; первое действие (ответ, «Создать лид», регистрация ВХ) берёт его само. Ведёт другой — 409 `CONFLICT`, `details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`; `takeover = true` — «Забрать себе» (с запросом подтверждения на экране, запись в журнал). Разобрано или подозрительное — 409, `mail_handled`.
+ * @summary Входящая почта: взять в работу
+ */
+export const takeInboundMail = async (
+  id: number,
+  inboundMailTakeIn: InboundMailTakeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getTakeInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailTakeIn),
+  });
+};
+
+export const getTakeInboundMailMutationKey = () => ["takeInboundMail"] as const;
+
+export const getTakeInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof takeInboundMail>>,
+    TError,
+    TakeInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof takeInboundMail>>,
+  TError,
+  TakeInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTakeInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof takeInboundMail>>,
+    TakeInboundMailMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return takeInboundMail(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TakeInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof takeInboundMail>>
+>;
+export type TakeInboundMailMutationBody = InboundMailTakeIn;
+export type TakeInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type TakeInboundMailMutationVariables = { id: number; data: InboundMailTakeIn };
+
+/**
+ * @summary Входящая почта: взять в работу
+ */
+export const useTakeInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof takeInboundMail>>,
+      TError,
+      TakeInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof takeInboundMail>>,
+  TError,
+  TakeInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getTakeInboundMailMutationOptions(options), queryClient);
+};
+
+export const getReleaseInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/release`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/release`: своё «в работе» или разобранное архивом либо ответом (первая линия; запись в журнал). Исполнитель без раздела первой линии возвращает своё письмо делопроизводителю. Нельзя — 409 (`mail_not_returnable`); ведёт другой — `mail_in_work_by_other`.
+ * @summary Входящая почта: вернуть в «Новые»
+ */
+export const releaseInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getReleaseInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getReleaseInboundMailMutationKey = () => ["releaseInboundMail"] as const;
+
+export const getReleaseInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseInboundMail>>,
+    TError,
+    ReleaseInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseInboundMail>>,
+  TError,
+  ReleaseInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReleaseInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseInboundMail>>,
+    ReleaseInboundMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return releaseInboundMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseInboundMail>>
+>;
+
+export type ReleaseInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ReleaseInboundMailMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: вернуть в «Новые»
+ */
+export const useReleaseInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof releaseInboundMail>>,
+      TError,
+      ReleaseInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof releaseInboundMail>>,
+  TError,
+  ReleaseInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getReleaseInboundMailMutationOptions(options), queryClient);
+};
+
+export const getBulkArchiveInboundMailUrl = () => {
+  return `/api/v1/inbound-mail/bulk-archive`;
+};
+
+/**
+ * CRM `POST /inbound-mail/bulk-archive` (первая линия): выбранные письма «Разобрано: архив» с одной причиной (рассылки, уведомления). Письма в работе у другого, регистрируемые и уже разобранные пропускаются и названы в `skipped`; остальные архивируются.
+ * @summary Входящая почта: в архив несколько писем
+ */
+export const bulkArchiveInboundMail = async (
+  inboundMailBulkArchiveIn: InboundMailBulkArchiveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailBulkArchiveResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<InboundMailBulkArchiveResult>(getBulkArchiveInboundMailUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inboundMailBulkArchiveIn),
+  });
+};
+
+export const getBulkArchiveInboundMailMutationKey = () => ["bulkArchiveInboundMail"] as const;
+
+export const getBulkArchiveInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+    TError,
+    BulkArchiveInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+  TError,
+  BulkArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBulkArchiveInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+    BulkArchiveInboundMailMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return bulkArchiveInboundMail(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BulkArchiveInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>
+>;
+export type BulkArchiveInboundMailMutationBody = InboundMailBulkArchiveIn;
+export type BulkArchiveInboundMailMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type BulkArchiveInboundMailMutationVariables = { data: InboundMailBulkArchiveIn };
+
+/**
+ * @summary Входящая почта: в архив несколько писем
+ */
+export const useBulkArchiveInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+      TError,
+      BulkArchiveInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof bulkArchiveInboundMail>>,
+  TError,
+  BulkArchiveInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getBulkArchiveInboundMailMutationOptions(options), queryClient);
+};
+
 export const getDownloadInboundMailAttachmentUrl = (id: number, index: number) => {
   return `/api/v1/inbound-mail/${id}/attachments/${index}`;
 };
 
 /**
- * CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит.
+ * CRM `GET /inbound-mail/{id}/attachments/{index}` — потоком, адрес хранилища наружу не уходит; `id` — письмо записи (корень или ответ клиента в цепочке, `InboundMailMessage.id`).
  * @summary Входящая почта: файл вложения
  */
 export const downloadInboundMailAttachment = async (
@@ -16672,7 +17128,7 @@ export const getReplyInboundMailUrl = (id: number) => {
 };
 
 /**
- * CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
+ * CRM `POST /inbound-mail/{id}/reply`: письмо почтовым сервисом (P1) на последнее письмо записи с `In-Reply-To` и `References` — в почтовом клиенте отправителя ответ ляжет в ту же цепочку. Письмо берётся в работу и после отправки «Разобрано: ответ отправлен»; `awaiting` («Ждём ответа») оставляет его «в работе»; `reply_all` сохраняет копию (остальные адреса письма, кроме общего ящика). Исполнитель без раздела первой линии отвечает на своё письмо. Ведёт другой — 409 `mail_in_work_by_other`. Почта (SMTP) не настроена — 409 `CONFLICT`, `details.reason = smtp_not_configured`. Итог доставки — в карточке (`replies`) и журнале почты.
  * @summary Входящая почта: ответ отправителю в ту же цепочку
  */
 export const replyInboundMail = async (
@@ -29755,7 +30211,7 @@ export const getRegisterLetterUrl = () => {
 };
 
 /**
- * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть.
+ * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
  * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
  */
 export const registerLetter = async (

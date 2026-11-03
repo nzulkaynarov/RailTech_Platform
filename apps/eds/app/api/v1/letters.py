@@ -3,7 +3,7 @@
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Body, Depends, Header, Query
+from fastapi import APIRouter, Body, Depends, Header, Query, Response
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -105,15 +105,22 @@ async def list_letters(
 
 @router.post("/letters", response_model=Letter, status_code=201, operation_id="registerLetter")
 async def register_letter(
-    body: LetterCreate, employee: Registrar, session: Session, bus: Bus, idempotency_key: IdemKey = None
+    body: LetterCreate,
+    employee: Registrar,
+    session: Session,
+    bus: Bus,
+    response: Response,
+    idempotency_key: IdemKey = None,
 ) -> Any:
+    created = True
     async with session.begin():
 
         async def create() -> Letter:
-            letter = await letters.register(session, bus, actor_id=employee.crm_user_id, data=body)
+            nonlocal created
+            letter, created = await letters.register_once(session, bus, actor_id=employee.crm_user_id, data=body)
             return await letters_read.present(session, letter)
 
-        return await idempotency.run(
+        result = await idempotency.run(
             session,
             crm_user_id=employee.crm_user_id,
             scope="POST /letters",
@@ -122,6 +129,9 @@ async def register_letter(
             status_code=201,
             action=create,
         )
+    if not created:  # письмо общего ящика уже имеет ВХ (W18A-P2-3): тот же ВХ, 200 вместо 201
+        response.status_code = 200
+    return result
 
 
 @router.get("/letters/{letter_id}", response_model=Letter, operation_id="getLetter")

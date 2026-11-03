@@ -4,14 +4,14 @@
  */
 
 /**
- * new — ждёт разбора; spam — «Подозрительные» (из спам-папки, W18A-P2-2); registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
+ * new — Новое (с `thread_reply` — «ответ в цепочке»); in_work — В работе (исполнитель `assignee`, с `assigned_at`); registering — Регистрируется (ВХ создаётся, ждём подтверждения; `eds_waiting` — событие не пришло в срок); done — Разобрано (итог — `result`); spam — Подозрительные
  */
 export type InboundMailStatus = (typeof InboundMailStatus)[keyof typeof InboundMailStatus];
 
 export const InboundMailStatus = {
   new: "new",
+  in_work: "in_work",
+  registering: "registering",
+  done: "done",
   spam: "spam",
-  registered: "registered",
-  lead: "lead",
-  archived: "archived",
 } as const;

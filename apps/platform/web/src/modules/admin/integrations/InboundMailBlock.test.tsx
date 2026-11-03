@@ -36,6 +36,30 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
     expect(within(form).getByRole("checkbox", { name: /Помощник канцелярии/ })).toBeChecked();
   });
 
+  it("правило «адресовано лично»: включено по умолчанию, пометку можно сменить и сохранить", async () => {
+    const side = await mailPanel();
+    expect(
+      await within(side).findByText("Сразу сотруднику — пометка «Адресовано лично»"),
+    ).toBeVisible();
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const form = within(side).getByRole("form", { name: "Приём почты" });
+    const rule = within(form).getByRole("checkbox", { name: /Письмо сотруднику в «Кому»/ });
+    expect(rule).toBeChecked();
+    const label = within(form).getByLabelText("Пометка у такого письма");
+    expect(label).toHaveValue("Адресовано лично");
+    fireEvent.change(label, { target: { value: "Лично вам" } });
+    fireEvent.change(within(form).getByLabelText("Ваш пароль администратора"), {
+      target: { value: "admin-pass" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить настройки" }));
+    expect(await within(side).findByText("Сразу сотруднику — пометка «Лично вам»")).toBeVisible();
+
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const again = within(side).getByRole("form", { name: "Приём почты" });
+    fireEvent.click(within(again).getByRole("checkbox", { name: /Письмо сотруднику в «Кому»/ }));
+    expect(within(again).queryByLabelText("Пометка у такого письма")).toBeNull();
+  });
+
   it("«Найти папки» подсказывает «Спам» по флагу сервера; сохранение — с папками", async () => {
     const side = await mailPanel();
     fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));

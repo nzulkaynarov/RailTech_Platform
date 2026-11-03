@@ -4,6 +4,8 @@
  */
 import type { InboundMailAssist } from "./inboundMailAssist";
 import type { InboundMailLink } from "./inboundMailLink";
+import type { InboundMailPerson } from "./inboundMailPerson";
+import type { InboundMailResult } from "./inboundMailResult";
 import type { InboundMailStatus } from "./inboundMailStatus";
 
 export interface InboundMailItem {
@@ -15,6 +17,8 @@ export interface InboundMailItem {
   received_at: string;
   /** @nullable */
   sent_at: string | null;
+  /** Последнее входящее письмо записи */
+  activity_at: string;
   /** @maxLength 200 */
   preview: string;
   /** @minimum 0 */
@@ -26,4 +30,23 @@ export interface InboundMailItem {
   lead: InboundMailLink | null;
   /** Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
   from_history: boolean;
+  /** «В работе у …»; у Нового с `thread_reply` — прежний исполнитель, справкой */
+  assignee: InboundMailPerson | null;
+  /** @nullable */
+  assigned_at: string | null;
+  /** Адресовано лично сотруднику (правило «Почта · Приём») */
+  personal: boolean;
+  /** «Новое (ответ в цепочке)»: клиент ответил на разобранное письмо */
+  thread_reply: boolean;
+  /** Не прочитано этим сотрудником */
+  unread: boolean;
+  /**
+   * Входящих писем в записи (цепочка)
+   * @minimum 1
+   */
+  messages_count: number;
+  /** Регистрация начата, подтверждения не пришло в срок («ждёт подтверждения») */
+  eds_waiting: boolean;
+  /** Итог у Разобрано */
+  result: InboundMailResult | null;
 }
