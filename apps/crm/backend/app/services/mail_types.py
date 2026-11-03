@@ -157,9 +157,9 @@ def _clean_attrs(values: dict[str, Any], base: dict[str, str]) -> dict[str, str]
     bad: dict[str, str] = {}
     for key, value in values.items():
         if key not in options:
-            bad[f"attrs.{key}"] = "unknown_attr"
+            bad["attrs." + key] = "unknown_attr"
         elif not isinstance(value, str) or value not in options[key]:
-            bad[f"attrs.{key}"] = "invalid_value"
+            bad["attrs." + key] = "invalid_value"
     if bad:
         raise ValidationFailedError("invalid attrs", fields=bad)
     merged = {**base, **values}

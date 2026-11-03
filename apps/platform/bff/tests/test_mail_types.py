@@ -4,7 +4,7 @@ CRM — на respx, данные вымышленные. Права: справ�
 действия — первая линия (`crm.leads.triage`).
 """
 
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 
@@ -141,7 +141,7 @@ async def test_type_change_and_actions_belong_to_the_first_line(
     targets = be.router.get(f"{MAIL}/handover-targets").mock(
         return_value=httpx.Response(200, json={"items": [{"id": 9, "name": "Бухгалтер Один"}]})
     )
-    calls = [
+    calls: list[tuple[Literal["POST", "PUT"], str, dict[str, Any] | None]] = [
         ("PUT", "/api/v1/inbound-mail/17/type", {"type_code": "meeting"}),
         ("POST", "/api/v1/inbound-mail/17/price", None),
         ("POST", "/api/v1/inbound-mail/17/suspicious", None),

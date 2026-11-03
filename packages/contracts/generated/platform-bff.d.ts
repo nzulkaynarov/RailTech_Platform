@@ -4388,7 +4388,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/mail-sender-rules/{ruleId}": {
+  "/mail-sender-rules/{id}": {
     parameters: {
       query?: never;
       header?: never;
@@ -11628,6 +11628,8 @@ export interface components {
       preview: string;
       attachments_count: number;
       assist: components["schemas"]["InboundMailAssist"];
+      /** @description Тип письма из справочника «Типы входящих писем»; `null` — не определён */
+      type: components["schemas"]["InboundMailType"] | null;
       /** @description Известный клиент — по адресу контакта или ИНН в тексте */
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
@@ -22060,7 +22062,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        ruleId: number;
+        id: number;
       };
       cookie?: never;
     };
