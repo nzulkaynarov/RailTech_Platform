@@ -175,6 +175,9 @@ import type {
   HsCodeUpdate,
   ImapCheck,
   ImapConnector,
+  ImapFolders,
+  ImapHistory,
+  ImapHistoryIn,
   ImapSettingsIn,
   InboundMail,
   InboundMailArchiveIn,
@@ -15351,6 +15354,218 @@ export const useCheckImap = <
   return useMutation(getCheckImapMutationOptions(options), queryClient);
 };
 
+export const getFindImapFoldersUrl = () => {
+  return `/api/v1/admin/integrations/imap/folders`;
+};
+
+/**
+ * CRM `POST /integrations/imap/folders` (W18A-P2-2): папки ящика по IMAP `LIST` с сохранённым входом, только чтение. Имена у провайдеров разные, поэтому не хардкодятся: `spam_suggestion` — папка с флагом `\Junk` (RFC 6154) или единственная с привычным именем, иначе `null` — выбирает человек. Итог — в ответе, `error_kind` — как у `ImapCheck`.
+ * @summary Найти папки ящика
+ */
+export const findImapFolders = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImapFolders> => {
+  return http<ImapFolders>(getFindImapFoldersUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getFindImapFoldersMutationKey = () => ["findImapFolders"] as const;
+
+export const getFindImapFoldersMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof findImapFolders>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof findImapFolders>>, TError, void, TContext> => {
+  const mutationKey = getFindImapFoldersMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof findImapFolders>>, void> = () => {
+    return findImapFolders(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FindImapFoldersMutationResult = NonNullable<
+  Awaited<ReturnType<typeof findImapFolders>>
+>;
+
+export type FindImapFoldersMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Найти папки ящика
+ */
+export const useFindImapFolders = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof findImapFolders>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof findImapFolders>>, TError, void, TContext> => {
+  return useMutation(getFindImapFoldersMutationOptions(options), queryClient);
+};
+
+export const getStartImapHistoryUrl = () => {
+  return `/api/v1/admin/integrations/imap/history`;
+};
+
+/**
+ * CRM `POST /integrations/imap/history` (W18A-P2-2; эталон — импорт истории при подключении ящика в Front и Help Scout). Письма папок опроса за 7, 14, 30 или 90 дней — фоном, не больше 2000 за раз (новые раньше, `limited`). Ход и итог — в ответе и в `ImapConnector.history`. Дубль по Message-ID не создаётся — повтор безопасен. Письма старше 3 дней — «из истории» (`from_history`): в списке, не в «Моих задачах»; из спам-папки — в «Подозрительных». Уже идёт — та же загрузка. Приём не настроен — 409.
+ * @summary Загрузить письма за период
+ */
+export const startImapHistory = async (
+  imapHistoryIn: ImapHistoryIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ImapHistory> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImapHistory>(getStartImapHistoryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(imapHistoryIn),
+  });
+};
+
+export const getStartImapHistoryMutationKey = () => ["startImapHistory"] as const;
+
+export const getStartImapHistoryMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startImapHistory>>,
+    TError,
+    StartImapHistoryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startImapHistory>>,
+  TError,
+  StartImapHistoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartImapHistoryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startImapHistory>>,
+    StartImapHistoryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startImapHistory(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartImapHistoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startImapHistory>>
+>;
+export type StartImapHistoryMutationBody = ImapHistoryIn;
+export type StartImapHistoryMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | IntegrationConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type StartImapHistoryMutationVariables = { data: ImapHistoryIn };
+
+/**
+ * @summary Загрузить письма за период
+ */
+export const useStartImapHistory = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startImapHistory>>,
+      TError,
+      StartImapHistoryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startImapHistory>>,
+  TError,
+  StartImapHistoryMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartImapHistoryMutationOptions(options), queryClient);
+};
+
 export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -15368,7 +15583,7 @@ export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
 };
 
 /**
- * CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта».
+ * CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `spam` — «Подозрительные» (из спам-папки, W18A-P2-2). `history = false` — без писем «из истории» (строки «Моих задач»), `true` — только они; `counts` — числа вкладок.
  * @summary Входящая почта: очередь писем общего ящика
  */
 export const listInboundMail = async (
@@ -16234,6 +16449,220 @@ export const useArchiveInboundMail = <
   TContext
 > => {
   return useMutation(getArchiveInboundMailMutationOptions(options), queryClient);
+};
+
+export const getMarkInboundMailNotSpamUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/not-spam`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/not-spam` (W18A-P2-2): подозрительное письмо становится обычным «Ждёт разбора». Ящик на сервере не меняется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
+ * @summary Входящая почта: «Не спам → в очередь»
+ */
+export const markInboundMailNotSpam = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getMarkInboundMailNotSpamUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkInboundMailNotSpamMutationKey = () => ["markInboundMailNotSpam"] as const;
+
+export const getMarkInboundMailNotSpamMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markInboundMailNotSpam>>,
+    TError,
+    MarkInboundMailNotSpamMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markInboundMailNotSpam>>,
+  TError,
+  MarkInboundMailNotSpamMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkInboundMailNotSpamMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markInboundMailNotSpam>>,
+    MarkInboundMailNotSpamMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return markInboundMailNotSpam(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkInboundMailNotSpamMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markInboundMailNotSpam>>
+>;
+
+export type MarkInboundMailNotSpamMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type MarkInboundMailNotSpamMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: «Не спам → в очередь»
+ */
+export const useMarkInboundMailNotSpam = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markInboundMailNotSpam>>,
+      TError,
+      MarkInboundMailNotSpamMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof markInboundMailNotSpam>>,
+  TError,
+  MarkInboundMailNotSpamMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkInboundMailNotSpamMutationOptions(options), queryClient);
+};
+
+export const getDiscardInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/discard`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/discard` (W18A-P2-2): в архив с причиной «Спам», ничего не удаляется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
+ * @summary Входящая почта: «Убрать» подозрительное письмо
+ */
+export const discardInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDiscardInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDiscardInboundMailMutationKey = () => ["discardInboundMail"] as const;
+
+export const getDiscardInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discardInboundMail>>,
+    TError,
+    DiscardInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discardInboundMail>>,
+  TError,
+  DiscardInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDiscardInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discardInboundMail>>,
+    DiscardInboundMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return discardInboundMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscardInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof discardInboundMail>>
+>;
+
+export type DiscardInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type DiscardInboundMailMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: «Убрать» подозрительное письмо
+ */
+export const useDiscardInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof discardInboundMail>>,
+      TError,
+      DiscardInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof discardInboundMail>>,
+  TError,
+  DiscardInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getDiscardInboundMailMutationOptions(options), queryClient);
 };
 
 export const getReplyInboundMailUrl = (id: number) => {

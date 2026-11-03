@@ -636,7 +636,8 @@
       "new": "Waiting",
       "registered": "Registered",
       "lead": "Sent to leads",
-      "archived": "Archived"
+      "archived": "Archived",
+      "spam": "Suspicious"
     },
     "kind": {
       "buyer": "Buyer",
@@ -716,7 +717,39 @@
     },
     "fromMail": "From the letter “{{subject}}” by {{sender}}",
     "fromMailLoading": "Copying the letter attachments…",
-    "fromMailFailed": "Could not copy the attachments — attach the files manually."
+    "fromMailFailed": "Could not copy the attachments — attach the files manually.",
+    "tabs": {
+      "new": "To sort",
+      "spam": "Suspicious",
+      "label": "Mail"
+    },
+    "filter": {
+      "label": "Show",
+      "all": "All",
+      "history": "From history"
+    },
+    "historyTag": "From history",
+    "spamCaption": "Suspicious mail",
+    "spamIntro": "Mail from the mailbox Spam folder. Return the ones you need to the queue.",
+    "spamEmpty": {
+      "title": "No suspicious mail",
+      "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
+    },
+    "historyEmpty": {
+      "title": "No mail from history",
+      "text": "An administrator loads older mail in Settings · Connections · Mail."
+    },
+    "spam": {
+      "title": "Suspicious mail",
+      "what": "Arrived in the mailbox Spam folder. Check the sender and the text.",
+      "notSpam": "Not spam → to queue",
+      "notSpamDone": "The mail is in the “To sort” queue",
+      "discard": "Remove",
+      "discardDone": "The mail is archived",
+      "hint": "To keep this sender out of Spam, mark them “Not spam” in your mail.",
+      "notSpamWhat": "The mail goes to “To sort” like any other",
+      "discardWhat": "“Remove” archives it with the reason “Spam”; nothing is deleted"
+    }
   },
   "settings": {
     "subtitle": "Letter lists, resolution templates and the registration AI assistant.",

@@ -226,7 +226,9 @@ OVERDUE_PATH = "/api/v1/stock/overdue/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
 MAIL_PATH = "/api/v1/inbound-mail"
-MAIL_PARAMS = {"status": "new"}
+# Строки «Моих задач» — без писем «из истории» (W18A-P2-2): загруженные «за период» и старше
+# 3 дней (`TASK_WINDOW_DAYS` CRM) — только в списке «Входящая почта»; решает CRM, BFF просит фильтр.
+MAIL_PARAMS = {"status": "new", "history": "false"}
 
 
 async def load_snapshot(

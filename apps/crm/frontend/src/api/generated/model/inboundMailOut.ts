@@ -18,6 +18,8 @@ export interface InboundMailOut {
   eds_letter_id: string | null;
   eds_letter_number: string | null;
   from_email: string;
+  /** Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
+  from_history?: boolean;
   from_name: string;
   handled_at: string | null;
   handled_by: number | null;

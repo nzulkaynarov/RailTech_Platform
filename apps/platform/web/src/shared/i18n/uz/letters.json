@@ -636,7 +636,8 @@
       "new": "Kutmoqda",
       "registered": "Ro‘yxatga olingan",
       "lead": "Lidlarga o‘tkazildi",
-      "archived": "Arxivda"
+      "archived": "Arxivda",
+      "spam": "Shubhali"
     },
     "kind": {
       "buyer": "Xaridor",
@@ -716,7 +717,39 @@
     },
     "fromMail": "«{{subject}}» xatidan, {{sender}}",
     "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
-    "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling."
+    "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling.",
+    "tabs": {
+      "new": "Koʻrib chiqilishi kerak",
+      "spam": "Shubhali",
+      "label": "Xatlar"
+    },
+    "filter": {
+      "label": "Koʻrsatish",
+      "all": "Hammasi",
+      "history": "Tarixdan"
+    },
+    "historyTag": "Tarixdan",
+    "spamCaption": "Shubhali xatlar",
+    "spamIntro": "Pochta qutisidagi «Spam» jildidan xatlar. Keraklilarini navbatga qaytaring.",
+    "spamEmpty": {
+      "title": "Shubhali xatlar yoʻq",
+      "text": "Bu yerga «Spam» jildidan xatlar tushadi, agar u qabul sozlamalarida tanlangan boʻlsa."
+    },
+    "historyEmpty": {
+      "title": "Tarixdan xatlar yoʻq",
+      "text": "Eski xatlarni administrator Sozlamalar · Ulanishlar · Pochta boʻlimida yuklaydi."
+    },
+    "spam": {
+      "title": "Shubhali xat",
+      "what": "Pochta qutisining «Spam» jildiga kelgan. Joʻnatuvchi va matnni tekshiring.",
+      "notSpam": "Spam emas → navbatga",
+      "notSpamDone": "Xat «Koʻrib chiqilishi kerak» navbatida",
+      "discard": "Olib tashlash",
+      "discardDone": "Xat arxivga olindi",
+      "hint": "Bu joʻnatuvchining xatlari Spamga tushmasligi uchun pochtada uni «Spam emas» deb belgilang.",
+      "notSpamWhat": "Xat oddiy xat kabi «Koʻrib chiqilishi kerak» boʻlimiga tushadi",
+      "discardWhat": "«Olib tashlash» — «Spam» sababi bilan arxivga, hech narsa oʻchirilmaydi"
+    }
   },
   "settings": {
     "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",

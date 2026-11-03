@@ -4,6 +4,10 @@
 приложения — `integration_secrets` (только на запись: в ответе «задан», `last4`, когда сменён),
 сохранение — после пароля админа, аудит без значений. «Проверить приём» — вход и открытие папки
 только на чтение; итог словом-кодом в ответе (без нового `Reason` в контракте).
+
+Папки (W18A-P2-2): «Найти папки» — `LIST` ящика с подсказкой спам-папки (флаг `\\Junk`); в
+настройке — список папок опроса с отметкой «спам»; итог опроса в ответе — сводка по папкам
+(последняя ошибка любой папки видна админу).
 """
 
 from datetime import UTC, datetime
@@ -12,14 +16,30 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
+from app.domain.inbound_folders import (
+    FolderSetting,
+    decode_folder,
+    primary_folder,
+    resolve_folders,
+    suggest_spam,
+)
 from app.domain.smtp import host_problem, normalize_host
 from app.integrations.imap import ImapClient, ImapProbeError, ImapResolution, resolve_imap
+from app.models.inbound_mail import InboundMailbox
 from app.repositories import inbound_mail as repo
 from app.repositories import users as users_repo
-from app.schemas.inbound_mail import ImapCheckOut, ImapStatusOut
+from app.schemas.inbound_mail import (
+    ImapCheckOut,
+    ImapFolderIn,
+    ImapFolderOut,
+    ImapFoldersOut,
+    ImapServerFolder,
+    ImapStatusOut,
+)
 from app.security import audit, reauth
 from app.security.principal import Principal
 from app.security.secrets_store import IMAP_PASSWORD, IMAP_USERNAME, SecretsStore, last4
+from app.services.inbound_mail_history import view as history_view
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -57,8 +77,10 @@ class ImapConnectorService:
                 secret = await self._store.status(IMAP_PASSWORD)
             except Exception:
                 logger.warning("imap_secret_status_unavailable", exc_info=True)
+        names = [f.name for f in resolved.folders]
         async with self._sessions() as session:
-            state = await repo.mailbox(session, resolved.mailbox)
+            state = summary(await repo.mailboxes(session, names))
+            last_import = await repo.last_import(session)
         return ImapStatusOut(
             configured=resolved.connection is not None,
             host=resolved.host,
@@ -75,6 +97,11 @@ class ImapConnectorService:
             last_ok_at=state.last_ok_at if state else None,
             last_error_kind=state.last_error_kind if state else None,
             last_error=state.last_error if state else None,
+            folders=[
+                ImapFolderOut(name=f.name, label=decode_folder(f.name), spam=f.spam)
+                for f in resolved.folders
+            ],
+            history=history_view(last_import) if last_import is not None else None,
         )
 
     async def save(
@@ -89,6 +116,7 @@ class ImapConnectorService:
         username: str | None,
         password: str | None,
         admin_password: str,
+        folders: list[ImapFolderIn] | None = None,
     ) -> ImapStatusOut:
         host = normalize_host(host.removeprefix("imap://").removeprefix("imaps://"))
         if host and (problem := host_problem(host)) is not None:
@@ -102,11 +130,18 @@ class ImapConnectorService:
         await self._reauth(who.user_id, admin_password)
         before = await self.status()
         payload = (await self._settings.get()).integrations.model_dump(mode="json")
+        kept: list[dict[str, object]] = payload["imap"].get("folders", [])
+        primary = mailbox.strip() or "INBOX"
+        if folders is not None:  # новый список папок; `mailbox` — первая не спам (совместимость)
+            chosen = resolve_folders([FolderSetting(f.name, f.spam) for f in folders], primary)
+            kept = [{"name": f.name, "spam": f.spam} for f in chosen]
+            primary = primary_folder(chosen)
         payload["imap"] = {
             "host": host,
             "port": port,
             "security": security,
-            "mailbox": mailbox.strip() or "INBOX",
+            "mailbox": primary,
+            "folders": kept,
             "assist_enabled": assist_enabled,
         }
         await self._settings.update(SETTINGS_KEY, payload, who.user_id)
@@ -157,3 +192,38 @@ class ImapConnectorService:
             logger.warning("imap_check_failed", kind=exc.kind, detail=exc.detail)
             return ImapCheckOut(ok=False, error_kind=exc.kind, detail=exc.detail or None)
         return ImapCheckOut(ok=True, messages=result.messages, latency_ms=result.latency_ms)
+
+    async def folders(self) -> ImapFoldersOut:
+        """«Найти папки»: папки ящика (`LIST`) и подсказка спам-папки; итог — в ответе."""
+        connection = (await self.resolution()).connection
+        if connection is None:
+            return ImapFoldersOut(ok=False, error_kind="not_configured")
+        try:
+            found = await self._client.folders(connection)
+        except ImapProbeError as exc:
+            logger.warning("imap_folders_failed", kind=exc.kind, detail=exc.detail)
+            return ImapFoldersOut(ok=False, error_kind=exc.kind, detail=exc.detail or None)
+        return ImapFoldersOut(
+            ok=True,
+            folders=[
+                ImapServerFolder(name=f.name, label=f.label, junk=f.junk, selectable=f.selectable)
+                for f in found
+            ],
+            spam_suggestion=suggest_spam(found),
+        )
+
+
+def summary(states: list[InboundMailbox]) -> InboundMailbox | None:
+    """Итог опроса по папкам: последний опрос и успех — самые свежие, ошибка — любой папки."""
+    if not states:
+        return None
+    failed = [s for s in states if s.last_error_kind]
+    polls = [s.last_poll_at for s in states if s.last_poll_at]
+    oks = [s.last_ok_at for s in states if s.last_ok_at]
+    return InboundMailbox(
+        mailbox=states[0].mailbox,
+        last_poll_at=max(polls) if polls else None,
+        last_ok_at=max(oks) if oks else None,
+        last_error_kind=failed[0].last_error_kind if failed else None,
+        last_error=failed[0].last_error if failed else None,
+    )

@@ -484,10 +484,12 @@ class _Run:
         from app.domain.external_mail_inbound import InboundFacts, mail_inbound
         from app.integrations.imap import resolve_imap
         from app.repositories import inbound_mail as mail_repo
+        from app.services.imap_connector import summary
 
         resolved = await resolve_imap(self.d.secrets, self.d.settings)
         async with self.d.sessions() as session:
-            state = await mail_repo.mailbox(session, resolved.mailbox)
+            names = [f.name for f in resolved.folders]
+            state = summary(await mail_repo.mailboxes(session, names))
             waiting = await mail_repo.count(session, "new")
         facts = InboundFacts(
             configured=resolved.connection is not None,

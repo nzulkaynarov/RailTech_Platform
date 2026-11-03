@@ -73,6 +73,7 @@ def page(items: list[dict[str, Any]], *, configured: bool = True) -> dict[str, A
     return {
         "items": items,
         "total": len(items),
+        "counts": {"new": len(items), "history": 0, "spam": 0},
         "mailbox": {
             "configured": configured,
             "last_poll_at": None,
@@ -113,6 +114,9 @@ async def test_registrar_queue_card_and_counter_show_new_mail(
     }
     [mail_card] = [c for c in cards.json()["cards"] if c["key"] == "inbound_mail"]
     assert (mail_card["count"], mail_card["path"]) == (1, "/eds/mail")
+    # «Мои задачи» — без писем «из истории» (W18A-P2-2): фильтр решает CRM.
+    asked = fb.crm["mail"].calls[0].request.url.params
+    assert (asked["status"], asked["history"]) == ("new", "false")
     assert {"module": "eds", "section": "mail", "count": 1, "attention": True} in counters.json()[
         "items"
     ]
@@ -447,3 +451,171 @@ async def test_assist_only_by_button_and_disabled_says_so(
     assert asked.json()["kind"] == "supplier_doc"
     assert off.status_code == 409
     assert off.json()["details"]["reason"] == "assist_disabled"
+
+
+# --- «Подозрительные» и загрузка за период (W18A-P2-2) -------------------------------------------
+
+
+async def test_spam_tab_forwards_filters_counts_and_history_mark(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    body = {
+        **page([item(status="spam", from_history=True)]),
+        "counts": {"new": 4, "history": 2, "spam": 1},
+    }
+    listed_crm = be.router.get(CRM).mock(return_value=httpx.Response(200, json=body))
+    await web.login(["REGISTRAR"])
+
+    listed = await web.client.get("/api/v1/inbound-mail?status=spam&history=true")
+
+    check(listed, "/inbound-mail", "get")
+    params = listed_crm.calls[0].request.url.params
+    assert (params["status"], params["history"]) == ("spam", "true")
+    data = listed.json()
+    assert data["counts"] == {"new": 4, "history": 2, "spam": 1}
+    assert (data["items"][0]["status"], data["items"][0]["from_history"]) == ("spam", True)
+    plain = await web.client.get("/api/v1/inbound-mail")
+    assert "history" not in listed_crm.calls[1].request.url.params
+    assert plain.json()["items"][0]["from_history"] is True
+
+
+async def test_not_spam_and_discard_forward_and_conflict(web: Web, be: Backends) -> None:
+    moved = be.router.post(f"{CRM}/17/not-spam").mock(return_value=httpx.Response(204))
+    removed = be.router.post(f"{CRM}/18/discard").mock(return_value=httpx.Response(204))
+    be.router.post(f"{CRM}/19/discard").mock(
+        return_value=httpx.Response(
+            409, json={"code": "conflict", "message": "x", "details": {"status": "new"}}
+        )
+    )
+    await web.login(["REGISTRAR"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    first = await web.client.post("/api/v1/inbound-mail/17/not-spam", headers=headers)
+    second = await web.client.post("/api/v1/inbound-mail/18/discard", headers=headers)
+    again = await web.client.post("/api/v1/inbound-mail/19/discard", headers=headers)
+
+    assert (first.status_code, second.status_code) == (204, 204)
+    assert moved.called
+    assert removed.called
+    assert again.status_code == 409
+    assert again.json()["message"] == "Письмо уже обработано: обновите очередь."
+
+
+async def test_manager_cannot_mark_not_spam(web: Web) -> None:
+    await web.login(["MANAGER_ALL"])
+    response = await web.client.post(
+        "/api/v1/inbound-mail/17/not-spam", headers={CSRF_HEADER: web.csrf}
+    )
+    assert response.status_code == 403
+
+
+HISTORY = {
+    "id": 3,
+    "days": 30,
+    "status": "running",
+    "found": 120,
+    "processed": 25,
+    "created": 20,
+    "limited": False,
+    "error_kind": None,
+    "started_at": "2026-11-03T05:00:00Z",
+    "finished_at": None,
+}
+
+
+async def test_admin_finds_folders_saves_them_and_loads_history(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    status = {
+        **IMAP,
+        "folders": [
+            {"name": "INBOX", "label": "INBOX", "spam": False},
+            {"name": "&BCEEPwQwBDw-", "label": "Спам", "spam": True},
+        ],
+        "history": HISTORY,
+    }
+    be.router.get(f"{CRM_URL}/api/v1/integrations/imap").mock(
+        return_value=httpx.Response(200, json=status)
+    )
+    saved = be.router.put(f"{CRM_URL}/api/v1/integrations/imap").mock(
+        return_value=httpx.Response(200, json=status)
+    )
+    be.router.post(f"{CRM_URL}/api/v1/integrations/imap/folders").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "ok": True,
+                "folders": [
+                    {"name": "INBOX", "label": "INBOX", "junk": False, "selectable": True},
+                    {"name": "&BCEEPwQwBDw-", "label": "Спам", "junk": True, "selectable": True},
+                ],
+                "spam_suggestion": "&BCEEPwQwBDw-",
+            },
+        )
+    )
+    started = be.router.post(f"{CRM_URL}/api/v1/integrations/imap/history").mock(
+        return_value=httpx.Response(200, json=HISTORY)
+    )
+    await web.login(["ADMIN"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    got = await web.client.get("/api/v1/admin/integrations/imap")
+    found = await web.client.post("/api/v1/admin/integrations/imap/folders", headers=headers)
+    put = await web.client.put(
+        "/api/v1/admin/integrations/imap",
+        json={
+            "host": "imap.mail.test",
+            "folders": [{"name": "INBOX"}, {"name": "&BCEEPwQwBDw-", "spam": True}],
+            "password": "admin-pass",
+        },
+        headers=headers,
+    )
+    history = await web.client.post(
+        "/api/v1/admin/integrations/imap/history", json={"days": 30}, headers=headers
+    )
+    wrong = await web.client.post(
+        "/api/v1/admin/integrations/imap/history", json={"days": 5}, headers=headers
+    )
+
+    check(got, "/admin/integrations/imap", "get")
+    check(found, "/admin/integrations/imap/folders", "post")
+    check(history, "/admin/integrations/imap/history", "post")
+    assert got.json()["folders"][1] == {"name": "&BCEEPwQwBDw-", "label": "Спам", "spam": True}
+    assert got.json()["history"]["processed"] == 25
+    assert found.json()["spam_suggestion"] == "&BCEEPwQwBDw-"
+    assert put.status_code == 200, put.text
+    assert json.loads(saved.calls[0].request.content)["folders"] == [
+        {"name": "INBOX", "spam": False},
+        {"name": "&BCEEPwQwBDw-", "spam": True},
+    ]
+    assert json.loads(started.calls[0].request.content) == {"days": 30}
+    assert wrong.status_code == 422
+    assert started.call_count == 1
+
+
+async def test_history_without_settings_says_what_to_do(web: Web, be: Backends) -> None:
+    be.router.post(f"{CRM_URL}/api/v1/integrations/imap/history").mock(
+        return_value=httpx.Response(
+            409, json={"code": "conflict", "message": "x", "details": {"field": "host"}}
+        )
+    )
+    await web.login(["ADMIN"])
+
+    response = await web.client.post(
+        "/api/v1/admin/integrations/imap/history",
+        json={"days": 7},
+        headers={CSRF_HEADER: web.csrf},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["message"].startswith("Сначала настройте приём почты")
+
+
+async def test_registrar_cannot_start_history(web: Web) -> None:
+    await web.login(["REGISTRAR"])
+    response = await web.client.post(
+        "/api/v1/admin/integrations/imap/history",
+        json={"days": 7},
+        headers={CSRF_HEADER: web.csrf},
+    )
+    assert response.status_code == 403

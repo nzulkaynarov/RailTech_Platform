@@ -4,8 +4,9 @@
 несекретное — `settings.integrations.imap`, логин и пароль приложения — `integration_secrets`.
 Транспорт — `imaplib` стандартной библиотеки в потоке (`asyncio.to_thread`): папка открывается
 только на чтение (`EXAMINE`), письма читаются `BODY.PEEK[]` — на сервере ничего не удаляется и не
-помечается прочитанным. Что уже забрано, CRM помнит у себя: UIDVALIDITY и последний UID папки.
-Значения секретов не логируются.
+помечается прочитанным. Что уже забрано, CRM помнит у себя: UIDVALIDITY и последний UID каждой
+папки. Папок может быть несколько (W18A-P2-2: «Входящие» и «Спам»); «Найти папки» — `LIST`,
+загрузка истории — `UID SEARCH SINCE` и чтение выбранных UID. Значения секретов не логируются.
 """
 
 import asyncio
@@ -15,12 +16,14 @@ import re
 import socket
 import ssl
 import time
-from dataclasses import dataclass
+from collections.abc import Sequence
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Final, Literal, Protocol
 
 import structlog
 
+from app.domain.inbound_folders import FolderSetting, ServerFolder, parse_list, resolve_folders
 from app.domain.smtp import host_problem, normalize_host
 from app.security.secrets_store import IMAP_PASSWORD, IMAP_USERNAME, SecretsStore
 from app.services.settings import SettingsService
@@ -60,6 +63,7 @@ class ImapResolution:
     mailbox: str
     username: str
     password: str
+    folders: tuple[FolderSetting, ...] = ()
 
     @property
     def connection(self) -> ImapConnection | None:
@@ -82,6 +86,9 @@ async def _stored(store: SecretsStore, key: str) -> str:
 
 async def resolve_imap(store: SecretsStore, settings: SettingsService) -> ImapResolution:
     stored = (await settings.get()).integrations.imap
+    folders = resolve_folders(
+        [FolderSetting(f.name, f.spam) for f in stored.folders], stored.mailbox
+    )
     return ImapResolution(
         host=normalize_host(stored.host.removeprefix("imap://").removeprefix("imaps://")),
         port=stored.port,
@@ -89,7 +96,13 @@ async def resolve_imap(store: SecretsStore, settings: SettingsService) -> ImapRe
         mailbox=stored.mailbox.strip() or "INBOX",
         username=(await _stored(store, IMAP_USERNAME)).strip(),
         password=await _stored(store, IMAP_PASSWORD),
+        folders=folders,
     )
+
+
+def in_folder(connection: ImapConnection, folder: str) -> ImapConnection:
+    """То же соединение, другая папка."""
+    return replace(connection, mailbox=folder)
 
 
 class ImapProbeError(Exception):
@@ -125,6 +138,16 @@ class ImapClient(Protocol):
         self, connection: ImapConnection, uidvalidity: int | None, last_uid: int | None
     ) -> FetchBatch: ...
 
+    async def folders(self, connection: ImapConnection) -> list[ServerFolder]: ...
+
+    async def search_since(
+        self, connection: ImapConnection, days: int
+    ) -> tuple[int, list[int]]: ...
+
+    async def fetch_uids(
+        self, connection: ImapConnection, uids: Sequence[int]
+    ) -> tuple[FetchedMessage, ...]: ...
+
 
 def _quote(mailbox: str) -> str:
     return '"' + mailbox.replace("\\", "\\\\").replace('"', '\\"') + '"'
@@ -143,6 +166,67 @@ class ImaplibClient:
         self, connection: ImapConnection, uidvalidity: int | None, last_uid: int | None
     ) -> FetchBatch:
         return await asyncio.to_thread(self._fetch, connection, uidvalidity, last_uid)
+
+    async def folders(self, connection: ImapConnection) -> list[ServerFolder]:
+        return await asyncio.to_thread(self._folders, connection)
+
+    async def search_since(self, connection: ImapConnection, days: int) -> tuple[int, list[int]]:
+        """Папка `connection.mailbox`: (UIDVALIDITY, UID писем за последние `days` дней)."""
+        return await asyncio.to_thread(self._search_since, connection, days)
+
+    async def fetch_uids(
+        self, connection: ImapConnection, uids: Sequence[int]
+    ) -> tuple[FetchedMessage, ...]:
+        """Письма с этими UID папки `connection.mailbox` (только чтение, `BODY.PEEK`)."""
+        return await asyncio.to_thread(self._fetch_uids, connection, list(uids))
+
+    def _folders(self, connection: ImapConnection) -> list[ServerFolder]:
+        client = self._session(connection)
+        try:
+            status, data = client.list()
+        except imaplib.IMAP4.error as exc:
+            raise ImapProbeError("unavailable", str(exc)[:200]) from exc
+        except (TimeoutError, OSError) as exc:
+            raise ImapProbeError("unavailable", type(exc).__name__) from exc
+        finally:
+            _logout(client)
+        if status != "OK":
+            raise ImapProbeError("unavailable", "LIST")
+        lines: list[bytes | tuple[bytes, bytes]] = []
+        for item in data:
+            if isinstance(item, bytes):
+                lines.append(item)
+            elif isinstance(item, tuple) and len(item) > 1:
+                lines.append((bytes(item[0]), bytes(item[1])))
+        return parse_list(lines)
+
+    def _search_since(self, connection: ImapConnection, days: int) -> tuple[int, list[int]]:
+        client = self._session(connection)
+        try:
+            _, current = self._examine(client, connection.mailbox)
+            return current, _search(client, None, days=days)
+        except imaplib.IMAP4.error as exc:
+            raise ImapProbeError("unavailable", str(exc)[:200]) from exc
+        except (TimeoutError, OSError) as exc:
+            raise ImapProbeError("unavailable", type(exc).__name__) from exc
+        finally:
+            _logout(client)
+
+    def _fetch_uids(
+        self, connection: ImapConnection, uids: list[int]
+    ) -> tuple[FetchedMessage, ...]:
+        client = self._session(connection)
+        try:
+            self._examine(client, connection.mailbox)
+            sizes = _sizes(client, uids)
+            # письмо удалили между поиском и чтением — его просто нет
+            return tuple(_one(client, uid, sizes[uid]) for uid in uids if uid in sizes)
+        except imaplib.IMAP4.error as exc:
+            raise ImapProbeError("unavailable", str(exc)[:200]) from exc
+        except (TimeoutError, OSError) as exc:
+            raise ImapProbeError("unavailable", type(exc).__name__) from exc
+        finally:
+            _logout(client)
 
     def _check(self, connection: ImapConnection) -> ImapCheck:
         started = time.monotonic()
@@ -224,11 +308,13 @@ class ImaplibClient:
         return count, int(match.group(1)) if match else 0
 
 
-def _search(client: imaplib.IMAP4, last_uid: int | None) -> list[int]:
+def _search(
+    client: imaplib.IMAP4, last_uid: int | None, *, days: int = FIRST_POLL_DAYS
+) -> list[int]:
     if last_uid is not None:
         status, data = client.uid("SEARCH", f"UID {last_uid + 1}:*")
     else:
-        since = (datetime.now(UTC) - timedelta(days=FIRST_POLL_DAYS)).strftime("%d-%b-%Y")
+        since = (datetime.now(UTC) - timedelta(days=days)).strftime("%d-%b-%Y")
         status, data = client.uid("SEARCH", f"SINCE {since}")
     if status != "OK" or not data or not data[0]:
         return []

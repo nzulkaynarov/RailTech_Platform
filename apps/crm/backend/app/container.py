@@ -59,6 +59,7 @@ if TYPE_CHECKING:
     from app.services.imap_connector import ImapConnectorService
     from app.services.inbound_mail import InboundMailService
     from app.services.inbound_mail_assist import InboundMailAssist
+    from app.services.inbound_mail_history import InboundMailHistory
     from app.services.inbound_mail_ingest import InboundMailIngest
     from app.services.kb.admin import KbAdminService
     from app.services.kb.ingest import KbIngestService
@@ -676,6 +677,21 @@ class Container:
         )
 
     @cached_property
+    def inbound_mail_history(self) -> "InboundMailHistory":
+        """«Загрузить письма за период» (W18A-P2-2): тот же разбор, что у опроса, фоном."""
+        from app.integrations.imap import ImaplibClient
+        from app.services.inbound_mail_history import InboundMailHistory
+
+        return InboundMailHistory(
+            self.session_factory,
+            self.secrets_store,
+            self.settings_service,
+            ImaplibClient(),
+            self.inbound_mail_ingest,
+            _enqueue_mail_history,
+        )
+
+    @cached_property
     def inbound_mail_assist(self) -> "InboundMailAssist":
         """Подсказка помощника канцелярии по кнопке: `qualifier-model` под бюджетом, без резерва."""
         from app.agents.llm import ChatModel
@@ -932,6 +948,12 @@ async def _enqueue_email(email_log_id: int) -> object:
     from app.tasks.mail import enqueue_email
 
     return await enqueue_email(email_log_id)
+
+
+async def _enqueue_mail_history(import_id: int) -> object:
+    from app.tasks.inbound_mail import enqueue_history
+
+    return await enqueue_history(import_id)
 
 
 async def _enqueue_extraction(document_id: int) -> object:

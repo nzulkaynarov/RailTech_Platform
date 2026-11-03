@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.35.0
+  version: 0.36.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -4237,6 +4237,70 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/integrations/imap/folders:
+    post:
+      tags: [integrations]
+      operationId: findImapFolders
+      summary: 'Найти папки ящика'
+      description: >-
+        CRM `POST /integrations/imap/folders` (W18A-P2-2): папки ящика по IMAP `LIST` с сохранённым входом, только чтение.
+        Имена у провайдеров разные, поэтому не хардкодятся: `spam_suggestion` — папка с флагом `\Junk` (RFC 6154) или
+        единственная с привычным именем, иначе `null` — выбирает человек. Итог — в ответе, `error_kind` — как у `ImapCheck`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapFolders'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/imap/history:
+    post:
+      tags: [integrations]
+      operationId: startImapHistory
+      summary: 'Загрузить письма за период'
+      description: >-
+        CRM `POST /integrations/imap/history` (W18A-P2-2; эталон — импорт истории при подключении ящика в Front и Help
+        Scout). Письма папок опроса за 7, 14, 30 или 90 дней — фоном, не больше 2000 за раз (новые раньше, `limited`). Ход и
+        итог — в ответе и в `ImapConnector.history`. Дубль по Message-ID не создаётся — повтор безопасен. Письма старше 3
+        дней — «из истории» (`from_history`): в списке, не в «Моих задачах»; из спам-папки — в «Подозрительных». Уже идёт —
+        та же загрузка. Приём не настроен — 409.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImapHistoryIn'
+      responses:
+        '200':
+          description: Загрузка начата или уже идёт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapHistory'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /inbound-mail:
     get:
       tags: [inbound-mail]
@@ -4245,13 +4309,18 @@ paths:
       description: >-
         CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без
         него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не
-        настроен: экран показывает «Настройки · Подключения · Почта».
+        настроен: экран показывает «Настройки · Подключения · Почта». `spam` — «Подозрительные» (из спам-папки, W18A-P2-2).
+        `history = false` — без писем «из истории» (строки «Моих задач»), `true` — только они; `counts` — числа вкладок.
       parameters:
         - name: status
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/InboundMailStatus'
+        - name: history
+          in: query
+          required: false
+          schema: {type: boolean}
       responses:
         '200':
           description: Готово
@@ -4442,6 +4511,56 @@ paths:
           $ref: '#/components/responses/InboundMailConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/not-spam:
+    post:
+      tags: [inbound-mail]
+      operationId: markInboundMailNotSpam
+      summary: 'Входящая почта: «Не спам → в очередь»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/not-spam` (W18A-P2-2): подозрительное письмо становится обычным «Ждёт разбора». Ящик
+        на сервере не меняется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '204':
+          description: В очереди
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/discard:
+    post:
+      tags: [inbound-mail]
+      operationId: discardInboundMail
+      summary: 'Входящая почта: «Убрать» подозрительное письмо'
+      description: >-
+        CRM `POST /inbound-mail/{id}/discard` (W18A-P2-2): в архив с причиной «Спам», ничего не удаляется. Письмо не из
+        «Подозрительных» — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '204':
+          description: В архиве
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -19129,7 +19248,7 @@ components:
       type: object
       additionalProperties: false
       required: [configured, host, port, security, mailbox, assist_enabled, username, password_configured, password_last4,
-        password_updated_at, secrets_enabled, last_poll_at, last_ok_at, last_error_kind, last_error]
+        password_updated_at, secrets_enabled, last_poll_at, last_ok_at, last_error_kind, last_error, folders, history]
       properties:
         configured: {type: boolean, description: 'Есть хост, логин и пароль — ящик опрашивается раз в 2 минуты'}
         host: {type: string}
@@ -19146,6 +19265,72 @@ components:
         last_ok_at: {type: [string, 'null'], format: date-time}
         last_error_kind: {type: [string, 'null'], description: 'Причина последнего сбоя опроса словом-кодом (как `ImapCheck.error_kind`)'}
         last_error: {type: [string, 'null']}
+        folders:
+          type: array
+          description: 'Папки опроса (W18A-P2-2); по умолчанию одна — `mailbox`. Итог опроса выше — сводка по папкам'
+          items: {$ref: '#/components/schemas/ImapFolder'}
+        history:
+          oneOf:
+            - $ref: '#/components/schemas/ImapHistory'
+            - type: 'null'
+          description: Последняя загрузка писем за период
+    ImapFolderIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 200, description: 'Имя папки как на сервере (modified UTF-7)'}
+        spam: {type: boolean, default: false, description: 'Письма отсюда — «Подозрительные», не в очередь'}
+    ImapFolder:
+      type: object
+      additionalProperties: false
+      required: [name, label, spam]
+      properties:
+        name: {type: string}
+        label: {type: string, description: Имя для человека (modified UTF-7 раскодирован)}
+        spam: {type: boolean}
+    ImapServerFolder:
+      type: object
+      additionalProperties: false
+      required: [name, label, junk, selectable]
+      properties:
+        name: {type: string}
+        label: {type: string}
+        junk: {type: boolean, description: 'Сервер отметил папку флагом `\Junk`'}
+        selectable: {type: boolean, description: 'false — папка-контейнер, писем в ней нет'}
+    ImapFolders:
+      type: object
+      additionalProperties: false
+      required: [ok, error_kind, detail, folders, spam_suggestion]
+      properties:
+        ok: {type: boolean}
+        error_kind: {type: [string, 'null']}
+        detail: {type: [string, 'null']}
+        folders:
+          type: array
+          items: {$ref: '#/components/schemas/ImapServerFolder'}
+        spam_suggestion: {type: [string, 'null'], description: 'Имя спам-папки по флагу `\Junk` или привычному имени'}
+    ImapHistoryIn:
+      type: object
+      additionalProperties: false
+      required: [days]
+      properties:
+        days: {type: integer, enum: [7, 14, 30, 90]}
+    ImapHistory:
+      type: object
+      additionalProperties: false
+      required: [id, days, status, found, processed, created, limited, error_kind, started_at, finished_at]
+      properties:
+        id: {type: integer}
+        days: {type: integer}
+        status: {type: string, enum: [running, done, error]}
+        found: {type: integer, minimum: 0, description: 'Сколько писем берём (не больше 2000)'}
+        processed: {type: integer, minimum: 0}
+        created: {type: integer, minimum: 0, description: 'Новых в очереди (остальные уже были)'}
+        limited: {type: boolean, description: 'В периоде писем больше 2000 — загружены новые'}
+        error_kind: {type: [string, 'null'], description: 'Как `ImapCheck.error_kind`'}
+        started_at: {type: string, format: date-time}
+        finished_at: {type: [string, 'null'], format: date-time}
     ImapSettingsIn:
       type: object
       additionalProperties: false
@@ -19155,6 +19340,11 @@ components:
         port: {type: integer, minimum: 1, maximum: 65535, default: 993}
         security: {type: string, enum: [ssl, starttls], default: ssl}
         mailbox: {type: string, minLength: 1, maxLength: 200, default: INBOX}
+        folders:
+          type: [array, 'null']
+          maxItems: 10
+          description: 'Папки опроса (W18A-P2-2); `null` — прежние. Задано — `mailbox` становится первой не спам'
+          items: {$ref: '#/components/schemas/ImapFolderIn'}
         assist_enabled: {type: boolean, default: true}
         username: {type: [string, 'null'], maxLength: 255, description: '`null` — оставить прежний'}
         imap_password: {type: [string, 'null'], minLength: 1, maxLength: 512, description: 'Пароль приложения; `null` — оставить прежний'}
@@ -19171,8 +19361,10 @@ components:
         latency_ms: {type: [integer, 'null']}
     InboundMailStatus:
       type: string
-      enum: [new, registered, lead, archived]
-      description: 'new — ждёт разбора; registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной'
+      enum: [new, spam, registered, lead, archived]
+      description: >-
+        new — ждёт разбора; spam — «Подозрительные» (из спам-папки, W18A-P2-2); registered — ВХ в EDS; lead — лид или
+        заметка в лиде; archived — архив с причиной
     InboundMailAssist:
       type: object
       additionalProperties: false
@@ -19202,7 +19394,8 @@ components:
     InboundMailItem:
       type: object
       additionalProperties: false
-      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead]
+      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead,
+        from_history]
       properties:
         id: {type: integer}
         status: {$ref: '#/components/schemas/InboundMailStatus'}
@@ -19224,6 +19417,7 @@ components:
             - $ref: '#/components/schemas/InboundMailLink'
             - type: 'null'
           description: Открытый лид с этим адресом
+        from_history: {type: boolean, description: 'Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»'}
     InboundMailMailbox:
       type: object
       additionalProperties: false
@@ -19236,13 +19430,23 @@ components:
     InboundMailPage:
       type: object
       additionalProperties: false
-      required: [items, total, mailbox]
+      required: [items, total, mailbox, counts]
       properties:
         items:
           type: array
           items: {$ref: '#/components/schemas/InboundMailItem'}
         total: {type: integer, minimum: 0}
         mailbox: {$ref: '#/components/schemas/InboundMailMailbox'}
+        counts: {$ref: '#/components/schemas/InboundMailCounts'}
+    InboundMailCounts:
+      type: object
+      additionalProperties: false
+      required: [new, history, spam]
+      description: Числа вкладок списка «Входящая почта»
+      properties:
+        new: {type: integer, minimum: 0, description: 'Ждут разбора (вместе с «из истории»)'}
+        history: {type: integer, minimum: 0, description: 'Из них — «из истории»'}
+        spam: {type: integer, minimum: 0, description: Подозрительные}
     InboundMailAttachment:
       type: object
       additionalProperties: false
@@ -19274,7 +19478,7 @@ components:
       type: object
       additionalProperties: false
       description: Карточка письма общего ящика
-      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead, to, text, attachments, skipped, too_large, inns, letter_number, letter_ref, result_lead, archive_reason, handled_at, replies]
+      required: [id, status, from_email, from_name, subject, received_at, sent_at, preview, attachments_count, assist, client, lead, from_history, to, text, attachments, skipped, too_large, inns, letter_number, letter_ref, result_lead, archive_reason, handled_at, replies]
       properties:
         id: {type: integer}
         status: {$ref: '#/components/schemas/InboundMailStatus'}
@@ -19296,6 +19500,7 @@ components:
             - $ref: '#/components/schemas/InboundMailLink'
             - type: 'null'
           description: Открытый лид с этим адресом
+        from_history: {type: boolean, description: 'Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»'}
         to:
           type: array
           items: {type: string}
