@@ -71,15 +71,6 @@ export const DEMO_USERS: readonly DemoUser[] = [
     language: "ru",
   },
   {
-    id: "u-demo-chief",
-    email: "chief@demo.example",
-    name: "Демо Начальников",
-    initials: "ДН",
-    position: "Руководитель канцелярии",
-    roles: ["REGISTRAR", "ADMIN"],
-    language: "ru",
-  },
-  {
     id: "u-demo-universal",
     email: "universal@demo.example",
     name: "Демо Широков",

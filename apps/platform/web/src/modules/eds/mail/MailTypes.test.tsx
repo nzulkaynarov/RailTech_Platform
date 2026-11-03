@@ -1,6 +1,8 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
+import { ROLE_ID } from "../../../mocks/fixtures/roles";
+import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
 import { readRules } from "../../../mocks/mailTypes";
 import { resetInboundMailMock } from "../../../mocks/inboundMail";
 import { renderAt, setupLetterTests, signIn } from "../../../test/lettersKit";
@@ -11,8 +13,8 @@ beforeEach(() => {
 });
 
 const REGISTRAR = "registrar@demo.example";
-// Руководитель канцелярии: первая линия и администратор — создаёт правило прямо из карточки.
-const ADMIN = "chief@demo.example";
+// Администратор, которому в «Оргструктуре» выдали ещё и роль первой линии почты, — создаёт правило из карточки.
+const ADMIN = "admin@demo.example";
 const heading = (name: string) => screen.findByRole("heading", { level: 1, name });
 const listOf = (name: string) => screen.findByRole("list", { name });
 
@@ -121,6 +123,14 @@ describe("Типы входящих писем: тег, фильтр, основ
 });
 
 describe("Правило отправителя из карточки (MAIL-TYPES, администратор)", () => {
+  beforeEach(() => {
+    writeEmployees(
+      readEmployees().map((e) =>
+        e.email === ADMIN ? { ...e, role_ids: [...e.role_ids, ROLE_ID.REGISTRAR] } : e,
+      ),
+    );
+  });
+
   it("предложенный помощником тип подтверждается правилом: дальше письма домена получают тип сами", async () => {
     signIn(ADMIN);
     renderAt("/eds/mail/28");

@@ -8,20 +8,35 @@ import { chooseOption } from "./support/fields";
 
 // MAIL-TYPES на MSW: типы входящих писем как справочник с действием по умолчанию. Делопроизводитель видит тег типа
 // в списке, фильтрует по типу; у письма «КП поставщика» основная кнопка — «Загрузить прайс», остальные действия — в
-// меню; меняет тип одним щелчком. Руководитель канцелярии (первая линия и администратор) создаёт правило прямо из
+// меню; меняет тип одним щелчком. Исполняющий обязанности (все роли, в том числе первая линия почты и администратор) создаёт правило прямо из
 // карточки. Администратор настраивает справочник и правила отправителей. Обе ширины, axe (WCAG 2.1 AA), снимки.
 // Данные вымышленные; снимки — в docs/screens/mail-types/.
 const WIDTHS = [1440, 390] as const;
 const REGISTRAR = "registrar@demo.example";
-const CHIEF = "chief@demo.example";
 const ADMIN = "admin@demo.example";
+// Администратор, которому в «Оргструктуре» выдана и роль первой линии почты (делопроизводитель): правило из карточки.
+const CHIEF = ADMIN;
 const KEYS = [
   "rt-pf-mock-session",
   "rt-pf-mock-inbound-mail",
   "rt-pf-mock-imap-off",
   "rt-pf-mock-dictionaries",
   "rt-pf-mock-mail-rules",
+  "rt-pf-mock-employees",
 ];
+// Сотрудник с ролями «Администратор» (1) и «Делопроизводитель» (7), как после выдачи роли в Оргструктуре.
+const ADMIN_WITH_CLERK = {
+  id: "u-demo-admin",
+  name: "Демо Админов",
+  initials: "ДА",
+  email: ADMIN,
+  position: "Системный администратор",
+  role_ids: ["1", "7"],
+  access: { crm: true, erp: true },
+  status: "active",
+  telegram_linked: true,
+  erp_sync: "ok",
+};
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
@@ -57,11 +72,23 @@ async function expectFits(page: Page, context: string): Promise<void> {
   expect(overflow, context).toBeLessThanOrEqual(0);
 }
 
-async function signInAt(page: Page, width: number, email: string): Promise<void> {
+async function signInAt(
+  page: Page,
+  width: number,
+  email: string,
+  withClerkRole = false,
+): Promise<void> {
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   if (page.url().startsWith("http")) {
     const clear = KEYS.map((key) => `window.localStorage.removeItem("${key}");`).join(" ");
     await page.evaluate(clear);
+  }
+  if (withClerkRole) {
+    await page.goto("/login");
+    const employees = JSON.stringify([ADMIN_WITH_CLERK]);
+    await page.evaluate(
+      `window.localStorage.setItem("rt-pf-mock-employees", ${JSON.stringify(employees)})`,
+    );
   }
   await loginAndWait(page, email);
 }
@@ -133,7 +160,7 @@ for (const width of WIDTHS) {
   });
 
   test(`типы писем: правило отправителя из карточки · ${String(width)}`, async ({ page }) => {
-    await signInAt(page, width, CHIEF);
+    await signInAt(page, width, CHIEF, true);
     await spaGoto(page, "/eds/mail/29");
     await expect(
       page.getByRole("heading", { level: 1, name: "Требование о предоставлении документов" }),
