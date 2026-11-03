@@ -18,6 +18,9 @@ class InboundMailAttachment(BaseModel):
     name: str
     content_type: str
     size: int
+    inline: bool = Field(
+        default=False, description="Картинка встроена в письмо — в списке вложений не показывается"
+    )
 
 
 class InboundMailSkipped(BaseModel):
@@ -123,7 +126,14 @@ class InboundMailMessage(BaseModel):
     from_email: str
     from_name: str
     at: datetime
-    text: str
+    text: str = Field(description="Текст без цитаты и подписи, нормализованный")
+    text_tail: str = Field(description="Цитата прошлой переписки и подпись — свёрнуты под «…»")
+    html: str | None = Field(
+        description="Безопасная HTML-версия (санитизация на сервере; показывать только в iframe "
+        "с sandbox без скриптов и строгим CSP); внешние картинки без src — адрес в data-rt-src; "
+        "нет — письмо без HTML или слишком большое"
+    )
+    html_remote_images: int = Field(description="Сколько внешних картинок ждут кнопки «Показать»")
     attachments: list[InboundMailAttachment]
 
 

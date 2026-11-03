@@ -1,8 +1,9 @@
 """Входящая почта общего ящика (W18A-P2, B-INB-5): разбор письма, вложения, подсказка помощника.
 
 Чистые функции без I/O. Письмо RFC 5322 → `ParsedMail`: Message-ID (ключ дедупликации), отправитель,
-тема, дата, цепочка (`In-Reply-To`, `References`), тело только текстом (HTML → текст без разметки,
-скриптов и стилей; в интерфейсе показывается как текст) и вложения по белому списку типов EDS
+тема, дата, цепочка (`In-Reply-To`, `References`), тело текстом (нормализованным, без цитаты и
+подписи — W18A-P2-4: `domain/mail_text.py`; цитата и подпись — `text_tail`), безопасная HTML-версия
+(`domain/mail_html.py`) и вложения по белому списку типов EDS
 (PDF, изображения, Office) с пределом размера и числа — остальные в `skipped` с причиной.
 
 Помощник (DECISIONS 2026-10-28, «код решает, модель предлагает»): модель возвращает только тип из
@@ -14,13 +15,15 @@ import hashlib
 import json
 import mimetypes
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from email import message_from_bytes, policy
-from email.message import EmailMessage
+from email.message import EmailMessage, MIMEPart
 from email.utils import getaddresses, parsedate_to_datetime
-from html.parser import HTMLParser
 from typing import Final, Literal, get_args
+
+from app.domain.mail_html import InlineImage, SafeHtml, html_text_parts, sanitize_html
+from app.domain.mail_text import MAX_TEXT_CHARS, normalize_text, split_quote
 
 Kind = Literal["buyer", "official", "supplier_doc", "other"]
 Action = Literal["register", "lead", "archive"]
@@ -56,14 +59,11 @@ ALLOWED_TYPES: Final[frozenset[str]] = frozenset(
 )
 MAX_FILE_BYTES: Final = 25 * 1024 * 1024  # как предел файла EDS
 MAX_FILES: Final = 20
-MAX_TEXT_CHARS: Final = 50_000
 MAX_SUBJECT_CHARS: Final = 300
 SUMMARY_MAX_CHARS: Final = 300
 _INN: Final = re.compile(r"(?<!\d)(\d{9})(?!\d)")
 _CONTROL: Final = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _NAME_CONTROL: Final = re.compile(r"[\x00-\x1f\x7f/\\]")
-_BLANKS: Final = re.compile(r"\n{3,}")
-_SPACES: Final = re.compile(r"[ \t\r\f\v]+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +71,8 @@ class MailFile:
     name: str
     content_type: str
     data: bytes
+    content_id: str | None = None  # Content-ID встроенной картинки (`cid:` в HTML), без скобок
+    inline: bool = False  # картинка встроена в HTML письма — в списке вложений не показывается
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,54 +94,9 @@ class ParsedMail:
     references: str | None
     text: str
     files: tuple[MailFile, ...] = ()
+    text_tail: str = ""  # цитата прошлой переписки и подпись — свёрнуты под «…»
+    html: SafeHtml | None = None
     skipped: tuple[SkippedFile, ...] = field(default_factory=tuple)
-
-
-class _TextExtractor(HTMLParser):
-    """HTML → текст: без тегов, `script`/`style`/`head`; блоки — переводами строк."""
-
-    _SKIP: Final = frozenset({"script", "style", "head", "title", "noscript", "template"})
-    _BREAK: Final = frozenset(
-        {"br", "p", "div", "tr", "li", "h1", "h2", "h3", "h4", "h5", "h6", "table", "blockquote"}
-    )
-
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self._parts: list[str] = []
-        self._skip_depth = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        if tag in self._SKIP:
-            self._skip_depth += 1
-        elif tag in self._BREAK:
-            self._parts.append("\n")
-
-    def handle_endtag(self, tag: str) -> None:
-        if tag in self._SKIP and self._skip_depth:
-            self._skip_depth -= 1
-        elif tag in self._BREAK:
-            self._parts.append("\n")
-
-    def handle_data(self, data: str) -> None:
-        if not self._skip_depth:
-            self._parts.append(data)
-
-    def text(self) -> str:
-        return "".join(self._parts)
-
-
-def html_to_text(html: str) -> str:
-    parser = _TextExtractor()
-    parser.feed(html)
-    parser.close()
-    return clean_text(parser.text())
-
-
-def clean_text(raw: str) -> str:
-    """Управляющие символы прочь, пробелы схлопнуты, не больше двух пустых строк подряд."""
-    text = _CONTROL.sub("", raw.replace("\r\n", "\n"))
-    lines = [_SPACES.sub(" ", line).strip() for line in text.split("\n")]
-    return _BLANKS.sub("\n\n", "\n".join(lines)).strip()[:MAX_TEXT_CHARS]
 
 
 def clean_name(raw: str | None) -> str:
@@ -181,8 +138,7 @@ def _sent_at(message: EmailMessage) -> datetime | None:
     return moment if moment.tzinfo is not None else None
 
 
-def _body(message: EmailMessage) -> str:
-    part = message.get_body(preferencelist=("plain", "html"))
+def _content(part: MIMEPart | None) -> str:
     if part is None:
         return ""
     try:
@@ -190,18 +146,55 @@ def _body(message: EmailMessage) -> str:
     except (LookupError, UnicodeError, AssertionError):
         payload = part.get_payload(decode=True)
         content = payload.decode("utf-8", "replace") if isinstance(payload, bytes) else ""
-    if not isinstance(content, str):
-        return ""
-    if part.get_content_type() == "text/html":
-        return html_to_text(content)
-    return clean_text(content)
+    return content if isinstance(content, str) else ""
+
+
+def _text_parts(plain: str | None, html: str | None) -> tuple[str, str]:
+    """(текст без цитаты и подписи, свёрнутый хвост). Есть текстовая часть — она; иначе текст из
+    HTML (цитата — `blockquote`/`gmail_quote`, потом те же признаки по строкам)."""
+    if plain is not None:
+        return split_quote(normalize_text(plain))
+    if html is None:
+        return "", ""
+    main_raw, quoted_raw = html_text_parts(html)
+    main, tail = split_quote(normalize_text(main_raw))
+    quoted = normalize_text(quoted_raw)
+    return main, "\n\n".join(part for part in (tail, quoted) if part)[:MAX_TEXT_CHARS]
+
+
+def _bodies(message: EmailMessage, files: tuple[MailFile, ...]) -> tuple[str, str, SafeHtml | None]:
+    plain_part = message.get_body(preferencelist=("plain",))
+    html_part = message.get_body(preferencelist=("html",))
+    plain = _content(plain_part) if plain_part is not None else None
+    html = _content(html_part) if html_part is not None else None
+    text, tail = _text_parts(plain, html)
+    inline = {f.content_id: InlineImage(f.content_type, f.data) for f in files if f.content_id}
+    safe = sanitize_html(html, inline) if html else None
+    return text, tail, safe
+
+
+def _file_parts(message: EmailMessage) -> list[EmailMessage]:
+    """Вложения письма и встроенные картинки с Content-ID из вложенного `multipart/related`
+    (рассылка `alternative[plain, related[html, image]]`), которые `iter_attachments` не отдаёт."""
+    parts = [p for p in message.iter_attachments() if isinstance(p, EmailMessage)]
+    seen = {id(p) for p in parts}
+    for part in message.walk():
+        if (
+            isinstance(part, EmailMessage)
+            and id(part) not in seen
+            and not part.is_multipart()
+            and part.get_content_maintype() == "image"
+            and _header(part, "Content-ID")
+        ):
+            parts.append(part)
+    return parts
 
 
 def _files(message: EmailMessage) -> tuple[tuple[MailFile, ...], tuple[SkippedFile, ...]]:
     files: list[MailFile] = []
     skipped: list[SkippedFile] = []
-    for part in message.iter_attachments():
-        if not isinstance(part, EmailMessage) or part.is_multipart():
+    for part in _file_parts(message):
+        if part.is_multipart():
             continue
         name = clean_name(part.get_filename())
         content_type = resolve_type(part.get_content_type(), name)
@@ -215,7 +208,8 @@ def _files(message: EmailMessage) -> tuple[tuple[MailFile, ...], tuple[SkippedFi
         elif len(files) >= MAX_FILES:
             reason = "count"
         if reason is None:
-            files.append(MailFile(name, content_type, data))
+            cid = _header(part, "Content-ID").strip().strip("<>").strip().lower()
+            files.append(MailFile(name, content_type, data, cid or None))
         else:
             skipped.append(SkippedFile(name, reason))
     return tuple(files), tuple(skipped)
@@ -236,6 +230,11 @@ def parse_message(raw: bytes) -> ParsedMail:
     to = _addresses(message, "To")
     cc = _addresses(message, "Cc")
     files, skipped = _files(message)
+    text, tail, safe_html = _bodies(message, files)
+    if safe_html is not None and safe_html.inlined:
+        files = tuple(
+            replace(f, inline=True) if f.content_id in safe_html.inlined else f for f in files
+        )
     return ParsedMail(
         message_id=normalize_message_id(_header(message, "Message-ID"), raw),
         from_email=from_email.strip().lower()[:255],
@@ -246,9 +245,11 @@ def parse_message(raw: bytes) -> ParsedMail:
         sent_at=_sent_at(message),
         in_reply_to=_header(message, "In-Reply-To")[:998] or None,
         references=_header(message, "References")[:4000] or None,
-        text=_body(message),
+        text=text,
         files=files,
         skipped=skipped,
+        text_tail=tail,
+        html=safe_html,
     )
 
 
@@ -281,7 +282,7 @@ def parse_assist(raw: str) -> AssistVerdict | None:
     summary = data.get("summary")
     if kind not in KINDS or not isinstance(summary, str):
         return None
-    text = clean_text(summary).replace("\n", " ")[:SUMMARY_MAX_CHARS].strip()
+    text = normalize_text(summary).replace("\n", " ")[:SUMMARY_MAX_CHARS].strip()
     if not text:
         return None
     return AssistVerdict(kind, text, SUGGESTED_ACTION[kind])

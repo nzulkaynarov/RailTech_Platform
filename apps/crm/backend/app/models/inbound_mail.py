@@ -1,7 +1,8 @@
 """Входящая почта общего ящика (W18A-P2, B-INB-5): письма очереди и состояние опроса.
 
 `inbound_mail` — одно письмо (UNIQUE `message_id` — дедупликация: повторный опрос, копия письма в
-ящике, смена UIDVALIDITY дубля не дают). Тело — только текст; вложения из белого списка — в бакете
+ящике, смена UIDVALIDITY дубля не дают). Тело — текст без цитаты и подписи (`text`; цитата —
+`text_tail`, W18A-P2-4) и безопасный HTML (`html_sanitized`); вложения из белого списка — в бакете
 вложений CRM (`attachments`: имя, тип, размер, ключ хранилища), отброшенные — `skipped` с причиной.
 Состояния (W18A-P2-3; домен — `domain/inbound_mail_flow.py`): `new` → `in_work` (исполнитель
 `assignee_id`, с `assigned_at`) → `registering` (ВХ создаётся в EDS, `registering_at`) → `done` с
@@ -86,6 +87,11 @@ class InboundMail(TimestampMixin, Base):
     in_reply_to: Mapped[str | None] = mapped_column(Text)
     references: Mapped[str | None] = mapped_column(Text)
     text: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    # W18A-P2-4: `text` — без цитаты и подписи (в лид, ВХ, помощнику), они — в `text_tail`; HTML
+    # письма — только после санитизации (`domain/mail_html.py`), внешние картинки без `src`.
+    text_tail: Mapped[str] = mapped_column(Text, nullable=False, server_default="")
+    html_sanitized: Mapped[str | None] = mapped_column(Text)
+    html_remote_images: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     attachments: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, server_default="[]"
     )

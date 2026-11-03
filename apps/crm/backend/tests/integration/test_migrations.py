@@ -464,3 +464,35 @@ def test_inbound_mail_statuses_become_done_with_outcome_and_back(
         back = [r[0] for r in conn.execute("SELECT status FROM inbound_mail ORDER BY id")]
     assert back == old
     command.upgrade(alembic_config, "head")
+
+
+MAIL_HTML_BEFORE = "563bd9b32ffd"
+
+
+def test_inbound_mail_html_columns_keep_old_rows_and_roll_back(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """W18A-P2-4: колонки HTML и цитаты приходят с пустыми значениями у старых писем и уходят."""
+    command.upgrade(alembic_config, MAIL_HTML_BEFORE)
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        conn.execute("TRUNCATE inbound_mail RESTART IDENTITY CASCADE")
+        conn.execute(
+            "INSERT INTO inbound_mail (message_id, mailbox, uidvalidity, uid, text) "
+            "VALUES ('old', 'INBOX', 1, 1, 'Старое письмо')"
+        )
+        conn.commit()
+
+    command.upgrade(alembic_config, "head")
+    sql = "SELECT text, text_tail, html_sanitized, html_remote_images FROM inbound_mail"
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(sql).fetchone() == ("Старое письмо", "", None, 0)
+
+    command.downgrade(alembic_config, MAIL_HTML_BEFORE)
+    cols = (
+        "SELECT count(*) FROM information_schema.columns WHERE table_name = 'inbound_mail' "
+        "AND column_name IN ('text_tail', 'html_sanitized', 'html_remote_images')"
+    )
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(cols).fetchone() == (0,)
+        assert conn.execute("SELECT text FROM inbound_mail").fetchone() == ("Старое письмо",)
+    command.upgrade(alembic_config, "head")

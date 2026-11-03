@@ -12,6 +12,13 @@ export interface InboundMailMessage {
   attachments: InboundMailAttachment[];
   from_email: string;
   from_name: string;
+  /** Безопасная HTML-версия (санитизация на сервере; показывать только в iframe с sandbox без скриптов и строгим CSP); внешние картинки без src — адрес в data-rt-src; нет — письмо без HTML или слишком большое */
+  html: string | null;
+  /** Сколько внешних картинок ждут кнопки «Показать» */
+  html_remote_images: number;
   id: number;
+  /** Текст без цитаты и подписи, нормализованный */
   text: string;
+  /** Цитата прошлой переписки и подпись — свёрнуты под «…» */
+  text_tail: string;
 }

@@ -232,6 +232,8 @@ class InboundMailIngest:
                     "content_type": item.content_type,
                     "size": len(item.data),
                     "storage_key": key,
+                    "content_id": item.content_id,
+                    "inline": item.inline,
                 }
             )
         return stored
@@ -279,6 +281,9 @@ async def _row(
         "in_reply_to": parsed.in_reply_to,
         "references": parsed.references,
         "text": parsed.text,
+        "text_tail": parsed.text_tail,
+        "html_sanitized": parsed.html.html if parsed.html is not None else None,
+        "html_remote_images": parsed.html.remote_images if parsed.html is not None else 0,
         "attachments": files,
         "skipped": [{"name": s.name, "reason": s.reason} for s in parsed.skipped],
         "inns": inns,
