@@ -8,6 +8,7 @@ import type {
   ProjectStage,
 } from "../shared/api/generated/model";
 import {
+  DELIVERY_FROM,
   MOCK_STAFF_ID,
   type ProjectState,
   findProject,
@@ -20,6 +21,7 @@ import {
   toRow,
   writeProject,
 } from "./fixtures/projects";
+import { companyToday } from "../shared/lib/dates";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -53,7 +55,12 @@ function guard(need: Level) {
       }),
     };
   }
-  return { writer: level === "full", staffId: MOCK_STAFF_ID[session.userId] };
+  return {
+    writer: level === "full",
+    // Отметки доставки (L0-1) — право ERP `fulfillment.manage`: раздел «Склад» полный.
+    marker: me.resources["erp.stock"] === "full",
+    staffId: MOCK_STAFF_ID[session.userId],
+  };
 }
 
 const notFound = () =>
@@ -176,6 +183,40 @@ function scanFailure(verdict: "invalid" | "missing" | "large") {
   });
 }
 
+/** Текстовые поля и имя файла формы multipart (без `request.formData()` — см. `scanVerdict`). */
+async function multipartFields(
+  request: Request,
+): Promise<Record<string, string> & { fileName?: string }> {
+  const boundary = /boundary=([^;]+)/.exec(request.headers.get("content-type") ?? "")?.[1];
+  const out: Record<string, string> & { fileName?: string } = {};
+  if (!boundary) return out;
+  const raw = new Uint8Array(await request.arrayBuffer());
+  const text = new TextDecoder().decode(raw);
+  for (const part of text.split(`--${boundary}`)) {
+    const split = part.indexOf("\r\n\r\n");
+    if (split < 0) continue;
+    const head = part.slice(0, split);
+    const name = /name="([^"]*)"/.exec(head)?.[1];
+    if (!name) continue;
+    const file = /filename="([^"]*)"/.exec(head)?.[1];
+    if (file !== undefined) {
+      if (file) out.fileName = file;
+      continue;
+    }
+    out[name] = part.slice(split + 4).replace(/\r\n$/, "");
+  }
+  return out;
+}
+
+function fieldFailure(reason: string, field: string, message: string) {
+  return failure(422, "VALIDATION_FAILED", message, "erp", {
+    backend_status: 400,
+    backend_code: reason.toUpperCase(),
+    reason,
+    fields: [field],
+  });
+}
+
 // --- обработчики --------------------------------------------------------------------------------------------
 
 export const edsProjectsHandlers = [
@@ -214,7 +255,7 @@ export const edsProjectsHandlers = [
     const ok = guard("read");
     if (ok.error) return ok.error;
     const project = findProject(refOf(request));
-    return project ? HttpResponse.json(toCard(project, ok.writer)) : notFound();
+    return project ? HttpResponse.json(toCard(project, ok.writer, ok.marker)) : notFound();
   }),
 
   http.post("*/eds/projects/:ref/contract/draft", ({ request }) => {
@@ -245,7 +286,7 @@ export const edsProjectsHandlers = [
       "Создан проект договора",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer), { status: 201 });
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker), { status: 201 });
   }),
 
   http.post("*/eds/projects/:ref/contract", async ({ request }) => {
@@ -296,7 +337,7 @@ export const edsProjectsHandlers = [
         : null,
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
   }),
 
   http.post("*/eds/projects/:ref/contract/scan", async ({ request }) => {
@@ -335,7 +376,7 @@ export const edsProjectsHandlers = [
       "Прикреплён скан подписанного договора",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
   }),
 
   // --- акт --------------------------------------------------------------------------------------------------
@@ -380,7 +421,7 @@ export const edsProjectsHandlers = [
         "Акт выпущен",
       );
       writeProject(next);
-      return HttpResponse.json(toCard(next, ok.writer));
+      return HttpResponse.json(toCard(next, ok.writer, ok.marker));
     }
     const a = p.act;
     if (!a) return notFound();
@@ -397,7 +438,7 @@ export const edsProjectsHandlers = [
         reason,
       );
       writeProject(next);
-      return HttpResponse.json(toCard(next, ok.writer));
+      return HttpResponse.json(toCard(next, ok.writer, ok.marker));
     }
     if (a.status !== "returned")
       return conflict("act_sign_not_allowed", "Акт сейчас в другом статусе.");
@@ -409,7 +450,7 @@ export const edsProjectsHandlers = [
       "Акт выпущен заново",
     );
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
   }),
 
   http.post("*/eds/projects/:ref/act/scan", async ({ request }) => {
@@ -435,7 +476,90 @@ export const edsProjectsHandlers = [
       next = logged(next, "project.done", "project", "", "Проект выполнен");
     }
     writeProject(next);
-    return HttpResponse.json(toCard(next, ok.writer));
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+  }),
+
+  // --- доставка клиенту (L0-1) -------------------------------------------------------------------------------
+
+  http.post("*/eds/projects/:ref/delivery", async ({ request }) => {
+    const ok = guard("read");
+    if (ok.error) return ok.error;
+    const p = findProject(refOf(request));
+    if (!p) return notFound();
+    if (!ok.marker) {
+      return failure(403, "FORBIDDEN", "Действие не положено вашей роли.", "erp", {
+        backend_status: 403,
+        backend_code: "ROLE_NOT_PERMITTED",
+        reason: "role_not_permitted",
+      });
+    }
+    const f = p.fulfillment;
+    if (!f) {
+      return conflict(
+        "fulfillment_not_ready",
+        "Исполнения по проекту ещё нет: оно появляется после договора.",
+      );
+    }
+    const form = await multipartFields(request.clone());
+    const action =
+      form.action === "delivered"
+        ? "delivered"
+        : form.action === "in_transit"
+          ? "in_transit"
+          : null;
+    const onDate = form.on_date ?? "";
+    if (!action) return fieldFailure("delivery_action_invalid", "action", "Выберите отметку.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(onDate)) {
+      return fieldFailure("delivery_date_invalid", "on_date", "Укажите дату.");
+    }
+    if (onDate > companyToday()) {
+      return fieldFailure("delivery_date_in_future", "on_date", "Дата не может быть в будущем.");
+    }
+    if (!DELIVERY_FROM[action].includes(f.status ?? "")) {
+      return conflict(
+        "delivery_transition_not_allowed",
+        "Доставка сейчас в другом статусе. Обновите страницу.",
+      );
+    }
+    const at = `${onDate}T12:00:00+05:00`;
+    const waybill = (form.waybill ?? "").trim();
+    const delivered = action === "delivered";
+    const lineStatus = delivered ? "delivered" : "in_transit";
+    const next = logged(
+      {
+        ...p,
+        fulfillment: {
+          ...f,
+          status: delivered ? "DELIVERED" : "IN_TRANSIT",
+          status_name: delivered ? "Доставлено" : "В пути",
+          shipped_at: f.shipped_at ?? at,
+          delivered_at: delivered ? at : f.delivered_at,
+          tracking_number: waybill || f.tracking_number,
+          proof_name: form.fileName ?? f.proof_name,
+        },
+        lines: (p.lines ?? []).map((line) => ({ ...line, status: lineStatus })),
+      },
+      `project.delivery_${action}`,
+      "project",
+      "",
+      delivered ? "Доставлено клиенту" : "Отправлено клиенту, в пути",
+    );
+    writeProject(next);
+    return HttpResponse.json(toCard(next, ok.writer, ok.marker));
+  }),
+
+  http.get("*/eds/projects/:ref/delivery/proof", ({ request }) => {
+    const ok = guard("read");
+    if (ok.error) return ok.error;
+    const p = findProject(refOf(request));
+    if (!p?.fulfillment?.proof_name) return notFound();
+    return new HttpResponse(new TextEncoder().encode("%PDF-1.4 demo\n"), {
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Content-Disposition": 'attachment; filename="delivery-proof"',
+        "X-Content-Type-Options": "nosniff",
+      },
+    });
   }),
 
   // --- файлы ------------------------------------------------------------------------------------------------

@@ -1057,7 +1057,7 @@ export interface paths {
     };
     /**
      * EDS · Карточка проекта
-     * @description ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
+     * @description ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка, строки поставки и отметки доставки `fulfillment.actions`) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
      */
     get: operations["getEdsProject"];
     put?: never;
@@ -1162,6 +1162,46 @@ export interface paths {
      * @description ERP `POST /crm/acts/{id}/attach-scan/` (multipart, поле `file`, до 20 МБ; тип и сигнатуру проверяет ERP). Акт должен быть «Выпущен» (иначе 409 `act_sign_not_allowed`). Когда акт подписан и все счета оплачены, проект «Выполнено». Право `fulfillment.act`. Раздел `eds.projects` — полный.
      */
     post: operations["scanEdsProjectAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/delivery": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: отметить доставку клиенту — «В пути» или «Доставлено»
+     * @description ERP `POST /crm/projects/{id}/delivery/` (multipart). `action`: `in_transit` — товар отправлен клиенту и в пути, `delivered` — доставлен (клиент после этого принимает поставку в кабинете: «Принять» / «Есть замечания»). `on_date` — дата отправки или доставки, не позже сегодня и не раньше отправки; `waybill` — № накладной перевозчика или трек (необязательно); `file` — подтверждение доставки: подписанная накладная, фото, PDF (необязательно, до 20 МБ). Действие — на весь проект, как у исполнения сделки ERP; переход проверяет ERP по статусу исполнения (`actions` в карточке): иначе 409 `delivery_transition_not_allowed`, исполнения ещё нет — 409 `fulfillment_not_ready`. Право ERP `fulfillment.manage` (раздел `erp.stock` полный), иначе 403. Раздел `eds.projects` — чтение. BFF читает тело потоком до 20 МБ и multipart не разбирает. Ответ — обновлённая карточка.
+     */
+    post: operations["markEdsProjectDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/delivery/proof": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Проект: файл подтверждения доставки
+     * @description Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла BFF берёт из исполнения в карточке проекта, а не из запроса. Файла нет — 404. Раздел `eds.projects` — чтение.
+     */
+    get: operations["downloadEdsProjectDeliveryProof"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -5288,6 +5328,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/stock/trace": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Прослеживаемость: поиск по серийному номеру или партии
+     * @description ERP `GET /stock/trace/?q=` (ADR-0021, L0-3): единицы прослеживаемости по номеру — точное совпадение первым, затем по части номера (от 2 знаков, до 50). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Короче 2 знаков — пустой список. Раздел `erp.stock` — чтение.
+     */
+    get: operations["searchStockTrace"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/stock/overdue": {
     parameters: {
       query?: never;
@@ -5556,6 +5616,86 @@ export interface paths {
     patch: operations["updateCatalogItem"];
     trace?: never;
   };
+  "/erp/catalog/items/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: опубликовать позицию
+     * @description ERP `POST catalog/items/{id}/publish/` — право `catalog.publish`; порог полноты (`catalog/publishing.py`). Не хватает полей — 409 `CONFLICT` с `details.reason = PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки. Раздел `erp.stock` — полный.
+     */
+    post: operations["publishCatalogItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/items/{id}/unpublish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: снять позицию с публикации
+     * @description ERP `POST catalog/items/{id}/unpublish/` — право `catalog.publish`; карточка снова черновик. Раздел `erp.stock` — полный.
+     */
+    post: operations["unpublishCatalogItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/proposals/{id}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: принять изменение от поставщика
+     * @description ERP `POST catalog/field-proposals/{id}/accept/` — право `catalog.manage`: значение из прайса поставщика записывается в карточку; уже решённое — 409. Ответ — карточка позиции. Раздел `erp.stock` — полный.
+     */
+    post: operations["acceptCatalogProposal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/proposals/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: отклонить изменение от поставщика
+     * @description ERP `POST catalog/field-proposals/{id}/reject/` — право `catalog.manage`: карточка не меняется, это значение поставщика больше не предлагается. Раздел `erp.stock` — полный.
+     */
+    post: operations["rejectCatalogProposal"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers": {
     parameters: {
       query?: never;
@@ -5569,7 +5709,11 @@ export interface paths {
      */
     get: operations["listCatalogSuppliers"];
     put?: never;
-    post?: never;
+    /**
+     * Расчёт · Поставщики: добавить поставщика
+     * @description ERP `POST catalog/suppliers/` — право `supply.manage`. Простая карточка компании (CAT-1): название, страна, ИНН или рег. номер нерезидента (хотя бы одно — иначе 422 с `details.reason = SUPPLIER_ID_REQUIRED`), контакт, валюта цен. Такой ИНН или пара «страна — рег. номер» уже есть — 409 (`SUPPLIER_EXISTS`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createCatalogSupplier"];
     delete?: never;
     options?: never;
     head?: never;
@@ -5588,6 +5732,50 @@ export interface paths {
      * @description ERP `catalog/suppliers/{id}/`: квоты, сроки поставки и действия цен; цена закупки — только с полем `supplier_prices`. Раздел `erp.stock` — чтение.
      */
     get: operations["getCatalogSupplier"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Поставщик: изменить карточку
+     * @description ERP `PATCH catalog/suppliers/{id}/` — право `supply.manage`; те же поля, что при создании. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateCatalogSupplier"];
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/offers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: добавить цену
+     * @description ERP `POST catalog/suppliers/{id}/offers/` — право `supply.manage` и поле `supplier_prices` (иначе 403). Товар, цена, валюта, Incoterms, MOQ, сроки поставки, действует с/до, источник. Одна цена на пару «поставщик — товар»: вторая — 409 (`OFFER_EXISTS`), её правят. Раздел `erp.stock` — полный.
+     */
+    post: operations["createSupplierOffer"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/offers/{offer_id}/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Поставщик: история цены
+     * @description ERP `catalog/suppliers/{id}/offers/{offer_id}/history/`: снимки цены, срока действия, базиса и источника, новые сверху. Сумма — только с полем `supplier_prices`, иначе `null`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getSupplierOfferHistory"];
     put?: never;
     post?: never;
     delete?: never;
@@ -5614,6 +5802,86 @@ export interface paths {
      * @description ERP `PATCH catalog/suppliers/{id}/offers/{offer_id}/` — право `supply.manage`; цена — ещё и поле `supplier_prices` (иначе 403 `FORBIDDEN`). Раздел `erp.stock` — полный.
      */
     patch: operations["updateSupplierOffer"];
+    trace?: never;
+  };
+  "/erp/catalog/price-import/template": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Загрузка прайса: шаблон xlsx
+     * @description ERP `sourcing/catalog-template/` потоком: колонки, пример строки и лист допустимых кодов (валюты, наличие, единицы, категории). Вложением с `nosniff`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["downloadPriceImportTemplate"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/price-import": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Загрузка прайса: проверить или применить файл
+     * @description ERP `POST sourcing/import-catalog/` (`mode=xlsx`) или `sourcing/import-catalog-ai/` (`mode=ai`) с `supplier_company_id`, сроком цен на весь файл и `dry_run`. Проверка (`check=true`) ничего не пишет и возвращает тот же отчёт. Чужие и опубликованные карточки прайс не меняет — расхождения уходят в изменения на одобрение. BFF читает тело до 21 МБ и передаёт multipart как есть (B-D23-6). Нужны поле `supplier_prices` (иначе 403) и раздел `erp.stock` — полный. ИИ выключен — 503.
+     */
+    post: operations["startPriceImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/price-import/apply-checked": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Загрузка прайса: применить проверенные строки (ИИ)
+     * @description ERP `POST sourcing/import-catalog-ai/` с `rows_token` из отчёта проверки: применяются ровно строки, которые сотрудник видел, без второго вызова ИИ. Токен другого сотрудника или истёкший — 422. Раздел `erp.stock` — полный, поле `supplier_prices`.
+     */
+    post: operations["applyCheckedPriceImport"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/price-import/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Загрузка прайса: состояние и отчёт
+     * @description ERP `sourcing/import-status/{id}/` (`mode=xlsx`) или `sourcing/ai-status/{id}/` (`mode=ai`) — только своя загрузка. Пока идёт — `state = running`; готово — отчёт: новые позиции и цены, обновлённые цены, изменения на одобрение, ошибки по строкам. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getPriceImport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/erp/catalog/brigades": {
@@ -7899,8 +8167,35 @@ export interface components {
       delivered_at: string | null;
       /** Format: date-time */
       accepted_at: string | null;
+      /** @description № накладной перевозчика или трек */
       tracking_number: string | null;
       carrier: string | null;
+      /** @description Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути» */
+      actions: components["schemas"]["ProjectDeliveryAction"][];
+      /** @description Имя файла подтверждения доставки; `null` — файла нет */
+      proof_name: string | null;
+      /** @description Ссылка BFF на файл подтверждения доставки (`/api/v1/eds/projects/{ref}/delivery/proof`); `null` — файла нет */
+      proof_url: string | null;
+    };
+    /**
+     * @description `in_transit` — отправлено клиенту, в пути; `delivered` — доставлено клиенту
+     * @enum {string}
+     */
+    ProjectDeliveryAction: "in_transit" | "delivered";
+    ProjectDeliveryMarkIn: {
+      action: components["schemas"]["ProjectDeliveryAction"];
+      /**
+       * Format: date
+       * @description Дата отправки (`in_transit`) или доставки (`delivered`); не позже сегодня и не раньше отправки
+       */
+      on_date: string;
+      /** @description № накладной перевозчика или трек; пусто — прежний остаётся */
+      waybill?: string;
+      /**
+       * Format: binary
+       * @description Подтверждение доставки — подписанная накладная, фото, PDF или документ до 20 МБ (необязательно)
+       */
+      file?: string;
     };
     ProjectDeliveryLine: {
       line_no: number;
@@ -9492,17 +9787,29 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
       parent_id: components["schemas"]["CompanyItemRef"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description При приёмке нужен № сертификата или декларации и срок действия */
+      requires_conformity_doc: boolean;
     };
+    /**
+     * @description Учёт единиц категории (ADR-0021): `serial` — каждая единица по серийному номеру, `lot` — партия и срок годности, `none` — только количество (по умолчанию). Товар наследует класс своей категории
+     * @enum {string}
+     */
+    TrackingClass: "serial" | "lot" | "none";
     CatalogCategoryList: {
       items: components["schemas"]["CatalogCategory"][];
     };
     CatalogCategoryIn: {
       name: string;
       parent_id?: components["schemas"]["CompanyItemRef"] | null;
+      tracking?: components["schemas"]["TrackingClass"];
+      requires_conformity_doc?: boolean;
     };
     CatalogCategoryUpdate: {
       name?: string;
       parent_id?: components["schemas"]["CompanyItemRef"] | null;
+      tracking?: components["schemas"]["TrackingClass"];
+      requires_conformity_doc?: boolean;
     };
     /**
      * @description На рассмотрении, одобрен, отклонён
@@ -11129,6 +11436,23 @@ export interface components {
       /** Format: date-time */
       created_at: string;
       created_by: string | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Свободные серийные или партии товара — выбор при отгрузке (S/L); у `none` пусто */
+      units: components["schemas"]["StockTraceUnitRef"][];
+    };
+    StockTraceUnitRef: {
+      id: string;
+      /** @enum {string} */
+      kind: "serial" | "lot";
+      /** @description Серийный номер или номер партии изготовителя */
+      number: string;
+      /**
+       * Format: date
+       * @description Годен до (партия)
+       */
+      expiry_date: string | null;
+      /** @description Ещё на складе: серийный — 1, партия — остаток партии */
+      available: number;
     };
     StockReservationList: {
       items: components["schemas"]["StockReservation"][];
@@ -11263,12 +11587,38 @@ export interface components {
       request: components["schemas"]["StockRequestRef"] | null;
       /** @description Строка расчёта, под которую заказано */
       line_id: string | null;
+      /** @description Цена поставщика, из которой создана строка (ADR-0021 п. 6) — базис и срок цены; сама цена — в `unit_price` */
+      offer: components["schemas"]["SupplierOrderLineOffer"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Категория требует документ соответствия на приёмке */
+      requires_doc: boolean;
+    };
+    SupplierOrderLineOffer: {
+      /**
+       * @description Базис поставки по Incoterms
+       * @example FCA
+       */
+      incoterms: string | null;
+      /**
+       * Format: date
+       * @description Цена действует до
+       */
+      valid_until: string | null;
+      expired: boolean;
     };
     SupplierOrderReceiptLine: {
       order_line_id: string;
       name: string;
       quantity: number;
       cell: string | null;
+      /** @description Серийные номера или номер партии */
+      units: string[];
+      /** Format: date */
+      expiry_date: string | null;
+      /** @description № сертификата или декларации */
+      doc_number: string | null;
+      /** Format: date */
+      doc_valid_until: string | null;
     };
     SupplierOrderReceipt: {
       id: string;
@@ -11402,6 +11752,22 @@ export interface components {
         order_line_id: string;
         quantity: number;
         cell?: string;
+        /** @description Серийные номера (`tracking = serial`): их число = количеству, без повторов; иначе 422 */
+        serials?: string[];
+        /** @description Партия (`tracking = lot`) — обязательна */
+        lot?: string;
+        /**
+         * Format: date
+         * @description Годен до (партия)
+         */
+        expiry_date?: string | null;
+        /** @description № сертификата или декларации (`requires_doc`) — обязателен */
+        doc_number?: string;
+        /**
+         * Format: date
+         * @description Документ действует до — обязателен и не в прошлом при `requires_doc`
+         */
+        doc_valid_until?: string | null;
       }[];
       supplier_doc?: string;
       note?: string;
@@ -11420,6 +11786,9 @@ export interface components {
       quantity: number;
       received_quantity: number;
       request: components["schemas"]["StockRequestRef"] | null;
+      tracking: components["schemas"]["TrackingClass"];
+      /** @description Спросить № сертификата или декларации и срок действия */
+      requires_doc: boolean;
     };
     StockDoneReceipt: {
       id: string;
@@ -11435,6 +11804,13 @@ export interface components {
         name: string;
         quantity: number;
         cell: string | null;
+        /** @description Серийные номера или номер партии */
+        units: string[];
+        /** Format: date */
+        expiry_date: string | null;
+        doc_number: string | null;
+        /** Format: date */
+        doc_valid_until: string | null;
       }[];
     };
     /** @description Приёмка — строки подтверждённых заказов, ждущие товара, и последние приёмки */
@@ -11448,6 +11824,11 @@ export interface components {
       name: string;
       quantity: number;
       cell: string | null;
+      /** @description Серийные или партии, ушедшие строкой (ADR-0021) */
+      units: {
+        number: string;
+        quantity: number;
+      }[];
     };
     StockShipment: {
       id: string;
@@ -11475,10 +11856,62 @@ export interface components {
       lines: {
         reservation_id: string;
         quantity: number;
+        /** @description Серийные или партии строки (`tracking` резерва `serial`/`lot` — обязательно; сумма = количеству; только свободные единицы этого товара из `units` резерва). Без них — 422 `units_required` */
+        units?: {
+          unit_id: string;
+          /**
+           * @description Сколько из партии; серийный — 1
+           * @default 1
+           */
+          quantity: number;
+        }[];
       }[];
       tracking?: string;
       carrier?: string;
       note?: string;
+    };
+    StockTraceList: {
+      items: components["schemas"]["StockTraceUnit"][];
+    };
+    StockTraceUnit: {
+      id: string;
+      /** @enum {string} */
+      kind: "serial" | "lot";
+      number: string;
+      /** Format: date */
+      expiry_date: string | null;
+      quantity: number;
+      shipped_quantity: number;
+      /** @enum {string} */
+      status: "in_stock" | "shipped";
+      product: {
+        id: string;
+        name: string;
+        article: string;
+      };
+      /** @description Откуда — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия, проект заказа */
+      origin: {
+        /** Format: date-time */
+        received_at: string;
+        /** @description Накладная поставщика */
+        supplier_doc: string | null;
+        order_number: string;
+        order_path: string;
+        supplier: string;
+        manufacturer: string | null;
+        doc_number: string | null;
+        /** Format: date */
+        doc_valid_until: string | null;
+        request: components["schemas"]["StockRequestRef"] | null;
+      };
+      /** @description Куда — отгрузки клиенту с проектом */
+      destinations: {
+        shipment_number: string;
+        /** Format: date-time */
+        shipped_at: string;
+        quantity: number;
+        request: components["schemas"]["StockRequestRef"];
+      }[];
     };
     PriceRequestLine: {
       line_id: string | null;
@@ -11845,6 +12278,8 @@ export interface components {
       /** Format: date */
       nearest_valid_until: string | null;
       docs_count: number;
+      /** @description Изменений от поставщиков на одобрении */
+      proposals_count: number;
     };
     CatalogItemPage: {
       items: components["schemas"]["CatalogItem"][];
@@ -11871,6 +12306,16 @@ export interface components {
       order_lead_days: number;
       /** @description Код: IN_STOCK, ON_ORDER, EXPECTED… */
       stock_status: string | null;
+      /** @description Базис поставки Incoterms: FCA, EXW, DAP… */
+      delivery_basis: string | null;
+      /** @description Срок поставки словами, как в прайсе */
+      lead_time: string;
+      source: components["schemas"]["CatalogOfferSource"];
+      /**
+       * Format: date-time
+       * @description Когда цена обновлена
+       */
+      updated_at: string;
       /** Format: date */
       valid_from: string | null;
       /** Format: date */
@@ -11908,11 +12353,51 @@ export interface components {
       gost_drawing: string;
       hs_code: string;
       manufacturer_part_number: string;
+      /** @description Изготовитель (бренд) */
       brand: string | null;
+      brand_id: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Карточка заведена по прайсу этого поставщика */
+      source_supplier: components["schemas"]["CatalogNamedRef"] | null;
+      proposals_count: number;
       offers: components["schemas"]["CatalogOffer"][];
       /** @description Видит ли сотрудник цены поставщиков */
       prices_visible: boolean;
       tech_docs: components["schemas"]["CatalogTechDocRef"][];
+      /** @description Изменения от поставщиков на одобрении */
+      proposals: components["schemas"]["CatalogProposal"][];
+      publish: components["schemas"]["CatalogPublishState"];
+    };
+    /**
+     * @description Откуда цена: прайс, ответ на запрос цены, введена вручную
+     * @enum {string}
+     */
+    CatalogOfferSource: "price_list" | "rfq_reply" | "manual";
+    /** @enum {string} */
+    CatalogProposalField:
+      | "name"
+      | "description"
+      | "category"
+      | "hs_code"
+      | "uom"
+      | "domain_type"
+      | "gost_drawing";
+    /** @description Изменение карточки из прайса поставщика, ждёт решения сотрудника */
+    CatalogProposal: {
+      id: components["schemas"]["CompanyItemRef"];
+      field: components["schemas"]["CatalogProposalField"];
+      /** @description Значение в карточке на момент загрузки */
+      current: string;
+      /** @description Значение из прайса */
+      proposed: string;
+      supplier: components["schemas"]["CatalogNamedRef"] | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    CatalogPublishState: {
+      /** @description Карточка проходит порог полноты */
+      publishable: boolean;
+      /** @description Коды недостающих полей полноты: name, category, hs_code, uom… */
+      missing: string[];
     };
     CatalogItemCreate: {
       name: string;
@@ -11930,9 +12415,20 @@ export interface components {
       unit_id?: components["schemas"]["CompanyItemRef"] | null;
       category_id?: components["schemas"]["CompanyItemRef"] | null;
       vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Изготовитель (бренд) */
+      brand_id?: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Артикул изготовителя */
+      manufacturer_part_number?: string;
+      /** @description Код ТН ВЭД: 2–10 цифр; пусто — снять */
+      hs_code?: string;
     };
     CatalogLookups: {
       units: components["schemas"]["CatalogUnit"][];
+      /** @description Базисы поставки Incoterms */
+      delivery_bases: {
+        code: string;
+        name: string;
+      }[];
       categories: {
         id: components["schemas"]["CompanyItemRef"];
         name: string;
@@ -11948,7 +12444,14 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
       tin: string;
+      /** @description Рег. номер нерезидента (без ИНН РУз) */
+      registration_number: string;
       country: string | null;
+      country_id: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Валюта цен поставщика */
+      currency: string | null;
+      /** @description Сам выпускает товар */
+      is_manufacturer: boolean;
       offers_count: number;
       /** @description Действующих предложений с истёкшим сроком цены */
       expired_count: number;
@@ -11967,7 +12470,14 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
       tin: string;
+      /** @description Рег. номер нерезидента (без ИНН РУз) */
+      registration_number: string;
       country: string | null;
+      country_id: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Валюта цен поставщика */
+      currency: string | null;
+      /** @description Сам выпускает товар */
+      is_manufacturer: boolean;
       offers_count: number;
       /** @description Действующих предложений с истёкшим сроком цены */
       expired_count: number;
@@ -11982,6 +12492,142 @@ export interface components {
       legal_address: string;
       offers: components["schemas"]["CatalogOffer"][];
       prices_visible: boolean;
+      /** @description Чьи бренды поставляет: изготовители его действующих цен */
+      brands: components["schemas"]["CatalogNamedRef"][];
+      /** @description Бренды, изготовитель которых — эта компания */
+      manufactured_brands: components["schemas"]["CatalogNamedRef"][];
+    };
+    /** @description Поставщик — простая карточка компании: ИНН или рег. номер нерезидента, хотя бы одно */
+    SupplierCreate: {
+      name: string;
+      country_id?: components["schemas"]["CompanyItemRef"] | null;
+      /** @description ИНН (9 цифр) */
+      tin?: string;
+      registration_number?: string;
+      currency?: string | null;
+      contact_person?: string;
+      phone?: string;
+      email?: string;
+      website?: string;
+      is_manufacturer?: boolean;
+    };
+    SupplierUpdate: {
+      name?: string;
+      country_id?: components["schemas"]["CompanyItemRef"] | null;
+      tin?: string;
+      registration_number?: string;
+      currency?: string | null;
+      contact_person?: string;
+      phone?: string;
+      email?: string;
+      website?: string;
+      is_manufacturer?: boolean;
+    };
+    SupplierOfferCreate: {
+      product_id: components["schemas"]["CompanyItemRef"];
+      price: components["schemas"]["CatalogMoneyIn"];
+      delivery_basis?: string | null;
+      min_order_qty?: number;
+      quota_qty?: number;
+      in_stock_lead_days?: number;
+      order_lead_days?: number;
+      lead_time?: string;
+      supplier_sku?: string;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+      source?: components["schemas"]["CatalogOfferSource"];
+    };
+    SupplierOfferHistory: {
+      items: {
+        /** Format: date-time */
+        at: string;
+        /** @description Только с полем `supplier_prices` */
+        price: components["schemas"]["CatalogMoney"] | null;
+        /** Format: date */
+        valid_from: string | null;
+        /** Format: date */
+        valid_until: string | null;
+        delivery_basis: string | null;
+        source: components["schemas"]["CatalogOfferSource"];
+        /** @description Кто изменил */
+        by: string | null;
+      }[];
+    };
+    /** @enum {string} */
+    PriceImportMode: "xlsx" | "ai";
+    PriceImportUpload: {
+      /**
+       * Format: binary
+       * @description xlsx по шаблону; для `mode=ai` — xlsx, PDF, PNG, JPEG; до 20 МБ
+       */
+      file: string;
+    };
+    PriceImportApplyIn: {
+      supplier_id: components["schemas"]["CompanyItemRef"];
+      rows_token: string;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+    };
+    PriceImportJob: {
+      job_id: string;
+      mode: components["schemas"]["PriceImportMode"];
+    };
+    PriceImportRowNote: {
+      /** @description Номер строки файла (с заголовком — 1) */
+      row: number;
+      /** @description Код: UNKNOWN_CURRENCY, PRICE_NOT_A_NUMBER, VALID_DATE_INVALID… */
+      code: string;
+      /** @description Значение из файла, если есть */
+      value: string;
+    };
+    PriceImportProposal: {
+      row: number;
+      product_id: components["schemas"]["CompanyItemRef"];
+      product_name: string;
+      field: components["schemas"]["CatalogProposalField"];
+      current: string;
+      proposed: string;
+    };
+    PriceImportReport: {
+      /** @description `true` — проверка, ничего не записано */
+      checked: boolean;
+      /** @description Новые позиции (черновики) */
+      items_created: number;
+      /** @description Найдены в номенклатуре */
+      items_matched: number;
+      /** @description Новые цены поставщика */
+      offers_created: number;
+      /** @description Обновлённые цены */
+      offers_updated: number;
+      /** @description Изменений карточек на одобрение */
+      proposal_count: number;
+      /** @description Первые 200 */
+      proposals: components["schemas"]["PriceImportProposal"][];
+      error_count: number;
+      /** @description Первые 200 строк с ошибкой — не загружены */
+      errors: components["schemas"]["PriceImportRowNote"][];
+      warning_count: number;
+      /** @description Загружены, но есть вопрос */
+      warnings: components["schemas"]["PriceImportRowNote"][];
+      /** @description Строк сверх предела 50 000 */
+      rows_truncated: number;
+      /** @description Позиций не пройдут порог публикации */
+      unpublishable: number;
+      /** @description ИИ: строки проверки для «Применить» без второго вызова */
+      rows_token: string | null;
+      /** @description ИИ: файл разобран моделью (`false` — шаблон, без ИИ) */
+      ai_used: boolean | null;
+    };
+    PriceImportStatus: {
+      /** @enum {string} */
+      state: "running" | "done" | "failed";
+      report: components["schemas"]["PriceImportReport"] | null;
+      /** @description Код ошибки файла: NAME_COLUMN_NOT_FOUND, AI_EXTRACT_FAILED, AI_EXTRACT_EMPTY, ROWS_TOKEN_EXPIRED… */
+      error: string | null;
     };
     SupplierOfferUpdate: {
       price?: components["schemas"]["CatalogMoneyIn"];
@@ -11995,6 +12641,11 @@ export interface components {
       /** Format: date */
       valid_until?: string | null;
       is_active?: boolean;
+      /** @description Incoterms */
+      delivery_basis?: string | null;
+      lead_time?: string;
+      supplier_sku?: string;
+      source?: components["schemas"]["CatalogOfferSource"];
     };
     /** @enum {string} */
     BrigadeKind: "brigade" | "person" | "subcontractor";
@@ -12115,6 +12766,8 @@ export interface components {
       country_name: string | null;
       website: string;
       is_active: boolean;
+      /** @description Компания-изготовитель (поставщик с типом «изготовитель»), если заведена */
+      company_id: components["schemas"]["CompanyItemRef"] | null;
     };
     ManufacturerPage: {
       items: components["schemas"]["Manufacturer"][];
@@ -12127,12 +12780,14 @@ export interface components {
       country_id?: components["schemas"]["CompanyItemRef"] | null;
       website?: string;
       is_active?: boolean;
+      company_id?: components["schemas"]["CompanyItemRef"] | null;
     };
     ManufacturerUpdate: {
       name?: string;
       country_id?: components["schemas"]["CompanyItemRef"] | null;
       website?: string;
       is_active?: boolean;
+      company_id?: components["schemas"]["CompanyItemRef"] | null;
     };
     /**
      * @description ТЗ, чертёж, сертификат, регламент ПНР, другое
@@ -12346,7 +13001,16 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`) */
+    /** @description 409 `CONFLICT` — номенклатура и поставщики (CAT-1): `details.reason` — `supplier_exists` (такой ИНН или рег. номер уже есть), `offer_exists` (цена этого поставщика на товар уже есть — правьте её), `proposal_decided` (изменение уже решено), `proposal_stale` (значения справочника больше нет), `product_incomplete` (не хватает полей для публикации) */
+    CatalogConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает) */
     StockConflict: {
       headers: {
         [name: string]: unknown;
@@ -12364,7 +13028,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку */
+    /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed` (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку */
     ProjectConflict: {
       headers: {
         [name: string]: unknown;
@@ -14492,6 +15156,70 @@ export interface operations {
       409: components["responses"]["ProjectConflict"];
       413: components["responses"]["ProjectPayloadTooLarge"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markEdsProjectDelivery: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["ProjectDeliveryMarkIn"];
+      };
+    };
+    responses: {
+      /** @description Отметка сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      413: components["responses"]["ProjectPayloadTooLarge"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsProjectDeliveryProof: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -21987,6 +22715,33 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  searchStockTrace: {
+    parameters: {
+      query: {
+        /** @description Серийный номер или номер партии */
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Найденные единицы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockTraceList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listOverdueSupplierOrders: {
     parameters: {
       query?: never;
@@ -22329,6 +23084,8 @@ export interface operations {
         kind?: components["schemas"]["CatalogItemKind"];
         /** @description Категория */
         category_id?: components["schemas"]["CompanyItemRef"];
+        /** @description `pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1) */
+        proposals?: "pending";
       };
       header?: never;
       path?: never;
@@ -22445,6 +23202,130 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  publishCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликована */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  unpublishCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Снята */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  acceptCatalogProposal: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rejectCatalogProposal: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отклонено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listCatalogSuppliers: {
     parameters: {
       query?: {
@@ -22474,6 +23355,38 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  createCatalogSupplier: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierCreate"];
+      };
+    };
+    responses: {
+      /** @description Добавлен */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   getCatalogSupplier: {
     parameters: {
       query?: never;
@@ -22499,6 +23412,107 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCatalogSupplier: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createSupplierOffer: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOfferCreate"];
+      };
+    };
+    responses: {
+      /** @description Добавлена */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogOffer"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSupplierOfferHistory: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+        /** @description Id предложения */
+        offer_id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOfferHistory"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -22535,6 +23549,140 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadPriceImportTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл xlsx */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  startPriceImport: {
+    parameters: {
+      query: {
+        /** @description Поставщик */
+        supplier_id: components["schemas"]["CompanyItemRef"];
+        /** @description `xlsx` — по шаблону; `ai` — любой файл, строки предлагает ИИ */
+        mode?: components["schemas"]["PriceImportMode"];
+        /** @description `true` — только проверка, без записи */
+        check?: boolean;
+        /** @description Цены действуют с */
+        valid_from?: string;
+        /** @description Цены действуют до */
+        valid_until?: string;
+      };
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PriceImportUpload"];
+      };
+    };
+    responses: {
+      /** @description Загрузка поставлена в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceImportJob"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  applyCheckedPriceImport: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PriceImportApplyIn"];
+      };
+    };
+    responses: {
+      /** @description Поставлено в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceImportJob"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getPriceImport: {
+    parameters: {
+      query?: {
+        /** @description `xlsx` — по шаблону; `ai` — любой файл, строки предлагает ИИ */
+        mode?: components["schemas"]["PriceImportMode"];
+      };
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceImportStatus"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };

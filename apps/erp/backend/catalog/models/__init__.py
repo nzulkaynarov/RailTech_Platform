@@ -7,6 +7,7 @@ from .hs_code import HSCode
 from .lookups import DomainType, ProductStatus, StockStatus
 from .offers import SupplierOffer
 from .products import Product, ProductDocument, ProductImage
+from .proposals import ProductFieldProposal
 from .requests import CategoryRequest
 from .taxonomy import Category, Manufacturer
 from .tech_docs import TechDocument
@@ -22,6 +23,7 @@ __all__ = [
     "Manufacturer",
     "Product",
     "ProductDocument",
+    "ProductFieldProposal",
     "ProductImage",
     "ProductStatus",
     "StockStatus",

@@ -1,6 +1,6 @@
 {
   "title": "Ombor",
-  "subtitle": "Qoldiqlar va zaxiralar, yetkazib beruvchilarga buyurtmalar, qabul qilish va loyihalar bo‘yicha jo‘natmalar",
+  "subtitle": "Qoldiqlar va zaxiralar, buyurtmalar, qabul qilish, jo‘natmalar va kuzatuv",
   "common": {
     "cancel": "Bekor qilish"
   },
@@ -8,7 +8,8 @@
     "balances": "Qoldiq va zaxiralar",
     "orders": "Yetkazib beruvchilarga buyurtmalar",
     "receipts": "Qabul qilish",
-    "shipments": "Jo‘natmalar"
+    "shipments": "Jo‘natmalar",
+    "trace": "Kuzatuv"
   },
   "load": {
     "retry": "Qayta urinish",
@@ -318,6 +319,12 @@
       "received": "Tovar qabul qilindi",
       "cancelled": "Buyurtma bekor qilindi",
       "edited": "Buyurtma saqlandi"
+    },
+    "offer": {
+      "label": "Yetkazib beruvchi narxi: {{text}}",
+      "incoterms": "bazis {{code}}",
+      "validUntil": "{{date}} gacha amal qiladi",
+      "expired": "{{date}} da tugagan"
     }
   },
   "receipts": {
@@ -409,5 +416,59 @@
     "answerNote": "Javob: {{note}}",
     "answer": "Javob olindi",
     "answerLabel": "Javob olindi: yetkazib beruvchi «{{name}}»"
+  },
+  "trace": {
+    "title": "Kuzatuv: qayerdan va qayerga",
+    "search": "Seriya raqami yoki partiya",
+    "searchPlaceholder": "Seriya raqami yoki partiya raqami",
+    "find": "Topish",
+    "hint": "Kamida 2 belgi kiriting: qabul, yetkazib beruvchi va hujjat, shuningdek jo‘natmalar va mijozlar ko‘rsatiladi.",
+    "results": "Topilgan birliklar",
+    "empty": {
+      "title": "Hech narsa topilmadi",
+      "text": "«{{query}}» raqamli seriya yoki partiya qabul qilinmagan."
+    },
+    "kind": {
+      "serial": "Seriya",
+      "lot": "Partiya"
+    },
+    "status": {
+      "in_stock": "Omborda",
+      "shipped": "Jo‘natilgan"
+    },
+    "lotShipped": "{{total}} dan {{shipped}} jo‘natilgan",
+    "from": "Qayerdan",
+    "to": "Qayerga",
+    "manufacturer": "Ishlab chiqaruvchi",
+    "supplier": "Yetkazib beruvchi",
+    "order": "Yetkazib beruvchiga buyurtma",
+    "received": "Qabul qilingan",
+    "document": "Muvofiqlik hujjati",
+    "until": "{{date}} gacha",
+    "expiryLabel": "Yaroqlilik muddati",
+    "orderedFor": "Kimga buyurtma qilingan",
+    "notShipped": "Hali omborda — jo‘natilmagan.",
+    "fieldsFor": "Raqamlar va hujjat: «{{name}}»",
+    "serials": "Seriya raqamlari — har qatorda bittadan",
+    "serialsPlaceholder": "Qadoqlash varaqasidan ustunni qo‘yish mumkin",
+    "serialsCount": "{{total}} dan {{count}} kiritildi",
+    "lot": "Partiya raqami",
+    "expiry": "Yaroqlilik muddati",
+    "docNumber": "Sertifikat yoki deklaratsiya №",
+    "docValidUntil": "Amal qiladi",
+    "noUnits": "Bu tovarning qabul qilingan seriya yoki partiyalari omborda yo‘q — jo‘natib bo‘lmaydi.",
+    "pickSerials": "«{{name}}» seriya raqamlari: {{total}} dan {{count}} tanlandi",
+    "pickLots": "«{{name}}» partiyalari: {{total}} dan {{count}} tanlandi",
+    "lotAvailable": "omborda {{count}}",
+    "expiryShort": "{{date}} gacha yaroqli",
+    "lotQuantity": "{{number}} partiyadan qancha",
+    "problem": {
+      "serials": "«{{name}}»: seriya raqamlari qabul qilinayotgan miqdorga teng bo‘lsin.",
+      "serialsRepeat": "«{{name}}»: seriya raqamlari takrorlanadi.",
+      "lot": "«{{name}}»: partiya raqamini kiriting.",
+      "doc": "«{{name}}»: sertifikat yoki deklaratsiya № va muddatini kiriting.",
+      "docExpired": "«{{name}}»: hujjat muddati tugagan.",
+      "units": "«{{name}}»: butun miqdor uchun seriya yoki partiyalarni tanlang."
+    }
   }
 }

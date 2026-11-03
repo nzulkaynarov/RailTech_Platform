@@ -143,7 +143,7 @@
     },
     "execution": {
       "title": "Fulfilment",
-      "hint": "Data from ERP, read only. Stock, purchasing and services for the project will appear with the “Stock” and “Costing” sections.",
+      "hint": "Stock shipments are in Stock · Shipments. Here you mark goods in transit and delivered.",
       "shipment": "Shipment",
       "none": "No shipment yet: it is created after the contract is signed.",
       "status": "Status",
@@ -152,7 +152,7 @@
       "delivered": "Delivered",
       "accepted": "Accepted by client",
       "carrier": "Carrier",
-      "tracking": "Tracking number",
+      "tracking": "Carrier waybill",
       "lines": "Delivery lines",
       "linesNone": "No delivery lines yet.",
       "line": {
@@ -169,11 +169,41 @@
         "delivered": "Delivered",
         "accepted": "Accepted by client",
         "disputed": "Disputed by client"
-      }
+      },
+      "proof": "Proof of delivery",
+      "proofFile": "File"
     },
     "journal": {
       "title": "Document log",
       "empty": "No entries yet. Here you will see who did what with the contract, invoice and act, and when."
+    },
+    "delivery": {
+      "in_transit": "Sent, in transit",
+      "delivered": "Delivered",
+      "done": {
+        "in_transit": "Marked: in transit",
+        "delivered": "Marked: delivered"
+      },
+      "failed": "Could not save the mark. Please try again.",
+      "dialog": {
+        "in_transit": "Sent to the client, in transit",
+        "delivered": "Delivered to the client",
+        "date": {
+          "in_transit": "Dispatch date",
+          "delivered": "Delivery date"
+        },
+        "dateInvalid": "Date must be today or earlier and not before dispatch",
+        "waybill": "Carrier waybill or tracking No.",
+        "waybillHint": "Optional",
+        "file": "Proof of delivery",
+        "fileHint": "Signed waybill or photo, up to 20 MB. Optional",
+        "consequence": {
+          "in_transit": "The client will see in the portal that the delivery is in transit.",
+          "delivered": "The client will see “Delivered” and can accept the delivery or report issues."
+        },
+        "cancel": "Cancel",
+        "submit": "Save"
+      }
     }
   },
   "journal": {
@@ -199,7 +229,9 @@
       "cancelled": "Act voided"
     },
     "project": {
-      "done": "Project completed"
+      "done": "Project completed",
+      "delivery_in_transit": "Sent to the client, in transit",
+      "delivery_delivered": "Delivered to the client"
     },
     "by": "{{date}} · {{name}}",
     "bySystem": "{{date}} · system",

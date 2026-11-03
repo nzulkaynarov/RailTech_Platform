@@ -39,6 +39,15 @@ class Fulfillment(models.Model):
     notes = models.TextField(blank=True)
     note_number = models.CharField(max_length=64, blank=True, default="", verbose_name=_("Номер накладной"))
     pdf_file = models.FileField(upload_to=fulfillment_pdf_path, storage=get_private_storage, null=True, blank=True)
+    delivery_proof = models.ForeignKey(
+        "sourcing.Attachment",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Подтверждение доставки"),
+        help_text=_("Подписанная накладная, фото или PDF при отметке «Доставлено» (L0-1)"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

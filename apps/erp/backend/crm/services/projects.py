@@ -406,11 +406,14 @@ def _act_card(act, user, journal: list, deal_currency: str) -> Optional[dict]:
     }
 
 
-def _fulfillment_card(deal) -> Optional[dict]:
+def _fulfillment_card(deal, user) -> Optional[dict]:
+    from sales.services import delivery_progress
+
     fulfillment = getattr(deal, "fulfillment", None)
     if fulfillment is None:
         return None
     status = fulfillment.status
+    proof = fulfillment.delivery_proof
     return {
         "status": status.code if status else None,
         "status_name": status.name if status else None,
@@ -420,6 +423,10 @@ def _fulfillment_card(deal) -> Optional[dict]:
         "accepted_at": fulfillment.accepted_at,
         "tracking_number": fulfillment.tracking_number,
         "carrier": fulfillment.carrier,
+        # L0-1: отметки «В пути» / «Доставлено», доступные этому сотруднику сейчас, и файл подтверждения доставки.
+        "actions": delivery_progress.available_actions(fulfillment, user),
+        "proof_attachment_id": proof.pk if proof else None,
+        "proof_name": proof.original_filename if proof else None,
     }
 
 
@@ -452,7 +459,7 @@ def _act_blocker(deal, user, acts: list) -> Optional[str]:
 
 
 def project_card(deal, user) -> dict:
-    """Карточка проекта: строка списка плюс документы с историей и действиями, исполнение (только чтение), журнал."""
+    """Карточка проекта: строка списка плюс документы с историей и действиями, исполнение с отметками доставки, журнал."""
     row = project_row(deal)
     journal = _journal(deal)
     contract = _live_contract(deal)
@@ -472,7 +479,7 @@ def project_card(deal, user) -> dict:
         "invoices": [_invoice_card(i) for i in sorted(_live_invoices(deal), key=lambda i: i.id)],
         "act": _act_card(act, user, journal, row["total"]["currency"] if row["total"] else "UZS"),
         "act_blocker": _act_blocker(deal, user, acts),
-        "fulfillment": _fulfillment_card(deal),
+        "fulfillment": _fulfillment_card(deal, user),
         "delivery_lines": _delivery_lines(deal),
         "journal": journal,
     }

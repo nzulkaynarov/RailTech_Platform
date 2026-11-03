@@ -14,4 +14,5 @@ export interface ManufacturerUpdate {
   /** @maxLength 200 */
   website?: string;
   is_active?: boolean;
+  company_id?: CompanyItemRef | null;
 }

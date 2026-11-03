@@ -32,6 +32,7 @@ from app.schemas_erp_catalog import (
     BrigadePage,
     BrigadeUpdate,
     CategoryProposalIn,
+    DeliveryBasisRef,
     ExchangeRatePage,
     HsCode,
     HsCodeCreate,
@@ -50,14 +51,20 @@ from app.schemas_erp_catalog import (
     ManufacturerUpdate,
     NamedRef,
     Offer,
+    OfferCreate,
+    OfferHistory,
     OfferUpdate,
+    SupplierCreate,
     SupplierDetail,
     SupplierPage,
+    SupplierUpdate,
     Unit,
     item_to_erp,
     manufacturer_to_erp,
+    offer_create_to_erp,
     proposal_to_erp,
     rows_of,
+    supplier_to_erp,
     to_brigade,
     to_brigade_page,
     to_hs,
@@ -67,6 +74,7 @@ from app.schemas_erp_catalog import (
     to_manufacturer,
     to_manufacturer_page,
     to_offer,
+    to_offer_history,
     to_rate_page,
     to_supplier_detail,
     to_supplier_page,
@@ -110,11 +118,12 @@ def _params(**values: Any) -> dict[str, Any]:
 @router.get("/erp/catalog/lookups", response_model=Lookups, operation_id="getCatalogLookups")
 async def get_lookups(authed: Reader) -> Lookups:
     erp = _erp(authed)
-    units, categories, currencies, countries = await asyncio.gather(
+    units, categories, currencies, countries, bases = await asyncio.gather(
         erp.pages("master-data/units/"),
         erp.pages("catalog/categories/"),
         erp.pages("master-data/currencies/"),
         erp.pages("master-data/countries/"),
+        erp.pages("master-data/delivery-basis/"),
     )
     return Lookups(
         units=[
@@ -134,6 +143,11 @@ async def get_lookups(authed: Reader) -> Lookups:
             for c in currencies
         ],
         countries=[NamedRef(id=ident(c.get("id")), name=text(c.get("name"))) for c in countries],
+        delivery_bases=[
+            DeliveryBasisRef(code=text(b.get("code")), name=text(b.get("name")))
+            for b in bases
+            if b.get("code")
+        ],
     )
 
 
@@ -146,13 +160,21 @@ async def list_items(
     q: Search = None,
     kind: ItemKindQuery = None,
     category_id: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
+    proposals: Annotated[str | None, Query(pattern=r"^pending$")] = None,
     page: Page = 1,
     page_size: PageSize = 25,
 ) -> ItemPage:
     data = await _erp(authed).data(
         "GET",
         "catalog/items/",
-        params=_params(q=q, kind=kind, category=category_id, page=page, page_size=page_size),
+        params=_params(
+            q=q,
+            kind=kind,
+            category=category_id,
+            proposals=proposals,
+            page=page,
+            page_size=page_size,
+        ),
     )
     return to_item_page(data, page, page_size)
 
@@ -182,7 +204,57 @@ async def update_item(id: ItemId, body: ItemUpdate, authed: Writer) -> ItemDetai
     return to_item_detail(raw, show_prices=show_prices(authed))
 
 
+@router.post(
+    "/erp/catalog/items/{id}/publish",
+    response_model=ItemDetail,
+    operation_id="publishCatalogItem",
+)
+async def publish_item(id: ItemId, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/items/{id}/publish/")
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/items/{id}/unpublish",
+    response_model=ItemDetail,
+    operation_id="unpublishCatalogItem",
+)
+async def unpublish_item(id: ItemId, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/items/{id}/unpublish/")
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/proposals/{id}/accept",
+    response_model=ItemDetail,
+    operation_id="acceptCatalogProposal",
+)
+async def accept_proposal(id: ItemId, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/field-proposals/{id}/accept/")
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/proposals/{id}/reject",
+    response_model=ItemDetail,
+    operation_id="rejectCatalogProposal",
+)
+async def reject_proposal(id: ItemId, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/field-proposals/{id}/reject/")
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
 # --- поставщики --------------------------------------------------------------------------------
+
+
+def _prices_forbidden() -> PlatformError:
+    # Цену закупки вводит только тот, кому она открыта: отказ до ERP (ERP отказал бы так же).
+    return PlatformError(
+        "FORBIDDEN",
+        "Цены поставщиков меняет тот, кому они открыты.",
+        status_code=403,
+        details={"restricted": "supplier_prices"},
+    )
 
 
 @router.get(
@@ -195,6 +267,54 @@ async def list_suppliers(
         "GET", "catalog/suppliers/", params=_params(q=q, page=page, page_size=page_size)
     )
     return to_supplier_page(data, page, page_size)
+
+
+@router.post(
+    "/erp/catalog/suppliers",
+    response_model=SupplierDetail,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createCatalogSupplier",
+)
+async def create_supplier(body: SupplierCreate, authed: Writer) -> SupplierDetail:
+    raw = await _erp(authed).data("POST", "catalog/suppliers/", json=supplier_to_erp(body.sent()))
+    return to_supplier_detail(raw, show_prices=show_prices(authed))
+
+
+@router.patch(
+    "/erp/catalog/suppliers/{id}",
+    response_model=SupplierDetail,
+    operation_id="updateCatalogSupplier",
+)
+async def update_supplier(id: ItemId, body: SupplierUpdate, authed: Writer) -> SupplierDetail:
+    raw = await _erp(authed).data(
+        "PATCH", f"catalog/suppliers/{id}/", json=supplier_to_erp(body.sent())
+    )
+    return to_supplier_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/suppliers/{id}/offers",
+    response_model=Offer,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createSupplierOffer",
+)
+async def create_offer(id: ItemId, body: OfferCreate, authed: Writer) -> Offer:
+    if not show_prices(authed):
+        raise _prices_forbidden()
+    raw = await _erp(authed).data(
+        "POST", f"catalog/suppliers/{id}/offers/", json=offer_create_to_erp(body.sent())
+    )
+    return to_offer(raw, show_prices=True)
+
+
+@router.get(
+    "/erp/catalog/suppliers/{id}/offers/{offer_id}/history",
+    response_model=OfferHistory,
+    operation_id="getSupplierOfferHistory",
+)
+async def offer_history(id: ItemId, offer_id: ItemId, authed: Reader) -> OfferHistory:
+    data = await _erp(authed).data("GET", f"catalog/suppliers/{id}/offers/{offer_id}/history/")
+    return to_offer_history(data, show_prices=show_prices(authed))
 
 
 @router.get(
@@ -212,13 +332,7 @@ async def get_supplier(id: ItemId, authed: Reader) -> SupplierDetail:
 )
 async def update_offer(id: ItemId, offer_id: ItemId, body: OfferUpdate, authed: Writer) -> Offer:
     if body.price is not None and not show_prices(authed):
-        # Цену закупки меняет только тот, кому она открыта: отказ до ERP (ERP отказал бы так же).
-        raise PlatformError(
-            "FORBIDDEN",
-            "Цены поставщиков меняет тот, кому они открыты.",
-            status_code=403,
-            details={"restricted": "supplier_prices"},
-        )
+        raise _prices_forbidden()
     raw = await _erp(authed).data(
         "PATCH", f"catalog/suppliers/{id}/offers/{offer_id}/", json=body.sent()
     )

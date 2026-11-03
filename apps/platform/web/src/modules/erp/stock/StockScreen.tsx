@@ -10,11 +10,12 @@ import { BalancesTab } from "./BalancesTab";
 import { OrdersTab } from "./OrdersTab";
 import { ReceiptsTab } from "./ReceiptsTab";
 import { ShipmentsTab } from "./ShipmentsTab";
+import { TraceTab } from "./TraceTab";
 
 import "../calc/calc.css";
 import "./stock.css";
 
-const VIEWS = ["balances", "orders", "receipts", "shipments"] as const;
+const VIEWS = ["balances", "orders", "receipts", "shipments", "trace"] as const;
 type View = (typeof VIEWS)[number];
 
 const BODY: Record<View, () => React.ReactNode> = {
@@ -22,6 +23,7 @@ const BODY: Record<View, () => React.ReactNode> = {
   orders: () => <OrdersTab />,
   receipts: () => <ReceiptsTab />,
   shipments: () => <ShipmentsTab />,
+  trace: () => <TraceTab />,
 };
 
 function viewOf(value: string | null): View {
