@@ -18,6 +18,7 @@
 ящиком в копии при включённом правиле сразу «в работе» у этого сотрудника («адресовано лично»).
 """
 
+import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -178,7 +179,8 @@ class InboundMailIngest:
         """Письмо → строка очереди; уже есть (Message-ID) — None. `history_at` — время загрузки
         истории: письмо старше окна задач помечается «из истории». `mailbox_address` — адрес самого
         общего ящика (логин приёма) для правила «адресовано лично»."""
-        parsed = parse_message(item.raw)
+        # Разбор (очистка HTML, цитаты) — CPU: вне цикла событий, тяжёлое письмо не вешает воркер.
+        parsed = await asyncio.to_thread(parse_message, item.raw)
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
                 if not folder.spam and await repo.promote_from_spam(
@@ -245,6 +247,8 @@ class InboundMailIngest:
                     "content_type": item.content_type,
                     "size": len(item.data),
                     "storage_key": key,
+                    "content_id": item.content_id,
+                    "inline": item.inline,
                 }
             )
         return stored
@@ -292,6 +296,9 @@ async def _row(
         "in_reply_to": parsed.in_reply_to,
         "references": parsed.references,
         "text": parsed.text,
+        "text_tail": parsed.text_tail,
+        "html_sanitized": parsed.html.html if parsed.html is not None else None,
+        "html_remote_images": parsed.html.remote_images if parsed.html is not None else 0,
         "attachments": files,
         "skipped": [{"name": s.name, "reason": s.reason} for s in parsed.skipped],
         "inns": inns,

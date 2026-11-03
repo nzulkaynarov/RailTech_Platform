@@ -59,7 +59,17 @@ const BASE = {
   assist: { status: "none", kind: null, summary: null, action: null },
 } satisfies Partial<StoredMail>;
 
-function make(over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "text">): StoredMail {
+/** Тело письма, которого нет в карточке верхнего уровня: HTML после санитизации и свёрнутая цитата (P2-4). */
+interface Body {
+  html?: string;
+  remoteImages?: number;
+  tail?: string;
+}
+
+function make(
+  over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "text"> & Body,
+): StoredMail {
+  const { html, remoteImages, tail, ...fields } = over;
   const receivedAt = over.received_at ?? minutesAgo(60);
   const full: StoredMail = {
     ...BASE,
@@ -69,10 +79,10 @@ function make(over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "t
     received_at: receivedAt,
     sent_at: receivedAt,
     preview: over.text.slice(0, 120),
-    ...over,
+    ...fields,
   };
   full.activity_at = over.activity_at ?? full.received_at;
-  full.attachments_count = full.attachments.length;
+  full.attachments_count = full.attachments.filter((file) => !file.inline).length;
   full.messages = over.messages ?? [
     {
       id: full.id,
@@ -80,6 +90,9 @@ function make(over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "t
       from_name: full.from_name,
       at: full.received_at,
       text: full.text,
+      text_tail: tail ?? "",
+      html: html ?? null,
+      html_remote_images: remoteImages ?? 0,
       attachments: full.attachments,
       new_participant: false,
     },
@@ -108,6 +121,24 @@ const done = (
   },
 });
 
+const LOGO =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+
+/** Рассылка, как её хранит CRM после санитизации: логотип встроен, внешние картинки без `src`, потерянная — заглушка. */
+const NEWSLETTER =
+  '<table width="600" cellpadding="0" cellspacing="0" bgcolor="#f5f5f5"><tbody><tr>' +
+  `<td align="center" style="padding:16px"><img src="${LOGO}" width="48" height="48" alt="Логотип"></td></tr>` +
+  '<tr><td style="padding:0 16px"><h1 style="font-size:20px;color:#1f1f1f">Скидки недели на канцтовары</h1>' +
+  "<p>Только до пятницы — скидки до 30% на бумагу и картриджи.</p>" +
+  '<img data-rt-src="https://cdn.promo-demo.example/banner.png" width="600" alt="Баннер акции"></td></tr>' +
+  '<tr><td style="padding:16px"><table width="100%" border="1" cellpadding="6" cellspacing="0"><tbody>' +
+  "<tr><td>Бумага А4, 500 листов</td><td>38 000 сум</td></tr>" +
+  "<tr><td>Картридж лазерный</td><td>210 000 сум</td></tr></tbody></table>" +
+  '<p><img data-rt-missing="1" alt="Фото каталога"></p>' +
+  '<p><a href="https://promo-demo.example/sale" target="_blank" rel="noopener noreferrer">Смотреть все предложения</a></p>' +
+  '<img data-rt-src="https://track.promo-demo.example/open.gif?u=1" width="1" height="1" alt=""></td></tr></tbody></table>' +
+  '<div class="gmail_quote"><blockquote>Вы получили это письмо, потому что подписаны на рассылку.</blockquote></div>';
+
 export function seed(): StoredMail[] {
   return [
     make({
@@ -120,7 +151,13 @@ export function seed(): StoredMail[] {
         "Добрый день!\n\nНаправляем акт сверки взаимных расчётов за октябрь 2026 года. Просим подписать и " +
         "вернуть скан до 10 ноября.\n\nС уважением,\nбухгалтерия ООО «Демо-Поставка»\nИНН 301234567",
       attachments: [
-        { index: 0, name: "акт-сверки-октябрь.pdf", content_type: "application/pdf", size: 48213 },
+        {
+          index: 0,
+          name: "акт-сверки-октябрь.pdf",
+          content_type: "application/pdf",
+          size: 48213,
+          inline: false,
+        },
       ],
       skipped: [{ name: "macros.xlsm", reason: "type" }],
       inns: ["301234567"],
@@ -152,7 +189,12 @@ export function seed(): StoredMail[] {
       from_name: "Промо-рассылка",
       subject: "Скидки недели на канцтовары",
       received_at: minutesAgo(180),
-      text: "Только до пятницы — скидки до 30% на бумагу и картриджи.",
+      text: "Скидки недели на канцтовары\n\nТолько до пятницы — скидки до 30% на бумагу и картриджи.\n\nБумага А4 500 л. 38 000 сум\nКартридж лазерный 210 000 сум\n\nСмотреть все предложения",
+      html: NEWSLETTER,
+      remoteImages: 2,
+      attachments: [
+        { index: 0, name: "logo.png", content_type: "image/png", size: 95, inline: true },
+      ],
       assist: {
         status: "done",
         kind: "other",
@@ -179,6 +221,7 @@ export function seed(): StoredMail[] {
       subject: "Счёт на смазку для стрелок",
       received_at: minutesAgo(95),
       text: "Выставляем счёт на смазку для стрелочных переводов, оплата в течение 5 дней.",
+      tail: "Иван Демо <ivan@railtech.example> пишет:\n> Добрый день! Подскажите цену смазки на партию из 40 канистр.\n\n--\nДемо-Масла, отдел продаж\n+998 00 000 00 00",
       assignee: COLLEAGUE,
       assigned_at: minutesAgo(40),
       unread: false,
@@ -201,6 +244,9 @@ export function seed(): StoredMail[] {
           from_name: "Демо-Платёж",
           at: minutesAgo(320),
           text: "Здравствуйте. Подскажите реквизиты для оплаты счёта № 118.",
+          text_tail: "",
+          html: null,
+          html_remote_images: 0,
           attachments: [],
           new_participant: false,
         },
@@ -210,8 +256,18 @@ export function seed(): StoredMail[] {
           from_name: "Демо-Платёж",
           at: minutesAgo(15),
           text: "Платёж отправили, подтверждение приложили.",
+          text_tail:
+            "Демо Менеджер <manager@railtech.example> пишет:\n> Реквизиты для оплаты — в приложенном счёте.",
+          html: null,
+          html_remote_images: 0,
           attachments: [
-            { index: 0, name: "платёжка-118.pdf", content_type: "application/pdf", size: 20111 },
+            {
+              index: 0,
+              name: "платёжка-118.pdf",
+              content_type: "application/pdf",
+              size: 20111,
+              inline: false,
+            },
           ],
           new_participant: false,
         },
