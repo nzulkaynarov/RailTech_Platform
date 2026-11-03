@@ -226,6 +226,7 @@ class InboundMailMessage(_Out):
     at: datetime
     text: str
     attachments: list[InboundMailAttachment]
+    new_participant: bool
 
 
 class InboundMailEvent(_Out):
@@ -248,6 +249,8 @@ class InboundMail(InboundMailItem):
     journal: list[InboundMailEvent]
     reply_all_copy: list[str]
     personal_label: str
+    reply_to: str
+    reply_options: list[str]
 
 
 class InboundMailLeadResult(_Out):
@@ -266,6 +269,7 @@ class InboundMailReplyIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     text: str = Field(min_length=1, max_length=20000)
+    to: str | None = Field(default=None, max_length=255)
     reply_all: bool = False
     awaiting: bool = False
 
@@ -384,6 +388,7 @@ def to_mail(src: crm.InboundMailOut) -> InboundMail:
                 from_name=m.from_name,
                 at=m.at,
                 text=m.text,
+                new_participant=bool(m.new_participant),
                 attachments=[
                     InboundMailAttachment.model_validate(a.model_dump()) for a in m.attachments
                 ],
@@ -400,6 +405,8 @@ def to_mail(src: crm.InboundMailOut) -> InboundMail:
         ],
         reply_all_copy=list(src.reply_all_copy),
         personal_label=src.personal_label,
+        reply_to=src.reply_to,
+        reply_options=list(src.reply_options),
     )
 
 

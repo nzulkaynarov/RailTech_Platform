@@ -4424,6 +4424,11 @@ components:
         id:
           title: Id
           type: integer
+        new_participant:
+          default: false
+          description: Письмо от адреса, которого в цепочке не было («новый участник переписки»)
+          title: New Participant
+          type: boolean
         text:
           title: Text
           type: string
@@ -4552,6 +4557,16 @@ components:
             type: string
           title: Reply All Copy
           type: array
+        reply_options:
+          description: 'Кому можно ответить: адреса цепочки (кроме общего ящика)'
+          items:
+            type: string
+          title: Reply Options
+          type: array
+        reply_to:
+          description: 'Кому ответ по умолчанию: отправитель корня цепочки'
+          title: Reply To
+          type: string
         result:
           anyOf:
           - $ref: '#/components/schemas/InboundMailResult'
@@ -4626,6 +4641,8 @@ components:
       - journal
       - reply_all_copy
       - personal_label
+      - reply_to
+      - reply_options
       title: InboundMailOut
       type: object
     InboundMailPage:
@@ -4729,6 +4746,13 @@ components:
           minLength: 1
           title: Text
           type: string
+        to:
+          anyOf:
+          - maxLength: 255
+            type: string
+          - type: 'null'
+          description: 'Кому: один из `reply_options` карточки; не задан — `reply_to`'
+          title: To
       required:
       - text
       title: InboundMailReplyIn
@@ -7240,6 +7264,7 @@ components:
       - mail_in_work_by_other
       - mail_handled
       - mail_not_returnable
+      - mail_registering
       title: Reason
       type: string
     ReasonCount:

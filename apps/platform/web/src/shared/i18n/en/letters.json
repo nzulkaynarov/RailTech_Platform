@@ -655,7 +655,8 @@
       "sendAll": "Reply all",
       "awaiting": "Awaiting an answer — keep the letter in progress",
       "copy": "Copy goes to: {{list}}",
-      "sentAwaiting": "Reply sent, the letter stays in progress"
+      "sentAwaiting": "Reply sent, the letter stays in progress",
+      "to": "To"
     },
     "fromMail": "From the letter “{{subject}}” by {{sender}}",
     "fromMailLoading": "Copying the letter attachments…",
@@ -800,7 +801,8 @@
     "thread": {
       "title": "Conversation",
       "incoming": "{{sender}}, {{when}}",
-      "outgoing": "Reply sent: {{who}}, {{when}} → {{to}}, “{{subject}}”"
+      "outgoing": "Reply sent: {{who}}, {{when}} → {{to}}, “{{subject}}”",
+      "newParticipant": "New participant"
     },
     "journal": {
       "title": "Journal",
@@ -820,6 +822,7 @@
         "discard": "moved to the archive"
       }
     },
-    "inWorkSince": "{{name}}, since {{time}}"
+    "inWorkSince": "{{name}}, since {{time}}",
+    "replyTag": "Reply in thread"
   }
 }

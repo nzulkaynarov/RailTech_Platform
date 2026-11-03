@@ -74,6 +74,9 @@ export function MailRow({
           {mail.status === "new" && mail.thread_reply && mail.assignee ? (
             <span className="pf-hint">{t("mail.previous", { name: mail.assignee.name })}</span>
           ) : null}
+          {mail.status !== "new" && mail.status !== "done" && mail.thread_reply ? (
+            <StatusTag tone="gold">{t("mail.replyTag")}</StatusTag>
+          ) : null}
           {mail.eds_waiting ? <StatusTag tone="gold">{t("mail.waiting")}</StatusTag> : null}
           {mail.personal ? <StatusTag tone="blue">{personalLabel}</StatusTag> : null}
           {mail.messages_count > 1 ? (

@@ -52,6 +52,10 @@ export interface InboundMailOut {
   replies: InboundMailReply[];
   /** Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя) */
   reply_all_copy: string[];
+  /** Кому можно ответить: адреса цепочки (кроме общего ящика) */
+  reply_options: string[];
+  /** Кому ответ по умолчанию: отправитель корня цепочки */
+  reply_to: string;
   /** Итог у `done` */
   result?: InboundMailResult | null;
   sent_at: string | null;

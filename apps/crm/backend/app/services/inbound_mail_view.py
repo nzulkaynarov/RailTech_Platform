@@ -13,7 +13,12 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.inbound_mail_flow import eds_waiting, reply_all_copy
+from app.domain.inbound_mail_flow import (
+    chain_addresses,
+    eds_waiting,
+    reply_all_copy,
+    reply_default,
+)
 from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
 from app.repositories import inbound_mail_views as views
@@ -205,9 +210,14 @@ async def build_card(
             at=m.sent_at or m.received_at,
             text=m.text,
             attachments=_files(m),
+            new_participant=m.new_participant,
         )
         for m in [row, *children]
     ]
+    chain = await views.chain_messages(session, row.id)
+    options = chain_addresses(chain, mailbox)
+    sender = row.from_email.lower()
+    default = reply_default(sender, latest.from_email.lower(), latest.new_participant)
     return dto.InboundMailOut(
         **item_fields(
             row, names, assist_on=assist_on, unread=unread, messages=len(messages), now=now
@@ -238,4 +248,6 @@ async def build_card(
             latest.to_addrs or [], latest.cc_addrs or [], mailbox, latest.from_email
         ),
         personal_label=personal_label,
+        reply_to=default,
+        reply_options=options,
     )

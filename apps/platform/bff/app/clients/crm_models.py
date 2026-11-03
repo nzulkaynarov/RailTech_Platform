@@ -930,6 +930,10 @@ class InboundMailMessage(BaseModel):
     from_email: Annotated[str, Field(title="From Email")]
     from_name: Annotated[str, Field(title="From Name")]
     id: Annotated[int, Field(title="Id")]
+    new_participant: Annotated[bool | None, Field(title="New Participant")] = False
+    """
+    Письмо от адреса, которого в цепочке не было («новый участник переписки»)
+    """
     text: Annotated[str, Field(title="Text")]
 
 
@@ -994,6 +998,14 @@ class InboundMailOut(BaseModel):
     reply_all_copy: Annotated[list[str], Field(title="Reply All Copy")]
     """
     Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)
+    """
+    reply_options: Annotated[list[str], Field(title="Reply Options")]
+    """
+    Кому можно ответить: адреса цепочки (кроме общего ящика)
+    """
+    reply_to: Annotated[str, Field(title="Reply To")]
+    """
+    Кому ответ по умолчанию: отправитель корня цепочки
     """
     result: InboundMailResult | None = None
     """

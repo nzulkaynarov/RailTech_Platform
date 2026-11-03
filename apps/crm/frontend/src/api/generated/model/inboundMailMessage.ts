@@ -13,5 +13,7 @@ export interface InboundMailMessage {
   from_email: string;
   from_name: string;
   id: number;
+  /** Письмо от адреса, которого в цепочке не было («новый участник переписки») */
+  new_participant?: boolean;
   text: string;
 }

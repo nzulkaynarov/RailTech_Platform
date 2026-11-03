@@ -51,6 +51,8 @@ const BASE = {
   journal: [] as InboundMailEvent[],
   reply_all_copy: [] as string[],
   personal_label: "Адресовано лично",
+  reply_to: "",
+  reply_options: [] as string[],
   messages: [],
   attachments: [],
   attachments_count: 0,
@@ -79,8 +81,12 @@ function make(over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "t
       at: full.received_at,
       text: full.text,
       attachments: full.attachments,
+      new_participant: false,
     },
   ];
+  full.messages = full.messages.map((m) => ({ ...m, new_participant: m.new_participant ?? false }));
+  full.reply_to = over.reply_to ?? full.from_email;
+  full.reply_options = over.reply_options ?? [full.from_email];
   full.messages_count = full.messages.length;
   return full;
 }

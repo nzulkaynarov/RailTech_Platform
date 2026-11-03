@@ -14,7 +14,7 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.errors import ConflictError, NotFoundError, Reason
-from app.domain.inbound_mail_flow import can_return, claim_of
+from app.domain.inbound_mail_flow import can_return, claim_of, eds_waiting
 from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
 from app.repositories import inbound_mail_views as views
@@ -148,8 +148,15 @@ async def registration(
             )
         return
     await claim(session, row, who, now)
-    if row.status != "registering":
-        row.status, row.registering_at = "registering", now
+    if row.status == "registering" and not eds_waiting(row.status, row.registering_at, now):
+        # Регистрация идёт (двойное нажатие, вторая вкладка): второго ВХ не создаём. Зависшая дольше
+        # `EDS_CONFIRM_MINUTES` («ждёт подтверждения») — можно повторить: EDS отсекает дубль ключом.
+        raise ConflictError(
+            "mail is already being registered", reason=Reason.MAIL_REGISTERING, status=row.status
+        )
+    first = row.status != "registering"
+    row.status, row.registering_at = "registering", now
+    if first:
         await audit.record(
             session, who.actor, "inbound_mail.register_start", "inbound_mail", row.id
         )

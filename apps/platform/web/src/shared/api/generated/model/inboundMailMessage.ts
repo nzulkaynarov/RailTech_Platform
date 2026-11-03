@@ -14,4 +14,6 @@ export interface InboundMailMessage {
   at: string;
   text: string;
   attachments: InboundMailAttachment[];
+  /** Письмо от адреса, которого в цепочке не было («новый участник переписки») */
+  new_participant: boolean;
 }

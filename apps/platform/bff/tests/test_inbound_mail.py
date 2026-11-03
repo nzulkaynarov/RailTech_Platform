@@ -80,12 +80,15 @@ def card(**over: Any) -> dict[str, Any]:
                 "attachments": [
                     {"index": 0, "name": "акт.pdf", "content_type": "application/pdf", "size": 15}
                 ],
+                "new_participant": False,
             }
         ],
         "replies": [],
         "journal": [],
         "reply_all_copy": [],
         "personal_label": "Адресовано лично",
+        "reply_to": "buh@supplier.test",
+        "reply_options": ["buh@supplier.test"],
     }
     return {**base, **over}
 
@@ -848,6 +851,7 @@ async def test_reply_all_and_awaiting_are_forwarded(web: Web, be: Backends) -> N
     assert reply.status_code == 200, reply.text
     assert json.loads(sent.calls[0].request.content) == {
         "text": "Принято",
+        "to": None,
         "reply_all": True,
         "awaiting": True,
     }
@@ -927,3 +931,82 @@ async def test_registrar_gets_new_and_own_work_rows_with_first_line_paths(
         ("mail:41", "inbound_mail", "/eds/mail/41"),
         ("mail:42", "inbound_mail_mine", "/eds/mail/42"),
     }
+
+
+async def test_register_while_already_registering_is_409_and_does_not_cancel(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Двойное нажатие «Зарегистрировать»: вторая попытка — 409 до EDS, а `cancel` не уходит —
+    он сбросил бы регистрацию, которая идёт первым запросом."""
+    mark = be.router.post(f"{CRM}/17/registration").mock(
+        return_value=httpx.Response(
+            409,
+            json={"code": "conflict", "message": "x", "details": {"reason": "mail_registering"}},
+        )
+    )
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.post(
+        "/api/v1/eds/letters", json=FORM, headers={CSRF_HEADER: web.csrf}
+    )
+
+    assert response.status_code == 409
+    body = response.json()
+    assert body["details"]["reason"] == "mail_registering"
+    assert body["message"] == "Письмо уже регистрируется — дождитесь результата."
+    assert eds.made("POST", "letters") == [], "второго ВХ нет"
+    assert [json.loads(c.request.content)["state"] for c in mark.calls] == ["start"]
+
+
+async def test_reply_to_choice_and_new_participant_pass_through(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    messages = card()["messages"] + [
+        {
+            **card()["messages"][0],
+            "id": 18,
+            "from_email": "evil@spoof.test",
+            "new_participant": True,
+        }
+    ]
+    be.router.get(f"{CRM}/17").mock(
+        return_value=httpx.Response(
+            200,
+            json=card(
+                messages=messages,
+                reply_options=["buh@supplier.test", "evil@spoof.test"],
+            ),
+        )
+    )
+    sent = be.router.post(f"{CRM}/17/reply").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": 5,
+                "to_email": "buh@supplier.test",
+                "subject": "Re: Акт",
+                "status": "queued",
+                "created_at": "2026-11-02T06:00:00Z",
+                "sent_at": None,
+                "by": None,
+            },
+        )
+    )
+    await web.login(["REGISTRAR"])
+
+    shown = await web.client.get("/api/v1/inbound-mail/17")
+    reply = await web.client.post(
+        "/api/v1/inbound-mail/17/reply",
+        json={"text": "Ответ", "to": "buh@supplier.test"},
+        headers={CSRF_HEADER: web.csrf},
+    )
+
+    check(shown, "/inbound-mail/{id}", "get")
+    body = shown.json()
+    assert [m["new_participant"] for m in body["messages"]] == [False, True]
+    assert (body["reply_to"], body["reply_options"]) == (
+        "buh@supplier.test",
+        ["buh@supplier.test", "evil@spoof.test"],
+    )
+    assert reply.status_code == 200, reply.text
+    assert json.loads(sent.calls[0].request.content)["to"] == "buh@supplier.test"

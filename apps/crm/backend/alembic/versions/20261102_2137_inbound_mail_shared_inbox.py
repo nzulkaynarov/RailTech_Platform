@@ -7,11 +7,13 @@
 * цепочка: `thread_root_id` (ответ клиента прикреплён к записи), `thread_reply` («Новое (ответ в
   цепочке)»), `activity_at` — последнее входящее письмо цепочки (порядок списка и «прочитано»);
 * адресаты: `cc_addrs` отдельно от `to_addrs` (старые строки — всё в `to_addrs`), сотрудники из
-  «Кому» и копии (`to_staff_ids`, `cc_staff_ids`), отметка «адресовано лично» (`personal`);
+  «Кому» и копии (`to_staff_ids`, `cc_staff_ids`), отметка «адресовано лично» (`personal`),
+  «новый участник переписки» (`new_participant`);
 * `inbound_mail_read` — «прочитано» на человека.
 
-Откат: `done` возвращается в прежний статус по итогу (`replied` — в архив с причиной), «в работе» и
-«регистрируется» — снова в очередь; цепочечные письма остаются отдельными строками списка.
+Откат: копия (`cc_addrs`) дописывается в `to_addrs`, `done` возвращается в прежний статус по итогу
+(`replied` — в архив с причиной), «в работе» и «регистрируется» — снова в очередь; письма цепочки
+остаются отдельными строками списка.
 
 Revision ID: 563bd9b32ffd
 Revises: add9f58d0dab
@@ -70,6 +72,10 @@ def upgrade() -> None:
     op.add_column(
         table, sa.Column("personal", sa.Boolean(), server_default=sa.false(), nullable=False)
     )
+    op.add_column(
+        table,
+        sa.Column("new_participant", sa.Boolean(), server_default=sa.false(), nullable=False),
+    )
     op.create_foreign_key(
         op.f("fk_inbound_mail_assignee_id_users"),
         table,
@@ -117,6 +123,11 @@ def upgrade() -> None:
 def downgrade() -> None:
     table = "inbound_mail"
     op.drop_table("inbound_mail_read")
+    # Копия возвращается в «Кому» (до этой ревизии адреса не различались): данные не теряются.
+    op.execute(
+        "UPDATE inbound_mail SET to_addrs = to_addrs || cc_addrs "
+        "WHERE jsonb_array_length(cc_addrs) > 0"
+    )
     op.drop_index("ix_inbound_mail_thread_root", table_name=table)
     op.drop_index("ix_inbound_mail_assignee_status", table_name=table)
     op.drop_index("ix_inbound_mail_status_activity", table_name=table)
@@ -136,6 +147,7 @@ def downgrade() -> None:
     )
     op.create_check_constraint(op.f("ck_inbound_mail_status"), table, _OLD)
     for name in (
+        "new_participant",
         "personal",
         "cc_staff_ids",
         "to_staff_ids",

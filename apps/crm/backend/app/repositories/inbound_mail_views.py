@@ -272,3 +272,15 @@ async def journal(session: AsyncSession, mail_id: int, limit: int = 100) -> Sequ
     )
     rows = (await session.scalars(stmt)).all()
     return list(reversed(rows))
+
+
+async def chain_messages(
+    session: AsyncSession, root_id: int
+) -> list[tuple[str, list[str], list[str]]]:
+    """Отправитель, «Кому» и копия каждого входящего письма записи — для адресов цепочки."""
+    stmt = (
+        select(InboundMail.from_email, InboundMail.to_addrs, InboundMail.cc_addrs)
+        .where(or_(InboundMail.id == root_id, InboundMail.thread_root_id == root_id))
+        .order_by(InboundMail.received_at, InboundMail.id)
+    )
+    return [(f, list(t or []), list(c or [])) for f, t, c in (await session.execute(stmt)).all()]

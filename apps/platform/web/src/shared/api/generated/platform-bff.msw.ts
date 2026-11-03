@@ -9216,6 +9216,7 @@ export const getGetInboundMailResponseMock = (
         content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
         size: faker.number.int({ min: 0 }),
       })),
+      new_participant: faker.datatype.boolean(),
     }),
   ),
   replies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -9254,6 +9255,10 @@ export const getGetInboundMailResponseMock = (
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   personal_label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  reply_to: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  reply_options: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ),
   ...overrideResponse,
 });
 

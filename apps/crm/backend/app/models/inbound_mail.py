@@ -140,6 +140,8 @@ class InboundMail(TimestampMixin, Base):
     to_staff_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False, server_default="[]")
     cc_staff_ids: Mapped[list[int]] = mapped_column(JSONB, nullable=False, server_default="[]")
     personal: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
+    # Письмо в цепочке от адреса, которого в ней не было («новый участник переписки», W18A-P2-3).
+    new_participant: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
 
 
 class InboundMailRead(Base):

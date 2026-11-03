@@ -173,3 +173,43 @@ def test_participant_visibility(
     full: bool, user: int, assignee: int | None, personal: bool, staff: list[int], visible: bool
 ) -> None:
     assert flow.can_see(full, user, assignee, personal, staff) is visible
+
+
+MSGS = [
+    ("buyer@example.test", [BOX], ["Petrov@railtech.uz"]),
+    ("boss@example.test", [BOX, "buyer@example.test"], []),
+]
+
+
+def test_chain_addresses_skip_the_mailbox_and_repeats() -> None:
+    assert flow.chain_addresses(MSGS, BOX) == [
+        "buyer@example.test",
+        "petrov@railtech.uz",
+        "boss@example.test",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("sender", "new"),
+    [
+        ("buyer@example.test", False),
+        ("PETROV@railtech.uz", False),  # был в копии первого письма
+        ("evil@spoof.test", True),
+        ("", True),
+    ],
+)
+def test_new_participant(sender: str, new: bool) -> None:
+    known = flow.chain_addresses(MSGS, BOX)
+    assert flow.is_new_participant(sender, known) is new
+
+
+@pytest.mark.parametrize(
+    ("latest", "latest_new", "expected"),
+    [
+        ("boss@example.test", False, "boss@example.test"),  # известный участник — ему
+        ("evil@spoof.test", True, "buyer@example.test"),  # подделка — отправителю корня
+        ("", False, "buyer@example.test"),
+    ],
+)
+def test_reply_default(latest: str, latest_new: bool, expected: str) -> None:
+    assert flow.reply_default("buyer@example.test", latest, latest_new) == expected

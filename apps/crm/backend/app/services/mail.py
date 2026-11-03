@@ -20,7 +20,7 @@ Procrastinate (`tasks/mail.py` → `deliver()`), чтобы медленный �
 транзакции, что и статус (`app/bus/events.py`).
 """
 
-from collections.abc import Awaitable, Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Final
@@ -163,6 +163,7 @@ class MailService:
         requested_by: int | None = None,
         ref: tuple[str, str] | None = None,
         thread_headers: dict[str, str] | None = None,
+        cc: Sequence[str] = (),
     ) -> EmailLogView:
         """Письмо с уже готовым текстом (клиентские тексты D1-9 — `domain/client_texts.py`): та же
         очередь,
@@ -178,7 +179,8 @@ class MailService:
             ref_kind=ref[0] if ref else None,
             ref_id=ref[1] if ref else None,
             # Ответ в ту же цепочку (W18A-P2): `In-Reply-To`, `References`.
-            thread_headers=thread_headers or None,
+            thread_headers={**(thread_headers or {}), **({"Cc": ", ".join(cc)} if cc else {})}
+            or None,
         )
         connection = (await self.resolution()).connection
         if connection is None or self._cipher is None:

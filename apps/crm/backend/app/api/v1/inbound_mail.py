@@ -214,7 +214,7 @@ async def reply_inbound_mail(
     отправки «Разобрано: ответ отправлен», при `awaiting` («Ждём ответа») остаётся «в работе».
     Почта не настроена — 409 `smtp_not_configured`."""
     return await container.inbound_mail.reply(
-        access, mail_id, body.text, reply_all=body.reply_all, awaiting=body.awaiting
+        access, mail_id, body.text, reply_all=body.reply_all, awaiting=body.awaiting, to=body.to
     )
 
 

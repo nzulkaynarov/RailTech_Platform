@@ -6,6 +6,7 @@
 """
 
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -26,10 +27,23 @@ class Outgoing:
     reply_to: str | None
     refs: tuple[AttachmentRef, ...]
     headers: tuple[tuple[str, str], ...] = ()
+    cc: tuple[str, ...] = ()
 
 
 #: Заголовки цепочки, которые строка журнала может нести (ответ на входящее письмо, W18A-P2).
 THREAD_HEADERS = frozenset({"In-Reply-To", "References"})
+
+
+#: Копия («Ответить всем», W18A-P2-3) лежит в `thread_headers` под этим ключом, но уходит не общим
+#: заголовком, а полем `cc` отправки: заголовок `Cc` и получатели конверта.
+CC_KEY = "Cc"
+_ADDRESS = re.compile(r"^[^\s<>,;\"]+@[^\s<>,;\"]+$")
+
+
+def parse_cc(raw: str | None) -> tuple[str, ...]:
+    """Адреса копии из строки журнала; всё, что не похоже на адрес, отбрасывается."""
+    items = [part.strip() for part in (raw or "").split(",")]
+    return tuple(dict.fromkeys(a for a in items if _ADDRESS.match(a)))[:20]
 
 
 class UndeliverableError(Exception):
@@ -69,7 +83,8 @@ def decode(row: EmailLog, cipher: SecretCipher | None) -> Outgoing:
         for name, value in (row.thread_headers or {}).items()
         if name in THREAD_HEADERS and value
     )
-    return Outgoing(row.to_email, row.subject, body, html, row.reply_to or None, refs, headers)
+    cc = parse_cc((row.thread_headers or {}).get(CC_KEY))
+    return Outgoing(row.to_email, row.subject, body, html, row.reply_to or None, refs, headers, cc)
 
 
 async def download(
@@ -102,6 +117,8 @@ async def send(
         extra["attachments"] = files
     if outgoing.headers:
         extra["headers"] = outgoing.headers
+    if outgoing.cc:
+        extra["cc"] = outgoing.cc
     await transport.send(connection, outgoing.to, outgoing.subject, outgoing.body, **extra)
 
 

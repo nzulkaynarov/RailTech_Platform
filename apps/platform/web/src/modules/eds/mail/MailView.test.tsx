@@ -209,6 +209,62 @@ describe("Ответ (W18A-P2-3)", () => {
   });
 });
 
+describe("Кому ответить и новый участник переписки (W18A-P2-3)", () => {
+  it("«Кому» по умолчанию — отправитель корня, список — адреса цепочки; письмо от нового адреса помечено", async () => {
+    signIn(REGISTRAR);
+    const url = new URL("/api/v1/inbound-mail/18", window.location.href);
+    const real = (await (await fetch(url)).json()) as {
+      messages: Record<string, unknown>[];
+    };
+    server.use(
+      http.get("*/inbound-mail/18", () =>
+        HttpResponse.json({
+          ...real,
+          messages: [
+            ...real.messages,
+            {
+              ...real.messages[0],
+              id: 118,
+              from_email: "evil@spoof.test",
+              from_name: "",
+              new_participant: true,
+            },
+          ],
+          reply_to: "zakaz@rail-client-demo.example",
+          reply_options: ["zakaz@rail-client-demo.example", "evil@spoof.test"],
+        }),
+      ),
+    );
+    let sent: { to?: string } = {};
+    server.use(
+      http.post("*/inbound-mail/18/reply", async ({ request }) => {
+        sent = (await request.json()) as { to?: string };
+        return HttpResponse.json({
+          id: 1,
+          to_email: sent.to ?? "",
+          subject: "Re",
+          status: "queued",
+          created_at: new Date().toISOString(),
+          sent_at: null,
+          by: null,
+        });
+      }),
+    );
+    renderAt("/eds/mail/18");
+
+    expect(await screen.findByText("Новый участник переписки")).toBeVisible();
+    expect(screen.getByLabelText("Кому")).toBeInTheDocument();
+    expect(
+      screen.getByText("zakaz@rail-client-demo.example", { selector: ".ant-select *" }),
+    ).toBeVisible();
+    fireEvent.change(screen.getByLabelText("Текст ответа"), { target: { value: "Ответ" } });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить ответ" }));
+    await waitFor(() => {
+      expect(sent.to).toBe("zakaz@rail-client-demo.example");
+    });
+  });
+});
+
 describe("Сотрудник без первой линии со своим письмом (W18A-P2-3)", () => {
   it("видит переписку и отвечает; действий первой линии нет; может вернуть делопроизводителю", async () => {
     signIn("universal@demo.example");

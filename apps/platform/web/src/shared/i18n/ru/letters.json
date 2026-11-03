@@ -655,7 +655,8 @@
       "sendAll": "Ответить всем",
       "awaiting": "Ждём ответа — письмо останется в работе",
       "copy": "Копия уйдёт: {{list}}",
-      "sentAwaiting": "Ответ отправлен, письмо остаётся в работе"
+      "sentAwaiting": "Ответ отправлен, письмо остаётся в работе",
+      "to": "Кому"
     },
     "fromMail": "Из письма: «{{subject}}» от {{sender}}",
     "fromMailLoading": "Переносим вложения письма…",
@@ -800,7 +801,8 @@
     "thread": {
       "title": "Переписка",
       "incoming": "{{sender}}, {{when}}",
-      "outgoing": "Ответ отправлен: {{who}}, {{when}} → {{to}}, «{{subject}}»"
+      "outgoing": "Ответ отправлен: {{who}}, {{when}} → {{to}}, «{{subject}}»",
+      "newParticipant": "Новый участник переписки"
     },
     "journal": {
       "title": "Журнал",
@@ -820,6 +822,7 @@
         "discard": "убрал в архив"
       }
     },
-    "inWorkSince": "{{name}}, с {{time}}"
+    "inWorkSince": "{{name}}, с {{time}}",
+    "replyTag": "Ответ в цепочке"
   }
 }

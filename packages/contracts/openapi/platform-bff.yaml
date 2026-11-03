@@ -11777,7 +11777,7 @@ components:
     InboundMailConflict:
       description: >-
         409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`,
-        `details.assigned_at`), уже разобрано (`mail_handled`), не возвращается в «Новые» (`mail_not_returnable`), почта не
+        `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), почта не
         настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`)
       content:
         application/json:
@@ -18851,7 +18851,7 @@ components:
     InboundMailMessage:
       type: object
       additionalProperties: false
-      required: [id, from_email, from_name, at, text, attachments]
+      required: [id, from_email, from_name, at, text, attachments, new_participant]
       description: Входящее письмо записи (первое — само письмо, дальше ответы клиента); вложения качаются по `id`
       properties:
         id: {type: integer}
@@ -18862,6 +18862,7 @@ components:
         attachments:
           type: array
           items: {$ref: '#/components/schemas/InboundMailAttachment'}
+        new_participant: {type: boolean, description: 'Письмо от адреса, которого в цепочке не было («новый участник переписки»)'}
     InboundMailEvent:
       type: object
       additionalProperties: false
@@ -18882,7 +18883,7 @@ components:
       required: [id, status, from_email, from_name, subject, received_at, sent_at, activity_at, preview, attachments_count,
         assist, client, lead, from_history, assignee, assigned_at, personal, thread_reply, unread, messages_count, eds_waiting,
         result, to, cc, text, attachments, skipped, too_large, inns, messages, replies, journal, reply_all_copy,
-        personal_label]
+        personal_label, reply_to, reply_options]
       properties:
         id: {type: integer}
         status: {$ref: '#/components/schemas/InboundMailStatus'}
@@ -18953,6 +18954,11 @@ components:
           description: 'Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)'
           items: {type: string}
         personal_label: {type: string, description: 'Пометка «адресовано лично» из настроек'}
+        reply_to: {type: string, description: 'Кому ответ по умолчанию: отправитель корня цепочки (последнему письму — только если его адрес уже был в цепочке)'}
+        reply_options:
+          type: array
+          description: 'Кому можно ответить: адреса цепочки, кроме общего ящика'
+          items: {type: string}
     InboundMailLeadResult:
       type: object
       additionalProperties: false
@@ -18973,6 +18979,7 @@ components:
       required: [text]
       properties:
         text: {type: string, minLength: 1, maxLength: 20000}
+        to: {type: [string, 'null'], maxLength: 255, description: 'Кому: один из `reply_options`; не задан — `reply_to` карточки'}
         reply_all: {type: boolean, default: false, description: '«Ответить всем»: копия — остальные адреса письма, кроме общего ящика'}
         awaiting: {type: boolean, default: false, description: '«Ждём ответа»: письмо остаётся «в работе»'}
     InboundMailTakeIn:
