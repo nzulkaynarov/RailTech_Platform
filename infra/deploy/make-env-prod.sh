@@ -10,7 +10,8 @@
 #                                      (в отличие от init не возвращает переменные VPS 2, удалённые drop-db-only). Его же зовёт reset-prod.sh
 #   make-env-prod.sh ensure-secrets [файл] только недостающие автоматические секреты (REDIS_PROBE_PASSWORD — пароль пробы «Состояния
 #                                      системы», W15-H8b; S3_OFFSITE_ACCESS_KEY/SECRET_KEY — ключ S3 сервиса внешней копии на Google
-#                                      Drive, OPS-GDRIVE): отсутствующий, пустой или CHANGE_ME создаётся случайным, заданный не меняется;
+#                                      Drive, OPS-GDRIVE; EDS_LITELLM_API_KEY — виртуальный ключ EDS в LiteLLM с префиксом sk-, EDS-REG):
+#                                      отсутствующий, пустой или CHANGE_ME создаётся случайным, заданный не меняется;
 #                                      остальное в файле не трогает. Его зовёт deploy.sh на каждом деплое (руками секрет не вписывают)
 #   make-env-prod.sh extract-s3 [файл] печатает 4 переменные ключей S3 для VPS 2 (WAL_S3_*, BACKUP_RUSTFS_*) из ключей сервисов
 #                                      S3_WAL_* и S3_BACKUP_* — для смены ключей, когда extract-db уже недоступен (после drop-db-only)
@@ -105,12 +106,14 @@ case "$cmd" in
   ensure-secrets)
     command -v openssl >/dev/null || { echo "openssl не найден" >&2; exit 1; }
     [[ -f "$file" ]] || { echo "нет $file — сначала init" >&2; exit 1; }
-    for name in REDIS_PROBE_PASSWORD S3_OFFSITE_ACCESS_KEY S3_OFFSITE_SECRET_KEY; do
+    # Имя или имя:префикс (ключи LiteLLM начинаются с sk-).
+    for entry in REDIS_PROBE_PASSWORD S3_OFFSITE_ACCESS_KEY S3_OFFSITE_SECRET_KEY EDS_LITELLM_API_KEY:sk-; do
+      name="${entry%%:*}"; prefix=""; [[ "$entry" == *:* ]] && prefix="${entry#*:}"
       current="$(grep -E "^${name}=" "$file" | tail -n1 | cut -d= -f2- || true)"
-      [[ -z "$current" || "$current" == CHANGE_ME ]] || continue
+      [[ -z "$current" || "$current" == CHANGE_ME || "$current" == sk-CHANGE_ME ]] || continue
       tmp="$(mktemp)"
       grep -vE "^${name}=" "$file" >"$tmp" || true
-      printf '%s=%s\n' "$name" "$(openssl rand -hex 24)" >>"$tmp"
+      printf '%s=%s%s\n' "$name" "$prefix" "$(openssl rand -hex 24)" >>"$tmp"
       cat "$tmp" >"$file"; rm -f "$tmp"; chmod 600 "$file"
       echo "  ✓ ${name} сгенерирован"
     done

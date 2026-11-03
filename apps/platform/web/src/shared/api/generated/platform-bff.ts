@@ -23,6 +23,7 @@ import type {
   AccountLockedResponse,
   ActionOk,
   ActivityFeed,
+  AiDecisionIn,
   AiModelChange,
   AiModelChangeIn,
   AiModelList,
@@ -106,6 +107,8 @@ import type {
   DictionaryItemPatch,
   DictionaryList,
   DictionaryOrderIn,
+  DocflowSettings,
+  DocflowSettingsPatch,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -209,6 +212,8 @@ import type {
   LetterCard,
   LetterConflictResponse,
   LetterDuplicateList,
+  LetterIntakeIn,
+  LetterIntakeSuggestion,
   LetterKindList,
   LetterPage,
   LetterRegisterIn,
@@ -32724,6 +32729,496 @@ export const useDeleteResolutionTemplate = <
   TContext
 > => {
   return useMutation(getDeleteResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getSuggestLetterFromFileUrl = () => {
+  return `/api/v1/eds/letter-intake`;
+};
+
+/**
+ * EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+ * @summary EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
+ */
+export const suggestLetterFromFile = async (
+  letterIntakeIn: LetterIntakeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterIntakeSuggestion> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterIntakeSuggestion>(getSuggestLetterFromFileUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterIntakeIn),
+  });
+};
+
+export const getSuggestLetterFromFileMutationKey = () => ["suggestLetterFromFile"] as const;
+
+export const getSuggestLetterFromFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof suggestLetterFromFile>>,
+    TError,
+    SuggestLetterFromFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof suggestLetterFromFile>>,
+  TError,
+  SuggestLetterFromFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSuggestLetterFromFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof suggestLetterFromFile>>,
+    SuggestLetterFromFileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return suggestLetterFromFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SuggestLetterFromFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof suggestLetterFromFile>>
+>;
+export type SuggestLetterFromFileMutationBody = LetterIntakeIn;
+export type SuggestLetterFromFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SuggestLetterFromFileMutationVariables = { data: LetterIntakeIn };
+
+/**
+ * @summary EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
+ */
+export const useSuggestLetterFromFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof suggestLetterFromFile>>,
+      TError,
+      SuggestLetterFromFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof suggestLetterFromFile>>,
+  TError,
+  SuggestLetterFromFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getSuggestLetterFromFileMutationOptions(options), queryClient);
+};
+
+export const getDecideAiSuggestionUrl = (id: string) => {
+  return `/api/v1/eds/ai-suggestions/${id}/decision`;
+};
+
+/**
+ * `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную. Раздел `eds.inbox.register` — полный; решение пишет только тот, кто вызывал помощника.
+ * @summary EDS · Решение человека по предложению ИИ (журнал)
+ */
+export const decideAiSuggestion = async (
+  id: string,
+  aiDecisionIn: AiDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getDecideAiSuggestionUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(aiDecisionIn),
+  });
+};
+
+export const getDecideAiSuggestionMutationKey = () => ["decideAiSuggestion"] as const;
+
+export const getDecideAiSuggestionMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideAiSuggestion>>,
+    TError,
+    DecideAiSuggestionMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideAiSuggestion>>,
+  TError,
+  DecideAiSuggestionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecideAiSuggestionMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideAiSuggestion>>,
+    DecideAiSuggestionMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decideAiSuggestion(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideAiSuggestionMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideAiSuggestion>>
+>;
+export type DecideAiSuggestionMutationBody = AiDecisionIn;
+export type DecideAiSuggestionMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DecideAiSuggestionMutationVariables = { id: string; data: AiDecisionIn };
+
+/**
+ * @summary EDS · Решение человека по предложению ИИ (журнал)
+ */
+export const useDecideAiSuggestion = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decideAiSuggestion>>,
+      TError,
+      DecideAiSuggestionMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decideAiSuggestion>>,
+  TError,
+  DecideAiSuggestionMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecideAiSuggestionMutationOptions(options), queryClient);
+};
+
+export const getGetDocflowSettingsUrl = () => {
+  return `/api/v1/eds/docflow-settings`;
+};
+
+/**
+ * `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
+ * @summary EDS · Настройки документооборота
+ */
+export const getDocflowSettings = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DocflowSettings> => {
+  return http<DocflowSettings>(getGetDocflowSettingsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetDocflowSettingsQueryKey = () => {
+  return [`/api/v1/eds/docflow-settings`] as const;
+};
+
+export const getGetDocflowSettingsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getDocflowSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocflowSettings>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetDocflowSettingsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getDocflowSettings>>> = ({ signal }) =>
+    getDocflowSettings({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getDocflowSettings>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetDocflowSettingsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getDocflowSettings>>
+>;
+export type GetDocflowSettingsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetDocflowSettings<
+  TData = Awaited<ReturnType<typeof getDocflowSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocflowSettings>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocflowSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getDocflowSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocflowSettings<
+  TData = Awaited<ReturnType<typeof getDocflowSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getDocflowSettings>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getDocflowSettings>>,
+          TError,
+          Awaited<ReturnType<typeof getDocflowSettings>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetDocflowSettings<
+  TData = Awaited<ReturnType<typeof getDocflowSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocflowSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Настройки документооборота
+ */
+
+export function useGetDocflowSettings<
+  TData = Awaited<ReturnType<typeof getDocflowSettings>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getDocflowSettings>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetDocflowSettingsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateDocflowSettingsUrl = () => {
+  return `/api/v1/eds/docflow-settings`;
+};
+
+/**
+ * `admin: full`.
+ * @summary EDS · Изменить настройки документооборота
+ */
+export const updateDocflowSettings = async (
+  docflowSettingsPatch: DocflowSettingsPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<DocflowSettings> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DocflowSettings>(getUpdateDocflowSettingsUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(docflowSettingsPatch),
+  });
+};
+
+export const getUpdateDocflowSettingsMutationKey = () => ["updateDocflowSettings"] as const;
+
+export const getUpdateDocflowSettingsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDocflowSettings>>,
+    TError,
+    UpdateDocflowSettingsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDocflowSettings>>,
+  TError,
+  UpdateDocflowSettingsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDocflowSettingsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDocflowSettings>>,
+    UpdateDocflowSettingsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateDocflowSettings(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDocflowSettingsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDocflowSettings>>
+>;
+export type UpdateDocflowSettingsMutationBody = DocflowSettingsPatch;
+export type UpdateDocflowSettingsMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type UpdateDocflowSettingsMutationVariables = { data: DocflowSettingsPatch };
+
+/**
+ * @summary EDS · Изменить настройки документооборота
+ */
+export const useUpdateDocflowSettings = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDocflowSettings>>,
+      TError,
+      UpdateDocflowSettingsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDocflowSettings>>,
+  TError,
+  UpdateDocflowSettingsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDocflowSettingsMutationOptions(options), queryClient);
 };
 
 export const getListEdsStaffUrl = () => {

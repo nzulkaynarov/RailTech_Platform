@@ -8765,6 +8765,124 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/letter-intake:
+    post:
+      tags: [letters]
+      operationId: suggestLetterFromFile
+      summary: 'EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)'
+      description: >-
+        EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля
+        карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или
+        фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел
+        `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`,
+        `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterIntakeIn'
+      responses:
+        '200':
+          description: Предложение полей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterIntakeSuggestion'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/ai-suggestions/{id}/decision:
+    post:
+      tags: [letters]
+      operationId: decideAiSuggestion
+      summary: 'EDS · Решение человека по предложению ИИ (журнал)'
+      description: >-
+        `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную. Раздел
+        `eds.inbox.register` — полный; решение пишет только тот, кто вызывал помощника.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/AiSuggestionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiDecisionIn'
+      responses:
+        '204':
+          description: Записано
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/docflow-settings:
+    get:
+      tags: [dictionaries]
+      operationId: getDocflowSettings
+      summary: 'EDS · Настройки документооборота'
+      description: >-
+        `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен.
+        Раздел `eds.inbox.register` — полный или `admin` — чтение.
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [dictionaries]
+      operationId: updateDocflowSettings
+      summary: 'EDS · Изменить настройки документооборота'
+      description: '`admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocflowSettingsPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/staff:
     get:
       tags: [letters]
@@ -11871,6 +11989,14 @@ components:
       schema:
         $ref: '#/components/schemas/ReferenceKind'
 
+    AiSuggestionIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID предложения ИИ (EDS)
+      schema:
+        type: string
+        format: uuid
     ResolutionTemplateIdPath:
       name: id
       in: path
@@ -18614,6 +18740,61 @@ components:
         `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список).
         Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только
         переименовать и переставить.
+
+    LetterIntakeIn:
+      type: object
+      additionalProperties: false
+      required: [file_id]
+      properties:
+        file_id: {type: string, format: uuid}
+
+    LetterIntakeFields:
+      type: object
+      additionalProperties: false
+      required: [sender_name, sender_inn, sender_ref_number, sender_ref_date, subject, summary, kind, document_due]
+      description: Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла
+      properties:
+        sender_name: {type: [string, 'null']}
+        sender_inn: {type: [string, 'null'], pattern: '^\d{9,14}$'}
+        sender_ref_number: {type: [string, 'null']}
+        sender_ref_date: {type: [string, 'null'], format: date}
+        subject: {type: [string, 'null']}
+        summary: {type: [string, 'null']}
+        kind: {type: [string, 'null'], pattern: '^[a-z][a-z_]{0,31}$', description: Действующий код справочника `letter-kinds`}
+        document_due: {type: [string, 'null'], format: date}
+
+    LetterIntakeSuggestion:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, source, fields, alias, prompt_version]
+      properties:
+        suggestion_id: {type: string, format: uuid}
+        source: {type: string, enum: [text, image]}
+        fields: {$ref: '#/components/schemas/LetterIntakeFields'}
+        alias: {type: string}
+        prompt_version: {type: string}
+
+    AiDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: {type: string, enum: [accepted, edited, manual]}
+
+    DocflowSettings:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans, ai_available]
+      properties:
+        recognize_scans: {type: boolean}
+        ai_available: {type: boolean}
+
+    DocflowSettingsPatch:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans]
+      properties:
+        recognize_scans: {type: boolean}
 
     ResolutionTemplateScope:
       type: string
