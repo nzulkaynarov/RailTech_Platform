@@ -242,17 +242,29 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
+    # 0.9.0 — способ получения кодом справочника (EDS-REG);
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.8.0"
+    assert EDS_YAML["info"]["version"] == "0.9.0"
+
+
+# Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.
+SLUG_PARAMS = {"{kind}": "DictionaryKind", "{code}": "DictionaryCode"}
 
 
 def test_numbers_are_not_path_parameters() -> None:
-    """Номер реестра содержит «/» — в пути только стабильный id (UUID)."""
+    """Номер реестра содержит «/» — в пути только стабильный id (UUID) или слаг справочника."""
+    params = EDS_YAML["components"]["parameters"]
     for path in EDS_YAML["paths"]:
         for segment in Path(path).parts:
-            if segment.startswith("{"):
+            if segment in SLUG_PARAMS:
+                schema = params[SLUG_PARAMS[segment]]["schema"]
+                schema = (
+                    EDS_YAML["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]] if "$ref" in schema else schema
+                )
+                assert schema["pattern"].startswith("^[a-z]") and "/" not in schema["pattern"], path
+            elif segment.startswith("{"):
                 assert segment.endswith("_id}"), path
 
 

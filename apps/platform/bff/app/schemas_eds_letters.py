@@ -10,7 +10,7 @@ BFF не решает: статус письма, права `letters.*`, сро
 import datetime as dt
 import re
 import uuid
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import quote
 
 from pydantic import (
@@ -46,9 +46,10 @@ ExtensionStatus = Literal["pending", "approved", "rejected"]
 _USER_ID = r"^[1-9][0-9]*$"
 LetterZone = Literal["goods", "services", "payment_terms"]
 # P8 (SPEC-v3 §3.2a п. 1): способ получения входящего.
-ReceiptMethod = Literal["post", "paper", "taxpayer_cabinet", "courier", "email"]
 RelatedKind = Literal["letter_in", "letter_out"]
 _KIND_CODE = r"^[a-z][a-z_]{0,31}$"
+# Способ получения — код справочника `receipt-methods` (EDS-REG): значения ведёт администратор.
+ReceiptMethod = Annotated[str, Field(pattern=_KIND_CODE)]
 ZONES: tuple[LetterZone, ...] = ("goods", "services", "payment_terms")
 
 _MARGIN = r"^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$"
@@ -261,6 +262,7 @@ class LetterKind(BaseModel):
     code: str
     name: LetterKindName
     urgent: bool
+    due_days: int | None = None
 
 
 class LetterKindList(BaseModel):

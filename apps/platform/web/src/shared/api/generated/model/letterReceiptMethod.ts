@@ -4,14 +4,7 @@
  */
 
 /**
- * Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
+ * Способ получения (P8, SPEC-v3 §3.2a п. 1) — код справочника `receipt-methods` (EDS-REG, ведёт администратор; названия — `GET /dictionaries/receipt-methods`). Стартовые коды: `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail.
+ * @pattern ^[a-z][a-z_]{0,31}$
  */
-export type LetterReceiptMethod = (typeof LetterReceiptMethod)[keyof typeof LetterReceiptMethod];
-
-export const LetterReceiptMethod = {
-  post: "post",
-  paper: "paper",
-  taxpayer_cabinet: "taxpayer_cabinet",
-  courier: "courier",
-  email: "email",
-} as const;
+export type LetterReceiptMethod = string;

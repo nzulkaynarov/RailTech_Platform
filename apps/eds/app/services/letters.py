@@ -31,7 +31,7 @@ from app.schemas.letters import (
     LetterTrack,
     ResolutionIn,
 )
-from app.services import events, files, instructions, journal, letter_kinds, numbering
+from app.services import dictionaries, events, files, instructions, journal, numbering
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -231,15 +231,19 @@ async def find_duplicates(
 async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data: LetterCreate) -> Letter:
     """Ручная регистрация (`POST /letters`). Нужен отправитель по имени или клиент CRM в `links`.
 
-    Карточка делопроизводства (P8): вид документа — код справочника (`letter_kinds`); вид со «срочно» (требование ГНК)
-    ставит «срочно» сам; связь с предыдущим ВХ или нашим ИСХ — по номеру.
+    Карточка делопроизводства (P8): вид документа и способ получения — действующие коды справочников (EDS-REG); вид
+    со «срочно» (требование ГНК) ставит «срочно» сам; связь с предыдущим ВХ или нашим ИСХ — по номеру.
     """
     links = data.links or ErpLinksIn()
     if not data.sender.name and links.crm_client_id is None:
         raise invalid_fields("Укажите отправителя или клиента.", sender="name_or_client_required")
-    kind = letter_kinds.BY_CODE.get(data.kind) if data.kind is not None else None
+    kind = await dictionaries.find(session, dictionaries.LETTER_KINDS, data.kind) if data.kind is not None else None
     if data.kind is not None and kind is None:
         raise invalid_fields("Такого вида документа нет в справочнике.", kind="unknown_kind")
+    if data.receipt_method is not None and (
+        await dictionaries.find(session, dictionaries.RECEIPT_METHODS, data.receipt_method) is None
+    ):
+        raise invalid_fields("Такого способа получения нет в справочнике.", receipt_method="unknown_method")
     if links.erp_request_id is not None and await find_by_request(session, links.erp_request_id) is not None:
         raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.")
     await _validate_staff(
@@ -257,9 +261,9 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         "received_at": data.received_at,
         "addressee_crm_user_id": data.addressee_crm_user_id,
         "manager_crm_user_id": data.manager_crm_user_id,
-        "urgent": data.urgent or (kind is not None and kind.urgent),
+        "urgent": data.urgent or (kind is not None and kind.attrs.get("urgent") is True),
         "doc_kind": data.kind,
-        "receipt_method": data.receipt_method.value if data.receipt_method else None,
+        "receipt_method": data.receipt_method,
         "signed_by": (data.signed_by or "").strip() or None,
         "document_due": data.document_due,
         **await _related(session, data.related_number),

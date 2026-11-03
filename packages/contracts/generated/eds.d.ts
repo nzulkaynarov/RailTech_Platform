@@ -78,7 +78,8 @@ export interface paths {
      * Справочник «Вид документа» входящего письма (P8)
      * @description Виды документа для карточки делопроизводства (SPEC-v3 §3.2a п. 1): код, названия на трёх языках и признак `urgent` —
      *     регистрация этим видом сразу ставит «срочно» (требование или уведомление ГНК). Типы — данные (DECISIONS 2026-10-28):
-     *     экран берёт список отсюда; новый вид не меняет контракт.
+     *     экран берёт список отсюда; новый вид не меняет контракт. С EDS-REG — только действующие значения справочника
+     *     `letter-kinds` (`GET /dictionaries/letter-kinds`) и срок по умолчанию `due_days`; ведёт их администратор.
      */
     get: operations["listLetterKinds"];
     put?: never;
@@ -87,6 +88,98 @@ export interface paths {
     options?: never;
     head?: never;
     patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dictionaries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Каталог справочников EDS
+     * @description Виды справочников EDS: код вида, название, `closed` (значения — закрытый список поведения кода: добавить и удалить
+     *     нельзя, только переименовать и переставить) и описание дополнительных полей значения (`attrs`).
+     */
+    get: operations["listDictionaries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dictionaries/{kind}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Значения справочника
+     * @description Значения в порядке показа. По умолчанию — только действующие (для форм); `include_hidden=true` — все, со
+     *     скрытыми и признаком `used` (экран администратора, названия у старых писем). Неизвестный вид — 404.
+     */
+    get: operations["listDictionaryItems"];
+    put?: never;
+    /**
+     * Добавить значение
+     * @description Код создаёт EDS из названия (латиница, `^[a-z][a-z_]{0,31}$`), значение встаёт в конец списка. Название (ru) уже
+     *     есть в справочнике — 409 `name_taken`; справочник закрытый — 409 `dictionary_closed`; неверное поле `attrs` — 422.
+     */
+    post: operations["createDictionaryItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dictionaries/{kind}/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Порядок значений
+     * @description Полный список кодов справочника (со скрытыми) в новом порядке; лишний или пропущенный код — 422.
+     */
+    put: operations["reorderDictionaryItems"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/dictionaries/{kind}/{code}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить неиспользованное значение
+     * @description Значение уже есть у писем — 409 `value_in_use` (скройте его); закрытый справочник — 409 `dictionary_closed`.
+     */
+    delete: operations["deleteDictionaryItem"];
+    options?: never;
+    head?: never;
+    /**
+     * Переименовать, скрыть или вернуть значение
+     * @description Код не меняется: письма хранят код. Скрытое значение не предлагается в формах, но остаётся у старых писем. В
+     *     закрытом справочнике меняются только названия (`active` — 409 `dictionary_closed`).
+     */
+    patch: operations["updateDictionaryItem"];
     trace?: never;
   };
   "/api/v1/letter-duplicates": {
@@ -127,8 +220,9 @@ export interface paths {
      *     (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
      *     публикуется `letter.registered`.
      *
-     *     Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — код из `GET /letter-kinds` (иначе 422,
-     *     в `details.fields` — поле `kind` с `unknown_kind`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
+     *     Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — действующий код справочника `letter-kinds` (иначе
+     *     422, в `details.fields` — поле `kind` с `unknown_kind`), `receipt_method` — действующий код `receipt-methods`
+     *     (иначе `receipt_method` с `unknown_method`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
      *     номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
      *     берётся тема.
      */
@@ -402,6 +496,60 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/resolution-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны резолюций — общие и свои (EDS-REG, R2)
+     * @description Шаблоны резолюций пути делопроизводства (исследование 2026-11-02 «Маршруты» §4.2, R2; эталоны — шаблоны резолюций
+     *     Directum RX и 1С:Документооборот): общие (`company`, ведёт администратор) и личные (`personal`, свои у каждого).
+     *     Шаблон только заполняет форму резолюции — применение не меняет письмо. `editable` — может ли вызывающий менять шаблон.
+     */
+    get: operations["listResolutionTemplates"];
+    put?: never;
+    /**
+     * Сохранить шаблон резолюции
+     * @description Личный — директору и делопроизводителю (`letters.resolve`, `letters.register`), общий — администратору (`bus.manage`;
+     *     иначе 403 `FORBIDDEN`, `details.reason = company_template_admin_only`). Название уже есть среди своих личных (или
+     *     общих) — 409 `name_taken`. Люди — активные сотрудники (иначе 422, поле с `not_active_employee`); у «Для сведения»
+     *     ответственного и срока нет (`responsible.type = none`, `due_days = null`).
+     */
+    post: operations["createResolutionTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/resolution-templates/{template_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Изменить шаблон резолюции
+     * @description Тело целиком, `scope` не меняется (иначе 422). Личный шаблон меняет только владелец (чужой — 404), общий —
+     *     администратор.
+     */
+    put: operations["updateResolutionTemplate"];
+    post?: never;
+    /**
+     * Удалить шаблон резолюции
+     * @description Личный — владелец, общий — администратор. Резолюции, заполненные из шаблона, не меняются.
+     */
+    delete: operations["deleteResolutionTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/letter-tasks": {
     parameters: {
       query?: never;
@@ -434,7 +582,8 @@ export interface paths {
     /**
      * Активные сотрудники — адресат, исполнитель, «ознакомить» (P8b)
      * @description Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
-     *     пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     *     пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2). Администратору
+     *     (`bus.manage`) — для общих шаблонов резолюций (EDS-REG).
      */
     get: operations["listActiveEmployees"];
     put?: never;
@@ -988,6 +1137,69 @@ export interface components {
         [key: string]: unknown;
       };
     };
+    /** @description Название на трёх языках; пустые `uz` и `en` экран заменяет `ru` */
+    LocalizedName: {
+      ru: string;
+      uz: string;
+      en: string;
+    };
+    LocalizedNameIn: {
+      ru: string;
+      uz?: string;
+      en?: string;
+    };
+    DictionaryCode: string;
+    /** @description Дополнительное поле значения справочника (поведение — код, значение — данные) */
+    DictionaryAttr: {
+      /** @example due_days */
+      key: string;
+      /** @enum {string} */
+      type: "boolean" | "integer";
+      name: components["schemas"]["LocalizedName"];
+      minimum?: number | null;
+      maximum?: number | null;
+    };
+    Dictionary: {
+      /** @example letter-kinds */
+      kind: string;
+      name: components["schemas"]["LocalizedName"];
+      /** @description Закрытый список поведения кода — только переименовать и переставить */
+      closed: boolean;
+      attrs: components["schemas"]["DictionaryAttr"][];
+    };
+    DictionaryList: {
+      items: components["schemas"]["Dictionary"][];
+    };
+    /** @description Значения полей `attrs` вида (`urgent`, `due_days` у видов документа); `null` — не задано */
+    DictionaryAttrValues: {
+      [key: string]: boolean | number | null;
+    };
+    DictionaryItem: {
+      code: components["schemas"]["DictionaryCode"];
+      name: components["schemas"]["LocalizedName"];
+      attrs: components["schemas"]["DictionaryAttrValues"];
+      /** @description `false` — скрыто: в формах не предлагается, у старых писем остаётся */
+      active: boolean;
+      /** @description Порядок показа */
+      position: number;
+      /** @description Значение уже есть у писем (удалить нельзя, только скрыть); `null` — не считалось (без `include_hidden`) */
+      used?: boolean | null;
+    };
+    DictionaryItemList: {
+      items: components["schemas"]["DictionaryItem"][];
+    };
+    DictionaryItemIn: {
+      name: components["schemas"]["LocalizedNameIn"];
+      attrs?: components["schemas"]["DictionaryAttrValues"];
+    };
+    DictionaryItemPatch: {
+      name?: components["schemas"]["LocalizedNameIn"];
+      attrs?: components["schemas"]["DictionaryAttrValues"];
+      active?: boolean;
+    };
+    DictionaryOrderIn: {
+      codes: components["schemas"]["DictionaryCode"][];
+    };
     /**
      * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
@@ -1291,10 +1503,11 @@ export interface components {
       date?: string | null;
     };
     /**
-     * @description Способ получения (P8) — почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail
-     * @enum {string}
+     * @description Способ получения (P8) — код справочника `receipt-methods` (EDS-REG: ведёт администратор). Стартовые коды: `post`,
+     *     `paper`, `taxpayer_cabinet`, `courier`, `email`; регистрация со скрытым или неизвестным кодом — 422, поле
+     *     `receipt_method` с `unknown_method`.
      */
-    ReceiptMethod: "post" | "paper" | "taxpayer_cabinet" | "courier" | "email";
+    ReceiptMethod: string;
     /** @description Код вида документа из `GET /letter-kinds` */
     LetterKindCode: string;
     LetterKindItem: {
@@ -1306,6 +1519,8 @@ export interface components {
       };
       /** @description Регистрация этим видом сразу ставит «срочно» */
       urgent: boolean;
+      /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
+      due_days?: number | null;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKindItem"][];
@@ -1454,10 +1669,55 @@ export interface components {
      */
     LetterTrack: "calc" | "office";
     /**
-     * @description Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения»
+     * @description Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения». Это
+     *     поведение системы (закрытый список кода); названия на экране — справочник `resolution-kinds` (закрытый: только
+     *     переименовать и переставить, EDS-REG).
      * @enum {string}
      */
     ResolutionKind: "execute" | "reply" | "info";
+    /**
+     * @description `personal` — свой шаблон сотрудника, `company` — общий, ведёт администратор
+     * @enum {string}
+     */
+    ResolutionTemplateScope: "personal" | "company";
+    /**
+     * @description Кто ответственный при применении: `person` — этот сотрудник, `addressee` — адресат письма (директор по умолчанию или
+     *     кому письмо адресовал делопроизводитель), `none` — выбрать при резолюции
+     * @enum {string}
+     */
+    ResolutionTemplateResponsibleType: "person" | "addressee" | "none";
+    ResolutionTemplateIn: {
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["ResolutionKind"];
+      text: string;
+      responsible_type?: components["schemas"]["ResolutionTemplateResponsibleType"];
+      /** @description Только при `responsible_type = person` */
+      responsible_crm_user_id?: number | null;
+      co_executor_ids?: number[];
+      acquaint_ids?: number[];
+      /** @description Срок — через столько дней (рабочий день); `null` — подсказка срока письма */
+      due_days?: number | null;
+    };
+    ResolutionTemplate: {
+      id: components["schemas"]["Uuid"];
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["ResolutionKind"];
+      text: string;
+      responsible_type: components["schemas"]["ResolutionTemplateResponsibleType"];
+      responsible: components["schemas"]["PersonRef"] | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      due_days: number | null;
+      /** @description Владелец личного шаблона; у общего — `null` */
+      owner: components["schemas"]["PersonRef"] | null;
+      /** @description Вызывающий может изменить и удалить шаблон */
+      editable: boolean;
+    };
+    ResolutionTemplateList: {
+      items: components["schemas"]["ResolutionTemplate"][];
+    };
     /** @description Проект резолюции делопроизводителя; все поля необязательны, `kind = null` — проекта нет */
     ResolutionDraftIn: {
       kind?: components["schemas"]["ResolutionKind"] | null;
@@ -2151,6 +2411,10 @@ export interface components {
     };
   };
   parameters: {
+    TemplateId: components["schemas"]["Uuid"];
+    /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+    DictionaryKind: string;
+    DictionaryCode: components["schemas"]["DictionaryCode"];
     LetterId: components["schemas"]["Uuid"];
     InstructionId: components["schemas"]["Uuid"];
     DocumentId: components["schemas"]["Uuid"];
@@ -2302,6 +2566,178 @@ export interface operations {
       403: components["responses"]["Forbidden"];
     };
   };
+  listDictionaries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Каталог */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  listDictionaryItems: {
+    parameters: {
+      query?: {
+        include_hidden?: boolean;
+      };
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Значения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
+  createDictionaryItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryItemIn"];
+      };
+    };
+    responses: {
+      /** @description Добавлено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItem"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  reorderDictionaryItems: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryOrderIn"];
+      };
+    };
+    responses: {
+      /** @description Значения в новом порядке (со скрытыми) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteDictionaryItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+        code: components["parameters"]["DictionaryCode"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+    };
+  };
+  updateDictionaryItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404 */
+        kind: components["parameters"]["DictionaryKind"];
+        code: components["parameters"]["DictionaryCode"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryItemPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItem"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
   findLetterDuplicates: {
     parameters: {
       query: {
@@ -2340,6 +2776,8 @@ export interface operations {
         on_control?: boolean;
         /** @description Только письма с просроченным поручением (`true`) — фильтр «Просрочено» (P8b) */
         overdue?: boolean;
+        /** @description Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG) */
+        kind?: string;
         /** @description Непрозрачный курсор из `next_cursor` */
         cursor?: components["parameters"]["Cursor"];
         limit?: components["parameters"]["Limit"];
@@ -2721,6 +3159,110 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["Conflict"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listResolutionTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Общие и свои личные шаблоны по названию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplateList"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  updateResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["parameters"]["TemplateId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  deleteResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        template_id: components["parameters"]["TemplateId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   listMyLetterTasks: {

@@ -12,6 +12,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { LinkButton } from "../../../shared/ui/LinkButton";
+import { useResolutionKindName } from "../dictionaries";
 import { fieldsOf, reasonOf, useRefreshLetters } from "../inbox/api";
 import { AttachmentsField } from "../new/AttachmentsField";
 import type { Attachment } from "../new/formModel";
@@ -272,10 +273,11 @@ export function MyInstruction({
 }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
+  const kindName = useResolutionKindName();
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("tasks.mine")}</h2>}>
       <p className={instruction.overdue ? "pf-instr-due pf-instr-due--overdue" : "pf-instr-due"}>
-        <strong>{t(`office.kind.${instruction.kind}`)}</strong> ·{" "}
+        <strong>{kindName(instruction.kind)}</strong> ·{" "}
         {t("instr.due", { date: date(instruction.due) })}
         {instruction.overdue ? ` · ${t("instr.overdue")}` : ""}
       </p>

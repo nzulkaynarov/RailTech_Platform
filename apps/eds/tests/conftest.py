@@ -5,6 +5,7 @@
 пересоздают базу один раз за сессию, применяют миграции Alembic и перед каждым тестом чистят таблицы.
 """
 
+import json
 import os
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
@@ -79,7 +80,19 @@ def database() -> str:
         conn.execute(psql.SQL("DROP DATABASE IF EXISTS {} WITH (FORCE)").format(psql.Identifier(_DB_NAME)))
         conn.execute(psql.SQL("CREATE DATABASE {}").format(psql.Identifier(_DB_NAME)))
     command.upgrade(alembic_config(), "head")
+    _remember_seed()
     return _ADMIN_URL
+
+
+# Значения справочников, засеянные миграцией (EDS-REG): после очистки таблиц перед тестом они возвращаются как были.
+_SEED: list[tuple[Any, ...]] = []
+_SEED_COLUMNS = "kind, code, name_ru, name_uz, name_en, attrs, active, position, created_at, updated_at"
+
+
+def _remember_seed() -> None:
+    url = f"{_ADMIN_URL.rpartition('/')[0]}/{_DB_NAME}"
+    with psycopg.connect(url) as conn:
+        _SEED[:] = conn.execute(f"SELECT {_SEED_COLUMNS} FROM dictionary_items").fetchall()  # noqa: S608
 
 
 def alembic_config() -> Config:
@@ -118,6 +131,16 @@ async def _truncate(settings: Settings) -> None:
             )
         ).scalars()
         await conn.execute(text(f"TRUNCATE {', '.join(names)} RESTART IDENTITY CASCADE"))
+        if _SEED:
+            keys = [c.strip() for c in _SEED_COLUMNS.split(",")]
+            insert = text(
+                f"INSERT INTO dictionary_items ({_SEED_COLUMNS}) "  # noqa: S608
+                f"VALUES ({', '.join(f'CAST(:{k} AS jsonb)' if k == 'attrs' else f':{k}' for k in keys)})"
+            )
+            await conn.execute(
+                insert,
+                [{**dict(zip(keys, row, strict=True)), "attrs": json.dumps(row[keys.index("attrs")])} for row in _SEED],
+            )
     await engine.dispose()
 
 

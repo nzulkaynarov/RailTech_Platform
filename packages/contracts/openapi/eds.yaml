@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.8.0
+  version: 0.9.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -26,6 +26,10 @@ info:
     делопроизводителю (B-P8B-4), `POST …/send` — повтор отправки адресату, `GET /letterhead` — проекция бланка ERP (событие
     `erp.letterhead.updated`). `DocumentSubmitIn.send` — отправить адресату после регистрации. Черновик `letter_out`
     создаёт любой с `memos.create`; своё письмо автор видит и без `letters.read`.
+
+    **0.9.0 (EDS-REG) — ломающее по oasdiff (до 1.0 допустимо).** Справочники документооборота — данные: `ReceiptMethod`
+    вместо перечня — код справочника `receipt-methods` (шаблон `^[a-z][a-z_]{0,31}$`; стартовые коды те же, старые письма не
+    меняются), ресурс `/dictionaries/{kind}` (тег `dictionaries`), фильтр `kind` списка писем, `LetterKindItem.due_days`.
 
     **0.7.0 (D2-5).** Добавляющее изменение: реестр показывает договоры, счета и акты проектов — `RegistryKind` дополнен значениями
     `contract`, `invoice`, `act`. Это проекция по событиям ERP (`erp.contract.status_changed`, `erp.invoice.issued|paid|overdue`,
@@ -122,6 +126,15 @@ tags:
     description: Реестр «Все документы» и экспорт
   - name: files
     description: Файлы документов с версиями (S3 сервиса)
+  - name: dictionaries
+    description: |
+      Справочники документооборота как данные (EDS-REG, исследование `docs/research/2026-11-02-flexibility/4-settings-ia.md`
+      §4.3): значения — данные (название ru/uz/en, порядок, «действует», поля вида по описанию `attrs`), поведение — код из
+      закрытого списка. Ресурс одинаковый для всех доменов: `GET /dictionaries` (каталог видов), `GET|POST /dictionaries/{kind}`,
+      `PATCH|DELETE /dictionaries/{kind}/{code}`, `PUT /dictionaries/{kind}/order`; BFF сводит каталоги доменов в один экран
+      «Настройки · Документооборот · Справочники». Читают — те, кто работает с письмами, и администратор; меняет —
+      администратор (`bus.manage`: код раздела `admin` каталога Платформы в EDS, нового права нет). Удалить можно только
+      неиспользованное значение; использованное скрывают (`active = false`): старые письма хранят код и показывают название.
   - name: bus
     description: |
       «Журнал интеграций» шины `rt_bus` (W13-A2, `docs/architecture/rt-bus.md`, «Журнал в Admin»): сводка подписчиков,
@@ -221,7 +234,8 @@ paths:
       description: |
         Виды документа для карточки делопроизводства (SPEC-v3 §3.2a п. 1): код, названия на трёх языках и признак `urgent` —
         регистрация этим видом сразу ставит «срочно» (требование или уведомление ГНК). Типы — данные (DECISIONS 2026-10-28):
-        экран берёт список отсюда; новый вид не меняет контракт.
+        экран берёт список отсюда; новый вид не меняет контракт. С EDS-REG — только действующие значения справочника
+        `letter-kinds` (`GET /dictionaries/letter-kinds`) и срок по умолчанию `due_days`; ведёт их администратор.
       x-rt-permissions: [letters.read, letters.register]
       responses:
         '200':
@@ -234,6 +248,178 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+  /api/v1/dictionaries:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaries
+      summary: Каталог справочников EDS
+      description: |
+        Виды справочников EDS: код вида, название, `closed` (значения — закрытый список поведения кода: добавить и удалить
+        нельзя, только переименовать и переставить) и описание дополнительных полей значения (`attrs`).
+      x-rt-permissions: [letters.read, letters.register, bus.manage]
+      responses:
+        '200':
+          description: Каталог
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/dictionaries/{kind}:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaryItems
+      summary: Значения справочника
+      description: |
+        Значения в порядке показа. По умолчанию — только действующие (для форм); `include_hidden=true` — все, со
+        скрытыми и признаком `used` (экран администратора, названия у старых писем). Неизвестный вид — 404.
+      x-rt-permissions: [letters.read, letters.register, bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKind'
+        - name: include_hidden
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Значения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [dictionaries]
+      operationId: createDictionaryItem
+      summary: Добавить значение
+      description: |
+        Код создаёт EDS из названия (латиница, `^[a-z][a-z_]{0,31}$`), значение встаёт в конец списка. Название (ru) уже
+        есть в справочнике — 409 `name_taken`; справочник закрытый — 409 `dictionary_closed`; неверное поле `attrs` — 422.
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKind'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemIn'
+      responses:
+        '201':
+          description: Добавлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/dictionaries/{kind}/order:
+    put:
+      tags: [dictionaries]
+      operationId: reorderDictionaryItems
+      summary: Порядок значений
+      description: Полный список кодов справочника (со скрытыми) в новом порядке; лишний или пропущенный код — 422.
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKind'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryOrderIn'
+      responses:
+        '200':
+          description: Значения в новом порядке (со скрытыми)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/dictionaries/{kind}/{code}:
+    patch:
+      tags: [dictionaries]
+      operationId: updateDictionaryItem
+      summary: Переименовать, скрыть или вернуть значение
+      description: |
+        Код не меняется: письма хранят код. Скрытое значение не предлагается в формах, но остаётся у старых писем. В
+        закрытом справочнике меняются только названия (`active` — 409 `dictionary_closed`).
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKind'
+        - $ref: '#/components/parameters/DictionaryCode'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [dictionaries]
+      operationId: deleteDictionaryItem
+      summary: Удалить неиспользованное значение
+      description: Значение уже есть у писем — 409 `value_in_use` (скройте его); закрытый справочник — 409 `dictionary_closed`.
+      x-rt-permissions: [bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKind'
+        - $ref: '#/components/parameters/DictionaryCode'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   /api/v1/letter-duplicates:
     get:
@@ -314,6 +500,13 @@ paths:
           description: Только письма с просроченным поручением (`true`) — фильтр «Просрочено» (P8b)
           schema:
             type: boolean
+        - name: kind
+          in: query
+          required: false
+          description: Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG)
+          schema:
+            type: string
+            pattern: '^[a-z][a-z_]{0,31}$'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -338,8 +531,9 @@ paths:
         (ссылки `ErpLinks` заполнены). Номер присваивается в транзакции создания; статус сразу `awaiting_resolution`;
         публикуется `letter.registered`.
 
-        Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — код из `GET /letter-kinds` (иначе 422,
-        в `details.fields` — поле `kind` с `unknown_kind`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
+        Карточка делопроизводства (P8, SPEC-v3 §3.2a п. 1): `kind` — действующий код справочника `letter-kinds` (иначе
+        422, в `details.fields` — поле `kind` с `unknown_kind`), `receipt_method` — действующий код `receipt-methods`
+        (иначе `receipt_method` с `unknown_method`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
         номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
         берётся тема.
       x-rt-permissions: [letters.register]
@@ -762,6 +956,111 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/resolution-templates:
+    get:
+      tags: [letters]
+      operationId: listResolutionTemplates
+      summary: Шаблоны резолюций — общие и свои (EDS-REG, R2)
+      description: |
+        Шаблоны резолюций пути делопроизводства (исследование 2026-11-02 «Маршруты» §4.2, R2; эталоны — шаблоны резолюций
+        Directum RX и 1С:Документооборот): общие (`company`, ведёт администратор) и личные (`personal`, свои у каждого).
+        Шаблон только заполняет форму резолюции — применение не меняет письмо. `editable` — может ли вызывающий менять шаблон.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      responses:
+        '200':
+          description: Общие и свои личные шаблоны по названию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [letters]
+      operationId: createResolutionTemplate
+      summary: Сохранить шаблон резолюции
+      description: |
+        Личный — директору и делопроизводителю (`letters.resolve`, `letters.register`), общий — администратору (`bus.manage`;
+        иначе 403 `FORBIDDEN`, `details.reason = company_template_admin_only`). Название уже есть среди своих личных (или
+        общих) — 409 `name_taken`. Люди — активные сотрудники (иначе 422, поле с `not_active_employee`); у «Для сведения»
+        ответственного и срока нет (`responsible.type = none`, `due_days = null`).
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '201':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/resolution-templates/{template_id}:
+    put:
+      tags: [letters]
+      operationId: updateResolutionTemplate
+      summary: Изменить шаблон резолюции
+      description: |
+        Тело целиком, `scope` не меняется (иначе 422). Личный шаблон меняет только владелец (чужой — 404), общий —
+        администратор.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    delete:
+      tags: [letters]
+      operationId: deleteResolutionTemplate
+      summary: Удалить шаблон резолюции
+      description: Личный — владелец, общий — администратор. Резолюции, заполненные из шаблона, не меняются.
+      x-rt-permissions: [letters.resolve, letters.register, bus.manage]
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /api/v1/letter-tasks:
     get:
       tags: [letters]
@@ -789,8 +1088,9 @@ paths:
       summary: Активные сотрудники — адресат, исполнитель, «ознакомить» (P8b)
       description: |
         Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
-        пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
-      x-rt-permissions: [letters.register, letters.resolve]
+        пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2). Администратору
+        (`bus.manage`) — для общих шаблонов резолюций (EDS-REG).
+      x-rt-permissions: [letters.register, letters.resolve, bus.manage]
       responses:
         '200':
           description: Сотрудники
@@ -1736,6 +2036,26 @@ components:
       description: Токен доступа EDS из `POST /api/v1/auth/sso/exchange` (HS256, `iss = eds`, `aud = eds-api`, 15 минут); токен сотрудника CRM (`aud = eds`) здесь отклоняется — 401 `UNAUTHORIZED`
 
   parameters:
+    TemplateId:
+      name: template_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
+    DictionaryKind:
+      name: kind
+      in: path
+      required: true
+      description: Вид справочника (`letter-kinds`, `receipt-methods`); неизвестный — 404
+      schema:
+        type: string
+        pattern: '^[a-z][a-z-]{0,31}$'
+    DictionaryCode:
+      name: code
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/DictionaryCode'
     LetterId:
       name: letter_id
       in: path
@@ -1929,6 +2249,111 @@ components:
           type: object
           description: '`reason`, `permission`, `fields` — для разбора, не для показа'
           additionalProperties: true
+
+    LocalizedName:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      description: Название на трёх языках; пустые `uz` и `en` экран заменяет `ru`
+      properties:
+        ru: { type: string, minLength: 1, maxLength: 120 }
+        uz: { type: string, maxLength: 120 }
+        en: { type: string, maxLength: 120 }
+    LocalizedNameIn:
+      type: object
+      additionalProperties: false
+      required: [ru]
+      properties:
+        ru: { type: string, minLength: 1, maxLength: 120 }
+        uz: { type: string, maxLength: 120 }
+        en: { type: string, maxLength: 120 }
+    DictionaryCode:
+      type: string
+      pattern: '^[a-z][a-z_]{0,31}$'
+    DictionaryAttr:
+      type: object
+      additionalProperties: false
+      required: [key, type, name]
+      description: Дополнительное поле значения справочника (поведение — код, значение — данные)
+      properties:
+        key: { type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [due_days] }
+        type: { type: string, enum: [boolean, integer] }
+        name: { $ref: '#/components/schemas/LocalizedName' }
+        minimum: { type: [integer, 'null'] }
+        maximum: { type: [integer, 'null'] }
+    Dictionary:
+      type: object
+      additionalProperties: false
+      required: [kind, name, closed, attrs]
+      properties:
+        kind: { type: string, pattern: '^[a-z][a-z-]{0,31}$', examples: [letter-kinds] }
+        name: { $ref: '#/components/schemas/LocalizedName' }
+        closed:
+          type: boolean
+          description: Закрытый список поведения кода — только переименовать и переставить
+        attrs:
+          type: array
+          items: { $ref: '#/components/schemas/DictionaryAttr' }
+    DictionaryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Dictionary' }
+    DictionaryAttrValues:
+      type: object
+      description: Значения полей `attrs` вида (`urgent`, `due_days` у видов документа); `null` — не задано
+      additionalProperties:
+        type: [boolean, integer, 'null']
+    DictionaryItem:
+      type: object
+      additionalProperties: false
+      required: [code, name, attrs, active, position]
+      properties:
+        code: { $ref: '#/components/schemas/DictionaryCode' }
+        name: { $ref: '#/components/schemas/LocalizedName' }
+        attrs: { $ref: '#/components/schemas/DictionaryAttrValues' }
+        active:
+          type: boolean
+          description: '`false` — скрыто: в формах не предлагается, у старых писем остаётся'
+        position: { type: integer, description: Порядок показа }
+        used:
+          type: [boolean, 'null']
+          description: Значение уже есть у писем (удалить нельзя, только скрыть); `null` — не считалось (без `include_hidden`)
+    DictionaryItemList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/DictionaryItem' }
+    DictionaryItemIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { $ref: '#/components/schemas/LocalizedNameIn' }
+        attrs: { $ref: '#/components/schemas/DictionaryAttrValues' }
+    DictionaryItemPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: { $ref: '#/components/schemas/LocalizedNameIn' }
+        attrs: { $ref: '#/components/schemas/DictionaryAttrValues' }
+        active: { type: boolean }
+    DictionaryOrderIn:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: { $ref: '#/components/schemas/DictionaryCode' }
 
     EdsPermission:
       type: string
@@ -2512,8 +2937,11 @@ components:
           format: date
     ReceiptMethod:
       type: string
-      enum: [post, paper, taxpayer_cabinet, courier, email]
-      description: Способ получения (P8) — почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail
+      pattern: '^[a-z][a-z_]{0,31}$'
+      description: |
+        Способ получения (P8) — код справочника `receipt-methods` (EDS-REG: ведёт администратор). Стартовые коды: `post`,
+        `paper`, `taxpayer_cabinet`, `courier`, `email`; регистрация со скрытым или неизвестным кодом — 422, поле
+        `receipt_method` с `unknown_method`.
     LetterKindCode:
       type: string
       pattern: '^[a-z][a-z_]{0,31}$'
@@ -2536,6 +2964,11 @@ components:
         urgent:
           type: boolean
           description: Регистрация этим видом сразу ставит «срочно»
+        due_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 365
+          description: Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
     LetterKindList:
       type: object
       additionalProperties: false
@@ -2853,7 +3286,84 @@ components:
     ResolutionKind:
       type: string
       enum: [execute, reply, info]
-      description: Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения»
+      description: |
+        Тип резолюции пути делопроизводства — `execute` «К исполнению», `reply` «Подготовить ответ», `info` «Для сведения». Это
+        поведение системы (закрытый список кода); названия на экране — справочник `resolution-kinds` (закрытый: только
+        переименовать и переставить, EDS-REG).
+    ResolutionTemplateScope:
+      type: string
+      enum: [personal, company]
+      description: '`personal` — свой шаблон сотрудника, `company` — общий, ведёт администратор'
+    ResolutionTemplateResponsibleType:
+      type: string
+      enum: [person, addressee, none]
+      description: |
+        Кто ответственный при применении: `person` — этот сотрудник, `addressee` — адресат письма (директор по умолчанию или
+        кому письмо адресовал делопроизводитель), `none` — выбрать при резолюции
+    ResolutionTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [name, scope, kind, text]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 120 }
+        scope: { $ref: '#/components/schemas/ResolutionTemplateScope' }
+        kind: { $ref: '#/components/schemas/ResolutionKind' }
+        text: { type: string, minLength: 1, maxLength: 4000 }
+        responsible_type:
+          $ref: '#/components/schemas/ResolutionTemplateResponsibleType'
+        responsible_crm_user_id:
+          type: [integer, 'null']
+          description: Только при `responsible_type = person`
+        co_executor_ids:
+          type: array
+          maxItems: 20
+          items: { type: integer }
+        acquaint_ids:
+          type: array
+          maxItems: 50
+          items: { type: integer }
+        due_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 365
+          description: Срок — через столько дней (рабочий день); `null` — подсказка срока письма
+    ResolutionTemplate:
+      type: object
+      additionalProperties: false
+      required:
+        [id, name, scope, kind, text, responsible_type, responsible, co_executors, acquaint, due_days, owner, editable]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        name: { type: string }
+        scope: { $ref: '#/components/schemas/ResolutionTemplateScope' }
+        kind: { $ref: '#/components/schemas/ResolutionKind' }
+        text: { type: string }
+        responsible_type: { $ref: '#/components/schemas/ResolutionTemplateResponsibleType' }
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        co_executors:
+          type: array
+          items: { $ref: '#/components/schemas/PersonRef' }
+        acquaint:
+          type: array
+          items: { $ref: '#/components/schemas/PersonRef' }
+        due_days: { type: [integer, 'null'] }
+        owner:
+          description: Владелец личного шаблона; у общего — `null`
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        editable: { type: boolean, description: Вызывающий может изменить и удалить шаблон }
+    ResolutionTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ResolutionTemplate' }
     ResolutionDraftIn:
       type: object
       additionalProperties: false

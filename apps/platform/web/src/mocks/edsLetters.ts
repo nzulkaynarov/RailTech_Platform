@@ -1,10 +1,10 @@
 import { HttpResponse, http } from "msw";
 
+import { activeLetterKinds, isActiveValue } from "./dictionaries";
 import { markMailRegistered } from "./inboundMail";
 import type {
   LetterCard,
   LetterDuplicateList,
-  LetterKindList,
   LetterPage,
   LetterRegisterIn,
   LetterRejectIn,
@@ -131,42 +131,6 @@ function row(letter: LetterCard): LetterRow {
   };
 }
 
-/** Справочник видов документа (как EDS `services/letter_kinds.py`). */
-export const LETTER_KINDS: LetterKindList = {
-  items: [
-    {
-      code: "tax_notice",
-      name: {
-        ru: "Требование или уведомление ГНК",
-        uz: "Soliq qo‘mitasi talabnomasi yoki xabarnomasi",
-        en: "Tax authority demand or notice",
-      },
-      urgent: true,
-    },
-    {
-      code: "bank",
-      name: { ru: "Письмо банка", uz: "Bank xati", en: "Bank letter" },
-      urgent: false,
-    },
-    {
-      code: "supplier",
-      name: { ru: "Письмо поставщика", uz: "Yetkazib beruvchi xati", en: "Supplier letter" },
-      urgent: false,
-    },
-    {
-      code: "government",
-      name: { ru: "Письмо госоргана", uz: "Davlat organi xati", en: "Government letter" },
-      urgent: false,
-    },
-    {
-      code: "counterparty",
-      name: { ru: "Письмо контрагента", uz: "Kontragent xati", en: "Counterparty letter" },
-      urgent: false,
-    },
-    { code: "other", name: { ru: "Прочее", uz: "Boshqa", en: "Other" }, urgent: false },
-  ],
-};
-
 const squash = (value: string | null | undefined) =>
   (value ?? "").trim().replace(/\s+/g, " ").toLowerCase();
 
@@ -256,6 +220,7 @@ export const edsLettersHandlers = [
     const statuses = url.searchParams.getAll("status") as LetterStatus[];
     const onControl = url.searchParams.get("on_control") === "true";
     const overdue = url.searchParams.get("overdue") === "true";
+    const kindFilter = url.searchParams.get("kind");
     const q = (url.searchParams.get("q") ?? "").trim().toLowerCase();
     const limit = Number(url.searchParams.get("limit") ?? 50);
     const start = Number(url.searchParams.get("cursor") ?? 0);
@@ -263,6 +228,7 @@ export const edsLettersHandlers = [
       .filter((l) => statuses.length === 0 || statuses.includes(l.status))
       .filter((l) => !onControl || rowExtras(l).on_control)
       .filter((l) => !overdue || rowExtras(l).overdue)
+      .filter((l) => !kindFilter || l.kind === kindFilter)
       .filter(
         (l) =>
           q === "" ||
@@ -279,7 +245,7 @@ export const edsLettersHandlers = [
   http.get("*/eds/letter-kinds", () => {
     const held = guard("read");
     if (held.error) return held.error;
-    return HttpResponse.json(LETTER_KINDS);
+    return HttpResponse.json(activeLetterKinds());
   }),
 
   http.get("*/eds/letter-duplicates", ({ request }) => {
@@ -309,8 +275,15 @@ export const edsLettersHandlers = [
     const held = guardRegister();
     if (held.error) return held.error;
     const body = (await request.json()) as LetterRegisterIn;
-    const kind = LETTER_KINDS.items.find((k) => k.code === body.kind);
+    const kind = activeLetterKinds().items.find((k) => k.code === body.kind);
     if (!kind) return invalid("kind", "unknown_kind", "Такого вида документа нет в справочнике.");
+    if (!isActiveValue("receipt-methods", body.receipt_method)) {
+      return invalid(
+        "receipt_method",
+        "unknown_method",
+        "Такого способа получения нет в справочнике.",
+      );
+    }
     const related = body.related_number ? findLetter(body.related_number.trim()) : undefined;
     if (body.related_number && !related) {
       return invalid("related_number", "not_found", "Документ с таким номером не найден.");

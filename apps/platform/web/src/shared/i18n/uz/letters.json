@@ -289,7 +289,8 @@
       "paper": "Qog‘oz (shaxsan olib kelingan)",
       "taxpayer_cabinet": "Soliq to‘lovchi kabineti my.soliq",
       "courier": "Kuryer",
-      "email": "E-mail"
+      "email": "E-mail",
+      "unavailable": "Usullar ma’lumotnomasi yuklanmadi. Sahifani yangilang."
     },
     "sender": {
       "label": "Korrespondent",
@@ -464,7 +465,32 @@
       "return": "Xat ish yurituvchiga qaytarildi",
       "reject": "Xat rad etildi"
     },
-    "failed": "Saqlanmadi: {{reason}}."
+    "failed": "Saqlanmadi: {{reason}}.",
+    "templates": {
+      "pick": "Shablondan",
+      "placeholder": "Shablonni tanlang",
+      "hint": "Maydonlarni to‘ldiradi — ularni tuzatish mumkin.",
+      "none": "Hozircha shablon yo‘q — rezolyutsiyani shablon sifatida saqlang.",
+      "unavailable": "Shablonlar yuklanmadi — qo‘lda to‘ldiring.",
+      "mine": "Meniki",
+      "company": "Umumiy",
+      "applied": "«{{name}}» shablonidan to‘ldirildi — maydonlarni tekshiring.",
+      "saveAs": "Shablon sifatida saqlash",
+      "saveTitle": "Shablon sifatida saqlash",
+      "name": "Shablon nomi",
+      "nameHint": "Masalan: «Soliq — buxgalteriya javobi».",
+      "nameRequired": "Nomini kiriting.",
+      "shared": "Umumiy — rezolyutsiya tayyorlovchilarning barchasi uchun",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "saved": "«{{name}}» shabloni saqlandi.",
+      "errors": {
+        "name_taken": "Bunday nomli shablon bor.",
+        "company_template_admin_only": "Umumiy shablonlarni administrator yuritadi.",
+        "invalid": "Rezolyutsiyadagi xodimlarni tekshiring: kimdir o‘chirilgan.",
+        "DEFAULT": "Shablonni saqlab bo‘lmadi. Qayta urinib ko‘ring."
+      }
+    }
   },
   "instr": {
     "title": "Topshiriqlar",
@@ -700,5 +726,102 @@
       "notSpamWhat": "Xat oddiy xat kabi «Koʻrib chiqilishi kerak» boʻlimiga tushadi",
       "discardWhat": "«Olib tashlash» — «Spam» sababi bilan arxivga, hech narsa oʻchirilmaydi"
     }
+  },
+  "settings": {
+    "subtitle": "Xatlar ma’lumotnomalari va rezolyutsiya shablonlari.",
+    "tabsLabel": "Hujjat aylanishi bo‘limlari",
+    "tabs": {
+      "dictionaries": "Ma’lumotnomalar",
+      "templates": "Rezolyutsiya shablonlari"
+    },
+    "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
+    "dict": {
+      "title": "Ma’lumotnomalar",
+      "hint": "Yangi qiymatlar shaklda darhol paydo bo‘ladi. Ishlatilganini faqat yashirish mumkin.",
+      "kindLabel": "Ma’lumotnoma",
+      "add": "Qiymat qo‘shish",
+      "name": "Nomi",
+      "nameRu": "Ruscha nomi",
+      "nameUz": "O‘zbekcha nomi",
+      "nameEn": "Inglizcha nomi",
+      "nameHint": "Bo‘sh bo‘lsa — ruscha nomi ko‘rsatiladi.",
+      "order": "Tartib",
+      "status": "Holat",
+      "active": "Amalda",
+      "hidden": "Yashirilgan",
+      "actions": "Amallar",
+      "edit": "O‘zgartirish",
+      "editNamed": "O‘zgartirish: {{name}}",
+      "hide": "Yashirish",
+      "hideNamed": "Yashirish: {{name}}",
+      "show": "Qaytarish",
+      "showNamed": "Qaytarish: {{name}}",
+      "delete": "O‘chirish",
+      "deleteNamed": "O‘chirish: {{name}}",
+      "up": "Yuqoriga: {{name}}",
+      "down": "Pastga: {{name}}",
+      "yes": "Ha",
+      "no": "—",
+      "generalRule": "umumiy qoida bo‘yicha",
+      "dueHint": "Bo‘sh — shoshilinch 3 kun, oddiy 10 kun.",
+      "addTitle": "Yangi qiymat",
+      "editTitle": "Qiymatni o‘zgartirish",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "saved": "Saqlandi",
+      "hiddenToast": "Yashirildi: shakllarda endi yo‘q",
+      "shownToast": "Qiymat yana shakllarda",
+      "deleted": "O‘chirildi",
+      "required": "Nomini kiriting",
+      "deleteTitle": "«{{name}}» o‘chirilsinmi?",
+      "consequence": "Qiymat ma’lumotnoma va shakllardan yo‘qoladi. U bilan xatlar yo‘q.",
+      "empty": {
+        "title": "Qiymatlar yo‘q",
+        "text": "Birinchi qiymatni qo‘shing."
+      },
+      "errors": {
+        "name_taken": "Bunday nom ma’lumotnomada bor.",
+        "value_in_use": "Qiymat xatlarda ishlatilgan — uni faqat yashirish mumkin.",
+        "dictionary_closed": "Bu ro‘yxatni faqat qayta nomlash mumkin.",
+        "FORBIDDEN": "Ma’lumotnomalarni faqat administrator o‘zgartiradi.",
+        "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
+        "load": "Ma’lumotnomalar yuklanmadi."
+      },
+      "retry": "Qayta urinish"
+    },
+    "templates": {
+      "title": "Rezolyutsiya shablonlari",
+      "hint": "Direktor rezolyutsiyada shablonni tanlaydi va tuzatadi. O‘z shablonlari — rezolyutsiya shaklidan.",
+      "add": "Shablon qo‘shish",
+      "name": "Nomi",
+      "kind": "Turi",
+      "responsible": "Mas’ul",
+      "due": "Muddat",
+      "scope": "Kim ko‘radi",
+      "company": "Hamma",
+      "personal": "Faqat {{name}}",
+      "addressee": "Xat adresati",
+      "chooseLater": "Rezolyutsiyada tanlash",
+      "days_one": "{{count}} kun",
+      "days_few": "{{count}} kun",
+      "days_many": "{{count}} kun",
+      "days_other": "{{count}} kun",
+      "dueDays": "Muddat, kun",
+      "dueHint": "Bo‘sh — xat muddati maslahati.",
+      "addTitle": "Yangi rezolyutsiya shabloni",
+      "editTitle": "Shablonni o‘zgartirish",
+      "required": "Maydonni to‘ldiring",
+      "deleted": "Shablon o‘chirildi",
+      "deleteTitle": "«{{name}}» shabloni o‘chirilsinmi?",
+      "consequence": "Shablon «Shablondan» ro‘yxatidan yo‘qoladi. Qo‘yilgan rezolyutsiyalar o‘zgarmaydi.",
+      "empty": {
+        "title": "Shablonlar yo‘q",
+        "text": "Odatiy xatlar uchun umumiy shablon qo‘shing."
+      }
+    }
+  },
+  "listKind": {
+    "label": "Hujjat turi",
+    "all": "Barcha turlar"
   }
 }

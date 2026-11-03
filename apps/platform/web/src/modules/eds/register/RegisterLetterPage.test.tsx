@@ -7,6 +7,7 @@ import { chooseOption, selectedLabel } from "../../../test/fields";
 import { setupLetterTests } from "../../../test/lettersKit";
 import { renderAt, signIn } from "../../../test/edsKit";
 import { server } from "../../../test/server";
+import { readDictionaries, writeDictionaries } from "../../../mocks/dictionaries";
 import { resetEds } from "../../../mocks/fixtures/edsDocuments";
 import { emptyRegister, toRegisterBody, validateRegister } from "./registerModel";
 
@@ -177,6 +178,50 @@ describe("Карточка ВХ: делопроизводитель готови
   });
 });
 
+describe("EDS · справочники в форме регистрации (EDS-REG)", () => {
+  it("способы получения и виды — из справочника: скрытого нет, добавленный администратором есть", async () => {
+    const state = readDictionaries();
+    writeDictionaries({
+      ...state,
+      "letter-kinds": state["letter-kinds"].map((item) =>
+        item.code === "bank" ? { ...item, active: false } : item,
+      ),
+      "receipt-methods": [
+        ...state["receipt-methods"].map((item) =>
+          item.code === "courier" ? { ...item, active: false } : item,
+        ),
+        {
+          code: "fax",
+          name: { ru: "Факс", uz: "", en: "" },
+          attrs: {},
+          active: true,
+          position: 60,
+        },
+      ],
+    });
+    await openForm();
+
+    const titles = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(
+          ".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option",
+        ),
+      ).map((item) => item.getAttribute("title") ?? item.textContent);
+    fireEvent.mouseDown(screen.getByLabelText("Способ получения"));
+    await waitFor(() => {
+      expect(titles()).toContain("Факс");
+    });
+    expect(titles()).not.toContain("Курьер");
+    fireEvent.keyDown(screen.getByLabelText("Способ получения"), { key: "Escape" });
+
+    fireEvent.mouseDown(screen.getByLabelText("Вид документа"));
+    await waitFor(() => {
+      expect(titles()).toContain("Письмо поставщика");
+    });
+    expect(titles()).not.toContain("Письмо банка");
+  });
+});
+
 describe("registerModel", () => {
   it("обязательные поля и дата поступления не позже сегодня", () => {
     const empty = emptyRegister("2026-11-01");
@@ -194,7 +239,7 @@ describe("registerModel", () => {
     const values = {
       ...emptyRegister("2026-11-01"),
       kind: "bank",
-      receiptMethod: "post" as const,
+      receiptMethod: "post",
       senderName: "  Банк ",
       subject: " Тарифы ",
       deal: { erp_deal_id: 5, label: "ЗВ-2026-104 · Стрелочные приводы · ООО «Демо-Рейл»" },

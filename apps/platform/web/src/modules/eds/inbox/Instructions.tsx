@@ -14,6 +14,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { useResolutionKindName } from "../dictionaries";
 import { reasonOf, useRefreshLetters } from "./api";
 import { Attachments } from "./Parts";
 
@@ -21,6 +22,7 @@ import { Attachments } from "./Parts";
 export function OfficeDecision({ letter }: { letter: LetterCard }) {
   const { t } = useTranslation("letters");
   const { date } = useFormat();
+  const kindName = useResolutionKindName();
   const res = letter.office_resolution;
   if (!res) return null;
   const names = (people: readonly { name: string }[]) =>
@@ -29,7 +31,7 @@ export function OfficeDecision({ letter }: { letter: LetterCard }) {
     <Card size="small" title={<h2 className="pf-letters-title">{t("instr.resolution")}</h2>}>
       <DefinitionList
         items={[
-          { label: t("instr.fields.kind"), value: t(`office.kind.${res.kind}`) },
+          { label: t("instr.fields.kind"), value: kindName(res.kind) },
           { label: t("instr.fields.responsible"), value: res.responsible?.name },
           { label: t("instr.fields.co"), value: names(res.co_executors) },
           { label: t("instr.fields.due"), value: res.due ? date(res.due) : null },

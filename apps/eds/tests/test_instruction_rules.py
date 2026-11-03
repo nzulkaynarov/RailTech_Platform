@@ -59,6 +59,13 @@ def test_suggested_due_without_document_due_is_3_or_10_days_shifted_to_a_workday
     assert suggested_due(letter(registered_at=wednesday), MON) == date(2026, 11, 16)  # ср + 10 = сб → пн
 
 
+def test_suggested_due_uses_the_kind_default_days_before_the_general_rule() -> None:
+    # Срок вида документа из справочника (EDS-REG) важнее общего правила 3/10; срок по документу — важнее всего.
+    assert suggested_due(letter(), MON, 5) == date(2026, 11, 9)  # +5 дней = сб → пн
+    assert suggested_due(letter(urgent=True), MON, 2) == date(2026, 11, 4)
+    assert suggested_due(letter(document_due=date(2026, 11, 9)), MON, 30) == FRI
+
+
 def test_suggested_due_is_never_in_the_past_and_none_for_calc() -> None:
     assert suggested_due(letter(document_due=date(2026, 10, 20)), MON) == MON
     assert suggested_due(letter(erp_request_id=1, doc_kind=None), MON) is None

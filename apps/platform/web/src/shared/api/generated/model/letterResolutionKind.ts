@@ -4,7 +4,7 @@
  */
 
 /**
- * `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.
+ * `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список). Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только переименовать и переставить.
  */
 export type LetterResolutionKind = (typeof LetterResolutionKind)[keyof typeof LetterResolutionKind];
 
