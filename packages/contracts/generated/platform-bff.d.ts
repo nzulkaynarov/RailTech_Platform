@@ -2792,6 +2792,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/consoles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Служебные консоли сервисов, открытые через Платформу
+     * @description OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+     */
+    get: operations["listServiceConsoles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/consoles/{key}/auth": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Проверка доступа к консоли сервиса для Caddy forward_auth
+     * @description OPS-CONSOLE. Caddy вызывает этот адрес перед каждым запросом к `/console/<ключ>/…` с cookie браузера: 204 — пропустить, 401 — нет сессии Платформы, 403 — не администратор (`admin: full`) или не сменён временный пароль, 404 — консоль не включена (`PLATFORM_CONSOLES`). Ответ не кэшируется (`Cache-Control: no-store`). Первое открытие консоли за 30 минут сессии пишется в журнал аудита (`console.open`, объект `console`, ключ консоли) — кто, когда, какая.
+     */
+    get: operations["authorizeServiceConsole"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/bus": {
     parameters: {
       query?: never;
@@ -6884,6 +6924,19 @@ export interface components {
       group: components["schemas"]["ServiceGroup"] | null;
       /** @description Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности» */
       technical: string | null;
+    };
+    /**
+     * @description `erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)
+     * @enum {string}
+     */
+    ServiceConsoleKey: "erp";
+    ServiceConsole: {
+      key: components["schemas"]["ServiceConsoleKey"];
+      /** @description Адрес на домене Платформы, например `/console/erp/admin/` */
+      url: string;
+    };
+    ServiceConsoleList: {
+      items: components["schemas"]["ServiceConsole"][];
     };
     IntegrationsOverview: {
       /** Format: date-time */
@@ -18368,6 +18421,53 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listServiceConsoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Включённые консоли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceConsoleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  authorizeServiceConsole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: components["schemas"]["ServiceConsoleKey"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Доступ разрешён */
+      204: {
+        headers: {
+          /** @description `no-store` */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
     };
   };
   getBusJournal: {

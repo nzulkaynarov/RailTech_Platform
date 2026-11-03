@@ -22,6 +22,7 @@ import {
   PanelTitle,
 } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
+import { ConsoleLink } from "./OpenLinks";
 
 /** Итог «Проверить связь» словами: ERP ответила, ответила с замечаниями или просит подождать. */
 function CheckResult({ check }: { check: ErpCheck }) {
@@ -314,6 +315,7 @@ export function ErpPanel({ editable }: { editable: boolean }) {
   return (
     <div className="pf-panel-stack">
       <PanelTitle>{t("cards.erp.title")}</PanelTitle>
+      <ConsoleLink console="erp" editable={editable} />
       <PanelState query={query}>{(erp) => <ErpBody erp={erp} editable={editable} />}</PanelState>
     </div>
   );

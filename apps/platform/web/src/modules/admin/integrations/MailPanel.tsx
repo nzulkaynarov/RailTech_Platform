@@ -29,6 +29,8 @@ import {
 } from "./parts";
 import { InboundMailBlock } from "./InboundMailBlock";
 import { useRefreshIntegrations } from "./refresh";
+import { ExternalLinks } from "./OpenLinks";
+import { mailLinks } from "./serviceLinks";
 
 const MAIL_STATUSES: readonly MailLogItemStatus[] = ["queued", "sent", "failed", "skipped_no_smtp"];
 const SECURITY = ["starttls", "ssl", "none"] as const;
@@ -411,7 +413,12 @@ export function MailPanel({ editable }: { editable: boolean }) {
     <div className="pf-panel-stack">
       <PanelTitle>{t("cards.mail.title")}</PanelTitle>
       <PanelState query={query}>
-        {(smtp) => <MailBody smtp={smtp} editable={editable} />}
+        {(smtp) => (
+          <>
+            <ExternalLinks links={mailLinks(smtp.host)} />
+            <MailBody smtp={smtp} editable={editable} />
+          </>
+        )}
       </PanelState>
     </div>
   );

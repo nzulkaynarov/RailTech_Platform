@@ -384,6 +384,15 @@ function detail(service: ExternalService) {
 }
 
 export const adminIntegrationsHandlers = [
+  // Служебная консоль через Платформу (OPS-CONSOLE): список — только администратору; сами консоли MSW не открывает.
+  http.get(
+    "*/admin/consoles",
+    () =>
+      guard("full") ??
+      HttpResponse.json({
+        items: [{ key: "erp", url: "/console/erp/admin/" }],
+      }),
+  ),
   http.get("*/admin/integrations", () => {
     const denied = guard("read");
     if (denied) return denied;

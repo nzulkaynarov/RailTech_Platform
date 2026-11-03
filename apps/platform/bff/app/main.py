@@ -22,6 +22,7 @@ from app.api import (
     bridge,
     chats,
     company_articles,
+    consoles,
     crm_clients,
     crm_kb,
     crm_leads,
@@ -104,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url=None,
         openapi_url=None,
     )
+    app.add_middleware(consoles.NoStoreConsoleAuth)
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(ClientIpMiddleware, networks=cfg.trusted_proxy_networks)
     install_error_handlers(app)
@@ -122,6 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_roles.router, prefix=API_PREFIX)
     app.include_router(admin_audit.router, prefix=API_PREFIX)
     app.include_router(admin_integrations.router, prefix=API_PREFIX)
+    app.include_router(consoles.router, prefix=API_PREFIX)
     app.include_router(admin_company.router, prefix=API_PREFIX)
     app.include_router(admin_bus.router, prefix=API_PREFIX)
     app.include_router(admin_bot.router, prefix=API_PREFIX)

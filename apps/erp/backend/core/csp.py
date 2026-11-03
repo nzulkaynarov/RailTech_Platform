@@ -88,6 +88,7 @@ class ContentSecurityPolicyMiddleware:
         if "Content-Security-Policy" not in response and "Content-Security-Policy-Report-Only" not in response:
             # Unfold /admin/ needs 'unsafe-eval' (Alpine's runtime new Function());
             # every other path keeps the strict policy.
-            policy = CSP_POLICY_ADMIN if request.path.startswith("/admin") else CSP_POLICY
+            # path_info: под префиксом консоли (/console/erp/admin/, core/console_mount.py) — тот же admin.
+            policy = CSP_POLICY_ADMIN if request.path_info.startswith("/admin") else CSP_POLICY
             response[CSP_HEADER_NAME] = policy
         return response

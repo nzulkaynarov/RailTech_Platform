@@ -59,7 +59,9 @@ x-erp-prod-env: &erp-prod-env
   DATABASE_URL: postgresql://erp_app:${DB_ERP_PASSWORD:?set in .env}@${DB_INTERNAL_IP:?set in .env}:5432/erp?sslmode=require
   DB_SSLMODE: require
   # 127.0.0.1/localhost — healthcheck контейнера (curl http://127.0.0.1:8000/health/), erp-backend — обращения из сети compose.
-  ALLOWED_HOSTS: ${ERP_DOMAIN},${CABINET_DOMAIN},erp-backend,127.0.0.1,localhost
+  # PLATFORM_DOMAIN — Django admin под /console/erp/admin/ на домене Платформы (OPS-CONSOLE; Caddy пускает туда только админа).
+  ALLOWED_HOSTS: ${ERP_DOMAIN},${CABINET_DOMAIN},${PLATFORM_DOMAIN:?set in .env},erp-backend,127.0.0.1,localhost
+  ERP_CONSOLE_PREFIX: /console/erp
   FRONTEND_URL: https://${ERP_DOMAIN}
   CRM_FRONTEND_URL: https://${CRM_DOMAIN:?set in .env}
   CABINET_URL: https://${CABINET_DOMAIN:?set in .env}

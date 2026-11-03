@@ -15,6 +15,8 @@ import { FilePicker } from "../../../shared/ui/FileField";
 import { hasFailedField } from "./errors";
 import { ActionForm, ActionToggle, ErrorNote, Field, LevelTag, Masked, PanelState } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
+import { ExternalLinks } from "./OpenLinks";
+import { offsiteLinks } from "./serviceLinks";
 
 /** Ссылки на консоль Google для четырёх шагов подготовки (OPS-GDRIVE-2). */
 const LINKS = {
@@ -482,7 +484,12 @@ export function OffsiteSection({ editable }: { editable: boolean }) {
       <h4 id="storage-offsite-title">{t("storage.offsite.title")}</h4>
       <p className="pf-int-sub">{t("storage.offsite.purpose")}</p>
       <PanelState query={query}>
-        {(offsite) => <OffsiteBody offsite={offsite} editable={editable} />}
+        {(offsite) => (
+          <>
+            <ExternalLinks links={offsiteLinks(offsite)} />
+            <OffsiteBody offsite={offsite} editable={editable} />
+          </>
+        )}
       </PanelState>
     </section>
   );

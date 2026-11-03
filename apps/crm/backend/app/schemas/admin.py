@@ -94,3 +94,11 @@ class AuditItem(BaseModel):
 class AuditPage(BaseModel):
     items: list[AuditItem]
     total: int
+
+
+class ConsoleOpenIn(BaseModel):
+    """Открытие служебной консоли через Платформу (OPS-CONSOLE): какая консоль."""
+
+    console: str = Field(
+        pattern=r"^[a-z][a-z0-9-]{1,31}$", description="Ключ консоли: litellm, erp и т. п."
+    )
