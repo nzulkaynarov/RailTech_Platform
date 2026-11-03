@@ -275,7 +275,20 @@
 }
 
 /* Фильтр статусов: на 390 не помещается — прокрутка вбок внутри своей полосы, страница не шире экрана (UX-2b). */
+/* EDS-REG: статус и вид документа в одну строку; на узком экране вид — под статусом */
+.pf-letters-filters {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.pf-letters-kind {
+  width: 240px;
+  max-width: 100%;
+}
 .pf-letters-filter {
+  min-width: 0;
   max-width: 100%;
   overflow-x: auto;
   scrollbar-width: thin;

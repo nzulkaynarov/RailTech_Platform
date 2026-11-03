@@ -49,7 +49,6 @@ import {
   LeadOwnerMode,
   LeadPlatformStatus,
   LeadRequestType,
-  LetterReceiptMethod,
   LetterResolutionKind,
   LetterStatus,
   LetterTrack,
@@ -141,6 +140,9 @@ import type {
   ConversationThread,
   CreatedId,
   CrewRate,
+  DictionaryItem,
+  DictionaryItemList,
+  DictionaryList,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -12496,7 +12498,7 @@ export const getRegisterLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -12609,6 +12611,128 @@ export const getRegisterLetterResponseMock = (
   ...overrideResponse,
 });
 
+export const getListDictionariesResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryList, object>> = {},
+): DictionaryList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.fromRegExp("^[a-z][a-z-]{0,31}$"),
+    owner: faker.helpers.arrayElement(["eds"] as const),
+    area: faker.helpers.arrayElement(["documents"] as const),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    closed: faker.datatype.boolean(),
+    attrs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+        type: faker.helpers.arrayElement(["boolean", "integer"] as const),
+        name: {
+          ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+        },
+        minimum: faker.helpers.arrayElement([faker.number.int(), null]),
+        maximum: faker.helpers.arrayElement([faker.number.int(), null]),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getListDictionaryItemsResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
+): DictionaryItemList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    attrs: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.datatype.boolean(),
+        faker.number.int(),
+        null,
+      ]),
+    },
+    active: faker.datatype.boolean(),
+    position: faker.number.int(),
+    used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateDictionaryItemResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
+): DictionaryItem => ({
+  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  name: {
+    ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+  },
+  attrs: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+      faker.datatype.boolean(),
+      faker.number.int(),
+      null,
+    ]),
+  },
+  active: faker.datatype.boolean(),
+  position: faker.number.int(),
+  used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  ...overrideResponse,
+});
+
+export const getReorderDictionaryItemsResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
+): DictionaryItemList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    attrs: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.datatype.boolean(),
+        faker.number.int(),
+        null,
+      ]),
+    },
+    active: faker.datatype.boolean(),
+    position: faker.number.int(),
+    used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getUpdateDictionaryItemResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
+): DictionaryItem => ({
+  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  name: {
+    ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+  },
+  attrs: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+      faker.datatype.boolean(),
+      faker.number.int(),
+      null,
+    ]),
+  },
+  active: faker.datatype.boolean(),
+  position: faker.number.int(),
+  used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  ...overrideResponse,
+});
+
 export const getListLetterKindsResponseMock = (
   overrideResponse: Partial<Extract<LetterKindList, object>> = {},
 ): LetterKindList => ({
@@ -12620,6 +12744,7 @@ export const getListLetterKindsResponseMock = (
       en: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     urgent: faker.datatype.boolean(),
+    due_days: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 365 }), null]),
   })),
   ...overrideResponse,
 });
@@ -12856,7 +12981,7 @@ export const getGetLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -13187,7 +13312,7 @@ export const getResolveLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -13521,7 +13646,7 @@ export const getReturnLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -13855,7 +13980,7 @@ export const getRejectLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14228,7 +14353,7 @@ export const getSaveResolutionDraftResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14580,7 +14705,7 @@ export const getResolveOfficeLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14929,7 +15054,7 @@ export const getAcknowledgeLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15281,7 +15406,7 @@ export const getCompleteInstructionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15639,7 +15764,7 @@ export const getRequestInstructionExtensionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15997,7 +16122,7 @@ export const getDecideInstructionExtensionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -29153,6 +29278,144 @@ export const getRegisterLetterMockHandler = (
   );
 };
 
+export const getListDictionariesMockHandler = (
+  overrideResponse?:
+    | DictionaryList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DictionaryList> | DictionaryList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/dictionaries",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDictionariesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListDictionaryItemsMockHandler = (
+  overrideResponse?:
+    | DictionaryItemList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DictionaryItemList> | DictionaryItemList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/dictionaries/:kind",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDictionaryItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateDictionaryItemMockHandler = (
+  overrideResponse?:
+    | DictionaryItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DictionaryItem> | DictionaryItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/dictionaries/:kind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateDictionaryItemResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReorderDictionaryItemsMockHandler = (
+  overrideResponse?:
+    | DictionaryItemList
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<DictionaryItemList> | DictionaryItemList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/dictionaries/:kind/order",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReorderDictionaryItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDictionaryItemMockHandler = (
+  overrideResponse?:
+    | DictionaryItem
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<DictionaryItem> | DictionaryItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/dictionaries/:kind/:code",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDictionaryItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteDictionaryItemMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/dictionaries/:kind/:code",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getListLetterKindsMockHandler = (
   overrideResponse?:
     | LetterKindList
@@ -31991,6 +32254,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDownloadCsvExportMockHandler(),
   getListLettersMockHandler(),
   getRegisterLetterMockHandler(),
+  getListDictionariesMockHandler(),
+  getListDictionaryItemsMockHandler(),
+  getCreateDictionaryItemMockHandler(),
+  getReorderDictionaryItemsMockHandler(),
+  getUpdateDictionaryItemMockHandler(),
+  getDeleteDictionaryItemMockHandler(),
   getListLetterKindsMockHandler(),
   getFindLetterDuplicatesMockHandler(),
   getGetLetterMockHandler(),

@@ -148,6 +148,7 @@ async def list_letters(
     q: Annotated[str | None, Query(max_length=200)] = None,
     on_control: Annotated[bool | None, Query()] = None,
     overdue: Annotated[bool | None, Query()] = None,
+    kind: Annotated[str | None, Query(pattern=r"^[a-z][a-z_]{0,31}$")] = None,
     cursor: Annotated[str | None, Query(max_length=500)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> LetterPage:
@@ -161,6 +162,8 @@ async def list_letters(
         params["on_control"] = "true" if on_control else "false"
     if overdue is not None:
         params["overdue"] = "true" if overdue else "false"
+    if kind:  # EDS-REG: вид документа из справочника
+        params["kind"] = kind
     if cursor:
         params["cursor"] = cursor
     return to_page(await _letters(authed).page(params))

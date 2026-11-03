@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.34.0
+  version: 0.35.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -31,6 +31,10 @@ info:
 
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    **0.35.0 (EDS-REG) — ломающее по oasdiff (до 1.0 допустимо).** `LetterReceiptMethod` — код справочника
+    `receipt-methods` вместо перечня (стартовые коды те же); справочники как данные — `/dictionaries…` (тег `dictionaries`);
+    фильтр `kind` у `GET /eds/letters`; `LetterKind.due_days`.
 
     **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
     `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
@@ -358,6 +362,13 @@ tags:
     description: EDS · Проекты — список и карточка проекта, договор (статусы вместо подписи кликом), акт, сканы, файлы (ERP; раздел `eds.projects`)
   - name: eds-payments
     description: EDS · Счета и оплаты бухгалтера — счета, платёжки клиентов, подтверждение оплаты (ERP), служебки к оплате и «Оплачено» (EDS); раздел `eds.payments`
+  - name: dictionaries
+    description: |
+      Справочники как данные (EDS-REG; `docs/research/2026-11-02-flexibility/4-settings-ia.md` §4.3): один экран
+      «Настройки · Документооборот · Справочники» для справочников всех доменов. BFF держит только каталог «вид → домен-владелец»
+      (сейчас — EDS: виды входящих документов, способы получения) и проксирует ресурс домена `/dictionaries/{kind}`; права,
+      «использовано», код — решает домен. Читают — те, кто работает с письмами (`eds.inbox` или `eds.inbox.register`), и
+      администратор (`admin`); меняет — `admin: full`.
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
   - name: calc
@@ -7772,6 +7783,11 @@ paths:
           required: false
           description: Только письма с просроченным поручением — фильтр «Просрочено» (P8b)
           schema: {type: boolean}
+        - name: kind
+          in: query
+          required: false
+          description: Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG)
+          schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
         - name: cursor
           in: query
           required: false
@@ -7830,6 +7846,188 @@ paths:
           $ref: '#/components/responses/EdsConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaries
+      summary: 'Справочники · каталог'
+      description: >-
+        Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот),
+        название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin`
+        — чтение. Домен не ответил — 503.
+      responses:
+        '200':
+          description: Каталог
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaryItems
+      summary: 'Справочники · значения'
+      description: >-
+        Значения в порядке показа: по умолчанию действующие (формы), `include_hidden=true` — все со скрытыми и признаком
+        `used` (экран администратора; названия у старых писем). Доступ — по домену вида: справочники документооборота
+        читают `eds.inbox`, `eds.inbox.register` и `admin`. Неизвестный вид — 404.
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - name: include_hidden
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Значения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [dictionaries]
+      operationId: createDictionaryItem
+      summary: 'Справочники · добавить значение'
+      description: >-
+        Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409
+        `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemIn'
+      responses:
+        '201':
+          description: Добавлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/order:
+    put:
+      tags: [dictionaries]
+      operationId: reorderDictionaryItems
+      summary: 'Справочники · порядок'
+      description: Раздел `admin` — полный. Все коды справочника (со скрытыми) в новом порядке.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryOrderIn'
+      responses:
+        '200':
+          description: Значения в новом порядке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/{code}:
+    patch:
+      tags: [dictionaries]
+      operationId: updateDictionaryItem
+      summary: 'Справочники · переименовать, скрыть, вернуть'
+      description: >-
+        Раздел `admin` — полный. Код не меняется. В закрытом справочнике меняются только названия.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - $ref: '#/components/parameters/DictionaryCodePath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [dictionaries]
+      operationId: deleteDictionaryItem
+      summary: 'Справочники · удалить неиспользованное'
+      description: >-
+        Раздел `admin` — полный. Значение уже использовано — 409 `value_in_use` (его скрывают).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - $ref: '#/components/parameters/DictionaryCodePath'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -11426,6 +11624,17 @@ components:
       description: Id объекта ERP (строкой)
       schema:
         $ref: '#/components/schemas/CompanyItemRef'
+    DictionaryKindPath:
+      name: kind
+      in: path
+      required: true
+      description: Вид справочника (`letter-kinds`, `receipt-methods`)
+      schema: {type: string, pattern: '^[a-z][a-z-]{0,31}$'}
+    DictionaryCodePath:
+      name: code
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
     ReferenceKindPath:
       name: kind
       in: path
@@ -18366,10 +18575,11 @@ components:
 
     LetterReceiptMethod:
       type: string
-      enum: [post, paper, taxpayer_cabinet, courier, email]
+      pattern: '^[a-z][a-z_]{0,31}$'
       description: >-
-        Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет
-        налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
+        Способ получения (P8, SPEC-v3 §3.2a п. 1) — код справочника `receipt-methods` (EDS-REG, ведёт администратор;
+        названия — `GET /dictionaries/receipt-methods`). Стартовые коды: `post` — почта, `paper` — бумага из рук,
+        `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail.
 
     LetterRelated:
       type: object
@@ -18380,6 +18590,116 @@ components:
         kind: {type: string, enum: [letter_in, letter_out]}
         number: {type: string, examples: [ВХ-101/26, ИСХ-012/26]}
         path: {type: string, description: Путь в SPA}
+
+    LocalizedName:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      description: Название на трёх языках; пустые `uz` и `en` экран заменяет `ru`
+      properties:
+        ru: {type: string, minLength: 1, maxLength: 120}
+        uz: {type: string, maxLength: 120}
+        en: {type: string, maxLength: 120}
+
+    LocalizedNameIn:
+      type: object
+      additionalProperties: false
+      required: [ru]
+      properties:
+        ru: {type: string, minLength: 1, maxLength: 120}
+        uz: {type: string, maxLength: 120}
+        en: {type: string, maxLength: 120}
+
+    DictionaryAttr:
+      type: object
+      additionalProperties: false
+      required: [key, type, name]
+      description: Дополнительное поле значения (поведение — код, значение — данные)
+      properties:
+        key: {type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [due_days]}
+        type: {type: string, enum: [boolean, integer]}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        minimum: {type: [integer, 'null']}
+        maximum: {type: [integer, 'null']}
+
+    Dictionary:
+      type: object
+      additionalProperties: false
+      required: [kind, owner, area, name, closed, attrs]
+      properties:
+        kind: {type: string, pattern: '^[a-z][a-z-]{0,31}$', examples: [letter-kinds]}
+        owner: {type: string, enum: [eds], description: Домен-владелец значений}
+        area: {type: string, enum: [documents], description: Область экрана (`documents` — документооборот)}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        closed: {type: boolean, description: Закрытый список поведения — только переименовать и переставить}
+        attrs:
+          type: array
+          items: {$ref: '#/components/schemas/DictionaryAttr'}
+
+    DictionaryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Dictionary'}
+
+    DictionaryAttrValues:
+      type: object
+      description: Значения полей `attrs` (`urgent`, `due_days` у видов документа); `null` — не задано
+      additionalProperties:
+        type: [boolean, integer, 'null']
+
+    DictionaryItem:
+      type: object
+      additionalProperties: false
+      required: [code, name, attrs, active, position]
+      properties:
+        code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+        active: {type: boolean, description: '`false` — скрыто: в формах не предлагается'}
+        position: {type: integer}
+        used:
+          type: [boolean, 'null']
+          description: Значение уже использовано (удалить нельзя, только скрыть); `null` — не считалось
+
+    DictionaryItemList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/DictionaryItem'}
+
+    DictionaryItemIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedNameIn'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+
+    DictionaryItemPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedNameIn'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+        active: {type: boolean}
+
+    DictionaryOrderIn:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
 
     LetterKind:
       type: object
@@ -18396,6 +18716,11 @@ components:
             uz: {type: string}
             en: {type: string}
         urgent: {type: boolean, description: Регистрация этим видом сразу ставит «срочно»}
+        due_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 365
+          description: Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
 
     LetterKindList:
       type: object

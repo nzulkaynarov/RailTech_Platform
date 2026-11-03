@@ -5,18 +5,10 @@ import type {
 } from "../../../shared/api/generated/model";
 import type { Attachment, DealChoice } from "../new/formModel";
 
-/** Способы получения (SPEC-v3 §3.2a п. 1) в порядке показа. */
-export const RECEIPT_METHODS: readonly LetterReceiptMethod[] = [
-  "paper",
-  "post",
-  "taxpayer_cabinet",
-  "courier",
-  "email",
-];
-
 export interface RegisterValues {
   kind: string;
-  receiptMethod: LetterReceiptMethod | "";
+  /** Способ получения — код справочника `receipt-methods` (EDS-REG); список и порядок задаёт администратор */
+  receiptMethod: LetterReceiptMethod;
   senderName: string;
   senderInn: string;
   refNumber: string;
@@ -126,7 +118,7 @@ export function toRegisterBody(values: RegisterValues): LetterRegisterIn {
   const ids = values.attachments.flatMap((a) => (a.status === "done" && a.id ? [a.id] : []));
   return {
     kind: values.kind,
-    receipt_method: values.receiptMethod as LetterReceiptMethod,
+    receipt_method: values.receiptMethod,
     sender_name: values.senderName.trim(),
     sender_inn: text(values.senderInn),
     received_at: values.receivedAt,

@@ -2,6 +2,7 @@
 
 from app.models.approvals import ApprovalRoute, ApprovalStep
 from app.models.base import Base
+from app.models.dictionaries import DictionaryItem
 from app.models.documents import Document, DocumentPayment, DocumentVersion
 from app.models.employee import Employee, SsoJti
 from app.models.files import FileVersion, StoredFile
@@ -18,6 +19,7 @@ __all__ = [
     "ApprovalRoute",
     "ApprovalStep",
     "Base",
+    "DictionaryItem",
     "Document",
     "DocumentMailing",
     "DocumentPayment",

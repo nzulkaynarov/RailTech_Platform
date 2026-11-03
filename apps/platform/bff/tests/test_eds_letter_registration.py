@@ -36,8 +36,14 @@ KINDS = {
             "code": "tax_notice",
             "name": {"ru": "Требование или уведомление ГНК", "uz": "Talabnoma", "en": "Tax notice"},
             "urgent": True,
+            "due_days": 3,
         },
-        {"code": "other", "name": {"ru": "Прочее", "uz": "Boshqa", "en": "Other"}, "urgent": False},
+        {
+            "code": "other",
+            "name": {"ru": "Прочее", "uz": "Boshqa", "en": "Other"},
+            "urgent": False,
+            "due_days": None,
+        },
     ]
 }
 
@@ -149,7 +155,7 @@ async def test_registrar_reads_the_inbox_but_cannot_resolve(web: Web, eds: EdsFa
     [
         {"file_ids": []},
         {"kind": "Налоговая"},
-        {"receipt_method": "pigeon"},
+        {"receipt_method": "Голубь"},
         {"sender_name": "  "},
         {"subject": ""},
         {"received_at": None},

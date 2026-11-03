@@ -289,7 +289,8 @@
       "paper": "Qog‘oz (shaxsan olib kelingan)",
       "taxpayer_cabinet": "Soliq to‘lovchi kabineti my.soliq",
       "courier": "Kuryer",
-      "email": "E-mail"
+      "email": "E-mail",
+      "unavailable": "Usullar ma’lumotnomasi yuklanmadi. Sahifani yangilang."
     },
     "sender": {
       "label": "Korrespondent",
@@ -667,5 +668,71 @@
     "fromMail": "«{{subject}}» xatidan, {{sender}}",
     "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
     "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling."
+  },
+  "settings": {
+    "subtitle": "Xatlar ma’lumotnomalari: hujjat turlari va qabul qilish usullari.",
+    "tabsLabel": "Hujjat aylanishi bo‘limlari",
+    "tabs": {
+      "dictionaries": "Ma’lumotnomalar"
+    },
+    "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
+    "dict": {
+      "title": "Ma’lumotnomalar",
+      "hint": "Yangi qiymatlar shaklda darhol paydo bo‘ladi. Ishlatilganini faqat yashirish mumkin.",
+      "kindLabel": "Ma’lumotnoma",
+      "add": "Qiymat qo‘shish",
+      "name": "Nomi",
+      "nameRu": "Ruscha nomi",
+      "nameUz": "O‘zbekcha nomi",
+      "nameEn": "Inglizcha nomi",
+      "nameHint": "Bo‘sh bo‘lsa — ruscha nomi ko‘rsatiladi.",
+      "order": "Tartib",
+      "status": "Holat",
+      "active": "Amalda",
+      "hidden": "Yashirilgan",
+      "actions": "Amallar",
+      "edit": "O‘zgartirish",
+      "editNamed": "O‘zgartirish: {{name}}",
+      "hide": "Yashirish",
+      "hideNamed": "Yashirish: {{name}}",
+      "show": "Qaytarish",
+      "showNamed": "Qaytarish: {{name}}",
+      "delete": "O‘chirish",
+      "deleteNamed": "O‘chirish: {{name}}",
+      "up": "Yuqoriga: {{name}}",
+      "down": "Pastga: {{name}}",
+      "yes": "Ha",
+      "no": "—",
+      "generalRule": "umumiy qoida bo‘yicha",
+      "dueHint": "Bo‘sh — shoshilinch 3 kun, oddiy 10 kun.",
+      "addTitle": "Yangi qiymat",
+      "editTitle": "Qiymatni o‘zgartirish",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "saved": "Saqlandi",
+      "hiddenToast": "Yashirildi: shakllarda endi yo‘q",
+      "shownToast": "Qiymat yana shakllarda",
+      "deleted": "O‘chirildi",
+      "required": "Nomini kiriting",
+      "deleteTitle": "«{{name}}» o‘chirilsinmi?",
+      "consequence": "Qiymat ma’lumotnoma va shakllardan yo‘qoladi. U bilan xatlar yo‘q.",
+      "empty": {
+        "title": "Qiymatlar yo‘q",
+        "text": "Birinchi qiymatni qo‘shing."
+      },
+      "errors": {
+        "name_taken": "Bunday nom ma’lumotnomada bor.",
+        "value_in_use": "Qiymat xatlarda ishlatilgan — uni faqat yashirish mumkin.",
+        "dictionary_closed": "Bu ro‘yxatni faqat qayta nomlash mumkin.",
+        "FORBIDDEN": "Ma’lumotnomalarni faqat administrator o‘zgartiradi.",
+        "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
+        "load": "Ma’lumotnomalar yuklanmadi."
+      },
+      "retry": "Qayta urinish"
+    }
+  },
+  "listKind": {
+    "label": "Hujjat turi",
+    "all": "Barcha turlar"
   }
 }

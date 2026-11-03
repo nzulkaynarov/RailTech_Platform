@@ -289,7 +289,8 @@
       "paper": "Paper (handed in)",
       "taxpayer_cabinet": "Taxpayer cabinet my.soliq",
       "courier": "Courier",
-      "email": "Email"
+      "email": "Email",
+      "unavailable": "The receipt methods did not load. Refresh the page."
     },
     "sender": {
       "label": "Correspondent",
@@ -667,5 +668,71 @@
     "fromMail": "From the letter “{{subject}}” by {{sender}}",
     "fromMailLoading": "Copying the letter attachments…",
     "fromMailFailed": "Could not copy the attachments — attach the files manually."
+  },
+  "settings": {
+    "subtitle": "Letter lists: document types and receipt methods.",
+    "tabsLabel": "Document flow sections",
+    "tabs": {
+      "dictionaries": "Lists"
+    },
+    "readOnly": "View only: an administrator changes the lists.",
+    "dict": {
+      "title": "Lists",
+      "hint": "New values appear in forms at once. A used value can only be hidden.",
+      "kindLabel": "List",
+      "add": "Add value",
+      "name": "Name",
+      "nameRu": "Name in Russian",
+      "nameUz": "Name in Uzbek",
+      "nameEn": "Name in English",
+      "nameHint": "Empty — the Russian name is shown.",
+      "order": "Order",
+      "status": "Status",
+      "active": "Active",
+      "hidden": "Hidden",
+      "actions": "Actions",
+      "edit": "Edit",
+      "editNamed": "Edit: {{name}}",
+      "hide": "Hide",
+      "hideNamed": "Hide: {{name}}",
+      "show": "Restore",
+      "showNamed": "Restore: {{name}}",
+      "delete": "Delete",
+      "deleteNamed": "Delete: {{name}}",
+      "up": "Move up: {{name}}",
+      "down": "Move down: {{name}}",
+      "yes": "Yes",
+      "no": "—",
+      "generalRule": "general rule",
+      "dueHint": "Empty — urgent 3 days, normal 10.",
+      "addTitle": "New value",
+      "editTitle": "Edit value",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Saved",
+      "hiddenToast": "Hidden: no longer offered in forms",
+      "shownToast": "The value is back in forms",
+      "deleted": "Deleted",
+      "required": "Enter a name",
+      "deleteTitle": "Delete “{{name}}”?",
+      "consequence": "The value disappears from the list and forms. No letters use it.",
+      "empty": {
+        "title": "No values",
+        "text": "Add the first value."
+      },
+      "errors": {
+        "name_taken": "This name is already in the list.",
+        "value_in_use": "Letters already use this value — it can only be hidden.",
+        "dictionary_closed": "This list can only be renamed.",
+        "FORBIDDEN": "Only an administrator can change the lists.",
+        "DEFAULT": "Could not save. Try again.",
+        "load": "The lists did not load."
+      },
+      "retry": "Retry"
+    }
+  },
+  "listKind": {
+    "label": "Document type",
+    "all": "All types"
   }
 }
