@@ -229,6 +229,14 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await expect(page.getByRole("button", { name: /^Сохранить/ })).toHaveCount(0);
       await expectNoViolations(page, `director timing ${String(width)}`);
       await shot(page, "director-timing");
+
+      await spaGoto(page, "/admin/telegram?tab=templates");
+      await h1(page, "Telegram");
+      await expect(
+        page.getByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
+      ).toBeVisible();
+      await expect(page.getByRole("link", { name: "Новый шаблон" })).toHaveCount(0);
+      await expectNoViolations(page, `director telegram templates ${String(width)}`);
     });
   }
 });

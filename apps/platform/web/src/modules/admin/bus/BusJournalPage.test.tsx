@@ -31,7 +31,9 @@ describe("Admin · Журнал интеграций: подписчики", () 
     renderAt("/admin/bus");
 
     // один «Журнал» (W15-H4): обмен между системами — его фильтр
-    expect(await screen.findByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Обмен между системами" }),
+    ).toBeVisible();
     expect(
       within(screen.getByRole("navigation", { name: "Что показать в журнале" })).getByRole("link", {
         name: "Обмен между системами",

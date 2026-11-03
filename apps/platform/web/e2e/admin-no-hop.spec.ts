@@ -136,7 +136,10 @@ test.describe("Настройки без переброса", () => {
       await expect(page).toHaveURL(/\/admin\/bus$/);
       await expect(page.getByRole("heading", { level: 3, name: "CRM отправляет" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
-      await expect(page).toHaveTitle("Журнал · Обмен между системами — RailTech Platform");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Обмен между системами" }),
+      ).toBeVisible();
+      await expect(page).toHaveTitle("Обмен между системами — RailTech Platform");
       await expectNoViolations(page, `journal systems ${String(width)}`);
       await shot(page, "journal-systems");
 

@@ -59,10 +59,10 @@ function totals(journal: BusJournal | undefined) {
  */
 export function BusJournalPage() {
   const { t } = useTranslation(["bus", "modules"]);
-  // Один «Журнал» (W15-H4): это его фильтр «Обмен между системами».
-  const title = t("modules:admin.sections.audit");
-  // Вкладка браузера различает фильтр журнала: «Журнал · Обмен между системами»
-  useDocumentTitle(`${title} · ${t("modules:admin.journal.systems")}`);
+  // Свой пункт группы «Система» (SET-IA): заголовок и вкладка браузера — как в меню, «Обмен между системами»; фильтр
+  // «Действия людей / Обмен между системами» над экраном остаётся.
+  const title = t("modules:admin.sections.bus");
+  useDocumentTitle(title);
   const [params, setParams] = useSearchParams();
   const view: View = isView(params.get("view")) ? (params.get("view") as View) : "subscribers";
   const journal = useGetBusJournal();
