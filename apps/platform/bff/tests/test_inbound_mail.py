@@ -1010,3 +1010,28 @@ async def test_reply_to_choice_and_new_participant_pass_through(
     )
     assert reply.status_code == 200, reply.text
     assert json.loads(sent.calls[0].request.content)["to"] == "buh@supplier.test"
+
+
+async def test_repeat_registration_after_waiting_returns_the_same_letter_not_a_second(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    """Регистрация зависла («ждёт подтверждения»), сотрудник нажал снова: CRM разрешает повтор,
+    EDS отвечает 200 с тем
+    же ВХ (одно письмо ящика — один ВХ) — экран получает ту же карточку, второго ВХ нет."""
+    be.router.post(f"{CRM}/17/registration").mock(return_value=httpx.Response(204))
+    await web.login(["REGISTRAR"])
+    headers = {CSRF_HEADER: web.csrf}
+
+    first = await web.client.post(
+        "/api/v1/eds/letters", json=FORM, headers={**headers, "Idempotency-Key": "mail-17-first"}
+    )
+    eds.answer("POST", "letters", httpx.Response(200, json=letter(links={})))
+    again = await web.client.post(
+        "/api/v1/eds/letters", json=FORM, headers={**headers, "Idempotency-Key": "mail-17-again"}
+    )
+
+    assert (first.status_code, again.status_code) == (201, 201), again.text
+    assert again.json()["id"] == first.json()["id"]
+    assert again.json()["number"] == first.json()["number"]
+    sent = [json.loads(c.content)["source"] for c in eds.made("POST", "letters")]
+    assert sent == [{"crm_inbound_mail_id": 17}] * 2
