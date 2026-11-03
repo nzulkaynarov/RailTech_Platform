@@ -38,6 +38,8 @@ function mail(over: Partial<InboundMail> = {}): InboundMail {
     messages: [],
     replies: [],
     journal: [],
+    reply_to: "a@b.example",
+    reply_options: ["a@b.example"],
     reply_all_copy: [],
     personal_label: "Адресовано лично",
     ...over,

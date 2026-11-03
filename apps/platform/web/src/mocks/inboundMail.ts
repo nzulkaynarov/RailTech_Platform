@@ -93,7 +93,15 @@ function historyMails(): StoredMail[] {
     assist: { status: "none" as const, kind: null, summary: null, action: null },
     from_history: true,
     messages: [
-      { id, from_email: email, from_name: name, at: minutesAgo(age * day), text, attachments: [] },
+      {
+        id,
+        from_email: email,
+        from_name: name,
+        at: minutesAgo(age * day),
+        text,
+        attachments: [],
+        new_participant: false,
+      },
     ],
     journal: [],
   });
