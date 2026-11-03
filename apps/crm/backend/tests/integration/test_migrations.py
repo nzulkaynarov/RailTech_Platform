@@ -523,3 +523,70 @@ def test_inbound_mail_downgrade_keeps_the_copy_in_to_addrs(
     assert rows["c1"] == ["to@example.test", "cc1@example.test", "cc2@example.test"]
     assert rows["c2"] == ["only@example.test"]
     command.upgrade(alembic_config, "head")
+
+
+def test_mail_types_revision_seeds_types_moves_old_hints_and_rolls_back(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """MAIL-TYPES: восемь типов, подсказки помощника до типов переезжают в тип, откат без потерь."""
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "76abc53006ad")
+    rows = [("a", "buyer"), ("b", "official"), ("c", "supplier_doc"), ("d", "other")]
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        conn.execute("TRUNCATE inbound_mail RESTART IDENTITY CASCADE")
+        for mid, kind in rows:
+            conn.execute(
+                "INSERT INTO inbound_mail (message_id, mailbox, uidvalidity, uid, "
+                "assist_status, assist_kind, assist_action) "
+                "VALUES (%s, 'INBOX', 1, 1, 'done', %s, 'lead')",
+                (mid, kind),
+            )
+        conn.commit()
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        types = conn.execute("SELECT code FROM mail_types ORDER BY position").fetchall()
+        assert [t[0] for t in types] == [
+            "client_request",
+            "cooperation",
+            "meeting",
+            "supplier_price",
+            "supplier_invoice",
+            "supplier_document",
+            "official",
+            "mailing",
+            "spam",
+        ]
+        moved = conn.execute(
+            "SELECT message_id, type_code, type_source FROM inbound_mail ORDER BY message_id"
+        ).fetchall()
+        assert moved == [
+            ("a", "client_request", "ai"),
+            ("b", "official", "ai"),
+            ("c", "supplier_document", "ai"),
+            ("d", None, None),
+        ]
+        conn.execute(
+            "UPDATE inbound_mail SET status = 'done', outcome = 'price', "
+            "assist_action = 'create_lead' WHERE message_id = 'a'"
+        )
+        conn.execute(
+            "UPDATE inbound_mail SET assist_action = 'register_incoming' WHERE message_id = 'b'"
+        )
+        conn.commit()
+
+    command.downgrade(alembic_config, "76abc53006ad")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        tables = (
+            "SELECT count(*) FROM pg_tables WHERE tablename IN ('mail_types', 'mail_sender_rules')"
+        )
+        assert conn.execute(tables).fetchone() == (0,)
+        back = conn.execute(
+            "SELECT message_id, outcome, archive_reason, assist_action FROM inbound_mail "
+            "WHERE message_id IN ('a', 'b') ORDER BY message_id"
+        ).fetchall()
+        assert back == [
+            ("a", "archived", "Прайс загружен", "lead"),
+            ("b", None, None, "register"),
+        ]
+    command.upgrade(alembic_config, "head")

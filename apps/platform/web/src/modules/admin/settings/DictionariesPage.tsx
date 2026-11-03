@@ -1,4 +1,4 @@
-import { Card } from "antd";
+import { Alert, Card } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -11,6 +11,7 @@ import { CategoriesTab } from "../company/tabs/CategoriesTab";
 import { ChargesTab } from "../company/tabs/ChargesTab";
 import { REFERENCE_KINDS, ReferenceTab } from "../company/tabs/ReferenceTab";
 import { DictionariesTab } from "../docflow/DictionariesTab";
+import { MailRules } from "../docflow/MailRules";
 import { BotSettingsSections } from "./BotSettingsSections";
 import { type NavGroup, SettingsNav } from "./SettingsNav";
 import { SettingsPage } from "./SettingsPage";
@@ -25,6 +26,7 @@ const DOC_PREFIX = "doc:";
 /**
  * Процессы · Справочники (SET-IA; ресёрч «Настройки» §4.3): все списки компании на одном экране, слева — по разделам.
  * Продажи — причины отказа и валюта сделок (раздел `deals` настроек бота); Документы — справочники писем (каталог BFF);
+ * Почта — «Типы входящих писем» и правила отправителей (MAIL-TYPES, данные CRM, тот же каталог BFF);
  * Расчёт — страны, валюты, единицы, базисы поставки, категории каталога и статьи расхода (нужен `company.settings`).
  * Данные не переносятся: каждый список хранит прежняя часть платформы (этап 2 — общий ресурс справочников, BACKLOG).
  */
@@ -46,10 +48,16 @@ export function DictionariesPage() {
     {
       key: "documents",
       label: t("modules:admin.dictionaries.documents"),
-      items: (catalog.data?.items ?? []).map((d) => ({
-        key: `${DOC_PREFIX}${d.kind}`,
-        label: localName(d.name, i18n.language),
-      })),
+      items: (catalog.data?.items ?? [])
+        .filter((d) => d.area === "documents")
+        .map((d) => ({ key: `${DOC_PREFIX}${d.kind}`, label: localName(d.name, i18n.language) })),
+    },
+    {
+      key: "mail",
+      label: t("modules:admin.dictionaries.mail"),
+      items: (catalog.data?.items ?? [])
+        .filter((d) => d.area === "mail")
+        .map((d) => ({ key: `${DOC_PREFIX}${d.kind}`, label: localName(d.name, i18n.language) })),
     },
     ...(withCalc
       ? [
@@ -85,10 +93,18 @@ export function DictionariesPage() {
   if (current === "deals") {
     body = <BotSettingsSections page="dictionaries" />;
   } else if (current.startsWith(DOC_PREFIX)) {
+    const kind = current.slice(DOC_PREFIX.length);
     body = (
-      <Card styles={{ body: { padding: 0 } }}>
-        <DictionariesTab readOnly={!canEdit(me, "admin")} kind={current.slice(DOC_PREFIX.length)} />
-      </Card>
+      <>
+        <Card styles={{ body: { padding: 0 } }}>
+          <DictionariesTab readOnly={!canEdit(me, "admin")} kind={kind} />
+        </Card>
+        {kind === "mail-types" ? (
+          <Card styles={{ body: { padding: 0 } }}>
+            <MailRules readOnly={!canEdit(me, "admin")} />
+          </Card>
+        ) : null}
+      </>
     );
   } else if (current === "categories") {
     body = (
@@ -110,8 +126,20 @@ export function DictionariesPage() {
     );
   }
 
+  const unavailable = catalog.data?.unavailable ?? [];
   return (
     <SettingsPage sectionKey="dictionaries">
+      {unavailable.length > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          style={{ marginBottom: 16 }}
+          message={t("modules:admin.dictionaries.partial", {
+            lists: unavailable.map((d) => t(`modules:admin.dictionaries.domain.${d}`)).join(", "),
+          })}
+        />
+      ) : null}
       <div className="pf-bot-layout">
         <SettingsNav
           label={t("modules:admin.dictionaries.nav")}

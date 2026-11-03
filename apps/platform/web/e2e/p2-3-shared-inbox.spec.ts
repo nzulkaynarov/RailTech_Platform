@@ -65,12 +65,12 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await spaGoto(page, "/eds/mail");
       await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
       for (const name of [
-        "Новые · 4",
+        "Новые · 6",
         "Мои в работе · 0",
         "Все в работе · 2",
         "Разобранные · 4",
         "Подозрительные · 1",
-        "Все · 10",
+        "Все · 12",
       ]) {
         await expect(page.getByRole("tab", { name })).toBeVisible();
       }
@@ -107,7 +107,7 @@ test.describe("P2-3: общий ящик как обращение", () => {
 
       await spaGoto(page, "/eds/mail/21");
       await expect(page.getByText(/Письмо уже в работе у Иванов Демо с \d{2}:\d{2}/)).toBeVisible();
-      await expect(page.getByRole("link", { name: "Зарегистрировать входящее" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Зарегистрировать как ВХ" })).toHaveCount(0);
       await page.getByRole("button", { name: "Забрать себе" }).click();
       await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await shot(page, "card-held-takeover");
@@ -194,7 +194,7 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await expect(
         page.getByText("Демо Широков (сотрудник), shirokov@railtech.example"),
       ).toBeVisible();
-      await expect(page.getByRole("link", { name: "Зарегистрировать входящее" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Зарегистрировать как ВХ" })).toHaveCount(0);
       await shot(page, "own-card");
       await expectFits(page, `своё письмо ${String(width)}`);
       await expectNoViolations(page, `своё письмо ${String(width)}`);

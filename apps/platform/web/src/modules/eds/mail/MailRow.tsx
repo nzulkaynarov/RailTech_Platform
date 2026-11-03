@@ -7,6 +7,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { arrivedAt, canReturn, mailPath, statusKey } from "./mailModel";
 import { MailOutcome } from "./MailOutcome";
+import { MailTypeTag } from "./MailTypeTag";
 
 /** Строка списка «Входящая почта»: жирная тема, пока письмо не прочитано; кто ведёт, итог и «Вернуть в Новые». */
 export function MailRow({
@@ -28,7 +29,6 @@ export function MailRow({
   const { t } = useTranslation("letters");
   const { date } = useFormat();
   const subject = mail.subject || t("mail.noSubject");
-  const kind = mail.assist.status === "done" && mail.assist.kind ? mail.assist.kind : null;
   const working = mail.status === "in_work" || mail.status === "registering";
   return (
     <li className="pf-mail-row" data-unread={mail.unread || undefined}>
@@ -83,7 +83,7 @@ export function MailRow({
             <span className="pf-hint">{t("mail.messages", { count: mail.messages_count })}</span>
           ) : null}
           {mail.from_history ? <StatusTag tone="default">{t("mail.historyTag")}</StatusTag> : null}
-          {kind ? <StatusTag tone="blue">{t(`mail.kind.${kind}`)}</StatusTag> : null}
+          {mail.type ? <MailTypeTag type={mail.type} /> : null}
           {mail.attachments_count > 0 ? (
             <span className="pf-hint">
               {t("mail.attachments", { count: mail.attachments_count })}

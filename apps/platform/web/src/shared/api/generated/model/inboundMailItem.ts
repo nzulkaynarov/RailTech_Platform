@@ -3,10 +3,12 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { InboundMailAssist } from "./inboundMailAssist";
+import type { InboundMailItemSenderCheck } from "./inboundMailItemSenderCheck";
 import type { InboundMailLink } from "./inboundMailLink";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailResult } from "./inboundMailResult";
 import type { InboundMailStatus } from "./inboundMailStatus";
+import type { InboundMailType } from "./inboundMailType";
 
 export interface InboundMailItem {
   id: number;
@@ -24,6 +26,13 @@ export interface InboundMailItem {
   /** @minimum 0 */
   attachments_count: number;
   assist: InboundMailAssist;
+  /** Тип письма из справочника «Типы входящих писем»; `null` — не определён */
+  type: InboundMailType | null;
+  /**
+   * Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+   * @nullable
+   */
+  sender_check: InboundMailItemSenderCheck;
   /** Известный клиент — по адресу контакта или ИНН в тексте */
   client: InboundMailLink | null;
   /** Открытый лид с этим адресом */

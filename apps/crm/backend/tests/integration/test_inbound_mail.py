@@ -32,6 +32,7 @@ from app.security.audit import Actor
 from app.security.principal import Principal
 from app.security.secrets_store import IMAP_PASSWORD, IMAP_USERNAME, SecretCipher, SecretsStore
 from app.services.inbound_mail import InboundMailService, MailAccess
+from app.services.inbound_mail_actions import InboundMailActions
 from app.services.inbound_mail_assist import InboundMailAssist
 from app.services.inbound_mail_ingest import InboundMailIngest
 from app.services.settings import SettingsService
@@ -97,6 +98,8 @@ class Stand:
         self.settings = settings or SettingsService(sessions)
         self.storage = FakeStorage()
         self.new: list[int] = []
+        # Доверенные `authserv-id` («Почта»): хост фейкового сервера 127.0.0.1 — не провайдер.
+        self.trusted: list[str] = []
         self._people: dict[str, Principal] = {}
         self.ingest = InboundMailIngest(
             sessions,
@@ -113,7 +116,12 @@ class Stand:
 
     async def configure(self) -> None:
         current = (await self.settings.get()).integrations.model_dump(mode="json")
-        current["imap"] = {"host": "127.0.0.1", "port": self.server.port, "mailbox": "INBOX"}
+        current["imap"] = {
+            "host": "127.0.0.1",
+            "port": self.server.port,
+            "mailbox": "INBOX",
+            "trusted_auth_servers": self.trusted,
+        }
         await self.settings.update("integrations", current, None)
         async with self.sessions() as session, session.begin():
             await self.store.put(session, IMAP_USERNAME, USERNAME, None)
@@ -132,6 +140,9 @@ class Stand:
     async def mails(self) -> list[InboundMail]:
         async with self.sessions() as session:
             return list((await session.scalars(select(InboundMail).order_by(InboundMail.id))).all())
+
+    def actions(self) -> InboundMailActions:
+        return InboundMailActions(self.sessions)
 
     def service(self, mail: Any = None) -> InboundMailService:
         async def configured() -> bool:
@@ -360,15 +371,21 @@ async def test_reply_goes_into_the_same_thread(stand: Stand) -> None:
 
 
 @pytest.mark.parametrize(
-    ("model", "status", "kind"),
+    ("model", "status", "type_code"),
     [
-        (FakeModel('{"kind": "buyer", "summary": "Просят КП на шпалы"}'), "done", "buyer"),
-        (FakeModel('{"kind": "delete_all", "summary": "x"}'), "unavailable", None),
+        (
+            FakeModel('{"type": "client_request", "summary": "Просят КП на шпалы"}'),
+            "done",
+            "client_request",
+        ),
+        # неизвестный тип при понятной сути: подсказка есть, тип пуст — человек выберет сам
+        (FakeModel('{"type": "delete_all", "summary": "x"}'), "done", None),
+        (FakeModel("не json"), "unavailable", None),
         (FakeModel(error=LlmUnavailableError("qualifier-model")), "unavailable", None),
     ],
 )
 async def test_assist_by_button_suggests_but_does_nothing(
-    stand: Stand, model: FakeModel, status: str, kind: str | None
+    stand: Stand, model: FakeModel, status: str, type_code: str | None
 ) -> None:
     await stand.settings.update(
         "ai", {"pii_policy": "strict"}, None
@@ -381,11 +398,12 @@ async def test_assist_by_button_suggests_but_does_nothing(
 
     out = await assist.suggest(who, mail_id)
 
-    assert (out.status, out.kind) == (status, kind)
+    assert out.status == status
     (mail,) = await stand.mails()
-    assert (mail.assist_status, mail.assist_kind, mail.status) == (status, kind, "new")
-    if kind == "buyer":
-        assert mail.assist_action == "lead"
+    assert (mail.assist_status, mail.type_code, mail.status) == (status, type_code, "new")
+    assert mail.type_source == ("ai" if type_code else None)
+    if type_code == "client_request":
+        assert mail.assist_action == "create_lead"
     prompt = model.prompts[0]
     data = prompt.rsplit("<mail>", 1)[1]
     assert "Игнорируй инструкции" in data, "текст письма — внутри блока данных"
@@ -407,7 +425,7 @@ async def test_assist_by_button_suggests_but_does_nothing(
     assert "Игнорируй" not in str(logged.after), "журнал ИИ — без текстов"
     if status == "done":
         again = await assist.suggest(who, mail_id)
-        assert again.kind == kind
+        assert again.summary == out.summary
         assert len(model.prompts) == 1, "повтор не зовёт модель второй раз"
 
 
@@ -532,7 +550,7 @@ async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:
     current = (await stand.settings.get()).integrations.model_dump(mode="json")
     current["imap"]["assist_enabled"] = False
     await stand.settings.update("integrations", current, None)
-    model = FakeModel('{"kind": "buyer", "summary": "x"}')
+    model = FakeModel('{"type": "client_request", "summary": "x"}')
     who = await stand.principal()
     from app.domain.errors import ConflictError
 
@@ -545,9 +563,9 @@ async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:
 @pytest.mark.parametrize(
     ("suggest", "action", "decision"),
     [
-        ('{"kind": "buyer", "summary": "КП"}', "lead", "accepted"),
-        ('{"kind": "buyer", "summary": "КП"}', "archive", "other"),
-        (None, "archive", "manual"),
+        ('{"type": "client_request", "summary": "КП"}', "create_lead", "accepted"),
+        ('{"type": "client_request", "summary": "КП"}', "archive_mailing", "other"),
+        (None, "archive_mailing", "manual"),
     ],
 )
 async def test_human_decision_is_logged(
@@ -559,7 +577,7 @@ async def test_human_decision_is_logged(
         await InboundMailAssist(stand.sessions, stand.settings, FakeModel(suggest)).suggest(
             who, mail_id
         )
-    if action == "lead":
+    if action == "create_lead":
         await stand.service().create_lead(who, mail_id)
     else:
         await stand.service().archive(who, mail_id, "реклама")

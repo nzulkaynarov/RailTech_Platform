@@ -37,6 +37,8 @@ from app.domain.inbound_mail_flow import (
     status_after_reply,
     thread_ids,
 )
+from app.domain.sender_auth import effective_trusted
+from app.domain.sender_auth import verdict as sender_verdict
 from app.integrations.imap import (
     FetchedMessage,
     ImapClient,
@@ -49,6 +51,7 @@ from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
 from app.repositories import inbound_mail_views as views
 from app.repositories import lead_intake as leads_repo
+from app.repositories import mail_types as types_repo
 from app.security import audit
 from app.security.secrets_store import SecretsStore
 from app.services.settings import SettingsService
@@ -189,10 +192,24 @@ class InboundMailIngest:
                     logger.info("inbound_mail_left_spam", folder=folder.name)
                 return None
         files = await self._put_files(parsed)
-        rule_on = (await self._settings.get()).integrations.imap.personal_rule
+        imap = (await self._settings.get()).integrations.imap
+        rule_on = imap.personal_rule
         async with self._sessions() as session, session.begin():
             now = datetime.now(UTC)
             values = await _row(session, parsed, files)
+            # Правило «отправитель или домен → тип» применяется до помощника и побеждает его.
+            # Только письмам с подтверждённым отправителем (SPF/DKIM/DMARC): `From` подделывается.
+            auth = sender_verdict(
+                list(parsed.auth_results),
+                parsed.from_email,
+                effective_trusted(imap.host, imap.trusted_auth_servers),
+            )
+            values["sender_auth"] = auth
+            by_rule = await types_repo.rule_type_for(session, parsed.from_email)
+            if by_rule is not None and auth == "verified":
+                values.update(type_code=by_rule, type_source="rule")
+            elif by_rule is not None:
+                values["rule_skipped"] = True
             values.update(
                 mailbox=folder.name,
                 uidvalidity=uidvalidity,

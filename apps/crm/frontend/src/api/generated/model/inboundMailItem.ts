@@ -3,10 +3,12 @@
  * RailTech CRM API
  */
 import type { InboundMailAssist } from "./inboundMailAssist";
+import type { InboundMailItemSenderCheck } from "./inboundMailItemSenderCheck";
 import type { InboundMailItemStatus } from "./inboundMailItemStatus";
 import type { InboundMailLink } from "./inboundMailLink";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailResult } from "./inboundMailResult";
+import type { InboundMailType } from "./inboundMailType";
 
 export interface InboundMailItem {
   /** Время последнего входящего письма записи */
@@ -35,11 +37,15 @@ export interface InboundMailItem {
   received_at: string;
   /** Итог у `done` */
   result?: InboundMailResult | null;
+  /** Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`) */
+  sender_check?: InboundMailItemSenderCheck;
   sent_at: string | null;
   status: InboundMailItemStatus;
   subject: string;
   /** «Новое (ответ в цепочке)»: клиент ответил на разобранное */
   thread_reply?: boolean;
+  /** Тип письма из справочника; `null` — не определён */
+  type?: InboundMailType | null;
   /** Не прочитано этим сотрудником */
   unread?: boolean;
 }

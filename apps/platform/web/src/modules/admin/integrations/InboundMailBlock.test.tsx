@@ -61,6 +61,36 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
     expect(within(again).queryByLabelText("Пометка у такого письма")).toBeNull();
   });
 
+  it("доверенные серверы почты: хост не провайдера — никому; хост Яндекса — серверы Яндекса; свой список заменяет вывод", async () => {
+    const side = await mailPanel();
+    // демо-хост imap.mail.example — не известный провайдер: никому не верим
+    expect(
+      await within(side).findByText(/Нет — хост IMAP не у известного провайдера/),
+    ).toBeVisible();
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const form = within(side).getByRole("form", { name: "Приём почты" });
+    const password = within(form).getByLabelText("Ваш пароль администратора");
+    fireEvent.change(password, { target: { value: "admin-pass" } });
+    fireEvent.change(within(form).getByLabelText("Сервер IMAP"), {
+      target: { value: "imap.yandex.ru" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить настройки" }));
+    expect(await within(side).findByText("По хосту IMAP: yandex.ru, yandex.net")).toBeVisible();
+
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const again = within(side).getByRole("form", { name: "Приём почты" });
+    fireEvent.change(within(again).getByLabelText("Доверенные серверы почты"), {
+      target: { value: "mx.corp-demo.example\nyandex.ru" },
+    });
+    fireEvent.change(within(again).getByLabelText("Ваш пароль администратора"), {
+      target: { value: "admin-pass" },
+    });
+    fireEvent.click(within(again).getByRole("button", { name: "Сохранить настройки" }));
+    expect(
+      await within(side).findByText("Заданы вручную: mx.corp-demo.example, yandex.ru"),
+    ).toBeVisible();
+  });
+
   it("«Найти папки» подсказывает «Спам» по флагу сервера; сохранение — с папками", async () => {
     const side = await mailPanel();
     fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));

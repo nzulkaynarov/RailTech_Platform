@@ -7,8 +7,10 @@
 скрывает паспорт, ПИНФЛ, номера карт и даты рождения, «Строгая» — ещё e-mail, телефоны, ИНН и счета;
 политика читается при каждом вызове, перезапуск не нужен; вложения — никогда. Модель — существующий
 алиас `qualifier-model` под BudgetGuard, без резерва; текст письма — внутри XML-блока промпта
-`prompts/mail_assist.md`. Ответ проверяет код (`domain/inbound_mail.parse_assist`): тип — только из
-минимального набора, действие по типу выбирает код; ничего не выполняется.
+`prompts/mail_assist.md`. Типы письма модель берёт из справочника «Типы входящих писем»
+(действующие, не хардкод, MAIL-TYPES); ответ проверяет код (`domain/mail_types.parse_verdict`):
+тип — только из действующих, иначе пусто; правило отправителя побеждает ИИ, человек подтверждает
+или меняет тип. Ничего не выполняется.
 
 Журнал ИИ — аудит CRM без текстов: кто вызвал, функция, алиас, версия промпта, результат
 (`ai.mail_assist`); решение человека по письму — `ai.mail_assist.decision` («принял предложенное»,
@@ -24,14 +26,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents import prompts
 from app.agents.llm import ChatCompleter, LlmUnavailableError
 from app.domain.errors import ConflictError, NotFoundError, Reason
-from app.domain.inbound_mail import AssistVerdict, parse_assist_reason
+from app.domain.mail_types import ActiveType, TypeVerdict, parse_verdict, types_block
 from app.integrations import langfuse as lf
 from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
+from app.repositories import mail_types as types_repo
 from app.schemas.inbound_mail import InboundMailAssist as AssistOut
 from app.security import audit
 from app.security.pii import DEFAULT_POLICY, PiiPolicy, mask_for_model
 from app.security.principal import Principal
+from app.services import mail_types as types_service
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -41,6 +45,7 @@ FUNCTION = "mail_assist"
 ALIAS = "qualifier-model"
 TEXT_CHARS = 6000
 RESPONSE_FORMAT = {"type": "json_object"}
+_LEGACY_KINDS = ("buyer", "official", "supplier_doc", "other")
 Decision = Literal["accepted", "other", "manual"]
 
 
@@ -57,10 +62,20 @@ def masked_mail(row: InboundMail, policy: PiiPolicy = DEFAULT_POLICY) -> str:
     return prompts.xml_escape("\n".join(lines))
 
 
+#: Подсказки до MAIL-TYPES хранили действие тремя короткими словами.
+_LEGACY_ACTIONS = {
+    "register": "register_incoming",
+    "lead": "create_lead",
+    "archive": "archive_mailing",
+}
+
+
 def decision_of(row: InboundMail, action: str) -> Decision:
-    if row.assist_status != "done" or row.assist_action is None:
+    """Принял ли человек подсказку: действие совпало с действием типа, который предложил ИИ."""
+    suggested = _LEGACY_ACTIONS.get(row.assist_action or "", row.assist_action)
+    if row.assist_status != "done" or suggested is None:
         return "manual"
-    return "accepted" if row.assist_action == action else "other"
+    return "accepted" if suggested == action else "other"
 
 
 async def record_decision(
@@ -92,13 +107,12 @@ async def record_decision(
 def view(row: InboundMail, enabled: bool) -> AssistOut:
     """Подсказка для экрана; не запрашивали и помощник выключен — `off` (кнопки нет)."""
     status = "off" if row.assist_status == "none" and not enabled else row.assist_status
+    # `kind` и `action` — устаревшие поля контракта: только у подсказок до MAIL-TYPES, новые —
+    # `type` письма.
+    kind = row.assist_kind if row.assist_kind in _LEGACY_KINDS else None
+    action = row.assist_action if row.assist_action in _LEGACY_ACTIONS else None
     return AssistOut.model_validate(
-        {
-            "status": status,
-            "kind": row.assist_kind,
-            "summary": row.assist_summary,
-            "action": row.assist_action,
-        }
+        {"status": status, "kind": kind, "summary": row.assist_summary, "action": action}
     )
 
 
@@ -127,17 +141,25 @@ class InboundMailAssist:
         if row.status not in ("new", "in_work"):
             raise ConflictError("mail is already handled", status=row.status)
         version = prompts.version(PROMPT)
+        async with self._sessions() as session:
+            types = await types_service.active_types(session)
         verdict, trace_id = await self._ask(
-            who, cfg.company.name, masked_mail(row, cfg.ai.pii_policy), version
+            who, cfg.company.name, masked_mail(row, cfg.ai.pii_policy), types, version
         )
         return await self._save(who, mail_id, verdict, trace_id, version)
 
     async def _ask(
-        self, who: Principal, company: str, mail: str, version: str
-    ) -> tuple[AssistVerdict | None, str | None]:
+        self,
+        who: Principal,
+        company: str,
+        mail: str,
+        types: list[ActiveType],
+        version: str,
+    ) -> tuple[TypeVerdict | None, str | None]:
         if self._model is None:
             return None, None
-        prompt = prompts.render(PROMPT, company=company, mail=mail)
+        block = prompts.xml_escape(types_block(types))
+        prompt = prompts.render(PROMPT, company=company, mail=mail, types=block)
         with lf.ai_trace(
             "mail-assist", user_id=who.user_id, function=FUNCTION, version=version, input=mail
         ):
@@ -154,7 +176,7 @@ class InboundMailAssist:
             except Exception:
                 logger.exception("mail_assist_failed")
                 return None, trace_id
-        verdict, problem = parse_assist_reason(result.text)
+        verdict, problem = parse_verdict(result.text, types)
         if problem is not None:  # причина словом-кодом, без текста письма и ответа модели
             logger.warning("mail_assist_unparsed", reason=problem, version=version)
         return verdict, trace_id
@@ -163,7 +185,7 @@ class InboundMailAssist:
         self,
         who: Principal,
         mail_id: int,
-        verdict: AssistVerdict | None,
+        verdict: TypeVerdict | None,
         trace_id: str | None,
         version: str,
     ) -> AssistOut:
@@ -176,9 +198,8 @@ class InboundMailAssist:
                 row.assist_status = status
                 row.assist_trace_id = trace_id
                 if verdict is not None:
-                    row.assist_kind = verdict.kind
                     row.assist_summary = verdict.summary
-                    row.assist_action = verdict.action
+                    await self._apply_type(session, row, verdict)
             await audit.record(
                 session,
                 who.actor,
@@ -190,10 +211,20 @@ class InboundMailAssist:
                     "alias": ALIAS,
                     "prompt_version": version,
                     "result": status,
-                    "kind": verdict.kind if verdict else None,
+                    "type": verdict.type_code if verdict else None,
                     "trace_id": trace_id,
                 },
             )
             out = view(row, True)
         logger.info("mail_assist_saved", mail_id=mail_id, status=status)
         return out
+
+    @staticmethod
+    async def _apply_type(session: AsyncSession, row: InboundMail, verdict: TypeVerdict) -> None:
+        """Тип от помощника — только если его ещё не задали правило отправителя или человек: они
+        сильнее."""
+        row.assist_kind = None  # устаревшее поле: тип письма — `type_code`
+        found = await types_repo.get_type(session, verdict.type_code) if verdict.type_code else None
+        row.assist_action = found.default_action if found is not None else None
+        if found is not None and found.active and row.type_source in (None, "ai"):
+            row.type_code, row.type_source = found.code, "ai"

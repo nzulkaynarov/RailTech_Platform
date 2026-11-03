@@ -8,6 +8,7 @@ import type {
   InboundMailCounts,
   InboundMailMessage,
   InboundMailReply,
+  InboundMailTypeDefaultAction,
   InboundMailView,
 } from "../../../shared/api/generated/model";
 import type { Attachment } from "../new/formModel";
@@ -37,10 +38,16 @@ export const OWN_TABS: readonly MailTab[] = ["mine", "done", "all"];
 /** Вкладки, где можно выбрать письма и отправить в архив пачкой (первая линия). */
 export const BULK_TABS: readonly MailTab[] = ["new", "in_work", "all", "spam"];
 
-/** «Вернуть в Новые» у разобранного архивом или ответом (ничего не потеряно); остальное возвращать нельзя. */
+/** «Вернуть в Новые» у разобранного архивом, ответом или «прайс загружен» (ничего не потеряно). */
 export function canReturn(mail: Pick<InboundMail, "status" | "result">): boolean {
   const outcome = mail.result?.outcome;
-  return mail.status === "done" && (outcome === "archived" || outcome === "replied");
+  return (
+    mail.status === "done" &&
+    (outcome === "archived" ||
+      outcome === "replied" ||
+      outcome === "price" ||
+      outcome === "handled")
+  );
 }
 
 /** Ключ слова статуса: «Новое · ответ в цепочке» у разобранного, на которое ответил клиент. */
@@ -70,11 +77,19 @@ export function registerFromMailPath(id: number): string {
   return `/eds/register?mail=${String(id)}`;
 }
 
-/** Вид документа формы P8 по подсказке помощника: только однозначные случаи, остальное выбирает человек. */
-const KIND_BY_ASSIST: Partial<Record<string, string>> = {
-  supplier_doc: "supplier",
-  other: "other",
-};
+/** Действия по типу письма (MAIL-TYPES): порядок меню «Другое действие»; что делает каждое, решает код CRM. */
+export const MAIL_ACTIONS: readonly InboundMailTypeDefaultAction[] = [
+  "register_incoming",
+  "create_lead",
+  "supplier_price",
+  "to_accountant",
+  "archive_mailing",
+  "reply_template",
+  "suspicious",
+];
+
+/** Существующая загрузка прайса поставщика (CAT-1): «Расчёт · Номенклатура и поставщики · Загрузка прайса». */
+export const PRICE_UPLOAD_PATH = "/erp/catalog?part=import";
 
 /** Дата поступления письма в поясе компании (`YYYY-MM-DD`). */
 export function receivedDate(iso: string): string {
@@ -111,7 +126,7 @@ export function prefillFromMail(
   return {
     ...(addressee ? { addresseeId: String(addressee.id) } : {}),
     ...(acquaint.length > 0 ? { draftKind: "info" as const, draftAcquaintIds: acquaint } : {}),
-    kind: (mail.assist.kind && KIND_BY_ASSIST[mail.assist.kind]) ?? "",
+    kind: "",
     receiptMethod: "email",
     senderName: mail.client?.name ?? (mail.from_name || mail.from_email),
     senderInn: mail.inns.length === 1 ? (mail.inns[0] ?? "") : "",

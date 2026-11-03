@@ -14,7 +14,7 @@ export interface InboundMailResult {
   by?: InboundMailPerson | null;
   lead?: InboundMailLink | null;
   letter_number?: string | null;
-  /** registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3 */
+  /** registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных до W18A-P2-3 */
   outcome: InboundMailResultOutcome;
   /** Причина архива */
   reason?: string | null;

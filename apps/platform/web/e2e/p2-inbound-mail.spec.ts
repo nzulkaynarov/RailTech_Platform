@@ -57,7 +57,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await spaGoto(page, "/eds/mail");
       await expect(page.getByRole("heading", { level: 1, name: "Входящая почта" })).toBeVisible();
       const list = page.getByRole("list", { name: "Письма, ждущие разбора" });
-      await expect(list.getByRole("listitem")).toHaveCount(4);
+      await expect(list.getByRole("listitem")).toHaveCount(6);
       await shot(page, "mail-list");
       await expectNoViolations(page, `список ${String(width)}`);
 
@@ -65,9 +65,11 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(
         page.getByRole("heading", { level: 1, name: "Запрос КП на стрелочные переводы" }),
       ).toBeVisible();
-      await expect(page.getByText("Покупатель", { exact: true })).toHaveCount(0);
+      await expect(page.getByText(/Покупатель просит КП/)).toHaveCount(0);
       await page.getByRole("button", { name: "Подсказать" }).click();
-      await expect(page.getByText("Предлагает: Создать лид")).toBeVisible();
+      // помощник предложил тип «Запрос клиента» — основная кнопка стала «Создать лид»
+      await expect(page.getByText(/Помощник предложил тип/)).toBeVisible();
+      await expect(page.getByText("предложил помощник")).toBeVisible();
       await expect(page.getByText("Новое", { exact: true }).first()).toBeVisible();
       await shot(page, "mail-card-assist");
       await expectNoViolations(page, `карточка ${String(width)}`);
@@ -76,7 +78,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
       await page.getByRole("button", { name: "Создать лид" }).last().click();
       await expect(page.getByText(/Лид L-2068 создан/)).toBeVisible();
-      await expect(list.getByRole("listitem")).toHaveCount(3);
+      await expect(list.getByRole("listitem")).toHaveCount(5);
     }
   });
 
@@ -86,8 +88,9 @@ test.describe("P2: входящая почта общего ящика", () => {
     for (const width of WIDTHS) {
       await signInAt(page, REGISTRAR, width);
       await spaGoto(page, "/eds/mail/17");
-      await expect(page.getByText("Предлагает: Зарегистрировать входящее")).toBeVisible();
-      await page.getByRole("link", { name: "Зарегистрировать входящее" }).click();
+      // «Документ поставщика»: основная кнопка — «Зарегистрировать как ВХ»; вид документа форма берёт из типа
+      await expect(page.getByRole("button", { name: /Другое действие/ })).toBeVisible();
+      await page.getByRole("link", { name: "Зарегистрировать как ВХ" }).click();
       await expect(
         page.getByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
       ).toBeVisible();
@@ -101,7 +104,7 @@ test.describe("P2: входящая почта общего ящика", () => {
       await spaGoto(page, "/eds/mail");
       await expect(
         page.getByRole("list", { name: "Письма, ждущие разбора" }).getByRole("listitem"),
-      ).toHaveCount(3);
+      ).toHaveCount(5);
     }
   });
 

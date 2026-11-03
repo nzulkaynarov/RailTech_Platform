@@ -406,7 +406,12 @@
       "personalLabelHint": "Ro‘yxat va kartochkada ko‘rinadi, 80 belgigacha",
       "personalState": "«Shaxsan» xatlar",
       "personalOn": "Darhol xodimga — «{{label}}» belgisi",
-      "personalOff": "O‘chirilgan — hammasi «Yangi»ga"
+      "personalOff": "O‘chirilgan — hammasi «Yangi»ga",
+      "trusted": "Ishonchli pochta serverlari",
+      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Bo‘sh — IMAP manzili bo‘yicha pochta provayderi serverlariga ishonamiz (Yandex, Google, Microsoft 365, Mail.ru, Zoho). Kiritilgan ro‘yxat buni almashtiradi. Jo‘natuvchini tasdiqlangan deb faqat shunday server belgilaydi: xatdagi soxta sarlavha hisobga olinmaydi.",
+      "trustedNone": "Yo‘q — IMAP manzili ma’lum provayderniki emas, jo‘natuvchi qoidalari qo‘llanmaydi",
+      "trustedDerived": "IMAP manzili bo‘yicha: {{list}}",
+      "trustedExplicit": "Qo‘lda kiritilgan: {{list}}"
     }
   },
   "services": {

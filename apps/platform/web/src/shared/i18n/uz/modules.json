@@ -221,7 +221,13 @@
       "nav": "Bo‘limlar bo‘yicha ma’lumotnomalar",
       "sales": "Savdo",
       "documents": "Hujjatlar",
-      "calc": "Hisob-kitob"
+      "calc": "Hisob-kitob",
+      "mail": "Pochta",
+      "partial": "Ba’zi ma’lumotnomalar yuklanmadi ({{lists}}) — qolganlari ko‘rsatilgan. Keyinroq qayta urining.",
+      "domain": {
+        "eds": "hujjatlar",
+        "crm": "pochta"
+      }
     },
     "notifications": {
       "personal": "Shaxsiy bildirishnomalar — Profilda.",

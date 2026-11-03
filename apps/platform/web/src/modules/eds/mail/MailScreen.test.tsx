@@ -20,22 +20,22 @@ describe("Документы · Входящая почта: список (W18A-
     signIn(REGISTRAR);
     renderAt("/eds/mail");
     const list = await listOf("Письма, ждущие разбора");
-    expect(within(list).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(6);
     for (const name of [
-      "Новые · 4",
+      "Новые · 6",
       "Мои в работе · 0",
       "Все в работе · 2",
       "Разобранные · 4",
       "Подозрительные · 1",
-      "Все · 10",
+      "Все · 12",
     ]) {
       expect(screen.getByRole("tab", { name })).toBeVisible();
     }
     expect(
       within(list).getByRole("link", { name: "Открыть письмо «Акт сверки за октябрь»" }),
     ).toHaveAttribute("href", "/eds/mail/17");
-    expect(within(list).getByText("Счёт или документ поставщика")).toBeVisible();
-    expect(within(list).getByText("Вложений: 1")).toBeVisible();
+    expect(within(list).getByText("Документ поставщика (договор, акт сверки)")).toBeVisible();
+    expect(within(list).getAllByText("Вложений: 1").length).toBeGreaterThan(0);
   });
 
   it("непрочитанное письмо — жирным, прочитанное — обычным; словом «Не прочитано» для скринридера", async () => {
@@ -97,7 +97,7 @@ describe("Документы · Входящая почта: список (W18A-
     );
     expect(await screen.findByText("Письмо вернулось в «Новые»")).toBeVisible();
     await waitFor(() => {
-      expect(screen.getByRole("tab", { name: "Новые · 5" })).toBeVisible();
+      expect(screen.getByRole("tab", { name: "Новые · 7" })).toBeVisible();
     });
   });
 
@@ -206,14 +206,14 @@ describe("Входящая почта: «Подозрительные» и «и�
       await screen.findByText("Подозрительное", { selector: ".ant-tag *, .ant-tag" }),
     ).toBeVisible();
     expect(screen.getByText(/отметьте его в почте «Не спам»/)).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать входящее" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Не спам → в очередь" }));
     expect(await screen.findByText("Письмо в «Новых»")).toBeVisible();
     expect(await screen.findByText("Подозрительных писем нет")).toBeVisible();
     fireEvent.click(screen.getByRole("tab", { name: /^Новые/ }));
     const back = await listOf("Письма, ждущие разбора");
     await waitFor(() => {
-      expect(within(back).getAllByRole("listitem")).toHaveLength(5);
+      expect(within(back).getAllByRole("listitem")).toHaveLength(7);
     });
   });
 

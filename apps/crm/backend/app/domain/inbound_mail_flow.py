@@ -16,11 +16,11 @@ from datetime import datetime, timedelta
 from typing import Final, Literal
 
 Status = Literal["new", "in_work", "registering", "done", "spam"]
-Outcome = Literal["registered", "lead", "replied", "archived"]
+Outcome = Literal["registered", "lead", "replied", "archived", "price", "handled"]
 Claim = Literal["take", "mine", "other", "closed"]
 
 STATUSES: Final[tuple[str, ...]] = ("new", "in_work", "registering", "done", "spam")
-OUTCOMES: Final[tuple[str, ...]] = ("registered", "lead", "replied", "archived")
+OUTCOMES: Final[tuple[str, ...]] = ("registered", "lead", "replied", "archived", "price", "handled")
 #: Сколько ждём событие EDS о регистрации, прежде чем показать «ждёт подтверждения EDS».
 EDS_CONFIRM_MINUTES: Final = 10
 MAX_THREAD_IDS: Final = 30
@@ -95,10 +95,10 @@ def claim_of(status: str, assignee_id: int | None, actor_id: int) -> Claim:
 
 
 def can_return(status: str, outcome: str | None) -> bool:
-    """«Вернуть в Новые»: своё «в работе» и разобранное архивом или ответом (ничего не потеряно)."""
+    """«Вернуть в Новые»: своё «в работе» и разобранное архивом, ответом или «прайс загружен»."""
     if status == "in_work":
         return True
-    return status == "done" and outcome in ("archived", "replied")
+    return status == "done" and outcome in ("archived", "replied", "price", "handled")
 
 
 def status_after_reply(status: str) -> str:

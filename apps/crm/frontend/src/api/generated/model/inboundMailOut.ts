@@ -8,11 +8,13 @@ import type { InboundMailAttachment } from "./inboundMailAttachment";
 import type { InboundMailEvent } from "./inboundMailEvent";
 import type { InboundMailLink } from "./inboundMailLink";
 import type { InboundMailMessage } from "./inboundMailMessage";
+import type { InboundMailOutSenderCheck } from "./inboundMailOutSenderCheck";
 import type { InboundMailOutStatus } from "./inboundMailOutStatus";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailReply } from "./inboundMailReply";
 import type { InboundMailResult } from "./inboundMailResult";
 import type { InboundMailSkipped } from "./inboundMailSkipped";
+import type { InboundMailType } from "./inboundMailType";
 
 export interface InboundMailOut {
   /** Время последнего входящего письма записи */
@@ -58,6 +60,8 @@ export interface InboundMailOut {
   reply_to: string;
   /** Итог у `done` */
   result?: InboundMailResult | null;
+  /** Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`) */
+  sender_check?: InboundMailOutSenderCheck;
   sent_at: string | null;
   skipped: InboundMailSkipped[];
   status: InboundMailOutStatus;
@@ -67,6 +71,8 @@ export interface InboundMailOut {
   thread_reply?: boolean;
   to: InboundMailAddress[];
   too_large: boolean;
+  /** Тип письма из справочника; `null` — не определён */
+  type?: InboundMailType | null;
   /** Не прочитано этим сотрудником */
   unread?: boolean;
 }

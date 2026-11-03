@@ -6,7 +6,7 @@ from datetime import date
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 
 class Action(StrEnum):
@@ -262,6 +262,21 @@ class CabinetUrlOut(BaseModel):
     url: Annotated[str | None, Field(title="Url")]
     """
     Действующий адрес; null — не задан ни в настройках, ни в окружении
+    """
+
+
+class CautionEnum(StrEnum):
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
+    """
+
+    public_domain = "public_domain"
+
+
+class Caution(RootModel[CautionEnum | None]):
+    root: Annotated[CautionEnum | None, Field(title="Caution")] = None
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
     """
 
 
@@ -782,6 +797,18 @@ class ImapStatusOut(BaseModel):
     port: Annotated[int, Field(title="Port")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
     security: Annotated[Security, Field(title="Security")]
+    trusted_auth_effective: Annotated[
+        list[str] | None, Field(title="Trusted Auth Effective")
+    ] = None
+    """
+    Кому верим на самом деле: заданный список или серверы провайдера нашего ящика по хосту IMAP; пусто — никому (хост не из известных провайдеров)
+    """
+    trusted_auth_servers: Annotated[
+        list[str] | None, Field(title="Trusted Auth Servers")
+    ] = None
+    """
+    Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип»; пусто — выводится из хоста IMAP (см. `trusted_auth_effective`)
+    """
     username: Annotated[str, Field(title="Username")]
 
 
@@ -797,8 +824,12 @@ class InboundMailAddress(BaseModel):
 
 class InboundMailAssist(BaseModel):
     """
-    Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
-    не делает; `none` — не запрашивали, `off` — помощник выключен админом.
+    Подсказка помощника (по кнопке «Подсказать»): суть письма и тип. Ничего сама не делает;
+    `none`
+    — не
+    запрашивали, `off` — помощник выключен админом. Тип письма — `InboundMailItem.type` (справочник
+    «Типы входящих писем»); `kind` и `action` — устаревшие поля до MAIL-TYPES, у новых подсказок
+    `null`.
     """
 
     action: Annotated[Action1 | None, Field(title="Action")] = None
@@ -853,6 +884,15 @@ class InboundMailEvent(BaseModel):
     detail: Annotated[str | None, Field(title="Detail")] = None
 
 
+class InboundMailHandoverTarget(BaseModel):
+    id: Annotated[int, Field(title="Id")]
+    name: Annotated[str, Field(title="Name")]
+
+
+class InboundMailHandoverTargets(BaseModel):
+    items: Annotated[list[InboundMailHandoverTarget], Field(title="Items")]
+
+
 class InboundMailItem(BaseModel):
     activity_at: Annotated[AwareDatetime, Field(title="Activity At")]
     """
@@ -898,12 +938,20 @@ class InboundMailItem(BaseModel):
     """
     Итог у `done`
     """
+    sender_check: Annotated[SenderCheck | None, Field(title="Sender Check")] = None
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     thread_reply: Annotated[bool | None, Field(title="Thread Reply")] = False
     """
     «Новое (ответ в цепочке)»: клиент ответил на разобранное
+    """
+    type: InboundMailType | None = None
+    """
+    Тип письма из справочника; `null` — не определён
     """
     unread: Annotated[bool | None, Field(title="Unread")] = False
     """
@@ -1030,6 +1078,10 @@ class InboundMailOut(BaseModel):
     """
     Итог у `done`
     """
+    sender_check: Annotated[SenderCheck | None, Field(title="Sender Check")] = None
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
     status: Annotated[Status7, Field(title="Status")]
@@ -1041,6 +1093,10 @@ class InboundMailOut(BaseModel):
     """
     to: Annotated[list[InboundMailAddress], Field(title="To")]
     too_large: Annotated[bool, Field(title="Too Large")]
+    type: InboundMailType | None = None
+    """
+    Тип письма из справочника; `null` — не определён
+    """
     unread: Annotated[bool | None, Field(title="Unread")] = False
     """
     Не прочитано этим сотрудником
@@ -1080,7 +1136,7 @@ class InboundMailResult(BaseModel):
     letter_number: Annotated[str | None, Field(title="Letter Number")] = None
     outcome: Annotated[Outcome | None, Field(title="Outcome")]
     """
-    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных до W18A-P2-3
     """
     reason: Annotated[str | None, Field(title="Reason")] = None
     """
@@ -1100,6 +1156,31 @@ class InboundMailSkippedItem(BaseModel):
     assignee: InboundMailPerson | None = None
     id: Annotated[int, Field(title="Id")]
     reason: Annotated[Reason, Field(title="Reason")]
+
+
+class InboundMailType(BaseModel):
+    """
+    Тип письма в списке и карточке: название, тег и действие по умолчанию (основная кнопка
+    карточки).
+    """
+
+    active: Annotated[bool, Field(title="Active")]
+    """
+    Тип отключён: у письма остаётся, предлагать его больше не будем
+    """
+    code: Annotated[str, Field(title="Code")]
+    color: Annotated[str, Field(title="Color")]
+    default_action: Annotated[str, Field(title="Default Action")]
+    icon: Annotated[str, Field(title="Icon")]
+    letter_kind: Annotated[str | None, Field(title="Letter Kind")] = None
+    """
+    Вид документа EDS (код): им форма ВХ из письма этого типа предзаполняется
+    """
+    name: LocalizedName
+    source: Annotated[Source4, Field(title="Source")]
+    """
+    Кто выбрал: правило отправителя, помощник (человек подтверждает) или человек
+    """
 
 
 class InboundMailbox(BaseModel):
@@ -1323,6 +1404,12 @@ class LeadSpend(BaseModel):
     lead_name: Annotated[str | None, Field(title="Lead Name")] = None
 
 
+class LocalizedName(BaseModel):
+    en: Annotated[str, Field(title="En")]
+    ru: Annotated[str, Field(title="Ru")]
+    uz: Annotated[str, Field(title="Uz")]
+
+
 class LocalizedText(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
@@ -1330,6 +1417,46 @@ class LocalizedText(BaseModel):
     en: Annotated[str, Field(title="En")]
     ru: Annotated[str, Field(title="Ru")]
     uz: Annotated[str, Field(title="Uz")]
+
+
+class MailSenderRule(BaseModel):
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    created_by: Annotated[str | None, Field(title="Created By")] = None
+    """
+    Кто создал (имя сотрудника)
+    """
+    id: Annotated[int, Field(title="Id")]
+    pattern: Annotated[str, Field(title="Pattern")]
+    """
+    Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами)
+    """
+    type_code: Annotated[str, Field(title="Type Code")]
+
+
+class MailSenderRuleList(BaseModel):
+    items: Annotated[list[MailSenderRule], Field(title="Items")]
+
+
+class MailSenderRuleOut(BaseModel):
+    applied: Annotated[int, Field(title="Applied")]
+    """
+    Сколько открытых писем «Новые» получили тип по этому правилу
+    """
+    caution: Annotated[Caution | None, Field(title="Caution")] = None
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
+    """
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    created_by: Annotated[str | None, Field(title="Created By")] = None
+    """
+    Кто создал (имя сотрудника)
+    """
+    id: Annotated[int, Field(title="Id")]
+    pattern: Annotated[str, Field(title="Pattern")]
+    """
+    Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами)
+    """
+    type_code: Annotated[str, Field(title="Type Code")]
 
 
 class MessageOut(BaseModel):
@@ -1458,13 +1585,15 @@ class OffsiteStatusOut(BaseModel):
 
 class Outcome(StrEnum):
     """
-    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных до W18A-P2-3
     """
 
     registered = "registered"
     lead = "lead"
     replied = "replied"
     archived = "archived"
+    price = "price"
+    handled = "handled"
 
 
 class Owner(StrEnum):
@@ -1618,6 +1747,15 @@ class Security1(StrEnum):
     starttls = "starttls"
     ssl = "ssl"
     none = "none"
+
+
+class SenderCheck(StrEnum):
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
+
+    unverified = "unverified"
+    unknown = "unknown"
 
 
 class SentViaEnum(StrEnum):
@@ -1797,6 +1935,16 @@ class Source3(StrEnum):
 
 
 class Source4(StrEnum):
+    """
+    Кто выбрал: правило отправителя, помощник (человек подтверждает) или человек
+    """
+
+    rule = "rule"
+    ai = "ai"
+    manual = "manual"
+
+
+class Source5(StrEnum):
     db = "db"
     env = "env"
     none = "none"
@@ -1972,7 +2120,7 @@ class TelegramStatusOut(BaseModel):
     mode: Annotated[str, Field(title="Mode")]
     running: Annotated[bool, Field(title="Running")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
-    source: Annotated[Source4, Field(title="Source")]
+    source: Annotated[Source5, Field(title="Source")]
     updated_at: Annotated[AwareDatetime | None, Field(title="Updated At")]
     username: Annotated[str | None, Field(title="Username")]
 

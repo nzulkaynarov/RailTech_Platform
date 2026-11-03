@@ -34,6 +34,7 @@ from app.errors import PlatformError, backend_reason, backend_unavailable, from_
 from app.feeds.numbers import lead_number
 from app.schemas_eds_documents import EdsFile
 from app.schemas_inbound_mail import (
+    TYPE_CODE,
     ImapCheck,
     ImapConnector,
     ImapFolders,
@@ -77,6 +78,9 @@ _MESSAGES = {
     "mail_handled": "Письмо уже обработано: обновите очередь.",
     "mail_registering": "Письмо уже регистрируется — дождитесь результата.",
     "mail_not_returnable": "Это письмо нельзя вернуть в «Новые».",
+    "mail_type_inactive": "Этот тип отключён — выберите другой.",
+    "mail_rule_exists": "Такое правило уже есть.",
+    "mail_no_handover_target": "Передать можно только тому, кто подтверждает оплату.",
 }
 _HANDLED = "Письмо уже обработано: обновите очередь."
 _TZ = ZoneInfo("Asia/Tashkent")
@@ -138,8 +142,11 @@ async def list_inbound_mail(
     view: Annotated[MailView, Query()] = "new",
     history: Annotated[bool | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    type: Annotated[str | None, Query(pattern=TYPE_CODE)] = None,
 ) -> InboundMailPage:
     params: dict[str, str] = {"view": view}
+    if type:
+        params["type"] = type
     if history is not None:
         params["history"] = "true" if history else "false"
     if q and q.strip():
@@ -354,6 +361,7 @@ async def save_imap(body: ImapSettingsIn, authed: AdminWrite) -> ImapConnector:
         "assist_enabled": body.assist_enabled,
         "personal_rule": body.personal_rule,
         "personal_label": body.personal_label,
+        "trusted_auth_servers": body.trusted_auth_servers,
         "username": body.username,
         "imap_password": body.imap_password.get_secret_value() if body.imap_password else None,
         "password": body.password.get_secret_value(),

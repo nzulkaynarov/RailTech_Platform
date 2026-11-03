@@ -58,6 +58,7 @@ if TYPE_CHECKING:
     from app.services.external_services.view import ExternalServicesView
     from app.services.imap_connector import ImapConnectorService
     from app.services.inbound_mail import InboundMailService
+    from app.services.inbound_mail_actions import InboundMailActions
     from app.services.inbound_mail_assist import InboundMailAssist
     from app.services.inbound_mail_history import InboundMailHistory
     from app.services.inbound_mail_ingest import InboundMailIngest
@@ -72,6 +73,7 @@ if TYPE_CHECKING:
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
     from app.services.mail_requests import MailRequestService
+    from app.services.mail_types import MailTypesService
     from app.services.offsite_connector import OffsiteConnectorService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
@@ -711,6 +713,20 @@ class Container:
             alias="qualifier-model",
         )
         return InboundMailAssist(self.session_factory, self.settings_service, model)
+
+    @cached_property
+    def inbound_mail_actions(self) -> "InboundMailActions":
+        """Тип письма, «прайс загружен», «передать бухгалтеру», «подозрительное» (MAIL-TYPES)."""
+        from app.services.inbound_mail_actions import InboundMailActions
+
+        return InboundMailActions(self.session_factory)
+
+    @cached_property
+    def mail_types(self) -> "MailTypesService":
+        """Справочник «Типы входящих писем» и правила отправителя (MAIL-TYPES)."""
+        from app.services.mail_types import MailTypesService
+
+        return MailTypesService(self.session_factory)
 
     @cached_property
     def inbound_mail(self) -> "InboundMailService":

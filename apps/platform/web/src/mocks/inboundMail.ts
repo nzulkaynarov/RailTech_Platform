@@ -12,7 +12,9 @@ import type {
   QueueCard,
   QueueItem,
 } from "../shared/api/generated/model";
+import { resetDictionariesMock, setMailTypeUsage } from "./dictionaries";
 import { type StoredMail, minutesAgo, seed } from "./inboundMailSeed";
+import { resetMailTypesMock, resolveType, setRuleApplier } from "./mailTypes";
 import { readSession, sessionRoles } from "./mockSession";
 import type { MockRole } from "./fixtures/roles";
 
@@ -31,13 +33,19 @@ interface Viewer {
   id: string;
   name: string;
   full: boolean;
+  /** Право загружать прайсы (`erp.stock: full` + цены поставщиков) — по объединению ВСЕХ ролей человека. */
+  stock: boolean;
 }
 
 function viewer(): Viewer {
   const session = readSession();
   const roles = session ? sessionRoles(session) : undefined;
   const full = roles?.view.some((r) => r.access["crm.leads.triage"] === "full") ?? false;
-  return { id: roles?.user.id ?? "u-demo-registrar", name: roles?.user.name ?? "Я", full };
+  const stock = roles
+    ? roles.all.some((r) => r.access["erp.stock"] === "full") &&
+      roles.all.some((r) => r.restricted_fields.includes("supplier_prices"))
+    : false;
+  return { id: roles?.user.id ?? "u-demo-registrar", name: roles?.user.name ?? "Я", full, stock };
 }
 
 function person(v: Viewer): InboundMailPerson {
@@ -133,6 +141,9 @@ let memory: StoredMail[] | null = null;
 /** Тесты: начальные письма заново. */
 export function resetInboundMailMock(): void {
   memory = null;
+  // Типы и правила живут рядом с письмами: сброс почты возвращает стартовый набор.
+  resetMailTypesMock();
+  resetDictionariesMock();
 }
 
 function read(): StoredMail[] {
@@ -163,6 +174,12 @@ function imapOff(): boolean {
   }
 }
 
+/** Кто подтверждает оплату (роль с «Платежи: полный») — адресаты «Передать бухгалтеру». */
+const HANDOVER_TARGETS: Record<"payments" | "price", InboundMailPerson[]> = {
+  payments: [{ id: "u-demo-accountant" as unknown as number, name: "Демо Бухгалтеров" }],
+  price: [{ id: "u-demo-supply" as unknown as number, name: "Демо Снабженцев" }],
+};
+
 const CARD_ONLY = new Set([
   "to",
   "cc",
@@ -183,8 +200,14 @@ const CARD_ONLY = new Set([
 /** Строка списка — карточка без полей, которые есть только у неё. */
 function itemOf(mail: StoredMail): InboundMailItem {
   return Object.fromEntries(
-    Object.entries(mail).filter(([key]) => !CARD_ONLY.has(key)),
+    Object.entries(withType(mail)).filter(([key]) => !CARD_ONLY.has(key)),
   ) as unknown as InboundMailItem;
+}
+
+/** Тип письма с актуальными названием, цветом и действием из справочника (админ мог их поменять). */
+function withType(mail: StoredMail): StoredMail {
+  if (!mail.type) return mail;
+  return { ...mail, type: resolveType(mail.type.code, mail.type.source) ?? mail.type };
 }
 
 function update(id: number, change: (mail: StoredMail) => StoredMail): StoredMail | null {
@@ -268,9 +291,9 @@ function claim(id: number, v: Viewer): Claim {
 function finish(
   id: number,
   v: Viewer,
-  result: { outcome: "registered" | "lead" | "replied" | "archived" } & Partial<
-    NonNullable<StoredMail["result"]>
-  >,
+  result: {
+    outcome: "registered" | "lead" | "replied" | "archived" | "price" | "handled";
+  } & Partial<NonNullable<StoredMail["result"]>>,
 ): void {
   update(id, (mail) => ({
     ...mail,
@@ -328,12 +351,18 @@ function inView(
   }
 }
 
-function listOf(view: InboundMailView, history: boolean | null, q: string): StoredMail[] {
+function listOf(
+  view: InboundMailView,
+  history: boolean | null,
+  q: string,
+  type: string | null = null,
+): StoredMail[] {
   if (imapOff()) return [];
   const v = viewer();
   const needle = q.trim().toLowerCase();
   return read()
     .filter((m) => inView(m, view, v, history))
+    .filter((m) => !type || m.type?.code === type)
     .filter(
       (m) =>
         !needle ||
@@ -419,6 +448,19 @@ export function inboundMailCounters(view: readonly MockRole[]) {
   return [{ module: "eds" as const, section: "mail", count, attention: count > 0 }];
 }
 
+/** Серверы провайдера ящика по хосту IMAP (как в CRM, `domain/sender_auth.PROVIDERS`). */
+function effectiveTrusted(host: string, explicit: readonly string[]): string[] {
+  if (explicit.length) return [...explicit];
+  const h = host.toLowerCase();
+  const is = (...suffixes: string[]) => suffixes.some((x) => h === x || h.endsWith(`.${x}`));
+  if (is("yandex.ru", "yandex.com")) return ["yandex.ru", "yandex.net"];
+  if (is("gmail.com", "googlemail.com")) return ["google.com"];
+  if (is("office365.com")) return ["protection.outlook.com"];
+  if (is("mail.ru")) return ["mail.ru"];
+  if (is("zoho.com", "zoho.eu")) return ["zoho.com", "zoho.eu"];
+  return [];
+}
+
 let imap: ImapConnector = {
   configured: true,
   host: "imap.mail.example",
@@ -439,6 +481,8 @@ let imap: ImapConnector = {
   last_error: null,
   folders: [{ name: "INBOX", label: "INBOX", spam: false }],
   history: null,
+  trusted_auth_servers: [],
+  trusted_auth_effective: [],
 };
 
 /** Ход загрузки истории: каждое чтение настроек — ещё одна пачка, как фоновая задача. */
@@ -479,7 +523,7 @@ function spamAction(id: number, change: (mail: StoredMail) => StoredMail) {
 function card(id: number): StoredMail | Response {
   const mail = read().find((m) => m.id === id);
   if (!mail) return notFound();
-  return visible(mail, viewer()) ? mail : forbidden();
+  return visible(mail, viewer()) ? withType(mail) : forbidden();
 }
 
 export const inboundMailHandlers = [
@@ -491,6 +535,7 @@ export const inboundMailHandlers = [
       view,
       raw === null ? null : raw === "true",
       url.searchParams.get("q") ?? "",
+      url.searchParams.get("type"),
     );
     return HttpResponse.json({
       items: items.map(itemOf),
@@ -526,6 +571,12 @@ export const inboundMailHandlers = [
     }
     return HttpResponse.json({ archived, skipped });
   }),
+  http.get("*/inbound-mail/handover-targets", ({ request }) => {
+    if (!viewer().full) return forbidden();
+    const purpose =
+      new URL(request.url).searchParams.get("purpose") === "price" ? "price" : "payments";
+    return HttpResponse.json({ items: HANDOVER_TARGETS[purpose] });
+  }),
   http.get("*/inbound-mail/:id/attachments/:index", () =>
     HttpResponse.text(PDF, { headers: { "content-type": "application/octet-stream" } }),
   ),
@@ -559,7 +610,10 @@ export const inboundMailHandlers = [
     const returnable =
       current.status === "in_work" ||
       (current.status === "done" &&
-        (current.result?.outcome === "archived" || current.result?.outcome === "replied"));
+        (current.result?.outcome === "archived" ||
+          current.result?.outcome === "replied" ||
+          current.result?.outcome === "price" ||
+          current.result?.outcome === "handled"));
     if (!returnable)
       return failure(409, "CONFLICT", "Это письмо нельзя вернуть в «Новые».", {
         reason: "mail_not_returnable",
@@ -602,13 +656,89 @@ export const inboundMailHandlers = [
             ...mail,
             assist: {
               status: "done",
-              kind: "buyer",
+              kind: null,
               summary: "Покупатель просит КП на стрелочные переводы с поставкой до конца года.",
-              action: "lead",
+              action: null,
             },
+            // Правило отправителя и выбор человека сильнее помощника.
+            type: mail.type ?? resolveType("client_request", "ai"),
           },
     );
     return updated ? HttpResponse.json(updated.assist) : notFound();
+  }),
+  http.put("*/inbound-mail/:id/type", async ({ params, request }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    const body = (await request.json()) as { type_code: string | null };
+    if (!v.full) return forbidden();
+    if (!read().some((m) => m.id === id)) return notFound();
+    const picked = body.type_code ? resolveType(body.type_code, "manual") : null;
+    if (body.type_code && !picked)
+      return failure(422, "VALIDATION_FAILED", "Такого типа нет.", { fields: ["type_code"] });
+    if (picked && !picked.active)
+      return failure(409, "CONFLICT", "Тип отключён.", { reason: "mail_type_inactive" });
+    update(id, (mail) => logged({ ...mail, type: picked }, v, "type", picked?.name.ru ?? "—"));
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post("*/inbound-mail/:id/price", ({ params }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    const current = read().find((m) => m.id === id);
+    if (!current) return notFound();
+    // Закрыть может тот, у кого есть право на прайсы, и либо ему передали письмо, либо он первая линия.
+    if (!v.stock || (!v.full && !isMine(current, v))) return forbidden();
+    const got = claim(id, v);
+    if ("response" in got) return got.response;
+    update(id, (mail) => logged(mail, v, "price"));
+    finish(id, v, { outcome: "price" });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post("*/inbound-mail/:id/complete", ({ params }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    const current = read().find((m) => m.id === id);
+    if (!current) return notFound();
+    if (!isMine(current, v)) return forbidden();
+    if (current.status !== "in_work") return conflict();
+    update(id, (mail) => logged(mail, v, "complete"));
+    finish(id, v, { outcome: "handled" });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post("*/inbound-mail/:id/suspicious", ({ params }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    if (!v.full) return forbidden();
+    const got = claim(id, v);
+    if ("response" in got) return got.response;
+    update(id, (mail) =>
+      logged({ ...mail, status: "spam", assignee: null, assigned_at: null }, v, "suspicious"),
+    );
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post("*/inbound-mail/:id/handover", async ({ params, request }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    const body = (await request.json()) as { user_id: number; purpose?: "payments" | "price" };
+    if (!v.full) return forbidden();
+    const target = HANDOVER_TARGETS[body.purpose ?? "payments"].find((t) => t.id === body.user_id);
+    if (!target)
+      return failure(409, "CONFLICT", "Некого выбрать.", { reason: "mail_no_handover_target" });
+    const got = claim(id, v);
+    if ("response" in got) return got.response;
+    update(id, (mail) =>
+      logged(
+        {
+          ...mail,
+          status: "in_work",
+          assignee: target,
+          assigned_at: new Date().toISOString(),
+        },
+        v,
+        "handover",
+        target.name,
+      ),
+    );
+    return new HttpResponse(null, { status: 204 });
   }),
   http.post("*/inbound-mail/:id/lead", ({ params }) => {
     const v = viewer();
@@ -693,6 +823,11 @@ export const inboundMailHandlers = [
       username: body.username ?? imap.username,
       password_last4: body.imap_password ? body.imap_password.slice(-4) : imap.password_last4,
       configured: Boolean(body.host),
+      trusted_auth_servers: body.trusted_auth_servers ?? imap.trusted_auth_servers,
+      trusted_auth_effective: effectiveTrusted(
+        body.host,
+        body.trusted_auth_servers ?? imap.trusted_auth_servers,
+      ),
     };
     return HttpResponse.json(imap);
   }),
@@ -735,3 +870,32 @@ export const inboundMailHandlers = [
 export function resetImapMock(): void {
   imap = { ...imap, folders: [{ name: "INBOX", label: "INBOX", spam: false }], history: null };
 }
+
+// Правило отправителя, созданное из карточки, сразу ставит тип открытым «Новым» письмам (кроме выбранных человеком).
+setRuleApplier((pattern, code, exceptId) => {
+  const mails = read();
+  let applied = 0;
+  const next = mails.map((mail) => {
+    const sender = mail.from_email.toLowerCase();
+    const domain = sender.split("@")[1] ?? "";
+    const hit = pattern.includes("@")
+      ? sender === pattern
+      : domain === pattern || domain.endsWith(`.${pattern}`);
+    if (!hit || mail.status !== "new") return mail;
+    // Тип по правилу — только письмам с подтверждённым отправителем.
+    if (mail.sender_check) return mail;
+    if (mail.id === exceptId) return mail;
+    if (mail.type?.source === "manual" || mail.type?.source === "rule") return mail;
+    applied += 1;
+    return { ...mail, type: resolveType(code, "rule") };
+  });
+  const target = next.find((m) => m.id === exceptId);
+  if (target && target.type?.source !== "manual") {
+    const at = next.indexOf(target);
+    next[at] = { ...target, type: resolveType(code, "rule") };
+    applied += 1;
+  }
+  write(next);
+  return applied;
+});
+setMailTypeUsage(() => new Set(read().flatMap((mail) => (mail.type ? [mail.type.code] : []))));

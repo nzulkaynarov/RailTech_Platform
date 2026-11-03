@@ -43,6 +43,8 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
   const [assist, setAssist] = useState(imap.assist_enabled);
   const [personal, setPersonal] = useState(imap.personal_rule);
   const [personalLabel, setPersonalLabel] = useState(imap.personal_label);
+  // Доверенные серверы — по одному в строке; список в состоянии хранится текстом.
+  const [trusted, setTrusted] = useState(imap.trusted_auth_servers.join("\n"));
   const save = useSaveImapConnector({
     mutation: {
       onSuccess: (data) => {
@@ -75,6 +77,10 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
             assist_enabled: assist,
             personal_rule: personal,
             personal_label: personalLabel.trim(),
+            trusted_auth_servers: trusted
+              .split(/[\s,;]+/)
+              .map((item) => item.trim())
+              .filter(Boolean),
             username: username.trim() === "" ? null : username.trim(),
             imap_password: appPassword === "" ? null : appPassword,
             password,
@@ -182,6 +188,21 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
           />
         </Field>
       ) : null}
+      <Field
+        id="imap-trusted"
+        label={t("mail.inbound.trusted")}
+        hint={t("mail.inbound.trustedHint")}
+      >
+        <Input.TextArea
+          id="imap-trusted"
+          rows={4}
+          value={trusted}
+          autoComplete="off"
+          onChange={(event) => {
+            setTrusted(event.target.value);
+          }}
+        />
+      </Field>
     </ActionForm>
   );
 }
@@ -231,6 +252,17 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
             value: imap.personal_rule
               ? t("mail.inbound.personalOn", { label: imap.personal_label })
               : t("mail.inbound.personalOff"),
+          },
+          {
+            label: t("mail.inbound.trusted"),
+            value: imap.trusted_auth_effective.length
+              ? t(
+                  imap.trusted_auth_servers.length
+                    ? "mail.inbound.trustedExplicit"
+                    : "mail.inbound.trustedDerived",
+                  { list: imap.trusted_auth_effective.join(", ") },
+                )
+              : t("mail.inbound.trustedNone"),
           },
           { label: t("mail.inbound.lastPoll"), value: last },
         ]}

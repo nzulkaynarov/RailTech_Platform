@@ -2248,6 +2248,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/inbound-mail/handover-targets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Входящая почта: кому передать счёт
+     * @description CRM `GET /inbound-mail/handover-targets` (MAIL-TYPES): активные сотрудники, чья роль даёт подтверждать оплату (раздел «Платежи» — полный; роли — данные, по названию роли код не ищет). Пусто — никто не назначен: экран подсказывает «Настройки · Роли». Раздел `crm.leads.triage` (полный).
+     */
+    get: operations["listInboundMailHandoverTargets"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/inbound-mail/{id}": {
     parameters: {
       query?: never;
@@ -2482,6 +2502,106 @@ export interface paths {
      * @description CRM `POST /inbound-mail/{id}/discard` (W18A-P2-2): в архив с причиной «Спам», ничего не удаляется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
      */
     post: operations["discardInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/type": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Входящая почта: сменить тип письма
+     * @description CRM `PUT /inbound-mail/{id}/type` (MAIL-TYPES): человек выбирает тип из справочника «Типы входящих писем» одним щелчком или снимает его (`type_code = null`). Запись в журнал письма; правило отправителя и помощник этот выбор не перебивают. Письмо не берётся в работу и не закрывается. Раздел `crm.leads.triage` (полный). Отключённый тип — 409 `CONFLICT` (`details.reason = mail_type_inactive`); неизвестный — 422.
+     */
+    put: operations["setInboundMailType"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/price": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Прайс загружен»
+     * @description CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт · Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел Нужно право на каталог (`erp.stock: full`); закрывает исполнитель переданного письма (снабженец) или первая линия (CRM проверяет и право по объединению ролей, и «чьё письмо»). Уже обработано — 409 `CONFLICT`.
+     */
+    post: operations["markInboundMailPriceUploaded"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Готово — убрать из очереди»
+     * @description CRM `POST /inbound-mail/{id}/complete` (MAIL-TYPES): исполнитель переданного письма (счёт — бухгалтер) закрывает его, итог `handled`. Нужен только вход сотрудника; не исполнитель — 403 `FORBIDDEN`, письмо не «в работе» — 409.
+     */
+    post: operations["completeInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/suspicious": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «В Подозрительные»
+     * @description CRM `POST /inbound-mail/{id}/suspicious` (MAIL-TYPES): письмо уходит из очереди во вкладку «Подозрительные», оттуда его можно вернуть («Не спам») или убрать. Ящик на сервере не меняется. Раздел `crm.leads.triage` (полный).
+     */
+    post: operations["moveInboundMailToSuspicious"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/handover": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Передать бухгалтеру»
+     * @description CRM `POST /inbound-mail/{id}/handover` (MAIL-TYPES): письмо «В работе» у выбранного сотрудника из `GET /inbound-mail/handover-targets` — из «Новых» оно уходит, у сотрудника появляется в «Моих задачах». Нет такого коллеги — 409 `CONFLICT` (`details.reason = mail_no_handover_target`). Раздел `crm.leads.triage` (полный).
+     */
+    post: operations["handoverInboundMail"];
     delete?: never;
     options?: never;
     head?: never;
@@ -4264,6 +4384,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/mail-sender-rules": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Типы писем · правила отправителя
+     * @description CRM `GET /mail-sender-rules` (MAIL-TYPES): «отправитель или домен → тип» по возрасту. Читает первая линия (`crm.leads.triage`) и администратор (`admin`, чтение).
+     */
+    get: operations["listMailSenderRules"];
+    put?: never;
+    /**
+     * Типы писем · новое правило отправителя
+     * @description CRM `POST /mail-sender-rules`: новые письма этого адреса или домена получают тип до помощника, правило побеждает ИИ. Письмо `mail_id` (создание из карточки) и открытые «Новые» этого отправителя, где тип не выбирал человек, получают тип сразу (`applied`). Только администратор (`admin: full`). Шаблон уже есть — 409 `CONFLICT` (`mail_rule_exists`); тип отключён — 409 (`mail_type_inactive`); не адрес и не домен — 422.
+     */
+    post: operations["createMailSenderRule"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/mail-sender-rules/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Типы писем · удалить правило отправителя
+     * @description CRM `DELETE /mail-sender-rules/{id}`: типы уже полученных писем остаются. Только администратор (`admin: full`).
+     */
+    delete: operations["deleteMailSenderRule"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/dictionaries": {
     parameters: {
       query?: never;
@@ -4273,7 +4437,7 @@ export interface paths {
     };
     /**
      * Справочники · каталог
-     * @description Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
+     * @description Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот, `mail` — типы входящих писем, MAIL-TYPES), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
      */
     get: operations["listDictionaries"];
     put?: never;
@@ -10951,10 +11115,22 @@ export interface components {
       /** @example due_days */
       key: string;
       /** @enum {string} */
-      type: "boolean" | "integer";
+      type: "boolean" | "integer" | "choice";
       name: components["schemas"]["LocalizedName"];
       minimum?: number | null;
       maximum?: number | null;
+      /** @description Допустимые значения `type = choice` — закрытый список кода (MAIL-TYPES); у остальных полей нет */
+      options?: components["schemas"]["DictionaryAttrOption"][] | null;
+      /**
+       * @description `false` — поле можно оставить пустым (вид документа EDS у типа письма)
+       * @default true
+       */
+      required: boolean;
+    };
+    DictionaryAttrOption: {
+      /** @example create_lead */
+      value: string;
+      name: components["schemas"]["LocalizedName"];
     };
     Dictionary: {
       /** @example letter-kinds */
@@ -10963,12 +11139,12 @@ export interface components {
        * @description Домен-владелец значений
        * @enum {string}
        */
-      owner: "eds";
+      owner: "eds" | "crm";
       /**
-       * @description Область экрана (`documents` — документооборот)
+       * @description Область экрана (`documents` — документооборот, `mail` — входящая почта)
        * @enum {string}
        */
-      area: "documents";
+      area: "documents" | "mail";
       name: components["schemas"]["LocalizedName"];
       /** @description Закрытый список поведения — только переименовать и переставить */
       closed: boolean;
@@ -10976,10 +11152,12 @@ export interface components {
     };
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
+      /** @description Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
+      unavailable: ("eds" | "crm")[];
     };
-    /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа); `null` — не задано */
+    /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
     DictionaryAttrValues: {
-      [key: string]: boolean | number | null;
+      [key: string]: boolean | number | string | null;
     };
     DictionaryItem: {
       code: string;
@@ -11087,6 +11265,10 @@ export interface components {
       personal_rule: boolean;
       /** @description Пометка у такого письма */
       personal_label: string;
+      /** @description Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). Пусто — серверы провайдера нашего ящика по хосту IMAP (см. `trusted_auth_effective`) */
+      trusted_auth_servers: string[];
+      /** @description Кому верим на самом деле: заданный список или серверы провайдера по хосту IMAP (Яндекс, Google, Microsoft 365, Mail.ru, Zoho); пусто — никому (хост не из известных провайдеров) */
+      trusted_auth_effective: string[];
       username: string;
       password_configured: boolean;
       password_last4: string | null;
@@ -11179,6 +11361,8 @@ export interface components {
       personal_rule: boolean;
       /** @default Адресовано лично */
       personal_label: string;
+      /** @description Доверенные `authserv-id`; `null` — прежние, пустой список — по хосту IMAP */
+      trusted_auth_servers?: string[] | null;
       /** @description `null` — оставить прежний */
       username?: string | null;
       /** @description Пароль приложения; `null` — оставить прежний */
@@ -11205,10 +11389,10 @@ export interface components {
      */
     InboundMailStatus: "new" | "in_work" | "registering" | "done" | "spam";
     /**
-     * @description Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной
+     * @description Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен, переданное письмо обработал исполнитель
      * @enum {string}
      */
-    InboundMailOutcome: "registered" | "lead" | "replied" | "archived";
+    InboundMailOutcome: "registered" | "lead" | "replied" | "archived" | "price" | "handled";
     /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
     InboundMailAssist: {
       /**
@@ -11216,14 +11400,97 @@ export interface components {
        * @enum {string}
        */
       status: "none" | "done" | "unavailable" | "off";
-      /** @enum {string|null} */
+      /**
+       * @description Устарело: только у подсказок до MAIL-TYPES; тип письма — `InboundMailItem.type`
+       * @enum {string|null}
+       */
       kind: "buyer" | "official" | "supplier_doc" | "other" | null;
       summary: string | null;
       /**
-       * @description Предложение по типу (выбирает код)
+       * @description Устарело: только у подсказок до MAIL-TYPES; действие — `type.default_action`
        * @enum {string|null}
        */
       action: "register" | "lead" | "archive" | null;
+    };
+    /** @description Тип письма (MAIL-TYPES): тег в списке и карточке; `default_action` — что делает основная кнопка карточки (закрытый список кода); отключённый тип у старого письма остаётся */
+    InboundMailType: {
+      code: string;
+      name: components["schemas"]["LocalizedName"];
+      /** @enum {string} */
+      color: "blue" | "green" | "gold" | "red" | "purple" | "cyan" | "default";
+      /** @enum {string} */
+      icon: "mail" | "team" | "calendar" | "file" | "wallet" | "bank" | "notification" | "stop";
+      /** @enum {string} */
+      default_action:
+        | "register_incoming"
+        | "create_lead"
+        | "supplier_price"
+        | "to_accountant"
+        | "archive_mailing"
+        | "reply_template"
+        | "suspicious";
+      /** @description Вид документа EDS (код `letter-kinds`): им форма «Зарегистрировать входящее» из письма этого типа предзаполняется */
+      letter_kind: string | null;
+      active: boolean;
+      /**
+       * @description Кто выбрал тип: правило отправителя, помощник (человек подтверждает) или человек
+       * @enum {string}
+       */
+      source: "rule" | "ai" | "manual";
+    };
+    InboundMailTypeIn: {
+      /** @description Код типа; `null` - снять тип */
+      type_code: string | null;
+    };
+    InboundMailHandoverIn: {
+      user_id: number;
+      /**
+       * @description `payments` — счёт тому, кто подтверждает оплату; `price` — прайс тому, кто загружает прайсы поставщиков
+       * @default payments
+       * @enum {string}
+       */
+      purpose: "payments" | "price";
+    };
+    InboundMailHandoverTargets: {
+      items: {
+        id: number;
+        name: string;
+      }[];
+    };
+    MailSenderRule: {
+      id: number;
+      /** @description Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами), нижний регистр */
+      pattern: string;
+      type_code: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @description Кто создал */
+      created_by: string | null;
+    };
+    MailSenderRuleList: {
+      items: components["schemas"]["MailSenderRule"][];
+    };
+    MailSenderRuleIn: {
+      /** @description Адрес или домен; `*@soliq.uz`, `@soliq.uz` и `soliq.uz` - одно и то же */
+      pattern: string;
+      type_code: string;
+      /** @description Письмо, из карточки которого создано правило: тип ставится и ему */
+      mail_id?: number | null;
+    };
+    MailSenderRuleOut: {
+      /**
+       * @description `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
+       * @enum {string|null}
+       */
+      caution: "public_domain" | null;
+      id: number;
+      pattern: string;
+      type_code: string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string | null;
+      /** @description Сколько открытых писем «Новые» получили тип по правилу */
+      applied: number;
     };
     InboundMailLink: {
       id: number;
@@ -11268,6 +11535,13 @@ export interface components {
       preview: string;
       attachments_count: number;
       assist: components["schemas"]["InboundMailAssist"];
+      /** @description Тип письма из справочника «Типы входящих писем»; `null` — не определён */
+      type: components["schemas"]["InboundMailType"] | null;
+      /**
+       * @description Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+       * @enum {string|null}
+       */
+      sender_check: "unverified" | "unknown" | null;
       /** @description Известный клиент — по адресу контакта или ИНН в тексте */
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
@@ -11407,6 +11681,13 @@ export interface components {
       preview: string;
       attachments_count: number;
       assist: components["schemas"]["InboundMailAssist"];
+      /** @description Тип письма из справочника «Типы входящих писем»; `null` — не определён */
+      type: components["schemas"]["InboundMailType"] | null;
+      /**
+       * @description Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+       * @enum {string|null}
+       */
+      sender_check: "unverified" | "unknown" | null;
       /** @description Известный клиент — по адресу контакта или ИНН в тексте */
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
@@ -13700,7 +13981,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
+    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`), некому передать (`mail_no_handover_target`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
     InboundMailConflict: {
       headers: {
         [name: string]: unknown;
@@ -13846,7 +14127,7 @@ export interface components {
     ReplyTemplateId: number;
     /** @description Id объекта ERP (строкой) */
     CompanyItemId: components["schemas"]["CompanyItemRef"];
-    /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+    /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
     DictionaryKindPath: string;
     DictionaryCodePath: string;
     /** @description Справочник ERP */
@@ -17646,6 +17927,8 @@ export interface operations {
         view?: components["schemas"]["InboundMailView"];
         history?: boolean;
         q?: string;
+        /** @description Только письма этого типа (код справочника `mail-types`, MAIL-TYPES); счётчики вкладок от него не зависят */
+        type?: string;
       };
       header?: never;
       path?: never;
@@ -17660,6 +17943,32 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["InboundMailPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listInboundMailHandoverTargets: {
+    parameters: {
+      query?: {
+        /** @description `payments` (по умолчанию) — подтверждающие оплату; `price` — загружающие прайсы и видящие цены поставщиков */
+        purpose?: "payments" | "price";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Кандидаты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailHandoverTargets"];
         };
       };
       401: components["responses"]["SessionExpired"];
@@ -18026,6 +18335,161 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setInboundMailType: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailTypeIn"];
+      };
+    };
+    responses: {
+      /** @description Тип записан */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markInboundMailPriceUploaded: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо разобрано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  completeInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо разобрано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  moveInboundMailToSuspicious: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо в «Подозрительных» */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  handoverInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InboundMailHandoverIn"];
+      };
+    };
+    responses: {
+      /** @description Письмо передано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -21625,6 +22089,88 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  listMailSenderRules: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Правила */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailSenderRuleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createMailSenderRule: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MailSenderRuleIn"];
+      };
+    };
+    responses: {
+      /** @description Правило создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailSenderRuleOut"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["InboundMailConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteMailSenderRule: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Правило удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listDictionaries: {
     parameters: {
       query?: never;
@@ -21655,7 +22201,7 @@ export interface operations {
       };
       header?: never;
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
       };
       cookie?: never;
@@ -21685,7 +22231,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
       };
       cookie?: never;
@@ -21721,7 +22267,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
       };
       cookie?: never;
@@ -21756,7 +22302,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
         code: components["parameters"]["DictionaryCodePath"];
       };
@@ -21786,7 +22332,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
         kind: components["parameters"]["DictionaryKindPath"];
         code: components["parameters"]["DictionaryCodePath"];
       };

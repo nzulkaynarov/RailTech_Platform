@@ -285,4 +285,9 @@ def test_reason_values_are_a_stable_contract() -> None:
         "mail_handled",
         "mail_not_returnable",
         "mail_registering",
+        "mail_type_name_taken",
+        "mail_type_in_use",
+        "mail_rule_exists",
+        "mail_type_inactive",
+        "mail_no_handover_target",
     }

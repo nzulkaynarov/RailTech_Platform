@@ -11,4 +11,9 @@ export type ListInboundMailParams = {
    * @maxLength 100
    */
   q?: string;
+  /**
+   * Только письма этого типа (код справочника `mail-types`, MAIL-TYPES); счётчики вкладок от него не зависят
+   * @pattern ^[a-z][a-z_]{0,31}$
+   */
+  type?: string;
 };

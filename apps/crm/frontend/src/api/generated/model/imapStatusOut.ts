@@ -32,5 +32,9 @@ export interface ImapStatusOut {
   port: number;
   secrets_enabled: boolean;
   security: ImapStatusOutSecurity;
+  /** Кому верим на самом деле: заданный список или серверы провайдера нашего ящика по хосту IMAP; пусто — никому (хост не из известных провайдеров) */
+  trusted_auth_effective?: string[];
+  /** Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип»; пусто — выводится из хоста IMAP (см. `trusted_auth_effective`) */
+  trusted_auth_servers?: string[];
   username: string;
 }

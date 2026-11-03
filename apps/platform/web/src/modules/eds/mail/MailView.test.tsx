@@ -19,10 +19,13 @@ describe("Карточка письма: подсказка и действия 
     signIn(REGISTRAR);
     renderAt("/eds/mail/18");
     expect(await heading("Запрос КП на стрелочные переводы")).toBeVisible();
-    expect(screen.queryByText("Покупатель")).toBeNull();
+    expect(screen.queryByText(/Покупатель просит КП/)).toBeNull();
+    expect(screen.getByText(/Тип не определён/)).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Подсказать" }));
-    expect(await screen.findByText("Покупатель")).toBeVisible();
-    expect(screen.getByText("Предлагает: Создать лид")).toBeVisible();
+    expect(await screen.findByText(/Покупатель просит КП/)).toBeVisible();
+    // помощник предложил тип «Запрос клиента» — основная кнопка стала его действием по умолчанию
+    expect(screen.getByText(/Помощник предложил тип/)).toBeVisible();
+    expect(screen.getByText("предложил помощник")).toBeVisible();
     expect(screen.getByText("Новое")).toBeVisible();
 
     fireEvent.click(screen.getByRole("button", { name: "Создать лид" }));
@@ -33,32 +36,39 @@ describe("Карточка письма: подсказка и действия 
     expect(await screen.findByText(/Лид L-2068 создан/)).toBeVisible();
     const list = await screen.findByRole("list", { name: "Письма, ждущие разбора" });
     await waitFor(() => {
-      expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+      expect(within(list).getAllByRole("listitem")).toHaveLength(5);
     });
   });
 
   it("«В архив» — только с причиной", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/19");
-    fireEvent.click(await screen.findByRole("button", { name: "В архив" }));
+    // тип «Рассылка»: основная кнопка — «В архив как рассылку», причина подставлена и правится
+    fireEvent.click(await screen.findByRole("button", { name: "В архив как рассылку" }));
     const confirm = screen.getByRole("button", { name: "Отправить в архив" });
+    expect(screen.getByLabelText("Причина")).toHaveValue("Рассылка");
+    fireEvent.change(screen.getByLabelText("Причина"), { target: { value: "" } });
     expect(confirm).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Причина"), { target: { value: "реклама" } });
     fireEvent.click(confirm);
     expect(await screen.findByText("Письмо в архиве")).toBeVisible();
   });
 
-  it("«Зарегистрировать входящее» открывает форму, заполненную из письма, с вложением и адресатами из копии", async () => {
+  it("«Зарегистрировать как ВХ» открывает форму, заполненную из письма, с вложением и адресатами из копии", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/17");
-    const register = await screen.findByRole("link", { name: "Зарегистрировать входящее" });
+    // «Документ поставщика»: основная кнопка — «Зарегистрировать как ВХ», остальные действия — в меню
+    const register = await screen.findByRole("link", { name: "Зарегистрировать как ВХ" });
     expect(register).toHaveAttribute("href", "/eds/register?mail=17");
+    expect(register).toHaveClass("ant-btn-primary");
     fireEvent.click(register);
     expect(
       await screen.findByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
     ).toBeVisible();
     expect(screen.getByLabelText(/Тема/)).toHaveValue("Акт сверки за октябрь");
     expect(await screen.findByText("акт-сверки-октябрь.pdf")).toBeVisible();
+    // вид документа предзаполнен по типу письма («Документ поставщика» → «Письмо поставщика»)
+    expect(await screen.findByText("Письмо поставщика")).toBeVisible();
   });
 });
 
@@ -82,7 +92,7 @@ describe("«В работе»: взять, перехватить, вернут�
     expect(
       await screen.findByText(/Письмо уже в работе у Иванов Демо с \d{2}:\d{2}/),
     ).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать входящее" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Создать лид" })).toBeNull();
     expect(screen.queryByLabelText("Текст ответа")).toBeNull();
 
@@ -92,7 +102,7 @@ describe("«В работе»: взять, перехватить, вернут�
     if (!confirm) throw new Error("нет кнопки подтверждения");
     fireEvent.click(confirm);
     expect(await screen.findByText("Письмо в работе у вас")).toBeVisible();
-    expect(await screen.findByRole("link", { name: "Зарегистрировать входящее" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Зарегистрировать как ВХ" })).toBeVisible();
   });
 
   it("действие, на которое опередил коллега (409): сообщение словами и «Забрать себе»", async () => {
@@ -271,7 +281,7 @@ describe("Сотрудник без первой линии со своим пи
     renderAt("/eds/my-mail/23");
     expect(await heading("Вопрос по гарантии на стрелочный привод")).toBeVisible();
     expect(screen.getByLabelText("Текст ответа")).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать входящее" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Создать лид" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Взять в работу" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Вернуть делопроизводителю" }));

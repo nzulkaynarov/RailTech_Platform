@@ -4,6 +4,7 @@
  */
 
 /**
+ * Устарело: только у подсказок до MAIL-TYPES; тип письма — `InboundMailItem.type`
  * @nullable
  */
 export type InboundMailAssistKind =

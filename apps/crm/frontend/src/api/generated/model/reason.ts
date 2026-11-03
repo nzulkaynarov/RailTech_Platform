@@ -148,4 +148,9 @@ export const Reason = {
   mail_handled: "mail_handled",
   mail_not_returnable: "mail_not_returnable",
   mail_registering: "mail_registering",
+  mail_type_name_taken: "mail_type_name_taken",
+  mail_type_in_use: "mail_type_in_use",
+  mail_rule_exists: "mail_rule_exists",
+  mail_type_inactive: "mail_type_inactive",
+  mail_no_handover_target: "mail_no_handover_target",
 } as const;

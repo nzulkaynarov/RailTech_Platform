@@ -11,7 +11,7 @@ from app.clients import crm_models as crm
 from app.feeds.numbers import lead_number, letter_ref
 
 MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
-MailOutcome = Literal["registered", "lead", "replied", "archived"]
+MailOutcome = Literal["registered", "lead", "replied", "archived", "price", "handled"]
 MailView = Literal["new", "mine", "in_work", "done", "spam", "all"]
 
 
@@ -75,6 +75,8 @@ class ImapConnector(_Out):
     assist_enabled: bool
     personal_rule: bool
     personal_label: str
+    trusted_auth_servers: list[str]
+    trusted_auth_effective: list[str]
     username: str
     password_configured: bool
     password_last4: str | None
@@ -99,6 +101,7 @@ class ImapSettingsIn(BaseModel):
     assist_enabled: bool = True
     personal_rule: bool = True
     personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
+    trusted_auth_servers: list[str] | None = Field(default=None, max_length=30)
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
@@ -117,6 +120,82 @@ class InboundMailAssist(_Out):
     kind: Literal["buyer", "official", "supplier_doc", "other"] | None
     summary: str | None
     action: Literal["register", "lead", "archive"] | None
+
+
+MailTypeAction = Literal[
+    "register_incoming",
+    "create_lead",
+    "supplier_price",
+    "to_accountant",
+    "archive_mailing",
+    "reply_template",
+    "suspicious",
+]
+TYPE_CODE = r"^[a-z][a-z_]{0,31}$"
+
+
+class LocalizedName(_Out):
+    ru: str
+    uz: str
+    en: str
+
+
+class InboundMailType(_Out):
+    code: str
+    name: LocalizedName
+    color: Literal["blue", "green", "gold", "red", "purple", "cyan", "default"]
+    icon: Literal["mail", "team", "calendar", "file", "wallet", "bank", "notification", "stop"]
+    default_action: MailTypeAction
+    letter_kind: str | None
+    active: bool
+    source: Literal["rule", "ai", "manual"]
+
+
+class InboundMailTypeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type_code: str | None = Field(pattern=TYPE_CODE)
+
+
+class InboundMailHandoverIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: int = Field(ge=1)
+    purpose: Literal["payments", "price"] = "payments"
+
+
+class InboundMailHandoverTarget(_Out):
+    id: int
+    name: str
+
+
+class InboundMailHandoverTargets(_Out):
+    items: list[InboundMailHandoverTarget]
+
+
+class MailSenderRule(_Out):
+    id: int
+    pattern: str
+    type_code: str
+    created_at: datetime
+    created_by: str | None
+
+
+class MailSenderRuleList(_Out):
+    items: list[MailSenderRule]
+
+
+class MailSenderRuleOut(MailSenderRule):
+    applied: int
+    caution: Literal["public_domain"] | None
+
+
+class MailSenderRuleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pattern: str = Field(min_length=3, max_length=255)
+    type_code: str = Field(pattern=TYPE_CODE)
+    mail_id: int | None = Field(default=None, ge=1)
 
 
 class InboundMailLink(_Out):
@@ -152,6 +231,8 @@ class InboundMailItem(_Out):
     preview: str
     attachments_count: int
     assist: InboundMailAssist
+    type: InboundMailType | None
+    sender_check: Literal["unverified", "unknown"] | None
     client: InboundMailLink | None
     lead: InboundMailLink | None
     from_history: bool
@@ -316,6 +397,11 @@ def _assist(src: crm.InboundMailAssist) -> InboundMailAssist:
     return InboundMailAssist.model_validate(src.model_dump(mode="json"))
 
 
+def _type(src: crm.InboundMailType | None) -> InboundMailType | None:
+    """Старый CRM (до MAIL-TYPES) поля `type` не знает: письмо без типа."""
+    return InboundMailType.model_validate(src.model_dump(mode="json")) if src else None
+
+
 def _person(src: crm.InboundMailPerson | None) -> InboundMailPerson | None:
     return InboundMailPerson(id=src.id, name=src.name) if src else None
 
@@ -348,6 +434,8 @@ def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
         preview=src.preview,
         attachments_count=src.attachments_count,
         assist=_assist(src.assist),
+        type=_type(src.type),
+        sender_check=src.sender_check,
         client=_client(src.client),
         lead=_lead(src.lead),
         from_history=bool(src.from_history),

@@ -4,6 +4,7 @@ import type { EdsFile } from "../../../shared/api/generated/model";
 import {
   copyInboundMailFilesToEds,
   getInboundMail,
+  listDictionaryItems,
   takeInboundMail,
 } from "../../../shared/api/generated/platform-bff";
 import { inWorkByOther, prefillFromMail } from "../mail/mailModel";
@@ -49,7 +50,22 @@ export function useMailPrefill(
             filesFailed = true;
           }
         }
-        apply((prev) => ({ ...prev, ...prefillFromMail(mail, files) }));
+        // Вид документа по типу письма (MAIL-TYPES): только если такой вид сейчас действует в справочнике EDS.
+        const wanted = mail.type?.letter_kind ?? null;
+        let kind = "";
+        if (wanted) {
+          try {
+            const kinds = await listDictionaryItems("letter-kinds");
+            kind = kinds.items.some((item) => item.code === wanted) ? wanted : "";
+          } catch {
+            kind = "";
+          }
+        }
+        apply((prev) => ({
+          ...prev,
+          ...prefillFromMail(mail, files),
+          ...(kind ? { kind } : {}),
+        }));
         setPrefill({
           state: filesFailed ? "files_failed" : "done",
           subject: mail.subject,

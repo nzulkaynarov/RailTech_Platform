@@ -45,6 +45,7 @@ from app.api import (
     events,
     health,
     inbound_mail,
+    mail_types,
     me,
     me_notifications,
     me_profile,
@@ -139,6 +140,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(eds_letter_intake.router, prefix=API_PREFIX)
     app.include_router(eds_resolution_templates.router, prefix=API_PREFIX)
     app.include_router(dictionaries.router, prefix=API_PREFIX)
+    # раньше inbound_mail: `/inbound-mail/handover-targets` не совпадёт с `/inbound-mail/{id}`
+    app.include_router(mail_types.router, prefix=API_PREFIX)
     app.include_router(inbound_mail.router, prefix=API_PREFIX)
     app.include_router(inbound_mail.admin_router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)

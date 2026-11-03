@@ -4,7 +4,7 @@
  */
 
 /**
- * Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной
+ * Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен, переданное письмо обработал исполнитель
  */
 export type InboundMailOutcome = (typeof InboundMailOutcome)[keyof typeof InboundMailOutcome];
 
@@ -13,4 +13,6 @@ export const InboundMailOutcome = {
   lead: "lead",
   replied: "replied",
   archived: "archived",
+  price: "price",
+  handled: "handled",
 } as const;

@@ -8,4 +8,5 @@ export type DictionaryAttrType = (typeof DictionaryAttrType)[keyof typeof Dictio
 export const DictionaryAttrType = {
   boolean: "boolean",
   integer: "integer",
+  choice: "choice",
 } as const;
