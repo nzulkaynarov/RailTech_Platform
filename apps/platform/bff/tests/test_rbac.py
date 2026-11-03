@@ -220,39 +220,43 @@ def test_menu_sections_exist_and_cover_every_section() -> None:
         assert module in MODULES
 
 
+SETTINGS_MENU = [
+    "overview",
+    "org",
+    "roles",
+    "company",
+    "numbering",
+    "taxes",
+    "articles",
+    "telegram",
+    "mail",
+    "forms",
+    "dictionaries",
+    "resolutions",
+    "templates",
+    "timing",
+    "notifications",
+    "integrations",
+    "spend",
+    "audit",
+    "exports",
+    "bus",
+]
+
+
 def test_menu_examples() -> None:
     admin = rbac.merge(roles("ADMIN"))
     assert rbac.menu_for(admin)["dashboard"] == ["queue"]
-    assert rbac.menu_for(admin)["admin"] == [
-        "roles",
-        "org",
-        "integrations",
-        "tickets",
-        "articles",
-        "company",
-        "docflow",
-        "bot",
-        "audit",
-        "setup",
-    ]
-    # W15-H4: базу знаний администратор открывает из Настроек · Telegram-бот (Клиентов в рейле нет)
+    # SET-IA: «Все настройки» и пять групп; у «Первого запуска» и «Обращений» пунктов нет
+    assert rbac.menu_for(admin)["admin"] == SETTINGS_MENU
+    # W15-H4: базу знаний администратор открывает из Настроек · Telegram (Клиентов в рейле нет)
     assert rbac.menu_for(admin)["crm"] == []
     assert "crm" not in rbac.modules_for(admin)
     director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
-    assert director["admin"] == [
-        "roles",
-        "org",
-        "integrations",
-        "tickets",
-        "articles",
-        "company",
-        "docflow",
-        "bot",
-        "audit",
-        "setup",
-    ]
+    # директор видит те же пункты на чтение; «Обмен между системами» прячет web (`level: full`)
+    assert director["admin"] == SETTINGS_MENU
     assert "kb" in director["crm"]
-    assert "bot" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
+    assert "telegram" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
     assert "kb" in rbac.menu_for(rbac.merge(roles("MANAGER")))["crm"]
     assert "kb" not in rbac.menu_for(rbac.merge(roles("SUPPLY")))["crm"]
     assert "summary" in rbac.menu_for(rbac.merge(roles("ACCOUNTANT")))["dashboard"]

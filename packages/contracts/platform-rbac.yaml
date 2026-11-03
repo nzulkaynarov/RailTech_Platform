@@ -308,7 +308,7 @@ resources:
         full: [chats:read, chats:reply, chats:note, chats:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari, kompaniya maqolalari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests, company articles" }
+    label: { ru: "Настройки · Сотрудники, Роли и права, Каналы связи, Процессы, Подключения, Журнал, Статьи компании, Обращения сотрудников", uz: "Sozlamalar · Xodimlar, rollar va huquqlar, aloqa kanallari, jarayonlar, ulanishlar, jurnal, kompaniya maqolalari, xodimlar murojaatlari", en: "Settings · Employees, roles & permissions, channels, processes, connections, log, company articles, staff requests" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
@@ -352,7 +352,7 @@ resources:
   # у ролей из шаблонов раздела нет, у директора и администратора — full.
   - key: company.settings
     module: admin
-    label: { ru: "Настройки · Компания и бланки: реквизиты, шаблоны документов, нумерация, условия оплаты", uz: "Sozlamalar · Kompaniya va blankalar: rekvizitlar, hujjat shablonlari, raqamlash, to‘lov shartlari", en: "Settings · Company & letterhead: details, document templates, numbering, payment terms" }
+    label: { ru: "Настройки · Компания: реквизиты и бланк, нумерация, налоги и валюты, шаблоны документов", uz: "Sozlamalar · Kompaniya: rekvizitlar va blanka, raqamlash, soliqlar va valyutalar, hujjat shablonlari", en: "Settings · Company: details & letterhead, numbering, taxes & currencies, document templates" }
     backend:
       erp: { full: [settings.edit, settings.charge_templates] }
 
@@ -395,20 +395,31 @@ menu:
     external: [chats.external]
     contacts: [chats.internal]
   admin:
-    roles: [admin]
+    # SET-IA (владелец 2026-11-03): индекс «Все настройки» и пять групп — Люди и доступ · Компания · Каналы связи ·
+    # Процессы · Система (группы — `apps/platform/web/src/modules/admin/settingsRegistry.ts`). Новых разделов каталога нет:
+    # пункты открываются прежними `admin` и `company.settings`. «Первый запуск» — чек-лист на индексе, «Обращения
+    # сотрудников» — в «Моих задачах»: своих пунктов у них нет.
+    overview: [admin]
     org: [admin]
-    integrations: [admin]
-    tickets: [admin]
-    articles: [admin]
+    roles: [admin]
     company: [company.settings]
-    # EDS-REG: «Документооборот» — справочники (виды входящих, способы получения), дальше шаблоны резолюций.
-    docflow: [admin]
-    bot: [admin]
-    # «Журнал» (W15-H4): действия людей и обмен между системами — фильтр одного экрана. «Обмен между системами» (шина,
-    # W13-A2) отдельного пункта не имеет и открывается только при `admin: full` (`level` в modules/admin/module.ts).
+    numbering: [company.settings]
+    taxes: [company.settings]
+    articles: [admin]
+    telegram: [admin]
+    mail: [admin]
+    forms: [admin]
+    dictionaries: [admin, company.settings]
+    resolutions: [admin]
+    templates: [company.settings]
+    timing: [admin]
+    notifications: [admin]
+    integrations: [admin]
+    spend: [admin]
     audit: [admin]
-    # «Первый запуск» (W15-H4): пункт виден администратору, пока шаги мастера не завершены (`showWhile` в module.ts).
-    setup: [admin]
+    exports: [admin]
+    # «Обмен между системами» (шина, W13-A2) открывается только при `admin: full` (`level` в реестре настроек).
+    bus: [admin]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. `supplier_prices` и `totals_only` своих прав ERP не дают: в расчёте (D2-1) ERP режет цены поставщика
