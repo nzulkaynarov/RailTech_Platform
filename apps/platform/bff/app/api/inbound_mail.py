@@ -75,6 +75,7 @@ _MESSAGES = {
     "secrets_key_missing": "На сервере не задан ключ шифрования секретов: пароль не сохранить.",
     "assist_disabled": "Помощник канцелярии выключен администратором — разберите письмо вручную.",
     "mail_handled": "Письмо уже обработано: обновите очередь.",
+    "mail_registering": "Письмо уже регистрируется — дождитесь результата.",
     "mail_not_returnable": "Это письмо нельзя вернуть в «Новые».",
 }
 _HANDLED = "Письмо уже обработано: обновите очередь."
@@ -320,7 +321,12 @@ async def discard(authed: Clerk, id: MailId) -> Response:
     "/inbound-mail/{id}/reply", response_model=InboundMailReply, operation_id="replyInboundMail"
 )
 async def reply(body: InboundMailReplyIn, authed: Member, id: MailId) -> InboundMailReply:
-    payload = {"text": body.text, "reply_all": body.reply_all, "awaiting": body.awaiting}
+    payload = {
+        "text": body.text,
+        "to": body.to,
+        "reply_all": body.reply_all,
+        "awaiting": body.awaiting,
+    }
     raw = await _json(authed, "POST", f"{CRM}/{id}/reply", json=payload)
     return InboundMailReply.model_validate(crm.InboundMailReply.model_validate(raw).model_dump())
 

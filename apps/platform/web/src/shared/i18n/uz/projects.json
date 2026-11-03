@@ -143,7 +143,7 @@
     },
     "execution": {
       "title": "Bajarilishi",
-      "hint": "ERP ma’lumotlari, faqat o‘qish. Loyiha bo‘yicha ombor, xaridlar va xizmatlar «Ombor» va «Hisob-kitob» bo‘limlari bilan paydo bo‘ladi.",
+      "hint": "Ombordan jo‘natish — «Ombor · Jo‘natmalar»da. Bu yerda tovar yo‘lda va yetkazilgani belgilanadi.",
       "shipment": "Jo‘natma",
       "none": "Jo‘natma hali yo‘q: u shartnoma imzolangandan keyin yaratiladi.",
       "status": "Holat",
@@ -152,7 +152,7 @@
       "delivered": "Yetkazilgan",
       "accepted": "Mijoz qabul qilgan",
       "carrier": "Tashuvchi",
-      "tracking": "Trek-raqam",
+      "tracking": "Tashuvchi yuk xati",
       "lines": "Yetkazib berish qatorlari",
       "linesNone": "Yetkazib berish qatorlari hali yo‘q.",
       "line": {
@@ -169,11 +169,41 @@
         "delivered": "Yetkazilgan",
         "accepted": "Mijoz qabul qilgan",
         "disputed": "Mijoz e’tiroz bildirgan"
-      }
+      },
+      "proof": "Yetkazib berish tasdig‘i",
+      "proofFile": "Fayl"
     },
     "journal": {
       "title": "Hujjatlar jurnali",
       "empty": "Yozuvlar hali yo‘q. Bu yerda shartnoma, hisob va dalolatnoma bilan kim, qachon nima qilgani ko‘rinadi."
+    },
+    "delivery": {
+      "in_transit": "Jo‘natildi, yo‘lda",
+      "delivered": "Yetkazildi",
+      "done": {
+        "in_transit": "Belgilandi: yo‘lda",
+        "delivered": "Belgilandi: yetkazildi"
+      },
+      "failed": "Belgini saqlab bo‘lmadi. Qaytadan urinib ko‘ring.",
+      "dialog": {
+        "in_transit": "Mijozga jo‘natildi, yo‘lda",
+        "delivered": "Mijozga yetkazildi",
+        "date": {
+          "in_transit": "Jo‘natish sanasi",
+          "delivered": "Yetkazish sanasi"
+        },
+        "dateInvalid": "Sana bugundan kech va jo‘natishdan oldin bo‘lmasin",
+        "waybill": "Tashuvchi yuk xati yoki trek raqami",
+        "waybillHint": "Majburiy emas",
+        "file": "Yetkazib berish tasdig‘i",
+        "fileHint": "Imzolangan yuk xati yoki rasm, 20 MB gacha. Majburiy emas",
+        "consequence": {
+          "in_transit": "Mijoz kabinetda yetkazib berish yo‘lda ekanini ko‘radi.",
+          "delivered": "Mijoz «Yetkazildi»ni ko‘radi va qabul qilishi yoki e’tiroz yozishi mumkin."
+        },
+        "cancel": "Bekor qilish",
+        "submit": "Saqlash"
+      }
     }
   },
   "journal": {
@@ -199,7 +229,9 @@
       "cancelled": "Dalolatnoma bekor qilindi"
     },
     "project": {
-      "done": "Loyiha bajarildi"
+      "done": "Loyiha bajarildi",
+      "delivery_in_transit": "Mijozga jo‘natildi, yo‘lda",
+      "delivery_delivered": "Mijozga yetkazildi"
     },
     "by": "{{date}} · {{name}}",
     "bySystem": "{{date}} · tizim",

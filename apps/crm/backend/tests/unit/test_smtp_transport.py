@@ -63,7 +63,7 @@ class FakeSmtp:
         if "login" in FakeSmtp.scenario:
             raise FakeSmtp.scenario["login"]
 
-    def send_message(self, message: EmailMessage) -> None:
+    def send_message(self, message: EmailMessage, to_addrs: list[str] | None = None) -> None:
         self.calls.append("send")
         if "send" in FakeSmtp.scenario:
             raise FakeSmtp.scenario["send"]

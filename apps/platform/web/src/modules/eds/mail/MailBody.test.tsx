@@ -27,6 +27,7 @@ function message(over: Partial<InboundMailMessage> = {}): InboundMailMessage {
     html: null,
     html_remote_images: 0,
     attachments: [],
+    new_participant: false,
     ...over,
   };
 }

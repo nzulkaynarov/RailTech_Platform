@@ -190,6 +190,8 @@ class Reason(StrEnum):
     MAIL_IN_WORK_BY_OTHER = "mail_in_work_by_other"
     MAIL_HANDLED = "mail_handled"
     MAIL_NOT_RETURNABLE = "mail_not_returnable"
+    # Регистрация ВХ из письма уже идёт (двойное нажатие, вторая вкладка): второго ВХ не будет.
+    MAIL_REGISTERING = "mail_registering"
 
 
 class DomainError(Exception):

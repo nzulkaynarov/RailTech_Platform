@@ -1,5 +1,7 @@
 import { useTranslation } from "react-i18next";
 
+import { StatusTag } from "../../../shared/ui/StatusTag";
+
 import type {
   InboundMail,
   InboundMailAddress,
@@ -72,6 +74,12 @@ function Incoming({
           sender: message.from_name || message.from_email,
           when: date(message.at, "datetime"),
         })}
+        {message.new_participant ? (
+          <>
+            {" "}
+            <StatusTag tone="gold">{t("mail.thread.newParticipant")}</StatusTag>
+          </>
+        ) : null}
       </p>
       <MailBody message={message} subject={mail.subject || t("mail.noSubject")} />
       <Files mailId={message.id} files={message.attachments.filter((file) => !file.inline)} />

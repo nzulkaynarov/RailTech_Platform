@@ -664,7 +664,8 @@
       "sendAll": "Hammaga javob berish",
       "awaiting": "Javob kutamiz — xat ishda qoladi",
       "copy": "Nusxa boradi: {{list}}",
-      "sentAwaiting": "Javob yuborildi, xat ishda qoladi"
+      "sentAwaiting": "Javob yuborildi, xat ishda qoladi",
+      "to": "Kimga"
     },
     "fromMail": "«{{subject}}» xatidan, {{sender}}",
     "fromMailLoading": "Xat ilovalari ko‘chirilmoqda…",
@@ -809,7 +810,8 @@
     "thread": {
       "title": "Yozishma",
       "incoming": "{{sender}}, {{when}}",
-      "outgoing": "Javob yuborildi: {{who}}, {{when}} → {{to}}, «{{subject}}»"
+      "outgoing": "Javob yuborildi: {{who}}, {{when}} → {{to}}, «{{subject}}»",
+      "newParticipant": "Yozishmada yangi ishtirokchi"
     },
     "journal": {
       "title": "Jurnal",
@@ -829,6 +831,7 @@
         "discard": "arxivga olib tashladi"
       }
     },
-    "inWorkSince": "{{name}}, {{time}} dan"
+    "inWorkSince": "{{name}}, {{time}} dan",
+    "replyTag": "Zanjirda javob"
   }
 }

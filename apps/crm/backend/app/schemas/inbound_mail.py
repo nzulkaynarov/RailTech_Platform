@@ -140,6 +140,10 @@ class InboundMailMessage(BaseModel):
         default=0, description="Сколько внешних картинок ждут кнопки «Показать»"
     )
     attachments: list[InboundMailAttachment]
+    new_participant: bool = Field(
+        default=False,
+        description="Письмо от адреса, которого в цепочке не было («новый участник переписки»)",
+    )
 
 
 class InboundMailEvent(BaseModel):
@@ -169,6 +173,10 @@ class InboundMailOut(InboundMailItem):
         description="Кому уйдёт копия при «Ответить всем» (без общего ящика и отправителя)"
     )
     personal_label: str = Field(description="Пометка «адресовано лично» из настроек")
+    reply_to: str = Field(description="Кому ответ по умолчанию: отправитель корня цепочки")
+    reply_options: list[str] = Field(
+        description="Кому можно ответить: адреса цепочки (кроме общего ящика)"
+    )
 
 
 class InboundMailbox(BaseModel):
@@ -210,6 +218,11 @@ class InboundMailArchiveIn(BaseModel):
 
 class InboundMailReplyIn(BaseModel):
     text: str = Field(min_length=1, max_length=20000)
+    to: str | None = Field(
+        default=None,
+        max_length=255,
+        description="Кому: один из `reply_options` карточки; не задан — `reply_to`",
+    )
     reply_all: bool = Field(
         default=False, description="«Ответить всем»: копия — остальные адреса письма"
     )

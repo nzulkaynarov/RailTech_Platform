@@ -147,4 +147,5 @@ export const Reason = {
   mail_in_work_by_other: "mail_in_work_by_other",
   mail_handled: "mail_handled",
   mail_not_returnable: "mail_not_returnable",
+  mail_registering: "mail_registering",
 } as const;

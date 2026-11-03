@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Checkbox, Input } from "antd";
+import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -17,6 +17,9 @@ export function Reply({ mail, reload }: { mail: InboundMail; reload: () => void 
   const refresh = useRefreshMail();
   const [text, setText] = useState("");
   const [awaiting, setAwaiting] = useState(false);
+  // «Кому» — явно (Zendesk, Help Scout): по умолчанию отправитель корня цепочки, список — адреса цепочки.
+  const [chosen, setChosen] = useState<string | null>(null);
+  const to = chosen !== null && mail.reply_options.includes(chosen) ? chosen : mail.reply_to;
   const [pending, setPending] = useState<"one" | "all" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const copy = mail.reply_all_copy;
@@ -25,7 +28,7 @@ export function Reply({ mail, reload }: { mail: InboundMail; reload: () => void 
     setPending(all ? "all" : "one");
     setError(null);
     try {
-      await replyInboundMail(mail.id, { text: text.trim(), reply_all: all, awaiting });
+      await replyInboundMail(mail.id, { text: text.trim(), to, reply_all: all, awaiting });
       setText("");
       void message.success(t(awaiting ? "mail.reply.sentAwaiting" : "mail.reply.sent"));
       await refresh();
@@ -42,6 +45,13 @@ export function Reply({ mail, reload }: { mail: InboundMail; reload: () => void 
   return (
     <Card size="small" title={<h2 className="pf-letters-title">{t("mail.reply.title")}</h2>}>
       <div className="pf-mail-actions">
+        <label htmlFor="mail-reply-to">{t("mail.reply.to")}</label>
+        <Select
+          id="mail-reply-to"
+          value={to}
+          options={mail.reply_options.map((value) => ({ value, label: value }))}
+          onChange={setChosen}
+        />
         <label htmlFor="mail-reply-text">{t("mail.reply.label")}</label>
         <Input.TextArea
           id="mail-reply-text"

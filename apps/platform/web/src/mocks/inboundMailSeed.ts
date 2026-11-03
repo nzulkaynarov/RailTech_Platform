@@ -51,6 +51,8 @@ const BASE = {
   journal: [] as InboundMailEvent[],
   reply_all_copy: [] as string[],
   personal_label: "Адресовано лично",
+  reply_to: "",
+  reply_options: [] as string[],
   messages: [],
   attachments: [],
   attachments_count: 0,
@@ -92,8 +94,11 @@ function make(
       html: html ?? null,
       html_remote_images: remoteImages ?? 0,
       attachments: full.attachments,
+      new_participant: false,
     },
   ];
+  full.reply_to = over.reply_to ?? full.from_email;
+  full.reply_options = over.reply_options ?? [full.from_email];
   full.messages_count = full.messages.length;
   return full;
 }
@@ -243,6 +248,7 @@ export function seed(): StoredMail[] {
           html: null,
           html_remote_images: 0,
           attachments: [],
+          new_participant: false,
         },
         {
           id: 122,
@@ -263,6 +269,7 @@ export function seed(): StoredMail[] {
               inline: false,
             },
           ],
+          new_participant: false,
         },
       ],
       replies: [

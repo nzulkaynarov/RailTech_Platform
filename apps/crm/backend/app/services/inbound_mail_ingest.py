@@ -30,7 +30,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.inbound_folders import FolderSetting, is_history
 from app.domain.inbound_mail import ParsedMail, find_inns, parse_message
-from app.domain.inbound_mail_flow import classify_recipients, status_after_reply, thread_ids
+from app.domain.inbound_mail_flow import (
+    chain_addresses,
+    classify_recipients,
+    is_new_participant,
+    status_after_reply,
+    thread_ids,
+)
 from app.integrations.imap import (
     FetchedMessage,
     ImapClient,
@@ -203,7 +209,14 @@ class InboundMailIngest:
                 ids = thread_ids(parsed.in_reply_to, parsed.references)
                 root = await views.thread_root(session, ids, for_update=True)
             if root is not None:
-                values.update(thread_root_id=root.id, status="done")
+                known = await views.chain_messages(session, root.id)
+                values.update(
+                    thread_root_id=root.id,
+                    status="done",
+                    new_participant=is_new_participant(
+                        parsed.from_email, chain_addresses(known, mailbox_address)
+                    ),
+                )
             else:
                 await _personal(session, parsed, values, mailbox_address, rule_on, now)
             mail_id = await repo.insert_new(session, values)
@@ -315,15 +328,17 @@ async def _personal(
 
 
 async def _attach(session: AsyncSession, root: InboundMail, child_id: int, at: datetime) -> None:
-    """Ответ клиента — к записи: видно новое письмо, разобранная запись снова «Новое (ответ в
-    цепочке)»
-    с прежним исполнителем в справке."""
+    """Ответ клиента — к записи: видно новое письмо (снова «не прочитано»), запись помечена «ответ
+    в цепочке» в любом рабочем состоянии (Новое, В работе, Регистрируется), а разобранная снова
+    «Новое (ответ в цепочке)» с прежним исполнителем в справке."""
     root.activity_at = max(root.activity_at, at)
     reopened = status_after_reply(root.status) != root.status
     if reopened:
-        root.status, root.thread_reply = "new", True
+        root.status = "new"
         root.outcome = root.archive_reason = None
         root.handled_by = root.handled_at = None
+    if root.status != "spam":
+        root.thread_reply = True
     await audit.record(
         session,
         audit.Actor.system(),

@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import ConflictError, ForbiddenError
+from app.domain.errors import ConflictError, ForbiddenError, ValidationFailedError
 from app.main import create_app
 from app.models.auth import AuditLog
 from app.models.email import EmailLog
@@ -42,6 +42,7 @@ def _raw(
     sender: str = "buyer@example.test",
     reply_to: str | None = None,
     references: str | None = None,
+    attach: bool = False,
 ) -> bytes:
     msg = EmailMessage()
     msg["From"] = f"Покупатель {n} <{sender}>"
@@ -55,6 +56,13 @@ def _raw(
     if references:
         msg["References"] = references
     msg.set_content(f"Нужны шпалы, партия {n}.")
+    if attach:
+        msg.add_attachment(
+            b"%PDF-1.4 secret " + str(n).encode(),
+            maintype="application",
+            subtype="pdf",
+            filename=f"документ-{n}.pdf",
+        )
     return msg.as_bytes().replace(b"\n", b"\r\n")
 
 
@@ -370,8 +378,8 @@ async def test_reply_all_keeps_the_copy_except_the_mailbox_and_sender(stand: Sta
     await service.reply(me, mail.id, "Всем: отправим.", reply_all=True, awaiting=True)
     await service.reply(me, mail.id, "Только вам.", reply_all=False, awaiting=True)
     all_reply, plain = sender.sent
-    assert all_reply["thread_headers"]["Cc"] == f"boss@example.test, {PETROV}"
-    assert "Cc" not in plain["thread_headers"], "«Ответить» — только отправителю"
+    assert tuple(all_reply["cc"]) == ("boss@example.test", PETROV)
+    assert not plain.get("cc"), "«Ответить» — только отправителю"
 
 
 async def test_personal_assignee_without_first_line_right_can_reply_and_return(
@@ -441,20 +449,65 @@ async def test_client_reply_joins_the_thread_and_reopens_with_the_same_assignee(
     assert "thread_reply" in [e.action for e in card.journal]
 
 
-async def test_reply_goes_to_the_latest_incoming_message_of_the_thread(stand: Stand) -> None:
+async def test_reply_goes_to_a_known_participant_headers_to_the_latest_message(
+    stand: Stand,
+) -> None:
+    """Ответ уходит на письмо цепочки (`In-Reply-To` последнего), а адресат — отправитель, который
+    уже был в цепочке (здесь коллега клиента был в копии первого письма)."""
     ivanov, _ = await _people(stand)
-    (mail,) = await _ingest(stand, (1, _raw(1)))
+    (mail,) = await _ingest(stand, (1, _raw(1, cc="colleague@example.test")))
     stand.server.box.add(
         2, _raw(2, reply_to="work-1@example.test", sender="colleague@example.test")
     )
     await stand.ingest.poll()
     sender = SentMail()
-    await _service(stand, sender).reply(MailAccess(ivanov, True), mail.id, "Ответ")
+    service = _service(stand, sender)
+
+    card = await service.get(await stand.clerk(), mail.id)
+    assert [m.new_participant for m in card.messages] == [False, False]
+    assert card.reply_to == "colleague@example.test"
+    await service.reply(MailAccess(ivanov, True), mail.id, "Ответ")
+
     (sent,) = sender.sent
     assert sent["to"] == "colleague@example.test"
     assert sent["thread_headers"]["In-Reply-To"] == "<work-2@example.test>"
     assert sent["thread_headers"]["References"] == "<work-2@example.test>"
     assert sent["ref"] == ("inbound_mail", str(mail.id))
+
+
+async def test_forged_sender_in_a_thread_does_not_redirect_the_reply(stand: Stand) -> None:
+    """Письмо с `In-Reply-To` на известную цепочку от нового адреса (подмена `From`): ответ по
+    умолчанию — отправителю корня, письмо помечено «новый участник переписки»; явный выбор адресата
+    — только из адресов цепочки."""
+    ivanov, _ = await _people(stand)
+    (mail,) = await _ingest(stand, (1, _raw(1)))
+    stand.server.box.add(2, _raw(2, reply_to="work-1@example.test", sender="evil@spoof.test"))
+    await stand.ingest.poll()
+    sender = SentMail()
+    service = _service(stand, sender)
+    clerk, me = await stand.clerk(), MailAccess(ivanov, True)
+
+    card = await service.get(clerk, mail.id)
+    assert [m.new_participant for m in card.messages] == [False, True]
+    assert card.reply_to == "buyer@example.test"
+    assert set(card.reply_options) == {"buyer@example.test", "evil@spoof.test"}
+    with pytest.raises(ValidationFailedError):
+        await service.reply(me, mail.id, "Ответ", to="outsider@example.test")
+    await service.reply(me, mail.id, "Ответ")
+
+    (sent,) = sender.sent
+    assert sent["to"] == "buyer@example.test", "From письма-подделки адресата не меняет"
+    assert sent["thread_headers"]["In-Reply-To"] == "<work-2@example.test>"
+
+
+async def test_reply_to_can_be_chosen_among_chain_addresses(stand: Stand) -> None:
+    ivanov, _ = await _people(stand)
+    (mail,) = await _ingest(stand, (1, _raw(1, cc="colleague@example.test")))
+    sender = SentMail()
+    await _service(stand, sender).reply(
+        MailAccess(ivanov, True), mail.id, "Ответ", to="Colleague@Example.test"
+    )
+    assert sender.sent[0]["to"] == "colleague@example.test"
 
 
 async def test_reply_in_open_record_only_marks_it_fresh(stand: Stand) -> None:
@@ -467,7 +520,7 @@ async def test_reply_in_open_record_only_marks_it_fresh(stand: Stand) -> None:
     await stand.ingest.poll()
 
     row = await _row(stand, mail.id)
-    assert (row.status, row.assignee_id, row.thread_reply) == ("in_work", ivanov.user_id, False)
+    assert (row.status, row.assignee_id, row.thread_reply) == ("in_work", ivanov.user_id, True)
     page = await service.page(MailAccess(petrov, True), "in_work")
     assert page.items[0].unread is True, "новое письмо в цепочке — снова не прочитано"
 
@@ -706,3 +759,102 @@ async def test_api_in_work_conflict_and_personal_access_by_rights(
     assert http.post(f"{base}/{third}/release", headers=clerk).status_code == 204
     counts = http.get(base, headers=clerk).json()["counts"]
     assert (counts["new"], counts["in_work"]) == (1, 2)
+
+
+async def test_api_foreign_attachments_and_thread_messages_are_403(
+    client: tuple[TestClient, Stand], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Сотрудник без первой линии не скачает файл чужого письма — ни корня, ни ответа в чужой
+    цепочке; файлы своего письма (и ответа в его цепочке) — скачает."""
+    http, stand = client
+    clerk = await _staff(http, sessions, "clerk-a@railtech.uz", "tpl:REGISTRAR")
+    seller = await _staff(http, sessions, IVANOV, "tpl:MANAGER_ALL")
+    await _ingest(
+        stand,
+        (1, _raw(1, attach=True)),  # чужое письмо
+        (2, _raw(2, attach=True, reply_to="work-1@example.test")),  # ответ в чужой цепочке
+        (3, _raw(3, to=IVANOV, cc=BOX, attach=True)),  # своё письмо
+        (4, _raw(4, attach=True, reply_to="work-3@example.test")),  # ответ в своей цепочке
+    )
+    ids = {m.subject: m.id for m in await stand.mails()}
+    base = "/api/v1/inbound-mail"
+    foreign_root, foreign_reply = ids["Запрос 1"], ids["Запрос 2"]
+    own_root, own_reply = ids["Запрос 3"], ids["Запрос 4"]
+
+    for mail_id in (foreign_root, foreign_reply):
+        denied = http.get(f"{base}/{mail_id}/attachments/0", headers=seller)
+        assert denied.status_code == 403, (mail_id, denied.text)
+        assert b"secret" not in denied.content
+        assert http.get(f"{base}/{mail_id}/attachments/0", headers=clerk).status_code == 200
+    for mail_id in (own_root, own_reply):
+        allowed = http.get(f"{base}/{mail_id}/attachments/0", headers=seller)
+        assert allowed.status_code == 200, (mail_id, allowed.text)
+        assert b"secret" in allowed.content
+
+
+async def test_second_registration_start_is_409_until_eds_answers_or_waits_too_long(
+    stand: Stand,
+) -> None:
+    """Двойное нажатие «Зарегистрировать»: пока ВХ создаётся, второй `start` — 409
+    `mail_registering`
+    (второго ВХ нет); отказ EDS (`cancel`) снова разрешает; зависшая регистрация — повтор
+    возможен."""
+    ivanov, petrov = await _people(stand)
+    (mail,) = await _ingest(stand, (1, _raw(1)))
+    service = _service(stand)
+    await service.registration(ivanov, mail.id, "start")
+
+    with pytest.raises(ConflictError) as same:
+        await service.registration(ivanov, mail.id, "start")
+    with pytest.raises(ConflictError) as other:
+        await service.registration(petrov, mail.id, "start")
+    assert same.value.details["reason"] == "mail_registering"
+    assert other.value.details["reason"] == "mail_in_work_by_other"
+
+    await service.registration(ivanov, mail.id, "cancel")  # EDS отказал
+    await service.registration(ivanov, mail.id, "start")  # можно снова
+    async with stand.sessions() as session, session.begin():
+        row = await session.get(InboundMail, mail.id)
+        assert row is not None
+        row.registering_at = datetime(2026, 1, 1, tzinfo=UTC)  # «ждёт подтверждения»
+    await service.registration(ivanov, mail.id, "start")
+    assert (await _row(stand, mail.id)).status == "registering"
+
+
+async def test_client_reply_during_registration_is_not_lost(stand: Stand) -> None:
+    """Клиент ответил, пока ВХ создаётся: запись помечена «ответ в цепочке»; пришло «Разобрано:
+    ВХ» —
+    номер записан, но запись снова «Новое (ответ в цепочке)», тот же исполнитель в справке."""
+    ivanov, _ = await _people(stand)
+    (mail,) = await _ingest(stand, (1, _raw(1)))
+    service = _service(stand)
+    await service.registration(ivanov, mail.id, "start")
+
+    stand.server.box.add(2, _raw(2, reply_to="work-1@example.test"))
+    await stand.ingest.poll()
+    during = await _row(stand, mail.id)
+    assert (during.status, during.thread_reply) == ("registering", True)
+
+    from tests.integration.test_inbound_mail import _registered
+
+    async with stand.sessions() as session, session.begin():
+        await service.accept_registered(session, _registered(mail.id))
+    row = await _row(stand, mail.id)
+    assert (row.status, row.thread_reply, row.assignee_id) == ("new", True, ivanov.user_id)
+    assert (row.outcome, row.eds_letter_number) == (None, "ВХ-12/26"), "номер ВХ не потерян"
+    page = await service.page(await stand.clerk(), "new")
+    assert [(i.id, i.thread_reply) for i in page.items] == [(mail.id, True)]
+
+
+async def test_registration_without_new_client_mail_ends_done(stand: Stand) -> None:
+    ivanov, _ = await _people(stand)
+    (mail,) = await _ingest(stand, (1, _raw(1)))
+    service = _service(stand)
+    await service.registration(ivanov, mail.id, "start")
+
+    from tests.integration.test_inbound_mail import _registered
+
+    async with stand.sessions() as session, session.begin():
+        await service.accept_registered(session, _registered(mail.id))
+    row = await _row(stand, mail.id)
+    assert (row.status, row.outcome, row.thread_reply) == ("done", "registered", False)

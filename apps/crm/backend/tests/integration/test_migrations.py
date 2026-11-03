@@ -496,3 +496,30 @@ def test_inbound_mail_html_columns_keep_old_rows_and_roll_back(
         assert conn.execute(cols).fetchone() == (0,)
         assert conn.execute("SELECT text FROM inbound_mail").fetchone() == ("Старое письмо",)
     command.upgrade(alembic_config, "head")
+
+
+def test_inbound_mail_downgrade_keeps_the_copy_in_to_addrs(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """W18A-P2-3: после отката адреса копии не теряются — до этой ревизии всё было в «Кому»."""
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        conn.execute("TRUNCATE inbound_mail RESTART IDENTITY CASCADE")
+        conn.execute(
+            "INSERT INTO inbound_mail (message_id, mailbox, uidvalidity, uid, to_addrs, cc_addrs) "
+            "VALUES ('c1', 'INBOX', 1, 1, '[\"to@example.test\"]', "
+            '\'["cc1@example.test", "cc2@example.test"]\'), '
+            "('c2', 'INBOX', 1, 2, '[\"only@example.test\"]', '[]')"
+        )
+        conn.commit()
+
+    command.downgrade(alembic_config, INBOUND_BEFORE)
+
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        rows: dict[str, list[str]] = {
+            str(k): list(v)
+            for k, v in conn.execute("SELECT message_id, to_addrs FROM inbound_mail").fetchall()
+        }
+    assert rows["c1"] == ["to@example.test", "cc1@example.test", "cc2@example.test"]
+    assert rows["c2"] == ["only@example.test"]
+    command.upgrade(alembic_config, "head")

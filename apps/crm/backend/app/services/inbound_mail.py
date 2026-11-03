@@ -37,9 +37,15 @@ from rt_bus import Event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
-from app.domain.errors import ConflictError, ForbiddenError, NotFoundError, UpstreamUnavailableError
+from app.domain.errors import (
+    ConflictError,
+    ForbiddenError,
+    NotFoundError,
+    UpstreamUnavailableError,
+    ValidationFailedError,
+)
 from app.domain.inbound_mail import reply_subject, thread_references
-from app.domain.inbound_mail_flow import can_see, reply_all_copy
+from app.domain.inbound_mail_flow import can_see, chain_addresses, reply_all_copy, reply_default
 from app.domain.lead_sources import LeadSource
 from app.domain.stages import OwnerMode, Stage
 from app.models.inbound_mail import InboundMail
@@ -306,6 +312,7 @@ class InboundMailService:
         *,
         reply_all: bool = False,
         awaiting: bool = False,
+        to: str | None = None,
     ) -> dto.InboundMailReply:
         """Ответ на последнее входящее письмо записи; письмо берётся (первое действие) и после
         отправки — «Разобрано: ответ отправлен», если не «Ждём ответа»."""
@@ -316,18 +323,21 @@ class InboundMailService:
                 raise ForbiddenError("mail is not yours", resource="mail_inbox")
             await work.claim(session, row, who, now)
             latest = await views.latest_incoming(session, row.id) or row
-            if not latest.from_email:
+            if not row.from_email:
                 raise ConflictError("mail has no sender address", field="from_email")
-            subject, address = reply_subject(row.subject), latest.from_email
+            mailbox = await self._mailbox()
+            options = chain_addresses(await views.chain_messages(session, row.id), mailbox)
+            address = (to or "").strip().lower() or reply_default(
+                row.from_email.lower(), latest.from_email.lower(), latest.new_participant
+            )
+            if address not in options:  # адресат — только из цепочки: подделка `From` его не задаёт
+                raise ValidationFailedError("reply address is not in the thread", field="to")
+            subject = reply_subject(row.subject)
             headers = {
                 "In-Reply-To": f"<{latest.message_id}>",
                 "References": thread_references(latest.message_id, latest.references),
             }
-            copy = reply_all_copy(
-                latest.to_addrs or [], latest.cc_addrs or [], await self._mailbox(), address
-            )
-        if reply_all and copy:
-            headers["Cc"] = ", ".join(copy)
+            copy = reply_all_copy(latest.to_addrs or [], latest.cc_addrs or [], mailbox, address)
         sent = await self._mail.send_rendered(
             "inbound_reply",
             address,
@@ -335,6 +345,7 @@ class InboundMailService:
             requested_by=who.user_id,
             ref=(repo.REF_KIND, str(mail_id)),
             thread_headers=headers,
+            cc=copy if reply_all else (),
         )
         await self._after_reply(who, mail_id, now, awaiting, copy if reply_all else [])
         logger.info("inbound_mail_replied", mail_id=mail_id, email_log_id=sent.id)
@@ -383,6 +394,8 @@ class InboundMailService:
         row.eds_letter_id = str(letter.get("eds_letter_id") or "")[:64] or None
         row.eds_letter_number = str(letter.get("number") or "")[:32] or None
         if row.status in ("new", "in_work", "registering"):
+            # Новое письмо клиента после начала регистрации: итог ВХ записан, запись снова «Новое».
+            newer_reply = row.registering_at is not None and row.activity_at > row.registering_at
             row.status, row.outcome = "done", "registered"
             row.handled_at = datetime.now(UTC)
             row.registering_at, row.thread_reply = None, False
@@ -391,6 +404,9 @@ class InboundMailService:
             row.handled_by = user if known and isinstance(user, int) else None
             who = audit.Actor(row.handled_by) if row.handled_by else audit.Actor.system()
             await record_decision(session, row, "register", who)
+            if newer_reply:  # клиент ответил, пока ВХ создавался: письмо не уходит из виду
+                row.status, row.thread_reply = "new", True
+                row.outcome = row.handled_by = row.handled_at = None
         logger.info("inbound_mail_registered", mail_id=mail_id, number=row.eds_letter_number)
 
 

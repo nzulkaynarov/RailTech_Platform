@@ -103,6 +103,7 @@ function historyMails(): StoredMail[] {
         html: null,
         html_remote_images: 0,
         attachments: [],
+        new_participant: false,
       },
     ],
     journal: [],
@@ -175,6 +176,8 @@ const CARD_ONLY = new Set([
   "journal",
   "reply_all_copy",
   "personal_label",
+  "reply_to",
+  "reply_options",
 ]);
 
 /** Строка списка — карточка без полей, которые есть только у неё. */
@@ -651,13 +654,13 @@ export const inboundMailHandlers = [
   http.post("*/inbound-mail/:id/reply", async ({ params, request }) => {
     const v = viewer();
     const id = Number(params.id);
-    const body = (await request.json()) as { awaiting?: boolean };
+    const body = (await request.json()) as { awaiting?: boolean; to?: string | null };
     const got = claim(id, v);
     if ("response" in got) return got.response;
     const now = new Date().toISOString();
     const reply = {
       id: got.mail.replies.length + 1,
-      to_email: got.mail.from_email,
+      to_email: body.to ?? got.mail.reply_to,
       subject: `Re: ${got.mail.subject}`,
       status: "queued",
       created_at: now,

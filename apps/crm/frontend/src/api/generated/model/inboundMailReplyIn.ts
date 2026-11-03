@@ -13,4 +13,6 @@ export interface InboundMailReplyIn {
    * @maxLength 20000
    */
   text: string;
+  /** Кому: один из `reply_options` карточки; не задан — `reply_to` */
+  to?: string | null;
 }

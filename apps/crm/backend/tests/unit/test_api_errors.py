@@ -284,4 +284,5 @@ def test_reason_values_are_a_stable_contract() -> None:
         "mail_in_work_by_other",
         "mail_handled",
         "mail_not_returnable",
+        "mail_registering",
     }

@@ -35,6 +35,7 @@ ContractActionCode = Literal[
 ActAction = Literal["issue", "return", "reissue"]
 ActActionCode = Literal["attach_scan", "return", "reissue"]
 ActBlocker = Literal["no_invoice", "act_exists", "forbidden"]
+DeliveryAction = Literal["in_transit", "delivered"]
 JournalDocument = Literal["contract", "act", "invoice", "quote", "project"]
 FileKind = Literal["contract", "invoice", "act"]
 FileVariant = Literal["pdf", "scan"]
@@ -176,6 +177,27 @@ class ProjectFulfillment(BaseModel):
     accepted_at: dt.datetime | None
     tracking_number: str | None
     carrier: str | None
+    actions: list[DeliveryAction]
+    proof_name: str | None
+    proof_url: str | None
+
+
+class RawFulfillment(BaseModel):
+    """Исполнение из ответа ERP: отметки доставки считает ERP; id вложения наружу не уходит."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    status: str | None
+    status_name: str | None
+    expected_delivery_date: dt.date | None
+    shipped_at: dt.datetime | None
+    delivered_at: dt.datetime | None
+    accepted_at: dt.datetime | None
+    tracking_number: str | None
+    carrier: str | None
+    actions: list[DeliveryAction] = Field(default_factory=list)
+    proof_attachment_id: int | None = None
+    proof_name: str | None = None
 
 
 class ProjectDeliveryLine(BaseModel):
@@ -282,7 +304,7 @@ class RawCard(RawRow):
     invoices: list[ProjectInvoice] = Field(default_factory=list)
     act: ProjectAct | None = None
     act_blocker: ActBlocker | None = None
-    fulfillment: ProjectFulfillment | None = None
+    fulfillment: RawFulfillment | None = None
     delivery_lines: list[ProjectDeliveryLine] = Field(default_factory=list)
     journal: list[ProjectJournalEntry] = Field(default_factory=list)
 

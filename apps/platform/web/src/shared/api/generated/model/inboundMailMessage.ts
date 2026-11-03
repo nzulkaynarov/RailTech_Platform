@@ -27,4 +27,6 @@ export interface InboundMailMessage {
    */
   html_remote_images: number;
   attachments: InboundMailAttachment[];
+  /** Письмо от адреса, которого в цепочке не было («новый участник переписки») */
+  new_participant: boolean;
 }

@@ -132,3 +132,29 @@ def can_see(
     if full or assignee_id == user_id:
         return True
     return personal and user_id in set(staff)
+
+
+def chain_addresses(
+    messages: Iterable[tuple[str, Sequence[str], Sequence[str]]], mailbox: str | None
+) -> list[str]:
+    """Адреса цепочки по порядку: отправители, «Кому» и копии её писем (`from`, `to`, `cc`), без
+    общего ящика и повторов. Только они годятся адресатом ответа (W18A-P2-3)."""
+    box = (mailbox or "").strip().lower()
+    seen: dict[str, None] = {}
+    for sender, to, cc in messages:
+        for addr in (sender, *to, *cc):
+            low = addr.strip().lower()
+            if low and low != box:
+                seen.setdefault(low)
+    return list(seen)
+
+
+def is_new_participant(sender: str, known: Iterable[str]) -> bool:
+    """Письмо в цепочке от адреса, которого в ней ещё не было (подмена `From`, пересылка)."""
+    return sender.strip().lower() not in {a.strip().lower() for a in known}
+
+
+def reply_default(root_sender: str, latest_sender: str, latest_new: bool) -> str:
+    """Кому ответ по умолчанию (Zendesk, Help Scout): отправителю корня цепочки; последнему письму
+    — только если его адрес уже был в цепочке, иначе подделка `From` увела бы ответ."""
+    return root_sender if latest_new or not latest_sender else latest_sender
