@@ -11125,6 +11125,66 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/projects/{deal_id}/delivery/:
+    post:
+      operationId: crm_projects_delivery_create
+      description: 'Отметка на весь проект (исполнение сделки одно): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered`
+        — из них же и из «В пути». Дата — не позже сегодня, доставка — не раньше отправки; № накладной перевозчика и файл
+        подтверждения (изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ) — по желанию. Смена статуса — сервис исполнения
+        (накладная, события `delivery.status_changed`, уведомления); строки поставки получают статус сразу, клиент принимает
+        доставленное в кабинете. Право `fulfillment.manage`.'
+      summary: 'Проект: отметить доставку — «В пути» или «Доставлено»'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        description: Сделка ERP
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeliveryMarkInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+          description: ''
+        '400':
+          description: DELIVERY_ACTION_INVALID / DELIVERY_DATE_INVALID / DELIVERY_DATE_IN_FUTURE / DELIVERY_DATE_BEFORE_SHIPPED
+            / WAYBILL_TOO_LONG / PROOF_INVALID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED / PROJECT_STAFF_ONLY
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'NOT_FOUND: сделки нет или она не проект'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: FULFILLMENT_NOT_READY / DELIVERY_TRANSITION_NOT_ALLOWED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/quote-charges/:
     get:
       operationId: crm_quote_charges_list
@@ -22265,6 +22325,40 @@ components:
       - title
       - tracking
       - unit
+    DeliveryMarkActionEnum:
+      enum:
+      - in_transit
+      - delivered
+      type: string
+      description: |-
+        * `in_transit` - in_transit
+        * `delivered` - delivered
+    DeliveryMarkInRequest:
+      type: object
+      properties:
+        action:
+          allOf:
+          - $ref: '#/components/schemas/DeliveryMarkActionEnum'
+          description: |-
+            `in_transit` — отправлено, в пути; `delivered` — доставлено
+
+            * `in_transit` - in_transit
+            * `delivered` - delivered
+        on_date:
+          type: string
+          format: date
+          description: Дата отправки или доставки; не позже сегодня и не раньше отправки
+        waybill:
+          type: string
+          description: № накладной перевозчика
+          maxLength: 128
+        file:
+          type: string
+          format: binary
+          description: 'Подтверждение доставки: накладная, фото, PDF (до 20 МБ)'
+      required:
+      - action
+      - on_date
     DeskBrigade:
       type: object
       properties:
@@ -23976,13 +24070,30 @@ components:
           nullable: true
         tracking_number:
           type: string
+          description: № накладной перевозчика или трек
         carrier:
           type: string
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryMarkActionEnum'
+          description: Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`)
+        proof_attachment_id:
+          type: integer
+          nullable: true
+          description: Вложение подтверждения доставки (`/sourcing/attachments/{id}/download/`)
+        proof_name:
+          type: string
+          nullable: true
+          description: Имя файла подтверждения доставки
       required:
       - accepted_at
+      - actions
       - carrier
       - delivered_at
       - expected_delivery_date
+      - proof_attachment_id
+      - proof_name
       - shipped_at
       - status
       - status_name

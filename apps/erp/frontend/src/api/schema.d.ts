@@ -6241,6 +6241,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/projects/{deal_id}/delivery/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Проект: отметить доставку — «В пути» или «Доставлено»
+         * @description Отметка на весь проект (исполнение сделки одно): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути». Дата — не позже сегодня, доставка — не раньше отправки; № накладной перевозчика и файл подтверждения (изображение, PDF, doc, docx, xls, xlsx, csv, txt до 20 МБ) — по желанию. Смена статуса — сервис исполнения (накладная, события `delivery.status_changed`, уведомления); строки поставки получают статус сразу, клиент принимает доставленное в кабинете. Право `fulfillment.manage`.
+         */
+        post: operations["crm_projects_delivery_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quote-charges/": {
         parameters: {
             query?: never;
@@ -11526,6 +11546,33 @@ export interface components {
             shipped_at: string | null;
             tracking: string;
         };
+        /**
+         * @description * `in_transit` - in_transit
+         *     * `delivered` - delivered
+         * @enum {string}
+         */
+        DeliveryMarkActionEnum: "in_transit" | "delivered";
+        DeliveryMarkInRequest: {
+            /**
+             * @description `in_transit` — отправлено, в пути; `delivered` — доставлено
+             *
+             *     * `in_transit` - in_transit
+             *     * `delivered` - delivered
+             */
+            action: components["schemas"]["DeliveryMarkActionEnum"];
+            /**
+             * Format: date
+             * @description Дата отправки или доставки; не позже сегодня и не раньше отправки
+             */
+            on_date: string;
+            /** @description № накладной перевозчика */
+            waybill?: string;
+            /**
+             * Format: binary
+             * @description Подтверждение доставки: накладная, фото, PDF (до 20 МБ)
+             */
+            file?: string;
+        };
         DeskBrigade: {
             id: number;
             name: string;
@@ -12324,8 +12371,15 @@ export interface components {
             delivered_at: string | null;
             /** Format: date-time */
             accepted_at: string | null;
+            /** @description № накладной перевозчика или трек */
             tracking_number: string;
             carrier: string;
+            /** @description Отметки доставки, доступные этому сотруднику сейчас (статус исполнения и право `fulfillment.manage`) */
+            actions: components["schemas"]["DeliveryMarkActionEnum"][];
+            /** @description Вложение подтверждения доставки (`/sourcing/attachments/{id}/download/`) */
+            proof_attachment_id: number | null;
+            /** @description Имя файла подтверждения доставки */
+            proof_name: string | null;
         };
         /**
          * @description * `fixed` - Фиксированная цена
@@ -29420,6 +29474,69 @@ export interface operations {
             };
             /** @description NOT_FOUND: сделки нет или она не проект */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    crm_projects_delivery_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Сделка ERP */
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["DeliveryMarkInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCard"];
+                };
+            };
+            /** @description DELIVERY_ACTION_INVALID / DELIVERY_DATE_INVALID / DELIVERY_DATE_IN_FUTURE / DELIVERY_DATE_BEFORE_SHIPPED / WAYBILL_TOO_LONG / PROOF_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / PROJECT_STAFF_ONLY */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND: сделки нет или она не проект */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description FULFILLMENT_NOT_READY / DELIVERY_TRANSITION_NOT_ALLOWED */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

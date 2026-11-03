@@ -2185,7 +2185,7 @@ paths:
       description: >-
         ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и
         действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и
-        правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер,
+        правам роли), исполнение (отгрузка, строки поставки и отметки доставки `fulfillment.actions`) и журнал. Раздел `eds.projects` — чтение: менеджер,
         снабженец и гл. инженер видят карточку без действий.
       parameters:
         - $ref: '#/components/parameters/ProjectRefPath'
@@ -2395,6 +2395,75 @@ paths:
           $ref: '#/components/responses/ProjectPayloadTooLarge'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/delivery:
+    post:
+      tags: [eds-projects]
+      operationId: markEdsProjectDelivery
+      summary: 'EDS · Проект: отметить доставку клиенту — «В пути» или «Доставлено»'
+      description: >-
+        ERP `POST /crm/projects/{id}/delivery/` (multipart). `action`: `in_transit` — товар отправлен клиенту и в пути, `delivered` —
+        доставлен (клиент после этого принимает поставку в кабинете: «Принять» / «Есть замечания»). `on_date` — дата отправки или
+        доставки, не позже сегодня и не раньше отправки; `waybill` — № накладной перевозчика или трек (необязательно); `file` —
+        подтверждение доставки: подписанная накладная, фото, PDF (необязательно, до 20 МБ). Действие — на весь проект, как у исполнения
+        сделки ERP; переход проверяет ERP по статусу исполнения (`actions` в карточке): иначе 409 `delivery_transition_not_allowed`,
+        исполнения ещё нет — 409 `fulfillment_not_ready`. Право ERP `fulfillment.manage` (раздел `erp.stock` полный), иначе 403.
+        Раздел `eds.projects` — чтение. BFF читает тело потоком до 20 МБ и multipart не разбирает. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectDeliveryMarkIn'
+      responses:
+        '200':
+          description: Отметка сохранена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '413':
+          $ref: '#/components/responses/ProjectPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/delivery/proof:
+    get:
+      tags: [eds-projects]
+      operationId: downloadEdsProjectDeliveryProof
+      summary: 'EDS · Проект: файл подтверждения доставки'
+      description: >-
+        Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла
+        BFF берёт из исполнения в карточке проекта, а не из запроса. Файла нет — 404. Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/ProjectRefPath'
+      responses:
+        '200':
+          description: Содержимое файла
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -11616,7 +11685,8 @@ components:
     ProjectConflict:
       description: >-
         409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе),
-        `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку
+        `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed`
+        (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку
       content:
         application/json:
           schema:
@@ -14824,10 +14894,45 @@ components:
           type: [string, 'null']
         tracking_number:
           type: [string, 'null']
+          description: № накладной перевозчика или трек
         carrier:
           type: [string, 'null']
-      required: [status, status_name, expected_delivery_date, shipped_at, delivered_at, accepted_at, tracking_number, carrier]
+        actions:
+          type: array
+          items: {$ref: '#/components/schemas/ProjectDeliveryAction'}
+          description: >-
+            Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`):
+            `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути»
+        proof_name:
+          type: [string, 'null']
+          description: Имя файла подтверждения доставки; `null` — файла нет
+        proof_url:
+          type: [string, 'null']
+          description: Ссылка BFF на файл подтверждения доставки (`/api/v1/eds/projects/{ref}/delivery/proof`); `null` — файла нет
+      required: [status, status_name, expected_delivery_date, shipped_at, delivered_at, accepted_at, tracking_number, carrier, actions, proof_name, proof_url]
       additionalProperties: false
+    ProjectDeliveryAction:
+      type: string
+      enum: [in_transit, delivered]
+      description: '`in_transit` — отправлено клиенту, в пути; `delivered` — доставлено клиенту'
+    ProjectDeliveryMarkIn:
+      type: object
+      required: [action, on_date]
+      properties:
+        action:
+          $ref: '#/components/schemas/ProjectDeliveryAction'
+        on_date:
+          type: string
+          format: date
+          description: Дата отправки (`in_transit`) или доставки (`delivered`); не позже сегодня и не раньше отправки
+        waybill:
+          type: string
+          maxLength: 128
+          description: № накладной перевозчика или трек; пусто — прежний остаётся
+        file:
+          type: string
+          format: binary
+          description: Подтверждение доставки — подписанная накладная, фото, PDF или документ до 20 МБ (необязательно)
     ProjectDeliveryLine:
       type: object
       properties:
