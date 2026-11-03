@@ -24,7 +24,7 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any, Optional
 
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import F, Q, Sum
 from django.utils import timezone
 from inventory.access import (
     StockError,
@@ -36,7 +36,8 @@ from inventory.access import (
     require_supply,
 )
 from inventory.models import MovementKind, Reservation, ReservationStatus
-from inventory.services import stock
+from inventory.services import stock, trace
+from inventory.services.overview import present_receipt_line
 from supply.models import (
     TRANSITIONS,
     GoodsReceipt,
@@ -174,7 +175,7 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
 
     items = {
         i.pk: i
-        for i in QuoteItem.objects.select_related("quote").filter(
+        for i in QuoteItem.objects.select_related("quote", "offer").filter(
             pk__in=[row.quote_item_id for row in lines if row.quote_item_id]
         )
     }
@@ -213,9 +214,26 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 "link_given": line.link_given,
                 "deal_id": deal_id,
                 "quote_item_id": item_id,
+                "quote_item": items.get(item_id) if item_id else None,
             }
         )
     return rows
+
+
+def _source_offer(supplier_id: int, product_id: int, quote_item) -> Optional[Any]:
+    """Цена поставщика для новой строки ЗП (ADR-0021 п. 6): та, из которой взята цена строки КП, если это цена этого
+    поставщика; иначе — действующая цена этого поставщика на этот товар (самая свежая). Нет — без ссылки."""
+    from catalog.models import SupplierOffer
+
+    offer = getattr(quote_item, "offer", None)
+    if offer is not None and offer.supplier_id == supplier_id and offer.product_id == product_id:
+        return offer
+    return (
+        SupplierOffer.objects.filter(supplier_id=supplier_id, product_id=product_id, is_active=True)
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today()))
+        .order_by(F("valid_from").desc(nulls_last=True), "-id")
+        .first()
+    )
 
 
 def _write_lines(order: SupplierOrder, rows: list[dict], user) -> None:
@@ -240,7 +258,8 @@ def _write_lines(order: SupplierOrder, rows: list[dict], user) -> None:
                 deal_id=row["deal_id"], quote_item_id=row["quote_item_id"]
             )  # привязка к проекту не слетает при правке
         if line is None:
-            SupplierOrderLine.objects.create(order=order, unit_price=row["unit_price"], **values)
+            offer = _source_offer(order.supplier_id, row["product"].pk, row["quote_item"])
+            SupplierOrderLine.objects.create(order=order, unit_price=row["unit_price"], supplier_offer=offer, **values)
             continue
         keep.add(line.pk)
         for key, value in values.items():
@@ -467,6 +486,8 @@ class ReceiptInput:
     order_line_id: int
     quantity: int
     cell: str = ""
+    #: Серийные, партия, документ соответствия — по классу категории (ADR-0021); для N не нужно.
+    tracking: Optional[trace.ReceiptTracking] = None
 
 
 def _reserve_for_project(line: SupplierOrderLine, quantity: int, user) -> None:
@@ -508,7 +529,9 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         raise StockError("ORDER_NOT_CONFIRMED", 409, current=order.status)
     order_lines = {
         line.pk: line
-        for line in order.lines.select_for_update(of=("self",)).select_related("product", "deal__stage", "quote_item")
+        for line in order.lines.select_for_update(of=("self",)).select_related(
+            "product__category", "deal__stage", "quote_item"
+        )
     }
     for item in lines:
         # Объектная проверка: строка приёмки должна принадлежать этому заказу.
@@ -517,6 +540,14 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         if order_lines[item.order_line_id].product_id is None:
             raise StockError("PRODUCT_REQUIRED", 409)  # карточку товара удалили — оприходовать некуда
     stock.lock_products(order_lines[i.order_line_id].product_id for i in lines)
+    # Серийные, партия и документ соответствия — по классу категории, до любой записи (ADR-0021). Под блокировкой товаров:
+    # параллельная приёмка того же товара ждёт, и её проверка «серийный уже принят» видит записанное соседом.
+    checked = {
+        item.order_line_id: trace.validate_receipt(
+            order_lines[item.order_line_id].product, item.quantity, item.tracking
+        )
+        for item in lines
+    }
     warehouse = stock.default_warehouse()
     receipt = GoodsReceipt.objects.create(
         order=order,
@@ -542,9 +573,17 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         )
         line.received_quantity += item.quantity
         line.save(update_fields=["received_quantity"])
-        GoodsReceiptLine.objects.create(
-            receipt=receipt, order_line=line, quantity=item.quantity, warehouse=warehouse, cell=cell[:32]
+        tracked = checked[item.order_line_id]
+        receipt_line = GoodsReceiptLine.objects.create(
+            receipt=receipt,
+            order_line=line,
+            quantity=item.quantity,
+            warehouse=warehouse,
+            cell=cell[:32],
+            conformity_doc_number=tracked.doc_number,
+            conformity_doc_valid_until=tracked.doc_valid_until,
         )
+        trace.record_receipt(receipt_line, line.product, tracked)
         _reserve_for_project(line, item.quantity, user)
         total += item.quantity
     _log(
@@ -648,6 +687,9 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     ),
                     "deal": _deal_ref(line.deal),
                     "quote_item_id": line.quote_item_id,
+                    "offer": _offer_ref(line.supplier_offer),
+                    "tracking": trace.tracking_of(line.product),
+                    "requires_doc": trace.requires_doc(line.product),
                 }
                 for line in lines
             ],
@@ -659,16 +701,12 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
                     "supplier_doc": receipt.supplier_doc or None,
                     "note": receipt.note or None,
                     "lines": [
-                        {
-                            "order_line_id": rl.order_line_id,
-                            "name": rl.order_line.name,
-                            "quantity": rl.quantity,
-                            "cell": rl.cell or None,
-                        }
-                        for rl in receipt.lines.all()
+                        {"order_line_id": rl.order_line_id, **present_receipt_line(rl)} for rl in receipt.lines.all()
                     ],
                 }
-                for receipt in order.receipts.select_related("received_by").prefetch_related("lines__order_line")
+                for receipt in order.receipts.select_related("received_by").prefetch_related(
+                    "lines__order_line", "lines__trace_units"
+                )
             ],
             "log": [
                 {
@@ -686,8 +724,21 @@ def present_order(order: SupplierOrder, user, *, detail: bool = False) -> dict:
 
 def _list_queryset():
     return SupplierOrder.objects.select_related("supplier", "currency", "created_by").prefetch_related(
-        "lines__deal__company"
+        "lines__deal__company", "lines__product__category", "lines__supplier_offer__delivery_basis"
     )
+
+
+def _offer_ref(offer) -> Optional[dict]:
+    """Цена поставщика, из которой создана строка (ADR-0021 п. 6): Incoterms и срок цены; сама цена — в строке под правом."""
+    if offer is None:
+        return None
+    valid_until = offer.valid_until
+    return {
+        "id": offer.pk,
+        "incoterms": offer.delivery_basis.code if offer.delivery_basis_id else None,
+        "valid_until": valid_until.isoformat() if valid_until else None,
+        "expired": bool(valid_until and valid_until < today()),
+    }
 
 
 def list_orders(

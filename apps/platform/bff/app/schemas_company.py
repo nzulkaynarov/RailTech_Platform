@@ -794,10 +794,16 @@ def to_reference_item(kind: str, raw: Mapping[str, Any]) -> ReferenceItem:
 # --- категории ---------------------------------------------------------------------------------
 
 
+# ADR-0021 (L0-3): учёт единиц категории — данные, товар наследует.
+TrackingClass = Literal["serial", "lot", "none"]
+
+
 class CatalogCategory(BaseModel):
     id: str
     name: str
     parent_id: str | None
+    tracking: TrackingClass
+    requires_conformity_doc: bool
 
 
 class CatalogCategoryList(BaseModel):
@@ -809,6 +815,8 @@ class CatalogCategoryIn(BaseModel):
 
     name: str = Field(min_length=1, max_length=255)
     parent_id: str | None = Field(default=None, pattern=_ID)
+    tracking: TrackingClass = "none"
+    requires_conformity_doc: bool = False
 
 
 class CatalogCategoryUpdate(Patch):
@@ -816,6 +824,8 @@ class CatalogCategoryUpdate(Patch):
 
     name: str | None = Field(default=None, min_length=1, max_length=255)
     parent_id: str | None = Field(default=None, pattern=_ID)
+    tracking: TrackingClass | None = None
+    requires_conformity_doc: bool | None = None
 
 
 class CategoryRequest(BaseModel):
@@ -850,8 +860,13 @@ class CategoryRequestRejectIn(BaseModel):
 
 
 def to_category(raw: Mapping[str, Any]) -> CatalogCategory:
+    tracking = raw.get("tracking")
     return CatalogCategory(
-        id=ident(raw.get("id")), name=text(raw.get("name")), parent_id=opt_ident(raw.get("parent"))
+        id=ident(raw.get("id")),
+        name=text(raw.get("name")),
+        parent_id=opt_ident(raw.get("parent")),
+        tracking=tracking if tracking in ("serial", "lot", "none") else "none",
+        requires_conformity_doc=bool(raw.get("requires_conformity_doc")),
     )
 
 

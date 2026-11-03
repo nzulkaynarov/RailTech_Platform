@@ -9,6 +9,7 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from inventory.access import StockError
 from inventory.serializers import StockErrorSerializer
 from inventory.services import overview
+from inventory.services.trace import ReceiptTracking
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -318,7 +319,21 @@ class OrderReceiptView(RoleGatedViewMixin, APIView):
             order = orders.receive(
                 request.user,
                 order_id,
-                [orders.ReceiptInput(row["order_line_id"], row["quantity"], row["cell"]) for row in data["lines"]],
+                [
+                    orders.ReceiptInput(
+                        row["order_line_id"],
+                        row["quantity"],
+                        row["cell"],
+                        tracking=ReceiptTracking(
+                            serials=row["serials"],
+                            lot=row["lot"],
+                            expiry=row["expiry_date"],
+                            doc_number=row["doc_number"],
+                            doc_valid_until=row["doc_valid_until"],
+                        ),
+                    )
+                    for row in data["lines"]
+                ],
                 supplier_doc=data["supplier_doc"],
                 note=data["note"],
             )

@@ -21,6 +21,8 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  StockTraceList,
+  StockTraceUnitRef,
   SupplierOrderCancelIn,
   SupplierOrderConfirmIn,
   SupplierOrderCreate,
@@ -35,10 +37,12 @@ import type {
 import { CATALOG } from "./fixtures/calc";
 import {
   type MockOrder,
+  type MockReceiptLine,
   type MockOrderLog,
   type MockProduct,
   type MockReservation,
   type MockStock,
+  type MockUnit,
   REQUESTS,
   SUPPLIERS,
   seedStock,
@@ -67,7 +71,11 @@ let memory: MockStock | null = null;
 function read(): MockStock {
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw) as MockStock;
+    if (raw) {
+      const saved = JSON.parse(raw) as MockStock;
+      saved.units ??= [];
+      return saved;
+    }
   } catch {
     // Хранилище недоступно — состояние в памяти.
   }
@@ -223,7 +231,151 @@ function presentReservation(state: MockStock, r: MockReservation): StockReservat
     status: r.status,
     created_at: r.createdAt,
     created_by: r.createdBy,
+    tracking: product?.tracking ?? "none",
+    units: freeUnits(state, r.productId).map(unitRef),
   };
+}
+
+// --- прослеживаемость (ADR-0021, L0-3): как `inventory.services.trace` ERP -----------------------
+
+const unitsOf = (state: MockStock): MockUnit[] => (state.units ??= []);
+const availableOf = (u: MockUnit) => u.quantity - u.shipped;
+
+function freeUnits(state: MockStock, productId: number): MockUnit[] {
+  return unitsOf(state)
+    .filter((u) => u.productId === productId && availableOf(u) > 0)
+    .sort(
+      (a, b) => (a.expiry ?? "").localeCompare(b.expiry ?? "") || a.number.localeCompare(b.number),
+    );
+}
+
+function unitRef(u: MockUnit): StockTraceUnitRef {
+  return {
+    id: String(u.id),
+    kind: u.kind,
+    number: u.number,
+    expiry_date: u.expiry,
+    available: availableOf(u),
+  };
+}
+
+const erpField = (
+  reason: string,
+  field: string,
+  message: string,
+  extra: Record<string, unknown> = {},
+) =>
+  failure(422, "VALIDATION_FAILED", message, {
+    source: "erp",
+    reason,
+    fields: [field],
+    ...extra,
+  });
+
+type ReceiptItem = SupplierOrderReceiptIn["lines"][number];
+
+/** Проверка строки приёмки по классу товара: та же, что `trace.validate_receipt` ERP. */
+function receiptProblem(state: MockStock, product: MockProduct | undefined, item: ReceiptItem) {
+  const tracking = product?.tracking ?? "none";
+  if (product?.requiresDoc) {
+    if (!item.doc_number?.trim()) {
+      return erpField(
+        "conformity_doc_required",
+        "doc_number",
+        "Укажите № сертификата или декларации.",
+      );
+    }
+    if (!item.doc_valid_until) {
+      return erpField(
+        "conformity_doc_valid_until_required",
+        "doc_valid_until",
+        "Укажите срок действия документа.",
+      );
+    }
+    if (item.doc_valid_until < today()) {
+      return erpField(
+        "conformity_doc_expired",
+        "doc_valid_until",
+        "Срок действия документа истёк.",
+      );
+    }
+  }
+  if (tracking === "serial") {
+    const serials = (item.serials ?? []).map((n) => n.trim()).filter(Boolean);
+    if (serials.length === 0) {
+      return erpField("serials_required", "serials", "Укажите серийные номера.", {
+        expected: item.quantity,
+      });
+    }
+    if (serials.length !== item.quantity) {
+      return erpField(
+        "serials_count_mismatch",
+        "serials",
+        "Серийных номеров должно быть столько, сколько принимаете.",
+        {
+          expected: item.quantity,
+          given: serials.length,
+        },
+      );
+    }
+    const repeated = serials.find((n, i) => serials.indexOf(n) !== i);
+    if (repeated)
+      return erpField("serial_duplicate", "serials", `Номер ${repeated} повторяется.`, {
+        number: repeated,
+      });
+    const taken = unitsOf(state).find(
+      (u) => u.productId === product?.id && u.kind === "serial" && serials.includes(u.number),
+    );
+    if (taken)
+      return conflict("serial_exists", `Серийный номер ${taken.number} уже принят.`, {
+        number: taken.number,
+      });
+  }
+  if (tracking === "lot" && !item.lot?.trim()) {
+    return erpField("lot_required", "lot", "Укажите номер партии.");
+  }
+  return null;
+}
+
+function recordUnits(
+  state: MockStock,
+  product: MockProduct,
+  item: ReceiptItem,
+  order: MockOrder,
+  line: MockOrder["lines"][number],
+  receivedAt: string,
+  supplierDoc: string | null,
+): string[] {
+  const tracking = product.tracking ?? "none";
+  if (tracking === "none") return [];
+  const base = {
+    productId: product.id,
+    receivedAt,
+    supplierDoc,
+    orderNumber: order.number,
+    supplierId: order.supplierId,
+    docNumber: product.requiresDoc ? (item.doc_number?.trim() ?? null) : null,
+    docValidUntil: product.requiresDoc ? (item.doc_valid_until ?? null) : null,
+    request: line.request,
+    shipped: 0,
+    destinations: [],
+  };
+  const numbers =
+    tracking === "serial"
+      ? (item.serials ?? []).map((n) => n.trim()).filter(Boolean)
+      : [item.lot?.trim() ?? ""];
+  for (const number of numbers) {
+    state.nextId += 1;
+    unitsOf(state).push({
+      ...base,
+      id: state.nextId,
+      kind: tracking,
+      number,
+      expiry: tracking === "lot" ? (item.expiry_date ?? null) : null,
+      quantity: tracking === "serial" ? 1 : item.quantity,
+    });
+  }
+  return numbers;
 }
 
 function presentProduct(state: MockStock, product: MockProduct, user: Me): StockProduct {
@@ -345,6 +497,15 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
       line_total: prices && l.unitPrice !== null ? money(Number(l.unitPrice) * l.quantity) : null,
       request: l.request ? refOf(l.request) : null,
       line_id: l.lineId === null ? null : String(l.lineId),
+      offer: l.offer
+        ? {
+            incoterms: l.offer.incoterms,
+            valid_until: l.offer.validUntil,
+            expired: l.offer.validUntil !== null && l.offer.validUntil < today(),
+          }
+        : null,
+      tracking: state.products.find((p) => p.id === l.productId)?.tracking ?? "none",
+      requires_doc: state.products.find((p) => p.id === l.productId)?.requiresDoc ?? false,
     })),
     receipts: state.receipts
       .filter((r) => r.orderNumber === order.number)
@@ -354,15 +515,22 @@ function presentOrder(state: MockStock, order: MockOrder, user: Me): SupplierOrd
         received_by: r.receivedBy,
         supplier_doc: r.supplierDoc,
         note: r.note,
-        lines: r.lines.map((l) => ({
-          order_line_id: String(l.orderLineId),
-          name: l.name,
-          quantity: l.quantity,
-          cell: l.cell,
-        })),
+        lines: r.lines.map((l) => ({ order_line_id: String(l.orderLineId), ...receiptLine(l) })),
       })),
     log: order.log.map((e) => ({ kind: e.kind, at: e.at, by: e.by, detail: e.detail })),
     rights: { ...rights(user), prices },
+  };
+}
+
+function receiptLine(l: MockReceiptLine) {
+  return {
+    name: l.name,
+    quantity: l.quantity,
+    cell: l.cell,
+    units: l.units ?? [],
+    expiry_date: l.expiry ?? null,
+    doc_number: l.docNumber ?? null,
+    doc_valid_until: l.docValidUntil ?? null,
   };
 }
 
@@ -912,6 +1080,12 @@ export const erpStockHandlers = [
           max: line.quantity - line.received,
         });
       }
+      const problem = receiptProblem(
+        state,
+        state.products.find((p) => p.id === line.productId),
+        item,
+      );
+      if (problem) return problem;
     }
     state.nextId += 1;
     const receipt = {
@@ -921,7 +1095,7 @@ export const erpStockHandlers = [
       receivedBy: held.user.name,
       supplierDoc: body.supplier_doc ?? null,
       note: body.note ?? null,
-      lines: [] as { orderLineId: number; name: string; quantity: number; cell: string | null }[],
+      lines: [] as MockReceiptLine[],
     };
     let total = 0;
     for (const item of body.lines) {
@@ -942,7 +1116,25 @@ export const erpStockHandlers = [
       addToCell(product, cell, item.quantity);
       addMovement(state, held.user, product.id, "receipt", item.quantity, cell, order.number);
       line.received += item.quantity;
-      receipt.lines.push({ orderLineId: line.id, name: line.name, quantity: item.quantity, cell });
+      const numbers = recordUnits(
+        state,
+        product,
+        item,
+        order,
+        line,
+        receipt.receivedAt,
+        receipt.supplierDoc,
+      );
+      receipt.lines.push({
+        orderLineId: line.id,
+        name: line.name,
+        quantity: item.quantity,
+        cell,
+        units: numbers,
+        expiry: product.tracking === "lot" ? (item.expiry_date ?? null) : null,
+        docNumber: product.requiresDoc ? (item.doc_number?.trim() ?? null) : null,
+        docValidUntil: product.requiresDoc ? (item.doc_valid_until ?? null) : null,
+      });
       total += item.quantity;
       if (line.request !== null && line.lineId !== null) {
         const held_ = state.reservations.find(
@@ -1006,6 +1198,8 @@ export const erpStockHandlers = [
             quantity: l.quantity,
             received_quantity: l.received,
             request: l.request ? refOf(l.request) : null,
+            tracking: state.products.find((p) => p.id === l.productId)?.tracking ?? "none",
+            requires_doc: state.products.find((p) => p.id === l.productId)?.requiresDoc ?? false,
           })),
       );
     const done = [...state.receipts].reverse().map((r) => {
@@ -1019,7 +1213,7 @@ export const erpStockHandlers = [
         received_by: r.receivedBy,
         supplier_doc: r.supplierDoc,
         quantity: r.lines.reduce((sum, l) => sum + l.quantity, 0),
-        lines: r.lines.map((l) => ({ name: l.name, quantity: l.quantity, cell: l.cell })),
+        lines: r.lines.map(receiptLine),
       };
     });
     return HttpResponse.json<StockReceipts>({ pending, done, rights: rights(held.user) });
@@ -1047,7 +1241,12 @@ export const erpStockHandlers = [
         "Проект ещё не подписан: отгрузка возможна после подписания договора.",
       );
     }
-    const picked: { reservation: MockReservation; product: MockProduct; quantity: number }[] = [];
+    const picked: {
+      reservation: MockReservation;
+      product: MockProduct;
+      quantity: number;
+      chosen: { unit: MockUnit; size: number }[];
+    }[] = [];
     for (const item of body.lines) {
       const reservation = state.reservations.find((r) => String(r.id) === item.reservation_id);
       if (!reservation || reservation.request !== body.request) {
@@ -1066,7 +1265,42 @@ export const erpStockHandlers = [
       }
       const product = state.products.find((p) => p.id === reservation.productId);
       if (!product) return missing("product_not_found", "Товара нет.");
-      picked.push({ reservation, product, quantity: item.quantity });
+      const chosen: { unit: MockUnit; size: number }[] = [];
+      if ((product.tracking ?? "none") !== "none") {
+        const picks = item.units ?? [];
+        if (picks.length === 0) {
+          return erpField("units_required", "units", "Выберите серийные номера или партии.", {
+            expected: item.quantity,
+          });
+        }
+        for (const pick of picks) {
+          const unit = unitsOf(state).find((u) => String(u.id) === pick.unit_id);
+          if (!unit || unit.productId !== product.id) {
+            return missing("unit_not_found", "Такой единицы этого товара на складе нет.");
+          }
+          const size = unit.kind === "serial" ? 1 : (pick.quantity ?? 1);
+          if (size > availableOf(unit)) {
+            return conflict("unit_not_available", `${unit.number} уже отгружен.`, {
+              number: unit.number,
+              max: availableOf(unit),
+            });
+          }
+          chosen.push({ unit, size });
+        }
+        const total = chosen.reduce((sum, c) => sum + c.size, 0);
+        if (total !== item.quantity) {
+          return erpField(
+            "units_count_mismatch",
+            "units",
+            "Выберите столько номеров, сколько отгружаете.",
+            {
+              expected: item.quantity,
+              given: total,
+            },
+          );
+        }
+      }
+      picked.push({ reservation, product, quantity: item.quantity, chosen });
     }
     state.shipSeq += 1;
     state.nextId += 1;
@@ -1079,9 +1313,10 @@ export const erpStockHandlers = [
       note: body.note ?? null,
       shippedAt: new Date().toISOString(),
       shippedBy: held.user.name,
-      lines: [] as { productId: number; name: string; quantity: number; cell: string | null }[],
+      lines: [] as MockStock["shipments"][number]["lines"],
     };
-    for (const { reservation, product, quantity } of picked) {
+    for (const { reservation, product, quantity, chosen } of picked) {
+      const first = shipment.lines.length;
       let left = quantity;
       for (const cell of [...product.cells].sort((a, b) => b.onHand - a.onHand)) {
         if (left <= 0) break;
@@ -1099,10 +1334,72 @@ export const erpStockHandlers = [
       }
       reservation.shipped += quantity;
       if (reservation.shipped >= reservation.quantity) reservation.status = "fulfilled";
+      const line = shipment.lines[first];
+      if (line && chosen.length > 0) {
+        line.units = chosen.map(({ unit, size }) => ({ number: unit.number, quantity: size }));
+        for (const { unit, size } of chosen) {
+          unit.shipped += size;
+          unit.destinations.push({
+            shipmentNumber: shipment.number,
+            shippedAt: shipment.shippedAt,
+            quantity: size,
+            request: body.request,
+          });
+        }
+      }
     }
     state.shipments.push(shipment);
     write(state);
     return HttpResponse.json<StockShipment>(presentShipment(shipment), { status: 201 });
+  }),
+
+  http.get("*/api/v1/erp/stock/trace", ({ request }) => {
+    const held = guard("erp.stock", "read");
+    if ("error" in held) return held.error;
+    const text = (new URL(request.url).searchParams.get("q") ?? "").trim().toLowerCase();
+    const state = read();
+    const found =
+      text.length < 2
+        ? []
+        : unitsOf(state)
+            .filter((u) => u.number.toLowerCase().includes(text))
+            .sort(
+              (a, b) =>
+                Number(a.number.toLowerCase() !== text) - Number(b.number.toLowerCase() !== text) ||
+                a.number.localeCompare(b.number),
+            );
+    const items = found.map((u) => {
+      const product = state.products.find((p) => p.id === u.productId);
+      return {
+        ...unitRef(u),
+        quantity: u.quantity,
+        shipped_quantity: u.shipped,
+        status: availableOf(u) > 0 ? ("in_stock" as const) : ("shipped" as const),
+        product: {
+          id: String(u.productId),
+          name: product?.name ?? "Товар",
+          article: product?.article ?? "",
+        },
+        origin: {
+          received_at: u.receivedAt,
+          supplier_doc: u.supplierDoc,
+          order_number: u.orderNumber,
+          order_path: `/erp/stock/${seg(u.orderNumber)}`,
+          supplier: SUPPLIERS.find((x) => x.id === u.supplierId)?.name ?? "—",
+          manufacturer: product?.brand ?? null,
+          doc_number: u.docNumber,
+          doc_valid_until: u.docValidUntil,
+          request: u.request ? refOf(u.request) : null,
+        },
+        destinations: u.destinations.map((d) => ({
+          shipment_number: d.shipmentNumber,
+          shipped_at: d.shippedAt,
+          quantity: d.quantity,
+          request: refOf(d.request),
+        })),
+      };
+    });
+    return HttpResponse.json<StockTraceList>({ items });
   }),
 ];
 
@@ -1149,6 +1446,7 @@ function presentShipment(s: ReturnType<typeof read>["shipments"][number]): Stock
       name: l.name,
       quantity: l.quantity,
       cell: l.cell,
+      units: l.units ?? [],
     })),
   };
 }

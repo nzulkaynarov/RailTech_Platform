@@ -4,6 +4,8 @@
  */
 import type { StockRequestRef } from "./stockRequestRef";
 import type { StockReservationStatus } from "./stockReservationStatus";
+import type { StockTraceUnitRef } from "./stockTraceUnitRef";
+import type { TrackingClass } from "./trackingClass";
 
 export interface StockReservation {
   /** @pattern ^[0-9]+$ */
@@ -31,4 +33,7 @@ export interface StockReservation {
   created_at: string;
   /** @nullable */
   created_by: string | null;
+  tracking: TrackingClass;
+  /** Свободные серийные или партии товара — выбор при отгрузке (S/L); у `none` пусто */
+  units: StockTraceUnitRef[];
 }

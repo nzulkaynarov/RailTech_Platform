@@ -492,7 +492,22 @@
         "title": "No category requests",
         "text": "When an employee asks for a new category, the request appears here."
       }
-    }
+    },
+    "tracking": {
+      "label": "Unit tracking",
+      "hint": "What to ask at receipt and shipment for items of this category",
+      "options": {
+        "none": "Quantity only",
+        "lot": "Lot and expiry date",
+        "serial": "Serial number of each unit"
+      },
+      "short": {
+        "lot": "lot",
+        "serial": "serial"
+      }
+    },
+    "doc": "Conformity document required (certificate or declaration)",
+    "docShort": "document"
   },
   "platform": {
     "title": "Platform settings",

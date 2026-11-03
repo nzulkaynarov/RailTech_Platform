@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from catalog.constants import TrackingClass
 from core.storage import category_icon_path, get_public_storage
 
 # ────────────────────────────────────────────
@@ -60,6 +61,19 @@ class Category(models.Model):
         default=True,
         verbose_name=_("Активна"),
         help_text=_("Неактивные категории скрыты в каталоге"),
+    )
+    # ADR-0021 (L0-3): прослеживаемость — данные категории, товар наследует.
+    tracking = models.CharField(
+        max_length=8,
+        choices=TrackingClass.choices,
+        default=TrackingClass.NONE,
+        verbose_name=_("Учёт единиц"),
+        help_text=_("Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров"),
+    )
+    requires_conformity_doc = models.BooleanField(
+        default=False,
+        verbose_name=_("Нужен документ соответствия"),
+        help_text=_("При приёмке — № сертификата или декларации и срок действия"),
     )
 
     class Meta:

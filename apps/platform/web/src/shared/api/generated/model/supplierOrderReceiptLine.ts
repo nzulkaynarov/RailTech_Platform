@@ -11,4 +11,15 @@ export interface SupplierOrderReceiptLine {
   quantity: number;
   /** @nullable */
   cell: string | null;
+  /** Серийные номера или номер партии */
+  units: string[];
+  /** @nullable */
+  expiry_date: string | null;
+  /**
+   * № сертификата или декларации
+   * @nullable
+   */
+  doc_number: string | null;
+  /** @nullable */
+  doc_valid_until: string | null;
 }

@@ -9948,6 +9948,28 @@ paths:
         '422': {$ref: '#/components/responses/ValidationFailed'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/stock/trace:
+    get:
+      tags: [stock]
+      operationId: searchStockTrace
+      summary: 'Склад · Прослеживаемость: поиск по серийному номеру или партии'
+      description: >-
+        ERP `GET /stock/trace/?q=` (ADR-0021, L0-3): единицы прослеживаемости по номеру — точное совпадение первым, затем по
+        части номера (от 2 знаков, до 50). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия;
+        вперёд — отгрузки, клиент, проект. Короче 2 знаков — пустой список. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: q, in: query, required: true, schema: {type: string, minLength: 1, maxLength: 100}, description: 'Серийный номер или номер партии'}
+      responses:
+        '200':
+          description: 'Найденные единицы'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockTraceList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /erp/stock/overdue:
     get:
       tags: [stock]
@@ -11894,7 +11916,8 @@ components:
         409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и
         `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`,
         `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`,
-        `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`)
+        `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят,
+        `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает)
       content:
         application/json:
           schema:
@@ -17507,6 +17530,8 @@ components:
         - id
         - name
         - parent_id
+        - tracking
+        - requires_conformity_doc
       properties:
         id:
           $ref: '#/components/schemas/CompanyItemRef'
@@ -17516,6 +17541,17 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CompanyItemRef'
             - type: 'null'
+        tracking:
+          $ref: '#/components/schemas/TrackingClass'
+        requires_conformity_doc:
+          type: boolean
+          description: При приёмке нужен № сертификата или декларации и срок действия
+    TrackingClass:
+      type: string
+      enum: [serial, lot, none]
+      description: >-
+        Учёт единиц категории (ADR-0021): `serial` — каждая единица по серийному номеру, `lot` — партия и срок годности,
+        `none` — только количество (по умолчанию). Товар наследует класс своей категории
     CatalogCategoryList:
       type: object
       additionalProperties: false
@@ -17540,6 +17576,10 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CompanyItemRef'
             - type: 'null'
+        tracking:
+          $ref: '#/components/schemas/TrackingClass'
+        requires_conformity_doc:
+          type: boolean
     CatalogCategoryUpdate:
       type: object
       additionalProperties: false
@@ -17553,6 +17593,10 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CompanyItemRef'
             - type: 'null'
+        tracking:
+          $ref: '#/components/schemas/TrackingClass'
+        requires_conformity_doc:
+          type: boolean
     CategoryRequestStatus:
       type: string
       enum:
@@ -20148,7 +20192,7 @@ components:
     StockReservation:
       type: object
       additionalProperties: false
-      required: [id, product_id, product_name, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by]
+      required: [id, product_id, product_name, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by, tracking, units]
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         product_id: {type: string, pattern: '^[0-9]+$'}
@@ -20161,6 +20205,22 @@ components:
         status: {type: string, enum: [active, released, fulfilled]}
         created_at: {type: string, format: date-time}
         created_by: {type: [string, 'null']}
+        tracking: {$ref: '#/components/schemas/TrackingClass'}
+        units:
+          type: array
+          description: Свободные серийные или партии товара — выбор при отгрузке (S/L); у `none` пусто
+          items: {$ref: '#/components/schemas/StockTraceUnitRef'}
+
+    StockTraceUnitRef:
+      type: object
+      additionalProperties: false
+      required: [id, kind, number, expiry_date, available]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        kind: {type: string, enum: [serial, lot]}
+        number: {type: string, description: 'Серийный номер или номер партии изготовителя'}
+        expiry_date: {type: [string, 'null'], format: date, description: 'Годен до (партия)'}
+        available: {type: integer, minimum: 0, description: 'Ещё на складе: серийный — 1, партия — остаток партии'}
 
     StockReservationList:
       type: object
@@ -20327,7 +20387,7 @@ components:
     SupplierOrderLine:
       type: object
       additionalProperties: false
-      required: [id, position, product_id, name, article, unit, quantity, received_quantity, unit_price, line_total, request, line_id]
+      required: [id, position, product_id, name, article, unit, quantity, received_quantity, unit_price, line_total, request, line_id, offer, tracking, requires_doc]
       properties:
         id: {type: string, pattern: '^[0-9]+$'}
         position: {type: integer, minimum: 1}
@@ -20351,16 +20411,36 @@ components:
             - {$ref: '#/components/schemas/StockRequestRef'}
             - {type: 'null'}
         line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта, под которую заказано'}
+        offer:
+          description: Цена поставщика, из которой создана строка (ADR-0021 п. 6) — базис и срок цены; сама цена — в `unit_price`
+          oneOf:
+            - {$ref: '#/components/schemas/SupplierOrderLineOffer'}
+            - {type: 'null'}
+        tracking: {$ref: '#/components/schemas/TrackingClass'}
+        requires_doc: {type: boolean, description: 'Категория требует документ соответствия на приёмке'}
+
+    SupplierOrderLineOffer:
+      type: object
+      additionalProperties: false
+      required: [incoterms, valid_until, expired]
+      properties:
+        incoterms: {type: [string, 'null'], examples: [FCA], description: 'Базис поставки по Incoterms'}
+        valid_until: {type: [string, 'null'], format: date, description: 'Цена действует до'}
+        expired: {type: boolean}
 
     SupplierOrderReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_line_id, name, quantity, cell]
+      required: [order_line_id, name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
       properties:
         order_line_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
         quantity: {type: integer, minimum: 1}
         cell: {type: [string, 'null']}
+        units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
+        expiry_date: {type: [string, 'null'], format: date}
+        doc_number: {type: [string, 'null'], description: '№ сертификата или декларации'}
+        doc_valid_until: {type: [string, 'null'], format: date}
 
     SupplierOrderReceipt:
       type: object
@@ -20527,13 +20607,22 @@ components:
               order_line_id: {type: string, pattern: '^[0-9]+$'}
               quantity: {type: integer, minimum: 1}
               cell: {type: string, maxLength: 32}
+              serials:
+                type: array
+                maxItems: 1000
+                items: {type: string, maxLength: 100}
+                description: 'Серийные номера (`tracking = serial`): их число = количеству, без повторов; иначе 422'
+              lot: {type: string, maxLength: 100, description: 'Партия (`tracking = lot`) — обязательна'}
+              expiry_date: {type: [string, 'null'], format: date, description: 'Годен до (партия)'}
+              doc_number: {type: string, maxLength: 100, description: '№ сертификата или декларации (`requires_doc`) — обязателен'}
+              doc_valid_until: {type: [string, 'null'], format: date, description: 'Документ действует до — обязателен и не в прошлом при `requires_doc`'}
         supplier_doc: {type: string, maxLength: 100}
         note: {type: string, maxLength: 500}
 
     StockPendingReceiptLine:
       type: object
       additionalProperties: false
-      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, article, unit, quantity, received_quantity, request]
+      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, article, unit, quantity, received_quantity, request, tracking, requires_doc]
       properties:
         order_number: {type: string}
         order_path: {type: string}
@@ -20550,6 +20639,8 @@ components:
           oneOf:
             - {$ref: '#/components/schemas/StockRequestRef'}
             - {type: 'null'}
+        tracking: {$ref: '#/components/schemas/TrackingClass'}
+        requires_doc: {type: boolean, description: 'Спросить № сертификата или декларации и срок действия'}
 
     StockDoneReceipt:
       type: object
@@ -20569,11 +20660,15 @@ components:
           items:
             type: object
             additionalProperties: false
-            required: [name, quantity, cell]
+            required: [name, quantity, cell, units, expiry_date, doc_number, doc_valid_until]
             properties:
               name: {type: string}
               quantity: {type: integer, minimum: 1}
               cell: {type: [string, 'null']}
+              units: {type: array, items: {type: string}, description: 'Серийные номера или номер партии'}
+              expiry_date: {type: [string, 'null'], format: date}
+              doc_number: {type: [string, 'null']}
+              doc_valid_until: {type: [string, 'null'], format: date}
 
     StockReceipts:
       type: object
@@ -20592,12 +20687,22 @@ components:
     StockShipmentLine:
       type: object
       additionalProperties: false
-      required: [product_id, name, quantity, cell]
+      required: [product_id, name, quantity, cell, units]
       properties:
         product_id: {type: string, pattern: '^[0-9]+$'}
         name: {type: string}
         quantity: {type: integer, minimum: 1}
         cell: {type: [string, 'null']}
+        units:
+          type: array
+          description: Серийные или партии, ушедшие строкой (ADR-0021)
+          items:
+            type: object
+            additionalProperties: false
+            required: [number, quantity]
+            properties:
+              number: {type: string}
+              quantity: {type: integer, minimum: 1}
 
     StockShipment:
       type: object
@@ -20643,9 +20748,82 @@ components:
             properties:
               reservation_id: {type: string, pattern: '^[0-9]+$'}
               quantity: {type: integer, minimum: 1}
+              units:
+                type: array
+                maxItems: 1000
+                description: >-
+                  Серийные или партии строки (`tracking` резерва `serial`/`lot` — обязательно; сумма = количеству; только
+                  свободные единицы этого товара из `units` резерва). Без них — 422 `units_required`
+                items:
+                  type: object
+                  additionalProperties: false
+                  required: [unit_id]
+                  properties:
+                    unit_id: {type: string, pattern: '^[0-9]+$'}
+                    quantity: {type: integer, minimum: 1, default: 1, description: 'Сколько из партии; серийный — 1'}
         tracking: {type: string, maxLength: 128}
         carrier: {type: string, maxLength: 128}
         note: {type: string, maxLength: 500}
+
+    StockTraceList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/StockTraceUnit'}
+
+    StockTraceUnit:
+      type: object
+      additionalProperties: false
+      required: [id, kind, number, expiry_date, quantity, shipped_quantity, status, product, origin, destinations]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        kind: {type: string, enum: [serial, lot]}
+        number: {type: string}
+        expiry_date: {type: [string, 'null'], format: date}
+        quantity: {type: integer, minimum: 1}
+        shipped_quantity: {type: integer, minimum: 0}
+        status: {type: string, enum: [in_stock, shipped]}
+        product:
+          type: object
+          additionalProperties: false
+          required: [id, name, article]
+          properties:
+            id: {type: string, pattern: '^[0-9]+$'}
+            name: {type: string}
+            article: {type: string}
+        origin:
+          type: object
+          additionalProperties: false
+          description: Откуда — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия, проект заказа
+          required: [received_at, supplier_doc, order_number, order_path, supplier, manufacturer, doc_number, doc_valid_until, request]
+          properties:
+            received_at: {type: string, format: date-time}
+            supplier_doc: {type: [string, 'null'], description: 'Накладная поставщика'}
+            order_number: {type: string}
+            order_path: {type: string}
+            supplier: {type: string}
+            manufacturer: {type: [string, 'null']}
+            doc_number: {type: [string, 'null']}
+            doc_valid_until: {type: [string, 'null'], format: date}
+            request:
+              oneOf:
+                - {$ref: '#/components/schemas/StockRequestRef'}
+                - {type: 'null'}
+        destinations:
+          type: array
+          description: Куда — отгрузки клиенту с проектом
+          items:
+            type: object
+            additionalProperties: false
+            required: [shipment_number, shipped_at, quantity, request]
+            properties:
+              shipment_number: {type: string}
+              shipped_at: {type: string, format: date-time}
+              quantity: {type: integer, minimum: 1}
+              request: {$ref: '#/components/schemas/StockRequestRef'}
 
     PriceRequestLine:
       type: object

@@ -492,7 +492,22 @@
         "title": "Kategoriya so'rovlari yo'q",
         "text": "Xodim yangi kategoriya so'raganda, so'rov shu yerda paydo bo'ladi."
       }
-    }
+    },
+    "tracking": {
+      "label": "Birliklar hisobi",
+      "hint": "Bu toifa tovarlari uchun qabul va jo‘natishda nima so‘raladi",
+      "options": {
+        "none": "Faqat miqdor",
+        "lot": "Partiya va yaroqlilik muddati",
+        "serial": "Har bir birlikning seriya raqami"
+      },
+      "short": {
+        "lot": "partiya",
+        "serial": "seriya"
+      }
+    },
+    "doc": "Muvofiqlik hujjati kerak (sertifikat yoki deklaratsiya)",
+    "docShort": "hujjat"
   },
   "platform": {
     "title": "Platforma sozlamalari",

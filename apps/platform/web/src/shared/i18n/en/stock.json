@@ -1,6 +1,6 @@
 {
   "title": "Stock",
-  "subtitle": "Stock and reservations, supplier orders, receiving and shipments by project",
+  "subtitle": "Stock and reservations, supplier orders, receiving, shipments and traceability",
   "common": {
     "cancel": "Cancel"
   },
@@ -8,7 +8,8 @@
     "balances": "Stock and reservations",
     "orders": "Supplier orders",
     "receipts": "Receiving",
-    "shipments": "Shipments"
+    "shipments": "Shipments",
+    "trace": "Traceability"
   },
   "load": {
     "retry": "Retry",
@@ -318,6 +319,12 @@
       "received": "Goods received",
       "cancelled": "Order cancelled",
       "edited": "Order saved"
+    },
+    "offer": {
+      "label": "Supplier price: {{text}}",
+      "incoterms": "basis {{code}}",
+      "validUntil": "valid until {{date}}",
+      "expired": "expired {{date}}"
     }
   },
   "receipts": {
@@ -409,5 +416,59 @@
     "answerNote": "Reply: {{note}}",
     "answer": "Reply received",
     "answerLabel": "Reply received: supplier “{{name}}”"
+  },
+  "trace": {
+    "title": "Traceability: where from and where to",
+    "search": "Serial or lot number",
+    "searchPlaceholder": "Serial number or lot number",
+    "find": "Find",
+    "hint": "Enter at least 2 characters: we show the receipt, supplier and document, and the shipments and clients.",
+    "results": "Units found",
+    "empty": {
+      "title": "Nothing found",
+      "text": "No received serial or lot with number “{{query}}”."
+    },
+    "kind": {
+      "serial": "Serial",
+      "lot": "Lot"
+    },
+    "status": {
+      "in_stock": "In stock",
+      "shipped": "Shipped"
+    },
+    "lotShipped": "shipped {{shipped}} of {{total}}",
+    "from": "Where from",
+    "to": "Where to",
+    "manufacturer": "Manufacturer",
+    "supplier": "Supplier",
+    "order": "Purchase order",
+    "received": "Received",
+    "document": "Conformity document",
+    "until": "until {{date}}",
+    "expiryLabel": "Expiry date",
+    "orderedFor": "Ordered for",
+    "notShipped": "Still in stock — not shipped.",
+    "fieldsFor": "Numbers and document: “{{name}}”",
+    "serials": "Serial numbers — one per line",
+    "serialsPlaceholder": "You can paste a column from the packing list",
+    "serialsCount": "Entered {{count}} of {{total}}",
+    "lot": "Lot number",
+    "expiry": "Expiry date",
+    "docNumber": "Certificate or declaration No.",
+    "docValidUntil": "Valid until",
+    "noUnits": "No received serials or lots of this item in stock — it cannot be shipped.",
+    "pickSerials": "Serial numbers of “{{name}}”: {{count}} of {{total}} selected",
+    "pickLots": "Lots of “{{name}}”: {{count}} of {{total}} selected",
+    "lotAvailable": "{{count}} in stock",
+    "expiryShort": "expires {{date}}",
+    "lotQuantity": "How many from lot {{number}}",
+    "problem": {
+      "serials": "“{{name}}”: enter as many serial numbers as you receive.",
+      "serialsRepeat": "“{{name}}”: serial numbers repeat.",
+      "lot": "“{{name}}”: enter the lot number.",
+      "doc": "“{{name}}”: enter the certificate or declaration No. and its validity.",
+      "docExpired": "“{{name}}”: the document has expired.",
+      "units": "“{{name}}”: select serial numbers or lots for the whole quantity."
+    }
   }
 }

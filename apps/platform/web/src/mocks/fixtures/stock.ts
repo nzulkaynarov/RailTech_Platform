@@ -6,12 +6,18 @@
  */
 export type OrderStatus = "draft" | "sent" | "confirmed" | "received" | "cancelled";
 
+export type MockTracking = "serial" | "lot" | "none";
+
 export interface MockProduct {
   id: number;
   name: string;
   article: string;
   unit: string;
   cells: { cell: string | null; onHand: number }[];
+  /** Учёт единиц по категории товара (ADR-0021); нет — только количество. */
+  tracking?: MockTracking;
+  requiresDoc?: boolean;
+  brand?: string;
 }
 
 export interface MockRequest {
@@ -49,6 +55,8 @@ export interface MockOrderLine {
   unitPrice: string | null;
   request: string | null;
   lineId: number | null;
+  /** Цена поставщика, из которой создана строка (ADR-0021 п. 6). */
+  offer?: { incoterms: string | null; validUntil: string | null } | null;
 }
 
 export interface MockOrderLog {
@@ -66,7 +74,37 @@ export interface MockReceipt {
   receivedBy: string;
   supplierDoc: string | null;
   note: string | null;
-  lines: { orderLineId: number; name: string; quantity: number; cell: string | null }[];
+  lines: MockReceiptLine[];
+}
+
+export interface MockReceiptLine {
+  orderLineId: number;
+  name: string;
+  quantity: number;
+  cell: string | null;
+  units?: string[];
+  expiry?: string | null;
+  docNumber?: string | null;
+  docValidUntil?: string | null;
+}
+
+/** Единица прослеживаемости (ADR-0021): серийный (1 шт.) или партия; откуда — приёмка, куда — отгрузки. */
+export interface MockUnit {
+  id: number;
+  productId: number;
+  kind: "serial" | "lot";
+  number: string;
+  expiry: string | null;
+  quantity: number;
+  shipped: number;
+  receivedAt: string;
+  supplierDoc: string | null;
+  orderNumber: string;
+  supplierId: number;
+  docNumber: string | null;
+  docValidUntil: string | null;
+  request: string | null;
+  destinations: { shipmentNumber: string; shippedAt: string; quantity: number; request: string }[];
 }
 
 export interface MockOrder {
@@ -98,7 +136,13 @@ export interface MockShipment {
   note: string | null;
   shippedAt: string;
   shippedBy: string;
-  lines: { productId: number; name: string; quantity: number; cell: string | null }[];
+  lines: {
+    productId: number;
+    name: string;
+    quantity: number;
+    cell: string | null;
+    units?: { number: string; quantity: number }[];
+  }[];
 }
 
 export interface MockPriceRequest {
@@ -135,6 +179,7 @@ export interface MockStock {
   shipments: MockShipment[];
   priceRequests: MockPriceRequest[];
   movements: MockMovement[];
+  units?: MockUnit[];
   nextId: number;
   orderSeq: number;
   shipSeq: number;
@@ -185,6 +230,17 @@ export function seedStock(): MockStock {
         article: "КБ-65",
         unit: "компл.",
         cells: [{ cell: "C-01-1", onHand: 50 }],
+      },
+      // Серийный товар с документом соответствия (L0-3): категория «Электрооборудование».
+      {
+        id: 33,
+        name: "Электродвигатель асинхронный АИР-100",
+        article: "АИР-100L4",
+        unit: "шт.",
+        cells: [],
+        tracking: "serial",
+        requiresDoc: true,
+        brand: "Завод «Вымышленный Электро»",
       },
     ],
     reservations: [
@@ -237,11 +293,49 @@ export function seedStock(): MockStock {
           { kind: "confirmed", at: now, by: "Демо Снабженцев", detail: day(-3) },
         ],
       },
+      {
+        id: 28,
+        number: `ЗП-${String(YEAR)}-028`,
+        status: "confirmed",
+        supplierId: 5,
+        expectedDate: day(5),
+        note: "",
+        currency: "UZS",
+        createdAt: now,
+        createdBy: "Демо Снабженцев",
+        sentAt: now,
+        sentTo: "sales@steel.example",
+        confirmedAt: now,
+        receivedAt: null,
+        cancelledAt: null,
+        cancelReason: null,
+        lines: [
+          {
+            id: 280,
+            productId: 33,
+            name: "Электродвигатель асинхронный АИР-100",
+            article: "АИР-100L4",
+            unit: "шт.",
+            quantity: 2,
+            received: 0,
+            unitPrice: "4200000.00",
+            request: "ПР-2026-099",
+            lineId: 803,
+            offer: { incoterms: "FCA", validUntil: day(40) },
+          },
+        ],
+        log: [
+          { kind: "created", at: now, by: "Демо Снабженцев", detail: "ООО «Вымышленная Сталь»" },
+          { kind: "sent", at: now, by: "Демо Снабженцев", detail: "sales@steel.example" },
+          { kind: "confirmed", at: now, by: "Демо Снабженцев", detail: day(5) },
+        ],
+      },
     ],
     receipts: [],
     shipments: [],
     priceRequests: [],
     movements: [],
+    units: [],
     nextId: 1000,
     orderSeq: 29,
     shipSeq: 0,

@@ -24,6 +24,8 @@ from app.schemas_erp_stock import (
     PriceRequestAnswerIn,
     PriceRequestIn,
     PriceRequestList,
+    ReceiptLineIn,
+    ShipLineIn,
     StockAdjustIn,
     StockBalanceList,
     StockProduct,
@@ -35,6 +37,7 @@ from app.schemas_erp_stock import (
     StockShipment,
     StockShipmentList,
     StockSupplierList,
+    StockTraceList,
     SupplierOrderCancelIn,
     SupplierOrderConfirmIn,
     SupplierOrderCreate,
@@ -56,6 +59,7 @@ from app.schemas_erp_stock import (
     to_shipment,
     to_shipments,
     to_suppliers,
+    to_trace,
 )
 
 router = APIRouter(prefix="/erp", tags=["stock"])
@@ -562,14 +566,7 @@ async def receive_order(
     authed: Actor, order_number: OrderNumber, body: SupplierOrderReceiptIn
 ) -> SupplierOrderDetail:
     payload: dict[str, Any] = {
-        "lines": [
-            {
-                "order_line_id": int(line.order_line_id),
-                "quantity": line.quantity,
-                "cell": line.cell or "",
-            }
-            for line in body.lines
-        ],
+        "lines": [_receipt_line(line) for line in body.lines],
     }
     if body.supplier_doc:
         payload["supplier_doc"] = body.supplier_doc
@@ -605,13 +602,45 @@ async def ship(authed: Actor, body: StockShipIn) -> StockShipment:
     erp = _erp(authed)
     payload: dict[str, Any] = {
         "deal_id": await erp.deal_id(body.request),
-        "lines": [
-            {"reservation_id": int(line.reservation_id), "quantity": line.quantity}
-            for line in body.lines
-        ],
+        "lines": [_ship_line(line) for line in body.lines],
     }
     for key in ("tracking", "carrier", "note"):
         value = getattr(body, key)
         if value:
             payload[key] = value
     return to_shipment(await erp.stock("POST", "shipments/", json=payload))
+
+
+def _receipt_line(line: ReceiptLineIn) -> dict[str, Any]:
+    """Строка приёмки для ERP: серийные, партия, документ — как ввели; обязательность решает ERP."""
+    out: dict[str, Any] = {
+        "order_line_id": int(line.order_line_id),
+        "quantity": line.quantity,
+        "cell": line.cell or "",
+    }
+    if line.serials:
+        out["serials"] = line.serials
+    if line.lot:
+        out["lot"] = line.lot
+    for key in ("expiry_date", "doc_valid_until"):
+        value = getattr(line, key)
+        if value is not None:
+            out[key] = value.isoformat()
+    if line.doc_number:
+        out["doc_number"] = line.doc_number
+    return out
+
+
+def _ship_line(line: ShipLineIn) -> dict[str, Any]:
+    out: dict[str, Any] = {"reservation_id": int(line.reservation_id), "quantity": line.quantity}
+    if line.units:
+        out["units"] = [{"unit_id": int(u.unit_id), "quantity": u.quantity} for u in line.units]
+    return out
+
+
+@router.get("/stock/trace", response_model=StockTraceList, operation_id="searchStockTrace")
+async def search_trace(
+    authed: Reader, q: Annotated[str, Query(min_length=1, max_length=100)]
+) -> StockTraceList:
+    """Прослеживаемость (ADR-0021): поиск по серийному или партии — откуда и куда; решает ERP."""
+    return to_trace(await _erp(authed).stock("GET", "trace/", params={"q": q.strip()}))

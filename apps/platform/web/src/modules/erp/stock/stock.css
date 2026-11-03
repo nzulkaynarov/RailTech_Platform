@@ -74,6 +74,34 @@
   align-items: center;
   gap: 8px;
 }
+/* Прослеживаемость (ADR-0021): поля строки во всю ширину под количеством и ячейкой. */
+.pf-stock-trace {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 0 0;
+  border: 0;
+}
+.pf-stock-trace-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 180px;
+  gap: 8px;
+}
+.pf-stock-units ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-stock-lot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .pf-stock-line-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 110px 130px auto;
@@ -99,7 +127,8 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .pf-stock-receive > li,
-  .pf-stock-line-row {
+  .pf-stock-line-row,
+  .pf-stock-trace-row {
     grid-template-columns: 1fr;
   }
   .pf-stock-search {
@@ -108,5 +137,25 @@
   }
   .pf-stock-toolbar-action {
     margin-left: 0;
+  }
+}
+
+/* «Прослеживаемость»: карточки единиц, «откуда» и «куда» рядом на широком экране (ADR-0021). */
+.pf-stock-trace-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-stock-trace-way {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+@media (max-width: 767px) {
+  .pf-stock-trace-way {
+    grid-template-columns: 1fr;
   }
 }
