@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { usePanelsStore } from "../../../app/shell/panelsStore";
@@ -9,6 +10,7 @@ import { endSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
 import i18n from "../../../shared/i18n";
 import { renderApp, signInAs } from "../../../test/renderApp";
+import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
 
 beforeEach(() => {
@@ -96,5 +98,35 @@ describe("Настройки · Расходы на ИИ · Защита дан�
     expect(card.queryByRole("button", { name: "Сохранить" })).toBeNull();
     expect(card.getByText("Политику меняет администратор.")).toBeVisible();
     expect(await screen.findByRole("switch", { name: "Читать сканы и фото писем" })).toBeDisabled();
+  });
+
+  it("документооборот отстаёт от CRM: предупреждение и фактическое состояние сканов", async () => {
+    // CRM — «Деловая», а проекция в EDS ещё «Строгая» (событие не дошло): переключатель показывает EDS, не CRM.
+    server.use(
+      http.get("*/eds/docflow-settings", () =>
+        HttpResponse.json({ recognize_scans: true, pii_policy: "strict", ai_available: true }),
+      ),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/ai-spend");
+    await page();
+    expect(
+      await screen.findByText(
+        /Документооборот ещё не применил политику «Деловая \(рекомендуется\)»/,
+      ),
+    ).toBeVisible();
+    expect(screen.getByText(/пока работает по «Строгая»/)).toBeVisible();
+    const scans = await screen.findByRole("switch", { name: "Читать сканы и фото писем" });
+    expect(scans).toBeDisabled();
+    expect(scans).not.toBeChecked();
+  });
+
+  it("политики совпадают — предупреждения нет", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/ai-spend");
+    await page();
+    await policy();
+    await screen.findByRole("switch", { name: "Читать сканы и фото писем" });
+    expect(screen.queryByText(/Документооборот ещё не применил политику/)).toBeNull();
   });
 });

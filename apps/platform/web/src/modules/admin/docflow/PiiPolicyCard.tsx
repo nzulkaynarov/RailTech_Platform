@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Button, Radio, Skeleton } from "antd";
+import { Alert, App, Button, Radio, Skeleton } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -8,6 +8,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import {
   getGetDocflowSettingsQueryKey,
   useGetBotSettings,
+  useGetDocflowSettings,
   useSaveBotSetting,
 } from "../../../shared/api/generated/platform-bff";
 import { ErrorNote } from "../../../shared/ui/FormParts";
@@ -38,7 +39,11 @@ export function PiiPolicyCard() {
   const refresh = useRefreshBot();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<PiiPolicy | null>(null);
+  const docflow = useGetDocflowSettings();
   const saved = policyOf(settings.data?.values);
+  // Фактическая политика документооборота (проекция по шине) отстаёт или не дошла — админ видит расхождение.
+  const applied = docflow.data?.pii_policy;
+  const lagging = settings.data !== undefined && applied !== undefined && applied !== saved;
   const value = draft ?? saved;
   const dirty = draft !== null && draft !== saved;
 
@@ -87,6 +92,17 @@ export function PiiPolicyCard() {
             ))}
           </Radio.Group>
           <ErrorNote message={save.isError ? botErrorText(t, save.error) : null} />
+          {lagging && applied ? (
+            <Alert
+              type="warning"
+              showIcon
+              role="status"
+              message={t("letters:settings.ai.policy.pending", {
+                name: t(`letters:settings.ai.policy.${saved}`),
+                current: t(`letters:settings.ai.policy.${applied}`),
+              })}
+            />
+          ) : null}
           {editable ? (
             <div className="pf-pii-actions">
               <span role="status">

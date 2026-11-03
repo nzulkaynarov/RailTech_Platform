@@ -201,11 +201,31 @@ async def test_code_decides_kind_and_dates(
     assert_error(empty, 409, "CONFLICT", reason="nothing_recognized")
 
 
+async def test_until_the_first_policy_event_eds_is_strict(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
+) -> None:
+    """События CRM ещё не было — EDS не открывает больше, чем выбрал админ: «Строгая», сканы не читаются."""
+    shown = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
+    assert shown.json()["pii_policy"] == "strict"
+    await intake(client, staff["registrar"], make_pdf([*LETTER_LINES, BUSINESS_PERSONAL]))
+    sent = json.dumps(model.bodies[-1], ensure_ascii=False)
+    for secret in ("301234567", "20208000900123456001", "+998 90 123 45 67", "AA1234567"):
+        assert secret not in sent, secret
+    scan = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert_error(scan, 409, "CONFLICT", reason="scan_recognition_disabled")
+    # Первое событие CRM (даже «Деловая») снимает ограничение; повтор того же события безвреден.
+    assert await deliver_policy(client, container, "business") == "processed"
+    assert await deliver_policy(client, container, "business") == "processed"
+    ok = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert ok.status_code == 200, ok.text
+
+
 async def test_business_policy_masks_only_personal_ids_by_default(
     client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
 ) -> None:
-    """«Деловая» (по умолчанию, события CRM ещё не было): реквизиты компании модель видит, паспорт, ПИНФЛ, карту и дату
-    рождения — нет; номера из ответа код возвращает сам."""
+    """«Деловая» (по умолчанию в CRM): реквизиты компании модель видит, паспорт, ПИНФЛ, карту и дату рождения — нет;
+    номера из ответа код возвращает сам."""
+    assert await deliver_policy(client, container, "business") == "processed"
     model.answer = {**ANSWER, "sender_ref_number": "1234567/KC"}
     lines = [*LETTER_LINES, BUSINESS_PERSONAL]
     body = (await intake(client, staff["registrar"], make_pdf(lines), name="letter.pdf")).json()
@@ -224,6 +244,7 @@ async def test_policy_switch_changes_masking_without_restart(
 ) -> None:
     """Смена политики в CRM действует на следующий вызов того же процесса; старое событие её не откатывает."""
     pdf = make_pdf([*LETTER_LINES, BUSINESS_PERSONAL])
+    assert await deliver_policy(client, container, "business", at="2026-11-03T08:00:00Z") == "processed"
     await intake(client, staff["registrar"], pdf)
     assert "301234567" in json.dumps(model.bodies[-1], ensure_ascii=False)
 
@@ -243,13 +264,14 @@ async def test_policy_switch_changes_masking_without_restart(
     assert "301234567" in json.dumps(model.bodies[-1], ensure_ascii=False)
     async with container.session_factory() as session:
         journal = (await session.execute(select(JournalEntry.action))).scalars().all()
-    assert journal.count("docflow_settings.pii_policy") == 2  # применены 10:00 и 11:00; опоздавшее — нет
+    assert journal.count("docflow_settings.pii_policy") == 3  # применены 08:00, 10:00 и 11:00; опоздавшее 09:30 — нет
 
 
 async def test_scans_follow_the_policy_and_the_admin_switch(
     client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
 ) -> None:
     """Скан или фото: «Деловая» и включённая настройка (по умолчанию) — в модель; иначе понятный отказ."""
+    assert await deliver_policy(client, container, "business", at="2026-11-03T08:00:00Z") == "processed"
     settings = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
     validate("DocflowSettings", settings.json())
     assert settings.json() == {"recognize_scans": True, "pii_policy": "business", "ai_available": True}

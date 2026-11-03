@@ -1064,7 +1064,8 @@
         "strict": "Qat’iy",
         "strictText": "Telefonlar, pochta, STIR va hisob raqamlari ham yashiriladi. Skan va fotolar modelga yuborilmaydi.",
         "readOnly": "Siyosatni administrator o‘zgartiradi.",
-        "saved": "Siyosat saqlandi: «{{name}}»"
+        "saved": "Siyosat saqlandi: «{{name}}»",
+        "pending": "Hujjat aylanishi «{{name}}» siyosatini hali qo‘llamadi va hozircha «{{current}}» bo‘yicha ishlayapti. Odatda bu bir necha soniya oladi; o‘tmasa — sahifani yangilang yoki tizim administratoriga xabar bering."
       }
     }
   },

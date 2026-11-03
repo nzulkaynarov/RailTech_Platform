@@ -1,3 +1,7 @@
+import json
+from pathlib import Path
+from typing import Any
+
 import pytest
 
 from app.security.pii import (
@@ -138,3 +142,24 @@ def test_logs_stay_strict_whatever_the_policy() -> None:
     event = {"event": "x", "text": "ИНН 305123456 +998901234567 a@b.uz"}
     assert structlog_processor(None, "info", event)["text"] == "ИНН [number] [number] [email]"
     assert langfuse_mask(data="ИНН 305123456") == "ИНН [number]"
+
+
+# Общие векторы с EDS (тот же файл читает EDS): строки те же — результат тот же.
+VECTORS = json.loads(
+    Path(__file__)
+    .parents[6]
+    .joinpath("packages/contracts/pii/policy-vectors.json")
+    .read_text(encoding="utf-8")
+)["vectors"]
+
+
+@pytest.mark.parametrize("vector", VECTORS, ids=[v["text"][:50] for v in VECTORS])
+def test_shared_vectors(vector: dict[str, Any]) -> None:
+    text = str(vector["text"])
+    business, strict = mask_for_model(text, "business"), mask_for_model(text, "strict")
+    for hidden in vector["business_hidden"]:
+        assert hidden not in business, (hidden, business)
+    for kept in vector["business_kept"]:
+        assert kept in business, (kept, business)
+    for hidden in vector["strict_hidden"]:
+        assert hidden not in strict, (hidden, strict)

@@ -1064,7 +1064,8 @@
         "strict": "Strict",
         "strictText": "Phones, email, tax IDs and bank accounts are hidden too. Scans and photos are not sent to the model.",
         "readOnly": "Only an administrator changes the policy.",
-        "saved": "Policy saved: “{{name}}”"
+        "saved": "Policy saved: “{{name}}”",
+        "pending": "Document flow has not applied the “{{name}}” policy yet and still works by “{{current}}”. This usually takes a few seconds; if it does not pass, reload the page or tell the system administrator."
       }
     }
   },

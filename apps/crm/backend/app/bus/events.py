@@ -310,12 +310,16 @@ async def mail_result(session: AsyncSession, row: EmailLog) -> None:
     await _publish(session, event_type, data, f"email_log/{row.id}")
 
 
-async def ai_policy_changed(session: AsyncSession, policy: str, actor: Actor) -> None:
-    """Политика защиты данных для ИИ сохранена (PD-BIZ): снимок для EDS, в той же транзакции."""
+async def ai_policy_changed(
+    session: AsyncSession, policy: str, actor: Actor, changed_at: datetime | None = None
+) -> None:
+    """Политика защиты данных для ИИ сохранена (PD-BIZ): снимок для EDS, в той же транзакции.
+
+    `changed_at` — для повторной публикации (время сохранения); по умолчанию — время базы."""
     _require_transaction(session)
     data = {
         "pii_policy": policy,
-        "changed_at": snapshots.utc(await snapshots.db_now(session)),
+        "changed_at": snapshots.utc(changed_at or await snapshots.db_now(session)),
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, AI_POLICY_CHANGED, data, "ai_policy/pii")

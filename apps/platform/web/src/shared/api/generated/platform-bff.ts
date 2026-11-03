@@ -33962,7 +33962,7 @@ export const getGetDocflowSettingsUrl = () => {
 };
 
 /**
- * `recognize_scans` — распознавать сканы и фото моделью (по умолчанию включено, действует при политике «Деловая»), `pii_policy` — политика защиты данных для ИИ (только чтение; её меняет `PUT /admin/bot/settings/ai`), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
+ * `recognize_scans` — распознавать сканы и фото моделью (по умолчанию включено, действует при политике «Деловая»), `pii_policy` — политика защиты данных для ИИ, как её применил документооборот (проекция CRM, только чтение; её меняет `PUT /admin/bot/settings/ai`; пока событие не пришло — `strict`; расхождение с CRM экран показывает предупреждением), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
  * @summary EDS · Настройки документооборота
  */
 export const getDocflowSettings = async (

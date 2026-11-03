@@ -2,6 +2,10 @@
 политики «Строгая» (прежнее поведение) и «Деловая» (паспорт, ПИНФЛ, карты, даты рождения) и нумерованные метки чисел с
 локальным возвратом."""
 
+import json
+from pathlib import Path
+from typing import Any
+
 import pytest
 
 from app.security.pii import mask_numbered, mask_text
@@ -41,8 +45,8 @@ def test_numbers_get_numbered_tokens_and_come_back_locally() -> None:
 
 # Те же примеры, что `apps/crm/backend/tests/unit/security/test_pii.py` (BUSINESS_MASKED / BUSINESS_KEPT).
 BUSINESS_MASKED = [
-    ("паспорт AA1234567 выдан", "паспорт [passport] выдан"),
-    ("серия AB 7654321", "серия [passport]"),
+    ("паспорт AA1234567 выдан", "паспорт [number_1] выдан"),
+    ("серия AB 7654321", "серия [number_1]"),
     ("ПИНФЛ 31234567890123", "ПИНФЛ [number_1]"),
     ("ПИНФЛ: 3 1234 567890123", "ПИНФЛ: [number_1]"),
     ("31234567890123 — личный номер", "[number_1] — личный номер"),
@@ -90,4 +94,34 @@ def test_strict_is_the_old_behaviour(raw: str) -> None:
     """«Строгая» не изменилась: тот же результат, что у `mask_text` (метки чисел вместо `[number]`)."""
     import re
 
-    assert re.sub(r"\[number_\d+\]", "[number]", mask_numbered(raw, "strict").text) == mask_text(raw)
+    def plain(text: str) -> str:
+        return re.sub(r"\[(?:number(?:_\d+)?|passport)\]", "[x]", text)
+
+    assert plain(mask_numbered(raw, "strict").text) == plain(mask_text(raw))
+
+
+# Общие векторы с CRM (`apps/crm/backend/tests/unit/security/test_pii.py` читает тот же файл).
+VECTORS = json.loads(
+    Path(__file__).parents[3].joinpath("packages/contracts/pii/policy-vectors.json").read_text(encoding="utf-8")
+)["vectors"]
+
+
+@pytest.mark.parametrize("vector", VECTORS, ids=[v["text"][:50] for v in VECTORS])
+def test_shared_vectors(vector: dict[str, Any]) -> None:
+    text = str(vector["text"])
+    business, strict = mask_numbered(text, "business").text, mask_numbered(text, "strict").text
+    for hidden in vector["business_hidden"]:
+        assert hidden not in business, (hidden, business)
+    for kept in vector["business_kept"]:
+        assert kept in business, (kept, business)
+    for hidden in vector["strict_hidden"]:
+        assert hidden not in strict, (hidden, strict)
+
+
+@pytest.mark.parametrize("policy", ["business", "strict"])
+def test_passport_like_reference_number_is_hidden_but_comes_back_locally(policy: str) -> None:
+    """Исходящий номер, похожий на паспорт («KC1234567»), не теряется: модель видит метку, поле получает номер."""
+    result = mask_numbered("Исх. № KC1234567 от 28.10.2026", policy)  # type: ignore[arg-type]
+    assert "KC1234567" not in result.text
+    token = result.text.split("№ ")[1].split(" ")[0]
+    assert result.unmask(token) == "KC1234567"

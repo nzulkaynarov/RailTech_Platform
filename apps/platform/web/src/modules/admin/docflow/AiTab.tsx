@@ -6,12 +6,10 @@ import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import {
   getGetDocflowSettingsQueryKey,
-  useGetBotSettings,
   useGetDocflowSettings,
   useUpdateDocflowSettings,
 } from "../../../shared/api/generated/platform-bff";
 import { TabHeader } from "../company/common";
-import { policyOf } from "./PiiPolicyCard";
 
 /**
  * Настройки · Расходы на ИИ · «Заполнить из файла» (EDS-REG, PD-BIZ): помощник регистрации входящих. PDF с текстом
@@ -26,8 +24,8 @@ export function AiTab() {
   const editable = canEdit(me, "admin");
   const queryClient = useQueryClient();
   const settings = useGetDocflowSettings();
-  const bot = useGetBotSettings();
-  const strict = policyOf(bot.data?.values) === "strict";
+  // Фактическое состояние документооборота: политику он получает из CRM по шине и может отставать (см. карточку выше).
+  const strict = settings.data?.pii_policy === "strict";
   const update = useUpdateDocflowSettings({
     mutation: {
       onSuccess: async () => {

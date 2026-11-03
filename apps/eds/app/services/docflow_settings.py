@@ -3,7 +3,9 @@
 * `recognize_scans` — читать ли моделью сканы и фото писем (выбор администратора, по умолчанию включено, решение
   владельца 2026-11-03). Действует только при политике «Деловая»: при «Строгой» сканы выключены.
 * `pii_policy` — проекция политики защиты данных для ИИ из CRM (событие `crm.ai_policy.changed`): владелец поля — CRM,
-  здесь она не правится (ORCHESTRATOR §3 п. 16). Нет события — «Деловая», как по умолчанию в CRM.
+  здесь она не правится (ORCHESTRATOR §3 п. 16). Пока событие ни разу не приходило (`pii_policy_at` пуст), EDS ведёт
+  себя как «Строгая»: расхождение с CRM не может открыть больше данных, чем выбрал администратор. CRM повторно
+  публикует текущую политику при каждом старте воркера, поэтому после выкладки событие приходит само.
 """
 
 from datetime import datetime
@@ -29,14 +31,15 @@ async def recognize_scans(session: AsyncSession) -> bool:
     return True if row is None else bool(row.recognize_scans)
 
 
-def _policy(value: str | None) -> PiiPolicy:
-    """Колонку держит check-ограничение; всё, что не «Строгая», — «Деловая» (по умолчанию)."""
-    return "strict" if value == "strict" else DEFAULT_POLICY
+def _policy(row: DocflowSettings | None) -> PiiPolicy:
+    """Событие CRM ещё не приходило (нет строки или `pii_policy_at` пуст) — «Строгая»; иначе значение проекции."""
+    if row is None or row.pii_policy_at is None:
+        return "strict"
+    return "strict" if row.pii_policy == "strict" else "business"
 
 
 async def pii_policy(session: AsyncSession) -> PiiPolicy:
-    row = await session.get(DocflowSettings, ROW_ID)
-    return _policy(row.pii_policy if row else None)
+    return _policy(await session.get(DocflowSettings, ROW_ID))
 
 
 async def scans_allowed(session: AsyncSession) -> bool:
@@ -66,7 +69,7 @@ async def update(session: AsyncSession, settings: Settings, *, actor_id: int, re
     )
     return SettingsOut(
         recognize_scans=recognize,
-        pii_policy=_policy(row.pii_policy),
+        pii_policy=_policy(row),
         ai_available=gateway.available(settings),
     )
 
