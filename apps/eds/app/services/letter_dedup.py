@@ -79,9 +79,22 @@ def name_key(name: str | None) -> str:
     return " ".join(word for word in _PUNCT.sub(" ", _text(name)).split() if word not in LEGAL_FORMS)
 
 
+# «Без номера»: такой номер не отличает письма — ключа нет (иначе каждое письмо «б/н» корреспондента — дубль первого).
+NO_NUMBER = frozenset({"бн", "bn", "нет", "безномера", "безномер", "бномера", "nn", "нн", "none", "na"})
+
+
 def ref_key(ref: str | None) -> str:
-    """Исходящий номер отправителя: без регистра, пробелов, «№» и «#»."""
-    return re.sub(r"\s", "", _text(re.sub(r"[№#]", "", ref or "")))  # «№» до NFKC: иначе он станет «No»
+    """Исходящий номер отправителя: без регистра, пробелов, «№» и «#»; «б/н», «-», «нет», «без номера» и номер без букв
+    и цифр — пустой."""
+    key = re.sub(r"\s", "", _text(re.sub(r"[№#]", "", ref or "")))  # «№» до NFKC: иначе он станет «No»
+    bare = re.sub(r"[\W_]", "", key)
+    return "" if not bare or bare in NO_NUMBER else key
+
+
+def letter_number(value: str) -> str:
+    """Номер ВХ, набранный как попало: регистр, пробелы, латинские «BX» вместо «ВХ»."""
+    number = re.sub(r"\s", "", value).upper()
+    return re.sub(r"^[BВ][XХ]", "ВХ", number)
 
 
 def subject_key(subject: str | None) -> str:
@@ -160,6 +173,24 @@ def _same_ref_clause(probe: Probe) -> Any:
     return column.is_not(None)
 
 
+def _sender_clause(probe: Probe) -> list[Any]:
+    """Отбор по корреспонденту в SQL до лимита: при ИНН — тот же ИНН, письмо без ИНН (сравнит название) или тот же
+    клиент CRM; письмо с другим ИНН — другой корреспондент."""
+    if not probe.inn:
+        return []
+    same = [Letter.sender_inn == probe.inn, Letter.sender_inn.is_(None)]
+    if probe.client is not None:
+        same.append(Letter.crm_client_id == probe.client)
+    return [or_(*same)]
+
+
+async def key_owner(session: AsyncSession, key: str | None) -> Letter | None:
+    """Письмо, которое держит ключ точного совпадения в индексе (не дубль: у дубля ключа нет)."""
+    if key is None:
+        return None
+    return (await session.execute(select(Letter).where(Letter.dedup_key == key))).scalar_one_or_none()
+
+
 async def find_exact(session: AsyncSession, probe: Probe) -> Letter | None:
     """Самое раннее зарегистрированное то же письмо (не дубль); нет ключа — `None`."""
     if probe.key is None:
@@ -225,9 +256,9 @@ async def check(session: AsyncSession, probe: Probe, *, actor_id: int) -> Letter
         window = timedelta(days=SIMILAR_DAYS)
         near.append(Letter.received_at.between(probe.received_at - window, probe.received_at + window))
     if near:
-        stmt = select(Letter).where(Letter.status != DUPLICATE, or_(*near)).order_by(Letter.registered_at.desc())
+        stmt = select(Letter).where(Letter.status != DUPLICATE, or_(*near), *_sender_clause(probe))
         subject, ref = subject_key(probe.subject), ref_key(probe.ref)
-        for letter in (await session.execute(stmt.limit(200))).scalars():
+        for letter in (await session.execute(stmt.order_by(Letter.registered_at.desc()).limit(2000))).scalars():
             if letter.id in found or not same_sender(probe, letter):
                 continue
             if ref and ref_key(letter.sender_ref_number) == ref:
@@ -249,7 +280,8 @@ async def check(session: AsyncSession, probe: Probe, *, actor_id: int) -> Letter
 
 async def _lock_pair(session: AsyncSession, letter_id: uuid.UUID, number: str) -> tuple[Letter, Letter | None]:
     """Письмо и оригинал под блокировкой в порядке id (две встречные пометки не дают взаимной блокировки)."""
-    original_id = (await session.execute(select(Letter.id).where(Letter.number == number))).scalar_one_or_none()
+    stmt = select(Letter.id).where(Letter.number == letter_number(number))
+    original_id = (await session.execute(stmt)).scalar_one_or_none()
     ids = [letter_id] if original_id is None else [letter_id, original_id]
     rows = {
         r.id: r
@@ -308,6 +340,12 @@ async def mark_duplicate(
         raise invalid_fields("Это то же письмо.", original_number="same_letter")
     if original.status == DUPLICATE:
         raise invalid_fields("Это письмо само дубль — укажите оригинал.", original_number="original_is_duplicate")
+    has_copies = select(Letter.id).where(Letter.duplicate_of_id == letter.id).limit(1)
+    if (await session.execute(has_copies)).scalar_one_or_none() is not None:
+        raise invalid_fields(
+            "У этого письма уже есть дубли — отметьте дублем другое письмо пары.",
+            original_number="letter_has_duplicates",
+        )
     resolved = letter.status not in _OPEN
     if resolved and track_of(letter) is LetterTrack.CALC:
         raise conflict("calc_in_progress", "По письму уже идёт расчёт: закройте его в проекте.", status=letter.status)
@@ -329,8 +367,15 @@ async def mark_duplicate(
     letter.status, letter.on_control, letter.duplicate_of_id = DUPLICATE, False, original.id
     letter.dedup_key, letter.updated_at = None, clock.now()
     await session.flush()
-    if original.dedup_key is None and key is not None:  # ключ переходит к оригиналу: новые дубли ловит индекс
-        original.dedup_key = key
+    own_key = exact_key(
+        original.sender_inn,
+        original.sender_name,
+        original.crm_client_id,
+        original.sender_ref_number,
+        original.sender_ref_date,
+    )
+    if original.dedup_key is None and key is not None and own_key == key:
+        original.dedup_key = key  # ключ переходит к оригиналу, только если это его же ключ по его полям
     comment = (data.comment or "").strip()
     await journal.record(
         session,

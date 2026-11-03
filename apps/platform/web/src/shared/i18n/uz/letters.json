@@ -168,7 +168,8 @@
         "original_is_duplicate": "U xatning oʻzi takror — aslini koʻrsating",
         "resolution_exists": "Rezolyutsiya qoʻyilgan — topshiriqlar bekor qilinishini tasdiqlang",
         "calc_in_progress": "Xat boʻyicha hisob ketmoqda — uni loyihada yoping",
-        "invalid_state": "Xat allaqachon takror deb belgilangan"
+        "invalid_state": "Xat allaqachon takror deb belgilangan",
+        "letter_has_duplicates": "Bu xatning takrorlari bor — juftlikdagi boshqa xatni belgilang"
       }
     }
   },

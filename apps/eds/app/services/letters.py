@@ -298,7 +298,7 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         if "uq_letters_source_mail_id" in str(exc.orig):  # гонка двух регистраций одного письма ящика
             raise SourceMailTakenError from exc
         if "uq_letters_dedup_key" in str(exc.orig):  # EDS-DUP: то же письмо только что зарегистрировал другой
-            winner = await letter_dedup.find_exact(session, same)
+            winner = await letter_dedup.key_owner(session, same.key) or await letter_dedup.find_exact(session, same)
             if winner is not None:
                 raise letter_dedup.duplicate_error(winner) from exc
             raise conflict("letter_source_busy", "Письмо уже регистрируется: повторите запрос.") from exc
@@ -315,7 +315,8 @@ async def _check_duplicate(session: AsyncSession, probe: letter_dedup.Probe, dat
     """EDS-DUP: то же письмо уже есть — 409 `duplicate_letter`; с `force` и причиной — найденный ВХ (в журнал)."""
     if data.force and not (data.force_reason or "").strip():
         raise invalid_fields("Укажите, почему это другое письмо.", force_reason="required")
-    found = await letter_dedup.find_exact(session, probe)
+    # По полям; иначе — тот, кто держит ключ в индексе (его поля могли отличаться: ключ остался от прежних данных).
+    found = await letter_dedup.find_exact(session, probe) or await letter_dedup.key_owner(session, probe.key)
     if found is not None and not data.force:
         raise letter_dedup.duplicate_error(found)
     return found

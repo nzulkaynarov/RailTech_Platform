@@ -2,7 +2,7 @@ import { HttpResponse, http } from "msw";
 
 import { activeLetterKinds, isActiveValue } from "./dictionaries";
 import { markMailRegistered } from "./inboundMail";
-import { findDuplicates } from "./edsLetterDuplicates";
+import { findDuplicates, letterNumber } from "./edsLetterDuplicates";
 import type {
   LetterCard,
   LetterDuplicateCheckIn,
@@ -296,10 +296,17 @@ export const edsLettersHandlers = [
         reason: "invalid_state",
       });
     }
-    const original = findLetter(body.original_number.trim());
+    const original = findLetter(letterNumber(body.original_number));
     if (!original) return invalid("original_number", "not_found", "Входящего с таким номером нет.");
     if (original.id === letter.id) {
       return invalid("original_number", "same_letter", "Это то же письмо.");
+    }
+    if (readLetters().some((l) => l.duplicate_of?.number === letter.number)) {
+      return invalid(
+        "original_number",
+        "letter_has_duplicates",
+        "У этого письма уже есть дубли — отметьте дублем другое письмо пары.",
+      );
     }
     const work = (letter.instructions ?? []).filter((i) => i.status === "in_work").length;
     const resolved = !["awaiting_resolution", "returned"].includes(letter.status);

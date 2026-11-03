@@ -168,7 +168,8 @@
         "original_is_duplicate": "That letter is a duplicate itself — give the original",
         "resolution_exists": "Resolution already made — confirm cancelling instructions",
         "calc_in_progress": "Calculation is under way — close it in the project",
-        "invalid_state": "The letter is already marked as duplicate"
+        "invalid_state": "The letter is already marked as duplicate",
+        "letter_has_duplicates": "This letter already has duplicates — mark the other letter of the pair"
       }
     }
   },

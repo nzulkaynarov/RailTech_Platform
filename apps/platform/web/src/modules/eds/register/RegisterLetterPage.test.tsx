@@ -162,6 +162,11 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     expect(await screen.findByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
     expect(screen.getByText(/Это письмо уже зарегистрировано: ВХ-108\/26/)).toBeVisible();
     expect(screen.getByText("На исполнении")).toBeVisible();
+    // Правка ключевого поля — найденный по 409 ВХ снимается (проверка заново); вернули — снова он.
+    type("Исходящий номер отправителя", "77-01/2");
+    expect(screen.queryByText("Похоже, это письмо уже зарегистрировано")).toBeNull();
+    type("Исходящий номер отправителя", "77-01/1");
+    expect(screen.getByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Это другое письмо — зарегистрировать" }));
     fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
     expect(await screen.findByText("Укажите причину — она попадёт в журнал")).toBeVisible();

@@ -68,8 +68,14 @@ def _name_key(name: str | None) -> str:
     return " ".join(word for word in _PUNCT.sub(" ", text).split() if word not in _LEGAL_FORMS)
 
 
+_NO_NUMBER = frozenset({"бн", "bn", "нет", "безномера", "безномер", "бномера", "nn", "нн", "none", "na"})
+
+
 def _ref_key(ref: str | None) -> str:
-    return re.sub(r"\s", "", unicodedata.normalize("NFKC", re.sub(r"[№#]", "", ref or "")).casefold().replace("ё", "е"))
+    text = unicodedata.normalize("NFKC", re.sub(r"[№#]", "", ref or "")).casefold().replace("ё", "е")
+    key = re.sub(r"\s", "", text)
+    bare = re.sub(r"[\W_]", "", key)
+    return "" if not bare or bare in _NO_NUMBER else key
 
 
 def _exact_key(inn: str | None, name: str | None, client: int | None, ref: str | None, ref_date: object) -> str | None:

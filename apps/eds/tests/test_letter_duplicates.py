@@ -2,13 +2,15 @@
 предупреждение, нормализация корреспондента, гонка двух регистраций, «Это дубль ВХ-…» и права."""
 
 import asyncio
+from datetime import date
 from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import text
 
 from app.container import Container
-from app.services.letter_dedup import exact_key, name_key, ref_key
+from app.services.letter_dedup import exact_key, letter_number, name_key, ref_key
 from tests.domain import Person, validate
 from tests.test_api_auth import assert_error
 from tests.test_files import PDF, upload
@@ -55,8 +57,6 @@ def test_correspondent_and_number_normalization() -> None:
     assert name_key("ООО «Пример Сталь-2»") != "пример сталь"
     assert ref_key(" № 12/45 ") == ref_key("12/45") == "12/45"
     assert ref_key("04-12/А") == ref_key("04-12/а")
-    from datetime import date
-
     day = date(2026, 10, 20)
     assert exact_key("301234567", "x", None, "12/45", day) == "12/45|2026-10-20|i:301234567"
     assert exact_key(None, "ООО «Пример»", None, "12/45", day) == "12/45|2026-10-20|n:пример"
@@ -259,3 +259,63 @@ async def test_duplicates_check_needs_reading_or_registering(
         denied = await client.post("/api/v1/letters/duplicates-check", json={}, headers=staff[who].headers)
         assert_error(denied, 403, "FORBIDDEN")
     assert await check(client, staff["manager"]) == []
+
+
+def test_no_number_is_an_empty_number_and_original_number_is_forgiving() -> None:
+    for empty in ("б/н", "Б/Н", "бн", "b/n", "-", "—", "нет", "без номера", "№", " / ", "..."):
+        assert ref_key(empty) == "", empty
+        assert exact_key("301234567", None, None, empty, date(2026, 10, 20)) is None, empty
+    assert ref_key("Н-1") == "н-1"
+    assert letter_number(" bx-001/26 ") == letter_number("вх-001/26") == "ВХ-001/26"
+    assert letter_number("BХ-001/26") == "ВХ-001/26"  # латинская B, кириллическая Х
+
+
+async def test_letters_without_a_number_are_not_duplicates(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    for number in ("б/н", "Б/Н", "-", "без номера"):
+        response = await register(
+            client, staff["registrar"], SUPPLIER, sender_ref={"number": number, "date": "2026-10-20"}
+        )
+        assert response.status_code == 201, (number, response.text)
+
+
+async def test_mark_duplicate_keeps_the_key_only_if_it_is_the_originals_own(
+    client: httpx.AsyncClient, staff: dict[str, Person], container: Container
+) -> None:
+    """Оригинал без исх. №, копия — с номером: после «Это дубль» ключ копии оригиналу не переходит, и письмо с полями
+    копии регистрируется (а не упирается в индекс навсегда)."""
+    registrar = staff["registrar"]
+    original = (await register(client, registrar, SUPPLIER, sender_ref=None)).json()
+    copy = (await register(client, registrar, SUPPLIER)).json()
+    assert (await mark(client, registrar, copy["id"], original_number="bx-001/26")).status_code == 200
+    again = await register(client, registrar, SUPPLIER)
+    assert again.status_code == 201, again.text
+
+    # Ключ в индексе у письма с другими полями (так было до исправления): 409 с владельцем; `force` — без ключа.
+    async with container.session_factory() as session, session.begin():
+        await session.execute(text("UPDATE letters SET dedup_key = NULL WHERE id = :id"), {"id": again.json()["id"]})
+        key = exact_key("301234567", None, None, "12/45", date(2026, 10, 20))
+        await session.execute(
+            text("UPDATE letters SET dedup_key = :k WHERE id = :id"), {"k": key, "id": original["id"]}
+        )
+        await session.execute(
+            text("UPDATE letters SET status = 'duplicate' WHERE id = :id"), {"id": again.json()["id"]}
+        )
+    blocked = await register(client, registrar, SUPPLIER)
+    assert_error(blocked, 409, "CONFLICT", reason="duplicate_letter")
+    assert blocked.json()["details"]["duplicate"]["number"] == original["number"]
+    assert await check(client, registrar, sender=SUPPLIER["sender"], sender_ref=SUPPLIER["sender_ref"]) == []
+    forced = await register(client, registrar, SUPPLIER, force=True, force_reason="Другое письмо")
+    assert forced.status_code == 201, forced.text
+
+
+async def test_a_letter_with_duplicates_cannot_become_a_duplicate(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    registrar = staff["registrar"]
+    first = (await register(client, registrar, SUPPLIER)).json()
+    second = (await register(client, registrar, SUPPLIER, force=True, force_reason="Тест")).json()
+    third = (await register(client, registrar, SUPPLIER, sender_ref={"number": "99", "date": "2026-10-20"})).json()
+    assert (await mark(client, registrar, second["id"], original_number=first["number"])).status_code == 200
+    chained = await mark(client, registrar, first["id"], original_number=third["number"])
+    assert_error(chained, 422, "VALIDATION_FAILED")
+    assert chained.json()["details"]["fields"][0]["message"] == "letter_has_duplicates"

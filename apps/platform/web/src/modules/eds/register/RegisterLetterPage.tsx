@@ -140,7 +140,14 @@ export function RegisterLetterPage() {
   const idempotency = useRef<{ body: string; key: string } | null>(null);
   // EDS-DUP: фоновая проверка дублей, найденный при отправке ВХ (409) и «Это другое письмо» с причиной.
   const checked = useDuplicateCheck(values);
-  const [serverDup, setServerDup] = useState<LetterDuplicate | null>(null);
+  // Найденный по 409 ВХ — пока не правили ключевые поля (корреспондент, ИНН, номер, дата): правка — проверка заново.
+  const dupFields = [values.senderName, values.senderInn, values.refNumber, values.refDate].join(
+    "\u0000",
+  );
+  const [serverHit, setServerDup] = useState<{ item: LetterDuplicate; fields: string } | null>(
+    null,
+  );
+  const serverDup = serverHit?.fields === dupFields ? serverHit.item : null;
   const duplicates =
     serverDup && !checked.some((item) => item.id === serverDup.id)
       ? [serverDup, ...checked]
@@ -239,7 +246,7 @@ export function RegisterLetterPage() {
       const found = duplicateFromError(error);
       if (found) {
         // То же письмо уже есть (EDS-DUP): показать его рядом с номером, ВХ не создан.
-        setServerDup({ ...found, match: "exact" });
+        setServerDup({ item: { ...found, match: "exact" }, fields: dupFields });
         setNote(t("letters:register.duplicate.blocked", { number: found.number }));
         window.setTimeout(() => {
           // фокус на «Открыть» найденного ВХ: блок прокручивается в вид и читается экранным диктором

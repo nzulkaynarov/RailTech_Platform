@@ -32339,7 +32339,7 @@ export const getMarkLetterDuplicateUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /letters/{id}/duplicate` (право `letters.register`). Раздел `eds.inbox.register` — полный. Письмо получает статус «Дубль» и ссылку на оригинал (`duplicate_of`), номер не освобождается; поручения отменяются, ожидающие «ознакомить» снимаются, контроль снимается — всё с записью в журнал. Оригинал — номер ВХ (`original_number`): нет такого, то же письмо или оригинал сам дубль — 422 `details.fields = [original_number]` (`details.reason`: `not_found`, `same_letter`, `original_is_duplicate`). Уже дубль — 409 `invalid_state`. Резолюция уже наложена — без `confirm = true` 409 `resolution_exists`; письмо по заявке клиента после резолюции — 409 `calc_in_progress`.
+ * EDS `POST /letters/{id}/duplicate` (право `letters.register`). Раздел `eds.inbox.register` — полный. Письмо получает статус «Дубль» и ссылку на оригинал (`duplicate_of`), номер не освобождается; поручения отменяются, ожидающие «ознакомить» снимаются, контроль снимается — всё с записью в журнал. Оригинал — номер ВХ (`original_number`): нет такого, то же письмо, оригинал сам дубль или у письма уже есть дубли — 422 `details.fields = [original_number]` (`details.reason`: `not_found`, `same_letter`, `original_is_duplicate`, `letter_has_duplicates`). Уже дубль — 409 `invalid_state`. Резолюция уже наложена — без `confirm = true` 409 `resolution_exists`; письмо по заявке клиента после резолюции — 409 `calc_in_progress`.
  * @summary EDS · «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо (EDS-DUP)
  */
 export const markLetterDuplicate = async (

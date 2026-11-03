@@ -22,8 +22,32 @@ export const nameKey = (value: string | null | undefined) =>
     .filter((word) => word && !LEGAL.has(word))
     .join(" ");
 
-export const refKey = (value: string | null | undefined) =>
-  (value ?? "").replace(/[№#\s]/g, "").toLowerCase();
+/** «б/н», «-», «нет», «без номера» и номер без букв и цифр — пустой номер (такие письма не совпадают). */
+const NO_NUMBER = new Set([
+  "бн",
+  "bn",
+  "нет",
+  "безномера",
+  "безномер",
+  "бномера",
+  "nn",
+  "нн",
+  "none",
+  "na",
+]);
+
+export const refKey = (value: string | null | undefined) => {
+  const key = (value ?? "").replace(/[№#\s]/g, "").toLowerCase();
+  const bare = key.replace(/[^\p{L}\p{N}]/gu, "");
+  return !bare || NO_NUMBER.has(bare) ? "" : key;
+};
+
+/** Номер ВХ, набранный как попало: регистр, пробелы, латинские «BX». */
+export const letterNumber = (value: string) =>
+  value
+    .replace(/\s/g, "")
+    .toUpperCase()
+    .replace(/^[BВ][XХ]/, "ВХ");
 
 const subjectKey = (value: string | null | undefined) =>
   (value ?? "").toLowerCase().replace(PUNCT, " ").split(/\s+/).filter(Boolean).join(" ");
