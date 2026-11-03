@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     release_date: str = Field(default="", validation_alias=AliasChoices("PLATFORM_RELEASE_DATE"))
     build_sha: str = Field(default="", validation_alias=AliasChoices("PLATFORM_BUILD_SHA"))
     build_date: str = Field(default="", validation_alias=AliasChoices("PLATFORM_BUILD_DATE"))
+    # Служебные консоли на домене Платформы (OPS-CONSOLE): ключи через запятую (`litellm,erp`).
+    # Пусто — консолей нет: кнопки скрыты, `forward_auth` Caddy получает 404 (runbooks/deploy.md).
+    consoles: str = Field(default="", validation_alias=AliasChoices("PLATFORM_CONSOLES"))
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
     )
