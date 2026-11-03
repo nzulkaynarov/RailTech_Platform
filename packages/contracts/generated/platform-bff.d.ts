@@ -10851,6 +10851,8 @@ export interface components {
       at: string;
       text: string;
       attachments: components["schemas"]["InboundMailAttachment"][];
+      /** @description Письмо от адреса, которого в цепочке не было («новый участник переписки») */
+      new_participant: boolean;
     };
     /** @description Строка журнала письма: кто и что сделал; подпись — по коду `action` (take, takeover, release, reply, lead, archive, register_start, register_cancel, thread_reply, personal, not_spam, discard) */
     InboundMailEvent: {
@@ -10910,6 +10912,10 @@ export interface components {
       reply_all_copy: string[];
       /** @description Пометка «адресовано лично» из настроек */
       personal_label: string;
+      /** @description Кому ответ по умолчанию: отправитель корня цепочки (последнему письму — только если его адрес уже был в цепочке) */
+      reply_to: string;
+      /** @description Кому можно ответить: адреса цепочки, кроме общего ящика */
+      reply_options: string[];
     };
     InboundMailLeadResult: {
       lead_id: number;
@@ -10923,6 +10929,8 @@ export interface components {
     };
     InboundMailReplyIn: {
       text: string;
+      /** @description Кому: один из `reply_options`; не задан — `reply_to` карточки */
+      to?: string | null;
       /**
        * @description «Ответить всем»: копия — остальные адреса письма, кроме общего ящика
        * @default false
@@ -13031,7 +13039,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), не возвращается в «Новые» (`mail_not_returnable`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
+    /** @description 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`) */
     InboundMailConflict: {
       headers: {
         [name: string]: unknown;

@@ -484,7 +484,10 @@ def test_inbound_mail_downgrade_keeps_the_copy_in_to_addrs(
     command.downgrade(alembic_config, INBOUND_BEFORE)
 
     with psycopg.connect(live_settings.libpq_dsn) as conn:
-        rows = dict(conn.execute("SELECT message_id, to_addrs FROM inbound_mail").fetchall())
+        rows: dict[str, list[str]] = {
+            str(k): list(v)
+            for k, v in conn.execute("SELECT message_id, to_addrs FROM inbound_mail").fetchall()
+        }
     assert rows["c1"] == ["to@example.test", "cc1@example.test", "cc2@example.test"]
     assert rows["c2"] == ["only@example.test"]
     command.upgrade(alembic_config, "head")

@@ -84,7 +84,6 @@ function make(over: Partial<StoredMail> & Pick<StoredMail, "id" | "subject" | "t
       new_participant: false,
     },
   ];
-  full.messages = full.messages.map((m) => ({ ...m, new_participant: m.new_participant ?? false }));
   full.reply_to = over.reply_to ?? full.from_email;
   full.reply_options = over.reply_options ?? [full.from_email];
   full.messages_count = full.messages.length;
@@ -203,6 +202,7 @@ export function seed(): StoredMail[] {
           at: minutesAgo(320),
           text: "Здравствуйте. Подскажите реквизиты для оплаты счёта № 118.",
           attachments: [],
+          new_participant: false,
         },
         {
           id: 122,
@@ -213,6 +213,7 @@ export function seed(): StoredMail[] {
           attachments: [
             { index: 0, name: "платёжка-118.pdf", content_type: "application/pdf", size: 20111 },
           ],
+          new_participant: false,
         },
       ],
       replies: [
