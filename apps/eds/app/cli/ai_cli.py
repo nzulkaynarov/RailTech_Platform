@@ -7,6 +7,7 @@
 
 import os
 
+import httpx
 import structlog
 
 from app.ai import provision
@@ -32,7 +33,7 @@ async def run() -> int:
         return 0
     try:
         outcome = await provision.sync_key(base, master, key, _budget())
-    except (RuntimeError, OSError) as exc:
+    except (RuntimeError, OSError, httpx.HTTPError) as exc:
         log.warning("ai.key_sync_failed", error=str(exc))
         return 0
     log.info("ai.key_synced", outcome=outcome, budget_usd=_budget())

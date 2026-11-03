@@ -146,17 +146,13 @@ describe("Настройки · Документооборот · Справоч
     });
   });
 
-  it("распознавание сканов: по умолчанию выключено, администратор включает", async () => {
+  it("ИИ-помощник: состояние словами, переключателя сканов нет до решения (Q-EDSREG-1)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=ai");
-    const scans = await screen.findByRole("switch", { name: "Распознавать сканы и фото" });
-    expect(scans).not.toBeChecked();
     expect(
-      screen.getByText("Письма организаций; паспорта и личные документы не загружайте."),
+      await screen.findByText("Сканы и фото помощник пока не читает: их заполняют вручную."),
     ).toBeInTheDocument();
-    fireEvent.click(scans);
-    await waitFor(() => {
-      expect(readDocflowSettings().recognize_scans).toBe(true);
-    });
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(readDocflowSettings().recognize_scans).toBe(false);
   });
 });

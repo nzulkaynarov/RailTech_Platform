@@ -100,7 +100,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
     await openForm();
     await attach("скан.png", "image/png");
     fireEvent.click(await screen.findByRole("button", { name: "Заполнить из файла" }));
-    expect(await screen.findByText(/распознавание сканов выключено/)).toBeVisible();
+    expect(await screen.findByText(/помощник их пока не читает/)).toBeVisible();
     expect(screen.getByLabelText("Корреспондент")).toHaveValue("");
   });
 

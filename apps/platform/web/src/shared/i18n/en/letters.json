@@ -376,7 +376,7 @@
       "group": "Fill from file",
       "fill": "Fill from file",
       "needFile": "Attach the letter file first.",
-      "hintText": "A PDF with text — the assistant suggests the fields. Scans — if enabled in settings.",
+      "hintText": "A PDF with text — the assistant suggests the fields. Scans and photos — manually.",
       "hintScans": "A PDF or photo of the letter — the assistant suggests the fields; check them.",
       "chip": "Suggested by AI",
       "applied_one": "Filled from the file: {{count}} field — check those marked “Suggested by AI”.",
@@ -387,7 +387,7 @@
       "deal": "Possible link: {{label}}",
       "link": "Link",
       "errors": {
-        "scan_recognition_disabled": "This is a scan or photo: scan recognition is off. Fill in manually.",
+        "scan_recognition_disabled": "This is a scan or photo: the assistant does not read them yet. Fill in manually.",
         "file_too_large": "The file is over 5 MB — the assistant cannot read it. Fill in manually.",
         "ai_unavailable": "The assistant did not respond. Fill in manually or try later.",
         "ai_budget_exceeded": "The assistant's daily limit is used up. Fill in manually.",
@@ -719,12 +719,12 @@
     "fromMailFailed": "Could not copy the attachments — attach the files manually."
   },
   "settings": {
-    "subtitle": "Letter lists, resolution templates and file recognition.",
+    "subtitle": "Letter lists, resolution templates and the registration AI assistant.",
     "tabsLabel": "Document flow sections",
     "tabs": {
       "dictionaries": "Lists",
       "templates": "Resolution templates",
-      "ai": "Recognition"
+      "ai": "AI assistant"
     },
     "readOnly": "View only: an administrator changes the lists.",
     "dict": {
@@ -814,11 +814,10 @@
     "ai": {
       "title": "Fill from file",
       "hint": "Registration assistant: called by a button, suggests fields, a person decides.",
-      "scans": "Recognize scans and photos",
-      "scansHint": "Letters from organizations; do not upload passports or personal documents.",
       "text": "PDFs with text are always read: personal data is hidden before it reaches the model.",
       "off": "The assistant is not set up: no model gateway key. The form is filled in manually.",
-      "saved": "Saved"
+      "scansLater": "The assistant does not read scans and photos yet: fill those in manually.",
+      "scansOn": "The assistant also reads scans and photos of letters from organizations."
     }
   },
   "listKind": {

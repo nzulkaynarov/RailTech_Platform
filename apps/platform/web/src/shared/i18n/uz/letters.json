@@ -376,7 +376,7 @@
       "group": "Fayldan to‘ldirish",
       "fill": "Fayldan to‘ldirish",
       "needFile": "Avval xat faylini biriktiring.",
-      "hintText": "Matnli PDF — yordamchi maydonlarni taklif qiladi. Skanlar — sozlamalarda yoqilgan bo‘lsa.",
+      "hintText": "Matnli PDF — yordamchi maydonlarni taklif qiladi. Skan va fotolar — qo‘lda.",
       "hintScans": "Xatning PDF yoki fotosi — yordamchi maydonlarni taklif qiladi, tekshiring.",
       "chip": "SI taklifi",
       "applied_one": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
@@ -387,7 +387,7 @@
       "deal": "Ehtimoliy bog‘lanish: {{label}}",
       "link": "Bog‘lash",
       "errors": {
-        "scan_recognition_disabled": "Bu skan yoki foto: skanlarni tanish o‘chirilgan. Qo‘lda to‘ldiring.",
+        "scan_recognition_disabled": "Bu skan yoki foto: yordamchi ularni hozircha o‘qimaydi. Qo‘lda to‘ldiring.",
         "file_too_large": "Fayl 5 MB dan katta — yordamchi uni o‘qimaydi. Qo‘lda to‘ldiring.",
         "ai_unavailable": "Yordamchi hozir javob bermadi. Qo‘lda to‘ldiring yoki keyinroq urinib ko‘ring.",
         "ai_budget_exceeded": "Yordamchining kunlik limiti tugadi. Qo‘lda to‘ldiring.",
@@ -719,12 +719,12 @@
     "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling."
   },
   "settings": {
-    "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va fayllarni tanish.",
+    "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",
     "tabsLabel": "Hujjat aylanishi bo‘limlari",
     "tabs": {
       "dictionaries": "Ma’lumotnomalar",
       "templates": "Rezolyutsiya shablonlari",
-      "ai": "Tanib olish"
+      "ai": "SI yordamchi"
     },
     "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
     "dict": {
@@ -814,11 +814,10 @@
     "ai": {
       "title": "Fayldan to‘ldirish",
       "hint": "Kiruvchi xatlarni ro‘yxatga olish yordamchisi: tugma bilan, maydonlarni taklif qiladi, inson hal qiladi.",
-      "scans": "Skan va fotolarni tanish",
-      "scansHint": "Tashkilotlar xatlari; pasport va shaxsiy hujjatlarni yuklamang.",
       "text": "Matnli PDF har doim o‘qiladi: shaxsiy ma’lumotlar modelga yuborishdan oldin yashiriladi.",
       "off": "Yordamchi sozlanmagan: modellar shlyuzi kaliti yo‘q. Shakl qo‘lda to‘ldiriladi.",
-      "saved": "Saqlandi"
+      "scansLater": "Skan va fotolarni yordamchi hozircha o‘qimaydi: ular qo‘lda to‘ldiriladi.",
+      "scansOn": "Tashkilotlar xatlarining skan va fotolarini ham yordamchi o‘qiydi."
     }
   },
   "listKind": {

@@ -14,6 +14,7 @@ from app.ai import gateway, provision
 from app.config import Settings
 from app.container import Container
 from app.models import AiSuggestion, JournalEntry
+from app.services import letter_intake
 from app.services.letter_intake import find_inn, pdf_text
 from tests.domain import Person, validate
 from tests.test_api_auth import assert_error
@@ -30,17 +31,18 @@ LETTER_LINES = [
 ]
 
 
-def make_pdf(lines: list[str]) -> bytes:
-    """Минимальный PDF с текстовым слоем (Helvetica, латиница) — для разбора `pypdf`."""
+def make_pdf(lines: list[str], pages: int = 1) -> bytes:
+    """Минимальный PDF с текстовым слоем (Helvetica, латиница) — для разбора `pypdf`; все страницы с одним текстом."""
     stream = "BT /F1 11 Tf 50 780 Td 14 TL " + " ".join(f"({line}) Tj T*" for line in lines) + " ET"
+    kids = " ".join(f"{5 + i} 0 R" for i in range(pages))
     objects = [
         "<< /Type /Catalog /Pages 2 0 R >>",
-        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R "
-        "/Resources << /Font << /F1 5 0 R >> >> >>",
+        f"<< /Type /Pages /Kids [{kids}] /Count {pages} >>",
         f"<< /Length {len(stream)} >>\nstream\n{stream}\nendstream",
         "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    ]
+    ] + [
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 3 0 R /Resources << /Font << /F1 4 0 R >> >> >>"
+    ] * pages
     out = b"%PDF-1.4\n"
     offsets = []
     for number, body in enumerate(objects, start=1):
@@ -105,6 +107,8 @@ def test_pdf_text_and_inn_are_read_by_code() -> None:
     assert "Ref. No. 1234567/KC" in text
     assert find_inn(text) == "301234567"
     assert find_inn("ПИНФЛ 31234567890123, тел. 901234567") is None  # личный номер и телефон — не ИНН
+    # Свой ИНН (реквизиты адресата в письме) — не ИНН отправителя.
+    assert find_inn("Кому: ООО «Демо», ИНН 309999999. От: банк, ИНН 301234567", own="309999999") == "301234567"
     assert pdf_text(b"%PDF-1.4 broken") == ""
 
 
@@ -255,5 +259,50 @@ async def test_key_sync_cli_skips_without_keys(monkeypatch: pytest.MonkeyPatch) 
     from app.cli import ai_cli
 
     monkeypatch.delenv("EDS_LITELLM_API_KEY", raising=False)
+    monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-master")
+    assert await ai_cli.run() == 0  # стенд поднимается, помощник выключен
+
+
+async def test_limits_are_checked_before_reading_the_file(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+) -> None:
+    big = make_pdf(LETTER_LINES) + b"%" * (letter_intake.MAX_PDF_BYTES + 1)
+    too_big = await intake(client, staff["registrar"], big, name="big.pdf")
+    assert_error(too_big, 409, "CONFLICT", reason="file_too_large")
+    pages = await intake(client, staff["registrar"], make_pdf(LETTER_LINES, pages=letter_intake.MAX_PDF_PAGES + 1))
+    assert_error(pages, 409, "CONFLICT", reason="file_too_large")
+    assert model.bodies == []  # в модель ничего не ушло
+
+
+async def test_zero_budget_means_no_limit(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:  # fmt: skip
+    assert (await intake(client, staff["registrar"], make_pdf(LETTER_LINES))).status_code == 200  # потрачено 0.0004
+    monkeypatch.setattr(settings, "ai_daily_budget_usd", 0.0004)
+    spent = await intake(client, staff["registrar"], make_pdf(LETTER_LINES))
+    assert_error(spent, 409, "CONFLICT", reason="ai_budget_exceeded")
+    monkeypatch.setattr(settings, "ai_daily_budget_usd", 0.0)
+    assert (await intake(client, staff["registrar"], make_pdf(LETTER_LINES))).status_code == 200
+
+
+def test_document_due_must_be_in_a_sane_range() -> None:
+    from datetime import date
+
+    today = date(2026, 11, 3)
+    far = letter_intake.clean({**ANSWER, "document_due": "2099-01-01"}, masked=None, kinds=set(), raw="", today=today)
+    old = letter_intake.clean({**ANSWER, "document_due": "2020-01-01"}, masked=None, kinds=set(), raw="", today=today)
+    ok = letter_intake.clean({**ANSWER, "document_due": "2026-11-10"}, masked=None, kinds=set(), raw="", today=today)
+    assert (far.document_due, old.document_due, str(ok.document_due)) == (None, None, "2026-11-10")
+
+
+async def test_key_sync_cli_survives_an_unreachable_gateway(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.cli import ai_cli
+
+    def down(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("no route", request=request)
+
+    monkeypatch.setattr(provision, "TRANSPORT", httpx.MockTransport(down))
+    monkeypatch.setenv("EDS_LITELLM_API_KEY", "sk-eds")
     monkeypatch.setenv("LITELLM_MASTER_KEY", "sk-master")
     assert await ai_cli.run() == 0  # стенд поднимается, помощник выключен

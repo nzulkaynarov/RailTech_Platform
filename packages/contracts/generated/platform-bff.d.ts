@@ -4491,7 +4491,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
-     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только если включено «Распознавать сканы». Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
      */
     post: operations["suggestLetterFromFile"];
     delete?: never;

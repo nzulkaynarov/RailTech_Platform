@@ -64,7 +64,7 @@ export function DocflowPage() {
           {active === "templates" ? (
             <TemplatesTab readOnly={readOnly} />
           ) : active === "ai" ? (
-            <AiTab readOnly={readOnly} />
+            <AiTab />
           ) : (
             <DictionariesTab readOnly={readOnly} />
           )}

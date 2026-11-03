@@ -103,3 +103,27 @@ async def test_others_cannot_call_the_helper(web: Web, eds: EdsFake) -> None:
         response = await web.send("POST", f"{BASE}/letter-intake", json={"file_id": FILE_ID})
         assert response.status_code == 403
     assert eds.made("POST", "letter-intake") == []
+
+
+async def test_helper_waits_for_the_model_longer_than_the_default_timeout(
+    web: Web, eds: EdsFake
+) -> None:
+    """Модель отвечает до `EDS_AI_TIMEOUT_S` (60 с): общий таймаут бэкенда (3 с) её оборвал бы."""
+    from app.api.eds_letter_intake import INTAKE_WAIT_SECONDS
+
+    waits: list[float] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        waits.append(request.extensions["timeout"]["read"])
+        return httpx.Response(200, json=SUGGESTION)
+
+    eds.answer("POST", "letter-intake", answer)
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+    response = await web.send("POST", f"{BASE}/letter-intake", json={"file_id": FILE_ID})
+    assert response.status_code == 200
+    assert waits == [INTAKE_WAIT_SECONDS]
+    assert INTAKE_WAIT_SECONDS >= 80 + 5  # предел EDS_AI_TIMEOUT_S и запас на файл
+    # обычные вызовы EDS — с общим таймаутом
+    await web.client.get(f"{BASE}/docflow-settings")
+    settings_call = eds.made("GET", "docflow-settings")[-1]
+    assert settings_call.extensions["timeout"]["read"] < INTAKE_WAIT_SECONDS

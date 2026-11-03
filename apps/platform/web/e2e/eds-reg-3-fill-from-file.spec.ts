@@ -11,7 +11,7 @@ import {
 import { pickFiles } from "./support/fields";
 
 // EDS-REG PR 3 на MSW: «Заполнить из файла» в «Зарегистрировать входящее» — PDF письма, предложенные поля с пометкой
-// «Предложено ИИ», правка, отказ на скан при выключенном распознавании; «Распознавание» в Настройках. Модели нет —
+// «Предложено ИИ», правка, отказ на скан (сканы — до решения Q-EDSREG-1); «ИИ-помощник» в Настройках. Модели нет —
 // ответ мока вымышленный. axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR` → docs/screens/eds-reg-3/).
 const WIDTHS = [1440, 390] as const;
 
@@ -80,7 +80,7 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
 
       // 2. Скан при выключенном распознавании — отказ словами, поля пустые.
       await fillFromFile(page, "скан-письма.png", "image/png");
-      await expect(page.getByText(/распознавание сканов выключено/)).toBeVisible();
+      await expect(page.getByText(/помощник их пока не читает/)).toBeVisible();
       await expect(page.getByLabel("Корреспондент", { exact: true })).toHaveValue("");
       await expectNoViolations(page, `register-scan-off ${String(width)}`);
       await settledScreenshot(page, "register-scan-off");
@@ -88,14 +88,14 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signOut(page);
 
-    // 3. Администратор: Настройки · Документооборот · Распознавание.
+    // 3. Администратор: Настройки · Документооборот · ИИ-помощник — состояние словами; переключателя сканов нет до решения
+    // владельца и юриста (Q-EDSREG-1).
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/docflow?tab=ai");
-    const scans = page.getByRole("switch", { name: "Распознавать сканы и фото" });
-    await expect(scans).not.toBeChecked();
-    await scans.click();
-    await expect(scans).toBeChecked();
-    await expect(page.locator(".ant-message-notice")).toHaveCount(0, { timeout: 10_000 });
+    await expect(
+      page.getByText("Сканы и фото помощник пока не читает: их заполняют вручную."),
+    ).toBeVisible();
+    await expect(page.getByRole("switch")).toHaveCount(0);
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await expectNoViolations(page, `settings-ai ${String(width)}`);

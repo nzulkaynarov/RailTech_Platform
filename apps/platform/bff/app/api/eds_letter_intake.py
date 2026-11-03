@@ -24,6 +24,11 @@ from app.schemas_eds_intake import (
 
 router = APIRouter(prefix="/eds", tags=["letters"])
 
+# «Заполнить из файла» ждёт модель: EDS ограничивает вызов шлюза `EDS_AI_TIMEOUT_S`
+# (по умолчанию 60 с, не больше 80 с — `apps/eds/app/config.py`); BFF ждёт EDS дольше — с запасом
+# на чтение файла и разбор PDF. Общий таймаут бэкенда (3 с, `clients/base.py`) оборвал бы вызов.
+INTAKE_WAIT_SECONDS = 90.0
+
 Registrar = Annotated[Authed, Depends(require("eds.inbox.register", "full"))]
 SettingsReader = Annotated[
     Authed, Depends(require_any(("eds.inbox.register", "full"), ("admin", "read")))
@@ -57,7 +62,14 @@ def _parse[M: BaseModel](model: type[M], raw: Any) -> M:
 async def suggest_letter_from_file(
     authed: Registrar, body: LetterIntakeIn
 ) -> LetterIntakeSuggestion:
-    raw = await _call(authed, "POST", "/letter-intake", 200, json={"file_id": str(body.file_id)})
+    raw = await _call(
+        authed,
+        "POST",
+        "/letter-intake",
+        200,
+        json={"file_id": str(body.file_id)},
+        wait_seconds=INTAKE_WAIT_SECONDS,
+    )
     return _parse(LetterIntakeSuggestion, raw)
 
 

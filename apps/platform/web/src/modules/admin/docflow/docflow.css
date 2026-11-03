@@ -7,10 +7,3 @@
 .pf-docflow-kinds > .ant-segmented {
   display: inline-flex;
 }
-
-/* Распознавание: переключатель с подписью в строку */
-.pf-docflow-switch {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
