@@ -129,8 +129,8 @@ async def test_duplicate_check_by_sender_and_outgoing_number(
     assert by_client.status_code == 201, by_client.text
     assert await check(ref_number="77", crm_client_id=42) == [by_client.json()["number"]]
 
-    # Дубль — предупреждение, не запрет: вторая регистрация проходит.
-    again = await register(client, staff["registrar"])
+    # То же письмо (с датой исходящего) — 409 (EDS-DUP); с `force` и причиной — проходит.
+    again = await register(client, staff["registrar"], force=True, force_reason="Повторное письмо")
     assert again.status_code == 201
     assert len(await check(ref_number="04-12/3456", sender_name="ГНИ Мирабадского района")) == 2
 

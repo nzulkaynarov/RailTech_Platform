@@ -36,7 +36,7 @@ async def test_repeat_with_another_key_returns_the_same_letter_without_a_new_num
     who = staff["registrar"]
     first = await post(client, who, body(), "mail-17-first")
     again = await post(client, who, body(subject="Другая тема той же регистрации"), "mail-17-again")
-    other = await post(client, who, body(mail_id=18), "mail-18-key")
+    other = await post(client, who, body(mail_id=18, sender_ref={"number": "18"}), "mail-18-key")
 
     assert first.status_code == 201, first.text
     assert again.status_code == 200, again.text
@@ -55,7 +55,7 @@ async def test_letters_without_a_mail_source_are_not_affected(
 ) -> None:
     who = staff["registrar"]
     first = await post(client, who, body(mail_id=None), "plain-key-1")
-    second = await post(client, who, body(mail_id=None), "plain-key-2")
+    second = await post(client, who, body(mail_id=None, sender_ref={"number": "2"}), "plain-key-2")
     assert (first.status_code, second.status_code) == (201, 201)
     assert await letters_count(container) == 2
 

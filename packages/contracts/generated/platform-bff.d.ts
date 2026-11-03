@@ -4255,7 +4255,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Зарегистрировать входящее (делопроизводитель, P8)
-     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
+     * @description Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -4366,6 +4366,26 @@ export interface paths {
     get: operations["listLetterKinds"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/duplicates-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проверка дублей входящего до регистрации (EDS-DUP)
+     * @description EDS `POST /letters/duplicates-check`: форма «Зарегистрировать входящее» зовёт в фоне по мере заполнения и после «Заполнить из файла». `match = exact` — то же письмо (корреспондент по ИНН или названию без регистра, кавычек и формы собственности + исх. № + дата исх.): регистрация без `force` получит 409 `duplicate_letter`. `same_subject` — тот же корреспондент и тема за ±3 дня, `same_ref` — тот же исх. № с другой датой, `same_file` — тот же файл: предупреждение, регистрировать не мешает. До пяти, точные первыми. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+     */
+    post: operations["checkLetterDuplicates"];
     delete?: never;
     options?: never;
     head?: never;
@@ -4506,6 +4526,26 @@ export interface paths {
     get: operations["downloadLetterFile"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо (EDS-DUP)
+     * @description EDS `POST /letters/{id}/duplicate` (право `letters.register`). Раздел `eds.inbox.register` — полный. Письмо получает статус «Дубль» и ссылку на оригинал (`duplicate_of`), номер не освобождается; поручения отменяются, ожидающие «ознакомить» снимаются, контроль снимается — всё с записью в журнал. Оригинал — номер ВХ (`original_number`): нет такого, то же письмо или оригинал сам дубль — 422 `details.fields = [original_number]` (`details.reason`: `not_found`, `same_letter`, `original_is_duplicate`). Уже дубль — 409 `invalid_state`. Резолюция уже наложена — без `confirm = true` 409 `resolution_exists`; письмо по заявке клиента после резолюции — 409 `calc_in_progress`.
+     */
+    post: operations["markLetterDuplicate"];
     delete?: never;
     options?: never;
     head?: never;
@@ -10466,7 +10506,7 @@ export interface components {
       text: components["schemas"]["LocalizedText"];
     };
     /**
-     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению». Слова — в словаре интерфейса, не в API.
+     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено»; путь делопроизводства (P8b, §3.2a): `in_execution` — «На исполнении», `executed` — «Исполнено», `noted` — «Принято к сведению»; `duplicate` — «Дубль» (EDS-DUP: письмо зарегистрировано повторно и закрыто, оригинал — `duplicate_of`). Слова — в словаре интерфейса, не в API.
      * @enum {string}
      */
     LetterStatus:
@@ -10476,7 +10516,8 @@ export interface components {
       | "rejected"
       | "in_execution"
       | "executed"
-      | "noted";
+      | "noted"
+      | "duplicate";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец), `services` — услуги, ТЗ, бригада (гл. инженер), `payment_terms` — условия оплаты (бухгалтер).
      * @enum {string}
@@ -10644,6 +10685,14 @@ export interface components {
        * @description Когда исполнены все поручения
        */
       executed_at?: string | null;
+      /** @description Оригинал, если письмо закрыто как дубль (EDS-DUP) */
+      duplicate_of?: components["schemas"]["LetterDuplicateOf"] | null;
+    };
+    LetterDuplicateOf: {
+      /** @example ВХ-104/26 */
+      number: string;
+      /** @description Карточка в SPA, `/eds/inbox/{номер}` */
+      path: string;
     };
     /**
      * @description Путь резолюции письма (P8b, SPEC-v3 §3.2a; решает EDS): `calc` — письмо по заявке клиента, резолюция «расчёт по зонам» (`POST /eds/letters/{id}/resolution`); `office` — делопроизводство, резолюция трёх типов (`POST /eds/letters/{id}/office-resolution`).
@@ -10793,10 +10842,10 @@ export interface components {
       due: string;
       text: string;
       /**
-       * @description «В работе» → «Исполнено»
+       * @description «В работе» → «Исполнено»; `cancelled` — «Отменено» (письмо — дубль, EDS-DUP)
        * @enum {string}
        */
-      status: "in_work" | "executed";
+      status: "in_work" | "executed" | "cancelled";
       /** @description Срок прошёл, не исполнено */
       overdue: boolean;
       report: string | null;
@@ -10982,6 +11031,40 @@ export interface components {
       status: components["schemas"]["LetterStatus"];
       /** @description Карточка в SPA, `/eds/inbox/{номер}` */
       path: string;
+      /**
+       * Format: date-time
+       * @description Когда зарегистрирован (EDS-DUP)
+       */
+      registered_at?: string;
+      /**
+       * @description Чем совпал (EDS-DUP): `exact` — то же письмо (корреспондент, исх. № и дата исх.), `same_subject` — корреспондент и тема за ±3 дня, `same_ref` — корреспондент и исх. № с другой датой, `same_file` — тот же файл
+       * @enum {string}
+       */
+      match?: "exact" | "same_subject" | "same_ref" | "same_file";
+    };
+    /** @description Поля формы регистрации для проверки дублей (EDS-DUP); пустые в проверке не участвуют */
+    LetterDuplicateCheckIn: {
+      sender_name?: string | null;
+      sender_inn?: string | null;
+      crm_client_id?: number | null;
+      sender_ref_number?: string | null;
+      /** Format: date */
+      sender_ref_date?: string | null;
+      subject?: string | null;
+      /** Format: date */
+      received_at?: string | null;
+      file_ids?: string[];
+    };
+    /** @description «Это дубль ВХ-…» (EDS-DUP) */
+    LetterMarkDuplicateIn: {
+      /** @description Номер оригинала, `ВХ-NNN/ГГ` */
+      original_number: string;
+      comment?: string | null;
+      /**
+       * @description Резолюция уже наложена — подтверждение отмены поручений
+       * @default false
+       */
+      confirm: boolean;
     };
     LetterDuplicateList: {
       items: components["schemas"]["LetterDuplicate"][];
@@ -11442,6 +11525,13 @@ export interface components {
       /** @description Письмо общего ящика, из которого регистрируется ВХ (очередь «Входящая почта», W18A-P2): EDS передаёт его в `letter.registered`, CRM снимает письмо с очереди. С ним `file_ids` может быть пустым (письмо без вложений — текст в `summary`); без него нужен хотя бы один файл. */
       source_mail_id?: number | null;
       file_ids: string[];
+      /**
+       * @description Зарегистрировать, хотя то же письмо уже есть (EDS-DUP, «Это другое письмо»); нужна `force_reason`
+       * @default false
+       */
+      force: boolean;
+      /** @description Почему это другое письмо — в журнал ВХ */
+      force_reason?: string | null;
     };
     ResolutionAssigneeIn: {
       /** @description `crm_user_id` сотрудника */
@@ -21737,6 +21827,37 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  checkLetterDuplicates: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterDuplicateCheckIn"];
+      };
+    };
+    responses: {
+      /** @description Совпадения (может быть пусто) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterDuplicateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   findLetterDuplicates: {
     parameters: {
       query: {
@@ -21948,6 +22069,42 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markLetterDuplicate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterMarkDuplicateIn"];
+      };
+    };
+    responses: {
+      /** @description Закрыто как дубль */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

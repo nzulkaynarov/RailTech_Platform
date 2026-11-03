@@ -204,6 +204,32 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/letters/duplicates-check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверка дублей до регистрации (точное совпадение и похожие)
+     * @description EDS-DUP. Форма регистрации зовёт её в фоне по мере заполнения. `exact` — то же письмо: корреспондент (ИНН у обоих —
+     *     по ИНН, иначе по нормализованному названию: регистр, кавычки, ООО/OOO/LLC/MChJ и т. п., лишние пробелы, или тот же
+     *     клиент CRM) + исходящий номер отправителя (без регистра и пробелов) + дата исходящего; такая регистрация без `force`
+     *     получит 409 `duplicate_letter`. `similar` — похожие, регистрации не мешают: `same_subject` — тот же корреспондент и
+     *     та же тема, дата получения в пределах ±3 дней; `same_ref` — тот же корреспондент и исходящий номер с другой или
+     *     пустой датой; `same_file` — вложение с тем же SHA-256 (`file_ids` — свои непривязанные файлы формы). Письма со
+     *     статусом `duplicate` не возвращаются. Не больше пяти, точные первыми.
+     */
+    post: operations["checkLetterDuplicates"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/letters": {
     parameters: {
       query?: never;
@@ -230,6 +256,13 @@ export interface paths {
      *     того же письма (другой `Idempotency-Key`, повтор после обрыва, двойное нажатие) возвращает уже созданный ВХ —
      *     `200` вместо `201`, без нового номера и без второго `letter.registered`. Две одновременные регистрации дают один
      *     ВХ (частичный уникальный индекс по источнику).
+     *
+     *     Дубль (EDS-DUP): то же письмо (см. `POST /letters/duplicates-check`, `exact`) уже зарегистрировано — 409 `CONFLICT`,
+     *     `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); ВХ не создаётся.
+     *     Зарегистрировать всё равно (повторное письмо с тем же номером) — `force = true` и `force_reason` (без причины — 422,
+     *     поле `force_reason` с `required`); причина и номер найденного ВХ — в журнал (`letter.duplicate_forced`). Две
+     *     одновременные регистрации одного письма без `force` дают один ВХ (частичный уникальный индекс по ключу точного
+     *     совпадения): вторая получает 409 `duplicate_letter`.
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -346,6 +379,36 @@ export interface paths {
      *     `letter.resubmitted` (события шины нет). Другой статус — 409 `CONFLICT` (`details.reason = invalid_state`).
      */
     post: operations["resubmitLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/letters/{letter_id}/duplicate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо
+     * @description EDS-DUP (ГОСТ Р 7.0.97: документ регистрируется один раз). Письмо получает статус-итог `duplicate` и ссылку
+     *     `duplicate_of` на оригинал; номер не освобождается (журнал непрерывный). Поручения в работе отменяются (`cancelled`,
+     *     запросы переноса — `rejected`), ожидающие «ознакомить» снимаются, «на контроле» снимается; в «Ждёт резолюции», «На
+     *     контроле» и задачах письмо больше не участвует. Журнал — `letter.marked_duplicate` (оригинал и комментарий), у
+     *     оригинала — `letter.duplicate_linked`. Событий шины нет.
+     *
+     *     Оригинал — номер ВХ (`original_number`): нет такого — 422 `original_number` с `not_found`; то же письмо —
+     *     `same_letter`; оригинал сам дубль — `original_is_duplicate`. Письмо уже дубль — 409 `invalid_state`. По письму уже
+     *     есть резолюция (статус не `awaiting_resolution` и не `returned`) — без `confirm = true` 409 `resolution_exists`
+     *     (`details.status`, `details.instructions` — поручений в работе). Письмо по заявке клиента (путь `calc`) после
+     *     резолюции — 409 `calc_in_progress`: расчёт уже идёт, закрывают его в проекте.
+     */
+    post: operations["markLetterDuplicate"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1508,7 +1571,8 @@ export interface components {
      *     резолюции директора; `resolved` — резолюция «расчёт» наложена (путь `calc`); `returned` — возвращено, письмо у
      *     регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
      *     (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
-     *     «Принято к сведению». Переходы — таблица в описании API.
+     *     «Принято к сведению». `duplicate` — «Дубль ВХ-…» (EDS-DUP): письмо зарегистрировано повторно, закрыто, ссылка на
+     *     оригинал — `Letter.duplicate_of`. Переходы — таблица в описании API.
      * @enum {string}
      */
     LetterStatus:
@@ -1518,7 +1582,8 @@ export interface components {
       | "rejected"
       | "in_execution"
       | "executed"
-      | "noted";
+      | "noted"
+      | "duplicate";
     /**
      * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец); `services` — услуги, ТЗ, бригада (гл. инженер); `payment_terms` — условия оплаты (бухгалтер)
      * @enum {string}
@@ -1618,6 +1683,45 @@ export interface components {
       /** Format: date */
       received_at: string;
       status: components["schemas"]["LetterStatus"];
+      /**
+       * Format: date-time
+       * @description Когда зарегистрирован (EDS-DUP)
+       */
+      registered_at?: string;
+      /**
+       * @description Чем совпал (EDS-DUP, `POST /letters/duplicates-check`); у `GET /letter-duplicates` нет
+       * @enum {string}
+       */
+      match?: "exact" | "same_subject" | "same_ref" | "same_file";
+    };
+    /** @description Поля формы регистрации для проверки дублей (EDS-DUP); пустые поля в проверке не участвуют */
+    LetterDuplicateCheckIn: {
+      sender?: components["schemas"]["IncomingLetterSender"];
+      crm_client_id?: number | null;
+      sender_ref?: components["schemas"]["SenderRef"];
+      subject?: string | null;
+      /** Format: date */
+      received_at?: string | null;
+      file_ids?: components["schemas"]["Uuid"][];
+    };
+    LetterDuplicateCheck: {
+      /** @description Совпадения, точные (`match = exact`) первыми */
+      items: components["schemas"]["LetterDuplicate"][];
+    };
+    LetterMarkDuplicateIn: {
+      /** @description Номер оригинала, `ВХ-NNN/ГГ` */
+      original_number: string;
+      comment?: string | null;
+      /**
+       * @description По письму уже есть резолюция — подтверждение, что её поручения отменяются
+       * @default false
+       */
+      confirm: boolean;
+    };
+    /** @description Оригинал письма-дубля (EDS-DUP) */
+    LetterDuplicateRef: {
+      id: components["schemas"]["Uuid"];
+      number: components["schemas"]["LetterNumber"];
     };
     LetterDuplicateList: {
       items: components["schemas"]["LetterDuplicate"][];
@@ -1660,6 +1764,13 @@ export interface components {
       file_ids?: components["schemas"]["Uuid"][];
       /** @description Откуда письмо (W18A-P2): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — уходит в `letter.registered.source`, CRM снимает письмо с очереди и пишет номер ВХ */
       source?: components["schemas"]["LetterSourceIn"] | null;
+      /**
+       * @description Зарегистрировать, хотя то же письмо уже есть (EDS-DUP); нужна `force_reason`
+       * @default false
+       */
+      force: boolean;
+      /** @description Почему это другое письмо (повторное письмо с тем же номером и т. п.) — в журнал ВХ */
+      force_reason?: string | null;
     };
     LetterSourceIn: {
       /** @description id письма в CRM (`inbound_mail.id`) */
@@ -1745,6 +1856,8 @@ export interface components {
        * @description Когда исполнены все поручения
        */
       executed_at?: string | null;
+      /** @description Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP) */
+      duplicate_of?: components["schemas"]["LetterDuplicateRef"] | null;
     };
     /**
      * @description Путь резолюции (P8b, SPEC-v3 §3.2a). `calc` — письмо по заявке клиента: есть `links.erp_request_id`, или вид
@@ -1895,10 +2008,10 @@ export interface components {
       decided_at: string;
     };
     /**
-     * @description Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус
+     * @description Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус. `cancelled` — «Отменено»: письмо закрыто как дубль (EDS-DUP)
      * @enum {string}
      */
-    InstructionStatus: "in_work" | "executed";
+    InstructionStatus: "in_work" | "executed" | "cancelled";
     /** @enum {string} */
     InstructionRole: "responsible" | "co_executor";
     OutgoingRef: {
@@ -2517,7 +2630,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description `CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused` */
+    /** @description `CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`, `duplicate_letter`, `resolution_exists`, `calc_in_progress` */
     Conflict: {
       headers: {
         [name: string]: unknown;
@@ -2891,6 +3004,33 @@ export interface operations {
       422: components["responses"]["ValidationFailed"];
     };
   };
+  checkLetterDuplicates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterDuplicateCheckIn"];
+      };
+    };
+    responses: {
+      /** @description Найденные совпадения (может быть пусто) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterDuplicateCheck"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
   listLetters: {
     parameters: {
       query?: {
@@ -3102,6 +3242,37 @@ export interface operations {
     };
     responses: {
       /** @description Снова ждёт резолюции */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  markLetterDuplicate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        letter_id: components["parameters"]["LetterId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterMarkDuplicateIn"];
+      };
+    };
+    responses: {
+      /** @description Письмо закрыто как дубль */
       200: {
         headers: {
           [name: string]: unknown;

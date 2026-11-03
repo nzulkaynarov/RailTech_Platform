@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.9.0
+  version: 0.10.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -18,6 +18,14 @@ info:
     `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
+
+    **0.10.0 (EDS-DUP, одно письмо — один входящий номер; по oasdiff ломающее — новые значения `LetterStatus.duplicate` и `InstructionStatus.cancelled` в ответах, до 1.0 допустимо).** Ручная регистрация проверяет дубль на
+    сервере: то же письмо (корреспондент по ИНН, иначе по названию без регистра, кавычек и формы собственности; исходящий
+    номер; дата исходящего) — 409 `duplicate_letter` с найденным ВХ; зарегистрировать всё равно — `force` с причиной
+    (журнал `letter.duplicate_forced`). Похожие письма (тот же корреспондент и тема за ±3 дня, тот же исх. № с другой датой,
+    тот же файл) показывает `POST /letters/duplicates-check` до регистрации. «Это дубль ВХ-…» (`POST
+    /letters/{id}/duplicate`) закрывает уже зарегистрированный дубль: статус `duplicate`, ссылка на оригинал, поручения
+    отменяются (`InstructionStatus.cancelled`), ожидающие ознакомления снимаются; номер не освобождается.
 
     **P4 волны 18a (письмо на бланке, D-DOC2 минимум; добавляющее, версия не растёт).** `letter_out` получает `letter` — тело
     блоками (`DocumentBody`, контракт `documents/body.schema.json`), «кому», почту адресата, подписанта, последний PDF и журнал
@@ -98,9 +106,10 @@ info:
     | `returned` | `POST …/submit` (повторная подача, правки) | `awaiting_resolution` | `letters.register` | — (запись журнала `letter.resubmitted`) |
     | `awaiting_resolution` (путь `office`) | `POST …/office-resolution`, `execute` или `reply` | `in_execution`, на контроле | `letters.resolve` | `notice.requested` |
     | `awaiting_resolution` (путь `office`) | `POST …/office-resolution`, `info` | `noted` | `letters.resolve` | `notice.requested` («ознакомить») |
+    | любой, кроме `duplicate` | `POST …/duplicate` («Это дубль ВХ-…») | `duplicate` | `letters.register` | — (журнал `letter.marked_duplicate`) |
     | `in_execution` | последнее поручение исполнено (`POST /instructions/{id}/complete` или ИСХ «в ответ на») | `executed`, контроль снят | исполнитель | `notice.requested` |
 
-    `resolved`, `rejected`, `executed` и `noted` — конечные. **Путь резолюции** (`Letter.track`, P8b): `calc` — письмо по
+    `resolved`, `rejected`, `executed`, `noted` и `duplicate` — конечные. **Путь резолюции** (`Letter.track`, P8b): `calc` — письмо по
     заявке клиента (`links.erp_request_id`, или нет вида документа и есть `links.erp_deal_id`), резолюция «расчёт по
     зонам»; `office` — остальное, резолюция трёх типов с поручениями (SPEC-v3 §3.2a). **Поручения** (P8b): исполнитель
     отмечает «Исполнено» с отчётом или ИСХ, просит перенос, автор резолюции решает перенос (срочные не продлеваются);
@@ -464,6 +473,40 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/letters/duplicates-check:
+    post:
+      tags: [letters]
+      operationId: checkLetterDuplicates
+      summary: Проверка дублей до регистрации (точное совпадение и похожие)
+      description: |
+        EDS-DUP. Форма регистрации зовёт её в фоне по мере заполнения. `exact` — то же письмо: корреспондент (ИНН у обоих —
+        по ИНН, иначе по нормализованному названию: регистр, кавычки, ООО/OOO/LLC/MChJ и т. п., лишние пробелы, или тот же
+        клиент CRM) + исходящий номер отправителя (без регистра и пробелов) + дата исходящего; такая регистрация без `force`
+        получит 409 `duplicate_letter`. `similar` — похожие, регистрации не мешают: `same_subject` — тот же корреспондент и
+        та же тема, дата получения в пределах ±3 дней; `same_ref` — тот же корреспондент и исходящий номер с другой или
+        пустой датой; `same_file` — вложение с тем же SHA-256 (`file_ids` — свои непривязанные файлы формы). Письма со
+        статусом `duplicate` не возвращаются. Не больше пяти, точные первыми.
+      x-rt-permissions: [letters.read, letters.register]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterDuplicateCheckIn'
+      responses:
+        '200':
+          description: Найденные совпадения (может быть пусто)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterDuplicateCheck'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
   /api/v1/letters:
     get:
       tags: [letters]
@@ -541,6 +584,13 @@ paths:
         того же письма (другой `Idempotency-Key`, повтор после обрыва, двойное нажатие) возвращает уже созданный ВХ —
         `200` вместо `201`, без нового номера и без второго `letter.registered`. Две одновременные регистрации дают один
         ВХ (частичный уникальный индекс по источнику).
+
+        Дубль (EDS-DUP): то же письмо (см. `POST /letters/duplicates-check`, `exact`) уже зарегистрировано — 409 `CONFLICT`,
+        `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); ВХ не создаётся.
+        Зарегистрировать всё равно (повторное письмо с тем же номером) — `force = true` и `force_reason` (без причины — 422,
+        поле `force_reason` с `required`); причина и номер найденного ВХ — в журнал (`letter.duplicate_forced`). Две
+        одновременные регистрации одного письма без `force` дают один ВХ (частичный уникальный индекс по ключу точного
+        совпадения): вторая получает 409 `duplicate_letter`.
       x-rt-permissions: [letters.register]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -731,6 +781,51 @@ paths:
       responses:
         '200':
           description: Снова ждёт резолюции
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Letter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/letters/{letter_id}/duplicate:
+    post:
+      tags: [letters]
+      operationId: markLetterDuplicate
+      summary: «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо
+      description: |
+        EDS-DUP (ГОСТ Р 7.0.97: документ регистрируется один раз). Письмо получает статус-итог `duplicate` и ссылку
+        `duplicate_of` на оригинал; номер не освобождается (журнал непрерывный). Поручения в работе отменяются (`cancelled`,
+        запросы переноса — `rejected`), ожидающие «ознакомить» снимаются, «на контроле» снимается; в «Ждёт резолюции», «На
+        контроле» и задачах письмо больше не участвует. Журнал — `letter.marked_duplicate` (оригинал и комментарий),
+        `letter.work_cancelled` (сколько поручений и ознакомлений снято), у оригинала — `letter.duplicate_linked`. Событий
+        шины нет.
+
+        Оригинал — номер ВХ (`original_number`): нет такого — 422 `original_number` с `not_found`; то же письмо —
+        `same_letter`; оригинал сам дубль — `original_is_duplicate`. Письмо уже дубль — 409 `invalid_state`. По письму уже
+        есть резолюция (статус не `awaiting_resolution` и не `returned`) — без `confirm = true` 409 `resolution_exists`
+        (`details.status`, `details.instructions` — поручений в работе). Письмо по заявке клиента (путь `calc`) после
+        резолюции — 409 `calc_in_progress`: расчёт уже идёт, закрывают его в проекте.
+      x-rt-permissions: [letters.register]
+      parameters:
+        - $ref: '#/components/parameters/LetterId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterMarkDuplicateIn'
+      responses:
+        '200':
+          description: Письмо закрыто как дубль
           content:
             application/json:
               schema:
@@ -2351,7 +2446,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     Conflict:
-      description: '`CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`'
+      description: '`CONFLICT` — `details.reason`: `invalid_state`, `route_closed`, `checklist_not_green`, `idempotency_key_reused`, `duplicate_letter`, `resolution_exists`, `calc_in_progress`'
       content:
         application/json:
           schema:
@@ -2913,13 +3008,14 @@ components:
 
     LetterStatus:
       type: string
-      enum: [awaiting_resolution, resolved, returned, rejected, in_execution, executed, noted]
+      enum: [awaiting_resolution, resolved, returned, rejected, in_execution, executed, noted, duplicate]
       description: |
         SPEC-v3 §2.4 («Зарегистрировано → Ждёт резолюции» — одним шагом): `awaiting_resolution` — зарегистрировано и ждёт
         резолюции директора; `resolved` — резолюция «расчёт» наложена (путь `calc`); `returned` — возвращено, письмо у
         регистратора; `rejected` — отклонено. Путь делопроизводства (P8b, SPEC-v3 §3.2a): `in_execution` — «На исполнении»
         (поручения в работе, на контроле), `executed` — «Исполнено» (все поручения исполнены, контроль снят), `noted` —
-        «Принято к сведению». Переходы — таблица в описании API.
+        «Принято к сведению». `duplicate` — «Дубль ВХ-…» (EDS-DUP): письмо зарегистрировано повторно, закрыто, ссылка на
+        оригинал — `Letter.duplicate_of`. Переходы — таблица в описании API.
     Zone:
       type: string
       enum: [goods, services, payment_terms]
@@ -3128,6 +3224,75 @@ components:
           format: date
         status:
           $ref: '#/components/schemas/LetterStatus'
+        registered_at:
+          type: string
+          format: date-time
+          description: Когда зарегистрирован (EDS-DUP)
+        match:
+          type: string
+          enum: [exact, same_subject, same_ref, same_file]
+          description: Чем совпал (EDS-DUP, `POST /letters/duplicates-check`); у `GET /letter-duplicates` нет
+    LetterDuplicateCheckIn:
+      type: object
+      additionalProperties: false
+      description: Поля формы регистрации для проверки дублей (EDS-DUP); пустые поля в проверке не участвуют
+      properties:
+        sender:
+          $ref: '#/components/schemas/IncomingLetterSender'
+        crm_client_id:
+          type: [integer, 'null']
+        sender_ref:
+          $ref: '#/components/schemas/SenderRef'
+        subject:
+          type: [string, 'null']
+          maxLength: 300
+        received_at:
+          type: [string, 'null']
+          format: date
+        file_ids:
+          type: array
+          uniqueItems: true
+          maxItems: 50
+          items:
+            $ref: '#/components/schemas/Uuid'
+    LetterDuplicateCheck:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5
+          description: Совпадения, точные (`match = exact`) первыми
+          items:
+            $ref: '#/components/schemas/LetterDuplicate'
+    LetterMarkDuplicateIn:
+      type: object
+      additionalProperties: false
+      required: [original_number]
+      properties:
+        original_number:
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Номер оригинала, `ВХ-NNN/ГГ`
+        comment:
+          type: [string, 'null']
+          maxLength: 2000
+        confirm:
+          type: boolean
+          default: false
+          description: По письму уже есть резолюция — подтверждение, что её поручения отменяются
+    LetterDuplicateRef:
+      type: object
+      additionalProperties: false
+      required: [id, number]
+      description: Оригинал письма-дубля (EDS-DUP)
+      properties:
+        id:
+          $ref: '#/components/schemas/Uuid'
+        number:
+          $ref: '#/components/schemas/LetterNumber'
     LetterDuplicateList:
       type: object
       additionalProperties: false
@@ -3222,6 +3387,15 @@ components:
           description: >-
             Откуда письмо (W18A-P2): письмо общего ящика CRM, зарегистрированное из очереди «Входящая почта», — уходит в
             `letter.registered.source`, CRM снимает письмо с очереди и пишет номер ВХ
+        force:
+          type: boolean
+          default: false
+          description: Зарегистрировать, хотя то же письмо уже есть (EDS-DUP); нужна `force_reason`
+        force_reason:
+          type: [string, 'null']
+          minLength: 1
+          maxLength: 1000
+          description: Почему это другое письмо (повторное письмо с тем же номером и т. п.) — в журнал ВХ
     LetterSourceIn:
       type: object
       additionalProperties: false
@@ -3408,6 +3582,11 @@ components:
           type: [string, 'null']
           format: date-time
           description: Когда исполнены все поручения
+        duplicate_of:
+          oneOf:
+            - $ref: '#/components/schemas/LetterDuplicateRef'
+            - type: 'null'
+          description: Оригинал, если письмо закрыто как дубль (`status = duplicate`, EDS-DUP)
 
     LetterTrack:
       type: string
@@ -3678,8 +3857,10 @@ components:
           format: date-time
     InstructionStatus:
       type: string
-      enum: [in_work, executed]
-      description: Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус
+      enum: [in_work, executed, cancelled]
+      description: >-
+        Поручение — «В работе» → «Исполнено»; просрочка — признак `overdue`, не статус. `cancelled` — «Отменено»: письмо
+        закрыто как дубль (EDS-DUP)
     InstructionRole:
       type: string
       enum: [responsible, co_executor]

@@ -29,7 +29,7 @@ from app.models.base import Base
 
 INSTRUCTION_KINDS = ("execute", "reply")
 INSTRUCTION_ROLES = ("responsible", "co_executor")
-INSTRUCTION_STATUSES = ("in_work", "executed")
+INSTRUCTION_STATUSES = ("in_work", "executed", "cancelled")  # cancelled — письмо закрыто как дубль (EDS-DUP)
 EXTENSION_STATUSES = ("pending", "approved", "rejected")
 
 
@@ -41,7 +41,7 @@ class Instruction(Base):
     __table_args__ = (
         CheckConstraint("kind IN ('execute', 'reply')", name="kind"),
         CheckConstraint("role IN ('responsible', 'co_executor')", name="role"),
-        CheckConstraint("status IN ('in_work', 'executed')", name="status"),
+        CheckConstraint("status IN ('in_work', 'executed', 'cancelled')", name="status"),
         UniqueConstraint("letter_id", "crm_user_id", name="uq_instructions_letter_person"),
         Index("ix_instructions_person_status", "crm_user_id", "status"),
         Index("ix_instructions_status_due", "status", "due"),
