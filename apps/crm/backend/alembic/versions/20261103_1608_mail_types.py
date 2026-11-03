@@ -11,10 +11,12 @@
   `Authentication-Results`) и `rule_skipped` — правило «отправитель → тип» ставится только письмам с
   подтверждённым отправителем; `mail_types.letter_kind` — вид документа EDS для предзаполнения формы
   ВХ;
-* итог письма `price` («прайс загружен»); `assist_action` шире — туда пишется код действия по
+* итоги письма `price` («прайс загружен») и `handled` («переданное письмо обработал
+  исполнитель»); `assist_action` шире — туда пишется код действия по
   умолчанию типа.
 
-Откат: итог `price` становится «в архив» с причиной, действие подсказки возвращается к трём
+Откат: итоги `price` и `handled` становятся «в архив» с причиной, действие подсказки
+возвращается к трём
 прежним словам (остальное стирается), таблицы и колонки удаляются.
 
 Revision ID: 97bc02846729
@@ -40,7 +42,8 @@ _COLORS = "'blue', 'green', 'gold', 'red', 'purple', 'cyan', 'default'"
 _ICONS = "'mail', 'team', 'calendar', 'file', 'wallet', 'bank', 'notification', 'stop'"
 _OUTCOME_OLD = "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived')"
 _OUTCOME_NEW = (
-    "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived', 'price')"
+    "outcome IS NULL OR outcome IN "
+    "('registered', 'lead', 'replied', 'archived', 'price', 'handled')"
 )
 _OLD_ACTIONS = "'register', 'lead', 'archive'"
 
@@ -272,6 +275,10 @@ def downgrade() -> None:
     op.execute(
         "UPDATE inbound_mail SET outcome = 'archived', archive_reason = 'Прайс загружен' "
         "WHERE outcome = 'price'"
+    )
+    op.execute(
+        "UPDATE inbound_mail SET outcome = 'archived', archive_reason = 'Обработано сотрудником' "
+        "WHERE outcome = 'handled'"
     )
     op.drop_constraint(op.f("ck_inbound_mail_outcome"), table_name, type_="check")
     op.create_check_constraint(op.f("ck_inbound_mail_outcome"), table_name, _OUTCOME_OLD)

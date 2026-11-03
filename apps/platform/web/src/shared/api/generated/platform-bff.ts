@@ -17422,7 +17422,7 @@ export const getMarkInboundMailPriceUploadedUrl = (id: number) => {
 };
 
 /**
- * CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт · Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел `crm.leads.triage` (полный). Уже обработано — 409 `CONFLICT`.
+ * CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт · Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел Нужно право на каталог (`erp.stock: full`); закрывает исполнитель переданного письма (снабженец) или первая линия (CRM проверяет и право по объединению ролей, и «чьё письмо»). Уже обработано — 409 `CONFLICT`.
  * @summary Входящая почта: «Прайс загружен»
  */
 export const markInboundMailPriceUploaded = async (
@@ -17523,6 +17523,113 @@ export const useMarkInboundMailPriceUploaded = <
   TContext
 > => {
   return useMutation(getMarkInboundMailPriceUploadedMutationOptions(options), queryClient);
+};
+
+export const getCompleteInboundMailUrl = (id: number) => {
+  return `/api/v1/inbound-mail/${id}/complete`;
+};
+
+/**
+ * CRM `POST /inbound-mail/{id}/complete` (MAIL-TYPES): исполнитель переданного письма (счёт — бухгалтер) закрывает его, итог `handled`. Нужен только вход сотрудника; не исполнитель — 403 `FORBIDDEN`, письмо не «в работе» — 409.
+ * @summary Входящая почта: «Готово — убрать из очереди»
+ */
+export const completeInboundMail = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getCompleteInboundMailUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompleteInboundMailMutationKey = () => ["completeInboundMail"] as const;
+
+export const getCompleteInboundMailMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeInboundMail>>,
+    TError,
+    CompleteInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeInboundMail>>,
+  TError,
+  CompleteInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeInboundMail>>,
+    CompleteInboundMailMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return completeInboundMail(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeInboundMail>>
+>;
+
+export type CompleteInboundMailMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | InboundMailConflictResponse
+  | BackendUnavailableResponse
+>;
+export type CompleteInboundMailMutationVariables = { id: number };
+
+/**
+ * @summary Входящая почта: «Готово — убрать из очереди»
+ */
+export const useCompleteInboundMail = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | InboundMailConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeInboundMail>>,
+      TError,
+      CompleteInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeInboundMail>>,
+  TError,
+  CompleteInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteInboundMailMutationOptions(options), queryClient);
 };
 
 export const getMoveInboundMailToSuspiciousUrl = (id: number) => {

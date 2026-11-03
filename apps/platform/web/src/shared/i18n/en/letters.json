@@ -814,7 +814,10 @@
       "priceHandoverNone": "Nobody to hand over to: no employee may upload price lists and see supplier prices. Assign such a role in Settings · Roles.",
       "priceHandoverWhat": "The letter leaves “New” and appears in My tasks of the chosen colleague, who will upload the price list.",
       "priceHandoverConfirm": "Hand over for upload",
-      "priceHandoverDone": "Letter handed over for price upload: {{name}}"
+      "priceHandoverDone": "Letter handed over for price upload: {{name}}",
+      "completeWhat": "The letter leaves the queue with the outcome “Handled”. Nothing else happens.",
+      "completeConfirm": "Done — remove from the queue",
+      "completeDone": "Letter removed from the queue"
     },
     "result": {
       "title": "Outcome",
@@ -899,7 +902,8 @@
       "replied": "Reply sent",
       "archived": "Archived: {{reason}}",
       "unknown": "Handled",
-      "price": "Price uploaded"
+      "price": "Price uploaded",
+      "handled": "Handled"
     },
     "returnToNew": "Return to New",
     "returned": "The letter is back in New",
@@ -967,7 +971,8 @@
         "type": "changed the type",
         "price": "marked the price as uploaded",
         "handover": "handed the letter over",
-        "suspicious": "moved it to Suspicious"
+        "suspicious": "moved it to Suspicious",
+        "complete": "closed the handed-over letter"
       }
     },
     "inWorkSince": "{{name}}, since {{time}}",

@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator
 from app.domain.business_hours import is_business_time
 from app.domain.qualification import DecisionRole, Timeline
 from app.domain.qualification_rules import Fact, QualificationCriteria
+from app.domain.sender_auth import DEFAULT_TRUSTED
 from app.domain.triggers import TriggerCode, TriggerSettings
 from app.domain.urls import is_http_url
 from app.schemas.settings_alerts import ServiceAlertsSettings
@@ -414,6 +415,22 @@ class ImapSettings(StrictModel):
     # письмо сразу «в работе» у этого сотрудника, а не в «Новых». Пометка — текст ≤ 80 знаков.
     personal_rule: bool = True
     personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
+    # Подтверждение отправителя (MAIL-TYPES): `authserv-id` почтовых серверов, чьему заголовку
+    # `Authentication-Results` верим (домен с поддоменами). Пусто — проверить нельзя никого.
+    trusted_auth_servers: list[str] = Field(
+        default_factory=lambda: list(DEFAULT_TRUSTED), max_length=30
+    )
+
+    @field_validator("trusted_auth_servers")
+    @classmethod
+    def _servers(cls, value: list[str]) -> list[str]:
+        clean = [v.strip().lower().strip(".") for v in value if v.strip()]
+        for item in clean:
+            if not re.fullmatch(
+                r"[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+", item
+            ):
+                raise ValueError("authserv-id must be a domain")
+        return list(dict.fromkeys(clean))
 
 
 class OffsiteCheckSettings(StrictModel):

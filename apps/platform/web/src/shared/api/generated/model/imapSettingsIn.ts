@@ -36,6 +36,12 @@ export interface ImapSettingsIn {
    */
   personal_label?: string;
   /**
+   * Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому
+   * @maxItems 30
+   * @nullable
+   */
+  trusted_auth_servers?: string[] | null;
+  /**
    * `null` — оставить прежний
    * @maxLength 255
    * @nullable

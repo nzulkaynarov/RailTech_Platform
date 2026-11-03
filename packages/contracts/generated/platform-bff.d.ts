@@ -2539,9 +2539,29 @@ export interface paths {
     put?: never;
     /**
      * Входящая почта: «Прайс загружен»
-     * @description CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт · Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел `crm.leads.triage` (полный). Уже обработано — 409 `CONFLICT`.
+     * @description CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт · Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел Нужно право на каталог (`erp.stock: full`); закрывает исполнитель переданного письма (снабженец) или первая линия (CRM проверяет и право по объединению ролей, и «чьё письмо»). Уже обработано — 409 `CONFLICT`.
      */
     post: operations["markInboundMailPriceUploaded"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/complete": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Готово — убрать из очереди»
+     * @description CRM `POST /inbound-mail/{id}/complete` (MAIL-TYPES): исполнитель переданного письма (счёт — бухгалтер) закрывает его, итог `handled`. Нужен только вход сотрудника; не исполнитель — 403 `FORBIDDEN`, письмо не «в работе» — 409.
+     */
+    post: operations["completeInboundMail"];
     delete?: never;
     options?: never;
     head?: never;
@@ -11245,6 +11265,8 @@ export interface components {
       personal_rule: boolean;
       /** @description Пометка у такого письма */
       personal_label: string;
+      /** @description Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). По умолчанию — Яндекс 360, Google, Microsoft 365, Mail.ru, Zoho */
+      trusted_auth_servers: string[];
       username: string;
       password_configured: boolean;
       password_last4: string | null;
@@ -11337,6 +11359,8 @@ export interface components {
       personal_rule: boolean;
       /** @default Адресовано лично */
       personal_label: string;
+      /** @description Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому */
+      trusted_auth_servers?: string[] | null;
       /** @description `null` — оставить прежний */
       username?: string | null;
       /** @description Пароль приложения; `null` — оставить прежний */
@@ -11363,10 +11387,10 @@ export interface components {
      */
     InboundMailStatus: "new" | "in_work" | "registering" | "done" | "spam";
     /**
-     * @description Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен
+     * @description Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен, переданное письмо обработал исполнитель
      * @enum {string}
      */
-    InboundMailOutcome: "registered" | "lead" | "replied" | "archived" | "price";
+    InboundMailOutcome: "registered" | "lead" | "replied" | "archived" | "price" | "handled";
     /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
     InboundMailAssist: {
       /**
@@ -18347,6 +18371,35 @@ export interface operations {
     };
   };
   markInboundMailPriceUploaded: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо разобрано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  completeInboundMail: {
     parameters: {
       query?: never;
       header: {

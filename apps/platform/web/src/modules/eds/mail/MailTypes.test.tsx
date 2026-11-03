@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { ROLE_ID } from "../../../mocks/fixtures/roles";
@@ -13,6 +13,8 @@ beforeEach(() => {
 });
 
 const REGISTRAR = "registrar@demo.example";
+const SUPPLY = "supply@demo.example";
+const ACCOUNTANT = "accountant@demo.example";
 // Администратор, которому в «Оргструктуре» выдали ещё и роль первой линии почты, — создаёт правило из карточки.
 const ADMIN = "admin@demo.example";
 /** Сотрудник «Делопроизводитель» с ещё одной ролью — как после выдачи роли в Оргструктуре. */
@@ -64,11 +66,11 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(screen.queryByRole("button", { name: "Загрузить прайс" })).toBeNull();
     fireEvent.click(primary);
     // единственный кандидат — снабженец (право на каталог и цены поставщиков) — подставлен сам
-    expect(await screen.findByText("Снабженец Демо")).toBeVisible();
+    expect(await screen.findByText("Демо Снабженцев")).toBeVisible();
     expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку" }));
     expect(
-      await screen.findByText("Письмо передано на загрузку прайса: Снабженец Демо"),
+      await screen.findByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
     ).toBeVisible();
     const list = await listOf("Письма, ждущие разбора");
     expect(within(list).queryByText("Коммерческое предложение на скрепления КБ-65")).toBeNull();
@@ -105,6 +107,61 @@ describe("Типы входящих писем: тег, фильтр, основ
     );
   });
 
+  it("снабженец (только SUPPLY) закрывает переданное ему письмо: «Прайс загружен — убрать из очереди», письмо уходит из его очереди", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail/28");
+    await heading("Коммерческое предложение на скрепления КБ-65");
+    fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку прайса" }));
+    expect(await screen.findByText("Демо Снабженцев")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку" }));
+    expect(
+      await screen.findByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
+    ).toBeVisible();
+    cleanup();
+
+    // то же письмо — у снабженца, у которого нет первой линии: он его видит и закрывает сам
+    signIn(SUPPLY);
+    renderAt("/eds/my-mail/28");
+    await heading("Коммерческое предложение на скрепления КБ-65");
+    expect(screen.getByRole("link", { name: "Открыть загрузку прайса" })).toHaveAttribute(
+      "href",
+      "/erp/catalog?part=import",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Прайс загружен — убрать из очереди" }));
+    expect(await screen.findByText("Письмо разобрано: прайс загружен")).toBeVisible();
+    fireEvent.click(await screen.findByRole("tab", { name: /Все мои/ }));
+    const all = await listOf("Все письма");
+    expect(
+      (await within(all).findByText("Коммерческое предложение на скрепления КБ-65")).closest("li"),
+    ).toHaveTextContent("Прайс загружен");
+  });
+
+  it("бухгалтер (без первой линии) закрывает переданный ему счёт: «Готово — убрать из очереди»", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail/18");
+    await heading("Запрос КП на стрелочные переводы");
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
+    fireEvent.click(await screen.findByTitle("Счёт поставщика"));
+    fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
+    expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
+    const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
+    fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
+    expect(await screen.findByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
+    cleanup();
+
+    signIn(ACCOUNTANT);
+    renderAt("/eds/my-mail/18");
+    await heading("Запрос КП на стрелочные переводы");
+    expect(screen.queryByRole("link", { name: "Открыть загрузку прайса" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Готово — убрать из очереди" }));
+    expect(await screen.findByText("Письмо убрано из очереди")).toBeVisible();
+    fireEvent.click(await screen.findByRole("tab", { name: /Все мои/ }));
+    const all = await listOf("Все письма");
+    expect(
+      (await within(all).findByText("Запрос КП на стрелочные переводы")).closest("li"),
+    ).toHaveTextContent("Обработано");
+  });
+
   it("человек меняет тип одним щелчком: основная кнопка меняется, в журнале — запись", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/28");
@@ -127,11 +184,11 @@ describe("Типы входящих писем: тег, фильтр, основ
     fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
     fireEvent.click(await screen.findByTitle("Счёт поставщика"));
     fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
-    expect(await screen.findByText("Бухгалтер Демо")).toBeVisible();
+    expect(await screen.findByText("Демо Бухгалтеров")).toBeVisible();
     expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     const [, confirm] = screen.getAllByRole("button", { name: "Передать бухгалтеру" });
     fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
-    expect(await screen.findByText("Письмо передано: Бухгалтер Демо")).toBeVisible();
+    expect(await screen.findByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
     const list = await listOf("Письма, ждущие разбора");
     expect(within(list).queryByText("Запрос КП на стрелочные переводы")).toBeNull();
   });

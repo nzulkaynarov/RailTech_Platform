@@ -4765,7 +4765,33 @@ paths:
       description: >-
         CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт ·
         Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел
-        `crm.leads.triage` (полный). Уже обработано — 409 `CONFLICT`.
+        Нужно право на каталог (`erp.stock: full`); закрывает исполнитель переданного письма (снабженец) или первая линия (CRM проверяет
+        и право по объединению ролей, и «чьё письмо»). Уже обработано — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '204':
+          description: Письмо разобрано
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/complete:
+    post:
+      tags: [inbound-mail]
+      operationId: completeInboundMail
+      summary: 'Входящая почта: «Готово — убрать из очереди»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/complete` (MAIL-TYPES): исполнитель переданного письма (счёт — бухгалтер) закрывает его,
+        итог `handled`. Нужен только вход сотрудника; не исполнитель — 403 `FORBIDDEN`, письмо не «в работе» — 409.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/InboundMailId'
@@ -19840,7 +19866,7 @@ components:
       description: 'Приём почты общего ящика (W18A-P2). Пароль приложения не возвращается — только «задан» и `last4`.'
       type: object
       additionalProperties: false
-      required: [configured, host, port, security, mailbox, assist_enabled, personal_rule, personal_label, username,
+      required: [configured, host, port, security, mailbox, assist_enabled, personal_rule, personal_label, trusted_auth_servers, username,
         password_configured, password_last4,
         password_updated_at, secrets_enabled, last_poll_at, last_ok_at, last_error_kind, last_error, folders, history]
       properties:
@@ -19852,6 +19878,13 @@ components:
         assist_enabled: {type: boolean, description: Помощник канцелярии включён}
         personal_rule: {type: boolean, description: '«Адресовано лично»: сотрудник в «Кому», общий ящик в копии — письмо сразу ему'}
         personal_label: {type: string, minLength: 1, maxLength: 80, description: 'Пометка у такого письма'}
+        trusted_auth_servers:
+          type: array
+          items: {type: string}
+          description: >-
+            Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results`
+            подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). По умолчанию — Яндекс 360, Google, Microsoft 365,
+            Mail.ru, Zoho
         username: {type: string}
         password_configured: {type: boolean}
         password_last4: {type: [string, 'null']}
@@ -19944,6 +19977,11 @@ components:
         assist_enabled: {type: boolean, default: true}
         personal_rule: {type: boolean, default: true}
         personal_label: {type: string, minLength: 1, maxLength: 80, default: Адресовано лично}
+        trusted_auth_servers:
+          type: [array, 'null']
+          maxItems: 30
+          items: {type: string}
+          description: 'Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому'
         username: {type: [string, 'null'], maxLength: 255, description: '`null` — оставить прежний'}
         imap_password: {type: [string, 'null'], minLength: 1, maxLength: 512, description: 'Пароль приложения; `null` — оставить прежний'}
         password: {type: string, minLength: 1, maxLength: 256, description: Пароль администратора}
@@ -19972,8 +20010,8 @@ components:
         done — Разобрано (итог — `result`); spam — Подозрительные
     InboundMailOutcome:
       type: string
-      enum: [registered, lead, replied, archived, price]
-      description: 'Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен'
+      enum: [registered, lead, replied, archived, price, handled]
+      description: 'Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен, переданное письмо обработал исполнитель'
     InboundMailAssist:
       type: object
       additionalProperties: false

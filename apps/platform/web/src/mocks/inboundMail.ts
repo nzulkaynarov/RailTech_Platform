@@ -33,13 +33,19 @@ interface Viewer {
   id: string;
   name: string;
   full: boolean;
+  /** Право загружать прайсы (`erp.stock: full` + цены поставщиков) — по объединению ВСЕХ ролей человека. */
+  stock: boolean;
 }
 
 function viewer(): Viewer {
   const session = readSession();
   const roles = session ? sessionRoles(session) : undefined;
   const full = roles?.view.some((r) => r.access["crm.leads.triage"] === "full") ?? false;
-  return { id: roles?.user.id ?? "u-demo-registrar", name: roles?.user.name ?? "Я", full };
+  const stock = roles
+    ? roles.all.some((r) => r.access["erp.stock"] === "full") &&
+      roles.all.some((r) => r.restricted_fields.includes("supplier_prices"))
+    : false;
+  return { id: roles?.user.id ?? "u-demo-registrar", name: roles?.user.name ?? "Я", full, stock };
 }
 
 function person(v: Viewer): InboundMailPerson {
@@ -170,8 +176,8 @@ function imapOff(): boolean {
 
 /** Кто подтверждает оплату (роль с «Платежи: полный») — адресаты «Передать бухгалтеру». */
 const HANDOVER_TARGETS: Record<"payments" | "price", InboundMailPerson[]> = {
-  payments: [{ id: 7002, name: "Бухгалтер Демо" }],
-  price: [{ id: 7003, name: "Снабженец Демо" }],
+  payments: [{ id: "u-demo-accountant" as unknown as number, name: "Демо Бухгалтеров" }],
+  price: [{ id: "u-demo-supply" as unknown as number, name: "Демо Снабженцев" }],
 };
 
 const CARD_ONLY = new Set([
@@ -285,9 +291,9 @@ function claim(id: number, v: Viewer): Claim {
 function finish(
   id: number,
   v: Viewer,
-  result: { outcome: "registered" | "lead" | "replied" | "archived" | "price" } & Partial<
-    NonNullable<StoredMail["result"]>
-  >,
+  result: {
+    outcome: "registered" | "lead" | "replied" | "archived" | "price" | "handled";
+  } & Partial<NonNullable<StoredMail["result"]>>,
 ): void {
   update(id, (mail) => ({
     ...mail,
@@ -462,6 +468,15 @@ let imap: ImapConnector = {
   last_error: null,
   folders: [{ name: "INBOX", label: "INBOX", spam: false }],
   history: null,
+  trusted_auth_servers: [
+    "yandex.ru",
+    "yandex.net",
+    "yandex.com",
+    "google.com",
+    "protection.outlook.com",
+    "mail.ru",
+    "zoho.com",
+  ],
 };
 
 /** Ход загрузки истории: каждое чтение настроек — ещё одна пачка, как фоновая задача. */
@@ -591,7 +606,8 @@ export const inboundMailHandlers = [
       (current.status === "done" &&
         (current.result?.outcome === "archived" ||
           current.result?.outcome === "replied" ||
-          current.result?.outcome === "price"));
+          current.result?.outcome === "price" ||
+          current.result?.outcome === "handled"));
     if (!returnable)
       return failure(409, "CONFLICT", "Это письмо нельзя вернуть в «Новые».", {
         reason: "mail_not_returnable",
@@ -661,11 +677,25 @@ export const inboundMailHandlers = [
   http.post("*/inbound-mail/:id/price", ({ params }) => {
     const v = viewer();
     const id = Number(params.id);
-    if (!v.full) return forbidden();
+    const current = read().find((m) => m.id === id);
+    if (!current) return notFound();
+    // Закрыть может тот, у кого есть право на прайсы, и либо ему передали письмо, либо он первая линия.
+    if (!v.stock || (!v.full && !isMine(current, v))) return forbidden();
     const got = claim(id, v);
     if ("response" in got) return got.response;
     update(id, (mail) => logged(mail, v, "price"));
     finish(id, v, { outcome: "price" });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.post("*/inbound-mail/:id/complete", ({ params }) => {
+    const v = viewer();
+    const id = Number(params.id);
+    const current = read().find((m) => m.id === id);
+    if (!current) return notFound();
+    if (!isMine(current, v)) return forbidden();
+    if (current.status !== "in_work") return conflict();
+    update(id, (mail) => logged(mail, v, "complete"));
+    finish(id, v, { outcome: "handled" });
     return new HttpResponse(null, { status: 204 });
   }),
   http.post("*/inbound-mail/:id/suspicious", ({ params }) => {
@@ -787,6 +817,7 @@ export const inboundMailHandlers = [
       username: body.username ?? imap.username,
       password_last4: body.imap_password ? body.imap_password.slice(-4) : imap.password_last4,
       configured: Boolean(body.host),
+      trusted_auth_servers: body.trusted_auth_servers ?? imap.trusted_auth_servers,
     };
     return HttpResponse.json(imap);
   }),

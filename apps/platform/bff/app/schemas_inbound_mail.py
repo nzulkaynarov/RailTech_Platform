@@ -11,7 +11,7 @@ from app.clients import crm_models as crm
 from app.feeds.numbers import lead_number, letter_ref
 
 MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
-MailOutcome = Literal["registered", "lead", "replied", "archived", "price"]
+MailOutcome = Literal["registered", "lead", "replied", "archived", "price", "handled"]
 MailView = Literal["new", "mine", "in_work", "done", "spam", "all"]
 
 
@@ -75,6 +75,7 @@ class ImapConnector(_Out):
     assist_enabled: bool
     personal_rule: bool
     personal_label: str
+    trusted_auth_servers: list[str]
     username: str
     password_configured: bool
     password_last4: str | None
@@ -99,6 +100,7 @@ class ImapSettingsIn(BaseModel):
     assist_enabled: bool = True
     personal_rule: bool = True
     personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
+    trusted_auth_servers: list[str] | None = Field(default=None, max_length=30)
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)

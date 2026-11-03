@@ -11,7 +11,7 @@ import { Assist } from "./MailAssist";
 import { MailOutcome } from "./MailOutcome";
 import { SpamActions } from "./SpamActions";
 import { MailTypeBlock } from "./MailTypeBlock";
-import { Working } from "./MailWork";
+import { OwnWork, Working } from "./MailWork";
 import { canReturn, useRefreshMail } from "./mailModel";
 import { ReleaseButton } from "./ReleaseButton";
 import { useMailRun } from "./useMailRun";
@@ -147,7 +147,10 @@ export function MailActions({
     return (
       <Panel title={t("mail.actions.title")}>
         {mine && mail.status === "in_work" ? (
-          <ReleaseButton mail={mail} label={t("mail.releaseOwn")} reload={changed} />
+          <>
+            <OwnWork mail={mail} reload={changed} />
+            <ReleaseButton mail={mail} label={t("mail.releaseOwn")} reload={changed} />
+          </>
         ) : (
           <p className="pf-hint pf-mail-what">{t("mail.ownHint")}</p>
         )}

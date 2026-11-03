@@ -23,6 +23,7 @@ from app.domain.inbound_folders import (
     resolve_folders,
     suggest_spam,
 )
+from app.domain.sender_auth import DEFAULT_TRUSTED
 from app.domain.smtp import host_problem, normalize_host
 from app.integrations.imap import ImapClient, ImapProbeError, ImapResolution, resolve_imap
 from app.models.inbound_mail import InboundMailbox
@@ -95,6 +96,7 @@ class ImapConnectorService:
             assist_enabled=imap.assist_enabled,
             personal_rule=imap.personal_rule,
             personal_label=imap.personal_label,
+            trusted_auth_servers=list(imap.trusted_auth_servers),
             username=resolved.username,
             password_configured=bool(resolved.password),
             password_last4=secret.last4 if secret else None,
@@ -122,6 +124,7 @@ class ImapConnectorService:
         assist_enabled: bool,
         personal_rule: bool = True,
         personal_label: str = "Адресовано лично",
+        trusted_auth_servers: list[str] | None = None,
         username: str | None = None,
         password: str | None,
         admin_password: str,
@@ -154,6 +157,11 @@ class ImapConnectorService:
             "assist_enabled": assist_enabled,
             "personal_rule": personal_rule,
             "personal_label": personal_label.strip() or "Адресовано лично",
+            "trusted_auth_servers": (
+                trusted_auth_servers
+                if trusted_auth_servers is not None
+                else payload["imap"].get("trusted_auth_servers", list(DEFAULT_TRUSTED))
+            ),
         }
         await self._settings.update(SETTINGS_KEY, payload, who.user_id)
         async with self._sessions() as session, session.begin():

@@ -12,7 +12,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 
-from app.api.inbound_mail import CRM, Clerk, MailId, _json
+from app.api.inbound_mail import CRM, Clerk, MailId, Member, _json
 from app.clients import crm_models as crm
 from app.deps import Authed, require, require_any
 from app.schemas_inbound_mail import (
@@ -26,6 +26,7 @@ from app.schemas_inbound_mail import (
 
 router = APIRouter(tags=["inbound-mail"])
 
+StockWriter = Annotated[Authed, Depends(require("erp.stock", "full"))]
 AdminWrite = Annotated[Authed, Depends(require("admin", "full"))]
 RulesReader = Annotated[
     Authed, Depends(require_any(("crm.leads.triage", "read"), ("admin", "read")))
@@ -58,9 +59,18 @@ async def set_type(body: InboundMailTypeIn, authed: Clerk, id: MailId) -> Respon
 @router.post(
     "/inbound-mail/{id}/price", status_code=204, operation_id="markInboundMailPriceUploaded"
 )
-async def price_uploaded(authed: Clerk, id: MailId) -> Response:
-    """«Прайс загружен»: письмо «Разобрано» с итогом `price`."""
+async def price_uploaded(authed: StockWriter, id: MailId) -> Response:
+    """«Прайс загружен»: письмо «Разобрано» с итогом `price`. Нужно право на каталог
+    (`erp.stock: full`); закрывает исполнитель переданного письма или первая линия — решает CRM."""
     await _json(authed, "POST", f"{CRM}/{id}/price")
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{id}/complete", status_code=204, operation_id="completeInboundMail")
+async def complete(authed: Member, id: MailId) -> Response:
+    """«Готово — убрать из очереди»: исполнитель переданного письма (счёт — бухгалтер) закрывает
+    его (итог `handled`); не исполнитель — 403 (решает CRM)."""
+    await _json(authed, "POST", f"{CRM}/{id}/complete")
     return Response(status_code=204)
 
 

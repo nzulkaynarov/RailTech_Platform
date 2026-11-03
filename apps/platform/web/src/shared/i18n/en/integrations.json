@@ -406,7 +406,10 @@
       "personalLabelHint": "Shown in the list and the card, up to 80 characters",
       "personalState": "Personal letters",
       "personalOn": "Straight to the person — label “{{label}}”",
-      "personalOff": "Off — everything goes to New"
+      "personalOff": "Off — everything goes to New",
+      "trusted": "Trusted mail servers",
+      "trustedHint": "One per line (domains such as yandex.ru). Only such a server can mark the sender as verified: a forged header in the letter does not count.",
+      "trustedNone": "None — sender rules are not applied"
     }
   },
   "services": {

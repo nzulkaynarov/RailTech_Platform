@@ -361,6 +361,7 @@ async def save_imap(body: ImapSettingsIn, authed: AdminWrite) -> ImapConnector:
         "assist_enabled": body.assist_enabled,
         "personal_rule": body.personal_rule,
         "personal_label": body.personal_label,
+        "trusted_auth_servers": body.trusted_auth_servers,
         "username": body.username,
         "imap_password": body.imap_password.get_secret_value() if body.imap_password else None,
         "password": body.password.get_secret_value(),

@@ -1,20 +1,66 @@
 """Подтверждён ли отправитель письма (MAIL-TYPES): разбор `Authentication-Results` (RFC 8601).
 
-Заголовок ставит почтовый сервер-получатель (MX провайдера: Яндекс 360, Google), самое верхнее
-значение — его. По нему, а не по `From`, можно доверять правилу «домен → тип»: `From` подделывается
-как угодно, SPF/DKIM/DMARC — нет. Домен подтверждён, если `dmarc=pass` (DMARC уже требует
-выравнивания `From`) или `spf=pass` и `dkim=pass` с выравниванием домена `From` хотя бы по одной
-подписи. Заголовка нет вовсе — проверить нельзя (`unknown`).
-
+Заголовок ставит почтовый сервер-получатель (MX провайдера: Яндекс 360, Google …); он кладёт его
+над всеми заголовками письма. Доверять можно только заголовку, у которого `authserv-id` — наш
+сервер (RFC 8601 §5, §7.1): отправитель может написать в письме любой `Authentication-Results` сам.
+Берём самый верхний заголовок и смотрим на его id: он в списке доверенных (настройка «Почта»,
+совпадение по домену с границей по точке) — разбираем; чужой или без id — проверить нельзя
+(`unknown`). Домен подтверждён, если `dmarc=pass` (DMARC уже требует выравнивания `From`) или
+`spf=pass` и `dkim=pass` с выравниванием домена `From` хотя бы по одной подписи.
 """
 
 import re
+from collections.abc import Iterable
 from typing import Final, Literal
 
 Verdict = Literal["verified", "unverified", "unknown"]
 
+#: Доверенные `authserv-id` по умолчанию: Яндекс 360 (`mx.yandex.ru`, `mxback…mail.yandex.net`),
+#: Google (`mx.google.com`), Microsoft 365 (`….protection.outlook.com`), Mail.ru, Zoho.
+DEFAULT_TRUSTED: Final[tuple[str, ...]] = (
+    "yandex.ru",
+    "yandex.net",
+    "yandex.com",
+    "google.com",
+    "protection.outlook.com",
+    "mail.ru",
+    "zoho.com",
+)
+
 _PAIR: Final = re.compile(r"([a-z][a-z0-9_.\-]*)=((?:\"[^\"]*\")|[^\s;]+)", re.IGNORECASE)
-_COMMENT: Final = re.compile(r"\([^)]*\)")
+
+
+def _strip_comments(text: str) -> str:
+    """Убрать комментарии RFC 5322 `( … )`, в том числе вложенные; скобки в кавычках не трогать."""
+    out: list[str] = []
+    depth = 0
+    quoted = False
+    for char in text:
+        if char == '"' and depth == 0:
+            quoted = not quoted
+        if not quoted and char == "(":
+            depth += 1
+        elif not quoted and char == ")" and depth > 0:
+            depth -= 1
+        elif depth == 0:
+            out.append(char)
+    return "".join(out)
+
+
+def server_id(header: str) -> str:
+    """`authserv-id` заголовка: первое слово до `;` (дальше может идти версия), нижний регистр."""
+    head = _strip_comments(header).split(";", 1)[0].split()
+    return head[0].strip('"').strip(".").lower() if head else ""
+
+
+def is_trusted(identifier: str, trusted: Iterable[str]) -> bool:
+    """`authserv-id` совпадает с доверенным доменом: он сам или его поддомен (граница по точке)."""
+    ident = identifier.lower().strip(".")
+    return bool(ident) and any(
+        ident == t or ident.endswith("." + t)
+        for t in (x.strip().lower().strip(".") for x in trusted)
+        if t
+    )
 
 
 def _domain(value: str) -> str:
@@ -34,7 +80,7 @@ def _results(header: str) -> list[dict[str, str]]:
     """Части заголовка после `authserv-id;`: метод → результат и свойства (`header.from`,
     `header.d` …).
     """
-    parts = _COMMENT.sub(" ", header).split(";")[1:]
+    parts = _strip_comments(header).split(";")[1:]
     out: list[dict[str, str]] = []
     for part in parts:
         pairs = [(k.lower(), v.strip('"')) for k, v in _PAIR.findall(part)]
@@ -45,9 +91,15 @@ def _results(header: str) -> list[dict[str, str]]:
     return out
 
 
-def verdict(headers: list[str], from_email: str) -> Verdict:
-    """Вердикт по значениям `Authentication-Results` (сверху вниз, как в письме) и адресу `From`."""
+def verdict(
+    headers: list[str], from_email: str, trusted: Iterable[str] = DEFAULT_TRUSTED
+) -> Verdict:
+    """Вердикт по значениям `Authentication-Results` (сверху вниз, как в письме) и адресу `From`.
+
+    Учитывается только самый верхний заголовок и только если его `authserv-id` доверенный."""
     if not headers or "@" not in from_email:
+        return "unknown"
+    if not is_trusted(server_id(headers[0]), trusted):
         return "unknown"
     found = _results(headers[0])
     if not found:
@@ -63,7 +115,8 @@ def verdict(headers: list[str], from_email: str) -> Verdict:
     spf_pass = [r for r in of("spf") if r["result"] == "pass"]
     dkim_pass = [r for r in of("dkim") if r["result"] == "pass"]
     spf_aligned = any(
-        aligned(r.get("smtp.mailfrom", r.get("smtp.helo", "")), sender) for r in spf_pass
+        aligned(r.get("smtp.mailfrom", r.get("smtp.mail", r.get("smtp.helo", ""))), sender)
+        for r in spf_pass
     )
     dkim_aligned = any(aligned(r.get("header.d", r.get("header.i", "")), sender) for r in dkim_pass)
     if spf_pass and dkim_pass and (spf_aligned or dkim_aligned):

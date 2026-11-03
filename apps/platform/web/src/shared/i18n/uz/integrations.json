@@ -406,7 +406,10 @@
       "personalLabelHint": "Ro‘yxat va kartochkada ko‘rinadi, 80 belgigacha",
       "personalState": "«Shaxsan» xatlar",
       "personalOn": "Darhol xodimga — «{{label}}» belgisi",
-      "personalOff": "O‘chirilgan — hammasi «Yangi»ga"
+      "personalOff": "O‘chirilgan — hammasi «Yangi»ga",
+      "trusted": "Ishonchli pochta serverlari",
+      "trustedHint": "Har qatorda bittadan (masalan, yandex.ru). Jo‘natuvchini tasdiqlangan deb faqat shunday server belgilaydi: xatdagi soxta sarlavha hisobga olinmaydi.",
+      "trustedNone": "Yo‘q — jo‘natuvchi qoidalari qo‘llanmaydi"
     }
   },
   "services": {

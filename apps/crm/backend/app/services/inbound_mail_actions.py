@@ -12,7 +12,7 @@ from datetime import UTC, datetime
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.errors import ConflictError, Reason, ValidationFailedError
+from app.domain.errors import ConflictError, ForbiddenError, Reason, ValidationFailedError
 from app.repositories import inbound_mail_views as views
 from app.repositories import mail_types as types_repo
 from app.schemas import mail_types as dto
@@ -57,11 +57,21 @@ class InboundMailActions:
             )
         logger.info("inbound_mail_type_set", mail_id=mail_id, type=type_code)
 
-    async def supplier_price(self, who: Principal, mail_id: int) -> None:
-        """«Прайс загружен»: человек загрузил прайс или КП в каталоге (CAT-1) и закрывает письмо."""
+    async def supplier_price(self, who: Principal, mail_id: int, *, first_line: bool) -> None:
+        """«Прайс загружен»: человек загрузил прайс или КП в каталоге (CAT-1) и закрывает письмо.
+
+        Закрыть может тот, у кого по объединению ролей есть право загружать прайсы
+        (`erp.stock: full`
+        и видимость цен поставщиков) и кто либо ведёт письмо (ему передали на загрузку), либо первая
+        линия (`mail_inbox:work`). Делопроизводитель без права на каталог не закроет: ничего не
+        загружено."""
         now = datetime.now(UTC)
         async with self._sessions() as session, session.begin():
+            if not await types_repo.has_capability(session, who.platform_role_ids, "price"):
+                raise ForbiddenError("no right to load price lists", resource="erp.stock")
             row = await work.lock(session, mail_id)
+            if row.assignee_id != who.user_id and not first_line:
+                raise ForbiddenError("mail is not yours", resource="mail_inbox")
             await work.claim(session, row, who, now)
             work.finish(row, "price", who, now)
             await record_decision(session, row, "supplier_price", who.actor)
@@ -69,6 +79,23 @@ class InboundMailActions:
                 session, who.actor, "inbound_mail.price", "inbound_mail", row.id, after={}
             )
         logger.info("inbound_mail_price_done", mail_id=mail_id)
+
+    async def complete(self, who: Principal, mail_id: int) -> None:
+        """«Готово — убрать из очереди»: тот, кому письмо передали (счёт — бухгалтеру), закрывает
+
+        Только исполнитель письма; первой линии для этого есть ответ, архив и остальные действия."""
+        now = datetime.now(UTC)
+        async with self._sessions() as session, session.begin():
+            row = await work.lock(session, mail_id)
+            if row.assignee_id != who.user_id:
+                raise ForbiddenError("mail is not yours", resource="mail_inbox")
+            if row.status != "in_work":
+                raise work.handled(row)
+            work.finish(row, "handled", who, now)
+            await audit.record(
+                session, who.actor, "inbound_mail.complete", "inbound_mail", row.id, after={}
+            )
+        logger.info("inbound_mail_completed", mail_id=mail_id)
 
     async def handover_targets(self, purpose: str = "payments") -> dto.InboundMailHandoverTargets:
         async with self._sessions() as session:

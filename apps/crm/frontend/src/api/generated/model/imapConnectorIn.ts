@@ -37,5 +37,7 @@ export interface ImapConnectorIn {
    */
   port?: number;
   security?: ImapConnectorInSecurity;
+  /** Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому */
+  trusted_auth_servers?: string[] | null;
   username?: string | null;
 }

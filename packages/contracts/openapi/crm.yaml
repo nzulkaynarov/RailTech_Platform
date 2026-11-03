@@ -3993,6 +3993,15 @@ components:
           - starttls
           title: Security
           type: string
+        trusted_auth_servers:
+          anyOf:
+          - items:
+              type: string
+            maxItems: 30
+            type: array
+          - type: 'null'
+          description: Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому
+          title: Trusted Auth Servers
         username:
           anyOf:
           - maxLength: 255
@@ -4252,6 +4261,13 @@ components:
           - starttls
           title: Security
           type: string
+        trusted_auth_servers:
+          description: 'Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results`
+            подтверждает отправителя для правил «отправитель → тип»'
+          items:
+            type: string
+          title: Trusted Auth Servers
+          type: array
         username:
           title: Username
           type: string
@@ -5096,10 +5112,12 @@ components:
             - replied
             - archived
             - price
+            - handled
             type: string
           - type: 'null'
           description: registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной,
-            price — прайс или КП поставщика загружен; `null` у писем, разобранных до W18A-P2-3
+            price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных
+            до W18A-P2-3
           title: Outcome
         reason:
           anyOf:
@@ -12787,6 +12805,34 @@ paths:
       summary: Get Inbound Mail Attachment
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/complete:
+    post:
+      description: '«Готово — убрать из очереди»: исполнитель переданного письма (счёт — бухгалтер) закрывает:
+
+        итог `handled`. Не исполнитель — 403; письмо не «в работе» — 409 `mail_handled`.'
+      operationId: complete_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Complete Inbound Mail
+      tags:
+      - mail-types
   /api/v1/inbound-mail/{mail_id}/discard:
     post:
       description: '«Убрать» подозрительное письмо: в архив с причиной «Спам». Не `spam` — 409.'
@@ -12909,7 +12955,14 @@ paths:
       - inbound-mail
   /api/v1/inbound-mail/{mail_id}/price:
     post:
-      description: '«Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге).'
+      description: '«Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге).
+
+
+        Закрывает тот, у кого по объединению ролей есть право загружать прайсы (`erp.stock: full` и
+
+        цены поставщиков), и либо ведёт письмо (его передали на загрузку), либо первая линия
+
+        (`mail_inbox:work`). Иначе — 403.'
       operationId: supplier_price_inbound_mail
       parameters:
       - in: path

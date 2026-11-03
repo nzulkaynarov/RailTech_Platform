@@ -13,6 +13,7 @@ import type {
 } from "../../../shared/api/generated/model";
 import {
   archiveInboundMail,
+  completeInboundMail,
   createLeadFromInboundMail,
   handoverInboundMail,
   markInboundMailPriceUploaded,
@@ -36,7 +37,7 @@ interface StepProps {
   mail: InboundMail;
   run: MailRun;
   pending: boolean;
-  cancel: () => void;
+  cancel?: (() => void) | undefined;
   done: () => void;
 }
 
@@ -50,7 +51,7 @@ function Buttons({
   confirm: string;
   loading: boolean;
   disabled?: boolean;
-  cancel: () => void;
+  cancel?: (() => void) | undefined;
   onClick: () => void;
 }) {
   const { t } = useTranslation("letters");
@@ -59,7 +60,7 @@ function Buttons({
       <Button type="primary" loading={loading} disabled={disabled} onClick={onClick}>
         {confirm}
       </Button>
-      <Button onClick={cancel}>{t("mail.actions.cancel")}</Button>
+      {cancel ? <Button onClick={cancel}>{t("mail.actions.cancel")}</Button> : null}
     </div>
   );
 }
@@ -346,6 +347,46 @@ export function Working({
         />
       ) : null}
       {mine ? <ReleaseButton mail={mail} label={t("mail.release")} reload={reload} /> : null}
+      {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
+    </div>
+  );
+}
+
+/**
+ * Письмо, которое передали этому сотруднику (сотрудник без первой линии, ветка «свои письма»): закрыть его, когда работа
+ * сделана. Снабженцу с письмом-прайсом — «Прайс загружен — убрать из очереди» (со ссылкой на загрузку), остальным
+ * (бухгалтеру со счётом) — «Готово — убрать из очереди». «Вернуть делопроизводителю» — отдельно.
+ */
+export function OwnWork({ mail, reload }: { mail: InboundMail; reload: () => void }) {
+  const { t } = useTranslation("letters");
+  const navigate = useNavigate();
+  const { me } = useAuth();
+  const { run, pending, error } = useMailRun(reload);
+  const priceMail = mail.type?.default_action === "supplier_price" && canEdit(me, "erp.stock");
+  const done = () => void navigate(listPath(true));
+  return (
+    <div className="pf-mail-actions">
+      {priceMail ? (
+        <PriceStep mail={mail} run={run} pending={pending} done={done} />
+      ) : (
+        <>
+          <Consequence title={t("mail.actions.what")} items={[t("mail.actions.completeWhat")]} />
+          <div>
+            <Button
+              type="primary"
+              loading={pending}
+              onClick={() =>
+                void run(async () => {
+                  await completeInboundMail(mail.id);
+                  return t("mail.actions.completeDone");
+                }, done)
+              }
+            >
+              {t("mail.actions.completeConfirm")}
+            </Button>
+          </div>
+        </>
+      )}
       {error ? <Alert type="error" showIcon role="alert" message={error} /> : null}
     </div>
   );

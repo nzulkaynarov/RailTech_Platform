@@ -180,6 +180,7 @@ export const labelsRu = {
     "inbound_mail.release": "Вернул письмо общего ящика в «Новые»",
     "inbound_mail.type": "Сменил тип письма общего ящика",
     "inbound_mail.price": "Отметил: прайс из письма загружен",
+    "inbound_mail.complete": "Закрыл переданное письмо",
     "inbound_mail.handover": "Передал письмо общего ящика сотруднику",
     "inbound_mail.suspicious": "Отправил письмо общего ящика в «Подозрительные»",
     "dictionary.created": "Добавил значение справочника",

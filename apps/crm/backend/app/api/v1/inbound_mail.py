@@ -245,6 +245,7 @@ async def put_imap_connector(
         assist_enabled=body.assist_enabled,
         personal_rule=body.personal_rule,
         personal_label=body.personal_label,
+        trusted_auth_servers=body.trusted_auth_servers,
         username=body.username,
         password=secret,
         admin_password=body.password.get_secret_value(),

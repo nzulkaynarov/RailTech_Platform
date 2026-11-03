@@ -177,10 +177,30 @@ async def set_inbound_mail_type(
 
 @router.post("/inbound-mail/{mail_id}/price", status_code=status.HTTP_204_NO_CONTENT)
 async def supplier_price_inbound_mail(
-    mail_id: MailId, who: Worker, container: ContainerDep
+    mail_id: MailId,
+    principal: PrincipalDep,
+    rbac: Annotated[Rbac, Depends(get_rbac)],
+    container: ContainerDep,
 ) -> Response:
-    """«Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге)."""
-    await container.inbound_mail_actions.supplier_price(who, mail_id)
+    """«Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге).
+
+    Закрывает тот, у кого по объединению ролей есть право загружать прайсы (`erp.stock: full` и
+    цены поставщиков), и либо ведёт письмо (его передали на загрузку), либо первая линия
+    (`mail_inbox:work`). Иначе — 403."""
+    if principal.must_change_password:
+        raise PasswordChangeRequiredError("change the temporary password first")
+    first_line = rbac.allowed(
+        principal.rbac_roles, "mail_inbox", "work", principal.platform_role_ids
+    )
+    await container.inbound_mail_actions.supplier_price(principal, mail_id, first_line=first_line)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/inbound-mail/{mail_id}/complete", status_code=status.HTTP_204_NO_CONTENT)
+async def complete_inbound_mail(mail_id: MailId, who: Reader, container: ContainerDep) -> Response:
+    """«Готово — убрать из очереди»: исполнитель переданного письма (счёт — бухгалтер) закрывает:
+    итог `handled`. Не исполнитель — 403; письмо не «в работе» — 409 `mail_handled`."""
+    await container.inbound_mail_actions.complete(who, mail_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

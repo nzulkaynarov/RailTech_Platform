@@ -485,6 +485,7 @@ IMAP = {
     "assist_enabled": True,
     "personal_rule": True,
     "personal_label": "Адресовано лично",
+    "trusted_auth_servers": ["yandex.ru", "google.com"],
     "username": "info@company.test",
     "password_configured": True,
     "password_last4": "abcd",

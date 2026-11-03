@@ -78,6 +78,32 @@ async def _row(stand: Stand, mail_id: int) -> InboundMail:
     return row
 
 
+async def _role_ids(stand: Stand, *codes: str) -> tuple[int, ...]:
+    from app.models.platform_roles import PlatformRole
+
+    async with stand.sessions() as session:
+        rows = (
+            await session.scalars(select(PlatformRole).where(PlatformRole.code.in_(codes)))
+        ).all()
+    return tuple(r.id for r in rows)
+
+
+async def _person(stand: Stand, email: str, *codes: str) -> Any:
+    """Сотрудник с ролями Платформы (права — по объединению всех его ролей)."""
+    from app.security.principal import Principal
+    from tests.integration.crm_helpers import make_user
+
+    account, _ = await make_user(stand.sessions, email, ["viewer"])
+    return Principal(
+        account.id, email, ("viewer",), platform_role_ids=await _role_ids(stand, *codes)
+    )
+
+
+async def _supplier(stand: Stand) -> Any:
+    """Снабженец и делопроизводитель в одном лице: может загрузить прайс и разобрать почту."""
+    return await _person(stand, "supply-clerk@railtech.uz", "tpl:SUPPLY", "tpl:REGISTRAR")
+
+
 async def _hide(stand: Stand, code: str) -> None:
     async with stand.sessions() as session, session.begin():
         await session.execute(update(MailType).where(MailType.code == code).values(active=False))
@@ -164,8 +190,7 @@ async def _add_rule(stand: Stand, pattern: str, code: str, mail_id: int | None =
 
 
 AUTH_PASS = (
-    "mx.example.test; spf=pass smtp.mailfrom={d}; dkim=pass header.i=@{d};"
-    " dmarc=pass header.from={d}"
+    "mx.yandex.ru; spf=pass smtp.mailfrom={d}; dkim=pass header.i=@{d}; dmarc=pass header.from={d}"
 )
 
 
@@ -183,9 +208,11 @@ def _signed(n: int, sender: str, auth: str | None = "pass", **kw: Any) -> bytes:
     domain = sender.rpartition("@")[2]
     if auth == "pass":
         msg["Authentication-Results"] = AUTH_PASS.format(d=domain)
+    elif auth == "foreign":  # заголовок, который написал сам отправитель, с чужим authserv-id
+        msg["Authentication-Results"] = f"attacker.example; dmarc=pass header.from={domain}"
     elif auth == "fail":
         msg["Authentication-Results"] = (
-            f"mx.example.test; spf=fail smtp.mailfrom={domain}; dkim=none; "
+            f"mx.yandex.ru; spf=fail smtp.mailfrom={domain}; dkim=none; "
             f"dmarc=fail header.from={domain}"
         )
     msg.set_content("Текст письма.")
@@ -224,6 +251,24 @@ async def test_domain_rule_sets_type_only_for_a_verified_sender_and_beats_the_mo
     assert (first.type_code, first.type_source) == ("official", "rule"), "правило сильнее ИИ"
     assert first.assist_action == "create_lead", "что сказал ИИ — в подсказке, но тип прежний"
     assert (second.type_code, second.type_source) == ("client_request", "ai")
+
+
+async def test_foreign_authserv_id_is_not_believed_unless_the_admin_trusts_it(stand: Stand) -> None:
+    await _add_rule(stand, "soliq.example", "official")
+    await stand.configure()
+    stand.server.box.add(1, _signed(1, "a@soliq.example", "foreign"))
+    await stand.ingest.poll()
+    (first,) = await stand.mails()
+    assert (first.type_code, first.sender_auth, first.rule_skipped) == (None, "unknown", True)
+
+    # админ внёс свой сервер в «Доверенные серверы» («Почта»): его заголовку верим
+    current = (await stand.settings.get()).integrations.model_dump(mode="json")
+    current["imap"]["trusted_auth_servers"] = ["attacker.example"]
+    await stand.settings.update("integrations", current, None)
+    stand.server.box.add(2, _signed(2, "b@soliq.example", "foreign"))
+    await stand.ingest.poll()
+    second = (await stand.mails())[1]
+    assert (second.type_code, second.sender_auth) == ("official", "verified")
 
 
 async def test_exact_address_rule_is_verified_too(stand: Stand) -> None:
@@ -404,7 +449,7 @@ async def test_done_actions_remove_mail_from_new_and_counts(stand: Stand) -> Non
 
     await stand.service().create_lead(who, ids[0])
     await stand.service().archive(who, ids[1], "рассылка")
-    await stand.actions().supplier_price(who, ids[2])
+    await stand.actions().supplier_price(await _supplier(stand), ids[2], first_line=True)
     await stand.actions().suspicious(who, ids[3])
 
     assert await _new_ids(stand) == [], "оформленные письма во «Входящих» не висят"
@@ -424,11 +469,12 @@ async def test_supplier_price_closes_mail_with_price_outcome(stand: Stand) -> No
     await InboundMailAssist(
         stand.sessions, stand.settings, FakeModel('{"type": "supplier_price", "summary": "Прайс"}')
     ).suggest(who, mail_id)
-    await stand.actions().supplier_price(who, mail_id)
+    supplier = await _supplier(stand)
+    await stand.actions().supplier_price(supplier, mail_id, first_line=True)
     row = await _row(stand, mail_id)
-    assert (row.status, row.outcome, row.handled_by) == ("done", "price", who.user_id)
+    assert (row.status, row.outcome, row.handled_by) == ("done", "price", supplier.user_id)
     with pytest.raises(ConflictError):
-        await stand.actions().supplier_price(who, mail_id)
+        await stand.actions().supplier_price(supplier, mail_id, first_line=True)
     async with stand.sessions() as session:
         decision = (
             await session.scalars(
@@ -590,10 +636,15 @@ async def test_api_dictionary_and_rules_are_admin_only_type_change_for_clerk(
         is True
     )
 
-    for path in ("price", "suspicious"):
+    for path, clerk_status in (("price", 403), ("suspicious", 204)):
         other = await _one_mail(stand, 2 if path == "price" else 3)
-        assert http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=seller).status_code == 403
-        assert http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=clerk).status_code == 204
+        forbidden = http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=seller)
+        assert forbidden.status_code == 403
+        # «прайс загружен» делопроизводителю без права на каталог не закрыть: ничего не загружено
+        assert (
+            http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=clerk).status_code
+            == clerk_status
+        )
     targets = http.get("/api/v1/inbound-mail/handover-targets", headers=clerk).json()["items"]
     assert [t["name"] for t in targets] == ["seller-t"], "роль подтверждает оплату — адресат"
 
@@ -633,8 +684,7 @@ async def test_price_handover_goes_to_a_colleague_who_may_load_prices(
 
 async def test_price_outcome_can_be_returned_to_new(stand: Stand) -> None:
     mail_id = await _one_mail(stand)
-    who = await stand.principal()
-    await stand.actions().supplier_price(who, mail_id)
+    await stand.actions().supplier_price(await _supplier(stand), mail_id, first_line=True)
     await stand.service().release(await stand.clerk(), mail_id)
     row = await _row(stand, mail_id)
     assert (row.status, row.outcome) == ("new", None)
@@ -675,3 +725,95 @@ async def test_letter_kind_is_an_optional_attr_of_a_type(stand: Stand) -> None:
     card = await stand.service().get(await stand.clerk(), mail_id)
     assert card.type is not None
     assert card.type.letter_kind == "government"
+
+
+async def test_supplier_with_only_the_supply_role_closes_the_mail_handed_to_him(
+    stand: Stand, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    from app.domain.errors import ForbiddenError
+    from app.models.platform_roles import UserPlatformRole
+
+    mail_id = await _one_mail(stand)
+    clerk = await stand.principal()
+    supply = await _person(stand, "supply-only@railtech.uz", "tpl:SUPPLY")  # без первой линии
+    (supply_role,) = await _role_ids(stand, "tpl:SUPPLY")
+    async with sessions() as session, session.begin():
+        session.add(UserPlatformRole(user_id=supply.user_id, role_id=supply_role))
+    await stand.actions().handover(clerk, mail_id, supply.user_id, "price")
+
+    # делопроизводитель без права на каталог закрыть «прайс загружен» не может: ничего не загружено
+    with pytest.raises(ForbiddenError):
+        await stand.actions().supplier_price(clerk, mail_id, first_line=True)
+    # чужой снабженец (не исполнитель, не первая линия) — тоже нет
+    other = await _person(stand, "supply-other@railtech.uz", "tpl:SUPPLY")
+    with pytest.raises(ForbiddenError):
+        await stand.actions().supplier_price(other, mail_id, first_line=False)
+
+    await stand.actions().supplier_price(supply, mail_id, first_line=False)
+    row = await _row(stand, mail_id)
+    assert (row.status, row.outcome, row.handled_by) == ("done", "price", supply.user_id)
+
+
+async def test_price_right_is_the_union_of_all_roles_of_a_person(
+    stand: Stand, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    from app.models.platform_roles import PlatformRole, UserPlatformRole
+
+    # инженер: каталог, но цен поставщиков не видит; ещё одна роль даёт «видит цены» без каталога
+    async with sessions() as session, session.begin():
+        prices = PlatformRole(
+            name="Видит цены поставщиков", access={}, restricted_fields=["supplier_prices"]
+        )
+        session.add(prices)
+    engineer = await _person(stand, "eng-prices@railtech.uz", "tpl:ENGINEER")
+    assert not await _can(stand, engineer, "price"), "одной роли инженера мало"
+    async with sessions() as session:
+        extra = (
+            await session.scalars(select(PlatformRole).where(PlatformRole.name == prices.name))
+        ).one()
+    both = type(engineer)(
+        engineer.user_id,
+        engineer.full_name,
+        engineer.roles,
+        platform_role_ids=(*engineer.platform_role_ids, extra.id),
+    )
+    assert await _can(stand, both, "price"), "права двух ролей складываются"
+    async with sessions() as session, session.begin():
+        (eng_role,) = await _role_ids(stand, "tpl:ENGINEER")
+        session.add(UserPlatformRole(user_id=engineer.user_id, role_id=eng_role))
+        session.add(UserPlatformRole(user_id=engineer.user_id, role_id=extra.id))
+    targets = {t.id for t in (await stand.actions().handover_targets("price")).items}
+    assert engineer.user_id in targets, "кандидаты — тоже по объединению ролей"
+
+
+async def _can(stand: Stand, person: Any, purpose: str) -> bool:
+    from app.repositories import mail_types as repo
+
+    async with stand.sessions() as session:
+        return await repo.has_capability(session, person.platform_role_ids, purpose)
+
+
+async def test_accountant_without_the_first_line_closes_the_mail_handed_to_him(
+    stand: Stand, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    from app.domain.errors import ForbiddenError
+    from app.models.platform_roles import UserPlatformRole
+
+    mail_id = await _one_mail(stand)
+    clerk = await stand.principal()
+    accountant = await _person(stand, "acc-only@railtech.uz", "tpl:ACCOUNTANT")
+    (role,) = await _role_ids(stand, "tpl:ACCOUNTANT")
+    async with sessions() as session, session.begin():
+        session.add(UserPlatformRole(user_id=accountant.user_id, role_id=role))
+    await stand.actions().handover(clerk, mail_id, accountant.user_id, "payments")
+
+    with pytest.raises(ForbiddenError):  # не исполнитель
+        await stand.actions().complete(clerk, mail_id)
+    await stand.actions().complete(accountant, mail_id)
+    row = await _row(stand, mail_id)
+    assert (row.status, row.outcome, row.handled_by) == ("done", "handled", accountant.user_id)
+    with pytest.raises(ConflictError):  # второй раз — уже обработано
+        await stand.actions().complete(accountant, mail_id)
+    # ошибочно закрытое письмо первая линия вернёт в «Новые»
+    await stand.service().release(await stand.clerk(), mail_id)
+    assert (await _row(stand, mail_id)).status == "new"

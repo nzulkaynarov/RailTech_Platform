@@ -9267,6 +9267,10 @@ export const getGetImapConnectorResponseMock = (
   assist_enabled: faker.datatype.boolean(),
   personal_rule: faker.datatype.boolean(),
   personal_label: faker.string.alpha({ length: { min: 1, max: 80 } }),
+  trusted_auth_servers: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
   password_configured: faker.datatype.boolean(),
   password_last4: faker.helpers.arrayElement([
@@ -9340,6 +9344,10 @@ export const getSaveImapConnectorResponseMock = (
   assist_enabled: faker.datatype.boolean(),
   personal_rule: faker.datatype.boolean(),
   personal_label: faker.string.alpha({ length: { min: 1, max: 80 } }),
+  trusted_auth_servers: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
   password_configured: faker.datatype.boolean(),
   password_last4: faker.helpers.arrayElement([
@@ -28254,6 +28262,24 @@ export const getMarkInboundMailPriceUploadedMockHandler = (
   );
 };
 
+export const getCompleteInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/complete",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getMoveInboundMailToSuspiciousMockHandler = (
   overrideResponse?:
     void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
@@ -34019,6 +34045,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDiscardInboundMailMockHandler(),
   getSetInboundMailTypeMockHandler(),
   getMarkInboundMailPriceUploadedMockHandler(),
+  getCompleteInboundMailMockHandler(),
   getMoveInboundMailToSuspiciousMockHandler(),
   getHandoverInboundMailMockHandler(),
   getReplyInboundMailMockHandler(),

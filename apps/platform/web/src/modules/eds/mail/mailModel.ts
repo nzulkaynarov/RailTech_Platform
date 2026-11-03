@@ -43,7 +43,10 @@ export function canReturn(mail: Pick<InboundMail, "status" | "result">): boolean
   const outcome = mail.result?.outcome;
   return (
     mail.status === "done" &&
-    (outcome === "archived" || outcome === "replied" || outcome === "price")
+    (outcome === "archived" ||
+      outcome === "replied" ||
+      outcome === "price" ||
+      outcome === "handled")
   );
 }
 

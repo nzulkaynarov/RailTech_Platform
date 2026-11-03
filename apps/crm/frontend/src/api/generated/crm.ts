@@ -8466,6 +8466,93 @@ export function useGetInboundMailAttachment<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getCompleteInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/complete`;
+};
+
+/**
+ * «Готово — убрать из очереди»: исполнитель переданного письма (счёт — бухгалтер) закрывает:
+ * итог `handled`. Не исполнитель — 403; письмо не «в работе» — 409 `mail_handled`.
+ * @summary Complete Inbound Mail
+ */
+export const completeInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getCompleteInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCompleteInboundMailMutationKey = () => ["completeInboundMail"] as const;
+
+export const getCompleteInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof completeInboundMail>>,
+    TError,
+    CompleteInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof completeInboundMail>>,
+  TError,
+  CompleteInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCompleteInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof completeInboundMail>>,
+    CompleteInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return completeInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CompleteInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof completeInboundMail>>
+>;
+
+export type CompleteInboundMailMutationError = ErrorType<ErrorOut>;
+export type CompleteInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Complete Inbound Mail
+ */
+export const useCompleteInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof completeInboundMail>>,
+      TError,
+      CompleteInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof completeInboundMail>>,
+  TError,
+  CompleteInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getCompleteInboundMailMutationOptions(options), queryClient);
+};
+
 export const getDiscardInboundMailUrl = (mailId: number) => {
   return `/api/v1/inbound-mail/${mailId}/discard`;
 };
@@ -8841,6 +8928,10 @@ export const getSupplierPriceInboundMailUrl = (mailId: number) => {
 
 /**
  * «Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге).
+ *
+ * Закрывает тот, у кого по объединению ролей есть право загружать прайсы (`erp.stock: full` и
+ * цены поставщиков), и либо ведёт письмо (его передали на загрузку), либо первая линия
+ * (`mail_inbox:work`). Иначе — 403.
  * @summary Supplier Price Inbound Mail
  */
 export const supplierPriceInboundMail = async (

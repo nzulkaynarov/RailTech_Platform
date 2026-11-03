@@ -797,6 +797,12 @@ class ImapStatusOut(BaseModel):
     port: Annotated[int, Field(title="Port")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
     security: Annotated[Security, Field(title="Security")]
+    trusted_auth_servers: Annotated[
+        list[str] | None, Field(title="Trusted Auth Servers")
+    ] = None
+    """
+    Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип»
+    """
     username: Annotated[str, Field(title="Username")]
 
 
@@ -1124,7 +1130,7 @@ class InboundMailResult(BaseModel):
     letter_number: Annotated[str | None, Field(title="Letter Number")] = None
     outcome: Annotated[Outcome | None, Field(title="Outcome")]
     """
-    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен; `null` у писем, разобранных до W18A-P2-3
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных до W18A-P2-3
     """
     reason: Annotated[str | None, Field(title="Reason")] = None
     """
@@ -1573,7 +1579,7 @@ class OffsiteStatusOut(BaseModel):
 
 class Outcome(StrEnum):
     """
-    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен; `null` у писем, разобранных до W18A-P2-3
+    registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — переданное письмо обработал исполнитель; `null` у писем, разобранных до W18A-P2-3
     """
 
     registered = "registered"
@@ -1581,6 +1587,7 @@ class Outcome(StrEnum):
     replied = "replied"
     archived = "archived"
     price = "price"
+    handled = "handled"
 
 
 class Owner(StrEnum):

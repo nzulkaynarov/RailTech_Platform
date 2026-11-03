@@ -814,7 +814,10 @@
       "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va yetkazib beruvchi narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
       "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Mening vazifalarim»ida paydo bo‘ladi — u narxnomani yuklaydi.",
       "priceHandoverConfirm": "Yuklashga topshirish",
-      "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}"
+      "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}",
+      "completeWhat": "Xat «Bajarildi» natijasi bilan navbatdan chiqadi. Boshqa hech narsa bo‘lmaydi.",
+      "completeConfirm": "Tayyor — navbatdan olib tashlash",
+      "completeDone": "Xat navbatdan olib tashlandi"
     },
     "result": {
       "title": "Natija",
@@ -899,7 +902,8 @@
       "replied": "Javob yuborildi",
       "archived": "Arxivga: {{reason}}",
       "unknown": "Ko‘rib chiqildi",
-      "price": "Narxnoma yuklandi"
+      "price": "Narxnoma yuklandi",
+      "handled": "Bajarildi"
     },
     "returnToNew": "«Yangi»ga qaytarish",
     "returned": "Xat «Yangi»ga qaytdi",
@@ -967,7 +971,8 @@
         "type": "turni almashtirdi",
         "price": "narxnoma yuklandi deb belgiladi",
         "handover": "xatni topshirdi",
-        "suspicious": "«Shubhali»ga yubordi"
+        "suspicious": "«Shubhali»ga yubordi",
+        "complete": "topshirilgan xatni yopdi"
       }
     },
     "inWorkSince": "{{name}}, {{time}} dan",

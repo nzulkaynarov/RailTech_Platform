@@ -21,6 +21,7 @@ export function MailOutcome({ result }: { result: InboundMailResult }) {
   }
   if (result.outcome === "replied") return <>{t("mail.outcome.replied")}</>;
   if (result.outcome === "price") return <>{t("mail.outcome.price")}</>;
+  if (result.outcome === "handled") return <>{t("mail.outcome.handled")}</>;
   if (result.outcome === "archived") {
     return <>{t("mail.outcome.archived", { reason: result.reason ?? "—" })}</>;
   }

@@ -61,6 +61,21 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
     expect(within(again).queryByLabelText("Пометка у такого письма")).toBeNull();
   });
 
+  it("доверенные серверы почты: по умолчанию крупные провайдеры, список можно изменить и сохранить", async () => {
+    const side = await mailPanel();
+    expect(await within(side).findByText(/yandex\.ru, yandex\.net/)).toBeVisible();
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const form = within(side).getByRole("form", { name: "Приём почты" });
+    const field = within(form).getByLabelText("Доверенные серверы почты");
+    expect((field as HTMLTextAreaElement).value).toContain("protection.outlook.com");
+    fireEvent.change(field, { target: { value: "mx.corp-demo.example\nyandex.ru" } });
+    fireEvent.change(within(form).getByLabelText("Ваш пароль администратора"), {
+      target: { value: "admin-pass" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить настройки" }));
+    expect(await within(side).findByText("mx.corp-demo.example, yandex.ru")).toBeVisible();
+  });
+
   it("«Найти папки» подсказывает «Спам» по флагу сервера; сохранение — с папками", async () => {
     const side = await mailPanel();
     fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));

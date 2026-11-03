@@ -49,7 +49,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 
 MAIL_STATUSES = ("new", "in_work", "registering", "done", "spam")
-MAIL_OUTCOMES = ("registered", "lead", "replied", "archived", "price")
+MAIL_OUTCOMES = ("registered", "lead", "replied", "archived", "price", "handled")
 IMPORT_STATUSES = ("running", "done", "error")
 ASSIST_STATUSES = ("none", "done", "unavailable")
 
@@ -61,7 +61,8 @@ class InboundMail(TimestampMixin, Base):
             "status IN ('new', 'in_work', 'registering', 'done', 'spam')", name="status"
         ),
         CheckConstraint(
-            "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived', 'price')",
+            "outcome IS NULL OR outcome IN "
+            "('registered', 'lead', 'replied', 'archived', 'price', 'handled')",
             name="outcome",
         ),
         CheckConstraint("assist_status IN ('none', 'done', 'unavailable')", name="assist_status"),

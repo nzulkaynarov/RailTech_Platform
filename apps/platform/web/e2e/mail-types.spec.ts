@@ -161,11 +161,11 @@ for (const width of WIDTHS) {
       "КП или прайс поставщика",
     );
     await page.getByRole("button", { name: "Передать на загрузку прайса" }).click();
-    await expect(page.getByText("Снабженец Демо")).toBeVisible();
+    await expect(page.getByText("Демо Снабженцев")).toBeVisible();
     await settledScreenshot(page, "mail-types-price-handover", "Тип письма");
     await page.getByRole("button", { name: "Передать на загрузку", exact: true }).click();
     await expect(
-      page.getByText("Письмо передано на загрузку прайса: Снабженец Демо"),
+      page.getByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
     ).toBeVisible();
     const queue = page.getByRole("list", { name: "Письма, ждущие разбора" });
     await expect(queue.getByText("Коммерческое предложение на скрепления КБ-65")).toHaveCount(0);
@@ -197,6 +197,48 @@ for (const width of WIDTHS) {
     await row.getByRole("button", { name: "Вернуть в Новые" }).click();
     await expect(page.getByText("Письмо вернулось в «Новые»")).toBeVisible();
     await expectNoViolations(page, "после возврата письма");
+  });
+
+  test(`типы писем: переданное письмо закрывает снабженец и бухгалтер — отдельные сотрудники без первой линии · ${String(width)}`, async ({
+    page,
+  }) => {
+    await signInAt(page, width, REGISTRAR);
+    await spaGoto(page, "/eds/mail/28");
+    await page.getByRole("button", { name: "Передать на загрузку прайса" }).click();
+    await page.getByRole("button", { name: "Передать на загрузку", exact: true }).click();
+    await expect(
+      page.getByText("Письмо передано на загрузку прайса: Демо Снабженцев"),
+    ).toBeVisible();
+    await spaGoto(page, "/eds/mail/18");
+    await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Счёт поставщика");
+    await page.getByRole("button", { name: "Передать бухгалтеру" }).first().click();
+    await page.getByRole("button", { name: "Передать", exact: true }).click();
+    await expect(page.getByText("Письмо передано: Демо Бухгалтеров")).toBeVisible();
+
+    // отдельный снабженец (только роль SUPPLY): письмо у него, закрывает он сам
+    await page.evaluate('window.localStorage.removeItem("rt-pf-mock-session")');
+    await page.goto("/login");
+    await loginAndWait(page, "supply@demo.example");
+    await spaGoto(page, "/eds/my-mail/28");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Коммерческое предложение на скрепления КБ-65" }),
+    ).toBeVisible();
+    await expect(page.getByRole("link", { name: "Открыть загрузку прайса" })).toBeVisible();
+    await settledScreenshot(page, "mail-types-own-supply");
+    await expectNoViolations(page, "переданное письмо у снабженца");
+    await page.getByRole("button", { name: "Прайс загружен — убрать из очереди" }).click();
+    await expect(page.getByText("Письмо разобрано: прайс загружен")).toBeVisible();
+
+    // отдельный бухгалтер: «Готово — убрать из очереди»
+    await page.evaluate('window.localStorage.removeItem("rt-pf-mock-session")');
+    await page.goto("/login");
+    await loginAndWait(page, "accountant@demo.example");
+    await spaGoto(page, "/eds/my-mail/18");
+    await expect(page.getByRole("button", { name: "Готово — убрать из очереди" })).toBeVisible();
+    await settledScreenshot(page, "mail-types-own-accountant");
+    await expectNoViolations(page, "переданное письмо у бухгалтера");
+    await page.getByRole("button", { name: "Готово — убрать из очереди" }).click();
+    await expect(page.getByText("Письмо убрано из очереди")).toBeVisible();
   });
 
   test(`типы писем: правило отправителя из карточки · ${String(width)}`, async ({ page }) => {

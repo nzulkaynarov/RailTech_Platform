@@ -32,5 +32,7 @@ export interface ImapStatusOut {
   port: number;
   secrets_enabled: boolean;
   security: ImapStatusOutSecurity;
+  /** Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» */
+  trusted_auth_servers?: string[];
   username: string;
 }

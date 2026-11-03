@@ -135,7 +135,6 @@ async def test_type_change_and_actions_belong_to_the_first_line(
     web: Web, be: Backends, check: ContractChecker
 ) -> None:
     put = be.router.put(f"{MAIL}/17/type").mock(return_value=httpx.Response(204))
-    price = be.router.post(f"{MAIL}/17/price").mock(return_value=httpx.Response(204))
     spam = be.router.post(f"{MAIL}/17/suspicious").mock(return_value=httpx.Response(204))
     hand = be.router.post(f"{MAIL}/17/handover").mock(return_value=httpx.Response(204))
     targets = be.router.get(f"{MAIL}/handover-targets").mock(
@@ -143,7 +142,6 @@ async def test_type_change_and_actions_belong_to_the_first_line(
     )
     calls: list[tuple[Literal["POST", "PUT"], str, dict[str, Any] | None]] = [
         ("PUT", "/api/v1/inbound-mail/17/type", {"type_code": "meeting"}),
-        ("POST", "/api/v1/inbound-mail/17/price", None),
         ("POST", "/api/v1/inbound-mail/17/suspicious", None),
         ("POST", "/api/v1/inbound-mail/17/handover", {"user_id": 9}),
     ]
@@ -151,7 +149,7 @@ async def test_type_change_and_actions_belong_to_the_first_line(
     for method, path, body in calls:
         assert (await web.send(method, path, json=body)).status_code == 403, path
     assert (await web.client.get("/api/v1/inbound-mail/handover-targets")).status_code == 403
-    assert not any(r.called for r in (put, price, spam, hand, targets))
+    assert not any(r.called for r in (put, spam, hand, targets))
 
     assert (await web.login(["REGISTRAR"])).status_code == 200
     for method, path, body in calls:
@@ -228,3 +226,24 @@ async def test_rule_on_a_public_domain_comes_back_with_a_caution(web: Web, be: B
         "POST", "/api/v1/mail-sender-rules", json={"pattern": "gmail.com", "type_code": "spam"}
     )
     assert (response.status_code, response.json()["caution"]) == (201, "public_domain")
+
+
+async def test_price_needs_the_catalog_right_and_complete_needs_only_a_session(
+    web: Web, be: Backends
+) -> None:
+    price = be.router.post(f"{MAIL}/17/price").mock(return_value=httpx.Response(204))
+    complete = be.router.post(f"{MAIL}/17/complete").mock(return_value=httpx.Response(204))
+    # делопроизводитель без права на каталог «прайс загружен» не закроет: до CRM запрос не дойдёт
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+    assert (await web.send("POST", "/api/v1/inbound-mail/17/price", json=None)).status_code == 403
+    assert not price.called
+    # снабженцу (только SUPPLY, первой линии нет) переданное письмо закрыть можно; решает CRM
+    assert (await web.login(["SUPPLY"])).status_code == 200
+    assert (await web.send("POST", "/api/v1/inbound-mail/17/price", json=None)).status_code == 204
+    assert price.called
+    # «Готово» — любой вошедший сотрудник: бухгалтер без первой линии
+    assert (await web.login(["ACCOUNTANT"])).status_code == 200
+    assert (
+        await web.send("POST", "/api/v1/inbound-mail/17/complete", json=None)
+    ).status_code == 204
+    assert complete.called

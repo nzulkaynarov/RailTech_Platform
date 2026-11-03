@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import Final
 
-from sqlalchemy import ColumnElement, and_, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, exists, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.mail_types import best_rule
@@ -128,24 +128,54 @@ async def apply_rule_to_open(
     return applied
 
 
+def _grants(purpose: str) -> list[ColumnElement[bool]]:
+    """Условия на роль: что нужно роли, чтобы работать с письмом такой цели. Для `price` нужны два
+    условия, и они складываются по ВСЕМ ролям человека (одна роль даёт `erp.stock`, другая —
+    видимость
+    цен поставщиков: у сотрудника с несколькими ролями права объединяются)."""
+    base = PlatformRole.access[PURPOSES[purpose]].astext == "full"
+    if purpose == "price":
+        # `restricted_fields` роли — поля с ограничением, которые она ВИДИТ (platform-rbac.yaml)
+        return [base, PlatformRole.restricted_fields.contains(["supplier_prices"])]
+    return [base]
+
+
+async def has_capability(session: AsyncSession, role_ids: Sequence[int], purpose: str) -> bool:
+    """Есть ли у человека с этими ролями Платформы право на цель (`payments` | `price`): по
+    объединению прав всех его ролей."""
+    if not role_ids:
+        return False
+    for cond in _grants(purpose):
+        stmt = (
+            select(func.count())
+            .select_from(PlatformRole)
+            .where(PlatformRole.id.in_(role_ids), cond)
+        )
+        if not (await session.execute(stmt)).scalar_one():
+            return False
+    return True
+
+
 async def handover_targets(
     session: AsyncSession, purpose: str = "payments"
 ) -> list[tuple[int, str]]:
-    """Кому передать письмо: активные сотрудники, чья роль даёт нужное право (данные, не коды).
+    """Кому передать письмо: активные сотрудники, чьи роли в сумме дают нужное право (данные, не
+    коды).
 
     `payments` — подтверждать оплату (`eds.payments: full`); `price` — загружать прайсы и видеть
-    цены поставщиков (`erp.stock: full` и поле `supplier_prices` в списке видимых полей роли)."""
-    roles = (
-        select(UserPlatformRole.user_id)
-        .join(PlatformRole, PlatformRole.id == UserPlatformRole.role_id)
-        .where(PlatformRole.access[PURPOSES[purpose]].astext == "full")
-    )
-    if purpose == "price":
-        # `restricted_fields` роли — поля с ограничением, которые она ВИДИТ (platform-rbac.yaml)
-        roles = roles.where(PlatformRole.restricted_fields.contains(["supplier_prices"]))
+    цены поставщиков (`erp.stock: full` и поле `supplier_prices` у какой-либо из ролей)."""
+
+    def has_role(cond: ColumnElement[bool]) -> ColumnElement[bool]:
+        return exists(
+            select(1)
+            .select_from(UserPlatformRole)
+            .join(PlatformRole, PlatformRole.id == UserPlatformRole.role_id)
+            .where(UserPlatformRole.user_id == User.id, cond)
+        )
+
     stmt = (
         select(User.id, User.full_name)
-        .where(User.is_active.is_(True), User.id.in_(roles))
+        .where(User.is_active.is_(True), *[has_role(c) for c in _grants(purpose)])
         .order_by(User.full_name, User.id)
     )
     return [(int(i), str(n)) for i, n in (await session.execute(stmt)).all()]

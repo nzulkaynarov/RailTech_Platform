@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from app.schemas.mail_types import InboundMailType
 
 MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
-MailOutcome = Literal["registered", "lead", "replied", "archived", "price"]
+MailOutcome = Literal["registered", "lead", "replied", "archived", "price", "handled"]
 MailView = Literal["new", "mine", "in_work", "done", "spam", "all", "tasks"]
 AssistStatus = Literal["none", "done", "unavailable", "off"]
 AssistKind = Literal["buyer", "official", "supplier_doc", "other"]
@@ -61,7 +61,8 @@ class InboundMailResult(BaseModel):
 
     outcome: MailOutcome | None = Field(
         description="registered — ВХ, lead — лид или заметка, replied — ответ отправлен, "
-        "archived — в архив с причиной, price — прайс или КП поставщика загружен; `null` у писем, "
+        "archived — в архив с причиной, price — прайс или КП поставщика загружен, handled — "
+        "переданное письмо обработал исполнитель; `null` у писем, "
         "разобранных до W18A-P2-3"
     )
     by: InboundMailPerson | None = None
@@ -351,6 +352,11 @@ class ImapStatusOut(BaseModel):
         description="«Адресовано лично»: сотрудник в «Кому», ящик в копии — письмо ему",
     )
     personal_label: str = Field(default="Адресовано лично", description="Пометка у такого письма")
+    trusted_auth_servers: list[str] = Field(
+        default_factory=list,
+        description="Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их "
+        "`Authentication-Results` подтверждает отправителя для правил «отправитель → тип»",
+    )
     username: str
     password_configured: bool
     password_last4: str | None
@@ -385,6 +391,11 @@ class ImapConnectorIn(BaseModel):
     assist_enabled: bool = True
     personal_rule: bool = True
     personal_label: str = Field(default="Адресовано лично", min_length=1, max_length=80)
+    trusted_auth_servers: list[str] | None = Field(
+        default=None,
+        max_length=30,
+        description="Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому",
+    )
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
