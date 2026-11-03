@@ -146,6 +146,7 @@ import type {
   DictionaryItem,
   DictionaryItemList,
   DictionaryList,
+  DocflowSettings,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -209,6 +210,7 @@ import type {
   LetterCard,
   LetterClient,
   LetterDuplicateList,
+  LetterIntakeSuggestion,
   LetterKindList,
   LetterOfficeResolution,
   LetterPage,
@@ -16517,6 +16519,57 @@ export const getUpdateResolutionTemplateResponseMock = (
   ...overrideResponse,
 });
 
+export const getSuggestLetterFromFileResponseMock = (
+  overrideResponse: Partial<Extract<LetterIntakeSuggestion, object>> = {},
+): LetterIntakeSuggestion => ({
+  suggestion_id: faker.string.uuid(),
+  source: faker.helpers.arrayElement(["text", "image"] as const),
+  fields: {
+    sender_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sender_inn: faker.helpers.arrayElement([faker.helpers.fromRegExp("^\\d{9,14}$"), null]),
+    sender_ref_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sender_ref_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    summary: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"), null]),
+    document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  prompt_version: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetDocflowSettingsResponseMock = (
+  overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
+): DocflowSettings => ({
+  recognize_scans: faker.datatype.boolean(),
+  ai_available: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateDocflowSettingsResponseMock = (
+  overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
+): DocflowSettings => ({
+  recognize_scans: faker.datatype.boolean(),
+  ai_available: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
 export const getListEdsStaffResponseMock = (
   overrideResponse: Partial<Extract<EdsStaffList, object>> = {},
 ): EdsStaffList => ({
@@ -30226,6 +30279,96 @@ export const getDeleteResolutionTemplateMockHandler = (
   );
 };
 
+export const getSuggestLetterFromFileMockHandler = (
+  overrideResponse?:
+    | LetterIntakeSuggestion
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LetterIntakeSuggestion> | LetterIntakeSuggestion),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letter-intake",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSuggestLetterFromFileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDecideAiSuggestionMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/ai-suggestions/:id/decision",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetDocflowSettingsMockHandler = (
+  overrideResponse?:
+    | DocflowSettings
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocflowSettings> | DocflowSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/docflow-settings",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDocflowSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDocflowSettingsMockHandler = (
+  overrideResponse?:
+    | DocflowSettings
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<DocflowSettings> | DocflowSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/eds/docflow-settings",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDocflowSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEdsStaffMockHandler = (
   overrideResponse?:
     | EdsStaffList
@@ -32779,6 +32922,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateResolutionTemplateMockHandler(),
   getUpdateResolutionTemplateMockHandler(),
   getDeleteResolutionTemplateMockHandler(),
+  getSuggestLetterFromFileMockHandler(),
+  getDecideAiSuggestionMockHandler(),
+  getGetDocflowSettingsMockHandler(),
+  getUpdateDocflowSettingsMockHandler(),
   getListEdsStaffMockHandler(),
   getListCrmMessagesMockHandler(),
   getGetCrmConversationMockHandler(),

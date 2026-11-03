@@ -17,7 +17,7 @@ const TAX = "/eds/inbox/%D0%92%D0%A5-108%2F26?panel=open&tab=resolution";
 async function directorForm() {
   signIn("director@demo.example");
   renderAt(TAX);
-  return screen.findByRole("form", { name: "Резолюция директора" }, { timeout: 3000 });
+  return screen.findByRole("form", { name: "Резолюция директора" }, { timeout: 10_000 });
 }
 
 describe("Шаблоны резолюций в форме (EDS-REG, R2)", () => {

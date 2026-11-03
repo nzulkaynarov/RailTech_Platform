@@ -326,6 +326,13 @@ services:
       s3-init:
         condition: service_completed_successfully
 
+  # Ключ EDS в LiteLLM (EDS-REG): одноразовый, без базы и секретов EDS — окружение из base.yml (только шлюз).
+  eds-ai-gateway:
+    <<: [*ops, *mem-256]
+    restart: "no"
+    image: ${RT_IMAGE_REGISTRY:-ghcr.io/nzulkaynarov}/rt-eds:${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+    build: !reset null
+
   # ─── ERP ────────────────────────────────────────────────────────────────────────────────────
   erp-backend:
     <<: [*ops, *mem-768]

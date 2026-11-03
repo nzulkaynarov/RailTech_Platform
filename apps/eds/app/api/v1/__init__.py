@@ -4,6 +4,7 @@
 from fastapi import APIRouter
 
 from app.api.v1 import (
+    ai,
     approvals,
     auth,
     bus,
@@ -28,4 +29,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     bus.router,
     dictionaries.router,
     resolution_templates.router,
+    ai.router,
 )

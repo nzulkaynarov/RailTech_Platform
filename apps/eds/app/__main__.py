@@ -2,7 +2,8 @@
 
 - `api` — FastAPI (REST, приёмник шины) под uvicorn;
 - `worker` — воркер Procrastinate (шина: ретранслятор и обработка inbox; уборка `jti`);
-- `bus status|dead|failed|retry|retry-dead|retry-inbox` — ручное управление шиной (docs/architecture/rt-bus.md §8).
+- `bus status|dead|failed|retry|retry-dead|retry-inbox` — ручное управление шиной (docs/architecture/rt-bus.md §8);
+- `ai-key-sync` — виртуальный ключ EDS в LiteLLM с дневным бюджетом (EDS-REG, сервис compose `eds-ai-gateway`).
 """
 
 import argparse
@@ -60,11 +61,16 @@ def _parser() -> argparse.ArgumentParser:
     from app.cli import bus_cli
 
     bus_cli.add_arguments(bus)
+    commands.add_parser("ai-key-sync", help="виртуальный ключ EDS в LiteLLM (бюджет на день)")
     return parser
 
 
 def main() -> None:
     args = _parser().parse_args()
+    if args.command == "ai-key-sync":  # без базы и секретов EDS: только окружение шлюза (app/cli/ai_cli.py)
+        from app.cli import ai_cli
+
+        sys.exit(asyncio.run(ai_cli.run()))
     configure_logging(get_settings())
     if args.command == "api":
         _run_api(args)

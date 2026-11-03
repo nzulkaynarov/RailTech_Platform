@@ -182,4 +182,17 @@ grep -qE 'pull .* eds-api' "$deploy" || fail "deploy.sh: eds-api не входи
 grep -q 'wait_healthy "$rel" "$svc"' "$deploy" && grep -q 'for svc in eds-api eds-worker' "$deploy" || fail "deploy.sh: нет проверки здоровья eds-api и eds-worker (у EDS нет домена для smoke)"
 grep -q 'eds-api' "$root/infra/deploy/rollback.sh" || fail "rollback.sh: EDS не учтён при откате"
 grep -q 'platform-web|eds)' "$root/infra/deploy/lib.sh" || fail "lib.sh: cleanup_old не чистит образы rt-eds"
+
+# 6. ИИ-помощник EDS (EDS-REG): ключ EDS в LiteLLM создаёт деплой (ensure-secrets, префикс sk-), заданный не меняется; мастер-ключ
+#    LiteLLM — только у одноразового eds-ai-gateway, у eds-api и eds-worker его нет.
+ens="$tmp/ens.env"; printf 'A=1\nEDS_LITELLM_API_KEY=sk-CHANGE_ME\n' > "$ens"; chmod 600 "$ens"
+bash "$root/infra/deploy/make-env-prod.sh" ensure-secrets "$ens" >/dev/null
+grep -qE '^EDS_LITELLM_API_KEY=sk-[0-9a-f]{48}$' "$ens" || fail "ensure-secrets: ключ EDS в LiteLLM не создан"
+first="$(grep '^EDS_LITELLM_API_KEY=' "$ens")"; bash "$root/infra/deploy/make-env-prod.sh" ensure-secrets "$ens" >/dev/null
+[[ "$(grep '^EDS_LITELLM_API_KEY=' "$ens")" == "$first" ]] || fail "ensure-secrets: заданный ключ EDS изменился"
+grep -q '^EDS_LITELLM_API_KEY=sk-CHANGE_ME$' "$root/infra/.env.prod.example" || fail "infra/.env.prod.example: нет EDS_LITELLM_API_KEY=sk-CHANGE_ME"
+gw="$(awk '/^  eds-ai-gateway:/{f=1;next} f&&/^  [a-z]/{exit} f' "$base")"
+grep -q 'LITELLM_MASTER_KEY' <<<"$gw" || fail "base.yml: eds-ai-gateway без мастер-ключа LiteLLM"
+! grep -q 'EDS_DATABASE_URL\|S3_ACCESS_KEY' <<<"$gw" || fail "base.yml: eds-ai-gateway не должен знать базу и S3 EDS"
+! awk '/^x-eds-backend:/{f=1;next} f&&/^[a-z]/{exit} f' "$base" | grep -q 'LITELLM_MASTER_KEY' || fail "base.yml: мастер-ключ LiteLLM у сервисов EDS"
 echo "eds-prod-test: ok"

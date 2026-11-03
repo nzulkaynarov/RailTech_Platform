@@ -7,13 +7,14 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { SectionTabs } from "../company/SectionTabs";
+import { AiTab } from "./AiTab";
 import { DictionariesTab } from "./DictionariesTab";
 import { TemplatesTab } from "./TemplatesTab";
 
 import "../company/company.css";
 import "./docflow.css";
 
-const TABS = [{ key: "dictionaries" }, { key: "templates" }] as const;
+const TABS = [{ key: "dictionaries" }, { key: "templates" }, { key: "ai" }] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
 const isTab = (value: string | null): value is TabKey => TABS.some((tab) => tab.key === value);
@@ -62,6 +63,8 @@ export function DocflowPage() {
         >
           {active === "templates" ? (
             <TemplatesTab readOnly={readOnly} />
+          ) : active === "ai" ? (
+            <AiTab />
           ) : (
             <DictionariesTab readOnly={readOnly} />
           )}
