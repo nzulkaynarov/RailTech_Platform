@@ -8,14 +8,13 @@ import {
   TeamOutlined,
   WalletOutlined,
 } from "@ant-design/icons";
-import type { ComponentType } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { InboundMailType, InboundMailTypeIcon } from "../../../shared/api/generated/model";
 import { DataTag } from "../../../shared/ui/DataTag";
 import { localName } from "../dictionaries";
 
-const ICONS: Record<InboundMailTypeIcon, ComponentType<{ "aria-hidden"?: boolean }>> = {
+const ICONS: Record<InboundMailTypeIcon, typeof MailOutlined> = {
   mail: MailOutlined,
   team: TeamOutlined,
   calendar: CalendarOutlined,
