@@ -54,9 +54,15 @@ test.describe("Консоли сервисов и внешние кабинет�
       await expectNoViolations(page, `erp ${String(width)}`);
       await settledScreenshot(page, "admin-erp");
 
-      await openCard(page, "telegram");
+      // Telegram — своя страница «Каналы связи · Telegram» (SET-IA); кабинеты бота — там же, вкладка «Подключение»
+      await spaGoto(page, "/admin/telegram");
       await expect(
-        side.getByRole("link", { name: "BotFather — откроется в новой вкладке" }),
+        page.getByRole("heading", { level: 1, name: "Telegram", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page
+          .getByRole("tabpanel")
+          .getByRole("link", { name: "BotFather — откроется в новой вкладке" }),
       ).toHaveAttribute("href", "https://t.me/BotFather");
       await expectNoViolations(page, `telegram ${String(width)}`);
       await settledScreenshot(page, "admin-telegram");

@@ -442,7 +442,7 @@
     "done": "{{number}} hisobi chiqarildi.",
     "reasons": {
       "already_issued": "Hisob allaqachon chiqarilgan. Karta yangilandi.",
-      "bank_details_required": "Kompaniyaning hisob raqami va MFO siz hisobni chiqarib bo‘lmaydi: ularni «Sozlamalar · Kompaniya va blankalar»da to‘ldiring.",
+      "bank_details_required": "Kompaniyaning hisob raqami va MFO siz hisobni chiqarib bo‘lmaydi: ularni «Sozlamalar · Rekvizitlar va blanka»da to‘ldiring.",
       "forbidden": "Hisob chiqarish sizning rolingizga ruxsat etilmagan.",
       "not_found": "Hisob topilmadi. Ro‘yxatni yangilang.",
       "unavailable": "ERP hozir javob bermayapti. Birozdan keyin qaytaring.",
@@ -451,7 +451,7 @@
   },
   "bankDetails": {
     "title": "Kompaniyaning bank rekvizitlari yo‘q — hisob chiqarib bo‘lmaydi.",
-    "text": "Administrator to‘ldiradi: Sozlamalar · Kompaniya va blankalar.",
-    "open": "«Kompaniya va blankalar»ni ochish"
+    "text": "Administrator to‘ldiradi: Sozlamalar · Rekvizitlar va blanka.",
+    "open": "«Rekvizitlar va blanka»ni ochish"
   }
 }

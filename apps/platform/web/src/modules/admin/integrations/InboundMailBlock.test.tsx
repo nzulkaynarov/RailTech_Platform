@@ -2,18 +2,19 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { resetImapMock } from "../../../mocks/inboundMail";
-import { panelEl, renderAt, signIn, setupIntegrationsTests } from "./testkit";
+import { openCard, signIn, setupIntegrationsTests } from "./testkit";
 
 setupIntegrationsTests();
 beforeEach(() => {
   resetImapMock();
 });
 
+/** Почта — своя страница Настроек «Каналы связи · Почта» (SET-IA), а не боковое окно «Подключений». */
 async function mailPanel(email = "admin@demo.example"): Promise<HTMLElement> {
   signIn(email);
-  renderAt("/admin/integrations?card=mail&panel=open");
+  const main = await openCard("mail");
   await screen.findByRole("heading", { name: "Приём: общий ящик (IMAP)" });
-  return panelEl();
+  return main;
 }
 
 describe("карточка «Почта» · приём (W18A-P2)", () => {

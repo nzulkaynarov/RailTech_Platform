@@ -275,8 +275,8 @@
     "hint": "Texts of contracts, acts and letters. Platform samples are copied, not edited.",
     "part": "Template type",
     "parts": {
-      "documents": "Document templates",
-      "emails": "Email templates"
+      "documents": "Documents",
+      "emails": "Emails"
     },
     "documents": {
       "name": "Name",

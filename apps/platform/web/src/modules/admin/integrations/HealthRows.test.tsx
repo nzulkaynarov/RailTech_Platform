@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEMO_WRONG_PASSWORD } from "../../../mocks/fixtures/users";
 import { server } from "../../../test/server";
-import { panelEl, renderAt, setupIntegrationsTests, signIn } from "./testkit";
+import { openCard, panelEl, renderAt, setupIntegrationsTests, signIn } from "./testkit";
 
 setupIntegrationsTests();
 
@@ -310,8 +310,7 @@ describe("Telegram: индикатор не противоречит строк�
         }),
       ),
     );
-    renderAt("/admin/integrations?card=telegram&panel=open");
-    const side = await panelEl();
+    const side = await openCard("telegram");
 
     expect(await within(side).findByText("Состояние бота")).toBeVisible();
     expect(within(side).getByText("не работает — токен не задан")).toBeVisible();

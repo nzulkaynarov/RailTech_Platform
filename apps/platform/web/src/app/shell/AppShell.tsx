@@ -5,10 +5,11 @@ import { Outlet, useLocation } from "react-router";
 
 import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/bridge";
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
+import { MODULE_SETTINGS } from "../../modules/admin/moduleSettings";
+import { SETTINGS_HOME } from "../../modules/admin/module";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { useLateSetupBanner, useSetupKnown } from "../../features/first-run/useSetupKnown";
-import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
 import { WhatsNewNotice } from "../../features/help/WhatsNewNotice";
@@ -76,7 +77,6 @@ export function AppShell() {
     match?.section,
     Boolean(match?.objectId && !isStubSection(match.module.code, match.section.key)),
   );
-  const setupPending = useSetupPending();
   const setupKnown = useSetupKnown();
   const setupBannerLate = useLateSetupBanner(setupKnown);
   const { attach: attachPanelSlot, claimed: panelClaimed } = usePanelSlotHost(panels.tab);
@@ -88,11 +88,10 @@ export function AppShell() {
     [me.modules],
   );
   const sectionAllowed = (s: SectionConfig) => canSee(me, s.access);
-  // Пункт подменю: не скрыт, виден роли (`menuAccess` уже доступа к адресу) и его условие выполнено (W15-H4).
-  const inMenu = (s: SectionConfig) =>
-    !s.hidden &&
-    canSee(me, s.menuAccess ?? s.access) &&
-    (s.showWhile !== "setupPending" || setupPending);
+  // Пункт подменю: не скрыт и виден роли (`menuAccess` уже доступа к адресу).
+  const inMenu = (s: SectionConfig) => !s.hidden && canSee(me, s.menuAccess ?? s.access);
+  const groupLabel = (module: string, s: SectionConfig) =>
+    s.group ? t(`modules:${module}.groups.${s.group}`) : undefined;
   // Раздел открыт, но его пункта в своём модуле у сотрудника нет: меню и крошки — там, где раздел для него живёт
   // (`menuHome`; база знаний для администратора — Настройки · Telegram-бот).
   const homeOf = (() => {
@@ -213,6 +212,7 @@ export function AppShell() {
       key: s.path,
       path: s.path,
       label: t(`modules:${module.code}.sections.${s.key}`),
+      group: groupLabel(module.code, s),
       active: homeOf ? homeOf.section.key === s.key : isSectionActive(s, match),
       badge: badgeFor(
         counters.data?.items.find((c) => c.module === module.code && c.section === s.key),
@@ -235,6 +235,7 @@ export function AppShell() {
     key: section.path,
     to: section.path,
     label: t(`modules:${activeModule.code}.sections.${section.key}`),
+    group: groupLabel(activeModule.code, section),
     active: homeOf ? homeOf.section.key === section.key : isSectionActive(section, match),
     badge: badgeFor(
       counters.data?.items.find((c) => c.module === activeModule.code && c.section === section.key),
@@ -261,9 +262,20 @@ export function AppShell() {
       )
     ) : undefined;
 
+  // ⚙ в заголовке подменю модуля — его группа Настроек (SET-IA, HubSpot): только тем, кому Настройки видны.
+  const settingsGroup = MODULE_SETTINGS[activeModule.code];
+  const settingsLink =
+    settingsGroup && canSee(me, { resource: "admin" })
+      ? {
+          to: `${SETTINGS_HOME}?group=${settingsGroup}`,
+          label: t("menu.settings", { group: t(`modules:admin.groups.${settingsGroup}`) }),
+        }
+      : undefined;
+
   const menuProps = {
     // Полное имя модуля без номера (UX-оценка 2026-10-27 §6.1): «Клиенты и лиды», а не «2. CRM».
     title: t(`modules:${activeModule.code}.title`),
+    ...(settingsLink ? { settings: settingsLink } : {}),
     items: menuItems,
     labels: {
       nav: t("menu.nav"),

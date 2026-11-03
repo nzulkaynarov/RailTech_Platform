@@ -13,7 +13,7 @@ import type {
 import type { Attachment } from "../new/formModel";
 import type { RegisterValues } from "../register/registerModel";
 
-export const ADMIN_MAIL_PATH = "/admin/integrations?card=mail&panel=open";
+export const ADMIN_MAIL_PATH = "/admin/mail";
 /** Вкладка «Подозрительные» списка «Входящая почта» (W18A-P2-2). */
 export const SPAM_TAB_PATH = "/eds/mail?tab=spam";
 

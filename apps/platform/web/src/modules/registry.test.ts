@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { resources } from "../shared/i18n";
+import { admin } from "./admin/module";
 import { MODULES, matchSection } from "./registry";
 
 const ru = resources.ru.modules;
@@ -50,20 +51,38 @@ describe("меню модулей — SPEC-v3 §6.2 в редакции UX-оц�
   it("Чаты", () => {
     expect(menuOf("chats")).toEqual(["Все чаты", "Команда", "С клиентами", "Контакты"]);
   });
-  it("Настройки", () => {
+  it("Настройки (SET-IA): индекс и пять групп — Люди и доступ · Компания · Каналы связи · Процессы · Система", () => {
     expect(menuOf("admin")).toEqual([
-      "Роли и права",
+      "Все настройки",
       "Сотрудники",
-      "Подключения",
-      "Обращения сотрудников",
+      "Роли и права",
+      "Реквизиты и бланк",
+      "Нумерация",
+      "Налоги и валюты",
       "Статьи компании",
-      "Компания и бланки",
-      "Документооборот",
-      "Telegram-бот",
-      // W15-H4: один «Журнал» — «Обмен между системами» стал его фильтром, а не пунктом
+      "Telegram",
+      "Почта",
+      "Формы сайта",
+      "Справочники",
+      "Шаблоны резолюций",
+      "Шаблоны документов",
+      "Время и сроки",
+      "Уведомления",
+      "Подключения",
+      "Расходы на ИИ",
       "Журнал",
-      // виден, пока шаги первого запуска не завершены (`showWhile`)
-      "Первый запуск",
+      "Выгрузки",
+      "Обмен между системами",
+    ]);
+    // «Первый запуск» — чек-лист на индексе, «Обращения сотрудников» — в «Моих задачах»: пунктов нет
+    const groups = admin.sections.filter((s) => !s.hidden).map((s) => s.group ?? "—");
+    expect([...new Set(groups)]).toEqual([
+      "—",
+      "people",
+      "company",
+      "channels",
+      "processes",
+      "system",
     ]);
   });
 
@@ -176,12 +195,24 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/roles",
     "/admin/org",
     "/admin/integrations",
-    "/admin/tickets",
+    "/admin",
     "/admin/articles",
     "/admin/company",
+    "/admin/numbering",
+    "/admin/taxes",
+    "/admin/telegram",
+    "/admin/mail",
+    "/admin/web-forms",
+    "/admin/dictionaries",
+    "/admin/resolutions",
+    "/admin/templates",
+    "/admin/timing",
+    "/admin/notifications",
+    "/admin/ai-spend",
     "/admin/audit",
+    "/admin/exports",
+    "/admin/bus",
     "/admin/setup",
-    "/admin/bot",
   ];
   it.each(listPaths)("%s — есть раздел", (path) => {
     expect(matchSection(path)).toBeDefined();

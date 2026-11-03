@@ -62,10 +62,23 @@ function stubLogoUpload(path: "/admin/company/logo" | "/admin/company/brand/logo
   return seen;
 }
 
+/** Бывшие вкладки «Компании и бланков» после SET-IA — страницы своих групп; старый адрес уводит на новую. */
+const PAGE_OF: Record<string, string> = {
+  details: "Реквизиты и бланк",
+  brand: "Реквизиты и бланк",
+  numbering: "Нумерация",
+  quote: "Шаблоны документов",
+  templates: "Шаблоны документов",
+  charges: "Справочники",
+  reference: "Справочники",
+  categories: "Справочники",
+  platform: "Налоги и валюты",
+};
+
 async function openTab(tab: string, email = "director@demo.example") {
   signInAs(email);
   renderApp(`/admin/company?tab=${tab}`);
-  await screen.findByRole("heading", { level: 1, name: "Компания и бланки" });
+  await screen.findByRole("heading", { level: 1, name: PAGE_OF[tab] ?? "Реквизиты и бланк" });
 }
 
 const button = (name: string | RegExp) => screen.findByRole("button", { name });
@@ -96,22 +109,21 @@ describe("Admin · Компания: реквизиты для счетов (D26
 });
 
 describe("Admin · Компания: доступ и каркас", () => {
-  it("директор и администратор открывают раздел; заголовок и подзаголовок — название компании", async () => {
+  it("директор и администратор открывают раздел; заголовок «Реквизиты и бланк», подзаголовок — название компании (SET-IA)", async () => {
     await openTab("details", "admin@demo.example");
     expect(await screen.findByText("ООО «Демо Рейл»", { selector: "div" })).toBeInTheDocument();
-    expect(screen.getByRole("tab", { name: "Реквизиты" })).toHaveAttribute("aria-selected", "true");
-    for (const name of [
-      "Бланк и бренд",
-      "Нумерация",
-      "Условия КП",
-      "Статьи расхода",
-      "Шаблоны",
-      "Справочники",
-      "Категории",
-      "Платформа",
-    ]) {
-      expect(screen.getByRole("tab", { name })).toBeInTheDocument();
-    }
+    // Одна страница с частями вместо девяти вкладок: вкладок нет
+    expect(screen.queryByRole("tab")).toBeNull();
+    expect(
+      screen.getByRole("heading", { level: 2, name: "Реквизиты компании" }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Бланк и бренд документов" }),
+    ).toBeInTheDocument();
+    // Контакты, которые бот называет клиентам (раздел `company` настроек бота) — на этой же странице
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Контакты для клиентов" }),
+    ).toBeInTheDocument();
   });
 
   it("без раздела `company.settings` пункт «Компания» скрыт в меню, а прямой адрес даёт «Нет доступа»", async () => {
@@ -120,14 +132,14 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Нет доступа" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Компания и бланки" })).toBeNull();
-    expect(screen.queryByRole("tab", { name: "Реквизиты" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Реквизиты и бланк" })).toBeNull();
   });
 
-  it("администратор видит пункт «Компания» в меню Admin", async () => {
+  it("администратор видит пункт «Реквизиты и бланк» в группе «Компания» меню Настроек", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");
-    expect(await screen.findByRole("link", { name: "Компания и бланки" })).toBeInTheDocument();
+    const group = await screen.findByRole("group", { name: "Компания" });
+    expect(within(group).getByRole("link", { name: "Реквизиты и бланк" })).toBeInTheDocument();
   });
 
   it("своей компании в ERP нет — слово и действие «Проверить снова», а не пустая страница", async () => {
@@ -193,11 +205,7 @@ describe("Admin · Компания: доступ и каркас", () => {
     await openTab("details", "manager@demo.example");
     await screen.findByLabelText("Телефон");
 
-    fireEvent.click(screen.getByRole("tab", { name: "Бланк и бренд" }));
-    expect(screen.getByRole("tab", { name: "Бланк и бренд" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    // Бланк — на той же странице; поля заблокированы, вид образца переключается
     expect(await screen.findByLabelText("Подписант")).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Сохранить бланк" })).toBeNull();
     await screen.findByTitle("Образец: КП");
@@ -208,7 +216,8 @@ describe("Admin · Компания: доступ и каркас", () => {
       );
     });
 
-    fireEvent.click(screen.getByRole("tab", { name: "Шаблоны" }));
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    fireEvent.click(within(menu).getByRole("link", { name: "Шаблоны документов" }));
     fireEvent.click(await screen.findByRole("button", { name: "Открыть: Договор поставки (наш)" }));
     const viewer = await screen.findByRole("dialog", { name: "Шаблон документа" });
     expect(within(viewer).getByLabelText(/^Текст шаблона/)).toBeDisabled();
@@ -218,10 +227,11 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(screen.getByRole("button", { name: "Создать шаблон" })).toBeDisabled();
     expect(screen.queryByRole("button", { name: /^Изменить:/ })).toBeNull();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Справочники" }));
+    // Справочники расчёта — страница «Процессы · Справочники»: открыта и с одним `company.settings`
+    fireEvent.click(within(menu).getByRole("link", { name: "Справочники" }));
     expect(await screen.findByText("Казахстан")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Добавить строку" })).toBeDisabled();
-    fireEvent.click(screen.getByText("Валюты", { selector: ".ant-segmented-item-label" }));
+    fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
     expect(await screen.findByText("Евро")).toBeInTheDocument();
   });
 });
@@ -258,7 +268,7 @@ describe("Реквизиты и логотип", () => {
   it("логотип: загрузка файла и удаление", async () => {
     await openTab("details");
     const input = await screen.findByLabelText("Выбрать файл: Логотип компании");
-    expect(screen.getByText("Нет логотипа")).toBeInTheDocument();
+    expect(screen.getAllByText("Нет логотипа").length).toBeGreaterThan(0);
     const seen = stubLogoUpload("/admin/company/logo");
 
     const file = new File(["png"], "logo.png", { type: "image/png" });
@@ -623,9 +633,7 @@ describe("Шаблоны документов и писем", () => {
 
   it("шаблон письма: образец после сохранения и предупреждение про замену файлового", async () => {
     await openTab("templates");
-    fireEvent.click(
-      await screen.findByText("Шаблоны писем", { selector: ".ant-segmented-item-label" }),
-    );
+    fireEvent.click(await screen.findByRole("tab", { name: "Письма" }));
     expect(await screen.findByText("invoice_issued")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Изменить: quote_sent" }));
     const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон письма" });
@@ -653,7 +661,7 @@ describe("Справочники", () => {
     expect(await screen.findByText("Турция")).toBeInTheDocument();
     expect(readCompanyMock().reference.countries.map((c) => c.code)).toContain("TR");
 
-    fireEvent.click(screen.getByText("Валюты", { selector: ".ant-segmented-item-label" }));
+    fireEvent.click(screen.getByRole("link", { name: "Валюты" }));
     expect(await screen.findByText("Евро")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Отключить: Евро" }));
     await waitFor(() => {

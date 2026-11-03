@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { DEMO_WRONG_PASSWORD } from "../../../mocks/fixtures/users";
-import { panelEl, renderAt, signIn, setupIntegrationsTests } from "./testkit";
+import { openCard, renderAt, signIn, setupIntegrationsTests } from "./testkit";
 
 setupIntegrationsTests();
 
@@ -10,14 +10,13 @@ const PASSWORD = "demo-pass-1";
 
 async function openPanel(card: string, email = "admin@demo.example"): Promise<HTMLElement> {
   signIn(email);
-  renderAt(`/admin/integrations?card=${card}&panel=open`);
-  return panelEl();
+  return openCard(card);
 }
 
-/** Подключение бота — вкладка Настроек · Telegram-бот (W15-H4), не боковое окно «Подключений». */
+/** Подключение бота — Настройки · Каналы связи · Telegram, вкладка «Подключение» (SET-IA), не боковое окно «Подключений». */
 async function openBotConnection(email = "admin@demo.example"): Promise<HTMLElement> {
   signIn(email);
-  renderAt("/admin/bot?part=connection");
+  renderAt("/admin/telegram");
   return screen.findByRole("tabpanel");
 }
 
@@ -42,16 +41,22 @@ function submitPassword(form: HTMLElement, password = PASSWORD) {
   type("Ваш пароль администратора", password, form);
 }
 
-describe("Telegram в «Подключениях» — кратко (W15-H4)", () => {
-  it("состояние бота и «Настроить бота», без формы токена и канала", async () => {
-    const side = await openPanel("telegram");
-    expect(await within(side).findByText("@demo_railtech_bot")).toBeVisible();
-    expect(within(side).getByRole("link", { name: "Настроить бота" })).toHaveAttribute(
+describe("Telegram в «Подключениях» — карточка ведёт на страницу канала (SET-IA)", () => {
+  it("«Открыть» у Telegram, Почты и Расходов — их страницы, а не боковое окно", async () => {
+    signIn("admin@demo.example");
+    renderAt("/admin/integrations");
+    expect(await screen.findByRole("link", { name: "Открыть: Telegram" })).toHaveAttribute(
       "href",
-      "/admin/bot?part=connection",
+      "/admin/telegram",
     );
-    expect(within(side).queryByRole("button", { name: "Сменить токен" })).toBeNull();
-    expect(within(side).queryByRole("button", { name: "Тестовое сообщение" })).toBeNull();
+    expect(screen.getByRole("link", { name: "Открыть: Почта" })).toHaveAttribute(
+      "href",
+      "/admin/mail",
+    );
+    expect(screen.getByRole("link", { name: "Открыть: Расходы" })).toHaveAttribute(
+      "href",
+      "/admin/ai-spend",
+    );
   });
 });
 

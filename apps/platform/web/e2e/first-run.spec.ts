@@ -165,7 +165,7 @@ test.describe("Первый запуск: полный путь", () => {
     // Остальные четыре шага (ERP уже сделан); форма каждого — в боковом окне мастера, без перехода (W15-H4)
     const steps = page.getByRole("list", { name: "Шаги настройки" });
     await expect(steps.getByRole("listitem")).toHaveCount(4);
-    await expect(page.getByText("Готово 1 из 5")).toBeVisible();
+    await expect(page.getByText("Готово 1 из 5", { exact: true })).toBeVisible();
     await steps.getByRole("link", { name: "Подключить бота" }).click();
     await expect(page).toHaveURL(/\/admin\/setup\?step=bot/);
     await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
@@ -198,7 +198,7 @@ test.describe("Первый запуск: полный путь", () => {
 
     // Шаг «Первый сотрудник» теперь сделан
     await spaGoto(page, "/admin/setup");
-    await expect(page.getByText("Готово 2 из 5")).toBeVisible();
+    await expect(page.getByText("Готово 2 из 5", { exact: true })).toBeVisible();
     await expect(
       steps.getByRole("listitem").filter({ hasText: "Первый сотрудник" }).getByText("Готово"),
     ).toBeVisible();
@@ -283,7 +283,7 @@ test.describe("Первый запуск: полный путь", () => {
     await page.reload();
     await spaGoto(page, "/admin/setup");
     await expect(page.getByText("Всё готово: Платформа настроена.")).toBeVisible();
-    await expect(page.getByText("Готово 5 из 5")).toBeVisible();
+    await expect(page.getByText("Готово 5 из 5", { exact: true })).toBeVisible();
     await spaGoto(page, "/admin/org");
     await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
@@ -392,12 +392,12 @@ test.describe("Первый запуск: axe и скриншоты", () => {
 });
 
 // D26G-6: «Выставить счёт» без р/с и МФО откажет — мастер показывает шаг «Банковские реквизиты для счетов» со статусом и
-// ведёт в «Компания и бланки», где над полями видно, что реквизитов нет. Снимки — docs/screens/d26g-4.
+// ведёт в «Реквизиты и бланк», где над полями видно, что реквизитов нет. Снимки — docs/screens/d26g-4.
 test.describe("Первый запуск: банковские реквизиты для счетов (D26G-6)", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const width of WIDTHS) {
-    test(`шаг «Банковские реквизиты для счетов» → «Компания и бланки» → «Готово», ${String(width)}`, async ({
+    test(`шаг «Банковские реквизиты для счетов» → «Реквизиты и бланк» → «Готово», ${String(width)}`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -415,13 +415,13 @@ test.describe("Первый запуск: банковские реквизит�
         card.getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
       ).toBeVisible();
       await card
-        .getByRole("link", { name: "Открыть «Компания и бланки»" })
+        .getByRole("link", { name: "Открыть «Реквизиты и бланк»" })
         .scrollIntoViewIfNeeded();
       await screenShot(page, "setup-bank-step");
       await expectNoViolations(page, `мастер: реквизиты ${String(width)}`);
 
-      await card.getByRole("link", { name: "Открыть «Компания и бланки»" }).click();
-      await expect(page).toHaveURL(/\/admin\/company\?tab=details/);
+      await card.getByRole("link", { name: "Открыть «Реквизиты и бланк»" }).click();
+      await expect(page).toHaveURL(/\/admin\/company$/);
       await expect(
         page.getByText(/Нет банковских реквизитов для счетов: без расчётного/),
       ).toBeVisible();

@@ -35,7 +35,7 @@
     "extra": "Qo‘shimcha"
   },
   "keys": {
-    "company": "Kompaniya",
+    "company": "Mijozlar uchun kontaktlar",
     "business_hours": "Ish soatlari",
     "texts": "Bot matnlari",
     "bot": "Bot xulq-atvori",
@@ -71,8 +71,8 @@
     "invalidField": "Qiymatni tekshiring"
   },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
-  "channelMoved": "Jamoa kanali «Ulanish» yorlig‘ida tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
-  "openIntegrations": "«Ulanish»ni ochish",
+  "channelMoved": "Jamoa kanali «Telegram» sahifasidagi «Ulanish» yorlig‘ida tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
+  "openIntegrations": "«Telegram»ni ochish",
   "weekdays": {
     "mon": "Du",
     "tue": "Se",
@@ -719,7 +719,7 @@
     "label": "Telegram-bot bo‘limlari",
     "connection": "Ulanish",
     "texts": "Matnlar",
-    "behavior": "Xulq-atvor va uzatish",
+    "behavior": "Xulq-atvor",
     "kb": "Bilimlar bazasi",
     "templates": "Javob shablonlari",
     "exports": "Yuklamalar",
@@ -730,9 +730,5 @@
     "text": "Bot javob beradigan hujjatlar, «Bot nimani topadi» qidiruvi, bo‘shliqlar va qum qutisi — bilimlar bazasi ekranida. Quyida — bot bazadan qanday foydalanadi.",
     "readOnlyText": "Hujjatlar, bo‘shliqlar va «Bot nimani topadi» qidiruvi — bilimlar bazasi ekranida, faqat o‘qish uchun.",
     "open": "Bilimlar bazasini ochish"
-  },
-  "seeAlso": {
-    "company": "Hujjatlar uchun rekvizitlar — «Kompaniya va blankalar»da",
-    "budget": "Butun tizim bo‘yicha model xarajatlari — «Ulanishlar · Xarajatlar»da"
   }
 }

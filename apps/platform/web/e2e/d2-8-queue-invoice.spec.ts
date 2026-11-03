@@ -202,9 +202,9 @@ test.describe("D26G-6, D26G-9: реквизиты для счёта и служ�
         main.getByText("Нет банковских реквизитов компании — счёт не выставить."),
       ).toBeVisible();
       await expect(
-        main.getByText("Заполняет администратор: Настройки · Компания и бланки."),
+        main.getByText("Заполняет администратор: Настройки · Реквизиты и бланк."),
       ).toBeVisible();
-      await expect(page.getByRole("link", { name: "Открыть «Компания и бланки»" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toHaveCount(0);
       await shot(page, "payments-to-issue-no-bank");
       await expectNoViolations(page, `к выставлению без реквизитов ${String(width)}`);
 

@@ -36,7 +36,9 @@ describe("статьи помощи в сборке", () => {
     expect(articleForSection("dashboard.queue")?.slug).toBe("queue");
     expect(articleForSection("admin.tickets")?.slug).toBe("admin-tickets");
     expect(articleForSection("me")?.slug).toBe("profile");
-    expect(articleForSection("admin.bus")).toBeUndefined();
+    expect(articleForSection("admin.bus")?.slug).toBe("admin-bus");
+    expect(articleForSection("admin.overview")?.slug).toBe("settings-home");
+    expect(articleForSection("crm.channels.none")).toBeUndefined();
     expect(articleForSection(undefined)).toBeUndefined();
   });
 

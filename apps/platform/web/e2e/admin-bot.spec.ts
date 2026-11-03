@@ -3,10 +3,9 @@ import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
-// Admin · Настройки бота на MSW (W13-A5): разделы настроек по схемам CRM (сохранение, отмена, ошибка поля, защита от потери
-// изменений), тексты бота в боковом окне, пробный прогон правил передачи, шаблоны ответов (создать, изменить, удалить),
-// выгрузки CSV (скачивание файла с датой в имени); директор читает без кнопок изменения; axe (WCAG 2.1 AA) на всех разделах;
-// снимки 1440 и 390 для PR.
+// Настройки бота на MSW (W13-A5; SET-IA — разделы на страницах своих групп Настроек): формы по схемам CRM (сохранение,
+// отмена, ошибка поля, защита от потери изменений), тексты бота в боковом окне, пробный прогон правил передачи, шаблоны
+// ответов, выгрузки CSV; директор читает без кнопок изменения; axe (WCAG 2.1 AA) на всех разделах; снимки 1440 и 390.
 const WIDTHS = [1440, 390] as const;
 const PANEL = "#pf-context-panel";
 const SECTIONS = [
@@ -28,10 +27,31 @@ const SECTIONS = [
   "exports",
 ] as const;
 
+/** Раздел бота → страница Настроек после SET-IA (старый адрес `/admin/bot?section=` уводит туда сам). */
+const PAGE_OF: Record<string, string> = {
+  company: "Реквизиты и бланк",
+  business_hours: "Время и сроки",
+  escalation: "Время и сроки",
+  texts: "Telegram",
+  bot: "Telegram",
+  kb: "Telegram",
+  stop_words: "Telegram",
+  competitors: "Telegram",
+  qualification: "Telegram",
+  templates: "Telegram",
+  web_form: "Формы сайта",
+  notifications: "Уведомления",
+  service_alerts: "Уведомления",
+  deals: "Справочники",
+  budget: "Расходы на ИИ",
+  exports: "Выгрузки",
+};
+
 async function expectNoViolations(page: Page, context: string): Promise<void> {
   await waitForMotionEnd(page);
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+    .exclude("iframe[sandbox]")
     .analyze();
   expect(
     results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
@@ -39,72 +59,79 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
-/** Без раздела — вкладка «Поведение и передача» (W15-H4: у экрана вкладки; раздел из старого адреса ведёт на свою вкладку). */
-async function openBot(page: Page, section?: string, extra = ""): Promise<void> {
-  const query = [section ? `section=${section}` : "part=behavior", extra].filter(Boolean).join("&");
-  await spaGoto(page, `/admin/bot${query ? `?${query}` : ""}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+/** Раздел бота по старому адресу — тот уводит на страницу группы; ждём её заголовок и конец загрузки. */
+async function openBot(page: Page, section = "company"): Promise<void> {
+  await spaGoto(page, `/admin/bot?section=${section}`);
+  await expect(
+    page.getByRole("heading", { level: 1, name: PAGE_OF[section] ?? "Telegram", exact: true }),
+  ).toBeVisible();
   await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
+}
+
+/** Форма раздела бота на странице — область с заголовком раздела. */
+function form(page: Page, name: string): Locator {
+  return page.getByRole("region", { name, exact: true });
 }
 
 function side(page: Page): Locator {
   return page.locator(PANEL);
 }
 
-function nav(page: Page): Locator {
-  return page.getByRole("navigation", { name: "Разделы настроек бота" });
-}
-
 test.describe("Настройки бота: администратор", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("разделы по группам; «Компания»: изменить, отменить, сохранить без «Что произойдёт»", async ({
+  test("«Контакты для клиентов» на «Реквизитах и бланке»: изменить, отменить, сохранить без «Что произойдёт»", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openBot(page);
 
-    await expect(page.getByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
-    await expect(nav(page).getByRole("link")).toHaveCount(12);
-    await expect(page.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
+    const contacts = form(page, "Контакты для клиентов");
+    await expect(contacts).toBeVisible();
+    await contacts.scrollIntoViewIfNeeded();
+    await expect(contacts.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
     // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
     await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await settledScreenshot(page, "company");
 
-    await page.getByLabel("Название компании").fill("RailTech Групп (демо)");
-    await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
-    await page.getByRole("button", { name: "Отменить изменения" }).click();
-    await expect(page.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
+    await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
+    await expect(contacts.getByText("Есть несохранённые изменения")).toBeVisible();
+    await contacts.getByRole("button", { name: "Отменить изменения" }).click();
+    await expect(contacts.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
 
-    await page.getByLabel("Название компании").fill("RailTech Групп (демо)");
-    await page.getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.getByText("Настройки «Компания» сохранены")).toBeVisible();
-    await expect(page.getByText("Изменений нет")).toBeVisible();
+    await contacts.getByLabel("Название компании").fill("RailTech Групп (демо)");
+    await contacts.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect(page.getByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
+    await expect(contacts.getByText("Изменений нет")).toBeVisible();
     await settledScreenshot(page, "company-saved");
   });
 
-  test("поле, которое не приняли, подсвечивается; несохранённые изменения при смене раздела", async ({
+  test("поле, которое не приняли, подсвечивается; несохранённые изменения при уходе со страницы", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openBot(page);
 
-    await page.getByLabel("Название компании").fill("   ");
-    await page.getByRole("button", { name: "Сохранить" }).click();
-    await expect(page.getByText("Значения не приняты: проверьте отмеченные поля.")).toBeVisible();
+    const contacts = form(page, "Контакты для клиентов");
+    await contacts.getByLabel("Название компании").fill("   ");
+    await contacts.getByRole("button", { name: "Сохранить", exact: true }).click();
+    await expect(
+      contacts.getByText("Значения не приняты: проверьте отмеченные поля."),
+    ).toBeVisible();
     await settledScreenshot(page, "company-error");
 
-    await nav(page).getByRole("link", { name: "Рабочие часы" }).click();
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    await menu.getByRole("link", { name: "Время и сроки" }).click();
     const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("button", { name: "Остаться" }).click();
-    await expect(page.getByLabel("Название компании")).toHaveValue("   ");
-    await nav(page).getByRole("link", { name: "Рабочие часы" }).click();
+    await expect(contacts.getByLabel("Название компании")).toHaveValue("   ");
+    await menu.getByRole("link", { name: "Время и сроки" }).click();
     await page
       .getByRole("dialog", { name: "Выйти без сохранения?" })
       .getByRole("button", { name: "Выйти без сохранения" })
       .click();
-    await expect(page.getByRole("heading", { level: 2, name: "Рабочие часы" })).toBeVisible();
+    await expect(form(page, "Рабочие часы")).toBeVisible();
   });
 
   test("рабочие часы, поведение бота, квалификация, бюджет: поля подписаны, значения сохраняются", async ({
@@ -113,23 +140,26 @@ test.describe("Настройки бота: администратор", () => {
     await loginAndWait(page, "admin@demo.example");
 
     await openBot(page, "business_hours");
-    await expect(page.getByLabel("Начало рабочего дня")).toHaveValue("09:00");
-    const saturday = page
+    const hours = form(page, "Рабочие часы");
+    await expect(hours.getByLabel("Начало рабочего дня")).toHaveValue("09:00");
+    const saturday = hours
       .getByRole("group", { name: "Рабочие дни" })
       .getByRole("checkbox", { name: "Сб" });
     await saturday.click();
     await expect(saturday).toBeChecked();
-    await page.getByRole("button", { name: "Сохранить" }).click();
+    await hours.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByText("Настройки «Рабочие часы» сохранены")).toBeVisible();
     await settledScreenshot(page, "business-hours");
 
     await openBot(page, "bot");
-    await page.getByLabel("Максимум слов в ответе").fill("80");
-    await page.getByRole("button", { name: "Сохранить" }).click();
+    const behaviour = form(page, "Поведение бота");
+    await behaviour.getByLabel("Максимум слов в ответе").fill("80");
+    await behaviour.getByRole("button", { name: "Сохранить", exact: true }).click();
     await expect(page.getByText("Настройки «Поведение бота» сохранены")).toBeVisible();
 
-    await openBot(page, "qualification");
-    await expect(page.getByText("Лид становится «Квалифицирован»")).toBeVisible();
+    await expect(
+      form(page, "Квалификация").getByText("Лид становится «Квалифицирован»"),
+    ).toBeVisible();
     await settledScreenshot(page, "qualification");
 
     await openBot(page, "budget");
@@ -137,7 +167,7 @@ test.describe("Настройки бота: администратор", () => {
       page.getByText("Anthropic (диалог, квалификатор, проверка качества)"),
     ).toBeVisible();
     await openBot(page, "notifications");
-    await expect(page.getByRole("link", { name: "Открыть «Подключение»" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Открыть «Telegram»" })).toBeVisible();
   });
 
   test("тексты бота: таблица по группам, поиск, правка в боковом окне с предпросмотром, пустой перевод отклоняется", async ({
@@ -193,7 +223,9 @@ test.describe("Настройки бота: администратор", () => {
       "Передач с новыми правилами",
     );
     await settledScreenshot(page, "escalation-dry-run");
-    await expect(page.getByText("Есть несохранённые изменения")).toBeVisible();
+    await expect(
+      form(page, "Правила передачи").getByText("Есть несохранённые изменения"),
+    ).toBeVisible();
   });
 
   test("шаблоны ответов: создать, изменить, удалить (удаление — с «Что произойдёт»)", async ({
@@ -285,23 +317,25 @@ test.describe("Настройки бота: выгрузки CSV", () => {
   });
 });
 
-test.describe("Telegram-бот в одном месте (W15-H4)", () => {
+test.describe("Telegram в одном месте (W15-H4, SET-IA)", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
-  test("вкладки: подключение (токен), тексты, поведение, база знаний (вход), шаблоны, выгрузки; боковое окно закрыто", async ({
+  test("вкладки: подключение (токен), тексты, поведение, шаблоны, база знаний (вход); боковое окно закрыто", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/bot");
-    await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Telegram", exact: true }),
+    ).toBeVisible();
     const tabs = page.getByRole("tablist", { name: "Разделы Telegram-бота" });
+    // SET-IA: один ряд вкладок; «Выгрузки» — страница «Система · Выгрузки»
     await expect(tabs.getByRole("tab")).toHaveText([
       "Подключение",
       "Тексты",
-      "Поведение и передача",
-      "База знаний",
+      "Поведение",
       "Шаблоны ответов",
-      "Выгрузки",
+      "База знаний",
     ]);
     // Выбирать нечего — бокового окна с «Объект не выбран» нет
     await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
@@ -312,17 +346,18 @@ test.describe("Telegram-бот в одном месте (W15-H4)", () => {
 
     await tabs.getByRole("tab", { name: "Тексты" }).click();
     await expect(page.getByText(/Приветствие и согласие · /)).toBeVisible();
-    await tabs.getByRole("tab", { name: "Поведение и передача" }).click();
-    await expect(nav(page).getByRole("link", { name: "Правила передачи" })).toBeVisible();
+    await tabs.getByRole("tab", { name: "Поведение" }).click();
+    await expect(form(page, "Стоп-слова")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Разделы настроек бота" })).toHaveCount(0);
 
     await tabs.getByRole("tab", { name: "База знаний" }).click();
     await expect(page.getByText("Минимальное сходство, чтобы бот отвечал (0–1)")).toBeVisible();
     await settledScreenshot(page, "bot-kb");
     await page.getByRole("link", { name: "Открыть базу знаний" }).click();
     await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
-    // администратор остаётся в Настройках: подсвечен «Telegram-бот», в рейле нет Клиентов
+    // администратор остаётся в Настройках: подсвечен «Telegram», в рейле нет Клиентов
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: "Telegram-бот" })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: "Telegram", exact: true })).toHaveAttribute(
       "aria-current",
       "page",
     );
@@ -338,12 +373,11 @@ test.describe("Настройки бота: права", () => {
 
   test("директор читает разделы, шаблоны и выгрузки без кнопок изменения", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await openBot(page);
+    await openBot(page, "business_hours");
 
     await expect(page.getByText("Только просмотр").first()).toBeVisible();
-    await expect(page.getByRole("button", { name: "Сохранить" })).toHaveCount(0);
-    await expect(page.getByLabel("Название компании")).toBeDisabled();
-    await openBot(page, "escalation");
+    await expect(page.getByRole("button", { name: "Сохранить", exact: true })).toHaveCount(0);
+    await expect(form(page, "Рабочие часы").getByLabel("Начало рабочего дня")).toBeDisabled();
     await expect(
       page.getByRole("button", { name: "Проверить на последних 50 диалогах" }),
     ).toHaveCount(0);
@@ -357,19 +391,23 @@ test.describe("Настройки бота: права", () => {
     await settledScreenshot(page, "director-view");
   });
 
-  test("менеджер: пункта «Настройки бота» нет, прямой адрес — «Нет доступа»; в Admin у директора пункт есть", async ({
+  test("менеджер: пункта «Telegram» нет, прямой адрес — «Нет доступа»; в Настройках у директора пункт есть", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/admin/bot");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Telegram-бот" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Telegram", exact: true })).toHaveCount(0);
 
     await page.evaluate("window.localStorage.clear()");
     await spaGoto(page, "/login");
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/roles");
-    await expect(page.getByRole("link", { name: "Telegram-бот" })).toBeVisible();
+    await expect(
+      page
+        .getByRole("navigation", { name: "Разделы модуля" })
+        .getByRole("link", { name: "Telegram", exact: true }),
+    ).toBeVisible();
   });
 });
 
@@ -397,21 +435,21 @@ test.describe("Настройки бота: axe и снимки", () => {
         }
       }
 
-      // W15-H4: вкладка «Подключение» — токен, канал команды и профиль бота
-      await spaGoto(page, "/admin/bot?part=connection");
+      // Вкладка «Подключение» — токен, канал команды и профиль бота
+      await spaGoto(page, "/admin/telegram");
       await expect(page.getByRole("tabpanel").getByText("@demo_railtech_bot")).toBeVisible();
       await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
       await expectNoViolations(page, `connection ${String(width)}`);
       await settledScreenshot(page, "a11y-connection");
 
-      await openBot(page, "texts", "text=greeting&panel=open");
+      await spaGoto(page, "/admin/telegram?tab=texts&text=greeting&panel=open");
       await expect(
         side(page).getByRole("heading", { level: 3, name: "Приветствие" }),
       ).toBeVisible();
       await expectNoViolations(page, `text editor ${String(width)}`);
       await settledScreenshot(page, "a11y-text-editor");
 
-      await openBot(page, "templates", "template=1&panel=open");
+      await spaGoto(page, "/admin/telegram?tab=templates&template=1&panel=open");
       await expect(side(page).getByRole("form", { name: "Изменить шаблон" })).toBeVisible();
       await side(page).getByRole("button", { name: "Удалить шаблон" }).click();
       await expectNoViolations(page, `template form ${String(width)}`);

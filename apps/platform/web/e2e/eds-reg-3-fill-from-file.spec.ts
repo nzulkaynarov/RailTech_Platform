@@ -88,14 +88,13 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await signOut(page);
 
-    // 3. Администратор: Настройки · Документооборот · ИИ-помощник — состояние словами; переключателя сканов нет до решения
-    // владельца и юриста (Q-EDSREG-1).
+    // 3. Администратор: Настройки · Система · Расходы на ИИ, часть «ИИ-помощник» (SET-IA; старый адрес уводит туда) —
+    // состояние словами; переключателя сканов нет до решения владельца и юриста (Q-EDSREG-1).
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/docflow?tab=ai");
-    await expect(
-      page.getByText("Сканы и фото помощник пока не читает: их заполняют вручную."),
-    ).toBeVisible();
-    await expect(page.getByRole("switch")).toHaveCount(0);
+    const note = page.getByText("Сканы и фото помощник пока не читает: их заполняют вручную.");
+    await expect(note).toBeVisible();
+    await expect(page.locator(".pf-co-body", { has: note }).getByRole("switch")).toHaveCount(0);
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await expectNoViolations(page, `settings-ai ${String(width)}`);

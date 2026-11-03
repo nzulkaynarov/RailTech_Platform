@@ -32,15 +32,16 @@ afterEach(() => {
   endSession();
 });
 
-const heading = () => screen.findByRole("heading", { level: 1, name: "Документооборот" });
+/** «Документооборот» после SET-IA: справочники писем — в «Процессы · Справочники», резолюции — своя страница. */
+const heading = () => screen.findByRole("heading", { level: 1, name: "Справочники" });
 
 async function rowOf(name: string): Promise<HTMLElement> {
   const cell = await screen.findByText(name, { selector: "b" });
   return cell.closest("tr") as HTMLElement;
 }
 
-describe("Настройки · Документооборот · Справочники (EDS-REG)", () => {
-  it("администратор видит стартовые виды документа с полями вида; пункт есть в меню", async () => {
+describe("Настройки · Процессы · Справочники писем и шаблоны резолюций (EDS-REG, SET-IA)", () => {
+  it("старый адрес «Документооборот» ведёт на первый справочник писем; пункт «Справочники» в меню", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow");
     expect(await heading()).toBeInTheDocument();
@@ -49,7 +50,11 @@ describe("Настройки · Документооборот · Справоч
     expect(tax).toHaveTextContent("3");
     expect(tax).toHaveTextContent("Действует");
     expect(await rowOf("Письмо банка")).toHaveTextContent("по общему правилу");
-    expect(screen.getAllByRole("link", { name: "Документооборот" }).length).toBeGreaterThan(0);
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    expect(within(menu).getByRole("link", { name: "Справочники" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
     // Письмо банка есть у демо-писем — удалить нельзя, только скрыть.
     expect(screen.queryByRole("button", { name: "Удалить: Письмо банка" })).toBeNull();
     expect(screen.getByRole("button", { name: "Удалить: Письмо поставщика" })).toBeEnabled();
@@ -80,7 +85,7 @@ describe("Настройки · Документооборот · Справоч
     signInAs("admin@demo.example");
     renderApp("/admin/docflow");
     await heading();
-    fireEvent.click(await screen.findByText("Способы получения"));
+    fireEvent.click(await screen.findByRole("link", { name: "Способы получения" }));
     const post = await rowOf("Почта");
     fireEvent.click(within(post).getByRole("button", { name: "Скрыть: Почта" }));
     await waitFor(async () => {
@@ -107,7 +112,7 @@ describe("Настройки · Документооборот · Справоч
     signInAs("admin@demo.example");
     renderApp("/admin/docflow");
     await heading();
-    fireEvent.click(await screen.findByText("Виды резолюции"));
+    fireEvent.click(await screen.findByRole("link", { name: "Виды резолюции" }));
     const row = await rowOf("Для сведения");
     expect(within(row).getByRole("button", { name: "Изменить: Для сведения" })).toBeEnabled();
     expect(within(row).queryByRole("button", { name: "Скрыть: Для сведения" })).toBeNull();
@@ -117,6 +122,9 @@ describe("Настройки · Документооборот · Справоч
   it("шаблоны резолюций: администратор видит общий и добавляет новый", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=templates");
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Шаблоны резолюций" }),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText("Банк — к сведению бухгалтерии", { selector: "b" }),
     ).toBeInTheDocument();
@@ -150,9 +158,13 @@ describe("Настройки · Документооборот · Справоч
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=ai");
     expect(
-      await screen.findByText("Сканы и фото помощник пока не читает: их заполняют вручную."),
+      await screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("switch")).toBeNull();
+    const note = await screen.findByText(
+      "Сканы и фото помощник пока не читает: их заполняют вручную.",
+    );
+    // переключателя сканов нет в части «ИИ-помощник» (переключатели страницы — у расходов и лимита)
+    expect(within(note.closest(".pf-co-body") as HTMLElement).queryByRole("switch")).toBeNull();
     expect(readDocflowSettings().recognize_scans).toBe(false);
   });
 });

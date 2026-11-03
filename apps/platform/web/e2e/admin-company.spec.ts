@@ -10,9 +10,10 @@ import {
   spaGoto,
   waitForMotionEnd,
 } from "./support/app";
-import { pickFiles } from "./support/fields";
+import { chooseOption, pickFiles } from "./support/fields";
 
-// Admin · Компания на MSW (W13-A3): каждое действие экрана, права, axe на 1440, 1280 и 390, снимки (`E2E_SCREENSHOT_DIR`).
+// Компания на MSW (W13-A3; SET-IA — бывшие вкладки «Компании и бланков» стали страницами групп «Компания» и «Процессы», старый
+// адрес `?tab=` уводит на новую): каждое действие экрана, права, axe на 1440, 1280 и 390, снимки (`E2E_SCREENSHOT_DIR`).
 const WIDTHS = [1440, 1280, 390] as const;
 
 /** Минимальный настоящий PNG 1×1: файл уходит как `multipart/form-data` через service worker MSW. */
@@ -21,16 +22,17 @@ const PNG = Buffer.from(
   "base64",
 );
 
+/** Бывшая вкладка → заголовок страницы, куда она переехала, и заголовок части на ней. */
 const TABS = [
-  ["details", "Реквизиты компании"],
-  ["brand", "Бланк и бренд документов"],
-  ["numbering", "Нумерация документов"],
-  ["quote", "Условия КП по умолчанию"],
-  ["charges", "Статьи расхода КП"],
-  ["templates", "Шаблоны документов и писем"],
-  ["reference", "Справочники"],
-  ["categories", "Категории каталога и запросы на них"],
-  ["platform", "Платформенные настройки"],
+  ["details", "Реквизиты и бланк", "Реквизиты компании"],
+  ["brand", "Реквизиты и бланк", "Бланк и бренд документов"],
+  ["numbering", "Нумерация", "Нумерация документов"],
+  ["quote", "Шаблоны документов", "Условия КП по умолчанию"],
+  ["charges", "Справочники", "Статьи расхода КП"],
+  ["templates", "Шаблоны документов", "Шаблоны документов"],
+  ["reference", "Справочники", "Страны"],
+  ["categories", "Справочники", "Категории каталога и запросы на них"],
+  ["platform", "Налоги и валюты", "Платформенные настройки"],
 ] as const;
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -57,9 +59,11 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openCompany(page: Page, tab: string): Promise<void> {
   await spaGoto(page, `/admin/company?tab=${tab}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
-  const title = TABS.find(([key]) => key === tab)?.[1] ?? "";
-  await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+  const [, h1, h2] = TABS.find(([key]) => key === tab) ?? ["", "Реквизиты и бланк", ""];
+  await expect(page.getByRole("heading", { level: 1, name: h1, exact: true })).toBeVisible();
+  if (tab !== "templates") {
+    await expect(page.getByRole("heading", { level: 2, name: h2 })).toBeAttached();
+  }
 }
 
 async function signOut(page: Page): Promise<void> {
@@ -81,6 +85,15 @@ async function choose(page: Page, select: Locator, text: string): Promise<void> 
   ).toContainText(text);
 }
 
+/** Справочник слева на «Процессы · Справочники»; на телефоне список — выпадающий (SET-IA). */
+async function pickList(page: Page, name: string): Promise<void> {
+  if ((page.viewportSize()?.width ?? 1440) < 768) {
+    await chooseOption(page.getByLabel("Справочники по разделам"), name);
+    return;
+  }
+  await page.getByRole("link", { name, exact: true }).click();
+}
+
 const toast = (page: Page, text: string) => page.locator(".ant-message").getByText(text);
 
 test.describe("Компания: права и меню", () => {
@@ -88,26 +101,25 @@ test.describe("Компания: права и меню", () => {
 
   test("менеджер: пункта «Компания» в меню нет, по адресу — «Нет доступа»", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    await expect(page.getByRole("link", { name: "Компания и бланки" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Реквизиты и бланк" })).toHaveCount(0);
     await spaGoto(page, "/admin/company");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
 
-  test("директор и администратор видят пункт «Компания» в меню Admin и открывают раздел", async ({
+  test("директор и администратор видят пункт «Реквизиты и бланк» в группе «Компания» и открывают страницу", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/org");
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Компания и бланки" })
+      .getByRole("group", { name: "Компания" })
+      .getByRole("link", { name: "Реквизиты и бланк" })
       .click();
     await expect(page).toHaveURL(/\/admin\/company/);
-    await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Реквизиты" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
+    await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();
+    // одна страница с частями вместо девяти вкладок
+    await expect(page.getByRole("tab")).toHaveCount(0);
     await signOut(page);
 
     await loginAndWait(page, "admin@demo.example");
@@ -126,7 +138,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     // Без правок бар сохранения невидим (UX-1b, S6)
     await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toBeHidden();
 
-    await page.getByLabel("Телефон").fill("+998 11 111 11 11");
+    await page.getByLabel("Телефон", { exact: true }).fill("+998 11 111 11 11");
     await expect(page.getByRole("group", { name: "Что произойдёт" })).toHaveCount(0);
     await page.getByRole("button", { name: "Сохранить реквизиты" }).click();
     await expect(toast(page, "Сохранено")).toBeVisible();
@@ -149,14 +161,14 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await settledScreenshot(page, "company-details-logo");
 
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
-    await expect(page.getByLabel("Телефон")).toHaveValue("+998 11 111 11 11");
+    await expect(page.getByRole("heading", { level: 1, name: "Реквизиты и бланк" })).toBeVisible();
+    await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue("+998 11 111 11 11");
     await page.getByRole("button", { name: "Удалить логотип" }).click();
     const confirm = page.getByRole("dialog", { name: "Удалить логотип компании?" });
     await expect(confirm.getByText("Что произойдёт")).toBeVisible();
     await confirm.getByRole("button", { name: "Удалить логотип" }).click();
     await expect(toast(page, "Логотип удалён")).toBeVisible();
-    await expect(page.getByText("Нет логотипа")).toBeVisible();
+    await expect(page.locator("#pf-co-part-details").getByText("Нет логотипа")).toBeVisible();
   });
 
   test("бланк и бренд: образец меняется до сохранения, вид документа переключается, цвет проверяется", async ({
@@ -316,7 +328,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
   test("шаблоны писем: включить шаблон, показать образец, создать новый", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await openCompany(page, "templates");
-    await page.locator(".ant-segmented-item-label", { hasText: "Шаблоны писем" }).click();
+    await page.getByRole("tab", { name: "Письма" }).click();
     await page.getByRole("button", { name: "Изменить: quote_sent" }).click();
     const editor = page.getByRole("dialog", { name: "Изменить шаблон письма" });
     await editor.getByLabel("Шаблон действует").check();
@@ -365,7 +377,7 @@ test.describe("Компания: статьи расхода, шаблоны, с
     ).toBeVisible();
     await confirm.getByRole("button", { name: "Отмена" }).click();
 
-    await page.locator(".ant-segmented-item-label", { hasText: "Валюты" }).click();
+    await pickList(page, "Валюты");
     await page.getByRole("button", { name: "Отключить: Евро" }).click();
     await expect(page.getByRole("row", { name: /Евро/ })).toContainText("Отключена");
     await page.getByRole("button", { name: "Включить: Евро" }).click();
@@ -533,7 +545,7 @@ test.describe("Компания: axe и снимки", () => {
         await openCompany(page, tab);
         // данные вкладки пришли: форма, список или таблица, а не скелетон
         await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
-        await expect(page.locator(".pf-co-body")).toBeVisible();
+        await expect(page.locator(".pf-co-body").first()).toBeVisible();
         if (tab === "brand") await expect(page.locator('iframe[title^="Образец"]')).toBeVisible();
         if (tab === "numbering") {
           await expect(
@@ -559,13 +571,13 @@ test.describe("Компания: axe и снимки", () => {
       await settledScreenshot(page, "company-templates-editor-modal");
       await editor.getByRole("button", { name: "Отмена" }).click();
 
-      await page.locator(".ant-segmented-item-label", { hasText: "Шаблоны писем" }).click();
+      await page.getByRole("tab", { name: "Письма" }).click();
       await expect(page.getByRole("row", { name: /invoice_issued/ })).toBeVisible();
       await expectNoViolations(page, `email templates ${String(width)}`);
       await settledScreenshot(page, "company-templates-emails");
 
       await openCompany(page, "reference");
-      await page.locator(".ant-segmented-item-label", { hasText: "Базисы поставки" }).click();
+      await pickList(page, "Базисы поставки");
       await expect(page.getByRole("row", { name: /DAP/ })).toBeVisible();
       await expectNoViolations(page, `reference ${String(width)}`);
       await settledScreenshot(page, "company-reference-basis");

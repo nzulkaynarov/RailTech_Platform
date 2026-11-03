@@ -227,3 +227,11 @@
   line-height: 24px;
   font-weight: 600;
 }
+
+/* Директор читает настройки (форма заблокирована): значения выбора и единицы измерения — читаемым цветом, а не бледным
+   цветом antd для недоступного поля (контраст ≥ 4.5:1; SET-IA, axe color-contrast на «Время и сроки»). */
+.pf-bot-form .ant-select-disabled .ant-select-selection-item,
+.pf-bot-form .ant-input-number-disabled .ant-input-number-suffix,
+.pf-bot-form .ant-input-number-affix-wrapper-disabled .ant-input-number-suffix {
+  color: #595959;
+}

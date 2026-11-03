@@ -3,7 +3,7 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, openAvatarMenu, settledScreenshot, waitForMotionEnd } from "./support/app";
 
-// EDS-REG PR 1 на MSW: Настройки · Документооборот · Справочники — администратор добавляет способ получения и скрывает
+// EDS-REG PR 1 на MSW: Настройки · Процессы · Справочники (до SET-IA — «Документооборот») — администратор добавляет способ получения и скрывает
 // другой; делопроизводитель видит изменения в форме «Зарегистрировать входящее»; журнал отбирает письма по виду документа.
 // axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR` → docs/screens/eds-reg-1/).
 const WIDTHS = [1440, 390] as const;
@@ -49,7 +49,7 @@ test.describe("EDS-REG · справочники документооборот�
   test("администратор ведёт справочники, делопроизводитель видит их в форме и журнале", async ({
     page,
   }) => {
-    // 1. Администратор: Настройки → Документооборот, виды входящих документов с полями «Срочный» и «Срок».
+    // 1. Администратор: Настройки → Процессы · Справочники (SET-IA), виды входящих документов с полями «Срочный» и «Срок».
     await loginAndWait(page, "admin@demo.example");
     await page
       .getByRole("navigation", { name: "Модули" })
@@ -57,10 +57,11 @@ test.describe("EDS-REG · справочники документооборот�
       .click();
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Документооборот" })
+      .getByRole("link", { name: "Справочники" })
       .click();
-    await expect(page).toHaveURL(/\/admin\/docflow/);
-    await expect(page.getByRole("heading", { level: 1, name: "Документооборот" })).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/dictionaries/);
+    await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
+    await page.getByRole("link", { name: "Виды входящих документов" }).click();
     await expect(page.getByText("Требование или уведомление ГНК", { exact: true })).toBeVisible();
     await shoot(page, "dictionaries-kinds");
 

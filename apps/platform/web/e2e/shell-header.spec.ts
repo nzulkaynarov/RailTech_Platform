@@ -155,7 +155,7 @@ test.describe("Шапка и бар несохранённого", () => {
       const save = page.getByRole("button", { name: "Сохранить реквизиты" });
       await expect(save).toBeHidden();
 
-      await page.getByLabel("Телефон").fill("+998 11 111 11 11");
+      await page.getByLabel("Телефон", { exact: true }).fill("+998 11 111 11 11");
       await expect(save).toBeVisible();
       await expect(page.getByRole("button", { name: "Сохранить реквизиты" })).toHaveCount(1);
       await settledScreenshot(page, "company-savebar");
@@ -164,19 +164,21 @@ test.describe("Шапка и бар несохранённого", () => {
       expect(
         await tabThroughForm(page, page.getByLabel("Полное наименование")),
       ).toBeGreaterThanOrEqual(8);
-      await page.getByLabel("Телефон").focus();
+      await page.getByLabel("Телефон", { exact: true }).focus();
 
-      await page.getByRole("tab", { name: "Бланк и бренд" }).click();
+      // Уход со страницы с правками (SET-IA: вкладок нет — уходим рейлом на «Все настройки») спрашивает
+      const settings = page
+        .getByRole("navigation", { name: "Модули" })
+        .getByRole("link", { name: "Настройки" });
+      await settings.click();
       const dialog = page.getByRole("dialog", { name: "Выйти без сохранения?" });
       await expect(dialog).toBeVisible();
       await dialog.getByRole("button", { name: "Остаться" }).click();
-      await expect(page.getByLabel("Телефон")).toHaveValue("+998 11 111 11 11");
+      await expect(page.getByLabel("Телефон", { exact: true })).toHaveValue("+998 11 111 11 11");
       await page.getByRole("button", { name: "Отменить" }).click();
       await expect(save).toBeHidden();
-      await page.getByRole("tab", { name: "Бланк и бренд" }).click();
-      await expect(
-        page.getByRole("heading", { level: 2, name: "Бланк и бренд документов" }),
-      ).toBeVisible();
+      await settings.click();
+      await expect(page.getByRole("heading", { level: 1, name: "Все настройки" })).toBeVisible();
     });
   }
 

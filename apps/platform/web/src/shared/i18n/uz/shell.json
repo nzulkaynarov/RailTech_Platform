@@ -12,7 +12,8 @@
     "nav": "Modul bo‘limlari",
     "collapse": "Menyuni yig‘ish",
     "show": "Menyu",
-    "needsAction": "harakat talab qiladi"
+    "needsAction": "harakat talab qiladi",
+    "settings": "Sozlamalar: {{group}}"
   },
   "topbar": {
     "crumbs": "Sahifa yo‘li",
@@ -250,12 +251,9 @@
       "erp": {
         "calc": "kalkulyator, tannarx",
         "catalog": "ma’lumotnomalar, nomenklatura"
-      },
-      "admin": {
-        "company": "shablonlar, rekvizitlar, raqamlash",
-        "integrations": "smtp, pochta, litellm",
-        "audit": "audit, jurnal"
       }
-    }
+    },
+    "settingsGroup": "Sozlamalar",
+    "settingTag": "Sozlama"
   }
 }

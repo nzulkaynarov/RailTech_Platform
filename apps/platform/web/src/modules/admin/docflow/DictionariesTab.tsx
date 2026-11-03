@@ -41,17 +41,21 @@ import { dictionaryErrorText } from "./errors";
  * значения таблицей — название, поля вида (из каталога), статус, порядок стрелками; добавить, изменить, скрыть или вернуть,
  * удалить неиспользованное. Использованное значение не удаляется, его скрывают: в формах его нет, у старых писем остаётся.
  */
-export function DictionariesTab({ readOnly }: { readOnly: boolean }) {
+export function DictionariesTab({ readOnly, kind: fixed }: { readOnly: boolean; kind?: string }) {
   const { t, i18n } = useTranslation("letters");
   const catalog = useListDictionaries({ query: { staleTime: 5 * 60_000 } });
   // Каталог BFF — справочники всех доменов; на этом экране все они — документооборота (`area = documents`).
   const dictionaries = catalog.data?.items ?? [];
-  const [kind, setKind] = useState<string | null>(null);
+  const [chosen, setKind] = useState<string | null>(null);
+  const kind = fixed ?? chosen;
   const current = dictionaries.find((d) => d.kind === kind) ?? dictionaries[0];
+  // На странице «Процессы · Справочники» (SET-IA) справочник выбран слева: заголовок — его название, переключателя нет.
+  const title =
+    fixed && current ? localName(current.name, i18n.language) : t("settings.dict.title");
 
   return (
     <div className="pf-co-body">
-      <TabHeader title={t("settings.dict.title")} hint={t("settings.dict.hint")} />
+      <TabHeader title={title} hint={t("settings.dict.hint")} />
       {catalog.isPending ? <Skeleton active paragraph={{ rows: 6 }} title={false} /> : null}
       {catalog.isError ? (
         <Alert
@@ -68,17 +72,19 @@ export function DictionariesTab({ readOnly }: { readOnly: boolean }) {
       ) : null}
       {current ? (
         <>
-          <div className="pf-docflow-kinds">
-            <Segmented<string>
-              aria-label={t("settings.dict.kindLabel")}
-              value={current.kind}
-              onChange={setKind}
-              options={dictionaries.map((d) => ({
-                value: d.kind,
-                label: localName(d.name, i18n.language),
-              }))}
-            />
-          </div>
+          {fixed ? null : (
+            <div className="pf-docflow-kinds">
+              <Segmented<string>
+                aria-label={t("settings.dict.kindLabel")}
+                value={current.kind}
+                onChange={setKind}
+                options={dictionaries.map((d) => ({
+                  value: d.kind,
+                  label: localName(d.name, i18n.language),
+                }))}
+              />
+            </div>
+          )}
           <DictionaryTable key={current.kind} dictionary={current} readOnly={readOnly} />
         </>
       ) : null}

@@ -46,7 +46,6 @@ import { TelegramPanel } from "./TelegramPanel";
 import "./integrations.css";
 
 const PATH = "/admin/integrations";
-const BUS_PATH = "/admin/bus";
 const CARD_KEYS: readonly IntegrationCardKey[] = [
   "erp",
   "telegram",
@@ -57,6 +56,17 @@ const CARD_KEYS: readonly IntegrationCardKey[] = [
   "storage",
   "system",
 ];
+
+/** Карточки, у которых своя страница Настроек (SET-IA): «Открыть» ведёт туда, а не в боковое окно. */
+const OWN_PAGE: Partial<Record<IntegrationCardKey, string>> = {
+  telegram: "/admin/telegram",
+  mail: "/admin/mail",
+  spend: "/admin/ai-spend",
+};
+
+function cardHref(key: IntegrationCardKey): string {
+  return OWN_PAGE[key] ?? `${PATH}?card=${key}&panel=open`;
+}
 
 function isCardKey(value: string | null): value is IntegrationCardKey {
   return value !== null && (CARD_KEYS as readonly string[]).includes(value);
@@ -210,7 +220,7 @@ function IntegrationTile({
       ) : null}
       <div className="pf-int-card-foot">
         <LinkButton
-          to={`${PATH}?card=${card.key}&panel=open`}
+          to={cardHref(card.key)}
           aria-label={t("openAria", { title })}
           aria-current={selected ? "true" : undefined}
         >
@@ -326,7 +336,7 @@ function AttentionSection({
                   </div>
                   <Link
                     className="pf-focusable"
-                    to={`${PATH}?card=${item.card}&panel=open`}
+                    to={cardHref(item.card)}
                     aria-label={t("attention.openAria", { subject })}
                   >
                     {t("open")}
@@ -446,11 +456,8 @@ export function IntegrationsPage() {
         extra={
           editable ? (
             // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы»;
-            // журнал шины — «Обмен между системами» (только `admin: full`, как и сам журнал).
-            <div className="pf-int-row">
-              <LinkButton to={BUS_PATH}>{t("modules:admin.journal.systems")}</LinkButton>
-              <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
-            </div>
+            // «Обмен между системами» — свой пункт группы «Система» (SET-IA).
+            <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
           ) : (
             <StatusTag tone="default">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>

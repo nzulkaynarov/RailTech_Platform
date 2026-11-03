@@ -1,0 +1,185 @@
+/* Настройки (SET-IA): индекс `/admin` и страницы групп. Макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0,
+   радиус 8, без теней, градиентов и цветных полосок; второстепенный текст #595959 (контраст ≥ 4.5:1 на белом и на #f5f5f5).
+   Индекс — как у Shopify и Stripe: название группы слева, карточки справа; на узком экране группа над карточками. */
+.pf-set-home,
+.pf-set-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-set-home {
+  gap: 24px;
+}
+.pf-set-search {
+  max-width: 640px;
+}
+.pf-set-h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+.pf-set-group {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 12px 24px;
+  align-items: start;
+  scroll-margin-top: 16px;
+}
+.pf-set-group > .pf-set-h2 {
+  padding-top: 12px;
+}
+@media (max-width: 1023px) {
+  .pf-set-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pf-set-group > .pf-set-h2 {
+    padding-top: 0;
+  }
+}
+.pf-set-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px;
+}
+.pf-set-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 100%;
+  box-sizing: border-box;
+  min-height: 84px;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  color: #1f1f1f;
+  text-decoration: none;
+}
+.pf-set-tile:hover {
+  border-color: #91caff;
+  color: #1f1f1f;
+}
+.pf-set-tile-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 24px;
+}
+.pf-set-tile-head .ant-tag {
+  margin-inline-end: 0;
+}
+.pf-set-tile-title {
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-set-tile-desc {
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-set-tile-hit {
+  color: #0958d9;
+  font-size: 12px;
+  line-height: 20px;
+}
+.pf-set-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 16px 0;
+}
+.pf-set-empty p {
+  margin: 0;
+}
+.pf-set-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #0958d9;
+  cursor: pointer;
+  font: inherit;
+}
+.pf-set-tickets {
+  margin: 0;
+  color: #595959;
+}
+
+/* Чек-лист «Первый запуск» (Shopify setup guide): шаги — последовательность, поэтому нумерованным списком с отметками. */
+.pf-set-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-set-setup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pf-set-setup-note {
+  margin: 0;
+  color: #595959;
+}
+.pf-set-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+}
+.pf-set-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 22px;
+}
+.pf-set-step-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #8c8c8c;
+  box-sizing: border-box;
+  flex: 0 0 auto;
+}
+.pf-set-steps li[data-state="done"] .pf-set-step-mark {
+  border-color: #1668dc;
+  background: #1668dc;
+}
+.pf-set-steps li[data-state="unknown"] .pf-set-step-mark {
+  border-style: dashed;
+}
+.pf-set-step-state {
+  color: #595959;
+  font-size: 13px;
+}
+.pf-set-card {
+  min-width: 0;
+}
+/* Ссылка внутри строки текста отличается не только цветом (axe link-in-text-block, WCAG 1.4.1) */
+.pf-set-inline {
+  text-decoration: underline;
+}
+.pf-set-head-extra {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pf-set-more {
+  color: #0958d9;
+  line-height: 32px;
+}

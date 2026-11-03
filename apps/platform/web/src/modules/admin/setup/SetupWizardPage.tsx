@@ -67,7 +67,7 @@ function CabinetStatus() {
 
 /**
  * Шаг «Банковские реквизиты для счетов» (D26G-6): признак ERP (та же проверка, что «Выставить счёт») — без р/с и МФО первый
- * счёт клиенту не выставить, а менеджер-универсал раздела «Настройки» не видит. Реквизиты вводятся в «Компания и бланки».
+ * счёт клиенту не выставить, а менеджер-универсал раздела «Настройки» не видит. Реквизиты вводятся в «Реквизиты и бланк».
  */
 function BankStep({ data }: { data: SetupChecklist }) {
   const { t } = useTranslation("modules");
@@ -312,7 +312,14 @@ export function SetupWizardPage() {
 
   return (
     <>
-      <PageHeader title={title} subtitle={t("admin.setup.subtitle")} />
+      <PageHeader
+        title={title}
+        subtitle={
+          data
+            ? t("admin.setup.subtitleCount", { done: data.done, total: data.total })
+            : t("admin.setup.subtitle")
+        }
+      />
       {editable && bannerHidden ? (
         <Alert
           type="info"

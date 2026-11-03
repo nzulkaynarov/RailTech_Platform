@@ -275,8 +275,8 @@
     "hint": "Shartnoma, dalolatnoma va xat matnlari. Platforma namunalari nusxalab olinadi.",
     "part": "Shablon turi",
     "parts": {
-      "documents": "Hujjat shablonlari",
-      "emails": "Xat shablonlari"
+      "documents": "Hujjatlar",
+      "emails": "Xatlar"
     },
     "documents": {
       "name": "Nomi",

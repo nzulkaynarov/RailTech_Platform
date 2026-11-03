@@ -10,7 +10,7 @@ import {
 } from "./support/app";
 
 // W15b-2 на MSW: мелкие дефекты гейта волны 15 — axe на приветствии первого входа менеджера (W15-G-4) и на «Ответ
-// отправлен» (W15-G-5), узбекская дата (W15-G-9), «Каналы связи» -> «Telegram-бот» (W15-G-8). Снимки 1440 и 390.
+// отправлен» (W15-G-5), узбекская дата (W15-G-9), «Каналы связи» -> «Telegram» (W15-G-8). Снимки 1440 и 390.
 const WIDTHS = [1440, 390] as const;
 
 async function expectNoViolations(page: Page, context: string): Promise<void> {
@@ -90,11 +90,13 @@ test.describe("Мелкие дефекты гейта волны 15", () => {
     await shoot(page, "g9-uz-queue-date");
   });
 
-  test("W15-G-8: заглушка «Каналы связи» ведёт в «Настройки · Telegram-бот»", async ({ page }) => {
+  test("W15-G-8: заглушка «Каналы связи» ведёт в «Настройки · Telegram» (SET-IA)", async ({
+    page,
+  }) => {
     await loginAndWait(page, "all@demo.example");
     await page.goto("/crm/channels");
-    const open = page.getByRole("link", { name: "Открыть «Telegram-бот»" });
-    await expect(open).toHaveAttribute("href", "/admin/bot");
+    const open = page.getByRole("link", { name: "Открыть «Telegram»" });
+    await expect(open).toHaveAttribute("href", "/admin/telegram");
     await expect(page.getByRole("main")).not.toContainText("Подключения");
     await shoot(page, "g8-channels-stub");
   });

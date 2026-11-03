@@ -208,14 +208,12 @@ describe("Admin · Журнал интеграций: права", () => {
     },
   );
 
-  it("администратор: отдельного пункта нет — «Журнал» подсвечен, обмен между системами — фильтр (W15-H4)", async () => {
+  it("администратор: «Обмен между системами» — свой пункт группы «Система» (SET-IA); директору пункта нет", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/bus");
-    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(await within(menu).findByRole("link", { name: "Журнал" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(within(menu).queryByRole("link", { name: "Обмен между системами" })).toBeNull();
+    const system = await screen.findByRole("group", { name: "Система" });
+    expect(
+      await within(system).findByRole("link", { name: "Обмен между системами" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });

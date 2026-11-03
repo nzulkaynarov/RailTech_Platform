@@ -80,8 +80,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "request",
   },
   "crm.channels": {
-    // Бот подключается в «Настройки · Telegram-бот» (W15-H4), а не в «Подключениях»
-    internal: { to: "/admin/bot", resource: "admin", section: "bot" },
+    // Бот подключается в «Настройки · Каналы связи · Telegram» (SET-IA), а не в «Подключениях»
+    internal: { to: "/admin/telegram", resource: "admin", section: "telegram" },
     when: "pilot",
   },
 
@@ -128,19 +128,31 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "eds.approvals",
   "eds.projects",
   "eds.payments",
-  "admin.roles",
-  "admin.org",
-  "admin.integrations",
-  "admin.bus",
-  "admin.setup",
-  "admin.company",
-  "admin.bot",
-  "admin.audit",
   "erp.catalog",
   "erp.docs",
-  "admin.tickets",
+  // Настройки (SET-IA): все страницы — настоящие экраны.
+  "admin.overview",
+  "admin.org",
+  "admin.roles",
+  "admin.company",
+  "admin.numbering",
+  "admin.taxes",
   "admin.articles",
-  "admin.docflow",
+  "admin.telegram",
+  "admin.mail",
+  "admin.forms",
+  "admin.dictionaries",
+  "admin.resolutions",
+  "admin.templates",
+  "admin.timing",
+  "admin.notifications",
+  "admin.integrations",
+  "admin.spend",
+  "admin.audit",
+  "admin.exports",
+  "admin.bus",
+  "admin.setup",
+  "admin.tickets",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

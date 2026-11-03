@@ -5,14 +5,20 @@ import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 
 setupBotTests();
 
-/** Без адреса раздела — вкладка «Поведение и передача» (W15-H4: у бота вкладки; первая — «Подключение»). */
-async function openBot(email: string, search = "?part=behavior") {
+/**
+ * Разделы бывшего «Telegram-бота» после SET-IA — на страницах своих групп Настроек: Каналы связи · Telegram (вкладки
+ * «Подключение · Тексты · Поведение · Шаблоны ответов · База знаний»), Время и сроки, Уведомления, Формы сайта, Справочники
+ * (причины отказа), Реквизиты и бланк (контакты для клиентов), Расходы на ИИ (дневной лимит), Выгрузки.
+ */
+async function openPage(email: string, path: string, title: string) {
   signIn(email);
-  const view = renderAt(`/admin/bot${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
-  await screen.findByRole("tablist", { name: "Разделы Telegram-бота" });
+  const view = renderAt(path);
+  expect(await screen.findByRole("heading", { level: 1, name: title })).toBeVisible();
   return view;
 }
+
+const openTelegram = (email: string, search = "") =>
+  openPage(email, `/admin/telegram${search}`, "Telegram");
 
 function tab(name: string) {
   fireEvent.click(
@@ -22,38 +28,28 @@ function tab(name: string) {
   );
 }
 
-function nav() {
-  return screen.getByRole("navigation", { name: "Разделы настроек бота" });
+/** Форма раздела бота на странице — область с заголовком раздела. */
+async function form(name: string) {
+  return screen.findByRole("region", { name });
 }
 
-async function section(name: string) {
-  fireEvent.click(within(nav()).getByRole("link", { name }));
-  return screen.findByRole("heading", { level: 2, name });
-}
-
-describe("Admin · Настройки бота: разделы", () => {
-  it("бот в одном месте (W15-H4): вкладки «Подключение · Тексты · Поведение и передача · База знаний · Шаблоны ответов · Выгрузки»", async () => {
-    await openBot("admin@demo.example", "");
+describe("Настройки · Telegram и разделы бота по группам (SET-IA)", () => {
+  it("Telegram: один уровень вкладок «Подключение · Тексты · Поведение · Шаблоны ответов · База знаний»", async () => {
+    await openTelegram("admin@demo.example");
     const tabs = screen.getByRole("tablist", { name: "Разделы Telegram-бота" });
     expect(
       within(tabs)
         .getAllByRole("tab")
         .map((t) => t.textContent),
-    ).toEqual([
-      "Подключение",
-      "Тексты",
-      "Поведение и передача",
-      "База знаний",
-      "Шаблоны ответов",
-      "Выгрузки",
-    ]);
-    // по умолчанию — «Подключение»: токен, канал команды и профиль, раньше бывшие в «Подключениях»
+    ).toEqual(["Подключение", "Тексты", "Поведение", "Шаблоны ответов", "База знаний"]);
     expect(within(tabs).getByRole("tab", { name: "Подключение" })).toHaveAttribute(
       "aria-selected",
       "true",
     );
     expect(await screen.findByText("@demo_railtech_bot")).toBeVisible();
     expect(screen.getByRole("button", { name: "Сменить токен" })).toBeVisible();
+    // без вложенной навигации разделов внутри вкладки
+    expect(screen.queryByRole("navigation", { name: "Разделы настроек бота" })).toBeNull();
 
     tab("База знаний");
     expect(await screen.findByRole("link", { name: "Открыть базу знаний" })).toHaveAttribute(
@@ -63,137 +59,119 @@ describe("Admin · Настройки бота: разделы", () => {
     expect(await screen.findByText("Минимальное сходство, чтобы бот отвечал (0–1)")).toBeVisible();
   });
 
-  it("администратор: разделы «Поведения и передачи» по группам; открывается «Компания» со значениями CRM", async () => {
-    await openBot("admin@demo.example");
+  it("«Поведение»: поведение бота, квалификация, стоп-слова и конкуренты — формами одна под другой", async () => {
+    await openTelegram("admin@demo.example", "?tab=behavior");
+    const expectations: Record<string, string> = {
+      "Поведение бота": "Максимум слов в ответе",
+      Квалификация: "Обязательные факты",
+      "Стоп-слова": "Слова",
+      Конкуренты: "Слова",
+    };
+    for (const [name, label] of Object.entries(expectations)) {
+      expect(await within(await form(name)).findAllByText(label)).not.toHaveLength(0);
+    }
+    // Разделы других групп сюда не попали
+    expect(screen.queryByRole("region", { name: "Правила передачи" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Причины отказа" })).toBeNull();
+  });
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
-    const links = within(nav())
-      .getAllByRole("link")
-      .map((l) => l.textContent);
-    expect(links).toEqual([
-      "Компания",
-      "Рабочие часы",
-      "Поведение бота",
-      "Стоп-слова",
-      "Конкуренты",
-      "Правила передачи",
-      "Квалификация",
-      "Форма «Заявка» с сайта",
-      "Канал команды",
-      "Оповещения о сбоях сервисов",
-      "Причины отказа",
-      "Бюджет моделей",
-    ]);
-    expect(screen.getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
-    expect(
-      screen.getByLabelText("Телефон компании (бот называет его по просьбе клиента)"),
-    ).toHaveValue("+998 71 000 00 00");
-    expect(within(nav()).getByRole("link", { name: "Компания" })).toHaveAttribute(
-      "aria-current",
-      "page",
+  it("каждый раздел бота — на странице своей группы и подписан на языке сотрудника", async () => {
+    const pages: [string, string, string, string][] = [
+      ["/admin/timing", "Время и сроки", "Рабочие часы", "Начало рабочего дня"],
+      ["/admin/timing", "Время и сроки", "Правила передачи", "Оценка лида для передачи"],
+      ["/admin/notifications", "Уведомления", "Канал команды", "Дежурные"],
+      [
+        "/admin/notifications",
+        "Уведомления",
+        "Оповещения о сбоях сервисов",
+        "Личное сообщение админам в Telegram",
+      ],
+      [
+        "/admin/web-forms",
+        "Формы сайта",
+        "Форма «Заявка» с сайта",
+        "Минимальное время заполнения формы",
+      ],
+      ["/admin/dictionaries?list=deals", "Справочники", "Причины отказа", "Причины отказа"],
+      ["/admin/ai-spend", "Расходы на ИИ", "Бюджет моделей", "Дневной бюджет"],
+      ["/admin/company", "Реквизиты и бланк", "Контакты для клиентов", "Название компании"],
+    ];
+    for (const [path, title, section, label] of pages) {
+      const { router } = await openPage("admin@demo.example", path, title);
+      expect(await within(await form(section)).findAllByText(label)).not.toHaveLength(0);
+      router.dispose();
+    }
+  });
+
+  it("канал команды выбирается в «Telegram · Подключение» — ссылка туда из «Уведомлений»", async () => {
+    await openPage("admin@demo.example", "/admin/notifications", "Уведомления");
+    const channel = await form("Канал команды");
+    expect(within(channel).queryByLabelText("ID приватного канала")).toBeNull();
+    expect(within(channel).getByRole("link", { name: "Открыть «Telegram»" })).toHaveAttribute(
+      "href",
+      "/admin/telegram",
     );
-    expect(screen.getByRole("button", { name: "Сохранить" })).toBeDisabled();
-    expect(screen.getByText("Изменений нет")).toBeVisible();
-    // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
-    expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
-    // Ссылка вместо дубля (S4): реквизиты для документов — в «Компания и бланки»
-    expect(
-      screen.getByRole("link", { name: "Реквизиты для документов — в «Компания и бланки»" }),
-    ).toHaveAttribute("href", "/admin/company?tab=details");
   });
 
   it("сохранение раздела: «Есть несохранённые изменения», сообщение; «Отменить изменения» возвращает значения", async () => {
-    await openBot("admin@demo.example");
-    const name = await screen.findByLabelText("Название компании");
+    await openPage("admin@demo.example", "/admin/company", "Реквизиты и бланк");
+    const contacts = await form("Контакты для клиентов");
+    const name = await within(contacts).findByLabelText("Название компании");
 
     fireEvent.change(name, { target: { value: "RailTech Групп (демо)" } });
-    expect(await screen.findByText("Есть несохранённые изменения")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Отменить изменения" }));
+    expect(await within(contacts).findByText("Есть несохранённые изменения")).toBeVisible();
+    fireEvent.click(within(contacts).getByRole("button", { name: "Отменить изменения" }));
     await waitFor(() => {
-      expect(screen.getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
+      expect(within(contacts).getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
     });
-    expect(screen.getByText("Изменений нет")).toBeVisible();
 
-    fireEvent.change(screen.getByLabelText("Название компании"), {
+    fireEvent.change(within(contacts).getByLabelText("Название компании"), {
       target: { value: "RailTech Групп (демо)" },
     });
-    fireEvent.click(screen.getByRole("button", { name: /Сохранить/ }));
-    expect(await screen.findByText("Настройки «Компания» сохранены")).toBeVisible();
+    fireEvent.click(within(contacts).getByRole("button", { name: /Сохранить/ }));
+    expect(await screen.findByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
     await waitFor(() => {
-      expect(screen.getByText("Изменений нет")).toBeVisible();
+      expect(within(contacts).getByText("Изменений нет")).toBeVisible();
     });
-    expect(screen.getByLabelText("Название компании")).toHaveValue("RailTech Групп (демо)");
-
-    // после перезагрузки экрана новое значение приходит из CRM
-    await section("Рабочие часы");
-    await section("Компания");
-    expect(await screen.findByLabelText("Название компании")).toHaveValue("RailTech Групп (демо)");
+    // Сохранение настройки — без «Что произойдёт» (CONVENTIONS §2 п. 8, S1)
+    expect(within(contacts).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
   });
 
   it("CRM не принимает значение: путь поля из ответа подсвечивает поле, сохранить после исправления можно", async () => {
-    await openBot("admin@demo.example");
-    const name = await screen.findByLabelText("Название компании");
-
-    fireEvent.change(name, { target: { value: "   " } });
-    fireEvent.click(screen.getByRole("button", { name: /Сохранить/ }));
-
+    await openPage("admin@demo.example", "/admin/company", "Реквизиты и бланк");
+    const contacts = await form("Контакты для клиентов");
+    fireEvent.change(await within(contacts).findByLabelText("Название компании"), {
+      target: { value: "   " },
+    });
+    fireEvent.click(within(contacts).getByRole("button", { name: /Сохранить/ }));
     expect(
-      await screen.findByText("Значения не приняты: проверьте отмеченные поля."),
+      await within(contacts).findByText("Значения не приняты: проверьте отмеченные поля."),
     ).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Название компании"), {
+    fireEvent.change(within(contacts).getByLabelText("Название компании"), {
       target: { value: "Рельсы Демо" },
     });
-    fireEvent.click(await screen.findByRole("button", { name: /Сохранить/ }));
-    expect(await screen.findByText("Настройки «Компания» сохранены")).toBeVisible();
+    fireEvent.click(await within(contacts).findByRole("button", { name: /Сохранить/ }));
+    expect(await screen.findByText("Настройки «Контакты для клиентов» сохранены")).toBeVisible();
   });
 
   it("рабочие часы: время, дни недели, праздники и часовой пояс — типизированные поля", async () => {
-    await openBot("admin@demo.example", "?section=business_hours");
-
-    expect(await screen.findByRole("heading", { level: 2, name: "Рабочие часы" })).toBeVisible();
-    expect(screen.getByLabelText("Начало рабочего дня")).toHaveValue("09:00");
-    expect(screen.getByLabelText("Конец рабочего дня")).toHaveValue("18:00");
-    const days = screen.getByRole("group", { name: /Рабочие дни/ });
+    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    const hours = await form("Рабочие часы");
+    expect(await within(hours).findByLabelText("Начало рабочего дня")).toHaveValue("09:00");
+    expect(within(hours).getByLabelText("Конец рабочего дня")).toHaveValue("18:00");
+    const days = within(hours).getByRole("group", { name: /Рабочие дни/ });
     expect(within(days).getByRole("checkbox", { name: "Пн" })).toBeChecked();
     expect(within(days).getByRole("checkbox", { name: "Сб" })).not.toBeChecked();
     fireEvent.click(within(days).getByRole("checkbox", { name: "Сб" }));
-    expect(await screen.findByText("Есть несохранённые изменения")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: /Сохранить/ }));
+    expect(await within(hours).findByText("Есть несохранённые изменения")).toBeVisible();
+    fireEvent.click(within(hours).getByRole("button", { name: /Сохранить/ }));
     expect(await screen.findByText("Настройки «Рабочие часы» сохранены")).toBeVisible();
   });
 
-  it("поведение бота, стоп-слова, конкуренты, квалификация, веб-форма, оповещения, бюджет и сделки открываются и подписаны на языке сотрудника", async () => {
-    await openBot("admin@demo.example");
-    const expectations: Record<string, string> = {
-      "Поведение бота": "Максимум слов в ответе",
-      "Стоп-слова": "Слова",
-      Конкуренты: "Слова",
-      Квалификация: "Обязательные факты",
-      "Форма «Заявка» с сайта": "Минимальное время заполнения формы",
-      "Канал команды": "Дежурные",
-      "Оповещения о сбоях сервисов": "Личное сообщение админам в Telegram",
-      "Бюджет моделей": "Дневной бюджет",
-      "Причины отказа": "Причины отказа",
-    };
-    for (const [name, label] of Object.entries(expectations)) {
-      await section(name);
-      expect(await screen.findAllByText(label)).not.toHaveLength(0);
-    }
-    await section("Канал команды");
-    expect(screen.queryByLabelText("ID приватного канала")).toBeNull();
-    expect(screen.getByRole("link", { name: "Открыть «Подключение»" })).toHaveAttribute(
-      "href",
-      "/admin/bot?part=connection",
-    );
-  });
-
   it("правила передачи: пробный прогон считает на значениях из формы и ничего не сохраняет", async () => {
-    await openBot("admin@demo.example", "?section=escalation");
-
-    expect(
-      await screen.findByRole("heading", { level: 2, name: "Правила передачи" }),
-    ).toBeVisible();
-    const dry = screen.getByRole("region", { name: "Пробный прогон правил передачи" });
+    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    await form("Правила передачи");
+    const dry = await screen.findByRole("region", { name: "Пробный прогон правил передачи" });
     expect(within(dry).getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     fireEvent.click(
       within(dry).getByRole("button", { name: /Проверить на последних 50 диалогах/ }),
@@ -218,32 +196,38 @@ describe("Admin · Настройки бота: разделы", () => {
       );
     });
     expect(within(dry).getByText(/Изменится у лидов: 2/)).toBeVisible();
-    expect(screen.getByText("Есть несохранённые изменения")).toBeVisible();
+    expect(
+      within(await form("Правила передачи")).getByText("Есть несохранённые изменения"),
+    ).toBeVisible();
   });
 
-  it("несохранённые изменения: смена раздела спрашивает «Выйти без сохранения?», «Остаться» оставляет форму", async () => {
-    await openBot("admin@demo.example");
-
-    fireEvent.change(await screen.findByLabelText("Название компании"), {
-      target: { value: "Иное" },
-    });
-    fireEvent.click(within(nav()).getByRole("link", { name: "Рабочие часы" }));
+  it("несохранённые изменения: уход со страницы спрашивает «Выйти без сохранения?», «Остаться» оставляет форму", async () => {
+    await openPage("admin@demo.example", "/admin/timing", "Время и сроки");
+    const hours = await form("Рабочие часы");
+    fireEvent.click(
+      within(await within(hours).findByRole("group", { name: /Рабочие дни/ })).getByRole(
+        "checkbox",
+        { name: "Сб" },
+      ),
+    );
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    fireEvent.click(within(menu).getByRole("link", { name: "Уведомления" }));
     expect(
       await screen.findByRole("dialog", { name: "Выйти без сохранения?" }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Остаться" }));
-    expect(screen.getByLabelText("Название компании")).toHaveValue("Иное");
+    expect(within(hours).getByText("Есть несохранённые изменения")).toBeVisible();
 
-    fireEvent.click(within(nav()).getByRole("link", { name: "Рабочие часы" }));
+    fireEvent.click(within(menu).getByRole("link", { name: "Уведомления" }));
     const leave = await screen.findAllByRole("button", { name: "Выйти без сохранения" });
     fireEvent.click(leave[leave.length - 1] as HTMLElement);
-    expect(await screen.findByRole("heading", { level: 2, name: "Рабочие часы" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Уведомления" })).toBeVisible();
   });
 });
 
-describe("Admin · Настройки бота: тексты", () => {
+describe("Настройки · Telegram: тексты", () => {
   it("группы с таблицей «название · ru · uz · en», поиск по названию и по ситуации", async () => {
-    await openBot("admin@demo.example", "?section=texts");
+    await openTelegram("admin@demo.example", "?tab=texts");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Тексты бота" })).toBeVisible();
     expect(await screen.findByText(/Приветствие и согласие · /)).toBeVisible();
@@ -268,7 +252,7 @@ describe("Admin · Настройки бота: тексты", () => {
   });
 
   it("правка текста в боковом окне: три языка, предпросмотр подстановок, без «Что произойдёт», сохранение раздела", async () => {
-    await openBot("admin@demo.example", "?section=texts");
+    await openTelegram("admin@demo.example", "?tab=texts");
 
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Приветствие" }));
     const panel = await panelEl();
@@ -288,7 +272,7 @@ describe("Admin · Настройки бота: тексты", () => {
   });
 
   it("пустой перевод: CRM называет путь, панель открывается на нём, исправление сохраняется", async () => {
-    await openBot("admin@demo.example", "?section=texts");
+    await openTelegram("admin@demo.example", "?tab=texts");
 
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Приветствие" }));
     const panel = await panelEl();
@@ -306,9 +290,9 @@ describe("Admin · Настройки бота: тексты", () => {
   });
 });
 
-describe("Admin · Настройки бота: шаблоны ответов", () => {
+describe("Настройки · Telegram: шаблоны ответов", () => {
   it("список, создание без «Что произойдёт», правка и удаление (удаление — с ним)", async () => {
-    await openBot("admin@demo.example", "?section=templates");
+    await openTelegram("admin@demo.example", "?tab=templates");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Шаблоны ответов" })).toBeVisible();
     expect(
@@ -355,7 +339,7 @@ describe("Admin · Настройки бота: шаблоны ответов", 
   });
 
   it("неизвестная подстановка отклоняется CRM — сообщение на экране", async () => {
-    await openBot("admin@demo.example", "?section=templates&template=new&panel=open");
+    await openTelegram("admin@demo.example", "?tab=templates&template=new&panel=open");
     const form = await within(await panelEl()).findByRole("form", { name: "Новый шаблон" });
 
     fireEvent.change(within(form).getByLabelText("Название"), { target: { value: "Ошибка" } });
@@ -368,7 +352,7 @@ describe("Admin · Настройки бота: шаблоны ответов", 
   });
 });
 
-describe("Admin · Настройки бота: выгрузки CSV", () => {
+describe("Настройки · Система · Выгрузки CSV", () => {
   function stubDownload() {
     const saved: string[] = [];
     URL.createObjectURL = vi.fn(() => "blob:test");
@@ -382,7 +366,7 @@ describe("Admin · Настройки бота: выгрузки CSV", () => {
   }
 
   it("администратор без второй роли: кнопки недоступны, причина названа — нужен раздел данных", async () => {
-    await openBot("admin@demo.example", "?section=exports");
+    await openPage("admin@demo.example", "/admin/exports", "Выгрузки");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Выгрузки CSV" })).toBeVisible();
     expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
@@ -394,7 +378,7 @@ describe("Admin · Настройки бота: выгрузки CSV", () => {
 
   it("роль с данными: файл скачивается под именем с датой, фильтры уходят в запрос", async () => {
     const saved = stubDownload();
-    await openBot("all@demo.example", "?section=exports");
+    await openPage("all@demo.example", "/admin/exports", "Выгрузки");
 
     const leads = (await screen.findByRole("heading", { level: 3, name: "Лиды" })).closest(
       "article",
@@ -413,7 +397,7 @@ describe("Admin · Настройки бота: выгрузки CSV", () => {
   });
 
   it("директор видит выгрузки без права скачивать", async () => {
-    await openBot("director@demo.example", "?section=exports");
+    await openPage("director@demo.example", "/admin/exports", "Выгрузки");
 
     expect(
       await screen.findByText("Только просмотр: выгружает данные администратор."),
@@ -426,28 +410,28 @@ describe("Admin · Настройки бота: выгрузки CSV", () => {
 
 describe("Admin · Настройки бота: права", () => {
   it("директор: разделы читает, кнопок изменения нет, поля заблокированы", async () => {
-    await openBot("director@demo.example");
-
-    expect(await screen.findByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
+    const { router } = await openPage("director@demo.example", "/admin/timing", "Время и сроки");
+    const hours = await form("Рабочие часы");
     expect(screen.getByText("Только просмотр")).toBeVisible();
-    expect(screen.queryByRole("button", { name: /Сохранить/ })).toBeNull();
+    expect(within(hours).queryByRole("button", { name: /Сохранить/ })).toBeNull();
     expect(screen.queryByRole("group", { name: "Что произойдёт" })).toBeNull();
-    expect(screen.getByLabelText("Название компании")).toBeDisabled();
-    await section("Правила передачи");
+    expect(await within(hours).findByLabelText("Начало рабочего дня")).toBeDisabled();
     expect(screen.queryByRole("button", { name: /Проверить на последних 50 диалогах/ })).toBeNull();
-    tab("Шаблоны ответов");
+    router.dispose();
+
+    await openTelegram("director@demo.example", "?tab=templates");
     expect(screen.queryByRole("link", { name: "Новый шаблон" })).toBeNull();
     expect(
       await screen.findByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
     ).toBeVisible();
   });
 
-  it("менеджер: пункта «Настройки бота» в меню Admin нет, по прямому адресу — «Нет доступа»", async () => {
+  it("менеджер: пункта «Telegram» в меню нет, по прямому адресу — «Нет доступа»; старый адрес бота уводит туда же", async () => {
     signIn("manager@demo.example");
     renderAt("/admin/bot");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Telegram-бот" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Telegram" })).toBeNull();
     expect(screen.queryByRole("tablist", { name: "Разделы Telegram-бота" })).toBeNull();
   });
 });

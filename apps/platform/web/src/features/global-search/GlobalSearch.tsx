@@ -17,6 +17,7 @@ import { useAuth } from "../../app/auth/useAuth";
 import { isActionable } from "../../modules/bridge";
 import { objectLink } from "../../modules/objectLinks";
 import { MODULES, moduleName } from "../../modules/registry";
+import { GROUP_NAMES, langOf, searchSettings } from "../../modules/admin/settingsRegistry";
 import { WhereToDo } from "../../modules/stub/WhereToDo";
 import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
@@ -88,7 +89,7 @@ interface Group {
  * группу «Действия» (только те, что доступны ролям сотрудника).
  */
 export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) {
-  const { t } = useTranslation("shell");
+  const { t, i18n } = useTranslation("shell");
   const { me } = useAuth();
   const navigate = useNavigate();
   const listId = useId();
@@ -127,7 +128,8 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
     }> = [];
 
     for (const mod of MODULES) {
-      if (!me.modules.includes(mod.code)) continue;
+      // Настройки ищутся по своему реестру — отдельной группой «Настройки» ниже (SET-IA).
+      if (!me.modules.includes(mod.code) || mod.code === "admin") continue;
       const modTitle = moduleName(t, mod.code);
       const accessibleSections = mod.sections.filter(
         (sec) => !sec.hidden && canSee(me, sec.access),
@@ -149,6 +151,16 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
     }
     return results.slice(0, 5);
   }, [me, typed, t]);
+
+  // Группа «Настройки» (SET-IA; Google Admin, HubSpot — поиск находит и настройки): реестр настроек по названию, описанию
+  // и ключевым словам на трёх языках, только доступные ролям сотрудника.
+  const settingHits = useMemo(() => {
+    if (typed.length < MIN_LENGTH || !me.modules.includes("admin")) return [];
+    return searchSettings(typed, langOf(i18n.language), (entry) => canSee(me, entry.access)).slice(
+      0,
+      5,
+    );
+  }, [me, typed, i18n.language]);
 
   // Группы с порядковым номером результата сквозь все группы: по нему работают стрелки и aria-activedescendant
   const view = useMemo(() => {
@@ -173,6 +185,25 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
             icon: <Icon />,
           };
         }),
+      });
+    }
+
+    if (settingHits.length > 0) {
+      const lang = langOf(i18n.language);
+      const Icon = MODULE_ICONS.admin;
+      out.push({
+        key: "settings",
+        name: t("search.settingsGroup"),
+        options: settingHits.map((hit) => ({
+          id: `${listId}-s-${hit.entry.key}`,
+          index: next++,
+          title: t(`modules:admin.sections.${hit.entry.key}`),
+          subtitle: GROUP_NAMES[hit.entry.group][lang],
+          tag: t("search.settingTag"),
+          path: hit.entry.path,
+          navigation: true,
+          icon: <Icon />,
+        })),
       });
     }
 
@@ -207,7 +238,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       });
     }
     return out;
-  }, [actions, groups, listId, navItems, t]);
+  }, [actions, groups, listId, navItems, settingHits, i18n.language, t]);
   const options = useMemo(() => view.flatMap((group) => group.options), [view]);
   const waiting = typed.length >= MIN_LENGTH && (debounced !== typed || query.isFetching);
 
@@ -317,7 +348,9 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           </kbd>
         )}
       </label>
-      <div className="pf-gsearch-pop" hidden={!open}>
+      {/* Список может прокручиваться (с группой «Настройки», SET-IA): окно достижимо с клавиатуры, чтобы его можно было
+          прокрутить (WCAG 2.1.1, axe scrollable-region-focusable); по строкам ходят стрелками из поля (aria-activedescendant). */}
+      <div className="pf-gsearch-pop" hidden={!open} tabIndex={open ? 0 : -1}>
         {open && ready && query.data ? (
           <SourceBanner
             sources={query.data.sources}

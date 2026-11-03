@@ -10,6 +10,8 @@ export interface RailSubmenuItem {
   path: string;
   label: string;
   active?: boolean;
+  /** Заголовок группы (Настройки, SET-IA): пишется перед первым пунктом группы */
+  group?: string | undefined;
   badge?: {
     count: number;
     attention: boolean;
@@ -89,8 +91,22 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
           gap: 2,
         }}
       >
-        {module.sections?.map((sec) => (
+        {module.sections?.map((sec, index, all) => (
           <li key={sec.key}>
+            {sec.group && sec.group !== all[index - 1]?.group ? (
+              <p
+                style={{
+                  margin: "6px 0 2px",
+                  padding: "0 8px",
+                  fontSize: 12,
+                  lineHeight: "20px",
+                  fontWeight: 600,
+                  color: "#595959",
+                }}
+              >
+                {sec.group}
+              </p>
+            ) : null}
             <Link
               to={sec.path}
               onClick={() => {
@@ -131,7 +147,7 @@ function RailItemWithFlyout({ module, menuOpen }: { module: RailModule; menuOpen
       trigger="hover"
       mouseEnterDelay={0.12}
       mouseLeaveDelay={0.15}
-      styles={{ body: { padding: 8, width: 232 } }}
+      styles={{ body: { padding: 8, width: 232, maxHeight: "85vh", overflowY: "auto" } }}
       content={content}
       open={open}
       onOpenChange={setOpen}

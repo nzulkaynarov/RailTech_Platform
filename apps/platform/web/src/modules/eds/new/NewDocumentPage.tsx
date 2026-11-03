@@ -395,7 +395,7 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
               message={t("documents:form.letterhead.missing")}
               action={
                 canCompany ? (
-                  <LinkButton size="small" to="/admin/company?tab=brand">
+                  <LinkButton size="small" to="/admin/company?part=brand">
                     {t("documents:form.letterhead.open")}
                   </LinkButton>
                 ) : undefined

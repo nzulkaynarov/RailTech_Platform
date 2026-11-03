@@ -284,8 +284,8 @@ function ProfileForm({ state, editable }: { state: BotProfileState; editable: bo
   );
 }
 
-/** Где настраивается бот целиком (W15-H4): Настройки · Telegram-бот, вкладка «Подключение». */
-export const BOT_CONNECTION_PATH = "/admin/bot?part=connection";
+/** Где настраивается бот целиком (SET-IA): Настройки · Каналы связи · Telegram, вкладка «Подключение». */
+export const BOT_CONNECTION_PATH = "/admin/telegram";
 
 function TelegramBody({
   bot,
@@ -387,16 +387,19 @@ export function TelegramPanel({
   editable,
   summary = false,
   initialTokenOpen = false,
+  titled = true,
 }: {
   editable: boolean;
   summary?: boolean;
   initialTokenOpen?: boolean;
+  /** Заголовок «Telegram» над панелью; на странице Telegram он уже в шапке страницы */
+  titled?: boolean;
 }) {
   const { t } = useTranslation("integrations");
   const query = useGetTelegramConnector();
   return (
     <div className="pf-panel-stack">
-      <PanelTitle>{t("cards.telegram.title")}</PanelTitle>
+      {titled ? <PanelTitle>{t("cards.telegram.title")}</PanelTitle> : null}
       <PanelState query={query}>
         {(bot) => (
           <>

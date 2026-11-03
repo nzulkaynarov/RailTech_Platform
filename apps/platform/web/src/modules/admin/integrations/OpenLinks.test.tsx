@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { mailLinks, modelProviderLinks, offsiteLinks, telegramLinks } from "./serviceLinks";
-import { panelEl, renderAt, signIn, setupIntegrationsTests } from "./testkit";
+import { openCard, signIn, setupIntegrationsTests } from "./testkit";
 
 setupIntegrationsTests();
 
@@ -11,8 +11,7 @@ const DIRECTOR = "director@demo.example";
 
 async function openPanel(card: string, email = ADMIN): Promise<HTMLElement> {
   signIn(email);
-  renderAt(`/admin/integrations?card=${card}&panel=open`);
-  return panelEl();
+  return openCard(card);
 }
 
 describe("справочник внешних кабинетов (OPS-CONSOLE)", () => {

@@ -628,14 +628,22 @@ describe("Баннер настройки и мастер", () => {
     expect(await screen.findByRole("region", { name: "Настройка Платформы" })).toBeVisible();
   });
 
-  it("пункт «Первый запуск» в меню Настроек — пока шаги не завершены", async () => {
+  it("чек-лист «Первый запуск» на индексе Настроек — пока шаги не завершены; пункта в меню нет (SET-IA)", async () => {
     signInAs("admin@demo.example");
-    renderApp("/admin/org");
-    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(await within(menu).findByRole("link", { name: "Первый запуск" })).toHaveAttribute(
+    renderApp("/admin");
+    const checklist = await screen.findByRole("region", {
+      name: /^Первый запуск: готово \d+ из \d+$/,
+    });
+    const steps = within(checklist).getByRole("list", { name: "Шаги настройки" });
+    expect(within(steps).getAllByRole("listitem").length).toBeGreaterThan(0);
+    expect(within(checklist).getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
       "href",
       "/admin/setup",
     );
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    expect(within(menu).queryByRole("link", { name: "Первый запуск" })).toBeNull();
+    // на индексе свой чек-лист — баннер настройки над ним не повторяется
+    expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
     cleanup();
 
     const state = readSetup();
@@ -647,13 +655,12 @@ describe("Баннер настройки и мастер", () => {
         done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
       }),
     );
-    renderApp("/admin/org");
-    const after = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(within(after).getByRole("link", { name: "Сотрудники" })).toBeVisible();
+    renderApp("/admin");
+    expect(await screen.findByRole("heading", { level: 2, name: "Люди и доступ" })).toBeVisible();
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
     });
-    expect(within(after).queryByRole("link", { name: "Первый запуск" })).toBeNull();
+    expect(screen.queryByRole("region", { name: /^Первый запуск/ })).toBeNull();
   });
 
   it("ERP ещё не выдала доступ: мастер ждёт, сам перепроверяет и показывает форму компании без «Проверить снова»", async () => {
@@ -811,7 +818,7 @@ describe("Банковские реквизиты для счетов (D26G-6)",
     resetBannerHidden("u-demo-admin");
   });
 
-  it("компания есть, р/с и МФО нет: шаг мастера «Не сделано» со ссылкой в «Компания и бланки», баннер напоминает", async () => {
+  it("компания есть, р/с и МФО нет: шаг мастера «Не сделано» со ссылкой в «Реквизиты и бланк», баннер напоминает", async () => {
     window.localStorage.setItem(MOCK_NO_BANK_KEY, "1");
     signInAs("admin@demo.example");
     renderApp("/admin/org");
@@ -830,9 +837,9 @@ describe("Банковские реквизиты для счетов (D26G-6)",
     expect(
       within(card).getByText(/Без расчётного счёта и МФО счёт клиенту не выставить/),
     ).toBeVisible();
-    expect(within(card).getByRole("link", { name: "Открыть «Компания и бланки»" })).toHaveAttribute(
+    expect(within(card).getByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toHaveAttribute(
       "href",
-      "/admin/company?tab=details",
+      "/admin/company",
     );
   });
 

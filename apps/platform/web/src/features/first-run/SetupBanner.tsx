@@ -26,7 +26,9 @@ export function SetupBanner() {
   const checklist = useSetupChecklist(allowed);
   const hidden = useBannerHidden(me.id);
 
-  if (!allowed || hidden || location.pathname === WIZARD_PATH) return null;
+  // На мастере и на индексе Настроек (там свой чек-лист «Первый запуск», SET-IA) баннер не нужен.
+  if (!allowed || hidden || location.pathname === WIZARD_PATH || location.pathname === "/admin")
+    return null;
   const data = checklist.data;
   if (!data || !needsSetup(data)) return null;
 
