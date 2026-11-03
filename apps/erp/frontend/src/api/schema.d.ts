@@ -8849,6 +8849,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stock/trace/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Прослеживаемость: поиск по серийному номеру или партии
+         * @description Точное совпадение номера первым, затем по части номера (от 2 знаков, до 50 единиц). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Читает сотрудник своей компании.
+         */
+        get: operations["stock_trace_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system-settings/": {
         parameters: {
             query?: never;
@@ -9834,6 +9854,20 @@ export interface components {
              * @description Иконка категории для отображения в каталоге
              */
             icon?: string | null;
+            /**
+             * Учёт единиц
+             * @description Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров
+             *
+             *     * `serial` - Серийный
+             *     * `lot` - Партия
+             *     * `none` - Только количество
+             */
+            tracking?: components["schemas"]["TrackingClassEnum"];
+            /**
+             * Нужен документ соответствия
+             * @description При приёмке — № сертификата или декларации и срок действия
+             */
+            requires_conformity_doc?: boolean;
         };
         /** @description Чтение — вложенные имена, запись — плоские id (конвенция проекта). */
         CategoryProposal: {
@@ -9954,6 +9988,20 @@ export interface components {
              * @description Иконка категории для отображения в каталоге
              */
             icon?: string | null;
+            /**
+             * Учёт единиц
+             * @description Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров
+             *
+             *     * `serial` - Серийный
+             *     * `lot` - Партия
+             *     * `none` - Только количество
+             */
+            tracking?: components["schemas"]["TrackingClassEnum"];
+            /**
+             * Нужен документ соответствия
+             * @description При приёмке — № сертификата или декларации и срок действия
+             */
+            requires_conformity_doc?: boolean;
         };
         /** @description Тело решения оператора: категория (одобрение) или причина (отказ). */
         CategoryRequestReviewRequest: {
@@ -12121,6 +12169,13 @@ export interface components {
             name: string;
             quantity: number;
             cell: string | null;
+            /** @description Принятые серийные или номер партии */
+            units: string[];
+            /** Format: date */
+            expiry_date: string | null;
+            doc_number: string | null;
+            /** Format: date */
+            doc_valid_until: string | null;
         };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         EmailTemplate: {
@@ -13063,6 +13118,18 @@ export interface components {
             line_total: string | null;
             deal: components["schemas"]["StockDealRef"] | null;
             quote_item_id: number | null;
+            /** @description Цена поставщика, из которой создана строка */
+            offer: components["schemas"]["OrderLineOffer"] | null;
+            /**
+             * @description Учёт единиц товара по категории
+             *
+             *     * `serial` - Серийный
+             *     * `lot` - Партия
+             *     * `none` - Только количество
+             */
+            tracking: components["schemas"]["TrackingClassEnum"];
+            /** @description Категория требует документ соответствия на приёмке */
+            requires_doc: boolean;
         };
         OrderLineInRequest: {
             /** @description Строка этого заказа (правка); без id — новая */
@@ -13082,6 +13149,17 @@ export interface components {
             unit_price?: string | null;
             deal_id?: number | null;
             quote_item_id?: number | null;
+        };
+        OrderLineOffer: {
+            id: number;
+            /** @description Базис поставки цены поставщика */
+            incoterms: string | null;
+            /**
+             * Format: date
+             * @description Цена действует до
+             */
+            valid_until: string | null;
+            expired: boolean;
         };
         OrderList: {
             results: components["schemas"]["OrderRow"][];
@@ -13692,6 +13770,20 @@ export interface components {
              * @description Иконка категории для отображения в каталоге
              */
             icon?: string | null;
+            /**
+             * Учёт единиц
+             * @description Серийный — каждая единица, партия — номер и срок годности, только количество — без номеров
+             *
+             *     * `serial` - Серийный
+             *     * `lot` - Партия
+             *     * `none` - Только количество
+             */
+            tracking?: components["schemas"]["TrackingClassEnum"];
+            /**
+             * Нужен документ соответствия
+             * @description При приёмке — № сертификата или декларации и срок действия
+             */
+            requires_conformity_doc?: boolean;
         };
         /**
          * @description Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
@@ -15045,6 +15137,8 @@ export interface components {
             quantity: number;
             received_quantity: number;
             deal: components["schemas"]["StockDealRef"] | null;
+            tracking: components["schemas"]["TrackingClassEnum"];
+            requires_doc: boolean;
         };
         Person: {
             id: number;
@@ -16666,16 +16760,45 @@ export interface components {
             note: string;
         };
         ReceiptLine: {
-            order_line_id: number;
             name: string;
             quantity: number;
             cell: string | null;
+            /** @description Принятые серийные или номер партии */
+            units: string[];
+            /** Format: date */
+            expiry_date: string | null;
+            doc_number: string | null;
+            /** Format: date */
+            doc_valid_until: string | null;
+            order_line_id: number;
         };
         ReceiptLineInRequest: {
             order_line_id: number;
             quantity: number;
             /** @default  */
             cell: string;
+            /** @description Серийные номера (S): их число = количеству */
+            serials?: string[];
+            /**
+             * @description Партия (L)
+             * @default
+             */
+            lot: string;
+            /**
+             * Format: date
+             * @description Годен до (L)
+             */
+            expiry_date?: string | null;
+            /**
+             * @description № сертификата или декларации
+             * @default
+             */
+            doc_number: string;
+            /**
+             * Format: date
+             * @description Документ соответствия действует до
+             */
+            doc_valid_until?: string | null;
         };
         Receipts: {
             pending: components["schemas"]["PendingReceiptLine"][];
@@ -17057,6 +17180,12 @@ export interface components {
             current?: string;
             /** @description `TRANSITION_NOT_ALLOWED`: куда хотели перейти */
             target?: string;
+            /** @description `SERIALS_REQUIRED`, `SERIALS_COUNT_MISMATCH`, `UNITS_*`: сколько номеров нужно */
+            expected?: number;
+            /** @description `*_COUNT_MISMATCH`: сколько передано */
+            given?: number;
+            /** @description `SERIAL_DUPLICATE`, `SERIAL_EXISTS`, `UNIT_NOT_AVAILABLE`: номер, о котором речь */
+            number?: string;
         };
         StockIncomingOrder: {
             order_id: number;
@@ -17117,6 +17246,16 @@ export interface components {
             /** Format: date-time */
             created_at: string;
             created_by_name: string | null;
+            /**
+             * @description Учёт единиц товара по его категории
+             *
+             *     * `serial` - Серийный
+             *     * `lot` - Партия
+             *     * `none` - Только количество
+             */
+            tracking: components["schemas"]["TrackingClassEnum"];
+            /** @description Свободные серийные или партии товара — выбор при отгрузке (S/L); у N пусто */
+            units: components["schemas"]["StockTraceUnitShort"][];
         };
         StockReservationList: {
             results: components["schemas"]["StockReservation"][];
@@ -17168,6 +17307,16 @@ export interface components {
         StockShipLineInRequest: {
             reservation_id: number;
             quantity: number;
+            /** @description Обязательно для товаров S/L (ADR-0021) */
+            units?: components["schemas"]["StockShipUnitInRequest"][];
+        };
+        StockShipUnitInRequest: {
+            unit_id: number;
+            /**
+             * @description Серийный — 1
+             * @default 1
+             */
+            quantity: number;
         };
         StockShipment: {
             id: number;
@@ -17187,10 +17336,16 @@ export interface components {
             name: string;
             quantity: number;
             cell: string | null;
+            /** @description Серийные или партии, ушедшие этой строкой */
+            units: components["schemas"]["StockShipmentUnit"][];
         };
         StockShipmentList: {
             results: components["schemas"]["StockShipment"][];
             rights: components["schemas"]["StockRights"];
+        };
+        StockShipmentUnit: {
+            number: string;
+            quantity: number;
         };
         StockStatus: {
             readonly id: number;
@@ -17214,6 +17369,72 @@ export interface components {
         };
         StockSupplierList: {
             results: components["schemas"]["StockSupplier"][];
+        };
+        StockTraceDestination: {
+            shipment_id: number;
+            shipment_number: string;
+            /** Format: date-time */
+            shipped_at: string;
+            quantity: number;
+            deal: components["schemas"]["StockDealRef"];
+        };
+        StockTraceList: {
+            results: components["schemas"]["StockTraceUnit"][];
+        };
+        StockTraceOrigin: {
+            receipt_id: number;
+            /** Format: date-time */
+            received_at: string;
+            supplier_doc: string | null;
+            order_id: number;
+            order_number: string;
+            supplier_name: string;
+            manufacturer: string | null;
+            /** @description № сертификата или декларации на приёмке */
+            doc_number: string | null;
+            /** Format: date */
+            doc_valid_until: string | null;
+            /** @description Проект, под который заказывали */
+            deal: components["schemas"]["StockDealRef"] | null;
+        };
+        StockTraceProduct: {
+            id: number;
+            name: string;
+            article: string;
+        };
+        StockTraceUnit: {
+            id: number;
+            kind: components["schemas"]["TraceKindEnum"];
+            /** @description Серийный номер или номер партии изготовителя */
+            number: string;
+            /**
+             * Format: date
+             * @description Годен до (партия)
+             */
+            expiry_date: string | null;
+            /** @description Сколько ещё на складе: серийный — 1, партия — остаток партии */
+            available: number;
+            quantity: number;
+            shipped_quantity: number;
+            status: components["schemas"]["TraceStatusEnum"];
+            product: components["schemas"]["StockTraceProduct"];
+            /** @description Откуда: приёмка, заказ, поставщик, изготовитель, документ */
+            origin: components["schemas"]["StockTraceOrigin"];
+            /** @description Куда: отгрузки, клиент, проект */
+            destinations: components["schemas"]["StockTraceDestination"][];
+        };
+        StockTraceUnitShort: {
+            id: number;
+            kind: components["schemas"]["TraceKindEnum"];
+            /** @description Серийный номер или номер партии изготовителя */
+            number: string;
+            /**
+             * Format: date
+             * @description Годен до (партия)
+             */
+            expiry_date: string | null;
+            /** @description Сколько ещё на складе: серийный — 1, партия — остаток партии */
+            available: number;
         };
         SupplierOffer: {
             readonly id: number;
@@ -17565,6 +17786,25 @@ export interface components {
         TokenRefreshResult: {
             access: string;
         };
+        /**
+         * @description * `serial` - serial
+         *     * `lot` - lot
+         * @enum {string}
+         */
+        TraceKindEnum: "serial" | "lot";
+        /**
+         * @description * `in_stock` - in_stock
+         *     * `shipped` - shipped
+         * @enum {string}
+         */
+        TraceStatusEnum: "in_stock" | "shipped";
+        /**
+         * @description * `serial` - Серийный
+         *     * `lot` - Партия
+         *     * `none` - Только количество
+         * @enum {string}
+         */
+        TrackingClassEnum: "serial" | "lot" | "none";
         /**
          * @description * `quote` - quote
          *     * `contract` - contract
@@ -35429,6 +35669,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StockSupplierList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_trace_search: {
+        parameters: {
+            query?: {
+                /** @description Серийный номер или номер партии (от 2 знаков) */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockTraceList"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];

@@ -150,7 +150,8 @@ async def registration(
     await claim(session, row, who, now)
     if row.status == "registering" and not eds_waiting(row.status, row.registering_at, now):
         # Регистрация идёт (двойное нажатие, вторая вкладка): второго ВХ не создаём. Зависшая дольше
-        # `EDS_CONFIRM_MINUTES` («ждёт подтверждения») — можно повторить: EDS отсекает дубль ключом.
+        # `EDS_CONFIRM_MINUTES` («ждёт подтверждения») — можно повторить: EDS по источнику письма
+        # вернёт прежний ВХ.
         raise ConflictError(
             "mail is already being registered", reason=Reason.MAIL_REGISTERING, status=row.status
         )

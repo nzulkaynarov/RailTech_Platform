@@ -15,6 +15,8 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock } from "./api";
+import { EMPTY_TRACE, type TraceDraft, needsTracking, traceFields, traceProblem } from "./trace";
+import { ReceiveTracking } from "./Tracking";
 
 const ref = (number: string) => encodeURIComponent(number);
 
@@ -220,6 +222,7 @@ export function CancelModal({
 interface Draft {
   quantity: number;
   cell: string;
+  trace: TraceDraft;
 }
 
 /** «Принять товар»: количество по строкам (частично или полностью), ячейка и накладная поставщика; остаток склада растёт. */
@@ -243,10 +246,19 @@ export function ReceiveModal({
   const order = query.data;
   const open = (order?.lines ?? []).filter((l) => l.received_quantity < l.quantity);
   const draftOf = (id: string, left: number): Draft =>
-    drafts[id] ?? { quantity: line === undefined || line === id ? left : 0, cell: "" };
+    drafts[id] ?? {
+      quantity: line === undefined || line === id ? left : 0,
+      cell: "",
+      trace: EMPTY_TRACE,
+    };
   const picked = open
     .map((l) => ({ line: l, draft: draftOf(l.id, l.quantity - l.received_quantity) }))
     .filter((item) => item.draft.quantity > 0);
+  // Серийные, партия и документ — до отправки (ADR-0021): чего не хватает, видно у строки.
+  const problems = picked
+    .map(({ line: l, draft }) => ({ l, problem: traceProblem(l, draft.trace, draft.quantity) }))
+    .filter((p) => p.problem !== null);
+  const [tried, setTried] = useState(false);
   return (
     <Modal
       open
@@ -261,6 +273,8 @@ export function ReceiveModal({
         submit: {
           label: t("order.receive.submit"),
           run: () => {
+            setTried(true);
+            if (problems.length > 0) return;
             const supplierDoc = clean(doc);
             receive.mutate({
               orderNumber: ref(number),
@@ -269,6 +283,7 @@ export function ReceiveModal({
                   order_line_id: l.id,
                   quantity: draft.quantity,
                   ...(clean(draft.cell) ? { cell: clean(draft.cell) } : {}),
+                  ...traceFields(l, draft.trace),
                 })),
                 ...(supplierDoc ? { supplier_doc: supplierDoc } : {}),
               },
@@ -319,6 +334,17 @@ export function ReceiveModal({
                       }));
                     }}
                   />
+                  {needsTracking(l) && draft.quantity > 0 ? (
+                    <ReceiveTracking
+                      line={l}
+                      name={l.name}
+                      quantity={draft.quantity}
+                      draft={draft.trace}
+                      onChange={(trace) => {
+                        setDrafts((prev) => ({ ...prev, [l.id]: { ...draft, trace } }));
+                      }}
+                    />
+                  ) : null}
                 </li>
               );
             })}
@@ -333,7 +359,15 @@ export function ReceiveModal({
               }}
             />
           </FormField>
-          <ErrorNote message={action.error} />
+          <ErrorNote
+            message={
+              tried && problems[0]
+                ? t(`trace.problem.${problems[0].problem ?? "serials"}`, {
+                    name: problems[0].l.name,
+                  })
+                : action.error
+            }
+          />
           <Consequence
             items={t("order.receive.consequence", { returnObjects: true }) as string[]}
           />

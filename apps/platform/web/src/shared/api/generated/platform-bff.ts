@@ -347,6 +347,7 @@ import type {
   SearchCalcCatalogParams,
   SearchParams,
   SearchResult,
+  SearchStockTraceParams,
   SentMessage,
   ServiceSwitchIn,
   Session,
@@ -377,6 +378,7 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  StockTraceList,
   SupplierCreate,
   SupplierDetail,
   SupplierOfferCreate,
@@ -29928,7 +29930,7 @@ export const getRegisterLetterUrl = () => {
 };
 
 /**
- * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе».
+ * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
  * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
  */
 export const registerLetter = async (
@@ -38504,6 +38506,167 @@ export const useShipFromStock = <
 > => {
   return useMutation(getShipFromStockMutationOptions(options), queryClient);
 };
+
+export const getSearchStockTraceUrl = (params: SearchStockTraceParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/trace?${stringifiedParams}`
+    : `/api/v1/erp/stock/trace`;
+};
+
+/**
+ * ERP `GET /stock/trace/?q=` (ADR-0021, L0-3): единицы прослеживаемости по номеру — точное совпадение первым, затем по части номера (от 2 знаков, до 50). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Короче 2 знаков — пустой список. Раздел `erp.stock` — чтение.
+ * @summary Склад · Прослеживаемость: поиск по серийному номеру или партии
+ */
+export const searchStockTrace = async (
+  params: SearchStockTraceParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockTraceList> => {
+  return http<StockTraceList>(getSearchStockTraceUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchStockTraceQueryKey = (params?: SearchStockTraceParams) => {
+  return [`/api/v1/erp/stock/trace`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchStockTraceQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchStockTraceQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchStockTrace>>> = ({ signal }) =>
+    searchStockTrace(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchStockTrace>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchStockTraceQueryResult = NonNullable<Awaited<ReturnType<typeof searchStockTrace>>>;
+export type SearchStockTraceQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchStockTrace>>,
+          TError,
+          Awaited<ReturnType<typeof searchStockTrace>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchStockTrace>>,
+          TError,
+          Awaited<ReturnType<typeof searchStockTrace>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Прослеживаемость: поиск по серийному номеру или партии
+ */
+
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchStockTraceQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListOverdueSupplierOrdersUrl = () => {
   return `/api/v1/erp/stock/overdue`;

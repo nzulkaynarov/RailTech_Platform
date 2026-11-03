@@ -755,6 +755,8 @@ export const adminCompanyHandlers = [
           id: nextId(s),
           name: body.name.trim(),
           parent_id: body.parent_id ?? null,
+          tracking: body.tracking ?? "none",
+          requires_conformity_doc: body.requires_conformity_doc ?? false,
         };
         s.categories.push(created);
         return created;

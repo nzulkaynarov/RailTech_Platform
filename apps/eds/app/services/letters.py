@@ -275,9 +275,44 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         )
     try:
         source = data.source.model_dump() if data.source is not None else None
+        if data.source is not None:
+            values["source_mail_id"] = data.source.crm_inbound_mail_id
         return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids, source=source)
-    except IntegrityError as exc:  # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
+    except IntegrityError as exc:
+        if "uq_letters_source_mail_id" in str(exc.orig):  # гонка двух регистраций одного письма ящика
+            raise SourceMailTakenError from exc
+        # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
         raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.") from exc
+
+
+class SourceMailTakenError(Exception):
+    """Письмо общего ящика уже имеет ВХ (сработал `uq_letters_source_mail_id`)."""
+
+
+async def find_by_source(session: AsyncSession, crm_inbound_mail_id: int) -> Letter | None:
+    stmt = select(Letter).where(Letter.source_mail_id == crm_inbound_mail_id)
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def register_once(
+    session: AsyncSession, bus: AsyncBus, *, actor_id: int, data: LetterCreate
+) -> tuple[Letter, bool]:
+    """Регистрация, у которой письмо общего ящика (`source`) получает ВХ один раз (W18A-P2-3): повтор — тот же ВХ
+    без нового номера и без второго `letter.registered`; `False` во втором элементе — «уже был». Две одновременные
+    регистрации ловит уникальный индекс: проигравшая откатывается до точки сохранения и читает ВХ победившей."""
+    if data.source is None:
+        return await register(session, bus, actor_id=actor_id, data=data), True
+    mail_id = data.source.crm_inbound_mail_id
+    if (found := await find_by_source(session, mail_id)) is not None:
+        return found, False
+    try:
+        async with session.begin_nested():
+            return await register(session, bus, actor_id=actor_id, data=data), True
+    except SourceMailTakenError:
+        found = await find_by_source(session, mail_id)
+        if found is None:  # победительница откатилась между вставкой и чтением — пусть клиент повторит
+            raise conflict("letter_source_busy", "Письмо уже регистрируется: повторите запрос.") from None
+        return found, False
 
 
 async def find_by_request(session: AsyncSession, erp_request_id: int) -> Letter | None:

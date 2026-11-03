@@ -4,7 +4,13 @@ OpenAPI (`/api/v1/stock/*`) и проверка тел запросов."""
 
 from rest_framework import serializers
 
+from catalog.constants import TrackingClass
+
 RESERVATION_STATUSES = ("active", "released", "fulfilled")
+#: Учёт единиц категории (ADR-0021): серийный, партия, только количество.
+TRACKING_CLASSES = TrackingClass.choices
+TRACE_KINDS = ("serial", "lot")
+TRACE_STATUSES = ("in_stock", "shipped")
 ORDER_STATUSES = ("draft", "sent", "confirmed", "received", "cancelled")
 
 
@@ -42,6 +48,14 @@ class StockBalanceListSerializer(serializers.Serializer):
     rights = StockRightsSerializer()
 
 
+class StockTraceUnitShortSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind = serializers.ChoiceField(choices=TRACE_KINDS)
+    number = serializers.CharField(help_text="Серийный номер или номер партии изготовителя")
+    expiry_date = serializers.DateField(allow_null=True, help_text="Годен до (партия)")
+    available = serializers.IntegerField(help_text="Сколько ещё на складе: серийный — 1, партия — остаток партии")
+
+
 class StockReservationSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     product_id = serializers.IntegerField()
@@ -54,6 +68,10 @@ class StockReservationSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=RESERVATION_STATUSES)
     created_at = serializers.DateTimeField()
     created_by_name = serializers.CharField(allow_null=True)
+    tracking = serializers.ChoiceField(choices=TRACKING_CLASSES, help_text="Учёт единиц товара по его категории")
+    units = StockTraceUnitShortSerializer(
+        many=True, help_text="Свободные серийные или партии товара — выбор при отгрузке (S/L); у N пусто"
+    )
 
 
 class StockReservationListSerializer(serializers.Serializer):
@@ -85,11 +103,17 @@ class StockProductSerializer(StockRowSerializer):
     rights = StockRightsSerializer()
 
 
+class StockShipmentUnitSerializer(serializers.Serializer):
+    number = serializers.CharField()
+    quantity = serializers.IntegerField()
+
+
 class StockShipmentLineSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
     name = serializers.CharField()
     quantity = serializers.IntegerField()
     cell = serializers.CharField(allow_null=True)
+    units = StockShipmentUnitSerializer(many=True, help_text="Серийные или партии, ушедшие этой строкой")
 
 
 class StockShipmentSerializer(serializers.Serializer):
@@ -137,6 +161,13 @@ class StockErrorSerializer(serializers.Serializer):
         required=False, help_text="`TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус"
     )
     target = serializers.CharField(required=False, help_text="`TRANSITION_NOT_ALLOWED`: куда хотели перейти")
+    expected = serializers.IntegerField(
+        required=False, help_text="`SERIALS_REQUIRED`, `SERIALS_COUNT_MISMATCH`, `UNITS_*`: сколько номеров нужно"
+    )
+    given = serializers.IntegerField(required=False, help_text="`*_COUNT_MISMATCH`: сколько передано")
+    number = serializers.CharField(
+        required=False, help_text="`SERIAL_DUPLICATE`, `SERIAL_EXISTS`, `UNIT_NOT_AVAILABLE`: номер, о котором речь"
+    )
 
 
 # ── запросы ────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -160,9 +191,17 @@ class StockReserveInSerializer(serializers.Serializer):
     quantity = serializers.IntegerField(min_value=1)
 
 
+class StockShipUnitInSerializer(serializers.Serializer):
+    unit_id = serializers.IntegerField(min_value=1)
+    quantity = serializers.IntegerField(min_value=1, required=False, default=1, help_text="Серийный — 1")
+
+
 class StockShipLineInSerializer(serializers.Serializer):
     reservation_id = serializers.IntegerField(min_value=1)
     quantity = serializers.IntegerField(min_value=1)
+    units = StockShipUnitInSerializer(
+        many=True, required=False, default=list, max_length=1000, help_text="Обязательно для товаров S/L (ADR-0021)"
+    )
 
 
 class StockShipInSerializer(serializers.Serializer):
@@ -171,3 +210,46 @@ class StockShipInSerializer(serializers.Serializer):
     tracking = serializers.CharField(required=False, allow_blank=True, max_length=128, default="")
     carrier = serializers.CharField(required=False, allow_blank=True, max_length=128, default="")
     note = serializers.CharField(required=False, allow_blank=True, max_length=500, default="")
+
+
+# ── прослеживаемость (ADR-0021) ────────────────────────────────────────────────────────────────────────────────────
+
+
+class StockTraceProductSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.CharField()
+    article = serializers.CharField(allow_blank=True)
+
+
+class StockTraceOriginSerializer(serializers.Serializer):
+    receipt_id = serializers.IntegerField()
+    received_at = serializers.DateTimeField()
+    supplier_doc = serializers.CharField(allow_null=True)
+    order_id = serializers.IntegerField()
+    order_number = serializers.CharField()
+    supplier_name = serializers.CharField()
+    manufacturer = serializers.CharField(allow_null=True)
+    doc_number = serializers.CharField(allow_null=True, help_text="№ сертификата или декларации на приёмке")
+    doc_valid_until = serializers.DateField(allow_null=True)
+    deal = StockDealRefSerializer(allow_null=True, help_text="Проект, под который заказывали")
+
+
+class StockTraceDestinationSerializer(serializers.Serializer):
+    shipment_id = serializers.IntegerField()
+    shipment_number = serializers.CharField()
+    shipped_at = serializers.DateTimeField()
+    quantity = serializers.IntegerField()
+    deal = StockDealRefSerializer()
+
+
+class StockTraceUnitSerializer(StockTraceUnitShortSerializer):
+    quantity = serializers.IntegerField()
+    shipped_quantity = serializers.IntegerField()
+    status = serializers.ChoiceField(choices=TRACE_STATUSES)
+    product = StockTraceProductSerializer()
+    origin = StockTraceOriginSerializer(help_text="Откуда: приёмка, заказ, поставщик, изготовитель, документ")
+    destinations = StockTraceDestinationSerializer(many=True, help_text="Куда: отгрузки, клиент, проект")
+
+
+class StockTraceListSerializer(serializers.Serializer):
+    results = StockTraceUnitSerializer(many=True)

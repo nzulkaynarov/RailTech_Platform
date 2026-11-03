@@ -216,3 +216,74 @@ class ShipmentLine(models.Model):
         verbose_name_plural = _("Строки отгрузки")
         ordering = ["shipment_id", "id"]
         constraints = [models.CheckConstraint(condition=Q(quantity__gt=0), name="shipment_line_quantity_positive")]
+
+
+class TraceKind(models.TextChoices):
+    SERIAL = "serial", _("Серийный номер")
+    LOT = "lot", _("Партия")
+
+
+class TraceStatus(models.TextChoices):
+    IN_STOCK = "in_stock", _("На складе")
+    SHIPPED = "shipped", _("Отгружен")
+
+
+class TraceUnit(models.Model):
+    """Единица прослеживаемости (ADR-0021): серийный номер (одна единица) или партия изготовителя (количество, срок годности).
+
+    Разрез прослеживаемости, а не складской учёт: остаток по-прежнему по количеству. Откуда — строка приёмки (заказ,
+    поставщик, документ соответствия), куда — распределения по строкам отгрузки (`TraceAllocation`).
+    """
+
+    kind = models.CharField(max_length=8, choices=TraceKind.choices, verbose_name=_("Вид"))
+    product = models.ForeignKey("catalog.Product", on_delete=models.PROTECT, related_name="trace_units")
+    number = models.CharField(max_length=100, db_index=True, verbose_name=_("Номер изготовителя"))
+    expiry_date = models.DateField(null=True, blank=True, verbose_name=_("Годен до"))
+    quantity = models.PositiveIntegerField(verbose_name=_("Количество"), help_text=_("Серийный — 1, партия — принятое"))
+    shipped_quantity = models.PositiveIntegerField(default=0, verbose_name=_("Отгружено"))
+    status = models.CharField(
+        max_length=10,
+        choices=TraceStatus.choices,
+        default=TraceStatus.IN_STOCK,
+        db_index=True,
+        verbose_name=_("Статус"),
+    )
+    receipt_line = models.ForeignKey(
+        "supply.GoodsReceiptLine", on_delete=models.PROTECT, related_name="trace_units", verbose_name=_("Приёмка")
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("Единица прослеживаемости")
+        verbose_name_plural = _("Единицы прослеживаемости")
+        ordering = ["product_id", "number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["product", "number"], condition=Q(kind="serial"), name="uniq_trace_serial_per_product"
+            ),
+            models.CheckConstraint(condition=Q(quantity__gt=0), name="trace_unit_quantity_positive"),
+            models.CheckConstraint(
+                condition=Q(shipped_quantity__lte=models.F("quantity")), name="trace_unit_shipped_le_quantity"
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_kind_display()} {self.number}"
+
+    @property
+    def available(self) -> int:
+        return self.quantity - self.shipped_quantity
+
+
+class TraceAllocation(models.Model):
+    """Какие единицы ушли строкой отгрузки клиенту и сколько (партия может уйти несколькими отгрузками)."""
+
+    unit = models.ForeignKey(TraceUnit, on_delete=models.PROTECT, related_name="allocations")
+    shipment_line = models.ForeignKey(ShipmentLine, on_delete=models.CASCADE, related_name="trace_allocations")
+    quantity = models.PositiveIntegerField()
+
+    class Meta:
+        verbose_name = _("Единица в отгрузке")
+        verbose_name_plural = _("Единицы в отгрузках")
+        ordering = ["shipment_line_id", "id"]
+        constraints = [models.CheckConstraint(condition=Q(quantity__gt=0), name="trace_allocation_quantity_positive")]

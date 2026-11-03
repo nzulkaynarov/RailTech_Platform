@@ -131,6 +131,11 @@ export interface paths {
      *     в `details.fields` — поле `kind` с `unknown_kind`); вид с `urgent` ставит `urgent = true` сам; `related_number` —
      *     номер предыдущего ВХ или нашего ИСХ (нет такого — 422, поле `related_number` с `not_found`); `summary` не задано —
      *     берётся тема.
+     *
+     *     Письмо общего ящика CRM (`source.crm_inbound_mail_id`, W18A-P2-3): одно письмо — один ВХ. Повторная регистрация
+     *     того же письма (другой `Idempotency-Key`, повтор после обрыва, двойное нажатие) возвращает уже созданный ВХ —
+     *     `200` вместо `201`, без нового номера и без второго `letter.registered`. Две одновременные регистрации дают один
+     *     ВХ (частичный уникальный индекс по источнику).
      */
     post: operations["registerLetter"];
     delete?: never;
@@ -2380,6 +2385,15 @@ export interface operations {
       };
     };
     responses: {
+      /** @description Письмо общего ящика уже зарегистрировано — прежний ВХ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Letter"];
+        };
+      };
       /** @description Зарегистрировано */
       201: {
         headers: {
