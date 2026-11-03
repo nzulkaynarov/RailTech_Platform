@@ -214,10 +214,12 @@ import type {
   LeadPage,
   LetterCard,
   LetterConflictResponse,
+  LetterDuplicateCheckIn,
   LetterDuplicateList,
   LetterIntakeIn,
   LetterIntakeSuggestion,
   LetterKindList,
+  LetterMarkDuplicateIn,
   LetterPage,
   LetterRegisterIn,
   LetterRejectIn,
@@ -30211,7 +30213,7 @@ export const getRegisterLetterUrl = () => {
 };
 
 /**
- * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Проверку дубля экран делает до отправки (`GET /eds/letter-duplicates`): дубль — предупреждение, не запрет. Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
+ * Форма «Зарегистрировать входящее» (SPEC-v3 §3.2a п. 1): EDS `POST /letters` (право `letters.register`). Раздел `eds.inbox.register` — полный: регистрация отдельно от резолюции (`eds.inbox: full`), делопроизводитель резолюцию не накладывает. Обязательны вид документа (код из `GET /eds/letter-kinds`), способ получения, корреспондент, дата поступления, тема и хотя бы один файл (загрузка — `POST /eds/document-files`). Вид со «срочно» (требование ГНК) ставит «срочно» сам. Адресат — директор по умолчанию (держатель резолюции); письмо сразу «Ждёт резолюции» и попадает директору в «Мои задачи» (`resolve_letter`). Дубли (EDS-DUP): экран проверяет в фоне (`POST /eds/letters/duplicates-check`); то же письмо уже зарегистрировано (корреспондент, исх. № и дата исх.) — 409 `CONFLICT`, `details.reason = duplicate_letter`, `details.duplicate` — найденный ВХ (`LetterDuplicate`); зарегистрировать всё равно — `force = true` с причиной `force_reason` (в журнал ВХ). Номер связанного ВХ или ИСХ не найден — 422 `VALIDATION_FAILED`, `details.fields = [related_number]`; неизвестный вид — `details.fields = [kind]`. `Idempotency-Key` уходит в EDS как есть. Из письма общего ящика (`source_mail_id`, W18A-P2-3): до EDS CRM помечает письмо «Регистрируется» и берёт его для сотрудника; ведёт другой или уже разобрано — 409 `CONFLICT` (`details.reason = mail_in_work_by_other` | `mail_handled`), ВХ не создаётся; отказ EDS возвращает письмо «в работе». Письмо ящика, у которого ВХ уже есть (повтор, двойное нажатие, регистрация зависла), получает тот же ВХ, а не второй: EDS отвечает 200, BFF — этой же карточкой.
  * @summary EDS · Зарегистрировать входящее (делопроизводитель, P8)
  */
 export const registerLetter = async (
@@ -31240,6 +31242,128 @@ export function useListLetterKinds<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getCheckLetterDuplicatesUrl = () => {
+  return `/api/v1/eds/letters/duplicates-check`;
+};
+
+/**
+ * EDS `POST /letters/duplicates-check`: форма «Зарегистрировать входящее» зовёт в фоне по мере заполнения и после «Заполнить из файла». `match = exact` — то же письмо (корреспондент по ИНН или названию без регистра, кавычек и формы собственности + исх. № + дата исх.): регистрация без `force` получит 409 `duplicate_letter`. `same_subject` — тот же корреспондент и тема за ±3 дня, `same_ref` — тот же исх. № с другой датой, `same_file` — тот же файл: предупреждение, регистрировать не мешает. До пяти, точные первыми. Раздел `eds.inbox` — чтение или `eds.inbox.register`.
+ * @summary EDS · Проверка дублей входящего до регистрации (EDS-DUP)
+ */
+export const checkLetterDuplicates = async (
+  letterDuplicateCheckIn: LetterDuplicateCheckIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterDuplicateList> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterDuplicateList>(getCheckLetterDuplicatesUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterDuplicateCheckIn),
+  });
+};
+
+export const getCheckLetterDuplicatesMutationKey = () => ["checkLetterDuplicates"] as const;
+
+export const getCheckLetterDuplicatesMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkLetterDuplicates>>,
+    TError,
+    CheckLetterDuplicatesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkLetterDuplicates>>,
+  TError,
+  CheckLetterDuplicatesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCheckLetterDuplicatesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkLetterDuplicates>>,
+    CheckLetterDuplicatesMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return checkLetterDuplicates(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckLetterDuplicatesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkLetterDuplicates>>
+>;
+export type CheckLetterDuplicatesMutationBody = LetterDuplicateCheckIn;
+export type CheckLetterDuplicatesMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CheckLetterDuplicatesMutationVariables = { data: LetterDuplicateCheckIn };
+
+/**
+ * @summary EDS · Проверка дублей входящего до регистрации (EDS-DUP)
+ */
+export const useCheckLetterDuplicates = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkLetterDuplicates>>,
+      TError,
+      CheckLetterDuplicatesMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof checkLetterDuplicates>>,
+  TError,
+  CheckLetterDuplicatesMutationVariables,
+  TContext
+> => {
+  return useMutation(getCheckLetterDuplicatesMutationOptions(options), queryClient);
+};
+
 export const getFindLetterDuplicatesUrl = (params: FindLetterDuplicatesParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -32209,6 +32333,138 @@ export function useDownloadLetterFile<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getMarkLetterDuplicateUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/duplicate`;
+};
+
+/**
+ * EDS `POST /letters/{id}/duplicate` (право `letters.register`). Раздел `eds.inbox.register` — полный. Письмо получает статус «Дубль» и ссылку на оригинал (`duplicate_of`), номер не освобождается; поручения отменяются, ожидающие «ознакомить» снимаются, контроль снимается — всё с записью в журнал. Оригинал — номер ВХ (`original_number`): нет такого, то же письмо или оригинал сам дубль — 422 `details.fields = [original_number]` (`details.reason`: `not_found`, `same_letter`, `original_is_duplicate`). Уже дубль — 409 `invalid_state`. Резолюция уже наложена — без `confirm = true` 409 `resolution_exists`; письмо по заявке клиента после резолюции — 409 `calc_in_progress`.
+ * @summary EDS · «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо (EDS-DUP)
+ */
+export const markLetterDuplicate = async (
+  id: string,
+  letterMarkDuplicateIn: LetterMarkDuplicateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getMarkLetterDuplicateUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterMarkDuplicateIn),
+  });
+};
+
+export const getMarkLetterDuplicateMutationKey = () => ["markLetterDuplicate"] as const;
+
+export const getMarkLetterDuplicateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markLetterDuplicate>>,
+    TError,
+    MarkLetterDuplicateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markLetterDuplicate>>,
+  TError,
+  MarkLetterDuplicateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkLetterDuplicateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markLetterDuplicate>>,
+    MarkLetterDuplicateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return markLetterDuplicate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkLetterDuplicateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markLetterDuplicate>>
+>;
+export type MarkLetterDuplicateMutationBody = LetterMarkDuplicateIn;
+export type MarkLetterDuplicateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type MarkLetterDuplicateMutationVariables = { id: string; data: LetterMarkDuplicateIn };
+
+/**
+ * @summary EDS · «Это дубль ВХ-…» — закрыть повторно зарегистрированное письмо (EDS-DUP)
+ */
+export const useMarkLetterDuplicate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markLetterDuplicate>>,
+      TError,
+      MarkLetterDuplicateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof markLetterDuplicate>>,
+  TError,
+  MarkLetterDuplicateMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkLetterDuplicateMutationOptions(options), queryClient);
+};
 
 export const getSaveResolutionDraftUrl = (id: string) => {
   return `/api/v1/eds/letters/${id}/resolution-draft`;

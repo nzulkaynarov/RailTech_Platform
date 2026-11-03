@@ -134,13 +134,43 @@
       "instruction_extension_approved": "Deadline extension approved",
       "instruction_extension_rejected": "Deadline extension rejected",
       "letter_executed": "All instructions executed",
-      "letter_acknowledged": "Acknowledged the letter"
+      "letter_acknowledged": "Acknowledged the letter",
+      "letter_duplicate_forced": "Registered despite matching another letter",
+      "letter_marked_duplicate": "Marked as duplicate",
+      "letter_work_cancelled": "Instructions and acknowledgements cancelled",
+      "letter_duplicate_linked": "Duplicate of this letter found"
     },
     "readOnly": "View only",
     "readOnlyHint": "The director decides on the letter.",
     "resolve": "Add resolution",
     "partial": "Request data is unavailable: the step is shown from the letter itself.",
-    "onControl": "Under control"
+    "onControl": "Under control",
+    "dup": {
+      "action": "Duplicate",
+      "title": "{{number}} is a duplicate",
+      "original": "Original number",
+      "comment": "Comment",
+      "confirm": "Resolution already made — cancel instructions ({{count}})",
+      "what": [
+        "The letter gets the status «Duplicate» and a link to the original",
+        "Its instructions and acknowledgements are cancelled, logged",
+        "The incoming number is not reused"
+      ],
+      "submit": "Mark as duplicate",
+      "cancel": "Cancel",
+      "done": "Marked as duplicate of {{number}}",
+      "banner": "Duplicate of",
+      "bannerNoLink": "Duplicate of another letter",
+      "bannerText": "The letter is closed: work continues on the original.",
+      "errors": {
+        "not_found": "No incoming letter with this number",
+        "same_letter": "That is this letter — give the original",
+        "original_is_duplicate": "That letter is a duplicate itself — give the original",
+        "resolution_exists": "Resolution already made — confirm cancelling instructions",
+        "calc_in_progress": "Calculation is under way — close it in the project",
+        "invalid_state": "The letter is already marked as duplicate"
+      }
+    }
   },
   "panel": {
     "awaitingReadOnly": {
@@ -341,8 +371,22 @@
       "hint": "Optional: number of a previous incoming (ВХ) or our outgoing (ИСХ)"
     },
     "duplicate": {
-      "title": "This letter may already be registered: same correspondent and outgoing number",
-      "item": "· {{subject}} · {{date}}"
+      "exactTitle": "This letter seems to be registered already",
+      "registered": "registered {{date}} · {{subject}}",
+      "open": "Open",
+      "other": "It's a different letter — register",
+      "keep": "Don't register",
+      "reason": "Why is it a different letter",
+      "reasonRequired": "Give a reason — it goes to the log",
+      "similarTitle": "Similar letters",
+      "item": "· {{subject}} · {{date}}",
+      "blocked": "This letter is already registered: {{number}}",
+      "match": {
+        "exact": "same letter",
+        "same_subject": "same subject",
+        "same_ref": "same ref. no.",
+        "same_file": "same file"
+      }
     },
     "consequence": [
       "The letter gets a ВХ number and the status “Awaiting resolution”.",
@@ -536,7 +580,8 @@
     },
     "status": {
       "in_work": "In progress",
-      "executed": "Executed"
+      "executed": "Executed",
+      "cancelled": "Cancelled"
     },
     "overdue": "Overdue",
     "due": "Due {{date}}",

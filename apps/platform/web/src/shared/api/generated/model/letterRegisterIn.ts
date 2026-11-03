@@ -102,4 +102,12 @@ export interface LetterRegisterIn {
    * @maxItems 50
    */
   file_ids: string[];
+  /** Зарегистрировать, хотя то же письмо уже есть (EDS-DUP, «Это другое письмо»); нужна `force_reason` */
+  force?: boolean;
+  /**
+   * Почему это другое письмо — в журнал ВХ
+   * @maxLength 1000
+   * @nullable
+   */
+  force_reason?: string | null;
 }

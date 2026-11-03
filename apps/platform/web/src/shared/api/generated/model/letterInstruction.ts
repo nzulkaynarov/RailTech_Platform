@@ -20,7 +20,7 @@ export interface LetterInstruction {
   person: PersonRef;
   due: string;
   text: string;
-  /** «В работе» → «Исполнено» */
+  /** «В работе» → «Исполнено»; `cancelled` — «Отменено» (письмо — дубль, EDS-DUP) */
   status: LetterInstructionStatus;
   /** Срок прошёл, не исполнено */
   overdue: boolean;

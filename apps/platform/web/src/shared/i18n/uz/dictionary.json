@@ -18,7 +18,8 @@
       "rejected": "Rad etilgan",
       "in_execution": "Ijroda",
       "executed": "Bajarildi",
-      "noted": "Ma’lumot uchun qabul qilindi"
+      "noted": "Ma’lumot uchun qabul qilindi",
+      "duplicate": "Takror"
     },
     "quote": {
       "draft": "Qoralama",

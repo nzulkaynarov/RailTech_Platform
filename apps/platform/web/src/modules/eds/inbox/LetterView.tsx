@@ -23,6 +23,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { letterRef } from "./api";
 import { useStateLabels } from "./labels";
 import { InstructionsCard, OfficeDecision } from "./Instructions";
+import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments } from "./Parts";
 import { ResolutionSlot } from "./ResolutionPanel";
 
@@ -195,7 +196,8 @@ function Content({
   const canResolve = canEdit(me, "eds.inbox");
   // Делопроизводитель готовит проект резолюции письма делопроизводства (P8b) в том же боковом окне.
   const office = letter.track === "office";
-  const canDraft = canEdit(me, "eds.inbox.register") && office;
+  const canRegister = canEdit(me, "eds.inbox.register");
+  const canDraft = canRegister && office;
   const awaiting = letter.status === "awaiting_resolution";
   const registry = useRegistryItems(letter);
 
@@ -235,6 +237,7 @@ function Content({
         }
       />
       <SourceBanner sources={letter.sources} onRetry={refetch} />
+      <DuplicateBanner letter={letter} />
       {/* Путь заявки (7 шагов) — только у письма по заявке клиента; у делопроизводства своих шагов нет (P8b). */}
       {letter.track === "office" ? null : (
         <section className="pf-card pf-letters-steps" aria-label={t("card.steps")}>
@@ -253,6 +256,12 @@ function Content({
         </div>
       ) : null}
       {awaiting && !canResolve ? <p className="pf-hint">{t("card.readOnlyHint")}</p> : null}
+      {/* EDS-DUP: «Это дубль ВХ-…» — у делопроизводителя; слева, чтобы боковое окно не закрывало кнопку */}
+      {canRegister && letter.status !== "duplicate" ? (
+        <div>
+          <MarkDuplicateAction letter={letter} />
+        </div>
+      ) : null}
       <div className="pf-letters-grid">
         <div className="pf-letters-main">
           <Card size="small" title={<h2 className="pf-letters-title">{t("card.details")}</h2>}>

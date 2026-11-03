@@ -46,8 +46,10 @@ from app.schemas_eds_letters import (
     InstructionExtensionIn,
     LetterCard,
     LetterDuplicate,
+    LetterDuplicateCheckIn,
     LetterDuplicateList,
     LetterKindList,
+    LetterMarkDuplicateIn,
     LetterPage,
     LetterRegisterIn,
     LetterRejectIn,
@@ -211,7 +213,10 @@ async def list_letter_kinds(authed: Reader) -> LetterKindList:
 
 
 @router.get(
-    "/letter-duplicates", response_model=LetterDuplicateList, operation_id="findLetterDuplicates"
+    "/letter-duplicates",
+    response_model=LetterDuplicateList,
+    response_model_exclude_none=True,
+    operation_id="findLetterDuplicates",
 )
 async def find_letter_duplicates(
     authed: Reader,
@@ -224,7 +229,24 @@ async def find_letter_duplicates(
         params["sender_name"] = sender_name.strip()
     if crm_client_id is not None:
         params["crm_client_id"] = crm_client_id
-    raw = await _letters(authed).duplicates(params)
+    return _duplicates(await _letters(authed).duplicates(params))
+
+
+@router.post(
+    "/letters/duplicates-check",
+    response_model=LetterDuplicateList,
+    response_model_exclude_none=True,
+    operation_id="checkLetterDuplicates",
+)
+async def check_letter_duplicates(
+    body: LetterDuplicateCheckIn, authed: Reader
+) -> LetterDuplicateList:
+    """EDS-DUP: фоновая проверка формы — то же письмо (`exact`) и похожие, до пяти."""
+    raw = await _letters(authed).check_duplicates(body.for_eds())
+    return _duplicates(raw)
+
+
+def _duplicates(raw: Any) -> LetterDuplicateList:
     items = raw.get("items") if isinstance(raw, dict) else None
     found: list[LetterDuplicate] = []
     for item in items if isinstance(items, list) else []:
@@ -237,6 +259,19 @@ async def find_letter_duplicates(
         except (ValidationError, AttributeError) as exc:
             raise backend_unavailable("eds", "bad_duplicates") from exc
     return LetterDuplicateList(items=found)
+
+
+@router.post(
+    "/letters/{id}/duplicate",
+    response_model=LetterCard,
+    response_model_exclude_unset=True,
+    operation_id="markLetterDuplicate",
+)
+async def mark_letter_duplicate(
+    id: LetterId, body: LetterMarkDuplicateIn, authed: Registrar
+) -> LetterCard:
+    """«Это дубль ВХ-…» (EDS-DUP): решает EDS — статус, отмена поручений, журнал."""
+    return await _card(authed, await _letters(authed).mark_duplicate(str(id), body.for_eds()))
 
 
 @router.get(

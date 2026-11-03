@@ -134,13 +134,43 @@
       "instruction_extension_approved": "Muddatni uzaytirish ma’qullandi",
       "instruction_extension_rejected": "Muddatni uzaytirish rad etildi",
       "letter_executed": "Barcha topshiriqlar bajarildi",
-      "letter_acknowledged": "Xat bilan tanishdi"
+      "letter_acknowledged": "Xat bilan tanishdi",
+      "letter_duplicate_forced": "Boshqa kiruvchi xatga mos boʻlsa ham roʻyxatga olindi",
+      "letter_marked_duplicate": "Takror deb belgilandi",
+      "letter_work_cancelled": "Topshiriqlar va tanishishlar bekor qilindi",
+      "letter_duplicate_linked": "Xatning takrori topildi"
     },
     "readOnly": "Faqat ko'rish",
     "readOnlyHint": "Xat bo'yicha qarorni direktor qabul qiladi.",
     "resolve": "Rezolyutsiya qo'yish",
     "partial": "Ariza ma'lumotlari mavjud emas: bosqich xatning o'zi bo'yicha ko'rsatilgan.",
-    "onControl": "Nazoratda"
+    "onControl": "Nazoratda",
+    "dup": {
+      "action": "Takror",
+      "title": "{{number}} — takror",
+      "original": "Asl xat raqami",
+      "comment": "Izoh",
+      "confirm": "Rezolyutsiya qoʻyilgan — topshiriqlarni bekor qilish ({{count}})",
+      "what": [
+        "Xat «Takror» maqomini va aslga havolani oladi",
+        "Undagi topshiriqlar va tanishishlar bekor qilinadi, jurnalga yoziladi",
+        "Kiruvchi raqam boʻshatilmaydi"
+      ],
+      "submit": "Takror deb belgilash",
+      "cancel": "Bekor qilish",
+      "done": "{{number}} takrori deb belgilandi",
+      "banner": "Xat takrori:",
+      "bannerNoLink": "Boshqa xatning takrori",
+      "bannerText": "Xat yopildi: ish asl xat boʻyicha davom etadi.",
+      "errors": {
+        "not_found": "Bunday raqamli kiruvchi xat yoʻq",
+        "same_letter": "Bu oʻsha xat — aslini koʻrsating",
+        "original_is_duplicate": "U xatning oʻzi takror — aslini koʻrsating",
+        "resolution_exists": "Rezolyutsiya qoʻyilgan — topshiriqlar bekor qilinishini tasdiqlang",
+        "calc_in_progress": "Xat boʻyicha hisob ketmoqda — uni loyihada yoping",
+        "invalid_state": "Xat allaqachon takror deb belgilangan"
+      }
+    }
   },
   "panel": {
     "awaitingReadOnly": {
@@ -341,8 +371,22 @@
       "hint": "Ixtiyoriy: oldingi kiruvchi (ВХ) yoki bizning chiquvchi (ИСХ) raqami"
     },
     "duplicate": {
-      "title": "Bu xat allaqachon ro‘yxatga olingan bo‘lishi mumkin: korrespondent va chiquvchi raqam bir xil",
-      "item": "· {{subject}} · {{date}}"
+      "exactTitle": "Bu xat allaqachon roʻyxatdan oʻtganga oʻxshaydi",
+      "registered": "roʻyxatga olingan {{date}} · {{subject}}",
+      "open": "Ochish",
+      "other": "Bu boshqa xat — roʻyxatga olish",
+      "keep": "Roʻyxatga olmaslik",
+      "reason": "Nega bu boshqa xat",
+      "reasonRequired": "Sababini yozing — u jurnalga tushadi",
+      "similarTitle": "Oʻxshash xatlar",
+      "item": "· {{subject}} · {{date}}",
+      "blocked": "Bu xat allaqachon roʻyxatdan oʻtgan: {{number}}",
+      "match": {
+        "exact": "oʻsha xat",
+        "same_subject": "oʻsha mavzu",
+        "same_ref": "oʻsha chiqish №",
+        "same_file": "oʻsha fayl"
+      }
     },
     "consequence": [
       "Xat ВХ raqamini va «Rezolyutsiya kutilmoqda» holatini oladi.",
@@ -536,7 +580,8 @@
     },
     "status": {
       "in_work": "Ishda",
-      "executed": "Bajarildi"
+      "executed": "Bajarildi",
+      "cancelled": "Bekor qilindi"
     },
     "overdue": "Muddati o‘tgan",
     "due": "Muddat {{date}}",
