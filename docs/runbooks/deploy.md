@@ -270,7 +270,8 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   «Подключить ERP»; `crm-erp-pairing.md`). Внешний адрес ERP в «Подключениях» для этого не годится — он даст 404. Сопряжение CRM с ERP
   на **другом сервере** требует внутренней связи между серверами (частная сеть/VPN, адрес ERP — частный IP или имя без точки; ADR-0009 это
   допускает, внешний `https://erp…` для `/api/integration` — нет).
-* **Попасть в Django admin (Unfold).** SSH-туннель к контейнеру `erp-backend` (порт наружу не публикуется), на VPS 1 из каталога релиза:
+* **Попасть в Django admin (Unfold).** Обычный путь — из Платформы: «Подключения» → «ERP» → «Открыть консоль: панель базы»
+  (`https://<Платформа>/console/erp/admin/`, раздел «Служебные консоли через Платформу» ниже). Аварийный путь — SSH-туннель к контейнеру `erp-backend` (порт наружу не публикуется), на VPS 1 из каталога релиза:
   ```bash
   # 1) адрес контейнера erp-backend в сети compose
   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose … ps -q erp-backend)"
@@ -285,6 +286,30 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   `docs/runbooks/rt-bus-erp.md`.
 * **Откат на релиз до S0-5:** его Caddy ещё отдаёт `/admin/` и `/api/integration` наружу, поэтому smoke отката (404 на этих путях) будет красным,
   хотя откат выполнен; это ожидаемо, повторный деплой текущего релиза закрывает пути.
+
+### Служебные консоли через Платформу (OPS-CONSOLE, DECISIONS 2026-11-03)
+
+Консоли внутренних сервисов открываются на домене Платформы по пути, без новых поддоменов и портов:
+
+| Консоль | Адрес | Свой вход | Как сервис живёт под путём |
+|---|---|---|---|
+| Шлюз моделей (LiteLLM) | `https://<Платформа>/console/litellm/ui/` | логин `admin`, пароль — `LITELLM_MASTER_KEY` | `SERVER_ROOT_PATH=/console/litellm` (`base.yml`); API отвечает и без префикса — CRM, ERP и healthcheck не меняются |
+| Панель базы ERP (Django admin) | `https://<Платформа>/console/erp/admin/` | учётка ERP суперпользователя или группы `system_engineers` | `ERP_CONSOLE_PREFIX=/console/erp` (`core/console_mount.py`, статика — `core/static_storage.py`); `PLATFORM_DOMAIN` в `ALLOWED_HOSTS` ERP |
+
+Как устроено: перед каждым запросом к `/console/*` Caddy (`service_consoles` в `Caddyfile.prod`/`.dev`) спрашивает BFF
+`GET /api/v1/consoles/<ключ>/auth` (`forward_auth`): нет сессии Платформы — редирект на `/login`, не администратор (`admin: full`)
+или не сменён временный пароль — 403, консоль выключена — 404; ответы BFF не кэшируются. Cookie Платформы (`rt_pf_*`) в сервис не
+уходят. Под `/console/erp` открыты только `admin/` и `static/` (машинный API, шина и портал — 404 и в Caddy, и в ERP). CSP с
+`'unsafe-eval'` стоит только на путях консолей, остальной сайт — прежняя строгая CSP. Первое открытие консоли за 30 минут сессии —
+запись журнала аудита «Открыл служебную консоль» (Настройки → Журнал; в журнале BFF — `console_open`). Проверка — `make deploy-check`
+(`infra/deploy/tests/console-edge-test.sh`).
+
+**Отключить.** Все консоли — `PLATFORM_CONSOLES=` (пустое значение) в `/opt/rt/.env.prod`, затем `docker compose … up -d platform-bff`:
+BFF отвечает 404, кнопки в «Подключениях» пропадают. Одну — оставить в списке только нужную (`PLATFORM_CONSOLES=erp`). Не задано —
+обе (`litellm,erp`). Совсем убрать маршрут — откат `Caddyfile.prod` на релиз до OPS-CONSOLE.
+
+Не через Платформу: консоль хранилища RustFS (под путь не встаёт — `docs/QUESTIONS.md` Q-OPS-CONSOLE-1; на время работы —
+`RUSTFS_CONSOLE_ENABLE=true` для `rustfs` и SSH-туннель на порт 9001 контейнера, как для Django admin выше) и Langfuse (на проде не запущен).
 
 ## 3. Откат
 
