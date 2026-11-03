@@ -168,7 +168,8 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
         empty={{
           title: t("settings.dict.empty.title"),
           text: t("settings.dict.empty.text"),
-          action: add,
+          // Пока список грузится, antd показывает пустое состояние под спиннером: без второй кнопки «Добавить».
+          action: query.isPending ? undefined : add,
         }}
         columns={[
           {

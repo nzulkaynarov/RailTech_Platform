@@ -109,7 +109,8 @@ export function TemplatesTab({ readOnly }: { readOnly: boolean }) {
         empty={{
           title: t("settings.templates.empty.title"),
           text: t("settings.templates.empty.text"),
-          action: add,
+          // Пока список грузится, antd показывает пустое состояние под спиннером: без второй кнопки «Добавить».
+          action: query.isPending ? undefined : add,
         }}
         columns={[
           {
