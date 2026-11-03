@@ -115,8 +115,12 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin: 0 -8px 8px;
-  padding: 0 8px;
+  /* Отступ снизу и граница над кнопкой действия: последний пункт («Выгрузки», «Обмен между системами») прокручивается
+     целиком над кнопкой «Пригласить сотрудника», а не уходит под неё */
+  margin: 0 -8px 12px;
+  padding: 0 8px 12px;
+  scroll-padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
 }
 .pf-menu-group {
   margin: 0;
@@ -130,7 +134,11 @@
   gap: 0;
 }
 .pf-menu-list--grouped .pf-menu-item {
-  height: 30px;
+  /* Длинная подпись («Обмен между системами») переносится внутри подсветки, а не вылезает за неё */
+  height: auto;
+  min-height: 30px;
+  padding-block: 4px;
+  line-height: 20px;
 }
 .pf-menu-item {
   display: flex;

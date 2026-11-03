@@ -214,7 +214,8 @@
       "tickets": "Staff requests are in “My tasks”, new: {{count}}.",
       "ticketsLink": "Open",
       "more": "Learn more",
-      "moreAria": "Learn more about “{{title}}” in Help"
+      "moreAria": "Learn more about “{{title}}” in Help",
+      "allGroups": "All settings groups"
     },
     "dictionaries": {
       "nav": "Lists by area",

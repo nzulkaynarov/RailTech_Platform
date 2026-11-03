@@ -62,6 +62,20 @@ const INTEGRATION_CARD: Record<string, string> = {
 
 export const TICKETS_HOME = "/dashboard/queue";
 
+/** Что открыто в боковом окне бота — текст или шаблон ответа — переносится на новый адрес (ссылки на конкретный текст). */
+const CARRIED = ["text", "template", "panel"] as const;
+
+function withCarried(target: string, from: URLSearchParams): string {
+  const [path = "", search = ""] = target.split("?");
+  const next = new URLSearchParams(search);
+  for (const key of CARRIED) {
+    const value = from.get(key);
+    if (value !== null) next.set(key, value);
+  }
+  const query = next.toString();
+  return query ? `${path}?${query}` : path;
+}
+
 function trimmed(pathname: string): string {
   return pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
 }
@@ -72,9 +86,9 @@ export function legacySettingsPath(pathname: string, search = ""): string | null
   if (path === "/admin/bot" || path.startsWith("/admin/bot/")) {
     const part = params.get("part");
     const section = params.get("section");
-    if (section && BOT_SECTION[section]) return BOT_SECTION[section];
-    if (part && BOT_PART[part]) return BOT_PART[part];
-    return "/admin/telegram";
+    const target =
+      (section && BOT_SECTION[section]) || (part && BOT_PART[part]) || "/admin/telegram";
+    return withCarried(target, params);
   }
   if (path === "/admin/docflow" || path.startsWith("/admin/docflow/")) {
     return DOCFLOW_TAB[params.get("tab") ?? ""] ?? "/admin/dictionaries?list=doc";

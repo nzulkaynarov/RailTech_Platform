@@ -1,7 +1,7 @@
-import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { expectNoViolations } from "./support/axe";
 
 // Настройки бота на MSW (W13-A5; SET-IA — разделы на страницах своих групп Настроек): формы по схемам CRM (сохранение,
 // отмена, ошибка поля, защита от потери изменений), тексты бота в боковом окне, пробный прогон правил передачи, шаблоны
@@ -46,18 +46,6 @@ const PAGE_OF: Record<string, string> = {
   budget: "Расходы на ИИ",
   exports: "Выгрузки",
 };
-
-async function expectNoViolations(page: Page, context: string): Promise<void> {
-  await waitForMotionEnd(page);
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude("iframe[sandbox]")
-    .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
-}
 
 /** Раздел бота по старому адресу — тот уводит на страницу группы; ждём её заголовок и конец загрузки. */
 async function openBot(page: Page, section = "company"): Promise<void> {

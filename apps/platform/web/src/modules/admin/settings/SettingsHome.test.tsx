@@ -82,6 +82,43 @@ describe("Настройки · индекс «Все настройки» (SET-
     expect(await screen.findByRole("region", { name: "Люди и доступ" })).toBeVisible();
   });
 
+  it("чек-лист «Первый запуск» на свежей установке: число шагов из данных, несделанный шаг — ссылка в мастер", async () => {
+    window.localStorage.setItem(
+      "rt-pf-mock-setup",
+      JSON.stringify({
+        needsAdmin: false,
+        code: "",
+        fresh: true,
+        companyCreated: true,
+        done: { erp: true },
+      }),
+    );
+    await openHome("admin@demo.example");
+    const checklist = await screen.findByRole("region", { name: "Первый запуск: готово 1 из 5" });
+    const steps = within(checklist).getByRole("list", { name: "Шаги настройки" });
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(5);
+    expect(within(steps).getByText("ERP").closest("li")).toHaveTextContent("Готово");
+    expect(within(steps).getByRole("link", { name: "Почта" })).toHaveAttribute(
+      "href",
+      "/admin/setup?step=mail&panel=open",
+    );
+    expect(within(checklist).getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
+      "href",
+      "/admin/setup",
+    );
+  });
+
+  it("⚙ из модуля (`?group=`): только своя группа и ссылка «Все группы настроек»", async () => {
+    await openHome("admin@demo.example", "/admin?group=processes");
+    expect(await screen.findByRole("region", { name: "Процессы" })).toBeVisible();
+    expect(screen.queryByRole("region", { name: "Люди и доступ" })).toBeNull();
+    expect(screen.queryByRole("region", { name: /^Первый запуск/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "Все группы настроек" })).toHaveAttribute(
+      "href",
+      "/admin",
+    );
+  });
+
   it("директор: те же группы на чтение, без «Обмена между системами» и без чек-листа первого запуска", async () => {
     await openHome("director@demo.example");
     await screen.findByRole("region", { name: "Система" });

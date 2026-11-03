@@ -1,24 +1,12 @@
-import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { expectNoViolations } from "./support/axe";
 
 // S1–S5 «Настройки: короче и без дублей» (ресёрч 2026-11-02 «Настройки» §4.2, §5): у сохранения настроек нет «Что
 // произойдёт», подзаголовки — одна строка без названий систем, в «Подключениях» карточки выше «Требует внимания» и
 // одинаковые причины — одной строкой, в боте — ссылки вместо дублей. Снимки 1440 и 390 и axe 0 —
 // `E2E_SCREENSHOT_DIR=docs/screens/s1`.
-
-async function expectNoViolations(page: Page, context: string): Promise<void> {
-  await waitForMotionEnd(page);
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .exclude("iframe[sandbox]")
-    .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
-}
 
 /** Подзаголовок страницы: одна строка, без CRM/ERP/EDS и «ансамбля» — или его нет (CONVENTIONS §2 п. 17). */
 async function expectShortSubtitle(page: Page, context: string): Promise<void> {

@@ -1,22 +1,11 @@
-import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { expectNoViolations } from "./support/axe";
 
 // UX-1b «Шапка, бар несохранённого, поиск» (аудит 2026-10-30, S5–S7, S13, S16, A1): поиск стоит на одном x во всех
 // разделах и при открытии окна; бар несохранённого держит место в конце формы — первый символ ничего не сдвигает; уход
 // с правками спрашивает; иконки результатов поиска — в своих строках. axe 0 и снимки (`E2E_SCREENSHOT_DIR=docs/screens/ux-1b`).
-
-async function expectNoViolations(page: Page, context: string): Promise<void> {
-  await waitForMotionEnd(page);
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
-}
 
 // Поле в фокусе не под баром: центр его рамки виден и в этой точке не бар. «bar» — фокус дошёл до кнопок бара,
 // «done» — ушёл из формы с баром.

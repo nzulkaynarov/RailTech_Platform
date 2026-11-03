@@ -1,28 +1,34 @@
-import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
-import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
+import { expectNoViolations } from "./support/axe";
 
 // SET-IA «Настройки: порядок и навигация» (владелец 2026-11-03; ресёрч docs/research/2026-11-02-flexibility/4-settings-ia.md
 // §4.1): индекс «Все настройки» с поиском и пятью группами, страницы групп, редиректы старых адресов, группа «Настройки» в
 // общем поиске, ⚙ в подменю модуля. axe 0 и снимки 1440 и 390 для PR (`E2E_SCREENSHOT_DIR=docs/screens/set-ia`).
 const WIDTHS = [1440, 390] as const;
 
-async function expectNoViolations(page: Page, context: string): Promise<void> {
-  await waitForMotionEnd(page);
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    // Образец бланка — изолированная рамка (`sandbox=""`), axe её не опрашивает (как admin-company.spec.ts).
-    .exclude("iframe[sandbox]")
-    .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
+/** Снимок без следов наведения (указатель уводится в угол) и с начала основного окна. */
+async function shot(page: Page, name: string): Promise<void> {
+  await page.mouse.move(0, 0);
+  await page.evaluate("document.getElementById('main-content')?.scrollTo(0, 0)");
+  await settledScreenshot(page, name);
 }
 
-async function shot(page: Page, name: string): Promise<void> {
-  await settledScreenshot(page, name);
+/** Свежая установка: администратор и ERP есть, остальные шаги первого запуска не сделаны. */
+async function seedFreshSetup(page: Page): Promise<void> {
+  const key = JSON.stringify("rt-pf-mock-setup");
+  const state = {
+    needsAdmin: false,
+    code: "",
+    fresh: true,
+    companyCreated: true,
+    done: { erp: true },
+  };
+  const value = JSON.stringify(JSON.stringify(state));
+  await page.addInitScript(
+    `if (!window.localStorage.getItem(${key})) window.localStorage.setItem(${key}, ${value});`,
+  );
 }
 
 async function h1(page: Page, name: string): Promise<void> {
@@ -99,10 +105,12 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await expectNoViolations(page, `mail ${String(width)}`);
       await shot(page, "page-mail");
 
-      // Каждая группа: индекс у своей группы (⚙ из модуля ведёт так же) и её страница
+      // Каждая группа: индекс только с ней (⚙ из модуля ведёт так же) и её страница
       for (const [group, path, title] of GROUP_PAGES) {
         await spaGoto(page, `/admin?group=${group}`);
         await h1(page, "Все настройки");
+        await expect(page.getByRole("link", { name: "Все группы настроек" })).toBeVisible();
+        await expect(page.locator(".pf-set-group")).toHaveCount(1);
         await expectNoViolations(page, `group ${group} ${String(width)}`);
         await shot(page, `group-${group}`);
         await spaGoto(page, path);
@@ -131,12 +139,33 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await expectNoViolations(page, "menu");
     await shot(page, "menu-groups");
 
+    // Последние пункты группы «Система» прокручиваются целиком над кнопкой «Пригласить сотрудника», длинная подпись — в
+    // своей подсветке
+    await spaGoto(page, "/admin/bus");
+    const bus = menu.getByRole("link", { name: "Обмен между системами" });
+    await expect(bus).toHaveAttribute("aria-current", "page");
+    await bus.scrollIntoViewIfNeeded();
+    const invite = page.getByRole("link", { name: "Пригласить сотрудника" });
+    for (const name of ["Выгрузки", "Обмен между системами"]) {
+      const item = await menu.getByRole("link", { name, exact: true }).boundingBox();
+      const button = await invite.boundingBox();
+      expect((item?.y ?? 0) + (item?.height ?? 0), name).toBeLessThanOrEqual(button?.y ?? 0);
+    }
+    const label = await bus.locator("span").first().boundingBox();
+    const box = await bus.boundingBox();
+    expect((label?.y ?? 0) + (label?.height ?? 0)).toBeLessThanOrEqual(
+      (box?.y ?? 0) + (box?.height ?? 0),
+    );
+    await page.mouse.move(0, 0);
+    await settledScreenshot(page, "menu-bus");
+
     await spaGoto(page, "/eds/documents");
     const gear = page.getByRole("link", { name: "Настройки: Процессы" });
     await expect(gear).toBeVisible();
     await gear.click();
     await expect(page).toHaveURL(/\/admin\?group=processes$/);
     await expect(page.getByRole("region", { name: "Процессы" })).toBeInViewport();
+    await expect(page.getByRole("region", { name: "Люди и доступ" })).toHaveCount(0);
 
     await page.keyboard.press("Control+k");
     await page.keyboard.type("почта");
@@ -147,6 +176,24 @@ test.describe("Настройки: порядок и навигация (SET-IA)
     await settings.getByRole("option").first().click();
     await expect(page).toHaveURL(/\/admin\/mail$/);
   });
+
+  for (const width of WIDTHS) {
+    test(`свежая установка на ${String(width)}: чек-лист «Первый запуск» на индексе, axe 0`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await seedFreshSetup(page);
+      await loginAndWait(page, "admin@demo.example");
+      await spaGoto(page, "/admin");
+      await h1(page, "Все настройки");
+      const checklist = page.getByRole("region", { name: /^Первый запуск: готово \d+ из \d+$/ });
+      await expect(checklist).toBeVisible();
+      await expect(checklist.getByRole("link", { name: "Продолжить настройку" })).toBeVisible();
+      await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
+      await expectNoViolations(page, `first run ${String(width)}`);
+      await shot(page, "index-first-run");
+    });
+  }
 
   test("каждый старый адрес Настроек открывает новое место", async ({ page }) => {
     test.setTimeout(180_000);
@@ -180,13 +227,8 @@ test.describe("Настройки: порядок и навигация (SET-IA)
       await h1(page, "Время и сроки");
       await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();
       await expect(page.getByRole("button", { name: /^Сохранить/ })).toHaveCount(0);
+      await expectNoViolations(page, `director timing ${String(width)}`);
       await shot(page, "director-timing");
-      // axe — на странице со ссылками внутри основного окна: у полностью заблокированной формы в прокручиваемом окне нет
-      // ни одного фокусируемого элемента (правило scrollable-region-focusable каркаса, не этой задачи — хвост в PR)
-      await spaGoto(page, "/admin/telegram?tab=templates");
-      await h1(page, "Telegram");
-      await expect(page.getByRole("link", { name: "Новый шаблон" })).toHaveCount(0);
-      await expectNoViolations(page, `director telegram ${String(width)}`);
     });
   }
 });

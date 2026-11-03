@@ -4,7 +4,15 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { MENU } from "../../app/rbac.generated";
-import { HELP_ARTICLES, articleForSection, listOf, parseArticle, searchArticles } from "./articles";
+import {
+  ARTICLE_ALIASES,
+  HELP_ARTICLES,
+  articleForSection,
+  findArticle,
+  listOf,
+  parseArticle,
+  searchArticles,
+} from "./articles";
 
 const SOURCE = join(import.meta.dirname, "../../../../../../docs/kb/help");
 
@@ -29,6 +37,15 @@ describe("статьи помощи в сборке", () => {
     }
     expect(new Set(HELP_ARTICLES.map((a) => a.slug)).size).toBe(HELP_ARTICLES.length);
     expect(new Set(HELP_ARTICLES.map((a) => a.title)).size).toBe(HELP_ARTICLES.length);
+  });
+
+  it("прежние адреса статей Настроек (SET-IA) ведут на действующие статьи", () => {
+    for (const [old, slug] of Object.entries(ARTICLE_ALIASES)) {
+      expect(findArticle(old), old).toBeUndefined();
+      expect(findArticle(slug)?.slug, old).toBe(slug);
+    }
+    expect(ARTICLE_ALIASES["admin-bot"]).toBe("admin-telegram");
+    expect(ARTICLE_ALIASES["docflow-settings"]).toBe("admin-dictionaries");
   });
 
   it("статья к разделу: по ключу раздела; раздел без статьи — нет", () => {

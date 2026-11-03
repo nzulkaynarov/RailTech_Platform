@@ -24,6 +24,14 @@ const LEGACY: [string, string][] = [
   ["/admin/bot?section=texts", "/admin/telegram?tab=texts"],
   ["/admin/bot?section=templates", "/admin/telegram?tab=templates"],
   ["/admin/bot?section=exports", "/admin/exports"],
+  [
+    "/admin/bot?part=texts&text=greeting&panel=open",
+    "/admin/telegram?tab=texts&text=greeting&panel=open",
+  ],
+  [
+    "/admin/bot?section=templates&template=1&panel=open",
+    "/admin/telegram?tab=templates&template=1&panel=open",
+  ],
   ["/admin/company?tab=details", "/admin/company"],
   ["/admin/company?tab=brand", "/admin/company?part=brand"],
   ["/admin/company?tab=numbering", "/admin/numbering"],

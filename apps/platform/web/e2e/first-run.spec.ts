@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import AxeBuilder from "@axe-core/playwright";
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { openAvatarMenu, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
+import { expectNoViolations } from "./support/axe";
 
 // Первый запуск в Платформе на MSW (W13-A4, порядок — W13C-F1): экран до входа, администратор, подключение ERP, своя компания,
 // баннер и мастер из пяти шагов, сотрудник без почты с одноразовым временным паролем. Код и пароли — случайные на каждый прогон.
@@ -12,17 +12,6 @@ const SETUP_KEY = "rt-pf-mock-setup";
 const WIDTHS = [1440, 390] as const;
 
 const secret = (prefix: string) => `${prefix}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
-
-async function expectNoViolations(page: Page, context: string): Promise<void> {
-  await waitForMotionEnd(page);
-  const results = await new AxeBuilder({ page })
-    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
-    .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
-}
 
 /** Состояние мока до загрузки страницы: записывается один раз, перезагрузка его не затирает. */
 async function seedSetup(page: Page, state: Record<string, unknown>): Promise<void> {

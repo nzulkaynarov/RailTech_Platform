@@ -1,5 +1,5 @@
 import { Input } from "antd";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
@@ -141,8 +141,8 @@ function FirstRunChecklist({ data }: { data: SetupChecklist }) {
  * Индекс Настроек `/admin` (SET-IA; эталоны — Shopify admin settings и setup guide, Stripe, HubSpot): строка поиска по реестру
  * настроек, чек-лист «Первый запуск», пока он не завершён, счётчик обращений сотрудников (они — в «Моих задачах») и пять групп
  * карточек. Карточка — название до 3 слов, строка до 60 знаков и плашка состояния, если есть данные. Показываются только
- * доступные ролям страницы (`canSee`); директору — те же карточки, страницы откроются на чтение. `?group=` — к своей группе
- * (⚙ в подменю модуля).
+ * доступные ролям страницы (`canSee`); директору — те же карточки, страницы откроются на чтение. `?group=` — только эта
+ * группа и ссылка «Все группы» (⚙ в подменю модуля).
  */
 export function SettingsHome() {
   const { t, i18n } = useTranslation("modules");
@@ -173,12 +173,11 @@ export function SettingsHome() {
   );
   const searching = query.trim().length >= 2;
 
-  // ⚙ из подменю модуля ведёт на свою группу: прокрутить к ней (HubSpot: из инструмента — сразу в его настройки).
-  const focusGroup = params.get("group");
-  useEffect(() => {
-    if (!focusGroup) return;
-    document.getElementById(`pf-set-group-${focusGroup}`)?.scrollIntoView({ block: "start" });
-  }, [focusGroup]);
+  // ⚙ из подменю модуля ведёт на свою группу (HubSpot: из инструмента — сразу в его настройки): индекс показывает только
+  // её, сверху — ссылка «Все группы»; чек-лист и счётчик обращений — на полном индексе.
+  const asked = params.get("group");
+  const focusGroup = SETTINGS_GROUPS.find((group) => group === asked) ?? null;
+  const groups = focusGroup ? [focusGroup] : SETTINGS_GROUPS;
 
   const status = (key: string) => statusOf(key, overview.data);
 
@@ -237,10 +236,17 @@ export function SettingsHome() {
         )
       ) : (
         <>
-          {admin && checklist.data && needsSetup(checklist.data) ? (
+          {focusGroup ? (
+            <p className="pf-set-tickets">
+              <Link className="pf-focusable pf-set-inline" to="/admin">
+                {t("admin.home.allGroups")}
+              </Link>
+            </p>
+          ) : null}
+          {!focusGroup && admin && checklist.data && needsSetup(checklist.data) ? (
             <FirstRunChecklist data={checklist.data} />
           ) : null}
-          {canSee(me, { resource: "admin" }) ? (
+          {!focusGroup && canSee(me, { resource: "admin" }) ? (
             <p className="pf-set-tickets">
               {t("admin.home.tickets", { count: tickets })}{" "}
               <Link className="pf-focusable pf-set-inline" to="/dashboard/queue">
@@ -248,7 +254,7 @@ export function SettingsHome() {
               </Link>
             </p>
           ) : null}
-          {SETTINGS_GROUPS.map((group: SettingsGroup) => {
+          {groups.map((group: SettingsGroup) => {
             const entries = visible.filter((entry) => entry.group === group);
             if (entries.length === 0) return null;
             return (
@@ -256,7 +262,6 @@ export function SettingsHome() {
                 key={group}
                 id={`pf-set-group-${group}`}
                 className="pf-set-group"
-                data-focused={focusGroup === group ? "true" : undefined}
                 aria-labelledby={`pf-set-group-${group}-title`}
               >
                 <h2 className="pf-set-h2" id={`pf-set-group-${group}-title`}>

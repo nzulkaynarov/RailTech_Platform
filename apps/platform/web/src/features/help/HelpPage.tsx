@@ -1,13 +1,14 @@
 import { Button, Card, Skeleton } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router";
+import { Link, Navigate, useParams } from "react-router";
 
 import { useDocumentTitle } from "../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { MyRequests } from "../tickets/MyRequests";
 import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
+import { ARTICLE_ALIASES } from "./articles";
 import { ArticleList } from "./ArticleList";
 import { ArticleView } from "./ArticleView";
 import { useHelpArticles, isCompanySlug } from "./companyArticles";
@@ -68,7 +69,9 @@ export function HelpPage() {
   else if (tab === "roadmap") content = <Roadmap />;
   else if (tab === "about") content = <AboutPanel />;
   else if (tab === "requests") content = <MyRequests {...(rest[1] ? { number: rest[1] } : {})} />;
-  else if (rest[1]) {
+  else if (rest[1] && ARTICLE_ALIASES[rest[1]]) {
+    content = <Navigate to={`/help/articles/${ARTICLE_ALIASES[rest[1]] ?? ""}`} replace />;
+  } else if (rest[1]) {
     const article = all.find((item) => item.slug === rest[1]);
     // Статья компании приходит из CRM: пока она грузится, «Такой статьи нет» говорить рано.
     content = article ? (

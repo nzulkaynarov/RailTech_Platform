@@ -214,7 +214,8 @@
       "tickets": "Xodimlar murojaatlari — «Mening vazifalarim»da, yangi: {{count}}.",
       "ticketsLink": "Ochish",
       "more": "Batafsil",
-      "moreAria": "«{{title}}» sahifasi haqida Yordamda batafsil"
+      "moreAria": "«{{title}}» sahifasi haqida Yordamda batafsil",
+      "allGroups": "Barcha sozlamalar guruhlari"
     },
     "dictionaries": {
       "nav": "Bo‘limlar bo‘yicha ma’lumotnomalar",
