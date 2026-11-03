@@ -42,7 +42,7 @@ export function useMailPrefill(
         const mail = await getInboundMail(id);
         let files: EdsFile[] = [];
         let filesFailed = false;
-        if (mail.attachments.length > 0) {
+        if (mail.attachments.some((file) => !file.inline)) {
           try {
             files = await copyInboundMailFilesToEds(id);
           } catch {

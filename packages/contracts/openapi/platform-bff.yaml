@@ -19724,12 +19724,13 @@ components:
     InboundMailAttachment:
       type: object
       additionalProperties: false
-      required: [index, name, content_type, size]
+      required: [index, name, content_type, size, inline]
       properties:
         index: {type: integer, minimum: 0}
         name: {type: string}
         content_type: {type: string}
         size: {type: integer, minimum: 0}
+        inline: {type: boolean, description: 'Картинка встроена в письмо (логотип, баннер): в списке вложений не показывается и к входящему не прикладывается'}
     InboundMailSkipped:
       type: object
       additionalProperties: false
@@ -19768,14 +19769,19 @@ components:
     InboundMailMessage:
       type: object
       additionalProperties: false
-      required: [id, from_email, from_name, at, text, attachments, new_participant]
+      required: [id, from_email, from_name, at, text, text_tail, html, html_remote_images, attachments, new_participant]
       description: Входящее письмо записи (первое — само письмо, дальше ответы клиента); вложения качаются по `id`
       properties:
         id: {type: integer}
         from_email: {type: string}
         from_name: {type: string}
         at: {type: string, format: date-time}
-        text: {type: string}
+        text: {type: string, description: 'Текст без цитаты и подписи, нормализованный: пустые строки подряд — одна. Именно он уходит в лид, входящее и помощнику'}
+        text_tail: {type: string, description: 'Цитата прошлой переписки и подпись; интерфейс показывает их свёрнутыми под «…»'}
+        html:
+          type: [string, 'null']
+          description: 'HTML-версия письма, очищенная на сервере по белому списку (без скриптов, фреймов, форм, обработчиков, javascript:). Показывать только в iframe с sandbox без allow-scripts, srcdoc и строгим CSP. Внешние картинки без src — адрес в data-rt-src, подставляется по кнопке; встроенные cid: уже data:-адресами, потерянные — data-rt-missing. null — письмо без HTML (текст), старое или слишком большое'
+        html_remote_images: {type: integer, minimum: 0, description: 'Сколько внешних картинок ждут кнопки «Показать картинки»'}
         attachments:
           type: array
           items: {$ref: '#/components/schemas/InboundMailAttachment'}

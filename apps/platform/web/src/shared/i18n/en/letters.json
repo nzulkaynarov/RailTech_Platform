@@ -631,6 +631,15 @@
     },
     "open": "Open the letter “{{subject}}”",
     "noSubject": "(no subject)",
+    "view": {
+      "openFull": "Open the full email",
+      "frameTitle": "Email “{{subject}}”",
+      "imagesHidden": "External images are not loaded",
+      "showImages": "Show images ({{count}})",
+      "quote": "Show quoted text and signature",
+      "quoteHide": "Hide quoted text and signature",
+      "missingImage": "Image unavailable"
+    },
     "attachments": "Attachments: {{count}}",
     "off": {
       "title": "Mail is not connected",

@@ -4158,6 +4158,11 @@ components:
         index:
           title: Index
           type: integer
+        inline:
+          default: false
+          description: Картинка встроена в письмо — в списке вложений не показывается
+          title: Inline
+          type: boolean
         name:
           title: Name
           type: string
@@ -4433,6 +4438,18 @@ components:
         from_name:
           title: From Name
           type: string
+        html:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Безопасная HTML-версия (санитизация на сервере; показывать только в iframe с sandbox без скриптов и
+            строгим CSP); внешние картинки без src — адрес в data-rt-src; нет — письмо без HTML или слишком большое
+          title: Html
+        html_remote_images:
+          default: 0
+          description: Сколько внешних картинок ждут кнопки «Показать»
+          title: Html Remote Images
+          type: integer
         id:
           title: Id
           type: integer
@@ -4442,7 +4459,13 @@ components:
           title: New Participant
           type: boolean
         text:
+          description: Текст без цитаты и подписи, нормализованный
           title: Text
+          type: string
+        text_tail:
+          default: ''
+          description: Цитата прошлой переписки и подпись — свёрнуты под «…»
+          title: Text Tail
           type: string
       required:
       - id

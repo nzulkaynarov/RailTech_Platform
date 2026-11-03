@@ -10,4 +10,6 @@ export interface InboundMailAttachment {
   content_type: string;
   /** @minimum 0 */
   size: number;
+  /** Картинка встроена в письмо (логотип, баннер): в списке вложений не показывается и к входящему не прикладывается */
+  inline: boolean;
 }

@@ -257,6 +257,8 @@ async def copy_files_to_eds(authed: Clerk, id: MailId) -> list[EdsFile]:
     eds = EdsProxy(authed.call)
     out: list[EdsFile] = []
     for item in card.attachments:
+        if item.inline:  # картинки внутри письма (логотип, баннер) — не файлы входящего
+            continue
         data = (await _file(authed, id, item.index)).content
         body, content_type = _multipart(item.name, item.content_type, data)
         out.append(

@@ -9686,6 +9686,7 @@ export const getGetInboundMailResponseMock = (
       name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
       size: faker.number.int({ min: 0 }),
+      inline: faker.datatype.boolean(),
     }),
   ),
   skipped: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
@@ -9705,6 +9706,12 @@ export const getGetInboundMailResponseMock = (
       from_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
       at: faker.date.past().toISOString().slice(0, 19) + "Z",
       text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text_tail: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      html: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      html_remote_images: faker.number.int({ min: 0 }),
       attachments: Array.from(
         { length: faker.number.int({ min: 1, max: 10 }) },
         (_, i) => i + 1,
@@ -9713,6 +9720,7 @@ export const getGetInboundMailResponseMock = (
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
         size: faker.number.int({ min: 0 }),
+        inline: faker.datatype.boolean(),
       })),
       new_participant: faker.datatype.boolean(),
     }),
