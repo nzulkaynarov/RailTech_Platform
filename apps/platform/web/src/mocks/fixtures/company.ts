@@ -16,6 +16,8 @@ import type {
   ReferenceKind,
 } from "../../shared/api/generated/model";
 
+const noTracking = { tracking: "none", requires_conformity_doc: false } as const;
+
 /**
  * Настройки своей компании для MSW (Admin · Компания, W13-A3). Всё вымышлено: реквизиты, ИНН, банк, адреса — домен
  * `.example` и заведомо ненастоящие номера (репозиторий публичный). Состояние лежит в `localStorage` страницы (как сессия
@@ -297,11 +299,18 @@ function seed(): CompanyMock {
       ],
     },
     categories: [
-      { id: "1", name: "Рельсы и скрепления", parent_id: null },
-      { id: "2", name: "Крепёж", parent_id: "1" },
-      { id: "3", name: "Подвижной состав", parent_id: null },
-      { id: "4", name: "Запчасти вагонов", parent_id: "3" },
-      { id: "5", name: "Электрооборудование", parent_id: null },
+      // ADR-0021: учёт единиц — данные категории (серийный, партия, только количество).
+      { id: "1", name: "Рельсы и скрепления", parent_id: null, ...noTracking },
+      { id: "2", name: "Крепёж", parent_id: "1", tracking: "lot", requires_conformity_doc: false },
+      { id: "3", name: "Подвижной состав", parent_id: null, ...noTracking },
+      { id: "4", name: "Запчасти вагонов", parent_id: "3", ...noTracking },
+      {
+        id: "5",
+        name: "Электрооборудование",
+        parent_id: null,
+        tracking: "serial",
+        requires_conformity_doc: true,
+      },
     ],
     requests: [
       {

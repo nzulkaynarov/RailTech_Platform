@@ -30,3 +30,4 @@
 | [0018](0018-themes-semantic-tokens.md) | темы и семантические токены | accepted 2026-10-23 | отложено DECISIONS 2026-10-29: C4 — после 1.0, без темы «Как в ERP» |
 | [0019](0019-product-readiness-tenant.md) | «одна компания — одна установка» | accepted 2026-10-23 | — |
 | [0020](0020-documents-letterhead-body-rendering.md) | документы: бланк, единый формат тела, рендеринг | accepted 2026-10-28 | — |
+| [0021](0021-item-traceability-classes.md) | прослеживаемость товара: классы S/L/N как данные категории | accepted 2026-11-03 | меняет BUSINESS §12; минимум — L0-3, полная модель — MVP-T1 |

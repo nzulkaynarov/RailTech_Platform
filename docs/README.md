@@ -46,7 +46,7 @@
 | Открытые вопросы (вверху — «Ждут владельца») | [`QUESTIONS.md`](QUESTIONS.md) | действует | архитектор |
 | Действия владельца вне кода | [`OWNER-CHECKLIST.md`](OWNER-CHECKLIST.md) | действует | владелец |
 | Стратегия, целевая архитектура, план этапов 0, B–H | [`strategy/2026-10-23-platform-architecture-strategy.md`](strategy/2026-10-23-platform-architecture-strategy.md) | действует | архитектор |
-| Архитектурные решения ансамбля | [`adr/README.md`](adr/README.md) — индекс со статусами и поправками (0001…0020) | действует | архитектор |
+| Архитектурные решения ансамбля | [`adr/README.md`](adr/README.md) — индекс со статусами и поправками (0001…0021) | действует | архитектор |
 | Продукт: спецификация единого интерфейса (словарь, процессы, роли, экраны) | [`product/SPEC-v3.md`](product/SPEC-v3.md) (§4 — вместе с ADR-0012) | действует | владелец |
 | Продукт: ценность систем и путь клиента | [`product/BUSINESS.md`](product/BUSINESS.md) | основание; при расхождении права SPEC-v3 | владелец |
 | Продукт: кабинет контрагента — отношения, шаблоны ролей, подключаемые модули (концепция) | [`product/COUNTERPARTY-CABINET.md`](product/COUNTERPARTY-CABINET.md), бенчмарк [`research/2026-11-01-counterparty-cabinet`](research/2026-11-01-counterparty-cabinet/README.md) | утверждено 2026-11-01; ADR и волны K0–K5 — по §9 | владелец |

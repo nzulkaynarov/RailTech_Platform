@@ -50,6 +50,8 @@ from inventory.models import (
 
 from catalog.models import Product
 
+from . import trace
+
 logger = logging.getLogger(__name__)
 
 MAX_CELL = 32
@@ -462,6 +464,8 @@ def release_for_item(item) -> None:
 class ShipInput:
     reservation_id: int
     quantity: int
+    #: Серийные или партии строки — для товаров класса S/L обязательны (ADR-0021), для N пусто.
+    units: list = field(default_factory=list)
 
 
 def _take_from_cells(product_id: int, quantity: int, user, shipment_id: int) -> list[tuple[Warehouse, str, int]]:
@@ -529,7 +533,7 @@ def ship(
         if reservation is None or reservation.deal_id != deal_id:
             raise StockError("RESERVATION_NOT_FOUND", 404)
     lock_products([r.product_id for r in peek.values()])
-    locked = Reservation.objects.select_for_update(of=("self",)).select_related("product", "quote_item")
+    locked = Reservation.objects.select_for_update(of=("self",)).select_related("product__category", "quote_item")
     reservations = {r.pk: r for r in locked.filter(pk__in=wanted)}
     for line in lines:
         if line.reservation_id not in reservations:
@@ -551,7 +555,9 @@ def ship(
             raise StockError("RESERVATION_NOT_ACTIVE", 409)
         if line.quantity < 1 or line.quantity > reservation.remaining:
             raise StockError("QUANTITY_OUT_OF_RANGE", 400, max=reservation.remaining)
-        for warehouse, cell, part in _take_from_cells(reservation.product_id, line.quantity, user, shipment.pk):
+        # S/L: без серийных или партий строка не отгружается; только свободные единицы этого товара (ADR-0021).
+        chosen = trace.validate_picks(reservations[line.reservation_id].product, line.quantity, line.units)
+        created = [
             ShipmentLine.objects.create(
                 shipment=shipment,
                 reservation=reservation,
@@ -561,6 +567,9 @@ def ship(
                 warehouse=warehouse,
                 cell=cell,
             )
+            for warehouse, cell, part in _take_from_cells(reservation.product_id, line.quantity, user, shipment.pk)
+        ]
+        trace.allocate(created[0], chosen)
         reservation.shipped_quantity += line.quantity
         if reservation.shipped_quantity >= reservation.quantity:
             reservation.status = ReservationStatus.FULFILLED

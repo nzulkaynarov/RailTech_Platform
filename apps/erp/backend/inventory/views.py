@@ -20,8 +20,9 @@ from inventory.serializers import (
     StockShipmentListSerializer,
     StockShipmentSerializer,
     StockSupplierListSerializer,
+    StockTraceListSerializer,
 )
-from inventory.services import overview, stock
+from inventory.services import overview, stock, trace
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -237,14 +238,21 @@ class StockShipmentListView(RoleGatedViewMixin, APIView):
             shipment = stock.ship(
                 request.user,
                 data["deal_id"],
-                [stock.ShipInput(line["reservation_id"], line["quantity"]) for line in data["lines"]],
+                [
+                    stock.ShipInput(
+                        line["reservation_id"],
+                        line["quantity"],
+                        [trace.UnitPick(u["unit_id"], u["quantity"]) for u in line["units"]],
+                    )
+                    for line in data["lines"]
+                ],
                 tracking=data["tracking"],
                 carrier=data["carrier"],
                 note=data["note"],
             )
             shipment = (
                 Shipment.objects.select_related("deal__company", "shipped_by")
-                .prefetch_related("lines__product")
+                .prefetch_related("lines__product", "lines__trace_allocations__unit")
                 .get(pk=shipment.pk)
             )
             return Response(overview.present_shipment(shipment), status=status.HTTP_201_CREATED)
@@ -268,5 +276,29 @@ class StockSupplierListView(APIView):
         try:
             require_staff(request.user)
             return Response({"results": overview.suppliers(request.user, request.query_params.get("q", "")[:100])})
+        except StockError as exc:
+            return fail(exc)
+
+
+class StockTraceView(APIView):
+    """GET /api/v1/stock/trace/?q= — поиск по серийному номеру или партии: откуда и куда (ADR-0021, L0-3)."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="stock_trace_search",
+        summary="Прослеживаемость: поиск по серийному номеру или партии",
+        description=(
+            "Точное совпадение номера первым, затем по части номера (от 2 знаков, до 50 единиц). Назад — приёмка, заказ "
+            "поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Читает "
+            "сотрудник своей компании."
+        ),
+        tags=TAGS,
+        parameters=[OpenApiParameter("q", str, description="Серийный номер или номер партии (от 2 знаков)")],
+        responses={200: StockTraceListSerializer, 403: ERRORS[403]},
+    )
+    def get(self, request):
+        try:
+            return Response({"results": trace.search(request.user, request.query_params.get("q", ""))})
         except StockError as exc:
             return fail(exc)
