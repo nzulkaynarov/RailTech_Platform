@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.agents import prompts
 from app.agents.llm import ChatCompleter, LlmUnavailableError
 from app.domain.errors import ConflictError, NotFoundError, Reason
-from app.domain.inbound_mail import AssistVerdict, parse_assist
+from app.domain.inbound_mail import AssistVerdict, parse_assist_reason
 from app.integrations import langfuse as lf
 from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
@@ -150,7 +150,10 @@ class InboundMailAssist:
             except Exception:
                 logger.exception("mail_assist_failed")
                 return None, trace_id
-        return parse_assist(result.text), trace_id
+        verdict, problem = parse_assist_reason(result.text)
+        if problem is not None:  # причина словом-кодом, без текста письма и ответа модели
+            logger.warning("mail_assist_unparsed", reason=problem, version=version)
+        return verdict, trace_id
 
     async def _save(
         self,

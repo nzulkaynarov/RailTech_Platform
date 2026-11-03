@@ -269,22 +269,86 @@ class AssistVerdict:
     action: Action
 
 
-def parse_assist(raw: str) -> AssistVerdict | None:
-    """Ответ модели `{"kind": …, "summary": …}` → подсказка; неизвестный тип или мусор — None."""
-    try:
-        data = json.loads(raw)
-    except (TypeError, ValueError):
+#: Как модели пишут тип письма (ru/en, разный регистр) → код. Сверено с `prompts/mail_assist.md`.
+KIND_SYNONYMS: Final[dict[str, Kind]] = {
+    "buyer": "buyer",
+    "customer": "buyer",
+    "client": "buyer",
+    "покупатель": "buyer",
+    "клиент": "buyer",
+    "official": "official",
+    "official_letter": "official",
+    "официальное": "official",
+    "официальное_письмо": "official",
+    "supplier_doc": "supplier_doc",
+    "supplier": "supplier_doc",
+    "supplier_document": "supplier_doc",
+    "invoice": "supplier_doc",
+    "поставщик": "supplier_doc",
+    "документ_поставщика": "supplier_doc",
+    "счёт_или_документ_поставщика": "supplier_doc",
+    "счет_или_документ_поставщика": "supplier_doc",
+    "other": "other",
+    "прочее": "other",
+    "другое": "other",
+    "spam": "other",
+    "спам": "other",
+}
+_FENCE: Final = re.compile(r"```[a-zA-Z]*\s*(.*?)```", re.DOTALL)
+_KIND_SEP: Final = re.compile(r"[\s\-]+")
+
+
+def _first_object(raw: str) -> tuple[dict[str, object] | None, str | None]:
+    """Первый JSON-объект ответа: без ограждений ``` и ```json, текст вокруг — прочь."""
+    fenced = _FENCE.search(raw)
+    text = fenced.group(1) if fenced else raw
+    decoder = json.JSONDecoder()
+    seen_json = False
+    for start, char in enumerate(text):
+        if char not in "{[":
+            continue
+        try:
+            value, _ = decoder.raw_decode(text, start)
+        except ValueError:
+            continue
+        seen_json = True
+        if isinstance(value, dict):
+            return value, None
+    return None, "no_object" if seen_json else "not_json"
+
+
+def _kind(value: object) -> Kind | None:
+    if not isinstance(value, str):
         return None
-    if not isinstance(data, dict):
-        return None
-    kind = data.get("kind")
+    key = _KIND_SEP.sub("_", value.strip().strip(".«»\"'").lower())
+    return KIND_SYNONYMS.get(key)
+
+
+def parse_assist_reason(raw: str | None) -> tuple[AssistVerdict | None, str | None]:
+    """Ответ модели → подсказка или причина отказа словом-кодом (в лог, без текста письма):
+    `not_json`, `no_object`, `unknown_kind=<значение>`, `empty_summary`."""
+    data, problem = _first_object(raw or "")
+    if data is None:
+        return None, problem
+    raw_kind = data.get("kind")
+    kind = _kind(raw_kind)
+    if kind is None:
+        shown = _CONTROL.sub("", str(raw_kind))[:32]
+        return None, f"unknown_kind={shown}"
     summary = data.get("summary")
-    if kind not in KINDS or not isinstance(summary, str):
-        return None
-    text = clean_text(summary).replace("\n", " ")[:SUMMARY_MAX_CHARS].strip()
+    text = (
+        clean_text(summary).replace("\n", " ")[:SUMMARY_MAX_CHARS].strip()
+        if isinstance(summary, str)
+        else ""
+    )
     if not text:
-        return None
-    return AssistVerdict(kind, text, SUGGESTED_ACTION[kind])
+        return None, "empty_summary"
+    return AssistVerdict(kind, text, SUGGESTED_ACTION[kind]), None
+
+
+def parse_assist(raw: str | None) -> AssistVerdict | None:
+    """Ответ модели `{"kind": …, "summary": …}` → подсказка; неизвестный тип или мусор — None."""
+    return parse_assist_reason(raw)[0]
 
 
 def reply_subject(subject: str) -> str:

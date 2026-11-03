@@ -4,6 +4,8 @@ import type {
   ProjectCard,
   ProjectContract,
   ProjectContractActionsItem,
+  ProjectDeliveryAction,
+  ProjectFulfillment,
   ProjectInvoice,
   ProjectJournalEntry,
   ProjectMoney,
@@ -69,8 +71,30 @@ export interface ProjectState {
   invoices: ProjectInvoice[];
   act: MutableAct | null;
   journal: ProjectJournalEntry[];
-  fulfillment?: ProjectCard["fulfillment"];
+  fulfillment?: MockFulfillment | null;
   lines?: ProjectCard["delivery_lines"];
+}
+
+/** Исполнение в памяти мока: отметки и ссылку на файл считает `toCard` (как ERP и BFF). */
+export type MockFulfillment = Omit<ProjectFulfillment, "actions" | "proof_url">;
+
+/** Отметки доставки (L0-1): как `sales/services/delivery_progress.TRANSITIONS` ERP. */
+export const DELIVERY_FROM: Record<ProjectDeliveryAction, readonly string[]> = {
+  in_transit: ["PENDING", "SHIPPED"],
+  delivered: ["PENDING", "SHIPPED", "IN_TRANSIT"],
+};
+
+function fulfillmentOf(p: ProjectState, marker: boolean): ProjectFulfillment | null {
+  const f = p.fulfillment;
+  if (!f) return null;
+  const actions = (Object.keys(DELIVERY_FROM) as ProjectDeliveryAction[]).filter(
+    (action) => marker && DELIVERY_FROM[action].includes(f.status ?? ""),
+  );
+  return {
+    ...f,
+    actions,
+    proof_url: f.proof_name ? `/api/v1/eds/projects/${numberOf(p)}/delivery/proof` : null,
+  };
 }
 
 const entry = (
@@ -276,15 +300,17 @@ function seed(): ProjectState[] {
           "Демо Бухгалтеров",
         ),
       ],
+      // Отгружено со склада (ОТГ), к клиенту ещё не доехало: дальше — «В пути» и «Доставлено» (L0-1).
       fulfillment: {
-        status: "DELIVERED",
-        status_name: "Доставлено",
+        status: "SHIPPED",
+        status_name: "Отгружено",
         expected_delivery_date: "2026-10-25",
         shipped_at: "2026-10-22T10:00:00+05:00",
-        delivered_at: "2026-10-25T15:00:00+05:00",
+        delivered_at: null,
         accepted_at: null,
         tracking_number: "TRK-4471",
         carrier: "Демо-Логистика",
+        proof_name: null,
       },
       lines: [
         {
@@ -292,7 +318,7 @@ function seed(): ProjectState[] {
           title: "Светофор постоянного света",
           quantity: 8,
           unit: "шт",
-          status: "delivered",
+          status: "shipped",
           eta: "2026-10-25",
           shipped_at: "2026-10-22T10:00:00+05:00",
           tracking: "TRK-4471",
@@ -302,7 +328,7 @@ function seed(): ProjectState[] {
           title: "Монтаж устройств автоблокировки",
           quantity: 1,
           unit: "усл",
-          status: "delivered",
+          status: "shipped",
           eta: "2026-10-25",
           shipped_at: null,
           tracking: "",
@@ -541,7 +567,7 @@ export function toRow(p: ProjectState): ProjectRow {
   };
 }
 
-export function toCard(p: ProjectState, writer: boolean): ProjectCard {
+export function toCard(p: ProjectState, writer: boolean, marker = false): ProjectCard {
   const c = p.contract;
   const a = p.act;
   const issuable = p.invoices.some((i) =>
@@ -591,7 +617,7 @@ export function toCard(p: ProjectState, writer: boolean): ProjectCard {
         }
       : null,
     act_blocker: !writer ? "forbidden" : a ? "act_exists" : issuable ? null : "no_invoice",
-    fulfillment: p.fulfillment ?? null,
+    fulfillment: fulfillmentOf(p, marker),
     delivery_lines: p.lines ?? [],
     journal: p.journal,
   };

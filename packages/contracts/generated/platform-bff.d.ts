@@ -1057,7 +1057,7 @@ export interface paths {
     };
     /**
      * EDS · Карточка проекта
-     * @description ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
+     * @description ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка, строки поставки и отметки доставки `fulfillment.actions`) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
      */
     get: operations["getEdsProject"];
     put?: never;
@@ -1162,6 +1162,46 @@ export interface paths {
      * @description ERP `POST /crm/acts/{id}/attach-scan/` (multipart, поле `file`, до 20 МБ; тип и сигнатуру проверяет ERP). Акт должен быть «Выпущен» (иначе 409 `act_sign_not_allowed`). Когда акт подписан и все счета оплачены, проект «Выполнено». Право `fulfillment.act`. Раздел `eds.projects` — полный.
      */
     post: operations["scanEdsProjectAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/delivery": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: отметить доставку клиенту — «В пути» или «Доставлено»
+     * @description ERP `POST /crm/projects/{id}/delivery/` (multipart). `action`: `in_transit` — товар отправлен клиенту и в пути, `delivered` — доставлен (клиент после этого принимает поставку в кабинете: «Принять» / «Есть замечания»). `on_date` — дата отправки или доставки, не позже сегодня и не раньше отправки; `waybill` — № накладной перевозчика или трек (необязательно); `file` — подтверждение доставки: подписанная накладная, фото, PDF (необязательно, до 20 МБ). Действие — на весь проект, как у исполнения сделки ERP; переход проверяет ERP по статусу исполнения (`actions` в карточке): иначе 409 `delivery_transition_not_allowed`, исполнения ещё нет — 409 `fulfillment_not_ready`. Право ERP `fulfillment.manage` (раздел `erp.stock` полный), иначе 403. Раздел `eds.projects` — чтение. BFF читает тело потоком до 20 МБ и multipart не разбирает. Ответ — обновлённая карточка.
+     */
+    post: operations["markEdsProjectDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/delivery/proof": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Проект: файл подтверждения доставки
+     * @description Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла BFF берёт из исполнения в карточке проекта, а не из запроса. Файла нет — 404. Раздел `eds.projects` — чтение.
+     */
+    get: operations["downloadEdsProjectDeliveryProof"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -8188,8 +8228,35 @@ export interface components {
       delivered_at: string | null;
       /** Format: date-time */
       accepted_at: string | null;
+      /** @description № накладной перевозчика или трек */
       tracking_number: string | null;
       carrier: string | null;
+      /** @description Отметки доставки, доступные этому сотруднику сейчас (считает ERP по статусу исполнения и праву `fulfillment.manage`): `in_transit` — из «Ожидает отгрузки» и «Отгружено», `delivered` — из них же и из «В пути» */
+      actions: components["schemas"]["ProjectDeliveryAction"][];
+      /** @description Имя файла подтверждения доставки; `null` — файла нет */
+      proof_name: string | null;
+      /** @description Ссылка BFF на файл подтверждения доставки (`/api/v1/eds/projects/{ref}/delivery/proof`); `null` — файла нет */
+      proof_url: string | null;
+    };
+    /**
+     * @description `in_transit` — отправлено клиенту, в пути; `delivered` — доставлено клиенту
+     * @enum {string}
+     */
+    ProjectDeliveryAction: "in_transit" | "delivered";
+    ProjectDeliveryMarkIn: {
+      action: components["schemas"]["ProjectDeliveryAction"];
+      /**
+       * Format: date
+       * @description Дата отправки (`in_transit`) или доставки (`delivered`); не позже сегодня и не раньше отправки
+       */
+      on_date: string;
+      /** @description № накладной перевозчика или трек; пусто — прежний остаётся */
+      waybill?: string;
+      /**
+       * Format: binary
+       * @description Подтверждение доставки — подписанная накладная, фото, PDF или документ до 20 МБ (необязательно)
+       */
+      file?: string;
     };
     ProjectDeliveryLine: {
       line_no: number;
@@ -13027,7 +13094,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку */
+    /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed` (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку */
     ProjectConflict: {
       headers: {
         [name: string]: unknown;
@@ -15155,6 +15222,70 @@ export interface operations {
       409: components["responses"]["ProjectConflict"];
       413: components["responses"]["ProjectPayloadTooLarge"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markEdsProjectDelivery: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["ProjectDeliveryMarkIn"];
+      };
+    };
+    responses: {
+      /** @description Отметка сохранена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      413: components["responses"]["ProjectPayloadTooLarge"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsProjectDeliveryProof: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
