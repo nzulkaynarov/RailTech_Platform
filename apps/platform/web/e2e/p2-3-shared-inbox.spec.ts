@@ -100,7 +100,8 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await signInAt(page, REGISTRAR, width);
       await spaGoto(page, "/eds/mail/18");
       await page.getByRole("button", { name: "Взять в работу" }).click();
-      await expect(page.getByText("Письмо в работе у вас")).toBeVisible();
+      // Состояние карточки, а не тост: тосты двух шагов живут вместе и совпадают по тексту.
+      await expect(page.getByRole("button", { name: "Вернуть в Новые" })).toBeVisible();
       await shot(page, "card-taken");
       await expectNoViolations(page, `взято ${String(width)}`);
 
@@ -112,7 +113,8 @@ test.describe("P2-3: общий ящик как обращение", () => {
       await shot(page, "card-held-takeover");
       await expectNoViolations(page, `забрать себе ${String(width)}`);
       await page.getByRole("button", { name: "Забрать себе" }).first().click();
-      await expect(page.getByText("Письмо в работе у вас")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Вернуть в Новые" })).toBeVisible();
+      await expect(page.getByRole("button", { name: "Забрать себе" })).toHaveCount(0);
       await expectFits(page, `карточка ${String(width)}`);
     }
   });
