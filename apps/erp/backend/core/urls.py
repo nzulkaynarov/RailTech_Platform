@@ -31,6 +31,7 @@ from inventory.views import (
     StockReservationView,
     StockShipmentListView,
     StockSupplierListView,
+    StockTraceView,
 )
 from portal.exceptions import portal_not_found
 from portal.public_views import (
@@ -128,6 +129,7 @@ from crm.views import (
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
+    ProjectDeliveryView,
     ProjectDetailView,
     ProjectListView,
     QuoteChargeViewSet,
@@ -243,6 +245,7 @@ urlpatterns = (
         # D2-5: Все проекты — только чтение; пути раньше роутера, чтобы `crm/projects/<id>/` не искал вьюсет.
         path("api/v1/crm/projects/", ProjectListView.as_view(), name="project-list"),
         path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
+        path("api/v1/crm/projects/<int:deal_id>/delivery/", ProjectDeliveryView.as_view(), name="project-delivery"),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
         re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django
@@ -340,6 +343,7 @@ urlpatterns = (
             "api/v1/stock/reservations/<int:reservation_id>/", StockReservationView.as_view(), name="stock-reservation"
         ),
         path("api/v1/stock/shipments/", StockShipmentListView.as_view(), name="stock-shipments"),
+        path("api/v1/stock/trace/", StockTraceView.as_view(), name="stock-trace"),
         path("api/v1/stock/suppliers/", StockSupplierListView.as_view(), name="stock-suppliers"),
         path("api/v1/stock/orders/", OrderListView.as_view(), name="stock-orders"),
         path("api/v1/stock/orders/from-deal/", OrderFromDealView.as_view(), name="stock-order-from-deal"),

@@ -17,6 +17,13 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { ErrorNote, QueryState, ScrollRegion } from "../../../shared/ui/FormParts";
 import { clean, useErrorText, useRefreshStock, useStateLabels } from "./api";
+import { ShipUnits } from "./Tracking";
+
+/** Серийные или партии строки отгрузки: « · SN-1, SN-2» или « · L-7 ×3». */
+function unitsText(units: readonly { number: string; quantity: number }[]): string {
+  if (units.length === 0) return "";
+  return ` · ${units.map((u) => (u.quantity > 1 ? `${u.number} ×${String(u.quantity)}` : u.number)).join(", ")}`;
+}
 
 /** Ширины колонок: накладная, заявка, строки (гибкая), трек, когда (UX-1c, S9) */
 const COLS = [130, 180, null, 180, 170] as const;
@@ -29,6 +36,8 @@ function NewShipment({ manage }: { manage: boolean }) {
   const [input, setInput] = useState("");
   const [request, setRequest] = useState<string | null>(null);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
+  // Серийные и партии по резерву (ADR-0021): единица → сколько из неё.
+  const [units, setUnits] = useState<Record<string, Record<string, number>>>({});
   const [tracking, setTracking] = useState("");
   const [carrier, setCarrier] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +50,7 @@ function NewShipment({ manage }: { manage: boolean }) {
         setError(null);
         refresh();
         setQuantities({});
+        setUnits({});
         setTracking("");
         setCarrier("");
         void message.success(t("shipments.done", { number: shipment.number }));
@@ -54,6 +64,9 @@ function NewShipment({ manage }: { manage: boolean }) {
   const rows: StockReservation[] = reservations.data?.items ?? [];
   const qtyOf = (r: StockReservation) => quantities[r.id] ?? r.remaining;
   const picked = rows.filter((r) => qtyOf(r) > 0);
+  const chosenOf = (r: StockReservation) =>
+    Object.values(units[r.id] ?? {}).reduce((sum, n) => sum + n, 0);
+  const unpicked = picked.find((r) => r.tracking !== "none" && chosenOf(r) !== qtyOf(r));
   return (
     <Card size="small" title={<h2 className="pf-calc-title">{t("shipments.newTitle")}</h2>}>
       <div className="pf-calc-stack">
@@ -105,6 +118,17 @@ function NewShipment({ manage }: { manage: boolean }) {
                             setQuantities((prev) => ({ ...prev, [r.id]: value ?? 0 }));
                           }}
                         />
+                        {r.tracking !== "none" && manage && qtyOf(r) > 0 ? (
+                          <ShipUnits
+                            name={r.product_name}
+                            units={r.units}
+                            quantity={qtyOf(r)}
+                            picked={units[r.id] ?? {}}
+                            onChange={(next) => {
+                              setUnits((prev) => ({ ...prev, [r.id]: next }));
+                            }}
+                          />
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -139,12 +163,23 @@ function NewShipment({ manage }: { manage: boolean }) {
                           loading={ship.isPending}
                           disabled={picked.length === 0}
                           onClick={() => {
+                            if (unpicked) {
+                              setError(t("trace.problem.units", { name: unpicked.product_name }));
+                              return;
+                            }
                             ship.mutate({
                               data: {
                                 request,
                                 lines: picked.map((r) => ({
                                   reservation_id: r.id,
                                   quantity: qtyOf(r),
+                                  ...(r.tracking !== "none"
+                                    ? {
+                                        units: Object.entries(units[r.id] ?? {})
+                                          .filter(([, n]) => n > 0)
+                                          .map(([unit_id, quantity]) => ({ unit_id, quantity })),
+                                      }
+                                    : {}),
                                 })),
                                 ...(clean(tracking) ? { tracking: clean(tracking) } : {}),
                                 ...(clean(carrier) ? { carrier: clean(carrier) } : {}),
@@ -188,7 +223,9 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
               </Link>
             </div>
             <p className="pf-hint">
-              {s.lines.map((l) => `${l.name} · ${String(l.quantity)}`).join("; ")}
+              {s.lines
+                .map((l) => `${l.name} · ${String(l.quantity)}${unitsText(l.units)}`)
+                .join("; ")}
             </p>
             <p className="pf-hint">
               {[s.tracking, s.carrier, activity(s.shipped_at)].filter(Boolean).join(" · ")}
@@ -230,6 +267,9 @@ function Rows({ items }: { items: readonly StockShipment[] }) {
                   <div key={index}>
                     {l.name} · <span className="pf-num">{l.quantity}</span>
                     {l.cell ? <span className="pf-hint"> ({l.cell})</span> : null}
+                    {l.units.length > 0 ? (
+                      <div className="pf-hint pf-num">{unitsText(l.units).slice(3)}</div>
+                    ) : null}
                   </div>
                 ))}
               </td>

@@ -200,6 +200,12 @@ SPECTACULAR_SETTINGS = {
         # A1, A2 волны 18a «Отметить за контрагента»: канал, которым контрагент сообщил решение, и решение по КП.
         "OnBehalfChannelEnum": "crm.services.quotes.on_behalf.CHANNELS",
         "ClientDecisionEnum": ["accept", "reject"],
+        # L0-1: отметка доставки клиенту по проекту («В пути» / «Доставлено»).
+        "DeliveryMarkActionEnum": "sales.services.delivery_progress.ACTIONS",
+        # ADR-0021 (L0-3): учёт единиц категории и вид единицы прослеживаемости.
+        "TrackingClassEnum": "catalog.constants.TrackingClass",
+        "TraceKindEnum": "inventory.serializers.TRACE_KINDS",
+        "TraceStatusEnum": "inventory.serializers.TRACE_STATUSES",
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

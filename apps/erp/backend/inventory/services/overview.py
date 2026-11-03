@@ -12,7 +12,7 @@ from typing import Any, Iterable, Optional
 from django.db.models import F, Q
 from inventory.access import can_manage_fulfillment, can_manage_supply, person_name, require_staff
 from inventory.models import Reservation, Shipment, StockBalance, StockMovement
-from inventory.services import stock
+from inventory.services import stock, trace
 
 from catalog.models import Product
 
@@ -113,7 +113,8 @@ def balances(user, *, q: str = "", only: str = "") -> dict:
     }
 
 
-def present_reservation(r: Reservation) -> dict:
+def present_reservation(r: Reservation, units: Optional[list] = None) -> dict:
+    """Резерв; `units` — свободные серийные или партии товара (для выбора при отгрузке S/L, ADR-0021)."""
     return {
         "id": r.pk,
         "product_id": r.product_id,
@@ -126,6 +127,8 @@ def present_reservation(r: Reservation) -> dict:
         "status": r.status,
         "created_at": r.created_at.isoformat(),
         "created_by_name": person_name(r.created_by) if r.created_by_id else None,
+        "tracking": trace.tracking_of(r.product),
+        "units": [trace.present_unit_short(u) for u in units or []],
     }
 
 
@@ -142,7 +145,9 @@ def reservations(
         qs = qs.filter(deal_id=deal_id)
     if product_id:
         qs = qs.filter(product_id=product_id)
-    return [present_reservation(r) for r in qs.order_by("deal_id", "id")[:MAX_ROWS]]
+    rows = list(qs.select_related("product__category").order_by("deal_id", "id")[:MAX_ROWS])
+    free = trace.free_units({r.product_id for r in rows if trace.tracking_of(r.product) != "none"})
+    return [present_reservation(r, free.get(r.product_id)) for r in rows]
 
 
 def product_detail(user, product_id: int) -> dict:
@@ -206,6 +211,7 @@ def present_shipment(shipment: Shipment) -> dict:
                 "name": line.product.name,
                 "quantity": line.quantity,
                 "cell": line.cell or None,
+                "units": [{"number": a.unit.number, "quantity": a.quantity} for a in line.trace_allocations.all()],
             }
             for line in shipment.lines.all()
         ],
@@ -214,10 +220,25 @@ def present_shipment(shipment: Shipment) -> dict:
 
 def shipments(user, *, deal_id: Optional[int] = None) -> dict:
     require_staff(user)
-    qs = Shipment.objects.select_related("deal__company", "shipped_by").prefetch_related("lines__product")
+    qs = Shipment.objects.select_related("deal__company", "shipped_by").prefetch_related(
+        "lines__product", "lines__trace_allocations__unit"
+    )
     if deal_id:
         qs = qs.filter(deal_id=deal_id)
     return {"results": [present_shipment(s) for s in qs[:MAX_ROWS]], "rights": rights(user)}
+
+
+def present_receipt_line(rl) -> dict:
+    """Строка приёмки: количество, ячейка, принятые серийные или партия и документ соответствия (ADR-0021)."""
+    return {
+        "name": rl.order_line.name,
+        "quantity": rl.quantity,
+        "cell": rl.cell or None,
+        "units": [u.number for u in rl.trace_units.all()],
+        "expiry_date": next((u.expiry_date for u in rl.trace_units.all() if u.expiry_date), None),
+        "doc_number": rl.conformity_doc_number or None,
+        "doc_valid_until": rl.conformity_doc_valid_until,
+    }
 
 
 def pending_receipts(user) -> dict:
@@ -228,11 +249,11 @@ def pending_receipts(user) -> dict:
     require_staff(user)
     lines = (
         SupplierOrderLine.objects.filter(order__status=OrderStatus.CONFIRMED, received_quantity__lt=F("quantity"))
-        .select_related("order__supplier", "deal__company")
+        .select_related("order__supplier", "deal__company", "product__category")
         .order_by("order__expected_date", "order_id", "position")[:MAX_ROWS]
     )
     receipts = GoodsReceipt.objects.select_related("order__supplier", "received_by").prefetch_related(
-        "lines__order_line"
+        "lines__order_line", "lines__trace_units"
     )[:50]
     return {
         "pending": [
@@ -249,6 +270,9 @@ def pending_receipts(user) -> dict:
                 "quantity": line.quantity,
                 "received_quantity": line.received_quantity,
                 "deal": _deal_ref(line.deal),
+                # Что спросить на приёмке (ADR-0021): поля появляются, только если категория их требует.
+                "tracking": trace.tracking_of(line.product),
+                "requires_doc": trace.requires_doc(line.product),
             }
             for line in lines
         ],
@@ -262,10 +286,7 @@ def pending_receipts(user) -> dict:
                 "received_by_name": person_name(receipt.received_by) if receipt.received_by_id else None,
                 "supplier_doc": receipt.supplier_doc or None,
                 "quantity": sum(rl.quantity for rl in receipt.lines.all()),
-                "lines": [
-                    {"name": rl.order_line.name, "quantity": rl.quantity, "cell": rl.cell or None}
-                    for rl in receipt.lines.all()
-                ],
+                "lines": [present_receipt_line(rl) for rl in receipt.lines.all()],
             }
             for receipt in receipts
         ],
