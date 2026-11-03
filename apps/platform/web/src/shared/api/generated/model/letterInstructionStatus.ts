@@ -4,7 +4,7 @@
  */
 
 /**
- * «В работе» → «Исполнено»
+ * «В работе» → «Исполнено»; `cancelled` — «Отменено» (письмо — дубль, EDS-DUP)
  */
 export type LetterInstructionStatus =
   (typeof LetterInstructionStatus)[keyof typeof LetterInstructionStatus];
@@ -12,4 +12,5 @@ export type LetterInstructionStatus =
 export const LetterInstructionStatus = {
   in_work: "in_work",
   executed: "executed",
+  cancelled: "cancelled",
 } as const;

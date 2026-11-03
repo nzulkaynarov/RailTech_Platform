@@ -1,25 +1,16 @@
 import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
-import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type ReactNode, createContext, useCallback, useContext, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterResolutionKind } from "../../../shared/api/generated/model";
+import type { LetterDuplicate, LetterResolutionKind } from "../../../shared/api/generated/model";
 import {
   decideAiSuggestion,
   registerLetter,
-  useFindLetterDuplicates,
   useListEdsStaff,
   useListLetterKinds,
 } from "../../../shared/api/generated/platform-bff";
@@ -29,7 +20,7 @@ import { Consequence } from "../../../shared/ui/Consequence";
 import { DateField } from "../../../shared/ui/DateField";
 import { ErrorNote } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
-import { letterPath, useRefreshLetters } from "../inbox/api";
+import { useRefreshLetters } from "../inbox/api";
 import { useRefreshMail } from "../mail/mailModel";
 import { RESOLUTION_KINDS } from "../inbox/officeModel";
 import { AttachmentsField } from "../new/AttachmentsField";
@@ -48,6 +39,8 @@ import {
   validateRegister,
 } from "./registerModel";
 import { AiFillBar } from "./AiFillBar";
+import { DuplicateNotice } from "./DuplicateCheck";
+import { type ForceState, duplicateFromError, useDuplicateCheck } from "./duplicates";
 import { type AiField, applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
 import { useMailPrefill } from "./useMailPrefill";
 
@@ -126,58 +119,6 @@ function serverFields(error: unknown): RegisterField[] {
   });
 }
 
-/** Задержка ввода для проверки дубля: запрос — когда сотрудник перестал печатать. */
-function useSettled(value: string, ms = 400): string {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setSettled(value);
-    }, ms);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [value, ms]);
-  return settled;
-}
-
-/** Предупреждение «Возможно, уже зарегистрировано» (корреспондент + исх. №): ссылка на существующий ВХ, регистрации не мешает. */
-function DuplicateWarning({ sender, refNumber }: { sender: string; refNumber: string }) {
-  const { t } = useTranslation("letters");
-  const { date } = useFormat();
-  const name = useSettled(sender.trim());
-  const number = useSettled(refNumber.trim());
-  const ready = name.length > 0 && number.length > 0;
-  const query = useFindLetterDuplicates(
-    { ref_number: number || "-", sender_name: name || undefined },
-    { query: { enabled: ready, staleTime: 30_000 } },
-  );
-  const found = ready ? (query.data?.items ?? []) : [];
-  if (found.length === 0) return null;
-  return (
-    <Alert
-      type="warning"
-      showIcon
-      role="status"
-      message={t("register.duplicate.title")}
-      description={
-        <ul className="pf-reg-duplicates">
-          {found.map((item) => (
-            <li key={item.id}>
-              <Link className="pf-focusable" to={letterPath(item.number)}>
-                {item.number}
-              </Link>{" "}
-              {t("register.duplicate.item", {
-                subject: item.subject,
-                date: date(item.received_at),
-              })}
-            </li>
-          ))}
-        </ul>
-      }
-    />
-  );
-}
-
 /**
  * EDS · «Зарегистрировать входящее» (P8, SPEC-v3 §3.2a п. 1): карточка делопроизводства для бумажных писем, требований
  * налоговой из my.soliq, писем банка и поставщиков. Результат — номер ВХ, статус «Ждёт резолюции» и строка у директора в
@@ -197,6 +138,24 @@ export function RegisterLetterPage() {
   const [note, setNote] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const idempotency = useRef<{ body: string; key: string } | null>(null);
+  // EDS-DUP: фоновая проверка дублей, найденный при отправке ВХ (409) и «Это другое письмо» с причиной.
+  const checked = useDuplicateCheck(values);
+  // Найденный по 409 ВХ — пока не правили ключевые поля (корреспондент, ИНН, номер, дата): правка — проверка заново.
+  const dupFields = [values.senderName, values.senderInn, values.refNumber, values.refDate].join(
+    "\u0000",
+  );
+  const [serverHit, setServerDup] = useState<{ item: LetterDuplicate; fields: string } | null>(
+    null,
+  );
+  const serverDup = serverHit?.fields === dupFields ? serverHit.item : null;
+  const duplicates =
+    serverDup && !checked.some((item) => item.id === serverDup.id)
+      ? [serverDup, ...checked]
+      : checked;
+  const exactFound = duplicates.some((item) => item.match === "exact");
+  const [force, setForce] = useState<ForceState>({ on: false, reason: "" });
+  const [reasonError, setReasonError] = useState(false);
+  const forcing = force.on && exactFound;
   const [params] = useSearchParams();
   const mailParam = Number(params.get("mail"));
   const mailId = Number.isInteger(mailParam) && mailParam > 0 ? mailParam : null;
@@ -258,7 +217,16 @@ export function RegisterLetterPage() {
       focus(first);
       return;
     }
-    const body = toRegisterBody(values);
+    if (forcing && !force.reason.trim()) {
+      setReasonError(true);
+      window.setTimeout(() => document.getElementById("reg-force-reason")?.focus(), 0);
+      return;
+    }
+    setReasonError(false);
+    const body = {
+      ...toRegisterBody(values),
+      ...(forcing ? { force: true, force_reason: force.reason.trim() } : {}),
+    };
     const json = JSON.stringify(body);
     if (idempotency.current?.body !== json) idempotency.current = { body: json, key: newKey() };
     setPending(true);
@@ -275,6 +243,20 @@ export function RegisterLetterPage() {
       else search.set("panel", "open");
       void navigate({ pathname: "/eds/inbox", search: `?${search.toString()}` });
     } catch (error) {
+      const found = duplicateFromError(error);
+      if (found) {
+        // То же письмо уже есть (EDS-DUP): показать его рядом с номером, ВХ не создан.
+        setServerDup({ item: { ...found, match: "exact" }, fields: dupFields });
+        setNote(t("letters:register.duplicate.blocked", { number: found.number }));
+        window.setTimeout(() => {
+          // фокус на «Открыть» найденного ВХ: блок прокручивается в вид и читается экранным диктором
+          document
+            .getElementById("reg-duplicates")
+            ?.querySelector<HTMLElement>("a, button")
+            ?.focus();
+        }, 0);
+        return;
+      }
       const fields = serverFields(error);
       setErrors(Object.fromEntries(fields.map((field) => [field, true])));
       const reason =
@@ -485,7 +467,15 @@ export function RegisterLetterPage() {
                   />
                 </Field>
               </div>
-              <DuplicateWarning sender={values.senderName} refNumber={values.refNumber} />
+              <DuplicateNotice
+                items={duplicates}
+                force={force}
+                onForce={(next) => {
+                  setForce(next);
+                  if (next.reason.trim()) setReasonError(false);
+                }}
+                reasonError={reasonError}
+              />
               <div className="pf-newdoc-row">
                 <Field id="reg-signed-by" label={t("letters:register.signedBy.label")}>
                   <Input

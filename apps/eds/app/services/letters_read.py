@@ -16,6 +16,7 @@ from app.schemas.letters import (
     Assignee,
     InstructionExtensionOut,
     InstructionOut,
+    LetterDuplicateRef,
     LetterListItem,
     LetterPage,
     LetterStatus,
@@ -270,7 +271,16 @@ async def present(session: AsyncSession, letter: Letter) -> LetterOut:
             AcquaintanceOut(person=directory.person(a.crm_user_id), acknowledged_at=a.acknowledged_at) for a in acquaint
         ],
         executed_at=letter.executed_at,
+        duplicate_of=await _duplicate_of(session, letter),
     )
+
+
+async def _duplicate_of(session: AsyncSession, letter: Letter) -> LetterDuplicateRef | None:
+    """Оригинал письма-дубля (EDS-DUP)."""
+    if letter.duplicate_of_id is None:
+        return None
+    number = (await session.execute(select(Letter.number).where(Letter.id == letter.duplicate_of_id))).scalar_one()
+    return LetterDuplicateRef(id=letter.duplicate_of_id, number=number)
 
 
 async def list_page(

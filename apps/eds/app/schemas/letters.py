@@ -34,6 +34,7 @@ class LetterStatus(StrEnum):
     IN_EXECUTION = "in_execution"
     EXECUTED = "executed"
     NOTED = "noted"
+    DUPLICATE = "duplicate"  # «Дубль ВХ-…» (EDS-DUP)
 
 
 class LetterTrack(StrEnum):
@@ -124,6 +125,9 @@ class LetterCreate(Strict):
     resolution_draft: "ResolutionDraftIn | None" = None  # проект резолюции делопроизводителя (P8b)
     # Откуда письмо (W18A-P2): письмо общего ящика CRM — уходит в `letter.registered.source`, CRM снимает его с очереди
     source: "LetterSourceIn | None" = None
+    # EDS-DUP: зарегистрировать, хотя то же письмо уже есть, — с причиной в журнал ВХ
+    force: bool = False
+    force_reason: Annotated[str | None, Field(min_length=1, max_length=1000)] = None
 
 
 class LetterSourceIn(Strict):  # eds.yaml LetterSourceIn
@@ -147,12 +151,47 @@ class LetterKindList(BaseModel):
     items: list[LetterKindItem]
 
 
+class DuplicateMatch(StrEnum):
+    """Чем совпал (EDS-DUP): то же письмо или похожее."""
+
+    EXACT = "exact"
+    SAME_SUBJECT = "same_subject"
+    SAME_REF = "same_ref"
+    SAME_FILE = "same_file"
+
+
 class LetterDuplicate(BaseModel):
     id: uuid.UUID
     number: str
     subject: str
     received_at: dt.date
     status: LetterStatus
+    registered_at: dt.datetime | None = None
+    match: DuplicateMatch | None = None
+
+
+class LetterDuplicateCheckIn(Strict):  # eds.yaml LetterDuplicateCheckIn
+    sender: IncomingLetterSender | None = None
+    crm_client_id: int | None = None
+    sender_ref: SenderRef | None = None
+    subject: Annotated[str | None, Field(max_length=300)] = None
+    received_at: dt.date | None = None
+    file_ids: FileIds = Field(default_factory=list)
+
+
+class LetterDuplicateCheck(BaseModel):
+    items: list[LetterDuplicate]
+
+
+class LetterMarkDuplicateIn(Strict):  # eds.yaml LetterMarkDuplicateIn
+    original_number: Annotated[str, Field(min_length=1, max_length=32)]
+    comment: Annotated[str | None, Field(max_length=2000)] = None
+    confirm: bool = False
+
+
+class LetterDuplicateRef(BaseModel):
+    id: uuid.UUID
+    number: str
 
 
 class LetterDuplicateList(BaseModel):
@@ -214,6 +253,7 @@ class Letter(BaseModel):
     instructions: "list[InstructionOut]" = Field(default_factory=list)
     acquaintances: "list[AcquaintanceOut]" = Field(default_factory=list)
     executed_at: dt.datetime | None = None
+    duplicate_of: LetterDuplicateRef | None = None
 
 
 # --- Путь делопроизводства: резолюция трёх типов, поручения, переносы, ознакомление (P8b, SPEC-v3 §3.2a) ---------
@@ -266,6 +306,7 @@ class OfficeResolution(BaseModel):
 class InstructionStatus(StrEnum):
     IN_WORK = "in_work"
     EXECUTED = "executed"
+    CANCELLED = "cancelled"  # письмо закрыто как дубль (EDS-DUP)
 
 
 class InstructionRole(StrEnum):

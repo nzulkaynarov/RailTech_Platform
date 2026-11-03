@@ -105,25 +105,81 @@ describe("EDS · Зарегистрировать входящее (P8)", () => 
     expect(await screen.findByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
   });
 
-  it("дубль (тот же корреспондент и исх. №): предупреждение со ссылкой на ВХ, регистрация не запрещена", async () => {
+  it("похожее (тот же корреспондент и исх. № без даты): ссылка на ВХ, регистрация не запрещена", async () => {
     await openForm();
 
     type("Корреспондент", "гни  демо-района");
-    type("Исходящий номер отправителя", "04-12/3456");
+    type("Исходящий номер отправителя", "№ 04-12/3456");
 
-    const warning = await screen.findByText(
-      /Возможно, это письмо уже зарегистрировано/,
-      {},
-      {
-        timeout: 3000,
-      },
-    );
-    expect(warning).toBeVisible();
+    expect(await screen.findByText("Похожие письма", {}, { timeout: 3000 })).toBeVisible();
     expect(screen.getByRole("link", { name: "ВХ-108/26" })).toHaveAttribute(
       "href",
       "/eds/inbox/%D0%92%D0%A5-108%2F26",
     );
+    expect(screen.getByText(/тот же исх\. №/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Зарегистрировать" })).toBeEnabled();
+  });
+
+  it("то же письмо (409): блок с ВХ, «Это другое письмо» требует причину и уходит с force", async () => {
+    const bodies: LetterRegisterIn[] = [];
+    server.use(
+      http.post("*/eds/letters", async ({ request }) => {
+        const body = (await request.clone().json()) as LetterRegisterIn;
+        bodies.push(body);
+        if (body.force) return undefined;
+        return HttpResponse.json(
+          {
+            code: "CONFLICT",
+            message: "Это письмо уже зарегистрировано: ВХ-108/26.",
+            source: "eds",
+            details: {
+              reason: "duplicate_letter",
+              duplicate: {
+                id: "11111111-1111-4111-8111-111111111111",
+                number: "ВХ-108/26",
+                subject: "Требование о представлении пояснений",
+                received_at: "2026-10-29",
+                registered_at: "2026-10-29T09:00:00Z",
+                status: "in_execution",
+                match: "exact",
+                path: "/eds/inbox/%D0%92%D0%A5-108%2F26",
+              },
+            },
+          },
+          { status: 409 },
+        );
+      }),
+    );
+    await openForm();
+    await chooseOption(screen.getByLabelText("Вид документа"), "Требование или уведомление ГНК");
+    type("Корреспондент", "ГНИ Другого района");
+    type("Исходящий номер отправителя", "77-01/1");
+    type("Тема", "Требование о пояснениях");
+    await attach();
+
+    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+
+    expect(await screen.findByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
+    expect(screen.getByText(/Это письмо уже зарегистрировано: ВХ-108\/26/)).toBeVisible();
+    expect(screen.getByText("На исполнении")).toBeVisible();
+    // Правка ключевого поля — найденный по 409 ВХ снимается (проверка заново); вернули — снова он.
+    type("Исходящий номер отправителя", "77-01/2");
+    expect(screen.queryByText("Похоже, это письмо уже зарегистрировано")).toBeNull();
+    type("Исходящий номер отправителя", "77-01/1");
+    expect(screen.getByText("Похоже, это письмо уже зарегистрировано")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Это другое письмо — зарегистрировать" }));
+    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+    expect(await screen.findByText("Укажите причину — она попадёт в журнал")).toBeVisible();
+    expect(bodies).toHaveLength(1);
+
+    type("Почему это другое письмо", "Повторное письмо с исправлениями");
+    fireEvent.click(screen.getByRole("button", { name: /Зарегистрировать$/ }));
+
+    expect(await screen.findByText(/Зарегистрировано: ВХ-/)).toBeVisible();
+    expect(bodies[1]).toMatchObject({
+      force: true,
+      force_reason: "Повторное письмо с исправлениями",
+    });
   });
 
   it("связанный документ с несуществующим номером — ошибка у поля, введённое остаётся", async () => {

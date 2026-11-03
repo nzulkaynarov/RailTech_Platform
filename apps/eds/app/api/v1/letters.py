@@ -16,9 +16,12 @@ from app.schemas.letters import (
     InstructionCompleteIn,
     Letter,
     LetterCreate,
+    LetterDuplicateCheck,
+    LetterDuplicateCheckIn,
     LetterDuplicateList,
     LetterKindItem,
     LetterKindList,
+    LetterMarkDuplicateIn,
     LetterPage,
     LetterRejectIn,
     LetterReturnIn,
@@ -31,7 +34,7 @@ from app.schemas.letters import (
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import dictionaries, idempotency, instructions, letters, letters_read
+from app.services import dictionaries, idempotency, instructions, letter_dedup, letters, letters_read
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -66,7 +69,12 @@ async def list_letter_kinds(_: Clerk, session: Session) -> LetterKindList:
     )
 
 
-@router.get("/letter-duplicates", response_model=LetterDuplicateList, operation_id="findLetterDuplicates")
+@router.get(
+    "/letter-duplicates",
+    response_model=LetterDuplicateList,
+    response_model_exclude_none=True,
+    operation_id="findLetterDuplicates",
+)
 async def find_letter_duplicates(
     _: Clerk,
     session: Session,
@@ -77,6 +85,14 @@ async def find_letter_duplicates(
     return await letters.find_duplicates(
         session, sender_name=sender_name, crm_client_id=crm_client_id, ref_number=ref_number
     )
+
+
+@router.post("/letters/duplicates-check", response_model=LetterDuplicateCheck, operation_id="checkLetterDuplicates")
+async def check_letter_duplicates(
+    body: LetterDuplicateCheckIn, employee: Clerk, session: Session
+) -> LetterDuplicateCheck:
+    """EDS-DUP: то же письмо (`exact`) и похожие — до регистрации; ничего не меняет."""
+    return await letter_dedup.check(session, letter_dedup.Probe.of(body), actor_id=employee.crm_user_id)
 
 
 @router.get("/letters", response_model=LetterPage, operation_id="listLetters")
@@ -181,6 +197,18 @@ async def resubmit_letter(
 ) -> Letter:
     async with session.begin():
         letter = await letters.resubmit(session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body)
+        return await letters_read.present(session, letter)
+
+
+@router.post("/letters/{letter_id}/duplicate", response_model=Letter, operation_id="markLetterDuplicate")
+async def mark_letter_duplicate(
+    letter_id: uuid.UUID, body: LetterMarkDuplicateIn, employee: Registrar, session: Session
+) -> Letter:
+    """«Это дубль ВХ-…» (EDS-DUP): письмо закрыто, ссылка на оригинал, поручения отменены."""
+    async with session.begin():
+        letter = await letter_dedup.mark_duplicate(
+            session, actor_id=employee.crm_user_id, letter_id=letter_id, data=body
+        )
         return await letters_read.present(session, letter)
 
 

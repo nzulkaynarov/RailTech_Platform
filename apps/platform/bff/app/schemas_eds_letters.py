@@ -36,12 +36,14 @@ LetterStatus = Literal[
     "in_execution",
     "executed",
     "noted",
+    # EDS-DUP: письмо зарегистрировано повторно и закрыто («Дубль ВХ-…»)
+    "duplicate",
 ]
 # P8b: путь резолюции (решает EDS) и тип резолюции делопроизводства.
 LetterTrack = Literal["calc", "office"]
 ResolutionKind = Literal["execute", "reply", "info"]
 InstructionRole = Literal["responsible", "co_executor"]
-InstructionStatus = Literal["in_work", "executed"]
+InstructionStatus = Literal["in_work", "executed", "cancelled"]
 ExtensionStatus = Literal["pending", "approved", "rejected"]
 _USER_ID = r"^[1-9][0-9]*$"
 LetterZone = Literal["goods", "services", "payment_terms"]
@@ -250,6 +252,15 @@ class LetterCard(BaseModel):
     instructions: list[LetterInstruction] = []
     acquaintances: list[LetterAcquaintance] = []
     executed_at: dt.datetime | None = None
+    duplicate_of: "LetterDuplicateOf | None" = None
+
+
+class LetterDuplicateOf(BaseModel):
+    number: str
+    path: str
+
+
+LetterCard.model_rebuild()
 
 
 class LetterKindName(BaseModel):
@@ -269,6 +280,9 @@ class LetterKindList(BaseModel):
     items: list[LetterKind]
 
 
+DuplicateMatch = Literal["exact", "same_subject", "same_ref", "same_file"]
+
+
 class LetterDuplicate(BaseModel):
     id: str
     number: str
@@ -276,6 +290,9 @@ class LetterDuplicate(BaseModel):
     received_at: dt.date
     status: LetterStatus
     path: str
+    # EDS-DUP: `POST /eds/letters/duplicates-check`; у старой проверки полей нет
+    registered_at: dt.datetime | None = None
+    match: DuplicateMatch | None = None
 
 
 class LetterDuplicateList(BaseModel):
@@ -479,6 +496,9 @@ class LetterRegisterIn(BaseModel):
     # W18A-P2: письмо общего ящика (очередь «Входящая почта») — EDS вернёт его в `letter.registered`
     source_mail_id: int | None = Field(default=None, ge=1)
     file_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    # EDS-DUP: «Это другое письмо — зарегистрировать» с причиной
+    force: bool = False
+    force_reason: str | None = Field(default=None, max_length=1000)
 
     _sender = field_validator("sender_name")(_not_blank)
 
@@ -536,7 +556,61 @@ class LetterRegisterIn(BaseModel):
             body["resolution_draft"] = self.resolution_draft.for_eds()
         if self.source_mail_id is not None:
             body["source"] = {"crm_inbound_mail_id": self.source_mail_id}
+        if self.force:
+            body["force"] = True
+            body["force_reason"] = text(self.force_reason)
         return body
+
+
+class LetterDuplicateCheckIn(BaseModel):
+    """Поля формы для фоновой проверки дублей (EDS-DUP); пустые не участвуют."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    sender_name: str | None = Field(default=None, max_length=255)
+    sender_inn: str | None = Field(default=None, pattern=r"^\d{9,14}$")
+    crm_client_id: int | None = Field(default=None, ge=1)
+    sender_ref_number: str | None = Field(default=None, max_length=64)
+    sender_ref_date: dt.date | None = None
+    subject: str | None = Field(default=None, max_length=300)
+    received_at: dt.date | None = None
+    file_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+
+    def for_eds(self) -> dict[str, Any]:
+        def text(value: str | None) -> str | None:
+            return value.strip() or None if value is not None else None
+
+        return {
+            "sender": {"name": text(self.sender_name), "inn": self.sender_inn},
+            "crm_client_id": self.crm_client_id,
+            "sender_ref": {
+                "number": text(self.sender_ref_number),
+                "date": self.sender_ref_date.isoformat() if self.sender_ref_date else None,
+            },
+            "subject": text(self.subject),
+            "received_at": self.received_at.isoformat() if self.received_at else None,
+            "file_ids": [str(f) for f in dict.fromkeys(self.file_ids)],
+        }
+
+
+class LetterMarkDuplicateIn(BaseModel):
+    """«Это дубль ВХ-…» (EDS-DUP)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    original_number: str = Field(min_length=1, max_length=32)
+    comment: str | None = Field(default=None, max_length=2000)
+    confirm: bool = False
+
+    _number = field_validator("original_number")(_not_blank)
+
+    def for_eds(self) -> dict[str, Any]:
+        comment = self.comment.strip() if self.comment is not None else None
+        return {
+            "original_number": self.original_number,
+            "comment": comment or None,
+            "confirm": self.confirm,
+        }
 
 
 class LetterReturnIn(BaseModel):
@@ -679,6 +753,11 @@ class _Journal(BaseModel):
     comment: str | None = None
 
 
+class _DuplicateRef(BaseModel):
+    id: str
+    number: str
+
+
 class EdsLetter(BaseModel):
     """`Letter` EDS: карточка с резолюцией и журналом."""
 
@@ -714,6 +793,7 @@ class EdsLetter(BaseModel):
     instructions: list[_Instruction] = []
     acquaintances: list[_Acquaintance] = []
     executed_at: dt.datetime | None = None
+    duplicate_of: _DuplicateRef | None = None
 
 
 class _EdsRow(BaseModel):
@@ -826,7 +906,7 @@ def letter_stage(status: LetterStatus, deal: dict[str, Any] | None) -> tuple[Ste
         return "RESOLUTION", None
     if status == "returned":
         return "REQUEST", None
-    if status in ("in_execution", "executed", "noted"):
+    if status in ("in_execution", "executed", "noted", "duplicate"):
         # Путь делопроизводства (P8b): расчёта нет, шкала заявки не применяется.
         return "RESOLUTION", None
     if deal is not None:
@@ -1023,6 +1103,13 @@ def to_card(
             for a in letter.acquaintances
         ],
         executed_at=letter.executed_at,
+        duplicate_of=(
+            LetterDuplicateOf(
+                number=letter.duplicate_of.number, path=letter_path(letter.duplicate_of.number)
+            )
+            if letter.duplicate_of is not None
+            else None
+        ),
     )
 
 

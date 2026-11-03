@@ -25,7 +25,17 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 # P8b: путь делопроизводства — «На исполнении», «Исполнено», «Принято к сведению» (SPEC-v3 §3.2a).
-LETTER_STATUSES = ("awaiting_resolution", "resolved", "returned", "rejected", "in_execution", "executed", "noted")
+# EDS-DUP: `duplicate` — «Дубль ВХ-…», письмо зарегистрировано повторно и закрыто (`duplicate_of_id` — оригинал).
+LETTER_STATUSES = (
+    "awaiting_resolution",
+    "resolved",
+    "returned",
+    "rejected",
+    "in_execution",
+    "executed",
+    "noted",
+    "duplicate",
+)
 RESOLUTION_KINDS = ("execute", "reply", "info")
 
 
@@ -36,7 +46,7 @@ class Letter(Base):
     __table_args__ = (
         CheckConstraint(
             "status IN ('awaiting_resolution', 'resolved', 'returned', 'rejected', "
-            "'in_execution', 'executed', 'noted')",
+            "'in_execution', 'executed', 'noted', 'duplicate')",
             name="status",
         ),
         CheckConstraint(
@@ -56,6 +66,9 @@ class Letter(Base):
             unique=True,
             postgresql_where=text("source_mail_id IS NOT NULL"),
         ),
+        # Одно письмо — один ВХ (EDS-DUP): ключ точного совпадения «корреспондент + исх. № + дата исх.»; у регистрации
+        # с `force` и у закрытого дубля — NULL. Гонка двух регистраций одного письма упирается в индекс.
+        Index("uq_letters_dedup_key", "dedup_key", unique=True, postgresql_where=text("dedup_key IS NOT NULL")),
         Index("ix_letters_erp_deal_id", "erp_deal_id"),
         Index("ix_letters_registered_at_id", "registered_at", "id"),
         Index("ix_letters_status", "status"),
@@ -118,4 +131,7 @@ class Letter(Base):
     # {kind, responsible, due, text, co_executors, acquaint, by, at} — проект резолюции делопроизводителя
     resolution_draft: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # EDS-DUP: ключ точного совпадения (`services/letter_dedup.exact_key`) и оригинал письма-дубля.
+    dedup_key: Mapped[str | None] = mapped_column(String(400))
+    duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("letters.id", ondelete="SET NULL"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
