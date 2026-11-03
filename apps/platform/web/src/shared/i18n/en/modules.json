@@ -221,7 +221,8 @@
       "nav": "Lists by area",
       "sales": "Sales",
       "documents": "Documents",
-      "calc": "Pricing"
+      "calc": "Pricing",
+      "mail": "Mail"
     },
     "notifications": {
       "personal": "Personal notifications are set in Profile.",

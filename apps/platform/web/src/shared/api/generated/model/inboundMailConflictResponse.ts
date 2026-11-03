@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`)
+ * 409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`, `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`), некому передать (`mail_no_handover_target`), почта не настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`)
  */
 export type InboundMailConflictResponse = Error;

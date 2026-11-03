@@ -10,4 +10,5 @@ export type DictionaryOwner = (typeof DictionaryOwner)[keyof typeof DictionaryOw
 
 export const DictionaryOwner = {
   eds: "eds",
+  crm: "crm",
 } as const;

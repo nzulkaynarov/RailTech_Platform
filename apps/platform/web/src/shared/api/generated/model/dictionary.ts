@@ -12,7 +12,7 @@ export interface Dictionary {
   kind: string;
   /** Домен-владелец значений */
   owner: DictionaryOwner;
-  /** Область экрана (`documents` — документооборот) */
+  /** Область экрана (`documents` — документооборот, `mail` — входящая почта) */
   area: DictionaryArea;
   name: LocalizedName;
   /** Закрытый список поведения — только переименовать и переставить */

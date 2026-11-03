@@ -10,6 +10,7 @@ import {
   InputNumber,
   Modal,
   Segmented,
+  Select,
   Skeleton,
 } from "antd";
 import type { TFunction } from "i18next";
@@ -92,9 +93,18 @@ export function DictionariesTab({ readOnly, kind: fixed }: { readOnly: boolean; 
   );
 }
 
-function attrText(t: TFunction<"letters">, attr: DictionaryAttr, value: unknown): string {
+function attrText(
+  t: TFunction<"letters">,
+  attr: DictionaryAttr,
+  value: unknown,
+  language: string,
+): string {
   if (attr.type === "boolean")
     return value === true ? t("settings.dict.yes") : t("settings.dict.no");
+  if (attr.type === "choice") {
+    const option = attr.options?.find((o) => o.value === value);
+    return option ? localName(option.name, language) : t("settings.dict.no");
+  }
   return typeof value === "number" ? String(value) : t("settings.dict.generalRule");
 }
 
@@ -186,7 +196,8 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
           ...dictionary.attrs.map((attr) => ({
             title: localName(attr.name, i18n.language),
             key: attr.key,
-            render: (_: unknown, row: DictionaryItem) => attrText(t, attr, row.attrs[attr.key]),
+            render: (_: unknown, row: DictionaryItem) =>
+              attrText(t, attr, row.attrs[attr.key], i18n.language),
           })),
           {
             title: t("settings.dict.status"),
@@ -320,6 +331,16 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
   );
 }
 
+/** Значение поля по умолчанию: флаг выключен, число пусто, выбор — без значения, кроме цвета и значка (нейтральные). */
+function initialAttr(attr: DictionaryAttr): boolean | null | string {
+  if (attr.type === "boolean") return false;
+  if (attr.type === "choice") {
+    const neutral = attr.key === "color" ? "default" : attr.key === "icon" ? "mail" : null;
+    return neutral && attr.options?.some((o) => o.value === neutral) ? neutral : null;
+  }
+  return null;
+}
+
 interface Values {
   ru: string;
   uz: string;
@@ -350,19 +371,13 @@ function ItemModal({
     uz: item?.name.uz ?? "",
     en: item?.name.en ?? "",
     attrs: Object.fromEntries(
-      dictionary.attrs.map((a) => [
-        a.key,
-        item?.attrs[a.key] ?? (a.type === "boolean" ? false : null),
-      ]),
+      dictionary.attrs.map((a) => [a.key, item?.attrs[a.key] ?? initialAttr(a)]),
     ),
   };
   const submit = (values: Values) => {
     const name = { ru: values.ru.trim(), uz: values.uz.trim(), en: values.en.trim() };
     const attrs = Object.fromEntries(
-      dictionary.attrs.map((a) => [
-        a.key,
-        values.attrs[a.key] ?? (a.type === "boolean" ? false : null),
-      ]),
+      dictionary.attrs.map((a) => [a.key, values.attrs[a.key] ?? initialAttr(a)]),
     );
     if (item) update.mutate({ kind: dictionary.kind, code: item.code, data: { name, attrs } });
     else create.mutate({ kind: dictionary.kind, data: { name, attrs } });
@@ -420,7 +435,30 @@ function ItemModal({
           <Input maxLength={120} autoComplete="off" />
         </Form.Item>
         {dictionary.attrs.map((attr) =>
-          attr.type === "boolean" ? (
+          attr.type === "choice" ? (
+            <Form.Item
+              key={attr.key}
+              name={["attrs", attr.key]}
+              label={localName(attr.name, i18n.language)}
+              // Не `required: true`: antd кладёт `aria-required` на корневой div списка, а он не поле (axe).
+              rules={[
+                {
+                  validator: (_rule, value: unknown) =>
+                    value
+                      ? Promise.resolve()
+                      : Promise.reject(new Error(t("settings.dict.chooseRequired"))),
+                },
+              ]}
+            >
+              <Select
+                placeholder={t("settings.dict.choose")}
+                options={(attr.options ?? []).map((o) => ({
+                  value: o.value,
+                  label: localName(o.name, i18n.language),
+                }))}
+              />
+            </Form.Item>
+          ) : attr.type === "boolean" ? (
             <Form.Item key={attr.key} name={["attrs", attr.key]} valuePropName="checked">
               <Checkbox>{localName(attr.name, i18n.language)}</Checkbox>
             </Form.Item>

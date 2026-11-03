@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../../../shared/api/errors";
 import type { InboundMail } from "../../../shared/api/generated/model";
 import { assistInboundMail } from "../../../shared/api/generated/platform-bff";
-import { StatusTag } from "../../../shared/ui/StatusTag";
 
 function reasonOf(error: unknown, fallback: string): string {
   return error instanceof ApiError ? error.message : fallback;
@@ -35,15 +34,12 @@ export function Assist({ mail, onChange }: { mail: InboundMail; onChange: () => 
       <h3 id="mail-assist-title" className="pf-res-subhead">
         {t("mail.assist.title")}
       </h3>
-      {assist.status === "done" && assist.kind ? (
+      {assist.status === "done" ? (
         <>
-          <div className="pf-fp-row">
-            <StatusTag tone="blue">{t(`mail.kind.${assist.kind}`)}</StatusTag>
-          </div>
           {assist.summary ? <p className="pf-mail-what">{assist.summary}</p> : null}
-          {assist.action ? (
-            <p className="pf-mail-what">
-              {t("mail.assist.suggests", { action: t(`mail.action.${assist.action}`) })}
+          {mail.type === null || mail.type.source === "ai" ? (
+            <p className="pf-hint pf-mail-what">
+              {t(mail.type === null ? "mail.assist.noType" : "mail.assist.suggestsType")}
             </p>
           ) : null}
           <p className="pf-hint pf-mail-what">{t("mail.assist.note")}</p>

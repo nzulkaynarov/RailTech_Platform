@@ -35,6 +35,7 @@ import { feedHandlers } from "./feedHandlers";
 import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
 import { inboundMailHandlers } from "./inboundMail";
+import { mailTypesHandlers } from "./mailTypes";
 import { ticketsHandlers } from "./ticketsHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
@@ -169,6 +170,7 @@ export const handlers = [
   ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
+  ...mailTypesHandlers, // MAIL-TYPES: правила отправителя
   ...inboundMailHandlers, // W18A-P2: входящая почта общего ящика и приём в «Подключениях»
   ...companyArticlesHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.

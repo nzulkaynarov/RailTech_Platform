@@ -20,11 +20,72 @@ import { buildMe, readSession } from "./mockSession";
  */
 const KEY = "rt-pf-mock-dictionaries";
 
-type Kind = "letter-kinds" | "receipt-methods" | "resolution-kinds";
+type Kind = "letter-kinds" | "receipt-methods" | "resolution-kinds" | "mail-types";
 const CLOSED: ReadonlySet<Kind> = new Set<Kind>(["resolution-kinds"]);
 type State = Record<Kind, DictionaryItem[]>;
 
 const names = (ru: string, uz: string, en: string) => ({ ru, uz, en });
+
+/** Действия по умолчанию, цвета и значки типов писем — закрытые списки кода (как у CRM). */
+const ACTIONS: readonly [string, string, string, string][] = [
+  [
+    "register_incoming",
+    "Зарегистрировать как входящее (ВХ) → директору",
+    "Kiruvchi sifatida ro‘yxatdan o‘tkazish → direktorga",
+    "Register as incoming → director",
+  ],
+  ["create_lead", "Создать лид → менеджеру", "Lid yaratish → menejerga", "Create a lead → manager"],
+  [
+    "supplier_price",
+    "Загрузить прайс или КП поставщика",
+    "Yetkazib beruvchi narxnomasini yuklash",
+    "Upload supplier price list or quote",
+  ],
+  ["to_accountant", "Передать бухгалтеру", "Buxgalterga topshirish", "Hand over to the accountant"],
+  [
+    "archive_mailing",
+    "В архив как рассылку",
+    "Reklama sifatida arxivga",
+    "Archive as a newsletter",
+  ],
+  ["reply_template", "Ответить шаблоном", "Shablon bilan javob berish", "Reply with a template"],
+  ["suspicious", "В «Подозрительные» (спам)", "«Shubhali»ga (spam)", "To Suspicious (spam)"],
+];
+const COLORS: readonly [string, string, string, string][] = [
+  ["blue", "Синий", "Ko‘k", "Blue"],
+  ["green", "Зелёный", "Yashil", "Green"],
+  ["gold", "Жёлтый", "Sariq", "Yellow"],
+  ["red", "Красный", "Qizil", "Red"],
+  ["purple", "Фиолетовый", "Binafsha", "Purple"],
+  ["cyan", "Бирюзовый", "Firuza", "Cyan"],
+  ["default", "Серый", "Kulrang", "Grey"],
+];
+const ICONS: readonly [string, string, string, string][] = [
+  ["mail", "Письмо", "Xat", "Letter"],
+  ["team", "Люди", "Odamlar", "People"],
+  ["calendar", "Календарь", "Taqvim", "Calendar"],
+  ["file", "Документ", "Hujjat", "Document"],
+  ["wallet", "Деньги", "Pul", "Money"],
+  ["bank", "Учреждение", "Muassasa", "Institution"],
+  ["notification", "Рассылка", "Xabarnoma", "Newsletter"],
+  ["stop", "Стоп", "To‘xtash", "Stop"],
+];
+const options = (list: readonly [string, string, string, string][]) =>
+  list.map(([value, ru, uz, en]) => ({ value, name: names(ru, uz, en) }));
+const mailType = (
+  code: string,
+  name: DictionaryItem["name"],
+  position: number,
+  color: string,
+  icon: string,
+  action: string,
+): DictionaryItem => ({
+  code,
+  name,
+  attrs: { default_action: action, color, icon },
+  active: true,
+  position,
+});
 const kindItem = (
   code: string,
   name: DictionaryItem["name"],
@@ -101,6 +162,74 @@ function seed(): State {
       methodItem("courier", names("Курьер", "Kuryer", "Courier"), 40),
       methodItem("email", names("E-mail", "E-mail", "Email"), 50),
     ],
+    // Типы входящих писем (MAIL-TYPES): как засевает миграция CRM.
+    "mail-types": [
+      mailType(
+        "client_request",
+        names("Запрос клиента", "Mijoz so‘rovi", "Customer request"),
+        10,
+        "green",
+        "mail",
+        "create_lead",
+      ),
+      mailType(
+        "cooperation",
+        names("Предложение о сотрудничестве", "Hamkorlik taklifi", "Partnership offer"),
+        20,
+        "purple",
+        "team",
+        "register_incoming",
+      ),
+      mailType(
+        "meeting",
+        names("Приглашение на встречу", "Uchrashuvga taklif", "Meeting invitation"),
+        30,
+        "cyan",
+        "calendar",
+        "reply_template",
+      ),
+      mailType(
+        "supplier_price",
+        names(
+          "КП или прайс поставщика",
+          "Yetkazib beruvchi narxnomasi",
+          "Supplier quote or price list",
+        ),
+        40,
+        "blue",
+        "file",
+        "supplier_price",
+      ),
+      mailType(
+        "supplier_invoice",
+        names("Счёт поставщика", "Yetkazib beruvchi hisobi", "Supplier invoice"),
+        50,
+        "gold",
+        "wallet",
+        "to_accountant",
+      ),
+      mailType(
+        "official",
+        names(
+          "Официальное письмо (госорган, банк, налоговая)",
+          "Rasmiy xat (davlat organi, bank, soliq)",
+          "Official letter (authority, bank, tax)",
+        ),
+        60,
+        "red",
+        "bank",
+        "register_incoming",
+      ),
+      mailType(
+        "mailing",
+        names("Рассылка", "Reklama xabarnomasi", "Newsletter"),
+        70,
+        "default",
+        "notification",
+        "archive_mailing",
+      ),
+      mailType("spam", names("Спам", "Spam", "Spam"), 80, "default", "stop", "suspicious"),
+    ],
     // Виды резолюции — поведение кода (закрытый список): только переименовать и переставить.
     "resolution-kinds": [
       methodItem("execute", names("К исполнению", "Ijro uchun", "For execution"), 10),
@@ -111,6 +240,33 @@ function seed(): State {
 }
 
 const CATALOG: Dictionary[] = [
+  {
+    kind: "mail-types",
+    owner: "crm",
+    area: "mail",
+    name: names("Типы входящих писем", "Kiruvchi xat turlari", "Incoming mail types"),
+    closed: false,
+    attrs: [
+      {
+        key: "default_action",
+        type: "choice",
+        name: names("Действие по умолчанию", "Standart harakat", "Default action"),
+        options: options(ACTIONS),
+      },
+      {
+        key: "color",
+        type: "choice",
+        name: names("Цвет", "Rang", "Colour"),
+        options: options(COLORS),
+      },
+      {
+        key: "icon",
+        type: "choice",
+        name: names("Значок", "Belgi", "Icon"),
+        options: options(ICONS),
+      },
+    ],
+  },
   {
     kind: "letter-kinds",
     owner: "eds",
@@ -196,7 +352,14 @@ export function isActiveValue(kind: Kind, code: string): boolean {
   return readDictionaries()[kind].some((item) => item.code === code && item.active);
 }
 
+/** Типы, уже стоящие у писем (подставляет мок почты): использованный тип не удаляется, только скрывается. */
+let mailTypeUsage: () => Set<string> = () => new Set();
+export function setMailTypeUsage(fn: () => Set<string>): void {
+  mailTypeUsage = fn;
+}
+
 function usedCodes(kind: Kind): Set<string> {
+  if (kind === "mail-types") return mailTypeUsage();
   return new Set(
     readLetters().flatMap((letter) => {
       const code =
@@ -225,6 +388,7 @@ function canRead(): boolean {
   return (
     allows(r, "eds.inbox", "read") ||
     allows(r, "eds.inbox.register", "full") ||
+    allows(r, "crm.leads.triage", "read") ||
     allows(r, "admin", "read")
   );
 }
@@ -236,7 +400,10 @@ function isAdmin(): boolean {
 }
 
 const isKind = (value: unknown): value is Kind =>
-  value === "letter-kinds" || value === "receipt-methods" || value === "resolution-kinds";
+  value === "letter-kinds" ||
+  value === "receipt-methods" ||
+  value === "resolution-kinds" ||
+  value === "mail-types";
 
 const closedFailure = () =>
   failure(
@@ -308,8 +475,17 @@ export const dictionariesHandlers = [
     const taken = new Set(state[kind].map((item) => item.code));
     let code = base;
     for (let i = 0; taken.has(code); i += 1) code = `${base}_${String.fromCharCode(97 + i)}`;
+    if (kind === "mail-types" && typeof body.attrs?.["default_action"] !== "string") {
+      return failure(422, "VALIDATION_FAILED", "Выберите действие по умолчанию.", {
+        fields: ["attrs.default_action"],
+      });
+    }
     const defaults: DictionaryItem["attrs"] =
-      kind === "letter-kinds" ? { urgent: false, due_days: null } : {};
+      kind === "letter-kinds"
+        ? { urgent: false, due_days: null }
+        : kind === "mail-types"
+          ? { color: "default", icon: "mail" }
+          : {};
     const created: DictionaryItem = {
       code,
       name: { ru, uz: body.name.uz?.trim() ?? "", en: body.name.en?.trim() ?? "" },

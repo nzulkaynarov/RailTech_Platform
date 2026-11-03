@@ -85,6 +85,12 @@
   max-width: 420px;
 }
 
+.pf-mail-type-filter {
+  flex: 0 1 260px;
+  min-width: 180px;
+  max-width: 100%;
+}
+
 .pf-mail-pick {
   padding: 0;
 }
@@ -231,4 +237,14 @@
   border: 0;
   overflow: hidden;
   background: #fff;
+}
+
+/* «Всегда считать письма от …»: длинное название типа переносится, кнопка не шире колонки (390 px). */
+.pf-mail-rule-btn {
+  max-width: 100%;
+  height: auto;
+  min-height: 32px;
+  white-space: normal;
+  text-align: left;
+  padding-block: 4px;
 }

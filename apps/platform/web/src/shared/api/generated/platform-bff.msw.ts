@@ -194,12 +194,14 @@ import type {
   InboundMail,
   InboundMailAssist,
   InboundMailBulkArchiveResult,
+  InboundMailHandoverTargets,
   InboundMailLeadResult,
   InboundMailLink,
   InboundMailPage,
   InboundMailPerson,
   InboundMailReply,
   InboundMailResult,
+  InboundMailType,
   IntegrationsOverview,
   KbChunkList,
   KbDocument,
@@ -225,6 +227,8 @@ import type {
   LetterResolutionDraft,
   MailLog,
   MailQueued,
+  MailSenderRuleList,
+  MailSenderRuleOut,
   Manufacturer,
   ManufacturerPage,
   Me,
@@ -9434,6 +9438,50 @@ export const getStartImapHistoryResponseMock = (
   ...overrideResponse,
 });
 
+export const getListInboundMailResponseInboundMailTypeMock = (
+  overrideResponse: Partial<InboundMailType> = {},
+): InboundMailType => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    color: faker.helpers.arrayElement([
+      "blue",
+      "green",
+      "gold",
+      "red",
+      "purple",
+      "cyan",
+      "default",
+    ] as const),
+    icon: faker.helpers.arrayElement([
+      "mail",
+      "team",
+      "calendar",
+      "file",
+      "wallet",
+      "bank",
+      "notification",
+      "stop",
+    ] as const),
+    default_action: faker.helpers.arrayElement([
+      "register_incoming",
+      "create_lead",
+      "supplier_price",
+      "to_accountant",
+      "archive_mailing",
+      "reply_template",
+      "suspicious",
+    ] as const),
+    active: faker.datatype.boolean(),
+    source: faker.helpers.arrayElement(["rule", "ai", "manual"] as const),
+  },
+  ...overrideResponse,
+});
+
 export const getListInboundMailResponseInboundMailLinkMock = (
   overrideResponse: Partial<InboundMailLink> = {},
 ): InboundMailLink => ({
@@ -9514,6 +9562,10 @@ export const getListInboundMailResponseMock = (
         null,
       ]),
     },
+    type: faker.helpers.arrayElement([
+      { ...getListInboundMailResponseInboundMailTypeMock() },
+      null,
+    ]),
     client: faker.helpers.arrayElement([
       { ...getListInboundMailResponseInboundMailLinkMock() },
       null,
@@ -9567,6 +9619,60 @@ export const getListInboundMailResponseMock = (
     spam: faker.number.int({ min: 0 }),
     all: faker.number.int({ min: 0 }),
     unread_new: faker.number.int({ min: 0 }),
+  },
+  ...overrideResponse,
+});
+
+export const getListInboundMailHandoverTargetsResponseMock = (
+  overrideResponse: Partial<Extract<InboundMailHandoverTargets, object>> = {},
+): InboundMailHandoverTargets => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getGetInboundMailResponseInboundMailTypeMock = (
+  overrideResponse: Partial<InboundMailType> = {},
+): InboundMailType => ({
+  ...{
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    color: faker.helpers.arrayElement([
+      "blue",
+      "green",
+      "gold",
+      "red",
+      "purple",
+      "cyan",
+      "default",
+    ] as const),
+    icon: faker.helpers.arrayElement([
+      "mail",
+      "team",
+      "calendar",
+      "file",
+      "wallet",
+      "bank",
+      "notification",
+      "stop",
+    ] as const),
+    default_action: faker.helpers.arrayElement([
+      "register_incoming",
+      "create_lead",
+      "supplier_price",
+      "to_accountant",
+      "archive_mailing",
+      "reply_template",
+      "suspicious",
+    ] as const),
+    active: faker.datatype.boolean(),
+    source: faker.helpers.arrayElement(["rule", "ai", "manual"] as const),
   },
   ...overrideResponse,
 });
@@ -9644,6 +9750,7 @@ export const getGetInboundMailResponseMock = (
       null,
     ]),
   },
+  type: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailTypeMock() }, null]),
   client: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   from_history: faker.datatype.boolean(),
@@ -12973,13 +13080,44 @@ export const getRegisterLetterResponseMock = (
   ...overrideResponse,
 });
 
+export const getListMailSenderRulesResponseMock = (
+  overrideResponse: Partial<Extract<MailSenderRuleList, object>> = {},
+): MailSenderRuleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    pattern: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    type_code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    created_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateMailSenderRuleResponseMock = (
+  overrideResponse: Partial<Extract<MailSenderRuleOut, object>> = {},
+): MailSenderRuleOut => ({
+  id: faker.number.int(),
+  pattern: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  type_code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  applied: faker.number.int({ min: 0 }),
+  ...overrideResponse,
+});
+
 export const getListDictionariesResponseMock = (
   overrideResponse: Partial<Extract<DictionaryList, object>> = {},
 ): DictionaryList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     kind: faker.helpers.fromRegExp("^[a-z][a-z-]{0,31}$"),
-    owner: faker.helpers.arrayElement(["eds"] as const),
-    area: faker.helpers.arrayElement(["documents"] as const),
+    owner: faker.helpers.arrayElement(["eds", "crm"] as const),
+    area: faker.helpers.arrayElement(["documents", "mail"] as const),
     name: {
       ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
       uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -12989,7 +13127,7 @@ export const getListDictionariesResponseMock = (
     attrs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
         key: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
-        type: faker.helpers.arrayElement(["boolean", "integer"] as const),
+        type: faker.helpers.arrayElement(["boolean", "integer", "choice"] as const),
         name: {
           ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
           uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
@@ -12997,6 +13135,19 @@ export const getListDictionariesResponseMock = (
         },
         minimum: faker.helpers.arrayElement([faker.number.int(), null]),
         maximum: faker.helpers.arrayElement([faker.number.int(), null]),
+        options: faker.helpers.arrayElement([
+          Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => ({
+              value: faker.string.alpha({ length: { min: 10, max: 20 } }),
+              name: {
+                ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+                uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+                en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+              },
+            }),
+          ),
+          null,
+        ]),
       }),
     ),
   })),
@@ -13017,6 +13168,7 @@ export const getListDictionaryItemsResponseMock = (
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
         faker.datatype.boolean(),
         faker.number.int(),
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
     },
@@ -13040,6 +13192,7 @@ export const getCreateDictionaryItemResponseMock = (
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
       faker.datatype.boolean(),
       faker.number.int(),
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
   },
@@ -13063,6 +13216,7 @@ export const getReorderDictionaryItemsResponseMock = (
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
         faker.datatype.boolean(),
         faker.number.int(),
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
     },
@@ -13086,6 +13240,7 @@ export const getUpdateDictionaryItemResponseMock = (
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
       faker.datatype.boolean(),
       faker.number.int(),
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
   },
@@ -27768,6 +27923,30 @@ export const getListInboundMailMockHandler = (
   );
 };
 
+export const getListInboundMailHandoverTargetsMockHandler = (
+  overrideResponse?:
+    | InboundMailHandoverTargets
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<InboundMailHandoverTargets> | InboundMailHandoverTargets),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/inbound-mail/handover-targets",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListInboundMailHandoverTargetsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetInboundMailMockHandler = (
   overrideResponse?:
     | InboundMail
@@ -28004,6 +28183,78 @@ export const getDiscardInboundMailMockHandler = (
 ) => {
   return http.post(
     "*/inbound-mail/:id/discard",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getSetInboundMailTypeMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/inbound-mail/:id/type",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getMarkInboundMailPriceUploadedMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/price",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getMoveInboundMailToSuspiciousMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/suspicious",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getHandoverInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/handover",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
       if (typeof overrideResponse === "function") {
         await overrideResponse(info);
@@ -30570,6 +30821,72 @@ export const getRegisterLetterMockHandler = (
           : getRegisterLetterResponseMock(),
         { status: 201 },
       );
+    },
+    options,
+  );
+};
+
+export const getListMailSenderRulesMockHandler = (
+  overrideResponse?:
+    | MailSenderRuleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<MailSenderRuleList> | MailSenderRuleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/mail-sender-rules",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListMailSenderRulesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateMailSenderRuleMockHandler = (
+  overrideResponse?:
+    | MailSenderRuleOut
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<MailSenderRuleOut> | MailSenderRuleOut),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/mail-sender-rules",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateMailSenderRuleResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteMailSenderRuleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/mail-sender-rules/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
     },
     options,
   );
@@ -33663,6 +33980,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getFindImapFoldersMockHandler(),
   getStartImapHistoryMockHandler(),
   getListInboundMailMockHandler(),
+  getListInboundMailHandoverTargetsMockHandler(),
   getGetInboundMailMockHandler(),
   getMarkInboundMailReadMockHandler(),
   getTakeInboundMailMockHandler(),
@@ -33675,6 +33993,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getArchiveInboundMailMockHandler(),
   getMarkInboundMailNotSpamMockHandler(),
   getDiscardInboundMailMockHandler(),
+  getSetInboundMailTypeMockHandler(),
+  getMarkInboundMailPriceUploadedMockHandler(),
+  getMoveInboundMailToSuspiciousMockHandler(),
+  getHandoverInboundMailMockHandler(),
   getReplyInboundMailMockHandler(),
   getListExternalServicesMockHandler(),
   getGetExternalServiceMockHandler(),
@@ -33787,6 +34109,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDownloadCsvExportMockHandler(),
   getListLettersMockHandler(),
   getRegisterLetterMockHandler(),
+  getListMailSenderRulesMockHandler(),
+  getCreateMailSenderRuleMockHandler(),
+  getDeleteMailSenderRuleMockHandler(),
   getListDictionariesMockHandler(),
   getListDictionaryItemsMockHandler(),
   getCreateDictionaryItemMockHandler(),

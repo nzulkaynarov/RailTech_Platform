@@ -3,7 +3,9 @@ import type {
   InboundMailAddress,
   InboundMailEvent,
   InboundMailPerson,
+  InboundMailType,
 } from "../shared/api/generated/model";
+import { resolveType } from "./mailTypes";
 
 /**
  * Начальные письма мока общего ящика (W18A-P2, W18A-P2-3). Данные вымышленные. «Я» в моках — сотрудник сессии: его id
@@ -57,6 +59,7 @@ const BASE = {
   attachments: [],
   attachments_count: 0,
   assist: { status: "none", kind: null, summary: null, action: null },
+  type: null as InboundMailType | null,
 } satisfies Partial<StoredMail>;
 
 /** Тело письма, которого нет в карточке верхнего уровня: HTML после санитизации и свёрнутая цитата (P2-4). */
@@ -104,7 +107,7 @@ function make(
 }
 
 const done = (
-  outcome: "registered" | "lead" | "replied" | "archived",
+  outcome: "registered" | "lead" | "replied" | "archived" | "price",
   minutes: number,
   extra: Partial<NonNullable<StoredMail["result"]>> = {},
 ): Pick<StoredMail, "status" | "result"> => ({
@@ -164,10 +167,11 @@ export function seed(): StoredMail[] {
       client: { id: 42, number: "42", name: "ООО «Демо-Поставка»" },
       assist: {
         status: "done",
-        kind: "supplier_doc",
+        kind: null,
         summary: "Поставщик прислал акт сверки за октябрь, просит подписать до 10 ноября.",
-        action: "register",
+        action: null,
       },
+      type: resolveType("supplier_invoice", "ai"),
       to: [addr(MAILBOX), addr("buh.copy@company.example")],
       cc: [addr("sidorov@railtech.example")],
       reply_all_copy: ["buh.copy@company.example", "sidorov@railtech.example"],
@@ -197,10 +201,11 @@ export function seed(): StoredMail[] {
       ],
       assist: {
         status: "done",
-        kind: "other",
+        kind: null,
         summary: "Рекламная рассылка канцтоваров.",
-        action: "archive",
+        action: null,
       },
+      type: resolveType("mailing", "ai"),
     }),
     make({
       id: 20,
@@ -348,6 +353,42 @@ export function seed(): StoredMail[] {
       text: "Подскажите ориентировочные сроки доставки партии в Самарканд.",
       unread: false,
       ...done("replied", 1000),
+    }),
+    make({
+      id: 28,
+      from_email: "sales@rail-parts-demo.example",
+      from_name: "ООО «Демо-Скрепления»",
+      subject: "Коммерческое предложение на скрепления КБ-65",
+      received_at: minutesAgo(8),
+      text:
+        "Добрый день!\n\nНаправляем коммерческое предложение и прайс-лист на рельсовые скрепления КБ-65. " +
+        "Цены действуют до 30 ноября, поставка со склада в Ташкенте.\n\nОтдел продаж ООО «Демо-Скрепления»",
+      attachments: [
+        {
+          index: 0,
+          name: "kp-skrepleniya-kb65.xlsx",
+          content_type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          size: 31844,
+          inline: false,
+        },
+      ],
+      assist: {
+        status: "done",
+        kind: null,
+        summary: "Поставщик прислал КП и прайс на скрепления КБ-65, цены до 30 ноября.",
+        action: null,
+      },
+      type: resolveType("supplier_price", "ai"),
+    }),
+    make({
+      id: 29,
+      from_email: "info@soliq.example",
+      from_name: "Налоговая служба Демо",
+      subject: "Требование о предоставлении документов",
+      received_at: minutesAgo(12),
+      text:
+        "Уважаемый руководитель!\n\nВ соответствии с запросом просим представить документы по сделкам за III квартал " +
+        "в срок до 15 ноября.\n\nНалоговая служба Демо",
     }),
   ];
 }

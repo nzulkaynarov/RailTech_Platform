@@ -4,7 +4,7 @@
  */
 
 /**
- * Предложение по типу (выбирает код)
+ * Устарело: только у подсказок до MAIL-TYPES; действие — `type.default_action`
  * @nullable
  */
 export type InboundMailAssistAction =

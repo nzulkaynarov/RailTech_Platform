@@ -12,7 +12,10 @@ import type { InboundMailAssistStatus } from "./inboundMailAssistStatus";
 export interface InboundMailAssist {
   /** none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть; unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором */
   status: InboundMailAssistStatus;
-  /** @nullable */
+  /**
+   * Устарело: только у подсказок до MAIL-TYPES; тип письма — `InboundMailItem.type`
+   * @nullable
+   */
   kind: InboundMailAssistKind;
   /**
    * @maxLength 300
@@ -20,7 +23,7 @@ export interface InboundMailAssist {
    */
   summary: string | null;
   /**
-   * Предложение по типу (выбирает код)
+   * Устарело: только у подсказок до MAIL-TYPES; действие — `type.default_action`
    * @nullable
    */
   action: InboundMailAssistAction;

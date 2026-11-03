@@ -1,5 +1,5 @@
 import { keepPreviousData } from "@tanstack/react-query";
-import { App, Card, Checkbox, Input, Segmented, Skeleton } from "antd";
+import { App, Card, Checkbox, Input, Segmented, Select, Skeleton } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
@@ -8,12 +8,17 @@ import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import type { InboundMailItem } from "../../../shared/api/generated/model";
-import { releaseInboundMail, useListInboundMail } from "../../../shared/api/generated/platform-bff";
+import {
+  releaseInboundMail,
+  useListDictionaryItems,
+  useListInboundMail,
+} from "../../../shared/api/generated/platform-bff";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { TabsBar } from "../../../shared/ui/TabsBar";
+import { localName } from "../dictionaries";
 import { BulkBar } from "./BulkArchive";
 import { MailRow } from "./MailRow";
 import { MailView } from "./MailView";
@@ -48,7 +53,7 @@ function useDebounced(value: string): string {
 }
 
 function MailList({ own }: { own: boolean }) {
-  const { t } = useTranslation(["letters", "modules"]);
+  const { t, i18n } = useTranslation(["letters", "modules"]);
   const { me } = useAuth();
   const { message } = App.useApp();
   const refresh = useRefreshMail();
@@ -60,12 +65,20 @@ function MailList({ own }: { own: boolean }) {
   const show: Show = tab === "new" && params.get("show") === "history" ? "history" : "all";
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
+  // Фильтр по типу (MAIL-TYPES): справочник читает первая линия; у «своих писем» фильтра нет.
+  const typeCode = !own ? params.get("type") : null;
+  const types = useListDictionaryItems(
+    "mail-types",
+    { include_hidden: true },
+    { query: { staleTime: 60_000, enabled: !own } },
+  );
   const [picked, setPicked] = useState<readonly number[]>([]);
   const query = useListInboundMail(
     {
       view: tab,
       ...(show === "history" ? { history: true } : {}),
       ...(q ? { q } : {}),
+      ...(typeCode ? { type: typeCode } : {}),
     },
     { query: { placeholderData: keepPreviousData } },
   );
@@ -73,12 +86,14 @@ function MailList({ own }: { own: boolean }) {
   useDocumentTitle(title);
   const data = query.data;
   const canBulk = !own && BULK_TABS.includes(tab);
-  const go = (next: { tab?: MailTab; show?: Show }) => {
+  const go = (next: { tab?: MailTab; show?: Show; type?: string | null }) => {
     const nextTab = next.tab ?? tab;
     const nextShow = nextTab === "new" ? (next.show ?? (next.tab ? "all" : show)) : "all";
     const search = new URLSearchParams();
     if (nextTab !== fallback) search.set("tab", nextTab);
     if (nextShow === "history") search.set("show", "history");
+    const nextType = next.type === undefined ? typeCode : next.type;
+    if (nextType) search.set("type", nextType);
     setParams(search, { replace: true });
     setPicked([]);
   };
@@ -121,7 +136,7 @@ function MailList({ own }: { own: boolean }) {
       />
     );
   } else if (data.items.length === 0) {
-    const empty = q ? "search" : show === "history" ? "history" : tab;
+    const empty = q || typeCode ? "search" : show === "history" ? "history" : tab;
     body = (
       <EmptyState
         title={t(`letters:mail.empty.${empty}.title`)}
@@ -183,6 +198,23 @@ function MailList({ own }: { own: boolean }) {
                   setPicked([]);
                 }}
               />
+              {!own && (types.data?.items.length ?? 0) > 0 ? (
+                <Select
+                  className="pf-mail-type-filter"
+                  aria-label={t("letters:mail.type.filter.label")}
+                  value={typeCode ?? ""}
+                  onChange={(value) => {
+                    go({ type: value || null });
+                  }}
+                  options={[
+                    { value: "", label: t("letters:mail.type.filter.all") },
+                    ...(types.data?.items ?? []).map((item) => ({
+                      value: item.code,
+                      label: localName(item.name, i18n.language),
+                    })),
+                  ]}
+                />
+              ) : null}
               {tab === "new" && !own ? (
                 <Segmented<Show>
                   aria-label={t("letters:mail.filter.label")}

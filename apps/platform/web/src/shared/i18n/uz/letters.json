@@ -739,16 +739,15 @@
       "registering": "Ro‘yxatga olinmoqda",
       "done": "Ko‘rib chiqildi"
     },
-    "kind": {
-      "buyer": "Xaridor",
-      "official": "Rasmiy xat",
-      "supplier_doc": "Yetkazib beruvchi hisobi yoki hujjati",
-      "other": "Boshqa"
-    },
     "action": {
-      "register": "Kiruvchini ro‘yxatga olish",
-      "lead": "Lid yaratish",
-      "archive": "Arxivga"
+      "register_incoming": "Kiruvchi sifatida ro‘yxatga olish",
+      "create_lead": "Lid yaratish",
+      "supplier_price": "Narxnomani yuklash",
+      "to_accountant": "Buxgalterga topshirish",
+      "archive_mailing": "Reklama sifatida arxivga",
+      "reply_template": "Javob berish",
+      "suspicious": "«Shubhali»ga",
+      "more": "Boshqa harakat"
     },
     "fields": {
       "from": "Kimdan",
@@ -775,10 +774,11 @@
       "title": "Yordamchi taklifi",
       "button": "Taklif qilish",
       "intro": "Yordamchi xat turi va harakatni taklif qiladi. Pochta manzillari, telefonlar, STIR, JShShIR, pasport, karta va hisob raqamlari yashiriladi, ilovalar yuborilmaydi. Xatni taklifsiz ham ko‘rib chiqish mumkin.",
-      "suggests": "Taklif: {{action}}",
       "note": "Taklif o‘zi hech narsa qilmaydi — harakatni siz tanlaysiz.",
       "unavailable": "Yordamchi hozir mavjud emas — xatni qo‘lda ko‘rib chiqing yoki keyinroq urinib ko‘ring.",
-      "retry": "Qayta urinish"
+      "retry": "Qayta urinish",
+      "suggestsType": "Yordamchi tur taklif qildi — asosiy tugma bilan tasdiqlang yoki turni almashtiring.",
+      "noType": "Yordamchi mos tur topmadi — turni o‘zingiz tanlang."
     },
     "actions": {
       "title": "Nima qilish kerak",
@@ -794,7 +794,22 @@
       "leadDone": "{{number}} lid yaratildi — uni menejer oladi",
       "leadNote": "Xat {{number}} lidga qo‘shildi",
       "archived": "Xat arxivda",
-      "failed": "Bo‘lmadi: {{reason}}"
+      "failed": "Bo‘lmadi: {{reason}}",
+      "mailingReason": "Reklama xabarnomasi",
+      "priceHow": "Narxnomani yuklash sahifasini oching, xat ilovasini yuklang va bu yerga qayting.",
+      "priceOpen": "Narxnomani yuklashni ochish",
+      "priceWhat": "Narxnoma yuklangach, xat «Narxnoma yuklandi» natijasi bilan navbatdan chiqadi.",
+      "priceConfirm": "Narxnoma yuklandi — navbatdan olib tashlash",
+      "priceDone": "Xat ko‘rib chiqildi: narxnoma yuklandi",
+      "handoverTo": "Kimga",
+      "handoverPick": "Xodimni tanlang",
+      "handoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda to‘lovni tasdiqlash huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
+      "handoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Mening vazifalarim»ida paydo bo‘ladi.",
+      "handoverConfirm": "Topshirish",
+      "handoverDone": "Xat topshirildi: {{name}}",
+      "suspiciousWhat": "Xat «Shubhali» bo‘limiga o‘tadi — u yerdan qaytarish mumkin («Spam emas»). Pochta qutisida hech narsa o‘zgarmaydi.",
+      "suspiciousConfirm": "«Shubhali»ga",
+      "suspiciousDone": "Xat «Shubhali»da"
     },
     "result": {
       "title": "Natija",
@@ -878,7 +893,8 @@
       "lead": "Lid {{number}}",
       "replied": "Javob yuborildi",
       "archived": "Arxivga: {{reason}}",
-      "unknown": "Ko‘rib chiqildi"
+      "unknown": "Ko‘rib chiqildi",
+      "price": "Narxnoma yuklandi"
     },
     "returnToNew": "«Yangi»ga qaytarish",
     "returned": "Xat «Yangi»ga qaytdi",
@@ -942,11 +958,41 @@
         "thread_reply": "mijoz zanjirda javob berdi",
         "personal": "xat shaxsan yo‘llangan",
         "not_spam": "shubhalilardan qaytardi",
-        "discard": "arxivga olib tashladi"
+        "discard": "arxivga olib tashladi",
+        "type": "turni almashtirdi",
+        "price": "narxnoma yuklandi deb belgiladi",
+        "handover": "xatni topshirdi",
+        "suspicious": "«Shubhali»ga yubordi"
       }
     },
     "inWorkSince": "{{name}}, {{time}} dan",
-    "replyTag": "Zanjirda javob"
+    "replyTag": "Zanjirda javob",
+    "type": {
+      "title": "Xat turi",
+      "none": "Turi yo‘q",
+      "empty": "Tur aniqlanmagan — tanlang yoki «Taklif qilish»ni bosing.",
+      "change": "Turni almashtirish",
+      "changed": "Tur o‘zgartirildi",
+      "removed": "Tur olib tashlandi",
+      "source": {
+        "rule": "jo‘natuvchi qoidasi bo‘yicha",
+        "ai": "yordamchi taklif qildi",
+        "manual": "xodim tanladi"
+      },
+      "filter": {
+        "label": "Xat turi",
+        "all": "Barcha turlar"
+      },
+      "rule": {
+        "scope": "Qoida nimaga tegishli",
+        "domain": "Butun domen",
+        "address": "Faqat shu manzil",
+        "button": "{{pattern}} xatlarini doim «{{type}}» deb hisoblash",
+        "what": "Undan kelgan yangi xatlar bu turni yordamchidan oldin o‘zi oladi.",
+        "created": "Qoida yaratildi. Yana shuncha xat turga ega bo‘ldi: {{count}}",
+        "exists": "Bunday qoida allaqachon bor."
+      }
+    }
   },
   "settings": {
     "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",
@@ -1009,7 +1055,32 @@
         "DEFAULT": "Saqlab bo‘lmadi. Qayta urinib ko‘ring.",
         "load": "Ma’lumotnomalar yuklanmadi."
       },
-      "retry": "Qayta urinish"
+      "retry": "Qayta urinish",
+      "choose": "Tanlang",
+      "chooseRequired": "Qiymatni tanlang",
+      "rules": {
+        "title": "Jo‘natuvchi qoidalari",
+        "hint": "Manzil yoki domendan kelgan xatlar turni yordamchidan oldin o‘zi oladi.",
+        "pattern": "Manzil yoki domen",
+        "patternHint": "Masalan: soliq.uz yoki ivan@firma.uz",
+        "type": "Tur",
+        "createdBy": "Yaratdi",
+        "add": "Qoida qo‘shish",
+        "delete": "O‘chirish",
+        "deleteNamed": "Qoidani o‘chirish: {{pattern}}",
+        "added": "Qoida qo‘shildi",
+        "deleted": "Qoida o‘chirildi",
+        "empty": {
+          "title": "Qoidalar yo‘q",
+          "text": "Qoida qo‘shing yoki xat kartochkasidan yarating."
+        },
+        "errors": {
+          "mail_rule_exists": "Bunday qoida allaqachon bor.",
+          "mail_type_inactive": "Bu tur o‘chirilgan — boshqasini tanlang.",
+          "DEFAULT": "Qoidani saqlab bo‘lmadi. Manzil yoki domenni tekshiring.",
+          "load": "Qoidalar yuklanmadi."
+        }
+      }
     },
     "templates": {
       "title": "Rezolyutsiya shablonlari",

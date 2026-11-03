@@ -739,16 +739,15 @@
       "registering": "Registering",
       "done": "Handled"
     },
-    "kind": {
-      "buyer": "Buyer",
-      "official": "Official letter",
-      "supplier_doc": "Supplier invoice or document",
-      "other": "Other"
-    },
     "action": {
-      "register": "Register incoming",
-      "lead": "Create a lead",
-      "archive": "Archive"
+      "register_incoming": "Register as incoming",
+      "create_lead": "Create a lead",
+      "supplier_price": "Upload the price list",
+      "to_accountant": "Hand over to the accountant",
+      "archive_mailing": "Archive as a newsletter",
+      "reply_template": "Reply",
+      "suspicious": "To Suspicious",
+      "more": "Another action"
     },
     "fields": {
       "from": "From",
@@ -775,10 +774,11 @@
       "title": "Assistant suggestion",
       "button": "Suggest",
       "intro": "The assistant suggests the letter type and an action. Email addresses, phones, TINs, PINFLs, passport, card and account numbers are hidden; attachments are not sent. You can handle the letter without it.",
-      "suggests": "Suggests: {{action}}",
       "note": "The suggestion does nothing by itself — you choose the action.",
       "unavailable": "The assistant is unavailable now — handle the letter manually or try later.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "suggestsType": "The assistant suggested a type — confirm it with the main button or change the type.",
+      "noType": "The assistant found no suitable type — pick one yourself."
     },
     "actions": {
       "title": "What to do",
@@ -794,7 +794,22 @@
       "leadDone": "Lead {{number}} created — a manager will take it",
       "leadNote": "The letter was added to lead {{number}}",
       "archived": "The letter is archived",
-      "failed": "Failed: {{reason}}"
+      "failed": "Failed: {{reason}}",
+      "mailingReason": "Newsletter",
+      "priceHow": "Open the price upload, upload the letter attachment and come back here.",
+      "priceOpen": "Open the price upload",
+      "priceWhat": "Once the price list is uploaded, the letter leaves the queue as “Price uploaded”.",
+      "priceConfirm": "Price uploaded — remove from the queue",
+      "priceDone": "Letter handled: price uploaded",
+      "handoverTo": "To",
+      "handoverPick": "Choose a colleague",
+      "handoverNone": "Nobody to hand over to: no employee can confirm payments. Assign such a role in Settings · Roles.",
+      "handoverWhat": "The letter leaves “New” and appears in My tasks of the chosen colleague.",
+      "handoverConfirm": "Hand over",
+      "handoverDone": "Letter handed over: {{name}}",
+      "suspiciousWhat": "The letter moves to the Suspicious tab — you can bring it back from there (“Not spam”). The mailbox itself is not changed.",
+      "suspiciousConfirm": "To Suspicious",
+      "suspiciousDone": "Letter moved to Suspicious"
     },
     "result": {
       "title": "Outcome",
@@ -878,7 +893,8 @@
       "lead": "Lead {{number}}",
       "replied": "Reply sent",
       "archived": "Archived: {{reason}}",
-      "unknown": "Handled"
+      "unknown": "Handled",
+      "price": "Price uploaded"
     },
     "returnToNew": "Return to New",
     "returned": "The letter is back in New",
@@ -942,11 +958,41 @@
         "thread_reply": "the client replied in the thread",
         "personal": "letter addressed personally",
         "not_spam": "returned from suspicious",
-        "discard": "moved to the archive"
+        "discard": "moved to the archive",
+        "type": "changed the type",
+        "price": "marked the price as uploaded",
+        "handover": "handed the letter over",
+        "suspicious": "moved it to Suspicious"
       }
     },
     "inWorkSince": "{{name}}, since {{time}}",
-    "replyTag": "Reply in thread"
+    "replyTag": "Reply in thread",
+    "type": {
+      "title": "Letter type",
+      "none": "No type",
+      "empty": "No type yet — pick one or press “Suggest”.",
+      "change": "Change the type",
+      "changed": "Type changed",
+      "removed": "Type removed",
+      "source": {
+        "rule": "by the sender rule",
+        "ai": "suggested by the assistant",
+        "manual": "chosen by an employee"
+      },
+      "filter": {
+        "label": "Letter type",
+        "all": "All types"
+      },
+      "rule": {
+        "scope": "What the rule covers",
+        "domain": "Whole domain",
+        "address": "This address only",
+        "button": "Always treat letters from {{pattern}} as “{{type}}”",
+        "what": "New letters from it get this type by themselves, before the assistant.",
+        "created": "Rule created. More letters got the type: {{count}}",
+        "exists": "This rule already exists."
+      }
+    }
   },
   "settings": {
     "subtitle": "Letter lists, resolution templates and the registration AI assistant.",
@@ -1009,7 +1055,32 @@
         "DEFAULT": "Could not save. Try again.",
         "load": "The lists did not load."
       },
-      "retry": "Retry"
+      "retry": "Retry",
+      "choose": "Choose",
+      "chooseRequired": "Choose a value",
+      "rules": {
+        "title": "Sender rules",
+        "hint": "Letters from an address or domain get the type by themselves, before the assistant.",
+        "pattern": "Address or domain",
+        "patternHint": "For example: soliq.uz or ivan@firma.uz",
+        "type": "Type",
+        "createdBy": "Created by",
+        "add": "Add a rule",
+        "delete": "Delete",
+        "deleteNamed": "Delete the rule: {{pattern}}",
+        "added": "Rule added",
+        "deleted": "Rule deleted",
+        "empty": {
+          "title": "No rules",
+          "text": "Add a rule or create one from a letter card."
+        },
+        "errors": {
+          "mail_rule_exists": "This rule already exists.",
+          "mail_type_inactive": "This type is hidden — choose another.",
+          "DEFAULT": "Could not save the rule. Check the address or domain.",
+          "load": "Rules did not load."
+        }
+      }
     },
     "templates": {
       "title": "Resolution templates",
