@@ -235,10 +235,9 @@ for (const width of WIDTHS) {
     await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
     await expect(page.getByText("Создать лид → менеджеру").first()).toBeVisible();
     // таблица не шире окна: названия и «Цвет» не обрезаются, горизонтальной прокрутки таблицы нет
-    const clipped = await page
-      .locator(".pf-co-table-wrap")
-      .first()
-      .evaluate((el) => el.scrollWidth - el.clientWidth);
+    const clipped = await page.evaluate<number>(
+      `(() => { const el = document.querySelector(".pf-co-table-wrap"); return el ? el.scrollWidth - el.clientWidth : 0; })()`,
+    );
     // на 390 таблица прокручивается в своём окне (так задумано); на широком экране обрезки быть не должно
     if (width >= 1000) expect(clipped, "таблица типов шире окна").toBeLessThanOrEqual(0);
     await expectNoViolations(page, "справочник типов");

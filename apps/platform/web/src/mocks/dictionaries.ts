@@ -330,8 +330,9 @@ const CATALOG: Dictionary[] = [
 
 /** Каталог, как отдаёт BFF: варианты «вида документа» у типов писем — действующие виды EDS. */
 function catalogWithKinds(): Dictionary[] {
-  const kinds = readDictionaries()
-    ["letter-kinds"].filter((item) => item.active)
+  const letterKinds = readDictionaries()["letter-kinds"];
+  const kinds = letterKinds
+    .filter((item) => item.active)
     .map((item) => ({ value: item.code, name: item.name }));
   return CATALOG.map((dictionary) => ({
     ...dictionary,
