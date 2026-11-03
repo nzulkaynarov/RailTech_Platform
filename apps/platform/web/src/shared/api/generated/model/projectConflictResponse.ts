@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку
+ * 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`, `delivery_transition_not_allowed` (отметка доставки не подходит к статусу исполнения), `fulfillment_not_ready` (исполнения ещё нет); обновите карточку
  */
 export type ProjectConflictResponse = Error;

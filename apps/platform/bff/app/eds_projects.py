@@ -22,6 +22,7 @@ from app.schemas_eds_projects import (
     ActActionIn,
     ContractActionIn,
     ProjectCard,
+    ProjectFulfillment,
     ProjectPage,
     ProjectRow,
     RawCard,
@@ -55,6 +56,15 @@ _ERP_REASONS: dict[str, str] = {
     "COUNTERPARTY_PERSON_REQUIRED": "Укажите, кто со стороны клиента.",
     "COMMENT_REQUIRED": "Заполните комментарий.",
     "CHANNEL_INVALID": "Выберите канал.",
+    # L0-1: отметки доставки клиенту по проекту.
+    "DELIVERY_TRANSITION_NOT_ALLOWED": "Доставка сейчас в другом статусе. Обновите страницу.",
+    "FULFILLMENT_NOT_READY": "Исполнения по проекту ещё нет: оно появляется после договора.",
+    "DELIVERY_ACTION_INVALID": "Выберите отметку: в пути или доставлено.",
+    "DELIVERY_DATE_INVALID": "Укажите дату.",
+    "DELIVERY_DATE_IN_FUTURE": "Дата не может быть в будущем.",
+    "DELIVERY_DATE_BEFORE_SHIPPED": "Доставка не может быть раньше отправки.",
+    "WAYBILL_TOO_LONG": "Номер накладной — не длиннее 128 знаков.",
+    "PROOF_INVALID": "Файл не подходит: изображение, PDF или документ до 20 МБ.",
 }
 _FIELD_OF: dict[str, str] = {
     "REASON_REQUIRED": "reason",
@@ -69,6 +79,12 @@ _FIELD_OF: dict[str, str] = {
     "COMMENT_REQUIRED": "comment",
     "CHANNEL_INVALID": "channel",
     "DECISION_INVALID": "decision",
+    "DELIVERY_ACTION_INVALID": "action",
+    "DELIVERY_DATE_INVALID": "on_date",
+    "DELIVERY_DATE_IN_FUTURE": "on_date",
+    "DELIVERY_DATE_BEFORE_SHIPPED": "on_date",
+    "WAYBILL_TOO_LONG": "waybill",
+    "PROOF_INVALID": "file",
 }
 
 
@@ -317,6 +333,26 @@ class ErpProjects:
         )
         return await self.card(ref)
 
+    async def mark_delivery(self, ref: str, content: bytes, content_type: str) -> ProjectCard:
+        """«В пути» / «Доставлено» (L0-1): форма multipart как есть; поля, файл, переход и право
+        `fulfillment.manage` проверяет ERP. Ответ ERP — обновлённая карточка."""
+        card = await self.raw_card(ref)
+        body = await self._json(
+            "POST",
+            f"{API}/projects/{card.deal_id}/delivery/",
+            content=content,
+            content_type=content_type,
+        )
+        return present(parse(RawCard, body, "project"))
+
+    async def delivery_proof_path(self, ref: str) -> str:
+        """Путь файла подтверждения доставки в ERP: id вложения — из карточки этого проекта."""
+        card = await self.raw_card(ref)
+        fulfillment = card.fulfillment
+        if fulfillment is None or fulfillment.proof_attachment_id is None:
+            raise not_found()
+        return f"/api/v1/sourcing/attachments/{fulfillment.proof_attachment_id}/download/"
+
     async def file_path(self, ref: str, kind: str, doc_id: int, variant: str) -> str:
         """Путь файла в ERP: документ обязан быть в карточке этого проекта."""
         card = await self.raw_card(ref)
@@ -358,6 +394,22 @@ def row(raw: RawRow) -> ProjectRow:
     )
 
 
+def delivery_proof_url(number: str) -> str:
+    return f"/api/v1/eds/projects/{number}/delivery/proof"
+
+
+def _fulfillment(raw: RawCard, number: str) -> ProjectFulfillment | None:
+    f = raw.fulfillment
+    if f is None:
+        return None
+    has_proof = f.proof_attachment_id is not None
+    return ProjectFulfillment(
+        **f.model_dump(exclude={"proof_attachment_id", "proof_name"}),
+        proof_name=(f.proof_name or None) if has_proof else None,
+        proof_url=delivery_proof_url(number) if has_proof else None,
+    )
+
+
 def present(raw: RawCard) -> ProjectCard:
     base = row(raw).model_dump()
     return ProjectCard(
@@ -368,7 +420,7 @@ def present(raw: RawCard) -> ProjectCard:
         invoices=raw.invoices,
         act=raw.act,
         act_blocker=raw.act_blocker,
-        fulfillment=raw.fulfillment,
+        fulfillment=_fulfillment(raw, base["number"]),
         delivery_lines=raw.delivery_lines,
         journal=raw.journal,
     )
