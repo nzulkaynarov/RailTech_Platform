@@ -4,7 +4,7 @@
  */
 
 /**
- * registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной; `null` у писем, разобранных до W18A-P2-3
+ * registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной, price — прайс или КП поставщика загружен; `null` у писем, разобранных до W18A-P2-3
  */
 export type InboundMailResultOutcome =
   (typeof InboundMailResultOutcome)[keyof typeof InboundMailResultOutcome] | null;
@@ -14,4 +14,5 @@ export const InboundMailResultOutcome = {
   lead: "lead",
   replied: "replied",
   archived: "archived",
+  price: "price",
 } as const;

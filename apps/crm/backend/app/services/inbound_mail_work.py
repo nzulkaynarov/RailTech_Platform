@@ -188,7 +188,7 @@ async def bulk_archive(
             continue
         finish(row, "archived", who, now)
         row.archive_reason = clean
-        await record_decision(session, row, "archive", who.actor)
+        await record_decision(session, row, "archive_mailing", who.actor)
         await audit.record(
             session,
             who.actor,

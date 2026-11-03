@@ -75,6 +75,10 @@ def _like(text: str) -> str:
     return f"%{escaped}%"
 
 
+def _of_type(type_code: str | None) -> list[ColumnElement[bool]]:
+    return [InboundMail.type_code == type_code] if type_code else []
+
+
 def _search(q: str | None) -> list[ColumnElement[bool]]:
     text = (q or "").strip()[:100]
     if not text:
@@ -106,12 +110,13 @@ async def page(
     limit: int,
     history: bool | None = None,
     q: str | None = None,
+    type_code: str | None = None,
 ) -> list[tuple[InboundMail, bool]]:
     """Записи вкладки (новые сверху по последнему входящему) с признаком «не прочитано»."""
     stmt = (
         select(InboundMail, unread_expr(scope))
         .outerjoin(InboundMailRead, _with_read(scope))
-        .where(*view_clause(view, scope, history), *_search(q))
+        .where(*view_clause(view, scope, history), *_search(q), *_of_type(type_code))
         .order_by(InboundMail.activity_at.desc(), InboundMail.id.desc())
         .limit(limit)
     )
@@ -125,11 +130,12 @@ async def total(
     *,
     history: bool | None = None,
     q: str | None = None,
+    type_code: str | None = None,
 ) -> int:
     stmt = (
         select(func.count())
         .select_from(InboundMail)
-        .where(*view_clause(view, scope, history), *_search(q))
+        .where(*view_clause(view, scope, history), *_search(q), *_of_type(type_code))
     )
     return int((await session.execute(stmt)).scalar_one())
 

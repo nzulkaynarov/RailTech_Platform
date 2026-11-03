@@ -2396,6 +2396,193 @@ components:
       - total
       title: DialogPage
       type: object
+    Dictionary:
+      properties:
+        attrs:
+          items:
+            $ref: '#/components/schemas/DictionaryAttr'
+          title: Attrs
+          type: array
+        closed:
+          title: Closed
+          type: boolean
+        kind:
+          title: Kind
+          type: string
+        name:
+          $ref: '#/components/schemas/LocalizedName'
+      required:
+      - kind
+      - name
+      - closed
+      - attrs
+      title: Dictionary
+      type: object
+    DictionaryAttr:
+      properties:
+        key:
+          title: Key
+          type: string
+        maximum:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Maximum
+        minimum:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Minimum
+        name:
+          $ref: '#/components/schemas/LocalizedName'
+        options:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/DictionaryAttrOption'
+            type: array
+          - type: 'null'
+          description: Допустимые значения для `type = choice` (закрытый список кода)
+          title: Options
+        type:
+          enum:
+          - boolean
+          - integer
+          - choice
+          title: Type
+          type: string
+      required:
+      - key
+      - type
+      - name
+      title: DictionaryAttr
+      type: object
+    DictionaryAttrOption:
+      properties:
+        name:
+          $ref: '#/components/schemas/LocalizedName'
+        value:
+          title: Value
+          type: string
+      required:
+      - value
+      - name
+      title: DictionaryAttrOption
+      type: object
+    DictionaryItem:
+      properties:
+        active:
+          title: Active
+          type: boolean
+        attrs:
+          additionalProperties:
+            anyOf:
+            - type: boolean
+            - type: integer
+            - type: string
+            - type: 'null'
+          title: Attrs
+          type: object
+        code:
+          title: Code
+          type: string
+        name:
+          $ref: '#/components/schemas/LocalizedName'
+        position:
+          title: Position
+          type: integer
+        used:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Used
+      required:
+      - code
+      - name
+      - attrs
+      - active
+      - position
+      title: DictionaryItem
+      type: object
+    DictionaryItemIn:
+      additionalProperties: false
+      properties:
+        attrs:
+          additionalProperties:
+            anyOf:
+            - type: boolean
+            - type: integer
+            - type: string
+            - type: 'null'
+          title: Attrs
+          type: object
+        name:
+          $ref: '#/components/schemas/LocalizedNameIn'
+      required:
+      - name
+      title: DictionaryItemIn
+      type: object
+    DictionaryItemList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/DictionaryItem'
+          title: Items
+          type: array
+      required:
+      - items
+      title: DictionaryItemList
+      type: object
+    DictionaryItemPatch:
+      additionalProperties: false
+      properties:
+        active:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Active
+        attrs:
+          anyOf:
+          - additionalProperties:
+              anyOf:
+              - type: boolean
+              - type: integer
+              - type: string
+              - type: 'null'
+            type: object
+          - type: 'null'
+          title: Attrs
+        name:
+          anyOf:
+          - $ref: '#/components/schemas/LocalizedNameIn'
+          - type: 'null'
+      title: DictionaryItemPatch
+      type: object
+    DictionaryList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/Dictionary'
+          title: Items
+          type: array
+      required:
+      - items
+      title: DictionaryList
+      type: object
+    DictionaryOrderIn:
+      additionalProperties: false
+      properties:
+        codes:
+          items:
+            pattern: ^[a-z][a-z_]{0,31}$
+            type: string
+          maxItems: 500
+          minItems: 1
+          title: Codes
+          type: array
+      required:
+      - codes
+      title: DictionaryOrderIn
+      type: object
     DocumentOut:
       properties:
         client_id:
@@ -4110,9 +4297,17 @@ components:
       title: InboundMailArchiveIn
       type: object
     InboundMailAssist:
-      description: 'Подсказка помощника (по кнопке «Подсказать»): тип, суть, предложенное действие. Ничего сама
+      description: 'Подсказка помощника (по кнопке «Подсказать»): суть письма и тип. Ничего сама не делает;
 
-        не делает; `none` — не запрашивали, `off` — помощник выключен админом.'
+        `none`
+
+        — не
+
+        запрашивали, `off` — помощник выключен админом. Тип письма — `InboundMailItem.type` (справочник
+
+        «Типы входящих писем»); `kind` и `action` — устаревшие поля до MAIL-TYPES, у новых подсказок
+
+        `null`.'
       properties:
         action:
           anyOf:
@@ -4277,6 +4472,41 @@ components:
       - action
       title: InboundMailEvent
       type: object
+    InboundMailHandoverIn:
+      additionalProperties: false
+      properties:
+        user_id:
+          minimum: 1.0
+          title: User Id
+          type: integer
+      required:
+      - user_id
+      title: InboundMailHandoverIn
+      type: object
+    InboundMailHandoverTarget:
+      properties:
+        id:
+          title: Id
+          type: integer
+        name:
+          title: Name
+          type: string
+      required:
+      - id
+      - name
+      title: InboundMailHandoverTarget
+      type: object
+    InboundMailHandoverTargets:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/InboundMailHandoverTarget'
+          title: Items
+          type: array
+      required:
+      - items
+      title: InboundMailHandoverTargets
+      type: object
     InboundMailItem:
       properties:
         activity_at:
@@ -4374,6 +4604,11 @@ components:
           description: '«Новое (ответ в цепочке)»: клиент ответил на разобранное'
           title: Thread Reply
           type: boolean
+        type:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailType'
+          - type: 'null'
+          description: Тип письма из справочника; `null` — не определён
         unread:
           default: false
           description: Не прочитано этим сотрудником
@@ -4646,6 +4881,11 @@ components:
         too_large:
           title: Too Large
           type: boolean
+        type:
+          anyOf:
+          - $ref: '#/components/schemas/InboundMailType'
+          - type: 'null'
+          description: Тип письма из справочника; `null` — не определён
         unread:
           default: false
           description: Не прочитано этим сотрудником
@@ -4821,10 +5061,11 @@ components:
             - lead
             - replied
             - archived
+            - price
             type: string
           - type: 'null'
-          description: registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной;
-            `null` у писем, разобранных до W18A-P2-3
+          description: registered — ВХ, lead — лид или заметка, replied — ответ отправлен, archived — в архив с причиной,
+            price — прайс или КП поставщика загружен; `null` у писем, разобранных до W18A-P2-3
           title: Outcome
         reason:
           anyOf:
@@ -4880,6 +5121,61 @@ components:
           title: Takeover
           type: boolean
       title: InboundMailTakeIn
+      type: object
+    InboundMailType:
+      description: 'Тип письма в списке и карточке: название, тег и действие по умолчанию (основная кнопка
+
+        карточки).'
+      properties:
+        active:
+          description: 'Тип отключён: у письма остаётся, предлагать его больше не будем'
+          title: Active
+          type: boolean
+        code:
+          title: Code
+          type: string
+        color:
+          title: Color
+          type: string
+        default_action:
+          title: Default Action
+          type: string
+        icon:
+          title: Icon
+          type: string
+        name:
+          $ref: '#/components/schemas/LocalizedName'
+        source:
+          description: 'Кто выбрал: правило отправителя, помощник (человек подтверждает) или человек'
+          enum:
+          - rule
+          - ai
+          - manual
+          title: Source
+          type: string
+      required:
+      - code
+      - name
+      - color
+      - icon
+      - default_action
+      - active
+      - source
+      title: InboundMailType
+      type: object
+    InboundMailTypeIn:
+      additionalProperties: false
+      properties:
+        type_code:
+          anyOf:
+          - pattern: ^[a-z][a-z_]{0,31}$
+            type: string
+          - type: 'null'
+          description: Код типа или `null` — снять тип
+          title: Type Code
+      required:
+      - type_code
+      title: InboundMailTypeIn
       type: object
     InboundMailbox:
       description: Состояние приёма для подсказки в очереди и строки здоровья.
@@ -5651,6 +5947,45 @@ components:
       - tg_user_id
       title: LinkTelegram
       type: object
+    LocalizedName:
+      properties:
+        en:
+          title: En
+          type: string
+        ru:
+          title: Ru
+          type: string
+        uz:
+          title: Uz
+          type: string
+      required:
+      - ru
+      - uz
+      - en
+      title: LocalizedName
+      type: object
+    LocalizedNameIn:
+      additionalProperties: false
+      properties:
+        en:
+          default: ''
+          maxLength: 120
+          title: En
+          type: string
+        ru:
+          maxLength: 120
+          minLength: 1
+          title: Ru
+          type: string
+        uz:
+          default: ''
+          maxLength: 120
+          title: Uz
+          type: string
+      required:
+      - ru
+      title: LocalizedNameIn
+      type: object
     LocalizedText:
       additionalProperties: false
       properties:
@@ -5685,6 +6020,104 @@ components:
       - email
       - password
       title: LoginRequest
+      type: object
+    MailSenderRule:
+      properties:
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        created_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Кто создал (имя сотрудника)
+          title: Created By
+        id:
+          title: Id
+          type: integer
+        pattern:
+          description: Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами)
+          title: Pattern
+          type: string
+        type_code:
+          title: Type Code
+          type: string
+      required:
+      - id
+      - pattern
+      - type_code
+      - created_at
+      title: MailSenderRule
+      type: object
+    MailSenderRuleIn:
+      additionalProperties: false
+      properties:
+        mail_id:
+          anyOf:
+          - minimum: 1.0
+            type: integer
+          - type: 'null'
+          description: 'Письмо, из карточки которого создано правило: тип ставится и ему'
+          title: Mail Id
+        pattern:
+          maxLength: 255
+          minLength: 3
+          title: Pattern
+          type: string
+        type_code:
+          pattern: ^[a-z][a-z_]{0,31}$
+          title: Type Code
+          type: string
+      required:
+      - pattern
+      - type_code
+      title: MailSenderRuleIn
+      type: object
+    MailSenderRuleList:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MailSenderRule'
+          title: Items
+          type: array
+      required:
+      - items
+      title: MailSenderRuleList
+      type: object
+    MailSenderRuleOut:
+      properties:
+        applied:
+          description: Сколько открытых писем «Новые» получили тип по этому правилу
+          title: Applied
+          type: integer
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        created_by:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Кто создал (имя сотрудника)
+          title: Created By
+        id:
+          title: Id
+          type: integer
+        pattern:
+          description: Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами)
+          title: Pattern
+          type: string
+        type_code:
+          title: Type Code
+          type: string
+      required:
+      - id
+      - pattern
+      - type_code
+      - created_at
+      - applied
+      title: MailSenderRuleOut
       type: object
     MakeCustomer:
       properties:
@@ -7300,6 +7733,11 @@ components:
       - mail_handled
       - mail_not_returnable
       - mail_registering
+      - mail_type_name_taken
+      - mail_type_in_use
+      - mail_rule_exists
+      - mail_type_inactive
+      - mail_no_handover_target
       title: Reason
       type: string
     ReasonCount:
@@ -9556,7 +9994,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.19.0
+  version: 0.20.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -11466,6 +11904,217 @@ paths:
       summary: Retry Request
       tags:
       - clients
+  /api/v1/dictionaries:
+    get:
+      description: 'Справочники CRM: «Типы входящих писем» (`mail-types`) — поля вида `default_action`,
+
+        `color`, `icon`.'
+      operationId: list_dictionaries
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Dictionaries
+      tags:
+      - mail-types
+  /api/v1/dictionaries/{kind}:
+    get:
+      description: 'Значения справочника по порядку админа; `include_hidden` — с отключёнными и с признаком
+
+        `used`.'
+      operationId: list_dictionary_items
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      - in: query
+        name: include_hidden
+        required: false
+        schema:
+          default: false
+          title: Include Hidden
+          type: boolean
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Dictionary Items
+      tags:
+      - mail-types
+    post:
+      description: 'Новое значение: код создаёт CRM из названия; `attrs.default_action` обязательно (закрытый
+
+        список).'
+      operationId: create_dictionary_item
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemIn'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Dictionary Item
+      tags:
+      - mail-types
+  /api/v1/dictionaries/{kind}/order:
+    put:
+      operationId: reorder_dictionary_items
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryOrderIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Reorder Dictionary Items
+      tags:
+      - mail-types
+  /api/v1/dictionaries/{kind}/{code}:
+    delete:
+      description: 'Только неиспользованное значение: у писем или правил — 409 `mail_type_in_use` (скройте
+
+        его).'
+      operationId: delete_dictionary_item
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      - in: path
+        name: code
+        required: true
+        schema:
+          pattern: ^[a-z][a-z_]{0,31}$
+          title: Code
+          type: string
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Delete Dictionary Item
+      tags:
+      - mail-types
+    patch:
+      operationId: update_dictionary_item
+      parameters:
+      - in: path
+        name: kind
+        required: true
+        schema:
+          pattern: ^[a-z][a-z-]{0,31}$
+          title: Kind
+          type: string
+      - in: path
+        name: code
+        required: true
+        schema:
+          pattern: ^[a-z][a-z_]{0,31}$
+          title: Code
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemPatch'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Update Dictionary Item
+      tags:
+      - mail-types
   /api/v1/documents:
     get:
       operationId: list_documents
@@ -11823,6 +12472,8 @@ paths:
 
         теме;
 
+        `type` — только письма этого типа (код справочника «Типы входящих писем»);
+
         `counts` — числа вкладок в рамках прав сотрудника.'
       operationId: list_inbound_mail
       parameters:
@@ -11858,6 +12509,15 @@ paths:
             type: string
           - type: 'null'
           title: Q
+      - in: query
+        name: type
+        required: false
+        schema:
+          anyOf:
+          - pattern: ^[a-z][a-z_]{0,31}$
+            type: string
+          - type: 'null'
+          title: Type
       responses:
         '200':
           content:
@@ -11906,6 +12566,28 @@ paths:
       summary: Bulk Archive Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/handover-targets:
+    get:
+      description: 'Кому передать счёт: активные сотрудники, чья роль даёт подтверждать оплату.'
+      operationId: inbound_mail_handover_targets
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailHandoverTargets'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Inbound Mail Handover Targets
+      tags:
+      - mail-types
   /api/v1/inbound-mail/{mail_id}:
     get:
       description: 'Карточка письма: отправитель, адресаты (сотрудники по адресу), все письма записи, наши
@@ -12070,6 +12752,42 @@ paths:
       summary: Discard Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/handover:
+    post:
+      description: '«Передать бухгалтеру»: письмо «В работе» у выбранного сотрудника из `handover-targets`;
+
+        ведёт другой — 409 `mail_in_work_by_other`; нет такого коллеги — 409
+
+        `mail_no_handover_target`.'
+      operationId: handover_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailHandoverIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Handover Inbound Mail
+      tags:
+      - mail-types
   /api/v1/inbound-mail/{mail_id}/lead:
     post:
       description: '«Создать лид»: лид без ответственного во «Входящих» или заметка в открытом лиде с этим
@@ -12128,6 +12846,32 @@ paths:
       summary: Not Spam Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/price:
+    post:
+      description: '«Прайс загружен»: письмо «Разобрано» с итогом `price` (прайс человек загрузил в каталоге).'
+      operationId: supplier_price_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Supplier Price Inbound Mail
+      tags:
+      - mail-types
   /api/v1/inbound-mail/{mail_id}/read:
     post:
       description: Отметить прочитанным этим сотрудником (открыл карточку).
@@ -12262,6 +13006,34 @@ paths:
       summary: Reply Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/suspicious:
+    post:
+      description: '«В „Подозрительные“»: письмо уходит из очереди во вкладку «Подозрительные» («Не спам»
+
+        вернёт его).'
+      operationId: suspicious_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Suspicious Inbound Mail
+      tags:
+      - mail-types
   /api/v1/inbound-mail/{mail_id}/take:
     post:
       description: '«Взять в работу» (повтор своего — без изменений). Ведёт другой — 409
@@ -12298,6 +13070,42 @@ paths:
       summary: Take Inbound Mail
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/type:
+    put:
+      description: 'Сменить тип письма одним щелчком (`null` — снять); запись в журнал письма. Правило
+
+        отправителя и помощник этот выбор не перебивают. Отключённый тип выбрать нельзя — 409
+
+        `mail_type_inactive`.'
+      operationId: set_inbound_mail_type
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailTypeIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Set Inbound Mail Type
+      tags:
+      - mail-types
   /api/v1/inbox:
     get:
       description: 'Очередь работы с запиской передачи (CRM-06). Читает любой с `leads:read` (D1-1: директор
@@ -14563,6 +15371,87 @@ paths:
       summary: Lead Notes
       tags:
       - leads
+  /api/v1/mail-sender-rules:
+    get:
+      description: Правила «отправитель или домен → тип» по возрасту.
+      operationId: list_mail_sender_rules
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailSenderRuleList'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Mail Sender Rules
+      tags:
+      - mail-types
+    post:
+      description: 'Правило применяется к новым письмам до помощника и побеждает его. Письмо `mail_id` и
+
+        открытые «Новые» этого отправителя, где тип не выбирал человек, получают тип сразу. Шаблон
+
+        уже есть — 409 `mail_rule_exists`; тип отключён — 409 `mail_type_inactive`; не адрес и не
+
+        домен — 422.'
+      operationId: create_mail_sender_rule
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MailSenderRuleIn'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailSenderRuleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Mail Sender Rule
+      tags:
+      - mail-types
+  /api/v1/mail-sender-rules/{rule_id}:
+    delete:
+      description: 'Удалить правило: типы у уже полученных писем остаются.'
+      operationId: delete_mail_sender_rule
+      parameters:
+      - in: path
+        name: rule_id
+        required: true
+        schema:
+          minimum: 1
+          title: Rule Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Delete Mail Sender Rule
+      tags:
+      - mail-types
   /api/v1/me:
     get:
       operationId: me

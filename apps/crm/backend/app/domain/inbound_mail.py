@@ -6,13 +6,11 @@
 (`domain/mail_html.py`) и вложения по белому списку типов EDS
 (PDF, изображения, Office) с пределом размера и числа — остальные в `skipped` с причиной.
 
-Помощник (DECISIONS 2026-10-28, «код решает, модель предлагает»): модель возвращает только тип из
-минимального набора и суть; предложение действия по типу выбирает код (`SUGGESTED_ACTION`), действие
-подтверждает человек.
+Помощник (DECISIONS 2026-10-28, «код решает, модель предлагает»): типы писем и разбор ответа
+модели — `domain/mail_types.py` (типы — данные справочника), действие подтверждает человек.
 """
 
 import hashlib
-import json
 import mimetypes
 import re
 from collections.abc import Iterator
@@ -21,23 +19,12 @@ from datetime import datetime
 from email import message_from_bytes, policy
 from email.message import EmailMessage, MIMEPart
 from email.utils import getaddresses, parsedate_to_datetime
-from typing import Final, Literal, get_args
+from typing import Final, Literal
 
 from app.domain.mail_html import InlineImage, SafeHtml, html_text_parts, sanitize_html
 from app.domain.mail_text import MAX_TEXT_CHARS, normalize_text, split_quote
 
-Kind = Literal["buyer", "official", "supplier_doc", "other"]
-Action = Literal["register", "lead", "archive"]
 SkipReason = Literal["type", "size", "count"]
-
-KINDS: Final[tuple[Kind, ...]] = get_args(Kind)
-#: Предложение действия по типу письма — решает код, не модель.
-SUGGESTED_ACTION: Final[dict[Kind, Action]] = {
-    "buyer": "lead",
-    "official": "register",
-    "supplier_doc": "register",
-    "other": "archive",
-}
 
 # Белый список — типы, которые принимает EDS (`apps/eds/app/services/files.py`, ALLOWED):
 # вложение письма можно без перекодирования приложить к ВХ.
@@ -61,7 +48,6 @@ ALLOWED_TYPES: Final[frozenset[str]] = frozenset(
 MAX_FILE_BYTES: Final = 25 * 1024 * 1024  # как предел файла EDS
 MAX_FILES: Final = 20
 MAX_SUBJECT_CHARS: Final = 300
-SUMMARY_MAX_CHARS: Final = 300
 _INN: Final = re.compile(r"(?<!\d)(\d{9})(?!\d)")
 _CONTROL: Final = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _NAME_CONTROL: Final = re.compile(r"[\x00-\x1f\x7f/\\]")
@@ -267,95 +253,6 @@ def find_inns(text: str) -> list[str]:
         if value not in seen:
             seen.append(value)
     return seen[:5]
-
-
-@dataclass(frozen=True, slots=True)
-class AssistVerdict:
-    kind: Kind
-    summary: str
-    action: Action
-
-
-#: Как модели пишут тип письма (ru/en, разный регистр) → код. Сверено с `prompts/mail_assist.md`.
-KIND_SYNONYMS: Final[dict[str, Kind]] = {
-    "buyer": "buyer",
-    "customer": "buyer",
-    "client": "buyer",
-    "покупатель": "buyer",
-    "клиент": "buyer",
-    "official": "official",
-    "official_letter": "official",
-    "официальное": "official",
-    "официальное_письмо": "official",
-    "supplier_doc": "supplier_doc",
-    "supplier": "supplier_doc",
-    "supplier_document": "supplier_doc",
-    "invoice": "supplier_doc",
-    "поставщик": "supplier_doc",
-    "документ_поставщика": "supplier_doc",
-    "счёт_или_документ_поставщика": "supplier_doc",
-    "счет_или_документ_поставщика": "supplier_doc",
-    "other": "other",
-    "прочее": "other",
-    "другое": "other",
-    "spam": "other",
-    "спам": "other",
-}
-_FENCE: Final = re.compile(r"```[a-zA-Z]*\s*(.*?)```", re.DOTALL)
-_KIND_SEP: Final = re.compile(r"[\s\-]+")
-
-
-def _first_object(raw: str) -> tuple[dict[str, object] | None, str | None]:
-    """Первый JSON-объект ответа: без ограждений ``` и ```json, текст вокруг — прочь."""
-    fenced = _FENCE.search(raw)
-    text = fenced.group(1) if fenced else raw
-    decoder = json.JSONDecoder()
-    seen_json = False
-    for start, char in enumerate(text):
-        if char not in "{[":
-            continue
-        try:
-            value, _ = decoder.raw_decode(text, start)
-        except ValueError:
-            continue
-        seen_json = True
-        if isinstance(value, dict):
-            return value, None
-    return None, "no_object" if seen_json else "not_json"
-
-
-def _kind(value: object) -> Kind | None:
-    if not isinstance(value, str):
-        return None
-    key = _KIND_SEP.sub("_", value.strip().strip(".«»\"'").lower())
-    return KIND_SYNONYMS.get(key)
-
-
-def parse_assist_reason(raw: str | None) -> tuple[AssistVerdict | None, str | None]:
-    """Ответ модели → подсказка или причина отказа словом-кодом (в лог, без текста письма):
-    `not_json`, `no_object`, `unknown_kind=<значение>`, `empty_summary`."""
-    data, problem = _first_object(raw or "")
-    if data is None:
-        return None, problem
-    raw_kind = data.get("kind")
-    kind = _kind(raw_kind)
-    if kind is None:
-        shown = _CONTROL.sub("", str(raw_kind))[:32]
-        return None, f"unknown_kind={shown}"
-    summary = data.get("summary")
-    text = (
-        normalize_text(summary).replace("\n", " ")[:SUMMARY_MAX_CHARS].strip()
-        if isinstance(summary, str)
-        else ""
-    )
-    if not text:
-        return None, "empty_summary"
-    return AssistVerdict(kind, text, SUGGESTED_ACTION[kind]), None
-
-
-def parse_assist(raw: str | None) -> AssistVerdict | None:
-    """Ответ модели `{"kind": …, "summary": …}` → подсказка; неизвестный тип или мусор — None."""
-    return parse_assist_reason(raw)[0]
 
 
 def reply_subject(subject: str) -> str:

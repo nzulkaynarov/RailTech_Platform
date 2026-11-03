@@ -31,6 +31,7 @@ from app.api.v1 import (
     lead_attachments,
     lead_intake,
     leads,
+    mail_types,
     me,
     models_admin,
     platform_roles,
@@ -102,6 +103,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
+        # 0.20.0 (MAIL-TYPES): типы входящих писем — справочник `/dictionaries`, правила
+        # отправителя, итог `price`, новые подкоды Reason (`mail_type_*`, `mail_rule_exists`,
+        # `mail_no_handover_target`) — oasdiff считает новое значение enum ответа ломающим.
         # 0.19.0 (W18A-P2-3): общий ящик как обращение — статусы `in_work | registering | done` с
         # итогом, `view` вместо `status` в списке, «в работе», цепочки, адресаты To/Cc — новые
         # значения enum ответа и смена параметра списка oasdiff считает ломающими.
@@ -122,7 +126,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.19.0",
+        version="0.20.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -172,6 +176,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         external_services,
         models_admin,
         integrations,
+        mail_types,  # раньше inbound_mail: `/inbound-mail/handover-targets` не `{mail_id}`
         inbound_mail,
         bus,
         system_status,

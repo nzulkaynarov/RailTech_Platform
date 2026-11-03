@@ -192,6 +192,13 @@ class Reason(StrEnum):
     MAIL_NOT_RETURNABLE = "mail_not_returnable"
     # Регистрация ВХ из письма уже идёт (двойное нажатие, вторая вкладка): второго ВХ не будет.
     MAIL_REGISTERING = "mail_registering"
+    # Типы писем (MAIL-TYPES): название занято, тип уже у писем или правил, правило уже есть,
+    # некому передать.
+    MAIL_TYPE_NAME_TAKEN = "mail_type_name_taken"
+    MAIL_TYPE_IN_USE = "mail_type_in_use"
+    MAIL_RULE_EXISTS = "mail_rule_exists"
+    MAIL_TYPE_INACTIVE = "mail_type_inactive"
+    MAIL_NO_HANDOVER_TARGET = "mail_no_handover_target"
 
 
 class DomainError(Exception):

@@ -140,8 +140,10 @@ class InboundMailService:
         mail_view: views.View = "new",
         history: bool | None = None,
         q: str | None = None,
+        type_code: str | None = None,
     ) -> dto.InboundMailPage:
-        """`history`: `false` — без писем «из истории», `true` — только они (вкладка «Новые»)."""
+        """`history`: `false` — без писем «из истории», `true` — только они (вкладка «Новые»);
+        `type_code` — только письма этого типа."""
         now = datetime.now(UTC)
         on = await self._assist_on()
         async with self._sessions() as session:
@@ -154,6 +156,7 @@ class InboundMailService:
                 q=q,
                 assist_on=on,
                 now=now,
+                type_code=type_code,
             )
             state = await repo.last_mailbox(session)
         mailbox = dto.InboundMailbox(
@@ -246,7 +249,7 @@ class InboundMailService:
                 lead = await _new_lead(session, row, now, web_lead_sla.due_at(cfg, now), who)
                 lead_id, created = lead.id, True
             work.finish(row, "lead", who, now)
-            await record_decision(session, row, "lead", who.actor)
+            await record_decision(session, row, "create_lead", who.actor)
             row.lead_id = lead_id
             await audit.record(
                 session,
@@ -265,7 +268,7 @@ class InboundMailService:
             row = await work.lock(session, mail_id)
             await work.claim(session, row, who, now)
             work.finish(row, "archived", who, now)
-            await record_decision(session, row, "archive", who.actor)
+            await record_decision(session, row, "archive_mailing", who.actor)
             row.archive_reason = reason.strip()[:500]
             await audit.record(
                 session,
@@ -403,7 +406,7 @@ class InboundMailService:
             known = isinstance(user, int) and await users_repo.get(session, user) is not None
             row.handled_by = user if known and isinstance(user, int) else None
             who = audit.Actor(row.handled_by) if row.handled_by else audit.Actor.system()
-            await record_decision(session, row, "register", who)
+            await record_decision(session, row, "register_incoming", who)
             if newer_reply:  # клиент ответил, пока ВХ создавался: письмо не уходит из виду
                 row.status, row.thread_reply = "new", True
                 row.outcome = row.handled_by = row.handled_at = None

@@ -7,6 +7,7 @@ import type { InboundMailItemStatus } from "./inboundMailItemStatus";
 import type { InboundMailLink } from "./inboundMailLink";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailResult } from "./inboundMailResult";
+import type { InboundMailType } from "./inboundMailType";
 
 export interface InboundMailItem {
   /** Время последнего входящего письма записи */
@@ -40,6 +41,8 @@ export interface InboundMailItem {
   subject: string;
   /** «Новое (ответ в цепочке)»: клиент ответил на разобранное */
   thread_reply?: boolean;
+  /** Тип письма из справочника; `null` — не определён */
+  type?: InboundMailType | null;
   /** Не прочитано этим сотрудником */
   unread?: boolean;
 }

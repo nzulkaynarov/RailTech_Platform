@@ -13,6 +13,7 @@ import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailReply } from "./inboundMailReply";
 import type { InboundMailResult } from "./inboundMailResult";
 import type { InboundMailSkipped } from "./inboundMailSkipped";
+import type { InboundMailType } from "./inboundMailType";
 
 export interface InboundMailOut {
   /** Время последнего входящего письма записи */
@@ -67,6 +68,8 @@ export interface InboundMailOut {
   thread_reply?: boolean;
   to: InboundMailAddress[];
   too_large: boolean;
+  /** Тип письма из справочника; `null` — не определён */
+  type?: InboundMailType | null;
   /** Не прочитано этим сотрудником */
   unread?: boolean;
 }

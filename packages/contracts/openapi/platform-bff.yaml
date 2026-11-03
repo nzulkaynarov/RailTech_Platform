@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.38.0
+  version: 0.39.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -4328,6 +4328,11 @@ paths:
           in: query
           required: false
           schema: {type: string, maxLength: 100}
+        - name: type
+          in: query
+          required: false
+          description: Только письма этого типа (код справочника `mail-types`, MAIL-TYPES); счётчики вкладок от него не зависят
+          schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
       responses:
         '200':
           description: Готово
@@ -4335,6 +4340,29 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/InboundMailPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/handover-targets:
+    get:
+      tags: [inbound-mail]
+      operationId: listInboundMailHandoverTargets
+      summary: 'Входящая почта: кому передать счёт'
+      description: >-
+        CRM `GET /inbound-mail/handover-targets` (MAIL-TYPES): активные сотрудники, чья роль даёт подтверждать оплату
+        (раздел «Платежи» — полный; роли — данные, по названию роли код не ищет). Пусто — никто не назначен: экран
+        подсказывает «Настройки · Роли». Раздел `crm.leads.triage` (полный).
+      responses:
+        '200':
+          description: Кандидаты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailHandoverTargets'
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':
@@ -4687,6 +4715,126 @@ paths:
           $ref: '#/components/responses/InboundMailConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/type:
+    put:
+      tags: [inbound-mail]
+      operationId: setInboundMailType
+      summary: 'Входящая почта: сменить тип письма'
+      description: >-
+        CRM `PUT /inbound-mail/{id}/type` (MAIL-TYPES): человек выбирает тип из справочника «Типы входящих писем» одним
+        щелчком или снимает его (`type_code = null`). Запись в журнал письма; правило отправителя и помощник этот выбор
+        не перебивают. Письмо не берётся в работу и не закрывается. Раздел `crm.leads.triage` (полный). Отключённый тип —
+        409 `CONFLICT` (`details.reason = mail_type_inactive`); неизвестный — 422.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailTypeIn'
+      responses:
+        '204':
+          description: Тип записан
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /inbound-mail/{id}/price:
+    post:
+      tags: [inbound-mail]
+      operationId: markInboundMailPriceUploaded
+      summary: 'Входящая почта: «Прайс загружен»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/price` (MAIL-TYPES): прайс или КП поставщика человек загрузил в каталоге («Расчёт ·
+        Номенклатура и поставщики · Загрузка прайса»); письмо «Разобрано» с итогом `price` и уходит из «Новых». Раздел
+        `crm.leads.triage` (полный). Уже обработано — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '204':
+          description: Письмо разобрано
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/suspicious:
+    post:
+      tags: [inbound-mail]
+      operationId: moveInboundMailToSuspicious
+      summary: 'Входящая почта: «В Подозрительные»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/suspicious` (MAIL-TYPES): письмо уходит из очереди во вкладку «Подозрительные», оттуда
+        его можно вернуть («Не спам») или убрать. Ящик на сервере не меняется. Раздел `crm.leads.triage` (полный).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      responses:
+        '204':
+          description: Письмо в «Подозрительных»
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /inbound-mail/{id}/handover:
+    post:
+      tags: [inbound-mail]
+      operationId: handoverInboundMail
+      summary: 'Входящая почта: «Передать бухгалтеру»'
+      description: >-
+        CRM `POST /inbound-mail/{id}/handover` (MAIL-TYPES): письмо «В работе» у выбранного сотрудника из
+        `GET /inbound-mail/handover-targets` — из «Новых» оно уходит, у сотрудника появляется в «Моих задачах». Нет такого
+        коллеги — 409 `CONFLICT` (`details.reason = mail_no_handover_target`). Раздел `crm.leads.triage` (полный).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/InboundMailId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InboundMailHandoverIn'
+      responses:
+        '204':
+          description: Письмо передано
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
 
   /inbound-mail/{id}/reply:
     post:
@@ -8152,13 +8300,95 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /mail-sender-rules:
+    get:
+      tags: [inbound-mail]
+      operationId: listMailSenderRules
+      summary: 'Типы писем · правила отправителя'
+      description: >-
+        CRM `GET /mail-sender-rules` (MAIL-TYPES): «отправитель или домен → тип» по возрасту. Читает первая линия
+        (`crm.leads.triage`) и администратор (`admin`, чтение).
+      responses:
+        '200':
+          description: Правила
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailSenderRuleList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [inbound-mail]
+      operationId: createMailSenderRule
+      summary: 'Типы писем · новое правило отправителя'
+      description: >-
+        CRM `POST /mail-sender-rules`: новые письма этого адреса или домена получают тип до помощника, правило побеждает ИИ.
+        Письмо `mail_id` (создание из карточки) и открытые «Новые» этого отправителя, где тип не выбирал человек, получают
+        тип сразу (`applied`). Только администратор (`admin: full`). Шаблон уже есть — 409 `CONFLICT`
+        (`mail_rule_exists`); тип отключён — 409 (`mail_type_inactive`); не адрес и не домен — 422.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MailSenderRuleIn'
+      responses:
+        '201':
+          description: Правило создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailSenderRuleOut'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/InboundMailConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /mail-sender-rules/{id}:
+    delete:
+      tags: [inbound-mail]
+      operationId: deleteMailSenderRule
+      summary: 'Типы писем · удалить правило отправителя'
+      description: >-
+        CRM `DELETE /mail-sender-rules/{id}`: типы уже полученных писем остаются. Только администратор (`admin: full`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '204':
+          description: Правило удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /dictionaries:
     get:
       tags: [dictionaries]
       operationId: listDictionaries
       summary: 'Справочники · каталог'
       description: >-
-        Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот),
+        Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот,
+        `mail` — типы входящих писем, MAIL-TYPES),
         название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin`
         — чтение. Домен не ответил — 503.
       responses:
@@ -12235,7 +12465,7 @@ components:
       name: kind
       in: path
       required: true
-      description: Вид справочника (`letter-kinds`, `receipt-methods`)
+      description: Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`)
       schema: {type: string, pattern: '^[a-z][a-z-]{0,31}$'}
     DictionaryCodePath:
       name: code
@@ -12451,7 +12681,8 @@ components:
     InboundMailConflict:
       description: >-
         409 `CONFLICT` — письмо уже в работе у другого (`details.reason = mail_in_work_by_other`, `details.assignee_name`,
-        `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), почта не
+        `details.assigned_at`), уже разобрано (`mail_handled`), письмо уже регистрируется (`mail_registering`), не возвращается в «Новые» (`mail_not_returnable`), тип отключён (`mail_type_inactive`), правило уже есть (`mail_rule_exists`),
+        некому передать (`mail_no_handover_target`), почта не
         настроена (`smtp_not_configured`) или помощник выключен (`assist_disabled`)
       content:
         application/json:
@@ -19404,10 +19635,22 @@ components:
       description: Дополнительное поле значения (поведение — код, значение — данные)
       properties:
         key: {type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [due_days]}
-        type: {type: string, enum: [boolean, integer]}
+        type: {type: string, enum: [boolean, integer, choice]}
         name: {$ref: '#/components/schemas/LocalizedName'}
         minimum: {type: [integer, 'null']}
         maximum: {type: [integer, 'null']}
+        options:
+          type: [array, 'null']
+          description: Допустимые значения `type = choice` — закрытый список кода (MAIL-TYPES); у остальных полей нет
+          items: {$ref: '#/components/schemas/DictionaryAttrOption'}
+
+    DictionaryAttrOption:
+      type: object
+      additionalProperties: false
+      required: [value, name]
+      properties:
+        value: {type: string, examples: [create_lead]}
+        name: {$ref: '#/components/schemas/LocalizedName'}
 
     Dictionary:
       type: object
@@ -19415,8 +19658,8 @@ components:
       required: [kind, owner, area, name, closed, attrs]
       properties:
         kind: {type: string, pattern: '^[a-z][a-z-]{0,31}$', examples: [letter-kinds]}
-        owner: {type: string, enum: [eds], description: Домен-владелец значений}
-        area: {type: string, enum: [documents], description: Область экрана (`documents` — документооборот)}
+        owner: {type: string, enum: [eds, crm], description: Домен-владелец значений}
+        area: {type: string, enum: [documents, mail], description: 'Область экрана (`documents` — документооборот, `mail` — входящая почта)'}
         name: {$ref: '#/components/schemas/LocalizedName'}
         closed: {type: boolean, description: Закрытый список поведения — только переименовать и переставить}
         attrs:
@@ -19434,9 +19677,11 @@ components:
 
     DictionaryAttrValues:
       type: object
-      description: Значения полей `attrs` (`urgent`, `due_days` у видов документа); `null` — не задано
+      description: >-
+        Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем —
+        строки из `options`); `null` — не задано
       additionalProperties:
-        type: [boolean, integer, 'null']
+        type: [boolean, integer, string, 'null']
 
     DictionaryItem:
       type: object
@@ -19711,8 +19956,8 @@ components:
         done — Разобрано (итог — `result`); spam — Подозрительные
     InboundMailOutcome:
       type: string
-      enum: [registered, lead, replied, archived]
-      description: 'Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной'
+      enum: [registered, lead, replied, archived, price]
+      description: 'Итог «Разобрано»: ВХ, лид (или заметка в лиде), ответ отправлен, архив с причиной, прайс поставщика загружен'
     InboundMailAssist:
       type: object
       additionalProperties: false
@@ -19728,9 +19973,92 @@ components:
           description: >-
             none — не запрашивали (подсказка только по кнопке «Подсказать», решение юриста 2026-11-02); done — есть;
             unavailable — модель недоступна (разберите вручную, можно повторить); off — помощник выключен администратором
-        kind: {type: [string, 'null'], enum: [buyer, official, supplier_doc, other, null]}
+        kind: {type: [string, 'null'], enum: [buyer, official, supplier_doc, other, null], description: 'Устарело: только у подсказок до MAIL-TYPES; тип письма — `InboundMailItem.type`'}
         summary: {type: [string, 'null'], maxLength: 300}
-        action: {type: [string, 'null'], enum: [register, lead, archive, null], description: 'Предложение по типу (выбирает код)'}
+        action: {type: [string, 'null'], enum: [register, lead, archive, null], description: 'Устарело: только у подсказок до MAIL-TYPES; действие — `type.default_action`'}
+    InboundMailType:
+      type: object
+      additionalProperties: false
+      required: [code, name, color, icon, default_action, active, source]
+      description: >-
+        Тип письма (MAIL-TYPES): тег в списке и карточке; `default_action` — что делает основная кнопка карточки
+        (закрытый список кода); отключённый тип у старого письма остаётся
+      properties:
+        code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        color: {type: string, enum: [blue, green, gold, red, purple, cyan, default]}
+        icon: {type: string, enum: [mail, team, calendar, file, wallet, bank, notification, stop]}
+        default_action:
+          type: string
+          enum: [register_incoming, create_lead, supplier_price, to_accountant, archive_mailing, reply_template, suspicious]
+        active: {type: boolean}
+        source:
+          type: string
+          enum: [rule, ai, manual]
+          description: 'Кто выбрал тип: правило отправителя, помощник (человек подтверждает) или человек'
+    InboundMailTypeIn:
+      type: object
+      additionalProperties: false
+      required: [type_code]
+      properties:
+        type_code: {type: [string, 'null'], pattern: '^[a-z][a-z_]{0,31}$', description: Код типа; `null` - снять тип}
+    InboundMailHandoverIn:
+      type: object
+      additionalProperties: false
+      required: [user_id]
+      properties:
+        user_id: {type: integer, minimum: 1}
+    InboundMailHandoverTargets:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name]
+            properties:
+              id: {type: integer}
+              name: {type: string}
+    MailSenderRule:
+      type: object
+      additionalProperties: false
+      required: [id, pattern, type_code, created_at, created_by]
+      properties:
+        id: {type: integer}
+        pattern: {type: string, description: 'Адрес `ivan@firma.uz` или домен `firma.uz` (с поддоменами), нижний регистр'}
+        type_code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        created_at: {type: string, format: date-time}
+        created_by: {type: [string, 'null'], description: Кто создал}
+    MailSenderRuleList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/MailSenderRule'}
+    MailSenderRuleIn:
+      type: object
+      additionalProperties: false
+      required: [pattern, type_code]
+      properties:
+        pattern: {type: string, minLength: 3, maxLength: 255, description: 'Адрес или домен; `*@soliq.uz`, `@soliq.uz` и `soliq.uz` - одно и то же'}
+        type_code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        mail_id: {type: [integer, 'null'], minimum: 1, description: 'Письмо, из карточки которого создано правило: тип ставится и ему'}
+    MailSenderRuleOut:
+      type: object
+      additionalProperties: false
+      required: [id, pattern, type_code, created_at, created_by, applied]
+      properties:
+        id: {type: integer}
+        pattern: {type: string}
+        type_code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        created_at: {type: string, format: date-time}
+        created_by: {type: [string, 'null']}
+        applied: {type: integer, minimum: 0, description: 'Сколько открытых писем «Новые» получили тип по правилу'}
     InboundMailLink:
       type: object
       additionalProperties: false
@@ -19773,7 +20101,7 @@ components:
       type: object
       additionalProperties: false
       required: [id, status, from_email, from_name, subject, received_at, sent_at, activity_at, preview, attachments_count,
-        assist, client, lead, from_history, assignee, assigned_at, personal, thread_reply, unread, messages_count, eds_waiting,
+        assist, type, client, lead, from_history, assignee, assigned_at, personal, thread_reply, unread, messages_count, eds_waiting,
         result]
       properties:
         id: {type: integer}
@@ -19787,6 +20115,11 @@ components:
         preview: {type: string, maxLength: 200}
         attachments_count: {type: integer, minimum: 0}
         assist: {$ref: '#/components/schemas/InboundMailAssist'}
+        type:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailType'
+            - type: 'null'
+          description: Тип письма из справочника «Типы входящих писем»; `null` — не определён
         client:
           oneOf:
             - $ref: '#/components/schemas/InboundMailLink'
@@ -19932,7 +20265,7 @@ components:
       additionalProperties: false
       description: Карточка письма общего ящика
       required: [id, status, from_email, from_name, subject, received_at, sent_at, activity_at, preview, attachments_count,
-        assist, client, lead, from_history, assignee, assigned_at, personal, thread_reply, unread, messages_count, eds_waiting,
+        assist, type, client, lead, from_history, assignee, assigned_at, personal, thread_reply, unread, messages_count, eds_waiting,
         result, to, cc, text, attachments, skipped, too_large, inns, messages, replies, journal, reply_all_copy,
         personal_label, reply_to, reply_options]
       properties:
@@ -19947,6 +20280,11 @@ components:
         preview: {type: string, maxLength: 200}
         attachments_count: {type: integer, minimum: 0}
         assist: {$ref: '#/components/schemas/InboundMailAssist'}
+        type:
+          oneOf:
+            - $ref: '#/components/schemas/InboundMailType'
+            - type: 'null'
+          description: Тип письма из справочника «Типы входящих писем»; `null` — не определён
         client:
           oneOf:
             - $ref: '#/components/schemas/InboundMailLink'

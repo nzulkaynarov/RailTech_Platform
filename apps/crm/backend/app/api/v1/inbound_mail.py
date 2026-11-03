@@ -16,6 +16,7 @@ from fastapi.responses import Response
 
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac, require
 from app.domain.errors import PasswordChangeRequiredError
+from app.domain.mail_types import CODE_PATTERN
 from app.repositories.inbound_mail_views import View
 from app.schemas.inbound_mail import (
     ImapCheckOut,
@@ -74,6 +75,7 @@ async def list_inbound_mail(
     view: Annotated[View, Query()] = "new",
     history: Annotated[bool | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=100)] = None,
+    type: Annotated[str | None, Query(pattern=CODE_PATTERN)] = None,
 ) -> InboundMailPage:
     """Очередь «Входящая почта» по представлению (до 200, новые сверху) и состояние приёма:
     `new` — Новые, `mine` — мои в работе, `in_work` — все в работе, `done` — Разобранные (с итогом),
@@ -82,8 +84,9 @@ async def list_inbound_mail(
     «из истории» и мои в работе. `mailbox.configured = false` — приём не настроен. `history=false` —
     без писем «из истории» (за последние 3 дня), `true` — только они; `q` — поиск по отправителю и
     теме;
+    `type` — только письма этого типа (код справочника «Типы входящих писем»);
     `counts` — числа вкладок в рамках прав сотрудника."""
-    return await container.inbound_mail.page(access, view, history, q)
+    return await container.inbound_mail.page(access, view, history, q, type)
 
 
 @router.get("/inbound-mail/{mail_id}", response_model=InboundMailOut)

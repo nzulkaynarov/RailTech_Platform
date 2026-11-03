@@ -49,7 +49,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base, TimestampMixin
 
 MAIL_STATUSES = ("new", "in_work", "registering", "done", "spam")
-MAIL_OUTCOMES = ("registered", "lead", "replied", "archived")
+MAIL_OUTCOMES = ("registered", "lead", "replied", "archived", "price")
 IMPORT_STATUSES = ("running", "done", "error")
 ASSIST_STATUSES = ("none", "done", "unavailable")
 
@@ -61,10 +61,14 @@ class InboundMail(TimestampMixin, Base):
             "status IN ('new', 'in_work', 'registering', 'done', 'spam')", name="status"
         ),
         CheckConstraint(
-            "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived')",
+            "outcome IS NULL OR outcome IN ('registered', 'lead', 'replied', 'archived', 'price')",
             name="outcome",
         ),
         CheckConstraint("assist_status IN ('none', 'done', 'unavailable')", name="assist_status"),
+        CheckConstraint(
+            "type_source IS NULL OR type_source IN ('rule', 'ai', 'manual')", name="type_source"
+        ),
+        Index("ix_inbound_mail_type_code", "type_code"),
         Index("uq_inbound_mail_message_id", "message_id", unique=True),
         Index("ix_inbound_mail_status_activity", "status", "activity_at"),
         Index("ix_inbound_mail_assignee_status", "assignee_id", "status"),
@@ -111,9 +115,11 @@ class InboundMail(TimestampMixin, Base):
     from_history: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     # Подсказка — только по кнопке «Подсказать» (юрист 2026-11-02): `none` — не запрашивали.
     assist_status: Mapped[str] = mapped_column(String(16), nullable=False, server_default="none")
+    # Устарело (до MAIL-TYPES — один из четырёх кодов); тип письма — `type_code`.
     assist_kind: Mapped[str | None] = mapped_column(String(16))
     assist_summary: Mapped[str | None] = mapped_column(String(300))
-    assist_action: Mapped[str | None] = mapped_column(String(16))
+    # Действие по умолчанию типа, который предложил помощник (код из `domain/mail_types.ACTIONS`).
+    assist_action: Mapped[str | None] = mapped_column(String(32))
     assist_trace_id: Mapped[str | None] = mapped_column(String(64))  # трасса Langfuse для оценки
     # Итог: ВХ в EDS (номер — из события EDS), лид, причина архива; кто и когда.
     eds_letter_id: Mapped[str | None] = mapped_column(String(64))
@@ -127,6 +133,11 @@ class InboundMail(TimestampMixin, Base):
     )
     handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     outcome: Mapped[str | None] = mapped_column(String(16))
+    # Тип письма (MAIL-TYPES): код справочника `mail_types` строкой — отключённый и удалённый тип
+    # у старого письма
+    # остаётся; `type_source` — кто выбрал: правило отправителя, помощник или человек.
+    type_code: Mapped[str | None] = mapped_column(String(32))
+    type_source: Mapped[str | None] = mapped_column(String(8))
     # «В работе у …» (Help Scout «assigned to»): кто и с какого времени; `registering_at` — ВХ
     # создаётся.
     assignee_id: Mapped[int | None] = mapped_column(

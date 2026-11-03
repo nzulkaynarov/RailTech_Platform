@@ -12,6 +12,7 @@ from app.models import (  # noqa: F401
     integrations,
     kb,
     leads,
+    mail_types,
     notices,
     platform_roles,
     qualification,

@@ -154,7 +154,7 @@ async def test_lead_and_assist_get_the_clean_text_only(stand: Stand) -> None:
     assert "цитата" not in (lead.need_summary or "")
 
     other = await _store_second(stand)
-    model = FakeModel('{"kind": "buyer", "summary": "Покупатель берёт шпалы"}')
+    model = FakeModel('{"type": "client_request", "summary": "Покупатель берёт шпалы"}')
     await InboundMailAssist(stand.sessions, stand.settings, model).suggest(who, other)
     prompt = model.prompts[0]
     assert "Берём 10 шпал" in prompt

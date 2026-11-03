@@ -1,0 +1,487 @@
+"""Типы входящих писем (MAIL-TYPES) на Postgres: справочник, правила, помощник, действия.
+
+IMAP — фейковый сервер; модель — подставная (платных вызовов нет); адреса и тексты вымышленные.
+"""
+
+from collections.abc import Iterator
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+from pydantic import SecretStr
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.config import Settings
+from app.domain.errors import ConflictError
+from app.main import create_app
+from app.models.auth import AuditLog
+from app.models.inbound_mail import InboundMail
+from app.models.mail_types import MailType
+from app.services.inbound_mail import InboundMailService
+from app.services.inbound_mail_assist import InboundMailAssist
+from tests.fake_imap import FakeImapServer
+from tests.integration.test_inbound_mail import (
+    BUCKET,
+    SECRETS_KEY,
+    FakeModel,
+    Stand,
+    _one_mail,
+    _staff,
+)
+
+pytestmark = pytest.mark.integration
+
+TAX = "info@soliq.example"
+
+
+@pytest.fixture
+def server() -> Iterator[FakeImapServer]:
+    with FakeImapServer() as running:
+        yield running
+
+
+@pytest.fixture
+def stand(sessions: async_sessionmaker[AsyncSession], server: FakeImapServer) -> Stand:
+    return Stand(sessions, server)
+
+
+@pytest.fixture
+def client(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings, server: FakeImapServer
+) -> Iterator[tuple[TestClient, Stand]]:
+    settings = live_settings.model_copy(update={"secrets_key": SecretStr(SECRETS_KEY)})
+    app = create_app(settings)
+    with TestClient(app) as test_client:
+        container = app.state.container
+        stand = Stand(sessions, server, container.settings_service)
+        container.__dict__["inbound_mail"] = InboundMailService(
+            sessions,
+            container.settings_service,
+            container.mail_service,
+            stand.storage,
+            BUCKET,
+            container.imap_connector.configured,
+        )
+        yield test_client, stand
+
+
+async def _types(stand: Stand) -> dict[str, MailType]:
+    async with stand.sessions() as session:
+        return {t.code: t for t in (await session.scalars(select(MailType))).all()}
+
+
+async def _row(stand: Stand, mail_id: int) -> InboundMail:
+    async with stand.sessions() as session:
+        row = await session.get(InboundMail, mail_id)
+    assert row is not None
+    return row
+
+
+async def _hide(stand: Stand, code: str) -> None:
+    async with stand.sessions() as session, session.begin():
+        await session.execute(update(MailType).where(MailType.code == code).values(active=False))
+
+
+# --- стартовый набор -------------------------------------------------------------------------
+
+
+async def test_seed_has_eight_types_with_closed_actions(stand: Stand) -> None:
+    types = await _types(stand)
+    assert set(types) == {
+        "client_request",
+        "cooperation",
+        "meeting",
+        "supplier_price",
+        "supplier_invoice",
+        "official",
+        "mailing",
+        "spam",
+    }
+    assert {t.code: t.default_action for t in types.values()} == {
+        "client_request": "create_lead",
+        "cooperation": "register_incoming",
+        "meeting": "reply_template",
+        "supplier_price": "supplier_price",
+        "supplier_invoice": "to_accountant",
+        "official": "register_incoming",
+        "mailing": "archive_mailing",
+        "spam": "suspicious",
+    }
+    assert all(t.active and t.name_uz and t.name_en for t in types.values())
+
+
+# --- классификация берёт типы из справочника -------------------------------------------------
+
+
+async def test_assist_prompt_lists_only_active_types_from_the_dictionary(stand: Stand) -> None:
+    await _hide(stand, "mailing")
+    mail_id = await _one_mail(stand)
+    model = FakeModel('{"type": "mailing", "summary": "Реклама шпал"}')
+    out = await InboundMailAssist(stand.sessions, stand.settings, model).suggest(
+        await stand.principal(), mail_id
+    )
+    prompt = model.prompts[0]
+    block = prompt.rsplit("<types>", 1)[1].split("</types>")[0]
+    assert "`client_request`" in block
+    assert "`mailing`" not in block, "отключённый тип модели не предлагается"
+    assert "Рассылка" not in block
+    # модель всё равно назвала отключённый тип: письмо без типа, суть сохранена
+    row = await _row(stand, mail_id)
+    assert (out.status, out.summary) == ("done", "Реклама шпал")
+    assert (row.type_code, row.type_source, row.assist_action) == (None, None, None)
+
+
+async def test_assist_type_is_taken_from_renamed_dictionary_value(stand: Stand) -> None:
+    async with stand.sessions() as session, session.begin():
+        await session.execute(
+            update(MailType)
+            .where(MailType.code == "client_request")
+            .values(name_ru="Заказ покупателя", default_action="supplier_price")
+        )
+    mail_id = await _one_mail(stand)
+    model = FakeModel('{"type": "Заказ покупателя", "summary": "Хотят шпалы"}')
+    await InboundMailAssist(stand.sessions, stand.settings, model).suggest(
+        await stand.principal(), mail_id
+    )
+    row = await _row(stand, mail_id)
+    assert (row.type_code, row.type_source) == ("client_request", "ai")
+    assert row.assist_action == "supplier_price", "действие — из данных справочника, не из кода"
+
+
+# --- правило отправителя побеждает ИИ --------------------------------------------------------
+
+
+async def _add_rule(stand: Stand, pattern: str, code: str, mail_id: int | None = None) -> Any:
+    from app.schemas.mail_types import MailSenderRuleIn
+    from app.services.mail_types import MailTypesService
+
+    return await MailTypesService(stand.sessions).add_rule(
+        await stand.principal(), MailSenderRuleIn(pattern=pattern, type_code=code, mail_id=mail_id)
+    )
+
+
+async def test_domain_rule_sets_type_on_arrival_and_beats_the_model(stand: Stand) -> None:
+    await _add_rule(stand, "*@soliq.example", "official")
+    await stand.configure()
+    from tests.integration.test_inbound_mail import _raw
+
+    stand.server.box.add(1, _raw(1, sender=TAX))
+    stand.server.box.add(2, _raw(2, sender="shop@other.example"))
+    await stand.ingest.poll()
+    first, second = await stand.mails()
+    assert (first.type_code, first.type_source) == ("official", "rule")
+    assert (second.type_code, second.type_source) == (None, None)
+
+    model = FakeModel('{"type": "client_request", "summary": "Просят КП"}')
+    assist = InboundMailAssist(stand.sessions, stand.settings, model)
+    await assist.suggest(await stand.principal(), first.id)
+    await assist.suggest(await stand.principal(), second.id)
+    first, second = await _row(stand, first.id), await _row(stand, second.id)
+    assert (first.type_code, first.type_source) == ("official", "rule"), "правило сильнее ИИ"
+    assert first.assist_action == "create_lead", "что сказал ИИ — в подсказке, но тип прежний"
+    assert (second.type_code, second.type_source) == ("client_request", "ai")
+
+
+async def test_rule_of_hidden_type_is_silent(stand: Stand) -> None:
+    await _add_rule(stand, "soliq.example", "official")
+    await _hide(stand, "official")
+    mail_id = await _one_mail(stand, sender=TAX)
+    assert (await _row(stand, mail_id)).type_code is None
+
+
+async def test_rule_from_card_types_this_mail_and_open_new_ones(stand: Stand) -> None:
+    from tests.integration.test_inbound_mail import _raw
+
+    await stand.configure()
+    for n in (1, 2, 3):
+        stand.server.box.add(n, _raw(n, sender=f"u{n}@soliq.example"))
+    stand.server.box.add(4, _raw(4, sender="other@elsewhere.example"))
+    await stand.ingest.poll()
+    one, two, three, four = await stand.mails()
+    who = await stand.principal()
+    # третье письмо человек уже разметил сам — правило его не трогает
+    await stand.actions().set_type(who, three.id, "cooperation")
+
+    out = await _add_rule(stand, "@Soliq.Example", "official", mail_id=one.id)
+
+    assert (out.pattern, out.applied) == ("soliq.example", 2)
+    types = {m.id: (m.type_code, m.type_source) for m in await stand.mails()}
+    assert types[one.id] == ("official", "rule")
+    assert types[two.id] == ("official", "rule")
+    assert types[three.id] == ("cooperation", "manual")
+    assert types[four.id] == (None, None)
+
+
+async def test_rule_validation(stand: Stand) -> None:
+    from app.domain.errors import ValidationFailedError
+
+    await _add_rule(stand, "soliq.example", "official")
+    with pytest.raises(ConflictError):
+        await _add_rule(stand, "*@SOLIQ.example", "spam")
+    with pytest.raises(ValidationFailedError):
+        await _add_rule(stand, "не адрес", "official")
+    with pytest.raises(ValidationFailedError):
+        await _add_rule(stand, "x.example", "no_such_type")
+    await _hide(stand, "mailing")
+    with pytest.raises(ConflictError):
+        await _add_rule(stand, "news.example", "mailing")
+
+
+# --- человек меняет тип — журнал -------------------------------------------------------------
+
+
+async def test_human_type_change_is_journaled_and_beats_ai_and_rule(stand: Stand) -> None:
+    mail_id = await _one_mail(stand, sender=TAX)
+    who = await stand.principal()
+    await stand.actions().set_type(who, mail_id, "meeting")
+    row = await _row(stand, mail_id)
+    assert (row.type_code, row.type_source, row.status) == ("meeting", "manual", "new")
+
+    model = FakeModel('{"type": "official", "summary": "Письмо"}')
+    await InboundMailAssist(stand.sessions, stand.settings, model).suggest(who, mail_id)
+    assert (await _row(stand, mail_id)).type_code == "meeting", "выбор человека ИИ не перебивает"
+
+    await stand.actions().set_type(who, mail_id, None)
+    row = await _row(stand, mail_id)
+    assert (row.type_code, row.type_source) == (None, None)
+
+    async with stand.sessions() as session:
+        entries = (
+            await session.scalars(select(AuditLog).where(AuditLog.action == "inbound_mail.type"))
+        ).all()
+    assert [(e.before, e.after) for e in entries] == [
+        ({"type": None}, {"type": "meeting", "type_name": "Приглашение на встречу"}),
+        ({"type": "meeting"}, {"type": None, "type_name": "—"}),
+    ]
+    assert all(e.actor_user_id == who.user_id for e in entries)
+    card = await stand.service().get(await stand.clerk(), mail_id)
+    assert [(e.action, e.detail) for e in card.journal if e.action == "type"] == [
+        ("type", "Приглашение на встречу"),
+        ("type", "—"),
+    ]
+
+
+async def test_cannot_pick_hidden_or_unknown_type(stand: Stand) -> None:
+    from app.domain.errors import ValidationFailedError
+
+    mail_id = await _one_mail(stand)
+    who = await stand.principal()
+    await _hide(stand, "spam")
+    with pytest.raises(ConflictError):
+        await stand.actions().set_type(who, mail_id, "spam")
+    with pytest.raises(ValidationFailedError):
+        await stand.actions().set_type(who, mail_id, "nope")
+
+
+# --- оформленные письма не висят во входящих -------------------------------------------------
+
+
+async def _new_ids(stand: Stand) -> list[int]:
+    page = await stand.service().page(await stand.clerk(), "new")
+    return [i.id for i in page.items]
+
+
+async def test_done_actions_remove_mail_from_new_and_counts(stand: Stand) -> None:
+    from tests.integration.test_inbound_mail import _raw
+
+    await stand.configure()
+    for n in range(1, 5):
+        stand.server.box.add(n, _raw(n))
+    await stand.ingest.poll()
+    ids = [m.id for m in await stand.mails()]
+    who = await stand.principal()
+    assert await _new_ids(stand) == sorted(ids, reverse=True)
+
+    await stand.service().create_lead(who, ids[0])
+    await stand.service().archive(who, ids[1], "рассылка")
+    await stand.actions().supplier_price(who, ids[2])
+    await stand.actions().suspicious(who, ids[3])
+
+    assert await _new_ids(stand) == [], "оформленные письма во «Входящих» не висят"
+    page = await stand.service().page(await stand.clerk(), "done")
+    outcomes = {i.id: i.result.outcome for i in page.items if i.result}
+    assert outcomes == {ids[0]: "lead", ids[1]: "archived", ids[2]: "price"}
+    assert page.counts.new == 0
+    assert page.counts.done == 3
+    assert page.counts.spam == 1
+    assert (await stand.service().page(await stand.clerk(), "spam")).items[0].id == ids[3]
+    assert (await stand.service().page(await stand.clerk(), "all")).total == 3
+
+
+async def test_supplier_price_closes_mail_with_price_outcome(stand: Stand) -> None:
+    mail_id = await _one_mail(stand)
+    who = await stand.principal()
+    await InboundMailAssist(
+        stand.sessions, stand.settings, FakeModel('{"type": "supplier_price", "summary": "Прайс"}')
+    ).suggest(who, mail_id)
+    await stand.actions().supplier_price(who, mail_id)
+    row = await _row(stand, mail_id)
+    assert (row.status, row.outcome, row.handled_by) == ("done", "price", who.user_id)
+    with pytest.raises(ConflictError):
+        await stand.actions().supplier_price(who, mail_id)
+    async with stand.sessions() as session:
+        decision = (
+            await session.scalars(
+                select(AuditLog).where(AuditLog.action == "ai.mail_assist.decision")
+            )
+        ).one()
+    assert decision.after is not None
+    assert (decision.after["decision"], decision.after["action"]) == ("accepted", "supplier_price")
+
+
+async def test_handover_goes_to_a_payment_confirming_colleague_only(
+    stand: Stand, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    from app.security.principal import Principal
+    from tests.integration.crm_helpers import make_user
+
+    mail_id = await _one_mail(stand)
+    who = await stand.principal()
+    assert (await stand.actions().handover_targets()).items == []
+    with pytest.raises(ConflictError):  # некому передать: ни одна роль не подтверждает оплату
+        await stand.actions().handover(who, mail_id, who.user_id)
+
+    account, _ = await make_user(sessions, "acc@railtech.uz", ["viewer"])
+    async with sessions() as session, session.begin():
+        from app.models.platform_roles import PlatformRole, UserPlatformRole
+
+        role = (
+            await session.scalars(select(PlatformRole).where(PlatformRole.code == "tpl:ACCOUNTANT"))
+        ).one()
+        session.add(UserPlatformRole(user_id=account.id, role_id=role.id))
+    targets = (await stand.actions().handover_targets()).items
+    assert [t.id for t in targets] == [account.id]
+
+    with pytest.raises(ConflictError):  # коллега без права подтверждать оплату — не адресат
+        await stand.actions().handover(who, mail_id, who.user_id)
+    await stand.actions().handover(who, mail_id, account.id)
+
+    row = await _row(stand, mail_id)
+    assert (row.status, row.assignee_id) == ("in_work", account.id)
+    assert await _new_ids(stand) == []
+    mine = await stand.service().page(
+        __import__("app.services.inbound_mail", fromlist=["MailAccess"]).MailAccess(
+            Principal(account.id, "Бухгалтер", ("viewer",)), False
+        ),
+        "mine",
+    )
+    assert [i.id for i in mine.items] == [mail_id]
+
+
+# --- фильтр по типу --------------------------------------------------------------------------
+
+
+async def test_list_filter_by_type_and_counts_stay(stand: Stand) -> None:
+    from tests.integration.test_inbound_mail import _raw
+
+    await stand.configure()
+    for n in (1, 2, 3):
+        stand.server.box.add(n, _raw(n))
+    await stand.ingest.poll()
+    a, b, c = [m.id for m in await stand.mails()]
+    who = await stand.principal()
+    await stand.actions().set_type(who, a, "meeting")
+    await stand.actions().set_type(who, b, "meeting")
+    await stand.actions().set_type(who, c, "spam")
+    clerk = await stand.clerk()
+    page = await stand.service().page(clerk, "new", type_code="meeting")
+    assert sorted(i.id for i in page.items) == [a, b]
+    assert page.total == 2
+    assert page.counts.new == 3, "счётчики вкладок не зависят от фильтра типа"
+    assert page.items[0].type is not None
+    assert (page.items[0].type.code, page.items[0].type.default_action) == (
+        "meeting",
+        "reply_template",
+    )
+    assert page.items[0].type.source == "manual"
+
+
+# --- API: права ------------------------------------------------------------------------------
+
+
+async def test_api_dictionary_and_rules_are_admin_only_type_change_for_clerk(
+    client: tuple[TestClient, Stand], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    http, stand = client
+    admin = await _staff(http, sessions, "admin-t@railtech.uz", "ADMIN")
+    clerk = await _staff(http, sessions, "clerk-t@railtech.uz", "tpl:REGISTRAR")
+    seller = await _staff(http, sessions, "seller-t@railtech.uz", "tpl:MANAGER_ALL")
+    dictionary = "/api/v1/dictionaries/mail-types"
+    body = {
+        "name": {"ru": "Жалоба", "uz": "", "en": "Complaint"},
+        "attrs": {"default_action": "create_lead"},
+    }
+
+    # читает любой сотрудник, меняет только админ
+    for who in (admin, clerk, seller):
+        assert http.get(dictionary, headers=who).status_code == 200
+    assert http.post(dictionary, json=body, headers=clerk).status_code == 403
+    created = http.post(dictionary, json=body, headers=admin)
+    assert created.status_code == 201, created.text
+    code = created.json()["code"]
+    assert created.json()["attrs"] == {
+        "default_action": "create_lead",
+        "color": "default",
+        "icon": "mail",
+    }
+    assert http.post(dictionary, json=body, headers=admin).status_code == 409
+    bad = {"name": {"ru": "Другое"}, "attrs": {"default_action": "delete_everything"}}
+    assert http.post(dictionary, json=bad, headers=admin).status_code == 422
+    assert (
+        http.post(dictionary, json={"name": {"ru": "Без действия"}}, headers=admin).status_code
+        == 422
+    )
+    assert http.get("/api/v1/dictionaries/other-kind", headers=admin).status_code == 404
+
+    rule = {"pattern": "*@soliq.example", "type_code": "official"}
+    assert http.post("/api/v1/mail-sender-rules", json=rule, headers=clerk).status_code == 403
+    assert http.post("/api/v1/mail-sender-rules", json=rule, headers=admin).status_code == 201
+    assert http.post("/api/v1/mail-sender-rules", json=rule, headers=admin).status_code == 409
+    listed = http.get("/api/v1/mail-sender-rules", headers=clerk).json()["items"]
+    assert [(r["pattern"], r["type_code"], r["created_by"] is not None) for r in listed] == [
+        ("soliq.example", "official", True)
+    ]
+    assert (
+        http.delete(f"/api/v1/mail-sender-rules/{listed[0]['id']}", headers=clerk).status_code
+        == 403
+    )
+    assert (
+        http.delete(f"/api/v1/mail-sender-rules/{listed[0]['id']}", headers=admin).status_code
+        == 204
+    )
+
+    mail_id = await _one_mail(stand)
+    url = f"/api/v1/inbound-mail/{mail_id}/type"
+    assert http.put(url, json={"type_code": code}, headers=seller).status_code == 403
+    assert http.put(url, json={"type_code": code}, headers=clerk).status_code == 204
+    card = http.get(f"/api/v1/inbound-mail/{mail_id}", headers=clerk).json()
+    assert (card["type"]["code"], card["type"]["source"]) == (code, "manual")
+    assert http.put(url, json={"type_code": "nope"}, headers=clerk).status_code == 422
+    listed_mail = http.get("/api/v1/inbound-mail", params={"type": code}, headers=clerk).json()
+    assert [i["id"] for i in listed_mail["items"]] == [mail_id]
+    assert (
+        http.get("/api/v1/inbound-mail", params={"type": "spam"}, headers=clerk).json()["items"]
+        == []
+    )
+
+    # использованный тип не удаляется, неиспользованный — да
+    assert http.delete(f"{dictionary}/{code}", headers=admin).status_code == 409
+    assert http.delete(f"{dictionary}/meeting", headers=admin).status_code == 204
+    hidden = http.patch(f"{dictionary}/{code}", json={"active": False}, headers=admin)
+    assert hidden.status_code == 200
+    visible = http.get(dictionary, headers=clerk).json()["items"]
+    assert code not in {i["code"] for i in visible}
+    assert (
+        http.get(dictionary, params={"include_hidden": "true"}, headers=admin).json()["items"][-1][
+            "used"
+        ]
+        is True
+    )
+
+    for path in ("price", "suspicious"):
+        other = await _one_mail(stand, 2 if path == "price" else 3)
+        assert http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=seller).status_code == 403
+        assert http.post(f"/api/v1/inbound-mail/{other}/{path}", headers=clerk).status_code == 204
+    targets = http.get("/api/v1/inbound-mail/handover-targets", headers=clerk).json()["items"]
+    assert [t["name"] for t in targets] == ["seller-t"], "роль подтверждает оплату — адресат"

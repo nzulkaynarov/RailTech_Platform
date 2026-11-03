@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import db
 from app.config import Settings, get_settings
+from app.domain.mail_types import SEED
 from app.domain.platform_roles import default_roles
 from app.security import passwords
 from app.tasks.queue import queue
@@ -77,6 +78,8 @@ TABLES = (
     "password_reset_tokens",
     "inbound_mail",
     "inbound_mailbox",
+    "mail_sender_rules",
+    "mail_types",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 
@@ -97,6 +100,29 @@ async def reseed_platform_roles(session: AsyncSession) -> None:
                 "is_system": row["is_system"],
                 "access": json.dumps(row["access"]),
                 "fields": json.dumps(row["restricted_fields"]),
+            },
+        )
+
+
+async def reseed_mail_types(session: AsyncSession) -> None:
+    """Стартовый набор типов писем как после миграции (MAIL-TYPES)."""
+    insert = text(
+        "INSERT INTO mail_types "
+        "(code, name_ru, name_uz, name_en, color, icon, default_action, position) "
+        "VALUES (:code, :ru, :uz, :en, :color, :icon, :action, :position)"
+    )
+    for index, seed in enumerate(SEED):
+        await session.execute(
+            insert,
+            {
+                "code": seed.code,
+                "ru": seed.ru,
+                "uz": seed.uz,
+                "en": seed.en,
+                "color": seed.color,
+                "icon": seed.icon,
+                "action": seed.action,
+                "position": (index + 1) * 10,
             },
         )
 
@@ -186,5 +212,6 @@ async def sessions(
         await session.execute(text(f"TRUNCATE {', '.join(TABLES)} RESTART IDENTITY CASCADE"))
         await session.execute(text("DELETE FROM casbin_rule WHERE v0 LIKE 'pr:%'"))
         await reseed_platform_roles(session)
+        await reseed_mail_types(session)
     yield factory
     await engine.dispose()

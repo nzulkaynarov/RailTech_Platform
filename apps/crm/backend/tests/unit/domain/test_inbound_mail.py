@@ -2,8 +2,6 @@
 
 from email.message import EmailMessage
 
-import pytest
-
 from app.domain import inbound_mail as im
 
 PDF = b"%PDF-1.4 test"
@@ -108,87 +106,6 @@ def test_attachment_count_limit() -> None:
 
 def test_find_inns() -> None:
     assert im.find_inns("ИНН 301234567, ИНН 301234567 и 1234567890123") == ["301234567"]
-
-
-@pytest.mark.parametrize(
-    ("raw", "expected"),
-    [
-        ('{"kind": "buyer", "summary": "Просят КП на шпалы"}', ("buyer", "lead")),
-        ('{"kind": "official", "summary": "Письмо налоговой"}', ("official", "register")),
-        ('{"kind": "supplier_doc", "summary": "Счёт"}', ("supplier_doc", "register")),
-        ('{"kind": "other", "summary": "Реклама"}', ("other", "archive")),
-    ],
-)
-def test_parse_assist_action_is_decided_by_code(raw: str, expected: tuple[str, str]) -> None:
-    verdict = im.parse_assist(raw)
-    assert verdict is not None
-    assert (verdict.kind, verdict.action) == expected
-
-
-@pytest.mark.parametrize(
-    "raw",
-    [
-        "not json",
-        '{"kind": "delete_everything", "summary": "x"}',
-        '{"kind": "buyer"}',
-        '{"kind": "buyer", "summary": "   "}',
-        "[]",
-    ],
-)
-def test_parse_assist_rejects_garbage(raw: str) -> None:
-    assert im.parse_assist(raw) is None
-
-
-@pytest.mark.parametrize(
-    ("raw", "kind"),
-    [
-        # Форматы ответа, которые встречаются у моделей через LiteLLM (прод 2026-11-03: 200 и None).
-        ('```json\n{"kind": "buyer", "summary": "Просят КП"}\n```', "buyer"),
-        ('```\n{"kind": "official", "summary": "Письмо банка"}\n```', "official"),
-        ('Вот ответ:\n{"kind": "other", "summary": "Реклама"}\nНадеюсь, помог.', "other"),
-        ('{"kind": "Buyer", "summary": "Просят КП"}', "buyer"),
-        ('{"kind": "BUYER", "summary": "Просят КП"}', "buyer"),
-        ('{"kind": "customer", "summary": "Просят КП"}', "buyer"),
-        ('{"kind": "покупатель", "summary": "Просят КП"}', "buyer"),
-        ('{"kind": "Официальное письмо", "summary": "Налоговая"}', "official"),
-        ('{"kind": "supplier", "summary": "Счёт"}', "supplier_doc"),
-        ('{"kind": "supplier-doc", "summary": "Счёт"}', "supplier_doc"),
-        ('{"kind": "Счёт или документ поставщика", "summary": "Акт"}', "supplier_doc"),
-        ('{"kind": "поставщик", "summary": "Акт"}', "supplier_doc"),
-        ('{"kind": "прочее", "summary": "Рассылка"}', "other"),
-        ('{"kind": " other ", "summary": "Рассылка", "extra": 1}', "other"),
-        ('[1, 2] {"kind": "buyer", "summary": "КП"}', "buyer"),
-    ],
-)
-def test_parse_assist_tolerates_model_formats(raw: str, kind: str) -> None:
-    verdict, problem = im.parse_assist_reason(raw)
-    assert problem is None
-    assert verdict is not None
-    assert (verdict.kind, verdict.action) == (kind, im.SUGGESTED_ACTION[kind])  # type: ignore[index]
-
-
-@pytest.mark.parametrize(
-    ("raw", "reason"),
-    [
-        ("", "not_json"),
-        (None, "not_json"),
-        ("Не могу помочь с этим письмом.", "not_json"),
-        ("```json\n{broken\n```", "not_json"),
-        ("[1, 2, 3]", "no_object"),
-        ('{"kind": "delete_everything", "summary": "x"}', "unknown_kind=delete_everything"),
-        ('{"summary": "x"}', "unknown_kind=None"),
-        ('{"kind": "buyer"}', "empty_summary"),
-        ('{"kind": "buyer", "summary": "   "}', "empty_summary"),
-        ('{"kind": "buyer", "summary": 5}', "empty_summary"),
-    ],
-)
-def test_parse_assist_reason_names_the_problem(raw: str | None, reason: str) -> None:
-    assert im.parse_assist_reason(raw) == (None, reason)
-
-
-def test_unknown_kind_in_reason_is_short() -> None:
-    _, reason = im.parse_assist_reason('{"kind": "' + "x" * 500 + '", "summary": "s"}')
-    assert reason == "unknown_kind=" + "x" * 32
 
 
 def test_reply_headers() -> None:

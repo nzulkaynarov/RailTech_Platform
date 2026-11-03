@@ -49,6 +49,7 @@ from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
 from app.repositories import inbound_mail_views as views
 from app.repositories import lead_intake as leads_repo
+from app.repositories import mail_types as types_repo
 from app.security import audit
 from app.security.secrets_store import SecretsStore
 from app.services.settings import SettingsService
@@ -193,6 +194,10 @@ class InboundMailIngest:
         async with self._sessions() as session, session.begin():
             now = datetime.now(UTC)
             values = await _row(session, parsed, files)
+            # Правило «отправитель или домен → тип» применяется до помощника и побеждает его.
+            by_rule = await types_repo.rule_type_for(session, parsed.from_email)
+            if by_rule is not None:
+                values.update(type_code=by_rule, type_source="rule")
             values.update(
                 mailbox=folder.name,
                 uidvalidity=uidvalidity,

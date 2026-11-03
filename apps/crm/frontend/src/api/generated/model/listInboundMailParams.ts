@@ -8,4 +8,5 @@ export type ListInboundMailParams = {
   view?: ListInboundMailView;
   history?: boolean | null;
   q?: string | null;
+  type?: string | null;
 };

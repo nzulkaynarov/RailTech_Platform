@@ -6,7 +6,7 @@
 (`InboundMailService`).
 """
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -20,10 +20,14 @@ from app.domain.inbound_mail_flow import (
     reply_default,
 )
 from app.models.inbound_mail import InboundMail
+from app.models.mail_types import MailType
 from app.repositories import inbound_mail as repo
 from app.repositories import inbound_mail_views as views
+from app.repositories import mail_types as types_repo
 from app.schemas import inbound_mail as dto
+from app.schemas.mail_types import InboundMailType
 from app.services.inbound_mail_assist import view as assist_view
+from app.services.mail_types import mail_type_out
 
 PREVIEW_CHARS = 200
 
@@ -73,6 +77,11 @@ def _result(row: InboundMail, names: Names) -> dto.InboundMailResult | None:
     )
 
 
+def _type(row: InboundMail, types: Mapping[str, MailType]) -> InboundMailType | None:
+    found = types.get(row.type_code) if row.type_code else None
+    return mail_type_out(found, row.type_source or "manual") if found is not None else None
+
+
 def item_fields(
     row: InboundMail,
     names: Names,
@@ -81,6 +90,7 @@ def item_fields(
     unread: bool,
     messages: int,
     now: datetime,
+    types: Mapping[str, MailType],
 ) -> dict[str, Any]:
     return {
         "id": row.id,
@@ -94,6 +104,7 @@ def item_fields(
         "preview": row.text[:PREVIEW_CHARS],
         "attachments_count": sum(1 for a in row.attachments or [] if not a.get("inline")),
         "assist": assist_view(row, assist_on),
+        "type": _type(row, types),
         "client": names.link("client", row.client_id),
         "lead": names.link("lead", row.matched_lead_id),
         "from_history": row.from_history,
@@ -118,10 +129,14 @@ async def build_page(
     q: str | None,
     assist_on: bool,
     now: datetime,
+    type_code: str | None = None,
 ) -> tuple[list[dto.InboundMailItem], int, dto.InboundMailCounts]:
-    found = await views.page(session, view, scope, limit=limit, history=history, q=q)
+    found = await views.page(
+        session, view, scope, limit=limit, history=history, q=q, type_code=type_code
+    )
     rows = [row for row, _ in found]
-    total = await views.total(session, view, scope, history=history, q=q)
+    total = await views.total(session, view, scope, history=history, q=q, type_code=type_code)
+    types = await types_repo.type_map(session)
     counts = await views.counts(session, scope)
     unread = await views.unread_new(session, scope)
     names = await load_names(session, rows)
@@ -135,6 +150,7 @@ async def build_page(
                 unread=is_unread,
                 messages=sizes.get(row.id, 1),
                 now=now,
+                types=types,
             )
         )
         for row, is_unread in found
@@ -178,7 +194,9 @@ async def _events(session: AsyncSession, mail_id: int, names: Names) -> list[dto
     out: list[dto.InboundMailEvent] = []
     for entry in entries:
         after = entry.after or {}
-        detail = after.get("reason") if isinstance(after.get("reason"), str) else None
+        detail = next(
+            (after[k] for k in ("reason", "type_name") if isinstance(after.get(k), str)), None
+        )
         out.append(
             dto.InboundMailEvent(
                 at=entry.created_at,
@@ -227,7 +245,13 @@ async def build_card(
     default = reply_default(sender, latest.from_email.lower(), latest.new_participant)
     return dto.InboundMailOut(
         **item_fields(
-            row, names, assist_on=assist_on, unread=unread, messages=len(messages), now=now
+            row,
+            names,
+            assist_on=assist_on,
+            unread=unread,
+            messages=len(messages),
+            now=now,
+            types=await types_repo.type_map(session),
         ),
         to=to,
         cc=cc,
