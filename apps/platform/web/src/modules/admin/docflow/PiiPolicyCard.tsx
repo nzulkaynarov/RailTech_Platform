@@ -16,14 +16,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { UnsavedGuard } from "../../../shared/ui/UnsavedGuard";
 import { botErrorText } from "../bot/errors";
 import { useRefreshBot } from "../bot/refresh";
-
-export type PiiPolicy = "business" | "strict";
-const POLICIES: readonly PiiPolicy[] = ["business", "strict"];
-
-/** Политика из значений раздела `ai` настроек CRM; нет значения — «Деловая» (по умолчанию CRM). */
-export function policyOf(values: Record<string, Record<string, unknown>> | undefined): PiiPolicy {
-  return values?.["ai"]?.["pii_policy"] === "strict" ? "strict" : "business";
-}
+import { POLICIES, type PiiPolicy, policyOf } from "./policy";
 
 /**
  * Защита данных для ИИ (PD-BIZ, решение владельца 2026-11-03): выбор политики «Деловая» / «Строгая» с одним предложением
@@ -43,7 +36,8 @@ export function PiiPolicyCard() {
   const saved = policyOf(settings.data?.values);
   // Фактическая политика документооборота (проекция по шине) отстаёт или не дошла — админ видит расхождение.
   const applied = docflow.data?.pii_policy;
-  const lagging = settings.data !== undefined && applied !== undefined && applied !== saved;
+  const lagging =
+    settings.data !== undefined && applied !== undefined && applied !== saved ? applied : null;
   const value = draft ?? saved;
   const dirty = draft !== null && draft !== saved;
 
@@ -92,14 +86,14 @@ export function PiiPolicyCard() {
             ))}
           </Radio.Group>
           <ErrorNote message={save.isError ? botErrorText(t, save.error) : null} />
-          {lagging && applied ? (
+          {lagging ? (
             <Alert
               type="warning"
               showIcon
               role="status"
               message={t("letters:settings.ai.policy.pending", {
                 name: t(`letters:settings.ai.policy.${saved}`),
-                current: t(`letters:settings.ai.policy.${applied}`),
+                current: t(`letters:settings.ai.policy.${lagging}`),
               })}
             />
           ) : null}

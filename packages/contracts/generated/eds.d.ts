@@ -689,7 +689,7 @@ export interface paths {
     };
     /**
      * Настройки документооборота
-     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию включено, действует при политике «Деловая»); `pii_policy` — политика защиты данных для ИИ из CRM (проекция события `crm.ai_policy.changed`, только чтение; нет события — `business`); `ai_available` — ключ шлюза задан.
+     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию включено, действует при политике «Деловая»); `pii_policy` — политика защиты данных для ИИ из CRM (проекция события `crm.ai_policy.changed`, только чтение; пока событие не приходило — `strict`); `ai_available` — ключ шлюза задан.
      */
     get: operations["getDocflowSettings"];
     put?: never;
