@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.36.0
+  version: 0.37.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -31,6 +31,10 @@ info:
 
     0.2.0 (волна 8): смена пароля (`POST /auth/change-password`, `Session.must_change_password`); Admin · Оргструктура —
     сотрудники, выдача ролей Платформы, приглашение по почте (`/admin/users*`, раздел матрицы `admin`).
+
+    **0.35.0 (EDS-REG) — ломающее по oasdiff (до 1.0 допустимо).** `LetterReceiptMethod` — код справочника
+    `receipt-methods` вместо перечня (стартовые коды те же); справочники как данные — `/dictionaries…` (тег `dictionaries`);
+    фильтр `kind` у `GET /eds/letters`; `LetterKind.due_days`.
 
     **0.4.0 (R-1b, ADR-0012 п. 2) — ломающее (до 1.0 допустимо).** Директор видит Ролевую матрицу только для чтения:
     `GET /admin/roles` и `GET /admin/roles/{id}` — от `admin: read` (раньше `full`), создание, изменение, удаление и
@@ -358,6 +362,13 @@ tags:
     description: EDS · Проекты — список и карточка проекта, договор (статусы вместо подписи кликом), акт, сканы, файлы (ERP; раздел `eds.projects`)
   - name: eds-payments
     description: EDS · Счета и оплаты бухгалтера — счета, платёжки клиентов, подтверждение оплаты (ERP), служебки к оплате и «Оплачено» (EDS); раздел `eds.payments`
+  - name: dictionaries
+    description: |
+      Справочники как данные (EDS-REG; `docs/research/2026-11-02-flexibility/4-settings-ia.md` §4.3): один экран
+      «Настройки · Документооборот · Справочники» для справочников всех доменов. BFF держит только каталог «вид → домен-владелец»
+      (сейчас — EDS: виды входящих документов, способы получения) и проксирует ресурс домена `/dictionaries/{kind}`; права,
+      «использовано», код — решает домен. Читают — те, кто работает с письмами (`eds.inbox` или `eds.inbox.register`), и
+      администратор (`admin`); меняет — `admin: full`.
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
   - name: calc
@@ -5222,6 +5233,57 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/consoles:
+    get:
+      tags: [integrations]
+      operationId: listServiceConsoles
+      summary: 'Служебные консоли сервисов, открытые через Платформу'
+      description: >-
+        OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене
+        Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых
+        консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор
+        (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+      responses:
+        '200':
+          description: Включённые консоли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceConsoleList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /consoles/{key}/auth:
+    get:
+      tags: [integrations]
+      operationId: authorizeServiceConsole
+      summary: 'Проверка доступа к консоли сервиса для Caddy forward_auth'
+      description: >-
+        OPS-CONSOLE. Caddy вызывает этот адрес перед каждым запросом к `/console/<ключ>/…` с cookie браузера: 204 — пропустить,
+        401 — нет сессии Платформы, 403 — не администратор (`admin: full`) или не сменён временный пароль, 404 — консоль не
+        включена (`PLATFORM_CONSOLES`). Ответ не кэшируется (`Cache-Control: no-store`). Первое открытие консоли за 30 минут
+        сессии пишется в журнал аудита (`console.open`, объект `console`, ключ консоли) — кто, когда, какая.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/ServiceConsoleKey'}
+      responses:
+        '204':
+          description: Доступ разрешён
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema: {type: string}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /admin/bus:
     get:
       tags: [bus]
@@ -8018,6 +8080,11 @@ paths:
           required: false
           description: Только письма с просроченным поручением — фильтр «Просрочено» (P8b)
           schema: {type: boolean}
+        - name: kind
+          in: query
+          required: false
+          description: Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG)
+          schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
         - name: cursor
           in: query
           required: false
@@ -8080,6 +8147,188 @@ paths:
           $ref: '#/components/responses/EdsConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaries
+      summary: 'Справочники · каталог'
+      description: >-
+        Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот),
+        название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin`
+        — чтение. Домен не ответил — 503.
+      responses:
+        '200':
+          description: Каталог
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}:
+    get:
+      tags: [dictionaries]
+      operationId: listDictionaryItems
+      summary: 'Справочники · значения'
+      description: >-
+        Значения в порядке показа: по умолчанию действующие (формы), `include_hidden=true` — все со скрытыми и признаком
+        `used` (экран администратора; названия у старых писем). Доступ — по домену вида: справочники документооборота
+        читают `eds.inbox`, `eds.inbox.register` и `admin`. Неизвестный вид — 404.
+      parameters:
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - name: include_hidden
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Значения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [dictionaries]
+      operationId: createDictionaryItem
+      summary: 'Справочники · добавить значение'
+      description: >-
+        Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409
+        `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemIn'
+      responses:
+        '201':
+          description: Добавлено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/order:
+    put:
+      tags: [dictionaries]
+      operationId: reorderDictionaryItems
+      summary: 'Справочники · порядок'
+      description: Раздел `admin` — полный. Все коды справочника (со скрытыми) в новом порядке.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryOrderIn'
+      responses:
+        '200':
+          description: Значения в новом порядке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItemList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /dictionaries/{kind}/{code}:
+    patch:
+      tags: [dictionaries]
+      operationId: updateDictionaryItem
+      summary: 'Справочники · переименовать, скрыть, вернуть'
+      description: >-
+        Раздел `admin` — полный. Код не меняется. В закрытом справочнике меняются только названия.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - $ref: '#/components/parameters/DictionaryCodePath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DictionaryItemPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DictionaryItem'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [dictionaries]
+      operationId: deleteDictionaryItem
+      summary: 'Справочники · удалить неиспользованное'
+      description: >-
+        Раздел `admin` — полный. Значение уже использовано — 409 `value_in_use` (его скрывают).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/DictionaryKindPath'
+        - $ref: '#/components/parameters/DictionaryCodePath'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -8589,6 +8838,233 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/resolution-templates:
+    get:
+      tags: [letters]
+      operationId: listResolutionTemplates
+      summary: 'EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)'
+      description: >-
+        EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только
+        заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin`
+        — чтение.
+      responses:
+        '200':
+          description: Шаблоны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [letters]
+      operationId: createResolutionTemplate
+      summary: 'EDS · Сохранить шаблон резолюции'
+      description: >-
+        Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе
+        403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '201':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/resolution-templates/{id}:
+    put:
+      tags: [letters]
+      operationId: updateResolutionTemplate
+      summary: 'EDS · Изменить шаблон резолюции'
+      description: 'Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ResolutionTemplateIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [letters]
+      operationId: deleteResolutionTemplate
+      summary: 'EDS · Удалить шаблон резолюции'
+      description: 'Личный — владелец, общий — `admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ResolutionTemplateIdPath'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letter-intake:
+    post:
+      tags: [letters]
+      operationId: suggestLetterFromFile
+      summary: 'EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)'
+      description: >-
+        EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля
+        карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или
+        фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел
+        `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`,
+        `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterIntakeIn'
+      responses:
+        '200':
+          description: Предложение полей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterIntakeSuggestion'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/ai-suggestions/{id}/decision:
+    post:
+      tags: [letters]
+      operationId: decideAiSuggestion
+      summary: 'EDS · Решение человека по предложению ИИ (журнал)'
+      description: >-
+        `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную. Раздел
+        `eds.inbox.register` — полный; решение пишет только тот, кто вызывал помощника.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/AiSuggestionIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiDecisionIn'
+      responses:
+        '204':
+          description: Записано
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/docflow-settings:
+    get:
+      tags: [dictionaries]
+      operationId: getDocflowSettings
+      summary: 'EDS · Настройки документооборота'
+      description: >-
+        `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен.
+        Раздел `eds.inbox.register` — полный или `admin` — чтение.
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [dictionaries]
+      operationId: updateDocflowSettings
+      summary: 'EDS · Изменить настройки документооборота'
+      description: '`admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocflowSettingsPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocflowSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/staff:
     get:
       tags: [letters]
@@ -8596,8 +9072,8 @@ paths:
       summary: 'EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)'
       description: >-
         EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел
-        `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник,
-        без проверки зоны (SPEC-v3 §3.2a п. 2).
+        `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель
+        резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
       responses:
         '200':
           description: Сотрудники
@@ -11676,6 +12152,17 @@ components:
       description: Id объекта ERP (строкой)
       schema:
         $ref: '#/components/schemas/CompanyItemRef'
+    DictionaryKindPath:
+      name: kind
+      in: path
+      required: true
+      description: Вид справочника (`letter-kinds`, `receipt-methods`)
+      schema: {type: string, pattern: '^[a-z][a-z-]{0,31}$'}
+    DictionaryCodePath:
+      name: code
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
     ReferenceKindPath:
       name: kind
       in: path
@@ -11684,6 +12171,22 @@ components:
       schema:
         $ref: '#/components/schemas/ReferenceKind'
 
+    AiSuggestionIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID предложения ИИ (EDS)
+      schema:
+        type: string
+        format: uuid
+    ResolutionTemplateIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID шаблона резолюции (EDS)
+      schema:
+        type: string
+        format: uuid
     InstructionIdPath:
       name: id
       in: path
@@ -12671,6 +13174,26 @@ components:
         technical:
           type: [string, 'null']
           description: 'Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»'
+
+    ServiceConsoleKey:
+      type: string
+      enum: [erp]
+      description: '`erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)'
+    ServiceConsole:
+      type: object
+      additionalProperties: false
+      required: [key, url]
+      properties:
+        key: {$ref: '#/components/schemas/ServiceConsoleKey'}
+        url: {type: string, description: 'Адрес на домене Платформы, например `/console/erp/admin/`'}
+    ServiceConsoleList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ServiceConsole'}
 
     IntegrationsOverview:
       type: object
@@ -18417,7 +18940,135 @@ components:
     LetterResolutionKind:
       type: string
       enum: [execute, reply, info]
-      description: '`execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.'
+      description: >-
+        `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список).
+        Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только
+        переименовать и переставить.
+
+    LetterIntakeIn:
+      type: object
+      additionalProperties: false
+      required: [file_id]
+      properties:
+        file_id: {type: string, format: uuid}
+
+    LetterIntakeFields:
+      type: object
+      additionalProperties: false
+      required: [sender_name, sender_inn, sender_ref_number, sender_ref_date, subject, summary, kind, document_due]
+      description: Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла
+      properties:
+        sender_name: {type: [string, 'null']}
+        sender_inn: {type: [string, 'null'], pattern: '^\d{9,14}$'}
+        sender_ref_number: {type: [string, 'null']}
+        sender_ref_date: {type: [string, 'null'], format: date}
+        subject: {type: [string, 'null']}
+        summary: {type: [string, 'null']}
+        kind: {type: [string, 'null'], pattern: '^[a-z][a-z_]{0,31}$', description: Действующий код справочника `letter-kinds`}
+        document_due: {type: [string, 'null'], format: date}
+
+    LetterIntakeSuggestion:
+      type: object
+      additionalProperties: false
+      required: [suggestion_id, source, fields, alias, prompt_version]
+      properties:
+        suggestion_id: {type: string, format: uuid}
+        source: {type: string, enum: [text, image]}
+        fields: {$ref: '#/components/schemas/LetterIntakeFields'}
+        alias: {type: string}
+        prompt_version: {type: string}
+
+    AiDecisionIn:
+      type: object
+      additionalProperties: false
+      required: [decision]
+      properties:
+        decision: {type: string, enum: [accepted, edited, manual]}
+
+    DocflowSettings:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans, ai_available]
+      properties:
+        recognize_scans: {type: boolean}
+        ai_available: {type: boolean}
+
+    DocflowSettingsPatch:
+      type: object
+      additionalProperties: false
+      required: [recognize_scans]
+      properties:
+        recognize_scans: {type: boolean}
+
+    ResolutionTemplateScope:
+      type: string
+      enum: [personal, company]
+      description: '`personal` — свой шаблон, `company` — общий, ведёт администратор'
+
+    ResolutionTemplateResponsibleType:
+      type: string
+      enum: [person, addressee, none]
+      description: '`person` — этот сотрудник, `addressee` — адресат письма, `none` — выбрать при резолюции'
+
+    ResolutionTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [name, scope, kind, text]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        scope: {$ref: '#/components/schemas/ResolutionTemplateScope'}
+        kind: {$ref: '#/components/schemas/LetterResolutionKind'}
+        text: {type: string, minLength: 1, maxLength: 4000}
+        responsible_type: {$ref: '#/components/schemas/ResolutionTemplateResponsibleType'}
+        responsible_id: {type: [string, 'null'], pattern: '^[1-9][0-9]*$', description: Только при `responsible_type = person`}
+        co_executor_ids:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, pattern: '^[1-9][0-9]*$'}
+        acquaint_ids:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: {type: string, pattern: '^[1-9][0-9]*$'}
+        due_days: {type: [integer, 'null'], minimum: 1, maximum: 365, description: 'Срок через N дней; `null` — подсказка срока письма'}
+
+    ResolutionTemplate:
+      type: object
+      additionalProperties: false
+      required: [id, name, scope, kind, text, responsible_type, responsible, co_executors, acquaint, due_days, owner, editable]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        scope: {$ref: '#/components/schemas/ResolutionTemplateScope'}
+        kind: {$ref: '#/components/schemas/LetterResolutionKind'}
+        text: {type: string}
+        responsible_type: {$ref: '#/components/schemas/ResolutionTemplateResponsibleType'}
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        co_executors:
+          type: array
+          items: {$ref: '#/components/schemas/PersonRef'}
+        acquaint:
+          type: array
+          items: {$ref: '#/components/schemas/PersonRef'}
+        due_days: {type: [integer, 'null']}
+        owner:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        editable: {type: boolean}
+
+    ResolutionTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ResolutionTemplate'}
 
     LetterResolutionDraft:
       type: object
@@ -18618,10 +19269,11 @@ components:
 
     LetterReceiptMethod:
       type: string
-      enum: [post, paper, taxpayer_cabinet, courier, email]
+      pattern: '^[a-z][a-z_]{0,31}$'
       description: >-
-        Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет
-        налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
+        Способ получения (P8, SPEC-v3 §3.2a п. 1) — код справочника `receipt-methods` (EDS-REG, ведёт администратор;
+        названия — `GET /dictionaries/receipt-methods`). Стартовые коды: `post` — почта, `paper` — бумага из рук,
+        `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail.
 
     LetterRelated:
       type: object
@@ -18632,6 +19284,116 @@ components:
         kind: {type: string, enum: [letter_in, letter_out]}
         number: {type: string, examples: [ВХ-101/26, ИСХ-012/26]}
         path: {type: string, description: Путь в SPA}
+
+    LocalizedName:
+      type: object
+      additionalProperties: false
+      required: [ru, uz, en]
+      description: Название на трёх языках; пустые `uz` и `en` экран заменяет `ru`
+      properties:
+        ru: {type: string, minLength: 1, maxLength: 120}
+        uz: {type: string, maxLength: 120}
+        en: {type: string, maxLength: 120}
+
+    LocalizedNameIn:
+      type: object
+      additionalProperties: false
+      required: [ru]
+      properties:
+        ru: {type: string, minLength: 1, maxLength: 120}
+        uz: {type: string, maxLength: 120}
+        en: {type: string, maxLength: 120}
+
+    DictionaryAttr:
+      type: object
+      additionalProperties: false
+      required: [key, type, name]
+      description: Дополнительное поле значения (поведение — код, значение — данные)
+      properties:
+        key: {type: string, pattern: '^[a-z][a-z_]{0,31}$', examples: [due_days]}
+        type: {type: string, enum: [boolean, integer]}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        minimum: {type: [integer, 'null']}
+        maximum: {type: [integer, 'null']}
+
+    Dictionary:
+      type: object
+      additionalProperties: false
+      required: [kind, owner, area, name, closed, attrs]
+      properties:
+        kind: {type: string, pattern: '^[a-z][a-z-]{0,31}$', examples: [letter-kinds]}
+        owner: {type: string, enum: [eds], description: Домен-владелец значений}
+        area: {type: string, enum: [documents], description: Область экрана (`documents` — документооборот)}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        closed: {type: boolean, description: Закрытый список поведения — только переименовать и переставить}
+        attrs:
+          type: array
+          items: {$ref: '#/components/schemas/DictionaryAttr'}
+
+    DictionaryList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/Dictionary'}
+
+    DictionaryAttrValues:
+      type: object
+      description: Значения полей `attrs` (`urgent`, `due_days` у видов документа); `null` — не задано
+      additionalProperties:
+        type: [boolean, integer, 'null']
+
+    DictionaryItem:
+      type: object
+      additionalProperties: false
+      required: [code, name, attrs, active, position]
+      properties:
+        code: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
+        name: {$ref: '#/components/schemas/LocalizedName'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+        active: {type: boolean, description: '`false` — скрыто: в формах не предлагается'}
+        position: {type: integer}
+        used:
+          type: [boolean, 'null']
+          description: Значение уже использовано (удалить нельзя, только скрыть); `null` — не считалось
+
+    DictionaryItemList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/DictionaryItem'}
+
+    DictionaryItemIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedNameIn'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+
+    DictionaryItemPatch:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {$ref: '#/components/schemas/LocalizedNameIn'}
+        attrs: {$ref: '#/components/schemas/DictionaryAttrValues'}
+        active: {type: boolean}
+
+    DictionaryOrderIn:
+      type: object
+      additionalProperties: false
+      required: [codes]
+      properties:
+        codes:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items: {type: string, pattern: '^[a-z][a-z_]{0,31}$'}
 
     LetterKind:
       type: object
@@ -18648,6 +19410,11 @@ components:
             uz: {type: string}
             en: {type: string}
         urgent: {type: boolean, description: Регистрация этим видом сразу ставит «срочно»}
+        due_days:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 365
+          description: Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
 
     LetterKindList:
       type: object

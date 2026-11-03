@@ -32,6 +32,8 @@ import {
 } from "./parts";
 import { TechnicalDetails } from "./HealthParts";
 import { useRefreshIntegrations } from "./refresh";
+import { ExternalLinks } from "./OpenLinks";
+import { telegramLinks } from "./serviceLinks";
 
 const LANGS = ["ru", "uz", "en"] as const;
 const LIMITS = { name: 64, short_description: 120, description: 512 } as const;
@@ -397,12 +399,15 @@ export function TelegramPanel({
       <PanelTitle>{t("cards.telegram.title")}</PanelTitle>
       <PanelState query={query}>
         {(bot) => (
-          <TelegramBody
-            bot={bot}
-            editable={editable}
-            summary={summary}
-            initialTokenOpen={initialTokenOpen}
-          />
+          <>
+            <ExternalLinks links={telegramLinks(bot.username)} />
+            <TelegramBody
+              bot={bot}
+              editable={editable}
+              summary={summary}
+              initialTokenOpen={initialTokenOpen}
+            />
+          </>
         )}
       </PanelState>
     </div>

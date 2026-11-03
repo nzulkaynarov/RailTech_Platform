@@ -27,8 +27,6 @@ from app.models.base import Base
 # P8b: путь делопроизводства — «На исполнении», «Исполнено», «Принято к сведению» (SPEC-v3 §3.2a).
 LETTER_STATUSES = ("awaiting_resolution", "resolved", "returned", "rejected", "in_execution", "executed", "noted")
 RESOLUTION_KINDS = ("execute", "reply", "info")
-# Способ получения (SPEC-v3 §3.2a п. 1, P8): почта, бумага из рук, кабинет налогоплательщика my.soliq, курьер, e-mail.
-RECEIPT_METHODS = ("post", "paper", "taxpayer_cabinet", "courier", "email")
 
 
 class Letter(Base):
@@ -61,10 +59,6 @@ class Letter(Base):
         Index("ix_letters_erp_deal_id", "erp_deal_id"),
         Index("ix_letters_registered_at_id", "registered_at", "id"),
         Index("ix_letters_status", "status"),
-        CheckConstraint(
-            "receipt_method IS NULL OR receipt_method IN ('post', 'paper', 'taxpayer_cabinet', 'courier', 'email')",
-            name="receipt_method",
-        ),
         # Проверка дубля при регистрации (P8): корреспондент + исх. № отправителя.
         Index(
             "ix_letters_sender_ref_number",
@@ -104,8 +98,8 @@ class Letter(Base):
     resolution_decided_by: Mapped[int | None] = mapped_column(BigInteger)
     resolution_decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Карточка делопроизводства (SPEC-v3 §3.2a п. 1, P8); у писем по заявке ERP — пусто.
-    doc_kind: Mapped[str | None] = mapped_column(String(32))  # код справочника `services/letter_kinds.py`
-    receipt_method: Mapped[str | None] = mapped_column(String(24))
+    doc_kind: Mapped[str | None] = mapped_column(String(32))  # код справочника `letter-kinds` (EDS-REG)
+    receipt_method: Mapped[str | None] = mapped_column(String(32))  # код справочника `receipt-methods` (EDS-REG)
     signed_by: Mapped[str | None] = mapped_column(String(255))
     document_due: Mapped[date | None] = mapped_column(Date)  # срок по документу (у отправителя)
     related_letter_id: Mapped[uuid.UUID | None] = mapped_column(

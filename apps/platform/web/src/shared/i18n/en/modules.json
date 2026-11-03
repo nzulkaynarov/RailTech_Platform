@@ -178,6 +178,7 @@
       "tickets": "Staff requests",
       "articles": "Company articles",
       "company": "Company & letterhead",
+      "docflow": "Document flow",
       "setup": "First-time setup",
       "bot": "Telegram bot",
       "audit": "Log"

@@ -2792,6 +2792,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/consoles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Служебные консоли сервисов, открытые через Платформу
+     * @description OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+     */
+    get: operations["listServiceConsoles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/consoles/{key}/auth": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Проверка доступа к консоли сервиса для Caddy forward_auth
+     * @description OPS-CONSOLE. Caddy вызывает этот адрес перед каждым запросом к `/console/<ключ>/…` с cookie браузера: 204 — пропустить, 401 — нет сессии Платформы, 403 — не администратор (`admin: full`) или не сменён временный пароль, 404 — консоль не включена (`PLATFORM_CONSOLES`). Ответ не кэшируется (`Cache-Control: no-store`). Первое открытие консоли за 30 минут сессии пишется в журнал аудита (`console.open`, объект `console`, ключ консоли) — кто, когда, какая.
+     */
+    get: operations["authorizeServiceConsole"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/bus": {
     parameters: {
       query?: never;
@@ -4224,6 +4264,94 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/dictionaries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочники · каталог
+     * @description Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
+     */
+    get: operations["listDictionaries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dictionaries/{kind}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочники · значения
+     * @description Значения в порядке показа: по умолчанию действующие (формы), `include_hidden=true` — все со скрытыми и признаком `used` (экран администратора; названия у старых писем). Доступ — по домену вида: справочники документооборота читают `eds.inbox`, `eds.inbox.register` и `admin`. Неизвестный вид — 404.
+     */
+    get: operations["listDictionaryItems"];
+    put?: never;
+    /**
+     * Справочники · добавить значение
+     * @description Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+     */
+    post: operations["createDictionaryItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dictionaries/{kind}/order": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Справочники · порядок
+     * @description Раздел `admin` — полный. Все коды справочника (со скрытыми) в новом порядке.
+     */
+    put: operations["reorderDictionaryItems"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/dictionaries/{kind}/{code}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Справочники · удалить неиспользованное
+     * @description Раздел `admin` — полный. Значение уже использовано — 409 `value_in_use` (его скрывают).
+     */
+    delete: operations["deleteDictionaryItem"];
+    options?: never;
+    head?: never;
+    /**
+     * Справочники · переименовать, скрыть, вернуть
+     * @description Раздел `admin` — полный. Код не меняется. В закрытом справочнике меняются только названия.
+     */
+    patch: operations["updateDictionaryItem"];
+    trace?: never;
+  };
   "/eds/letter-kinds": {
     parameters: {
       query?: never;
@@ -4504,6 +4632,118 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/resolution-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+     * @description EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin` — чтение.
+     */
+    get: operations["listResolutionTemplates"];
+    put?: never;
+    /**
+     * EDS · Сохранить шаблон резолюции
+     * @description Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе 403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+     */
+    post: operations["createResolutionTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/resolution-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * EDS · Изменить шаблон резолюции
+     * @description Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.
+     */
+    put: operations["updateResolutionTemplate"];
+    post?: never;
+    /**
+     * EDS · Удалить шаблон резолюции
+     * @description Личный — владелец, общий — `admin: full`.
+     */
+    delete: operations["deleteResolutionTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letter-intake": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
+     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+     */
+    post: operations["suggestLetterFromFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/ai-suggestions/{id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Решение человека по предложению ИИ (журнал)
+     * @description `accepted` — зарегистрировал как предложено, `edited` — поправил, `manual` — заполнил вручную. Раздел `eds.inbox.register` — полный; решение пишет только тот, кто вызывал помощника.
+     */
+    post: operations["decideAiSuggestion"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/docflow-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Настройки документооборота
+     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
+     */
+    get: operations["getDocflowSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * EDS · Изменить настройки документооборота
+     * @description `admin: full`.
+     */
+    patch: operations["updateDocflowSettings"];
+    trace?: never;
+  };
   "/eds/staff": {
     parameters: {
       query?: never;
@@ -4513,7 +4753,7 @@ export interface paths {
     };
     /**
      * EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
-     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
      */
     get: operations["listEdsStaff"];
     put?: never;
@@ -6684,6 +6924,19 @@ export interface components {
       group: components["schemas"]["ServiceGroup"] | null;
       /** @description Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности» */
       technical: string | null;
+    };
+    /**
+     * @description `erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)
+     * @enum {string}
+     */
+    ServiceConsoleKey: "erp";
+    ServiceConsole: {
+      key: components["schemas"]["ServiceConsoleKey"];
+      /** @description Адрес на домене Платформы, например `/console/erp/admin/` */
+      url: string;
+    };
+    ServiceConsoleList: {
+      items: components["schemas"]["ServiceConsole"][];
     };
     IntegrationsOverview: {
       /** Format: date-time */
@@ -10398,10 +10651,89 @@ export interface components {
      */
     LetterTrack: "calc" | "office";
     /**
-     * @description `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.
+     * @description `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список). Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только переименовать и переставить.
      * @enum {string}
      */
     LetterResolutionKind: "execute" | "reply" | "info";
+    LetterIntakeIn: {
+      /** Format: uuid */
+      file_id: string;
+    };
+    /** @description Предложенные поля; `null` — не найдено. ИНН найден кодом в тексте файла */
+    LetterIntakeFields: {
+      sender_name: string | null;
+      sender_inn: string | null;
+      sender_ref_number: string | null;
+      /** Format: date */
+      sender_ref_date: string | null;
+      subject: string | null;
+      summary: string | null;
+      /** @description Действующий код справочника `letter-kinds` */
+      kind: string | null;
+      /** Format: date */
+      document_due: string | null;
+    };
+    LetterIntakeSuggestion: {
+      /** Format: uuid */
+      suggestion_id: string;
+      /** @enum {string} */
+      source: "text" | "image";
+      fields: components["schemas"]["LetterIntakeFields"];
+      alias: string;
+      prompt_version: string;
+    };
+    AiDecisionIn: {
+      /** @enum {string} */
+      decision: "accepted" | "edited" | "manual";
+    };
+    DocflowSettings: {
+      recognize_scans: boolean;
+      ai_available: boolean;
+    };
+    DocflowSettingsPatch: {
+      recognize_scans: boolean;
+    };
+    /**
+     * @description `personal` — свой шаблон, `company` — общий, ведёт администратор
+     * @enum {string}
+     */
+    ResolutionTemplateScope: "personal" | "company";
+    /**
+     * @description `person` — этот сотрудник, `addressee` — адресат письма, `none` — выбрать при резолюции
+     * @enum {string}
+     */
+    ResolutionTemplateResponsibleType: "person" | "addressee" | "none";
+    ResolutionTemplateIn: {
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["LetterResolutionKind"];
+      text: string;
+      responsible_type?: components["schemas"]["ResolutionTemplateResponsibleType"];
+      /** @description Только при `responsible_type = person` */
+      responsible_id?: string | null;
+      co_executor_ids?: string[];
+      acquaint_ids?: string[];
+      /** @description Срок через N дней; `null` — подсказка срока письма */
+      due_days?: number | null;
+    };
+    ResolutionTemplate: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["LetterResolutionKind"];
+      text: string;
+      responsible_type: components["schemas"]["ResolutionTemplateResponsibleType"];
+      responsible: components["schemas"]["PersonRef"] | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      due_days: number | null;
+      owner: components["schemas"]["PersonRef"] | null;
+      editable: boolean;
+    };
+    ResolutionTemplateList: {
+      items: components["schemas"]["ResolutionTemplate"][];
+    };
     /** @description Проект резолюции делопроизводителя; директор утверждает его одним действием или правит */
     LetterResolutionDraft: {
       kind: components["schemas"]["LetterResolutionKind"] | null;
@@ -10538,11 +10870,8 @@ export interface components {
     EdsStaffList: {
       items: components["schemas"]["EdsStaffMember"][];
     };
-    /**
-     * @description Способ получения (P8, SPEC-v3 §3.2a п. 1): `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. Слова — в словаре интерфейса.
-     * @enum {string}
-     */
-    LetterReceiptMethod: "post" | "paper" | "taxpayer_cabinet" | "courier" | "email";
+    /** @description Способ получения (P8, SPEC-v3 §3.2a п. 1) — код справочника `receipt-methods` (EDS-REG, ведёт администратор; названия — `GET /dictionaries/receipt-methods`). Стартовые коды: `post` — почта, `paper` — бумага из рук, `taxpayer_cabinet` — кабинет налогоплательщика my.soliq, `courier` — курьер, `email` — e-mail. */
+    LetterReceiptMethod: string;
     /** @description Связанный документ — предыдущий ВХ (`letter_in`) или наш ИСХ (`letter_out`) */
     LetterRelated: {
       /** @enum {string} */
@@ -10555,6 +10884,77 @@ export interface components {
       /** @description Путь в SPA */
       path: string;
     };
+    /** @description Название на трёх языках; пустые `uz` и `en` экран заменяет `ru` */
+    LocalizedName: {
+      ru: string;
+      uz: string;
+      en: string;
+    };
+    LocalizedNameIn: {
+      ru: string;
+      uz?: string;
+      en?: string;
+    };
+    /** @description Дополнительное поле значения (поведение — код, значение — данные) */
+    DictionaryAttr: {
+      /** @example due_days */
+      key: string;
+      /** @enum {string} */
+      type: "boolean" | "integer";
+      name: components["schemas"]["LocalizedName"];
+      minimum?: number | null;
+      maximum?: number | null;
+    };
+    Dictionary: {
+      /** @example letter-kinds */
+      kind: string;
+      /**
+       * @description Домен-владелец значений
+       * @enum {string}
+       */
+      owner: "eds";
+      /**
+       * @description Область экрана (`documents` — документооборот)
+       * @enum {string}
+       */
+      area: "documents";
+      name: components["schemas"]["LocalizedName"];
+      /** @description Закрытый список поведения — только переименовать и переставить */
+      closed: boolean;
+      attrs: components["schemas"]["DictionaryAttr"][];
+    };
+    DictionaryList: {
+      items: components["schemas"]["Dictionary"][];
+    };
+    /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа); `null` — не задано */
+    DictionaryAttrValues: {
+      [key: string]: boolean | number | null;
+    };
+    DictionaryItem: {
+      code: string;
+      name: components["schemas"]["LocalizedName"];
+      attrs: components["schemas"]["DictionaryAttrValues"];
+      /** @description `false` — скрыто: в формах не предлагается */
+      active: boolean;
+      position: number;
+      /** @description Значение уже использовано (удалить нельзя, только скрыть); `null` — не считалось */
+      used?: boolean | null;
+    };
+    DictionaryItemList: {
+      items: components["schemas"]["DictionaryItem"][];
+    };
+    DictionaryItemIn: {
+      name: components["schemas"]["LocalizedNameIn"];
+      attrs?: components["schemas"]["DictionaryAttrValues"];
+    };
+    DictionaryItemPatch: {
+      name?: components["schemas"]["LocalizedNameIn"];
+      attrs?: components["schemas"]["DictionaryAttrValues"];
+      active?: boolean;
+    };
+    DictionaryOrderIn: {
+      codes: string[];
+    };
     LetterKind: {
       /** @example tax_notice */
       code: string;
@@ -10565,6 +10965,8 @@ export interface components {
       };
       /** @description Регистрация этим видом сразу ставит «срочно» */
       urgent: boolean;
+      /** @description Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10) */
+      due_days?: number | null;
     };
     LetterKindList: {
       items: components["schemas"]["LetterKind"][];
@@ -13352,8 +13754,15 @@ export interface components {
     ReplyTemplateId: number;
     /** @description Id объекта ERP (строкой) */
     CompanyItemId: components["schemas"]["CompanyItemRef"];
+    /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+    DictionaryKindPath: string;
+    DictionaryCodePath: string;
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
+    /** @description UUID предложения ИИ (EDS) */
+    AiSuggestionIdPath: string;
+    /** @description UUID шаблона резолюции (EDS) */
+    ResolutionTemplateIdPath: string;
     /** @description UUID поручения (EDS, P8b) */
     InstructionIdPath: string;
     /** @description UUID входящего письма (EDS) */
@@ -18023,6 +18432,53 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  listServiceConsoles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Включённые консоли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ServiceConsoleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  authorizeServiceConsole: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        key: components["schemas"]["ServiceConsoleKey"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Доступ разрешён */
+      204: {
+        headers: {
+          /** @description `no-store` */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+    };
+  };
   getBusJournal: {
     parameters: {
       query?: never;
@@ -21015,6 +21471,8 @@ export interface operations {
         on_control?: boolean;
         /** @description Только письма с просроченным поручением — фильтр «Просрочено» (P8b) */
         overdue?: boolean;
+        /** @description Только письма этого вида документа — код справочника `letter-kinds` (EDS-REG) */
+        kind?: string;
         /** @description Непрозрачный курсор из `next_cursor` */
         cursor?: string;
         /** @description Размер страницы */
@@ -21070,6 +21528,196 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listDictionaries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Каталог */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listDictionaryItems: {
+    parameters: {
+      query?: {
+        include_hidden?: boolean;
+      };
+      header?: never;
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Значения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createDictionaryItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryItemIn"];
+      };
+    };
+    responses: {
+      /** @description Добавлено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reorderDictionaryItems: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryOrderIn"];
+      };
+    };
+    responses: {
+      /** @description Значения в новом порядке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItemList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteDictionaryItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+        code: components["parameters"]["DictionaryCodePath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateDictionaryItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Вид справочника (`letter-kinds`, `receipt-methods`) */
+        kind: components["parameters"]["DictionaryKindPath"];
+        code: components["parameters"]["DictionaryCodePath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DictionaryItemPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DictionaryItem"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       409: components["responses"]["EdsConflict"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
@@ -21517,6 +22165,244 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listResolutionTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID шаблона резолюции (EDS) */
+        id: components["parameters"]["ResolutionTemplateIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID шаблона резолюции (EDS) */
+        id: components["parameters"]["ResolutionTemplateIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  suggestLetterFromFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterIntakeIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение полей */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterIntakeSuggestion"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decideAiSuggestion: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID предложения ИИ (EDS) */
+        id: components["parameters"]["AiSuggestionIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AiDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Записано */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getDocflowSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateDocflowSettings: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocflowSettingsPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DocflowSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };

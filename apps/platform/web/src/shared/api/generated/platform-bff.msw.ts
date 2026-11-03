@@ -50,7 +50,6 @@ import {
   LeadOwnerMode,
   LeadPlatformStatus,
   LeadRequestType,
-  LetterReceiptMethod,
   LetterResolutionKind,
   LetterStatus,
   LetterTrack,
@@ -70,8 +69,11 @@ import {
   QuoteDeliveryReason,
   QuoteDeliveryStatus,
   QuoteSendChannel,
+  ResolutionTemplateResponsibleType,
+  ResolutionTemplateScope,
   RestrictedField,
   ServiceAction,
+  ServiceConsoleKey,
   ServiceOwner,
   ServiceState,
   SetupCompanyBlocker,
@@ -142,6 +144,10 @@ import type {
   ConversationThread,
   CreatedId,
   CrewRate,
+  DictionaryItem,
+  DictionaryItemList,
+  DictionaryList,
+  DocflowSettings,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -208,6 +214,7 @@ import type {
   LetterCard,
   LetterClient,
   LetterDuplicateList,
+  LetterIntakeSuggestion,
   LetterKindList,
   LetterOfficeResolution,
   LetterPage,
@@ -276,6 +283,8 @@ import type {
   RequestCreatedView,
   RequestRetriedView,
   ResolutionAssignees,
+  ResolutionTemplate,
+  ResolutionTemplateList,
   Role,
   RoleJournal,
   RoleList,
@@ -283,6 +292,7 @@ import type {
   SandboxTurn,
   SearchResult,
   SentMessage,
+  ServiceConsoleList,
   Session,
   SetupCabinet,
   SetupCabinetCheck,
@@ -10729,6 +10739,16 @@ export const getGetSystemStatusResponseMock = (
   ...overrideResponse,
 });
 
+export const getListServiceConsolesResponseMock = (
+  overrideResponse: Partial<Extract<ServiceConsoleList, object>> = {},
+): ServiceConsoleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.arrayElement(Object.values(ServiceConsoleKey)),
+    url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
 export const getGetBusJournalResponseMock = (
   overrideResponse: Partial<Extract<BusJournal, object>> = {},
 ): BusJournal => ({
@@ -12825,7 +12845,7 @@ export const getRegisterLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -12938,6 +12958,128 @@ export const getRegisterLetterResponseMock = (
   ...overrideResponse,
 });
 
+export const getListDictionariesResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryList, object>> = {},
+): DictionaryList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.fromRegExp("^[a-z][a-z-]{0,31}$"),
+    owner: faker.helpers.arrayElement(["eds"] as const),
+    area: faker.helpers.arrayElement(["documents"] as const),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    closed: faker.datatype.boolean(),
+    attrs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        key: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+        type: faker.helpers.arrayElement(["boolean", "integer"] as const),
+        name: {
+          ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+          uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+          en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+        },
+        minimum: faker.helpers.arrayElement([faker.number.int(), null]),
+        maximum: faker.helpers.arrayElement([faker.number.int(), null]),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getListDictionaryItemsResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
+): DictionaryItemList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    attrs: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.datatype.boolean(),
+        faker.number.int(),
+        null,
+      ]),
+    },
+    active: faker.datatype.boolean(),
+    position: faker.number.int(),
+    used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateDictionaryItemResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
+): DictionaryItem => ({
+  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  name: {
+    ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+  },
+  attrs: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+      faker.datatype.boolean(),
+      faker.number.int(),
+      null,
+    ]),
+  },
+  active: faker.datatype.boolean(),
+  position: faker.number.int(),
+  used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  ...overrideResponse,
+});
+
+export const getReorderDictionaryItemsResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItemList, object>> = {},
+): DictionaryItemList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    name: {
+      ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+      en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    },
+    attrs: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+        faker.datatype.boolean(),
+        faker.number.int(),
+        null,
+      ]),
+    },
+    active: faker.datatype.boolean(),
+    position: faker.number.int(),
+    used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getUpdateDictionaryItemResponseMock = (
+  overrideResponse: Partial<Extract<DictionaryItem, object>> = {},
+): DictionaryItem => ({
+  code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  name: {
+    ru: faker.string.alpha({ length: { min: 1, max: 120 } }),
+    uz: faker.string.alpha({ length: { min: 10, max: 120 } }),
+    en: faker.string.alpha({ length: { min: 10, max: 120 } }),
+  },
+  attrs: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement([
+      faker.datatype.boolean(),
+      faker.number.int(),
+      null,
+    ]),
+  },
+  active: faker.datatype.boolean(),
+  position: faker.number.int(),
+  used: faker.helpers.arrayElement([faker.datatype.boolean(), null]),
+  ...overrideResponse,
+});
+
 export const getListLetterKindsResponseMock = (
   overrideResponse: Partial<Extract<LetterKindList, object>> = {},
 ): LetterKindList => ({
@@ -12949,6 +13091,7 @@ export const getListLetterKindsResponseMock = (
       en: faker.string.alpha({ length: { min: 10, max: 20 } }),
     },
     urgent: faker.datatype.boolean(),
+    due_days: faker.helpers.arrayElement([faker.number.int({ min: 1, max: 365 }), null]),
   })),
   ...overrideResponse,
 });
@@ -13185,7 +13328,7 @@ export const getGetLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -13516,7 +13659,7 @@ export const getResolveLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -13850,7 +13993,7 @@ export const getReturnLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14184,7 +14327,7 @@ export const getRejectLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14557,7 +14700,7 @@ export const getSaveResolutionDraftResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -14909,7 +15052,7 @@ export const getResolveOfficeLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15258,7 +15401,7 @@ export const getAcknowledgeLetterResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15610,7 +15753,7 @@ export const getCompleteInstructionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -15968,7 +16111,7 @@ export const getRequestInstructionExtensionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -16326,7 +16469,7 @@ export const getDecideInstructionExtensionResponseMock = (
   },
   kind: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   receipt_method: faker.helpers.arrayElement([
-    faker.helpers.arrayElement(Object.values(LetterReceiptMethod)),
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
     null,
   ]),
   signed_by: faker.helpers.arrayElement([
@@ -16439,6 +16582,201 @@ export const getDecideInstructionExtensionResponseMock = (
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getListResolutionTemplatesResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListResolutionTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplateList, object>> = {},
+): ResolutionTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+    kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+    responsible: faker.helpers.arrayElement([
+      { ...getListResolutionTemplatesResponsePersonRefMock() },
+      null,
+    ]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    owner: faker.helpers.arrayElement([
+      { ...getListResolutionTemplatesResponsePersonRefMock() },
+      null,
+    ]),
+    editable: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateResolutionTemplateResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateResolutionTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplate, object>> = {},
+): ResolutionTemplate => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+  kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+  responsible: faker.helpers.arrayElement([
+    { ...getCreateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  co_executors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  owner: faker.helpers.arrayElement([
+    { ...getCreateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  editable: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateResolutionTemplateResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateResolutionTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplate, object>> = {},
+): ResolutionTemplate => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+  kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+  responsible: faker.helpers.arrayElement([
+    { ...getUpdateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  co_executors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  owner: faker.helpers.arrayElement([
+    { ...getUpdateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  editable: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getSuggestLetterFromFileResponseMock = (
+  overrideResponse: Partial<Extract<LetterIntakeSuggestion, object>> = {},
+): LetterIntakeSuggestion => ({
+  suggestion_id: faker.string.uuid(),
+  source: faker.helpers.arrayElement(["text", "image"] as const),
+  fields: {
+    sender_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sender_inn: faker.helpers.arrayElement([faker.helpers.fromRegExp("^\\d{9,14}$"), null]),
+    sender_ref_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    sender_ref_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    summary: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"), null]),
+    document_due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  prompt_version: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetDocflowSettingsResponseMock = (
+  overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
+): DocflowSettings => ({
+  recognize_scans: faker.datatype.boolean(),
+  ai_available: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateDocflowSettingsResponseMock = (
+  overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
+): DocflowSettings => ({
+  recognize_scans: faker.datatype.boolean(),
+  ai_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -27506,6 +27844,48 @@ export const getGetSystemStatusMockHandler = (
   );
 };
 
+export const getListServiceConsolesMockHandler = (
+  overrideResponse?:
+    | ServiceConsoleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ServiceConsoleList> | ServiceConsoleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/consoles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListServiceConsolesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAuthorizeServiceConsoleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/consoles/:key/auth",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetBusJournalMockHandler = (
   overrideResponse?:
     | BusJournal
@@ -29644,6 +30024,144 @@ export const getRegisterLetterMockHandler = (
   );
 };
 
+export const getListDictionariesMockHandler = (
+  overrideResponse?:
+    | DictionaryList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DictionaryList> | DictionaryList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/dictionaries",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDictionariesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListDictionaryItemsMockHandler = (
+  overrideResponse?:
+    | DictionaryItemList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DictionaryItemList> | DictionaryItemList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/dictionaries/:kind",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDictionaryItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateDictionaryItemMockHandler = (
+  overrideResponse?:
+    | DictionaryItem
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<DictionaryItem> | DictionaryItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/dictionaries/:kind",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateDictionaryItemResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReorderDictionaryItemsMockHandler = (
+  overrideResponse?:
+    | DictionaryItemList
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<DictionaryItemList> | DictionaryItemList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/dictionaries/:kind/order",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReorderDictionaryItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDictionaryItemMockHandler = (
+  overrideResponse?:
+    | DictionaryItem
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<DictionaryItem> | DictionaryItem),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/dictionaries/:kind/:code",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDictionaryItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteDictionaryItemMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/dictionaries/:kind/:code",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getListLetterKindsMockHandler = (
   overrideResponse?:
     | LetterKindList
@@ -29952,6 +30470,186 @@ export const getDecideInstructionExtensionMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getDecideInstructionExtensionResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListResolutionTemplatesMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ResolutionTemplateList> | ResolutionTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/resolution-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListResolutionTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateResolutionTemplateMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ResolutionTemplate> | ResolutionTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/resolution-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateResolutionTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateResolutionTemplateMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ResolutionTemplate> | ResolutionTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/eds/resolution-templates/:id",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateResolutionTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteResolutionTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/eds/resolution-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getSuggestLetterFromFileMockHandler = (
+  overrideResponse?:
+    | LetterIntakeSuggestion
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<LetterIntakeSuggestion> | LetterIntakeSuggestion),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/letter-intake",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSuggestLetterFromFileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDecideAiSuggestionMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/ai-suggestions/:id/decision",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetDocflowSettingsMockHandler = (
+  overrideResponse?:
+    | DocflowSettings
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<DocflowSettings> | DocflowSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/docflow-settings",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetDocflowSettingsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateDocflowSettingsMockHandler = (
+  overrideResponse?:
+    | DocflowSettings
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<DocflowSettings> | DocflowSettings),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/eds/docflow-settings",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateDocflowSettingsResponseMock(),
         { status: 200 },
       );
     },
@@ -32396,6 +33094,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetBackupsMockHandler(),
   getRequestBackupMockHandler(),
   getGetSystemStatusMockHandler(),
+  getListServiceConsolesMockHandler(),
+  getAuthorizeServiceConsoleMockHandler(),
   getGetBusJournalMockHandler(),
   getListBusDeliveriesMockHandler(),
   getListBusInboxMockHandler(),
@@ -32490,6 +33190,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getDownloadCsvExportMockHandler(),
   getListLettersMockHandler(),
   getRegisterLetterMockHandler(),
+  getListDictionariesMockHandler(),
+  getListDictionaryItemsMockHandler(),
+  getCreateDictionaryItemMockHandler(),
+  getReorderDictionaryItemsMockHandler(),
+  getUpdateDictionaryItemMockHandler(),
+  getDeleteDictionaryItemMockHandler(),
   getListLetterKindsMockHandler(),
   getFindLetterDuplicatesMockHandler(),
   getGetLetterMockHandler(),
@@ -32504,6 +33210,14 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCompleteInstructionMockHandler(),
   getRequestInstructionExtensionMockHandler(),
   getDecideInstructionExtensionMockHandler(),
+  getListResolutionTemplatesMockHandler(),
+  getCreateResolutionTemplateMockHandler(),
+  getUpdateResolutionTemplateMockHandler(),
+  getDeleteResolutionTemplateMockHandler(),
+  getSuggestLetterFromFileMockHandler(),
+  getDecideAiSuggestionMockHandler(),
+  getGetDocflowSettingsMockHandler(),
+  getUpdateDocflowSettingsMockHandler(),
   getListEdsStaffMockHandler(),
   getListCrmMessagesMockHandler(),
   getGetCrmConversationMockHandler(),

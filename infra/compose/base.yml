@@ -95,7 +95,7 @@ x-crm-backend: &crm-backend
 # EDS (apps/eds, волна 12, ADR-0015): один образ для eds-api, eds-worker и eds-migrate. Внешнего маршрута нет — Caddy на EDS
 # не ведёт ни с одного домена; сотрудники приходят через BFF Платформы, системы — по шине rt_bus (приёмник POST /bus/v1/events).
 x-eds-backend: &eds-backend
-  build:
+  build: &eds-build
     context: ../../apps/eds
     target: prod
     # Шина событий rt_bus (ADR-0014, L14): пакет и схемы контракта лежат вне контекста сборки; rt-docs — письма на бланке (P4).
@@ -126,6 +126,11 @@ x-eds-backend: &eds-backend
     RT_BUS_SECRET_EDS_CRM: ${RT_BUS_SECRET_EDS_CRM:-}
     RT_BUS_ENDPOINT_ERP: ${RT_BUS_ENDPOINT_ERP:-}
     RT_BUS_ENDPOINT_PLATFORM_BFF: ${RT_BUS_ENDPOINT_PLATFORM_BFF:-}
+    # ИИ-помощник «Заполнить из файла» (EDS-REG): шлюз LiteLLM своим виртуальным ключом EDS (регистрирует eds-ai-gateway).
+    # Пусто — помощник выключен, форма регистрации заполняется вручную.
+    LITELLM_BASE_URL: http://litellm:4000
+    EDS_LITELLM_API_KEY: ${EDS_LITELLM_API_KEY:-}
+    EDS_AI_DAILY_BUDGET_USD: ${EDS_AI_DAILY_BUDGET_USD:-1}
 
 services:
   # ─── Общая инфраструктура ──────────────────────────────────────────────────────────────────
@@ -515,7 +520,9 @@ services:
       DJANGO_DEBUG: ${ERP_DEBUG:-true}
       DJANGO_LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AUTO_MIGRATE: "true"
-      ALLOWED_HOSTS: erp.localhost,cabinet.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz},${CABINET_DOMAIN:-cabinet.railtech.uz}
+      ALLOWED_HOSTS: erp.localhost,cabinet.localhost,platform.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz},${CABINET_DOMAIN:-cabinet.railtech.uz}
+      # Django admin под /console/erp на домене Платформы (OPS-CONSOLE): core/console_mount.py; пусто — выключено.
+      ERP_CONSOLE_PREFIX: /console/erp
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/erp?sslmode=disable
       DB_SSLMODE: disable
       REDIS_CACHE_URL: redis://:${REDIS_CACHE_PASSWORD:?set in .env}@redis-cache:6379/0
@@ -726,6 +733,9 @@ services:
       PLATFORM_COOKIE_SECURE: ${PLATFORM_COOKIE_SECURE:-true}
       PLATFORM_ERP_REFRESH_COOKIE: ${PLATFORM_ERP_REFRESH_COOKIE:-refresh_token}
       PLATFORM_LOGIN_RATE_PER_MINUTE: ${PLATFORM_LOGIN_RATE_PER_MINUTE:-10}
+      # Служебная консоль через Платформу (OPS-CONSOLE): /console/erp/admin/ — только администратору.
+      # Не задано — `erp`; пустое значение (PLATFORM_CONSOLES=) выключает (дефис, не `:-`: пусто ≠ не задано).
+      PLATFORM_CONSOLES: ${PLATFORM_CONSOLES-erp}
       # Таймаут вызовов CRM из BFF, секунды (T5, runbook r3 O-1) и прокси, которым BFF верит в X-Forwarded-For (Caddy в сети compose).
       PLATFORM_CRM_TIMEOUT_SECONDS: ${PLATFORM_CRM_TIMEOUT_SECONDS:-5}
       PLATFORM_TRUSTED_PROXIES: ${PLATFORM_TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
@@ -792,6 +802,23 @@ services:
       timeout: 3s
       retries: 10
       start_period: 10s
+
+  # Виртуальный ключ EDS в LiteLLM (EDS-REG): регистрирует EDS_LITELLM_API_KEY с дневным бюджетом EDS_AI_DAILY_BUDGET_USD
+  # и только алиасами EDS. Одноразовый, идемпотентный, всегда завершается кодом 0; мастер-ключ — только здесь. Без базы и
+  # секретов EDS: окружение — только шлюз.
+  eds-ai-gateway:
+    build: *eds-build
+    command: ["python", "-m", "app", "ai-key-sync"]
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY}
+      EDS_LITELLM_API_KEY: ${EDS_LITELLM_API_KEY:-}
+      EDS_AI_DAILY_BUDGET_USD: ${EDS_AI_DAILY_BUDGET_USD:-1}
+    restart: "no"
+    depends_on:
+      litellm:
+        condition: service_healthy
 
   # Воркер Procrastinate: ретранслятор шины (outbox → доставка), обработка inbox (проекция сотрудников), уборка jti.
   eds-worker:

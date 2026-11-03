@@ -279,6 +279,7 @@ export const MENU = {
     tickets: ["admin"],
     articles: ["admin"],
     company: ["company.settings"],
+    docflow: ["admin"],
     bot: ["admin"],
     audit: ["admin"],
     setup: ["admin"],

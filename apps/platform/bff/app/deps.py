@@ -121,6 +121,7 @@ class Authed:
         content_type: str | None = None,
         stream: bool = False,
         headers: dict[str, str] | None = None,
+        wait_seconds: float | None = None,
     ) -> httpx.Response:
         return await self.service.call(
             self.sid,
@@ -134,6 +135,7 @@ class Authed:
             content_type=content_type,
             stream=stream,
             headers=headers,
+            wait_seconds=wait_seconds,
         )
 
 

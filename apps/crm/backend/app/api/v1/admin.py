@@ -4,14 +4,15 @@ from datetime import datetime
 from typing import Annotated
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
 from app.models.auth import AuditLog, User
-from app.schemas.admin import AuditItem, AuditPage, Dashboard
+from app.schemas.admin import AuditItem, AuditPage, ConsoleOpenIn, Dashboard
 from app.schemas.leads import ActionResult
+from app.security import audit
 from app.security.principal import Principal
 from app.services import dashboard
 
@@ -97,6 +98,19 @@ async def list_audit(
         for r in rows
     ]
     return AuditPage(items=items, total=total)
+
+
+@router.post("/audit/console-open", status_code=204)
+async def audit_console_open(
+    body: ConsoleOpenIn,
+    who: Annotated[Principal, Depends(require("integrations", "write"))],
+    container: ContainerDep,
+) -> Response:
+    """Запись «открыл служебную консоль» (OPS-CONSOLE): BFF Платформы пускает администратора в
+    консоль сервиса по пути `/console/<ключ>/` и отмечает это здесь — кто, когда, какая."""
+    async with container.session_factory() as session, session.begin():
+        await audit.record(session, who.actor, "console.open", "console", body.console)
+    return Response(status_code=204)
 
 
 async def _actor_names(session: AsyncSession, ids: set[int | None]) -> dict[int, str]:

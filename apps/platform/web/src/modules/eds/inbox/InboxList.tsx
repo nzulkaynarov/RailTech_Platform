@@ -1,4 +1,4 @@
-import { Button, Card, Segmented } from "antd";
+import { Button, Card, Segmented, Select } from "antd";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
@@ -24,6 +24,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { STATUS_FILTERS, letterPath, withParams } from "./api";
+import { localName, useLetterDictionary } from "../dictionaries";
 import { useStateLabels } from "./labels";
 import { ResolutionSlot } from "./ResolutionPanel";
 
@@ -233,17 +234,24 @@ function Rows({ items, selected }: { items: readonly LetterRow[]; selected: stri
 
 /** EDS · Входящие письма (SPEC-v3 §7.3): список со статусом словами, фильтр (по умолчанию «Ждёт резолюции»), письмо — в боковом окне. */
 export function InboxList() {
-  const { t } = useTranslation(["letters", "modules", "dictionary"]);
+  const { t, i18n } = useTranslation(["letters", "modules", "dictionary"]);
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
   const canRegister = canEdit(me, "eds.inbox.register");
   const filter = filterOf(params.get("status"));
+  const kind = params.get("kind") || null;
   const selected = params.get("letter");
   const title = t("modules:eds.sections.inbox");
   useDocumentTitle(title);
+  // Вид документа — справочник (EDS-REG), со скрытыми: старые письма тоже находятся.
+  const kinds = useLetterDictionary("letter-kinds", true);
 
-  const listParams: ListLettersParams = { ...paramsOf(filter), limit: PAGE };
+  const listParams: ListLettersParams = {
+    ...paramsOf(filter),
+    ...(kind ? { kind } : {}),
+    limit: PAGE,
+  };
   const query = useInfiniteQuery({
     queryKey: getListLettersQueryKey(listParams),
     queryFn: ({ pageParam }) =>
@@ -252,6 +260,20 @@ export function InboxList() {
     getNextPageParam: (last) => last.next_cursor ?? undefined,
   });
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
+
+  const setKind = (value: string | undefined) => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value) next.set("kind", value);
+        else next.delete("kind");
+        next.delete("letter");
+        next.delete("sheet");
+        return next;
+      },
+      { replace: true },
+    );
+  };
 
   const setFilter = (value: Filter) => {
     setParams(
@@ -350,13 +372,33 @@ export function InboxList() {
         }
       />
       {/* На узком экране фильтр прокручивается вбок, обрезанный край виден — все варианты доступны (UX-2b) */}
-      <div className="pf-letters-filter">
-        <Segmented
-          aria-label={t("letters:list.filter.label")}
-          value={filter}
-          options={FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
-          onChange={(value) => {
-            setFilter(value);
+      <div className="pf-letters-filters">
+        <div className="pf-letters-filter">
+          <Segmented
+            aria-label={t("letters:list.filter.label")}
+            value={filter}
+            options={FILTERS.map((value) => ({ value, label: filterLabel(value, t) }))}
+            onChange={(value) => {
+              setFilter(value);
+            }}
+          />
+        </div>
+        <label htmlFor="pf-letters-kind" className="pf-sr-only">
+          {t("letters:listKind.label")}
+        </label>
+        <Select
+          id="pf-letters-kind"
+          className="pf-letters-kind"
+          allowClear
+          value={kind ?? undefined}
+          placeholder={t("letters:listKind.all")}
+          loading={kinds.isPending}
+          options={(kinds.data?.items ?? []).map((item) => ({
+            value: item.code,
+            label: localName(item.name, i18n.language),
+          }))}
+          onChange={(value: string | undefined) => {
+            setKind(value);
           }}
         />
       </div>

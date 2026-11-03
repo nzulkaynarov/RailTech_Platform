@@ -10,4 +10,11 @@ export interface LetterKind {
   name: LetterKindName;
   /** Регистрация этим видом сразу ставит «срочно» */
   urgent: boolean;
+  /**
+   * Срок исполнения по умолчанию, дней (EDS-REG); `null` — общее правило (срочно 3, обычный 10)
+   * @minimum 1
+   * @maximum 365
+   * @nullable
+   */
+  due_days?: number | null;
 }

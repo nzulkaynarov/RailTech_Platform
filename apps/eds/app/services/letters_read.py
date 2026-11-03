@@ -21,7 +21,6 @@ from app.schemas.letters import (
     LetterStatus,
     OfficeResolution,
     OutgoingRef,
-    ReceiptMethod,
     RelatedRef,
     Resolution,
     ResolutionDraft,
@@ -29,7 +28,7 @@ from app.schemas.letters import (
 )
 from app.schemas.letters import Letter as LetterOut
 from app.schemas.pagination import decode_cursor
-from app.services import files, instructions, journal, paging
+from app.services import dictionaries, files, instructions, journal, paging
 from app.services.letters import fmt_pct
 from app.services.people import Directory, default_director, load_directory
 
@@ -170,6 +169,15 @@ def _office_resolution(
     )
 
 
+async def _kind_due_days(session: AsyncSession, letter: Letter) -> int | None:
+    """Срок исполнения по умолчанию вида документа (справочник `letter-kinds`, EDS-REG); скрытый вид тоже считается."""
+    if letter.doc_kind is None:
+        return None
+    item = await dictionaries.find(session, dictionaries.LETTER_KINDS, letter.doc_kind, active_only=False)
+    days = item.attrs.get("due_days") if item is not None else None
+    return days if isinstance(days, int) and not isinstance(days, bool) else None
+
+
 async def present(session: AsyncSession, letter: Letter) -> LetterOut:
     """Карточка письма: резолюция, поручения, вложения (последние версии) и журнал."""
     rows, extensions, acquaint, numbers = await _work(session, letter)
@@ -211,13 +219,17 @@ async def present(session: AsyncSession, letter: Letter) -> LetterOut:
         reject_reason=letter.reject_reason,
         journal=entries,
         kind=letter.doc_kind,
-        receipt_method=ReceiptMethod(letter.receipt_method) if letter.receipt_method else None,
+        receipt_method=letter.receipt_method,
         signed_by=letter.signed_by,
         document_due=letter.document_due,
         related=await _related(session, letter),
         track=instructions.track_of(letter),
         on_control=letter.on_control,
-        suggested_due=instructions.suggested_due(letter, today) if letter.status == "awaiting_resolution" else None,
+        suggested_due=(
+            instructions.suggested_due(letter, today, await _kind_due_days(session, letter))
+            if letter.status == "awaiting_resolution"
+            else None
+        ),
         resolution_draft=_draft(letter, directory),
         office_resolution=_office_resolution(letter, rows, acquaint, directory),
         instructions=[
@@ -270,9 +282,12 @@ async def list_page(
     limit: int,
     on_control: bool | None = None,
     overdue: bool | None = None,
+    kind: str | None = None,
 ) -> LetterPage:
     today = clock.company_date(clock.now())
     stmt = select(Letter)
+    if kind is not None:
+        stmt = stmt.where(Letter.doc_kind == kind)
     if statuses:
         stmt = stmt.where(Letter.status.in_([s.value for s in statuses]))
     if on_control is not None:

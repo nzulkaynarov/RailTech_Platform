@@ -18,3 +18,25 @@
   padding: 0 4px;
   font-weight: 600;
 }
+
+/* EDS-REG: «Заполнить из файла» — кнопка под файлом, пометка «Предложено ИИ» у поля */
+.pf-reg-ai {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-reg-ai-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.pf-reg-ai-chip {
+  align-self: flex-start;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 20px;
+  color: #0958d9;
+  background: #e6f4ff;
+}

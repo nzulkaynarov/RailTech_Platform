@@ -890,5 +890,48 @@
       "bad_status": "Кабинет ответил кодом {{code}} — проверьте адрес.",
       "not_cabinet": "По адресу отвечает не кабинет клиента — проверьте адрес."
     }
+  },
+  "links": {
+    "groupAria": "Кабинеты сервиса",
+    "newTabAria": "{{name}} — откроется в новой вкладке",
+    "mail": {
+      "yandex": {
+        "admin": "Админка Яндекс 360",
+        "mail": "Почта Яндекса"
+      },
+      "google": {
+        "admin": "Админка Google Workspace",
+        "mail": "Gmail"
+      },
+      "mailru": {
+        "admin": "Почта Mail.ru для бизнеса",
+        "mail": "Почта Mail.ru"
+      }
+    },
+    "models": {
+      "anthropic": "Консоль Anthropic",
+      "openai": "Консоль OpenAI",
+      "gemini": "Google AI Studio",
+      "mistral": "Консоль Mistral",
+      "deepseek": "Консоль DeepSeek",
+      "groq": "Консоль Groq",
+      "openrouter": "Ключи OpenRouter"
+    },
+    "telegram": {
+      "botfather": "BotFather",
+      "bot": "Бот в Telegram"
+    },
+    "offsite": {
+      "yandex": "Папка на Яндекс Диске",
+      "gdrive": "Папка на Google Диске"
+    }
+  },
+  "consoles": {
+    "open": "Открыть консоль: {{name}}",
+    "openAria": "Открыть консоль «{{name}}» в новой вкладке",
+    "ownLogin": "Вход — ключом или паролем самого сервиса.",
+    "erp": {
+      "name": "панель базы"
+    }
   }
 }
