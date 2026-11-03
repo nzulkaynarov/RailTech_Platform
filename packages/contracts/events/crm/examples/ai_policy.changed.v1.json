@@ -1,0 +1,20 @@
+{
+  "specversion": "1.0",
+  "id": "5d1b7c40-8e2a-4f19-a3c6-0b9e4d2f7a31",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.ai_policy.changed.v1",
+  "time": "2026-11-03T09:00:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/ai_policy.changed/v1",
+  "tenant": "railtech",
+  "correlationid": "b7e2a9c4-3d51-4a08-9f6e-1c2d3e4f5a60",
+  "subject": "ai_policy/pii",
+  "data": {
+    "pii_policy": "strict",
+    "changed_at": "2026-11-03T09:00:00Z",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 1
+    }
+  }
+}

@@ -23,6 +23,25 @@ class Actor(BaseModel):
     """
 
 
+class AiPolicyChangedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.ai_policy.changed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Админ сохранил раздел «ИИ» настроек CRM (политика защиты персональных данных перед моделью, решение владельца 2026-11-03): `business` («Деловая», по умолчанию) — в тексте для модели скрываются только паспорт, ПИНФЛ, номера карт и даты рождения; `strict` («Строгая») — ещё и телефоны, почта, ИНН, счета и прочие длинные числа, сканы и фото в модель не уходят. Снимок значения целиком: подписчик заменяет проекцию, снимок с `changed_at` старше применённого не применяется. Данных людей и компаний нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    pii_policy: PiiPolicy
+    """
+    Политика маскирования персональных данных перед вызовом модели
+    """
+    changed_at: AwareDatetime
+    """
+    Момент сохранения настройки в CRM (время базы)
+    """
+    actor: Actor
+
+
 class Author(StrEnum):
     """
     Кто автор сообщения (роль сообщения CRM)
@@ -456,6 +475,15 @@ class Phone(RootModel[str]):
     """
     Телефон в E.164
     """
+
+
+class PiiPolicy(StrEnum):
+    """
+    Политика маскирования персональных данных перед вызовом модели
+    """
+
+    business = "business"
+    strict = "strict"
 
 
 class PreferredChannel(StrEnum):

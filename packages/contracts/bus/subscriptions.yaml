@@ -89,3 +89,5 @@ subscribers:
       # P4 (B-W18AP1-1): итог письма адресату, запрошенного EDS с notify = true — журнал отправки письма на бланке.
       - uz.railtech.crm.mail.sent.v1
       - uz.railtech.crm.mail.failed.v1
+      # PD-BIZ: политика защиты данных для ИИ («Деловая» / «Строгая») — владелец CRM, проекция EDS для «Заполнить из файла».
+      - uz.railtech.crm.ai_policy.changed.v1
