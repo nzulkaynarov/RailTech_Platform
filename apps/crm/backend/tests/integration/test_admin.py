@@ -373,3 +373,29 @@ async def test_dashboard_and_audit(
     assert audit["total"] >= 2
     assert json.dumps(audit["items"][0])  # сериализуется (inet → str)
     assert harness.client.get("/api/v1/kb/documents", headers=viewer_headers).status_code == 403
+
+
+async def test_console_open_is_audited_for_admin_only(
+    harness: Harness, admin: dict[str, str], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """OPS-CONSOLE: открытие консоли через Платформу — запись журнала «кто, когда, какая»."""
+    viewer, password = await make_user(sessions, "viewer2@railtech.uz", ["viewer"])
+    viewer_headers = login(harness.client, viewer.email, password)
+    url = "/api/v1/audit/console-open"
+    assert (
+        harness.client.post(url, headers=viewer_headers, json={"console": "litellm"}).status_code
+        == 403
+    )
+    assert harness.client.post(url, headers=admin, json={"console": "../x"}).status_code == 422
+
+    assert harness.client.post(url, headers=admin, json={"console": "litellm"}).status_code == 204
+
+    page = harness.client.get("/api/v1/audit?action=console.open", headers=admin).json()
+    assert page["total"] == 1
+    item = page["items"][0]
+    assert (item["entity_type"], item["entity_id"], item["actor_type"]) == (
+        "console",
+        "litellm",
+        "user",
+    )
+    assert item["actor_user_id"] is not None
