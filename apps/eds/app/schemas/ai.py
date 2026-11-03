@@ -47,8 +47,15 @@ class AiDecisionIn(Strict):
     decision: AiDecision
 
 
+class PiiPolicy(StrEnum):
+    BUSINESS = "business"  # «Деловая»: скрываются паспорт, ПИНФЛ, номера карт, даты рождения
+    STRICT = "strict"  # «Строгая»: скрывается всё прежнее, сканы и фото в модель не уходят
+
+
 class DocflowSettings(BaseModel):
     recognize_scans: bool
+    # Политика защиты данных для ИИ — проекция настройки CRM (владелец поля — CRM), здесь только для чтения.
+    pii_policy: PiiPolicy
     ai_available: bool
 
 

@@ -4,7 +4,9 @@
   источник (текст или изображение), итог вызова, токены и стоимость, решение человека (принял · поправил · вручную).
   **Без текстов**: ни файла, ни ответа модели здесь нет.
 * `docflow_settings` — одна строка настроек документооборота (администратор): `recognize_scans` — распознавать сканы и
-  фото моделью, по умолчанию выключено.
+  фото моделью (по умолчанию включено; работает только при политике «Деловая»); `pii_policy` — проекция политики защиты
+  данных для ИИ из CRM (событие `crm.ai_policy.changed`, PD-BIZ): `business` по умолчанию, `strict`; `pii_policy_at` —
+  момент изменения в CRM, более старое событие не применяется.
 """
 
 import uuid
@@ -47,9 +49,14 @@ class AiSuggestion(Base):
 
 class DocflowSettings(Base):
     __tablename__ = "docflow_settings"
-    __table_args__ = (CheckConstraint("id = 1", name="single_row"),)
+    __table_args__ = (
+        CheckConstraint("id = 1", name="single_row"),
+        CheckConstraint("pii_policy IN ('business', 'strict')", name="pii_policy"),
+    )
 
     id: Mapped[int] = mapped_column(SmallInteger, primary_key=True)
-    recognize_scans: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    recognize_scans: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    pii_policy: Mapped[str] = mapped_column(String(16), server_default="business")
+    pii_policy_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     updated_by: Mapped[int | None] = mapped_column(BigInteger)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

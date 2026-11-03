@@ -62,3 +62,23 @@ class UserDeactivated(BaseModel):
 def parse_time(value: str) -> datetime:
     """Время конверта (RFC 3339, `Z`) → aware datetime."""
     return datetime.fromisoformat(value)
+
+
+class AiPolicyActor(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    crm_user_id: int | None = None
+
+
+class AiPolicyChanged(BaseModel):
+    """`data` события `crm.ai_policy.changed`: политика защиты данных для ИИ («Деловая» / «Строгая»)."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    pii_policy: str
+    changed_at: AwareDatetime
+    actor: AiPolicyActor = Field(default_factory=AiPolicyActor)
+
+    @property
+    def crm_user_id(self) -> int | None:
+        return self.actor.crm_user_id
