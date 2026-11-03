@@ -76,6 +76,7 @@ class ImapConnector(_Out):
     personal_rule: bool
     personal_label: str
     trusted_auth_servers: list[str]
+    trusted_auth_effective: list[str]
     username: str
     password_configured: bool
     password_last4: str | None

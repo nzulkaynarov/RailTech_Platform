@@ -355,7 +355,13 @@ class ImapStatusOut(BaseModel):
     trusted_auth_servers: list[str] = Field(
         default_factory=list,
         description="Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их "
-        "`Authentication-Results` подтверждает отправителя для правил «отправитель → тип»",
+        "`Authentication-Results` подтверждает отправителя для правил «отправитель → тип»; "
+        "пусто — выводится из хоста IMAP (см. `trusted_auth_effective`)",
+    )
+    trusted_auth_effective: list[str] = Field(
+        default_factory=list,
+        description="Кому верим на самом деле: заданный список или серверы провайдера нашего "
+        "ящика по хосту IMAP; пусто — никому (хост не из известных провайдеров)",
     )
     username: str
     password_configured: bool
@@ -394,7 +400,7 @@ class ImapConnectorIn(BaseModel):
     trusted_auth_servers: list[str] | None = Field(
         default=None,
         max_length=30,
-        description="Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому",
+        description="Доверенные `authserv-id`; `null` — прежние, пустой список — по хосту IMAP",
     )
     username: str | None = Field(default=None, max_length=255)
     imap_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)

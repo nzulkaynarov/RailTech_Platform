@@ -255,7 +255,14 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
           },
           {
             label: t("mail.inbound.trusted"),
-            value: imap.trusted_auth_servers.join(", ") || t("mail.inbound.trustedNone"),
+            value: imap.trusted_auth_effective.length
+              ? t(
+                  imap.trusted_auth_servers.length
+                    ? "mail.inbound.trustedExplicit"
+                    : "mail.inbound.trustedDerived",
+                  { list: imap.trusted_auth_effective.join(", ") },
+                )
+              : t("mail.inbound.trustedNone"),
           },
           { label: t("mail.inbound.lastPoll"), value: last },
         ]}

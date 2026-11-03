@@ -264,6 +264,25 @@ async def latest_incoming(session: AsyncSession, root_id: int) -> InboundMail | 
     return (await session.scalars(stmt)).first()
 
 
+async def assigned_by(session: AsyncSession, mail_id: int) -> str | None:
+    """Чем назначен нынешний исполнитель: последнее из `take`, `takeover`, `handover`, `release`
+    в журнале письма (`handover` — письмо ему передал коллега, остальное — взял сам)."""
+    stmt = (
+        select(AuditLog.action)
+        .where(
+            AuditLog.entity_type == "inbound_mail",
+            AuditLog.entity_id == str(mail_id),
+            AuditLog.action.in_(
+                [f"inbound_mail.{a}" for a in ("take", "takeover", "handover", "release")]
+            ),
+        )
+        .order_by(AuditLog.created_at.desc(), AuditLog.id.desc())
+        .limit(1)
+    )
+    action = (await session.scalars(stmt)).first()
+    return action.removeprefix("inbound_mail.") if action else None
+
+
 async def journal(session: AsyncSession, mail_id: int, limit: int = 100) -> Sequence[AuditLog]:
     """Что делали с письмом (аудит CRM): кто, что и когда; текстов писем в журнале нет."""
     stmt = (

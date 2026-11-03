@@ -4000,7 +4000,7 @@ components:
             maxItems: 30
             type: array
           - type: 'null'
-          description: Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому
+          description: Доверенные `authserv-id`; `null` — прежние, пустой список — по хосту IMAP
           title: Trusted Auth Servers
         username:
           anyOf:
@@ -4261,9 +4261,16 @@ components:
           - starttls
           title: Security
           type: string
+        trusted_auth_effective:
+          description: 'Кому верим на самом деле: заданный список или серверы провайдера нашего ящика по хосту IMAP; пусто
+            — никому (хост не из известных провайдеров)'
+          items:
+            type: string
+          title: Trusted Auth Effective
+          type: array
         trusted_auth_servers:
           description: 'Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results`
-            подтверждает отправителя для правил «отправитель → тип»'
+            подтверждает отправителя для правил «отправитель → тип»; пусто — выводится из хоста IMAP (см. `trusted_auth_effective`)'
           items:
             type: string
           title: Trusted Auth Servers

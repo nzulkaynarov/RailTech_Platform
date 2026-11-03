@@ -43,7 +43,11 @@ def server() -> Iterator[FakeImapServer]:
 
 @pytest.fixture
 def stand(sessions: async_sessionmaker[AsyncSession], server: FakeImapServer) -> Stand:
-    return Stand(sessions, server)
+    box = Stand(sessions, server)
+    box.trusted = [
+        "yandex.ru"
+    ]  # админ вписал сервер Яндекса: тест-хост не из известных провайдеров
+    return box
 
 
 @pytest.fixture
@@ -210,6 +214,8 @@ def _signed(n: int, sender: str, auth: str | None = "pass", **kw: Any) -> bytes:
         msg["Authentication-Results"] = AUTH_PASS.format(d=domain)
     elif auth == "foreign":  # заголовок, который написал сам отправитель, с чужим authserv-id
         msg["Authentication-Results"] = f"attacker.example; dmarc=pass header.from={domain}"
+    elif auth == "google":  # подделка «от Google» в письме на ящике не у Google
+        msg["Authentication-Results"] = f"mx.google.com; dmarc=pass header.from={domain}"
     elif auth == "fail":
         msg["Authentication-Results"] = (
             f"mx.yandex.ru; spf=fail smtp.mailfrom={domain}; dkim=none; "
@@ -817,3 +823,45 @@ async def test_accountant_without_the_first_line_closes_the_mail_handed_to_him(
     # ошибочно закрытое письмо первая линия вернёт в «Новые»
     await stand.service().release(await stand.clerk(), mail_id)
     assert (await _row(stand, mail_id)).status == "new"
+
+
+async def test_complete_is_only_for_a_mail_handed_over_not_one_taken_by_oneself(
+    stand: Stand, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """«Готово — убрать из очереди» — для переданного письма; взявший письмо сам разбирает его
+    обычными действиями, а не закрывает «просто так»."""
+    from app.domain.errors import ForbiddenError
+    from app.models.platform_roles import UserPlatformRole
+
+    mail_id = await _one_mail(stand)
+    accountant = await _person(stand, "acc-self@railtech.uz", "tpl:ACCOUNTANT")
+    (role,) = await _role_ids(stand, "tpl:ACCOUNTANT")
+    async with sessions() as session, session.begin():
+        session.add(UserPlatformRole(user_id=accountant.user_id, role_id=role))
+    await stand.service().take(accountant, mail_id)  # взял сам, не передано
+    with pytest.raises(ForbiddenError):
+        await stand.actions().complete(accountant, mail_id)
+    assert (await _row(stand, mail_id)).status == "in_work"
+
+    # вернул и затем получил письмо передачей — закрывает
+    clerk = await stand.principal()
+    from app.services.inbound_mail import MailAccess
+
+    await stand.service().release(MailAccess(accountant, False), mail_id)
+    await stand.actions().handover(clerk, mail_id, accountant.user_id, "payments")
+    await stand.actions().complete(accountant, mail_id)
+    assert (await _row(stand, mail_id)).outcome == "handled"
+
+
+async def test_no_trusted_servers_and_unknown_host_means_nobody_is_believed(stand: Stand) -> None:
+    """Сервер компании не ставит Authentication-Results: подделка «от Google» и даже «от Яндекса»
+    в самом письме не делает отправителя подтверждённым."""
+    stand.trusted = []  # админ ничего не вписал; хост 127.0.0.1 — не провайдер из таблицы
+    await _add_rule(stand, "soliq.example", "official")
+    await stand.configure()
+    stand.server.box.add(1, _signed(1, "a@soliq.example", "google"))
+    stand.server.box.add(2, _signed(2, "b@soliq.example"))  # заголовок «от Яндекса»
+    await stand.ingest.poll()
+    first, second = await stand.mails()
+    for mail in (first, second):
+        assert (mail.type_code, mail.sender_auth, mail.rule_skipped) == (None, "unknown", True)

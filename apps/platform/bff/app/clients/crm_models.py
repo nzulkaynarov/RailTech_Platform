@@ -797,11 +797,17 @@ class ImapStatusOut(BaseModel):
     port: Annotated[int, Field(title="Port")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
     security: Annotated[Security, Field(title="Security")]
+    trusted_auth_effective: Annotated[
+        list[str] | None, Field(title="Trusted Auth Effective")
+    ] = None
+    """
+    Кому верим на самом деле: заданный список или серверы провайдера нашего ящика по хосту IMAP; пусто — никому (хост не из известных провайдеров)
+    """
     trusted_auth_servers: Annotated[
         list[str] | None, Field(title="Trusted Auth Servers")
     ] = None
     """
-    Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип»
+    Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип»; пусто — выводится из хоста IMAP (см. `trusted_auth_effective`)
     """
     username: Annotated[str, Field(title="Username")]
 

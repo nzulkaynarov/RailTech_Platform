@@ -83,7 +83,8 @@ class InboundMailActions:
     async def complete(self, who: Principal, mail_id: int) -> None:
         """«Готово — убрать из очереди»: тот, кому письмо передали (счёт — бухгалтеру), закрывает
 
-        Только исполнитель письма; первой линии для этого есть ответ, архив и остальные действия."""
+        Только исполнитель, которому письмо передали (`handover`); взявшему письмо самому для этого
+        есть ответ, архив и остальные действия."""
         now = datetime.now(UTC)
         async with self._sessions() as session, session.begin():
             row = await work.lock(session, mail_id)
@@ -91,6 +92,8 @@ class InboundMailActions:
                 raise ForbiddenError("mail is not yours", resource="mail_inbox")
             if row.status != "in_work":
                 raise work.handled(row)
+            if await views.assigned_by(session, mail_id) != "handover":
+                raise ForbiddenError("mail was not handed over to you", resource="mail_inbox")
             work.finish(row, "handled", who, now)
             await audit.record(
                 session, who.actor, "inbound_mail.complete", "inbound_mail", row.id, after={}

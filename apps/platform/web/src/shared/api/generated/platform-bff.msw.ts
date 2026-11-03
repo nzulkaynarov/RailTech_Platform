@@ -9271,6 +9271,10 @@ export const getGetImapConnectorResponseMock = (
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  trusted_auth_effective: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
   username: faker.string.alpha({ length: { min: 10, max: 20 } }),
   password_configured: faker.datatype.boolean(),
   password_last4: faker.helpers.arrayElement([
@@ -9345,6 +9349,10 @@ export const getSaveImapConnectorResponseMock = (
   personal_rule: faker.datatype.boolean(),
   personal_label: faker.string.alpha({ length: { min: 1, max: 80 } }),
   trusted_auth_servers: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  trusted_auth_effective: Array.from(
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
   ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),

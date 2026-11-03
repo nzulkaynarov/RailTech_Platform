@@ -98,6 +98,8 @@ class Stand:
         self.settings = settings or SettingsService(sessions)
         self.storage = FakeStorage()
         self.new: list[int] = []
+        # Доверенные `authserv-id` («Почта»): хост фейкового сервера 127.0.0.1 — не провайдер.
+        self.trusted: list[str] = []
         self._people: dict[str, Principal] = {}
         self.ingest = InboundMailIngest(
             sessions,
@@ -114,7 +116,12 @@ class Stand:
 
     async def configure(self) -> None:
         current = (await self.settings.get()).integrations.model_dump(mode="json")
-        current["imap"] = {"host": "127.0.0.1", "port": self.server.port, "mailbox": "INBOX"}
+        current["imap"] = {
+            "host": "127.0.0.1",
+            "port": self.server.port,
+            "mailbox": "INBOX",
+            "trusted_auth_servers": self.trusted,
+        }
         await self.settings.update("integrations", current, None)
         async with self.sessions() as session, session.begin():
             await self.store.put(session, IMAP_USERNAME, USERNAME, None)

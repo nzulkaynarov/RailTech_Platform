@@ -448,6 +448,19 @@ export function inboundMailCounters(view: readonly MockRole[]) {
   return [{ module: "eds" as const, section: "mail", count, attention: count > 0 }];
 }
 
+/** Серверы провайдера ящика по хосту IMAP (как в CRM, `domain/sender_auth.PROVIDERS`). */
+function effectiveTrusted(host: string, explicit: readonly string[]): string[] {
+  if (explicit.length) return [...explicit];
+  const h = host.toLowerCase();
+  const is = (...suffixes: string[]) => suffixes.some((x) => h === x || h.endsWith(`.${x}`));
+  if (is("yandex.ru", "yandex.com")) return ["yandex.ru", "yandex.net"];
+  if (is("gmail.com", "googlemail.com")) return ["google.com"];
+  if (is("office365.com")) return ["protection.outlook.com"];
+  if (is("mail.ru")) return ["mail.ru"];
+  if (is("zoho.com", "zoho.eu")) return ["zoho.com", "zoho.eu"];
+  return [];
+}
+
 let imap: ImapConnector = {
   configured: true,
   host: "imap.mail.example",
@@ -468,15 +481,8 @@ let imap: ImapConnector = {
   last_error: null,
   folders: [{ name: "INBOX", label: "INBOX", spam: false }],
   history: null,
-  trusted_auth_servers: [
-    "yandex.ru",
-    "yandex.net",
-    "yandex.com",
-    "google.com",
-    "protection.outlook.com",
-    "mail.ru",
-    "zoho.com",
-  ],
+  trusted_auth_servers: [],
+  trusted_auth_effective: [],
 };
 
 /** Ход загрузки истории: каждое чтение настроек — ещё одна пачка, как фоновая задача. */
@@ -818,6 +824,10 @@ export const inboundMailHandlers = [
       password_last4: body.imap_password ? body.imap_password.slice(-4) : imap.password_last4,
       configured: Boolean(body.host),
       trusted_auth_servers: body.trusted_auth_servers ?? imap.trusted_auth_servers,
+      trusted_auth_effective: effectiveTrusted(
+        body.host,
+        body.trusted_auth_servers ?? imap.trusted_auth_servers,
+      ),
     };
     return HttpResponse.json(imap);
   }),

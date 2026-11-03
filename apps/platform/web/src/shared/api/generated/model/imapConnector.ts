@@ -27,8 +27,10 @@ export interface ImapConnector {
    * @maxLength 80
    */
   personal_label: string;
-  /** Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). По умолчанию — Яндекс 360, Google, Microsoft 365, Mail.ru, Zoho */
+  /** Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). Пусто — серверы провайдера нашего ящика по хосту IMAP (см. `trusted_auth_effective`) */
   trusted_auth_servers: string[];
+  /** Кому верим на самом деле: заданный список или серверы провайдера по хосту IMAP (Яндекс, Google, Microsoft 365, Mail.ru, Zoho); пусто — никому (хост не из известных провайдеров) */
+  trusted_auth_effective: string[];
   username: string;
   password_configured: boolean;
   /** @nullable */

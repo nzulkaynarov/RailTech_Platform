@@ -11265,8 +11265,10 @@ export interface components {
       personal_rule: boolean;
       /** @description Пометка у такого письма */
       personal_label: string;
-      /** @description Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). По умолчанию — Яндекс 360, Google, Microsoft 365, Mail.ru, Zoho */
+      /** @description Доверенные `authserv-id` почтовых серверов (домен с поддоменами): только их `Authentication-Results` подтверждает отправителя для правил «отправитель → тип» (MAIL-TYPES). Пусто — серверы провайдера нашего ящика по хосту IMAP (см. `trusted_auth_effective`) */
       trusted_auth_servers: string[];
+      /** @description Кому верим на самом деле: заданный список или серверы провайдера по хосту IMAP (Яндекс, Google, Microsoft 365, Mail.ru, Zoho); пусто — никому (хост не из известных провайдеров) */
+      trusted_auth_effective: string[];
       username: string;
       password_configured: boolean;
       password_last4: string | null;
@@ -11359,7 +11361,7 @@ export interface components {
       personal_rule: boolean;
       /** @default Адресовано лично */
       personal_label: string;
-      /** @description Доверенные `authserv-id`; `null` — прежние, пустой список — не верить никому */
+      /** @description Доверенные `authserv-id`; `null` — прежние, пустой список — по хосту IMAP */
       trusted_auth_servers?: string[] | null;
       /** @description `null` — оставить прежний */
       username?: string | null;

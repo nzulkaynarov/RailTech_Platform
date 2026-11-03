@@ -37,6 +37,7 @@ from app.domain.inbound_mail_flow import (
     status_after_reply,
     thread_ids,
 )
+from app.domain.sender_auth import effective_trusted
 from app.domain.sender_auth import verdict as sender_verdict
 from app.integrations.imap import (
     FetchedMessage,
@@ -199,7 +200,9 @@ class InboundMailIngest:
             # Правило «отправитель или домен → тип» применяется до помощника и побеждает его.
             # Только письмам с подтверждённым отправителем (SPF/DKIM/DMARC): `From` подделывается.
             auth = sender_verdict(
-                list(parsed.auth_results), parsed.from_email, imap.trusted_auth_servers
+                list(parsed.auth_results),
+                parsed.from_email,
+                effective_trusted(imap.host, imap.trusted_auth_servers),
             )
             values["sender_auth"] = auth
             by_rule = await types_repo.rule_type_for(session, parsed.from_email)
