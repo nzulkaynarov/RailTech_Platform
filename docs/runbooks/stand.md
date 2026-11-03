@@ -109,6 +109,10 @@ CRM `CRM_LANGFUSE_*`, общий проект). После смены ключе
 временная mock-модель LiteLLM (`litellm_params.mock_response`), поле `mock_response` в теле запроса прокси игнорирует
 и идёт к провайдеру.
 
+EDS (помощник «Заполнить из файла», EDS-REG) ходит в LiteLLM своим ключом `EDS_LITELLM_API_KEY` (тоже генерирует `make env`;
+в старом `.env` его нет — `make env` допишет): ключ с дневным бюджетом `EDS_AI_DAILY_BUDGET_USD` регистрирует одноразовый сервис
+`eds-ai-gateway` при `make up`. Ключа нет — помощник выключен, форма регистрации работает вручную.
+
 ## Telegram Mini App на стенде: ограничение и проверка через туннель (FIX-15)
 
 **Ограничение.** Стенд `make up` — обычный `http://*.localhost`, без TLS. Mini App требует HTTPS-адрес, а cookie сессии

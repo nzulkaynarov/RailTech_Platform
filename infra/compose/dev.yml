@@ -151,6 +151,10 @@ services:
     volumes: *eds-src
     restart: unless-stopped
 
+  eds-ai-gateway:
+    build: { target: dev }
+    volumes: *eds-src
+
   caddy:
     volumes:
       - ../caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro

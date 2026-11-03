@@ -373,6 +373,30 @@
       "none": "No draft",
       "acquaint": "Acquaint",
       "acquaintHint": "Staff from the letter’s copy; optional"
+    },
+    "ai": {
+      "group": "Fill from file",
+      "fill": "Fill from file",
+      "needFile": "Attach the letter file first.",
+      "hintText": "A PDF with text — the assistant suggests the fields. Scans and photos — manually.",
+      "hintScans": "A PDF or photo of the letter — the assistant suggests the fields; check them.",
+      "chip": "Suggested by AI",
+      "applied_one": "Filled from the file: {{count}} field — check those marked “Suggested by AI”.",
+      "applied_few": "Filled from the file: {{count}} fields — check those marked “Suggested by AI”.",
+      "applied_many": "Filled from the file: {{count}} fields — check those marked “Suggested by AI”.",
+      "applied_other": "Filled from the file: {{count}} fields — check those marked “Suggested by AI”.",
+      "revert": "Remove suggestions",
+      "deal": "Possible link: {{label}}",
+      "link": "Link",
+      "errors": {
+        "scan_recognition_disabled": "This is a scan or photo: the assistant does not read them yet. Fill in manually.",
+        "file_too_large": "The file is over 5 MB — the assistant cannot read it. Fill in manually.",
+        "ai_unavailable": "The assistant did not respond. Fill in manually or try later.",
+        "ai_budget_exceeded": "The assistant's daily limit is used up. Fill in manually.",
+        "nothing_recognized": "The assistant found nothing in the file. Fill in manually.",
+        "unsupported_file": "You can fill from a PDF or a photo of the letter.",
+        "DEFAULT": "Could not fill from the file. Fill in manually."
+      }
     }
   },
   "office": {
@@ -870,11 +894,12 @@
     "replyTag": "Reply in thread"
   },
   "settings": {
-    "subtitle": "Letter lists and resolution templates.",
+    "subtitle": "Letter lists, resolution templates and the registration AI assistant.",
     "tabsLabel": "Document flow sections",
     "tabs": {
       "dictionaries": "Lists",
-      "templates": "Resolution templates"
+      "templates": "Resolution templates",
+      "ai": "AI assistant"
     },
     "readOnly": "View only: an administrator changes the lists.",
     "dict": {
@@ -960,6 +985,14 @@
         "title": "No templates",
         "text": "Add a shared template for typical letters."
       }
+    },
+    "ai": {
+      "title": "Fill from file",
+      "hint": "Registration assistant: called by a button, suggests fields, a person decides.",
+      "text": "PDFs with text are always read: personal data is hidden before it reaches the model.",
+      "off": "The assistant is not set up: no model gateway key. The form is filled in manually.",
+      "scansLater": "The assistant does not read scans and photos yet: fill those in manually.",
+      "scansOn": "The assistant also reads scans and photos of letters from organizations."
     }
   },
   "listKind": {

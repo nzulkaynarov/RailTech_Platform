@@ -8,6 +8,7 @@ import {
   resetResolutionTemplatesMock,
 } from "../../../mocks/resolutionTemplates";
 import { resetFeedMocks } from "../../../mocks/feedHandlers";
+import { readDocflowSettings, resetLetterIntakeMock } from "../../../mocks/letterIntake";
 import { endSession } from "../../../mocks/mockSession";
 import { resetTicketsMock } from "../../../mocks/ticketsStore";
 import i18n from "../../../shared/i18n";
@@ -24,6 +25,7 @@ beforeEach(() => {
   resetTicketsMock();
   resetDictionariesMock();
   resetResolutionTemplatesMock();
+  resetLetterIntakeMock();
 });
 afterEach(() => {
   cleanup();
@@ -142,5 +144,15 @@ describe("Настройки · Документооборот · Справоч
       kind: "execute",
       due_days: 10,
     });
+  });
+
+  it("ИИ-помощник: состояние словами, переключателя сканов нет до решения (Q-EDSREG-1)", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/docflow?tab=ai");
+    expect(
+      await screen.findByText("Сканы и фото помощник пока не читает: их заполняют вручную."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("switch")).toBeNull();
+    expect(readDocflowSettings().recognize_scans).toBe(false);
   });
 });

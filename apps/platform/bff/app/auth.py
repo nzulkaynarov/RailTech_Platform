@@ -510,6 +510,7 @@ class AuthService:
         content_type: str | None = None,
         stream: bool = False,
         extra_headers: dict[str, str] | None = None,
+        wait_seconds: float | None = None,
     ) -> httpx.Response:
         client = {"crm": self.crm, "erp": self.erp, "eds": self.eds}[backend]
         if client is None:
@@ -530,6 +531,7 @@ class AuthService:
                 content=content,
                 probe=probe,
                 stream=stream,
+                wait_seconds=wait_seconds,
             )
         except BackendUnavailableError as exc:
             raise backend_unavailable(backend, exc.reason) from exc
@@ -548,9 +550,11 @@ class AuthService:
         probe: bool = False,
         stream: bool = False,
         headers: dict[str, str] | None = None,
+        wait_seconds: float | None = None,
     ) -> httpx.Response:
         """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть
-        (`probe` — ещё и 502, см. `BackendClient.send`).
+        (`probe` — ещё и 502, см. `BackendClient.send`). `wait_seconds` — своё время ожидания ответа
+        вместо общего (долгие операции: ИИ-помощник EDS ждёт модель).
 
         Просроченный access обновляется заранее; если бэкенд всё же ответил 401 — одно обновление и
         повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`. `stream` — ответ отдаётся
@@ -571,6 +575,7 @@ class AuthService:
             content_type,
             stream,
             headers,
+            wait_seconds,
         )
         if resp.status_code != 401:
             return resp
@@ -591,6 +596,7 @@ class AuthService:
             content_type,
             stream,
             headers,
+            wait_seconds,
         )
         if resp.status_code == 401:
             if stream:

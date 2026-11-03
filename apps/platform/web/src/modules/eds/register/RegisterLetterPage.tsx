@@ -1,5 +1,13 @@
 import { Alert, App, Button, Card, Checkbox, Input, Select } from "antd";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
@@ -9,6 +17,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { LetterResolutionKind } from "../../../shared/api/generated/model";
 import {
+  decideAiSuggestion,
   registerLetter,
   useFindLetterDuplicates,
   useListEdsStaff,
@@ -38,10 +47,26 @@ import {
   toRegisterBody,
   validateRegister,
 } from "./registerModel";
+import { AiFillBar } from "./AiFillBar";
+import { type AiField, applySuggestion, decisionOf, revertSuggestion } from "./aiFill";
 import { useMailPrefill } from "./useMailPrefill";
 
 import "../new/new.css";
 import "./register.css";
+
+/** Поля, заполненные «Заполнить из файла» и ещё не исправленные человеком (id поля формы). */
+const SuggestedFields = createContext<ReadonlySet<string>>(new Set());
+
+const AI_FIELD_IDS: Readonly<Record<AiField, string>> = {
+  senderName: registerFieldId("sender_name"),
+  senderInn: registerFieldId("sender_inn"),
+  refNumber: "reg-ref-number",
+  refDate: "reg-ref-date",
+  subject: registerFieldId("subject"),
+  summary: "reg-summary",
+  kind: registerFieldId("kind"),
+  documentDue: "reg-document-due",
+};
 
 function Field({
   id,
@@ -56,9 +81,12 @@ function Field({
   error?: string | undefined;
   children: ReactNode;
 }) {
+  const { t } = useTranslation("letters");
+  const suggested = useContext(SuggestedFields).has(id);
   return (
     <div className="pf-fp-field">
       <label htmlFor={id}>{label}</label>
+      {suggested ? <span className="pf-reg-ai-chip">{t("register.ai.chip")}</span> : null}
       {children}
       {error ? (
         <span className="pf-field-error" id={`${id}-error`} role="alert">
@@ -193,8 +221,22 @@ export function RegisterLetterPage() {
   const title = t("modules:eds.sections.register");
   useDocumentTitle(title);
 
+  // «Заполнить из файла» (EDS-REG): id предложения, заполненные поля и те, что человек ещё не правил.
+  const [ai, setAi] = useState<{ id: string; filled: AiField[]; left: Set<AiField> } | null>(null);
+  const touch = (key: keyof RegisterValues) => {
+    setAi((prev) => {
+      if (!prev?.left.has(key as AiField)) return prev;
+      const left = new Set(prev.left);
+      left.delete(key as AiField);
+      return { ...prev, left };
+    });
+  };
   const set = <K extends keyof RegisterValues>(key: K, value: RegisterValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
+    touch(key);
+  };
+  const report = (decision: "accepted" | "edited" | "manual") => {
+    if (ai) void decideAiSuggestion(ai.id, { decision }).catch(() => undefined);
   };
   const setAttachments = (updater: (prev: Attachment[]) => Attachment[]) => {
     setValues((prev) => ({ ...prev, attachments: updater(prev.attachments) }));
@@ -225,6 +267,7 @@ export function RegisterLetterPage() {
         headers: { "Idempotency-Key": idempotency.current.key },
       });
       void refresh();
+      if (ai) report(decisionOf(ai.filled, ai.left));
       if (values.sourceMailId !== null) void refreshMail();
       void message.success(t("letters:register.toast", { number: card.number }));
       const search = new URLSearchParams({ letter: card.number, tab: "resolution" });
@@ -299,377 +342,398 @@ export function RegisterLetterPage() {
           }
         />
       ) : null}
-      <form
-        aria-label={t("letters:register.formLabel")}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (!pending && !uploading) void submit();
-        }}
+      <SuggestedFields.Provider
+        value={new Set(ai ? [...ai.left].map((key) => AI_FIELD_IDS[key]) : [])}
       >
-        <Card>
-          <div className="pf-fp-form">
-            <div className="pf-newdoc-row">
-              <Field
-                id={id("kind")}
-                label={t("letters:register.kind.label")}
-                hint={kinds.isError ? t("letters:register.kind.unavailable") : undefined}
-                error={fieldError("kind")}
-              >
-                <Select
-                  id={id("kind")}
-                  value={values.kind || undefined}
-                  placeholder={t("letters:register.choose")}
-                  loading={kinds.isPending}
-                  options={kindOptions}
-                  status={errors.kind ? "error" : undefined}
-                  aria-invalid={errors.kind || undefined}
-                  aria-describedby={describedBy(id("kind"), kinds.isError, Boolean(errors.kind))}
-                  onChange={(code: string) => {
-                    const kind = kinds.data?.items.find((item) => item.code === code);
-                    setValues((prev) => ({
-                      ...prev,
-                      kind: code,
-                      // Требование ГНК сразу «срочно» (SPEC-v3 §3.2a п. 1); снять галочку можно, EDS всё равно поставит.
-                      urgent: kind?.urgent ? true : prev.urgent,
-                      receiptMethod:
-                        kind?.code === "tax_notice" && !prev.receiptMethod
-                          ? "taxpayer_cabinet"
-                          : prev.receiptMethod,
-                    }));
-                  }}
-                />
-              </Field>
-              <Field
-                id={id("receipt_method")}
-                label={t("letters:register.method.label")}
-                hint={methods.isError ? t("letters:register.method.unavailable") : undefined}
-                error={fieldError("receipt_method")}
-              >
-                <Select
-                  id={id("receipt_method")}
-                  value={values.receiptMethod || undefined}
-                  placeholder={t("letters:register.choose")}
-                  loading={methods.isPending}
-                  options={(methods.data?.items ?? []).map((item) => ({
-                    value: item.code,
-                    label: localName(item.name, i18n.language),
-                  }))}
-                  status={errors.receipt_method ? "error" : undefined}
-                  aria-invalid={errors.receipt_method || undefined}
-                  aria-describedby={describedBy(
-                    id("receipt_method"),
-                    methods.isError,
-                    Boolean(errors.receipt_method),
-                  )}
-                  onChange={(value) => {
-                    set("receiptMethod", value);
-                  }}
-                />
-              </Field>
-            </div>
-            <div className="pf-newdoc-row">
-              <Field
-                id={id("sender_name")}
-                label={t("letters:register.sender.label")}
-                hint={t("letters:register.sender.hint")}
-                error={fieldError("sender_name")}
-              >
-                <Input
-                  id={id("sender_name")}
-                  value={values.senderName}
-                  maxLength={255}
-                  autoComplete="off"
-                  status={errors.sender_name ? "error" : undefined}
-                  aria-invalid={errors.sender_name || undefined}
-                  aria-describedby={describedBy(
-                    id("sender_name"),
-                    true,
-                    Boolean(errors.sender_name),
-                  )}
-                  onChange={(event) => {
-                    set("senderName", event.target.value);
-                  }}
-                />
-              </Field>
-              <Field
-                id={id("sender_inn")}
-                label={t("letters:register.inn.label")}
-                error={fieldError("sender_inn")}
-              >
-                <Input
-                  id={id("sender_inn")}
-                  value={values.senderInn}
-                  maxLength={14}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  status={errors.sender_inn ? "error" : undefined}
-                  aria-invalid={errors.sender_inn || undefined}
-                  aria-describedby={describedBy(
-                    id("sender_inn"),
-                    false,
-                    Boolean(errors.sender_inn),
-                  )}
-                  onChange={(event) => {
-                    set("senderInn", event.target.value);
-                  }}
-                />
-              </Field>
-            </div>
-            <div className="pf-newdoc-row">
-              <Field id="reg-ref-number" label={t("letters:register.refNumber.label")}>
-                <Input
-                  id="reg-ref-number"
-                  value={values.refNumber}
-                  maxLength={64}
-                  autoComplete="off"
-                  onChange={(event) => {
-                    set("refNumber", event.target.value);
-                  }}
-                />
-              </Field>
-              <Field id="reg-ref-date" label={t("letters:register.refDate.label")}>
-                <DateField
-                  id="reg-ref-date"
-                  value={values.refDate}
-                  onChange={(next) => {
-                    set("refDate", next);
-                  }}
-                />
-              </Field>
-            </div>
-            <DuplicateWarning sender={values.senderName} refNumber={values.refNumber} />
-            <div className="pf-newdoc-row">
-              <Field id="reg-signed-by" label={t("letters:register.signedBy.label")}>
-                <Input
-                  id="reg-signed-by"
-                  value={values.signedBy}
-                  maxLength={255}
-                  autoComplete="off"
-                  onChange={(event) => {
-                    set("signedBy", event.target.value);
-                  }}
-                />
-              </Field>
-              <Field
-                id={id("received_at")}
-                label={t("letters:register.receivedAt.label")}
-                error={fieldError("received_at")}
-              >
-                <DateField
-                  id={id("received_at")}
-                  value={values.receivedAt}
-                  status={errors.received_at ? "error" : undefined}
-                  aria-invalid={errors.received_at || undefined}
-                  aria-describedby={describedBy(
-                    id("received_at"),
-                    false,
-                    Boolean(errors.received_at),
-                  )}
-                  onChange={(next) => {
-                    set("receivedAt", next);
-                  }}
-                />
-              </Field>
-            </div>
-            <Field
-              id={id("subject")}
-              label={t("letters:register.subject.label")}
-              error={fieldError("subject")}
-            >
-              <Input
-                id={id("subject")}
-                value={values.subject}
-                maxLength={300}
-                autoComplete="off"
-                status={errors.subject ? "error" : undefined}
-                aria-invalid={errors.subject || undefined}
-                aria-describedby={describedBy(id("subject"), false, Boolean(errors.subject))}
-                onChange={(event) => {
-                  set("subject", event.target.value);
-                }}
-              />
-            </Field>
-            <Field
-              id="reg-summary"
-              label={t("letters:register.summary.label")}
-              hint={t("letters:register.summary.hint")}
-            >
-              <Input.TextArea
-                id="reg-summary"
-                rows={4}
-                maxLength={10000}
-                value={values.summary}
-                aria-describedby="reg-summary-hint"
-                onChange={(event) => {
-                  set("summary", event.target.value);
-                }}
-              />
-            </Field>
-            <div className="pf-newdoc-row">
-              <Field
-                id="reg-document-due"
-                label={t("letters:register.documentDue.label")}
-                hint={t("letters:register.documentDue.hint")}
-              >
-                <DateField
-                  id="reg-document-due"
-                  value={values.documentDue}
-                  aria-describedby="reg-document-due-hint"
-                  onChange={(next) => {
-                    set("documentDue", next);
-                  }}
-                />
-              </Field>
-              <Field
-                id="reg-addressee"
-                label={t("letters:register.addressee.label")}
-                hint={t("letters:register.addressee.hint")}
-              >
-                {/* P8b: адресат — любой активный сотрудник; пусто — директор (его назначает EDS) */}
-                <Select
-                  id="reg-addressee"
-                  value={values.addresseeId || undefined}
-                  placeholder={t("letters:register.addressee.default")}
-                  allowClear
-                  showSearch
-                  optionFilterProp="label"
-                  loading={staff.isPending}
-                  options={people}
-                  aria-describedby="reg-addressee-hint"
-                  onChange={(value: string | undefined) => {
-                    set("addresseeId", value ?? "");
-                  }}
-                />
-              </Field>
-            </div>
-            <Checkbox
-              checked={values.urgent}
-              onChange={(event) => {
-                set("urgent", event.target.checked);
-              }}
-            >
-              {t("letters:register.urgent")}
-            </Checkbox>
-            <Field
-              id={id("file_ids")}
-              label={t("letters:register.files.label")}
-              hint={t("letters:register.files.hint")}
-              error={fieldError("file_ids")}
-            >
-              <AttachmentsField
-                id={id("file_ids")}
-                value={values.attachments}
-                onChange={setAttachments}
-              />
-            </Field>
-            {canLink ? (
-              <Field
-                id="reg-deal"
-                label={t("letters:register.deal.label")}
-                hint={t("letters:register.deal.hint")}
-              >
-                <DealField
-                  id="reg-deal"
-                  value={values.deal}
-                  onChange={(choice) => {
-                    set("deal", choice);
-                  }}
-                  describedBy="reg-deal-hint"
-                  invalid={false}
-                />
-              </Field>
-            ) : null}
-            <Field
-              id={id("related_number")}
-              label={t("letters:register.related.label")}
-              hint={t("letters:register.related.hint")}
-              error={fieldError("related_number")}
-            >
-              <Input
-                id={id("related_number")}
-                value={values.relatedNumber}
-                maxLength={32}
-                autoComplete="off"
-                placeholder="ВХ-101/26"
-                status={errors.related_number ? "error" : undefined}
-                aria-invalid={errors.related_number || undefined}
-                aria-describedby={describedBy(
-                  id("related_number"),
-                  true,
-                  Boolean(errors.related_number),
-                )}
-                onChange={(event) => {
-                  set("relatedNumber", event.target.value);
-                }}
-              />
-            </Field>
-            <fieldset className="pf-reg-draft" aria-describedby="reg-draft-hint">
-              <legend>{t("letters:register.draft.legend")}</legend>
-              <p className="pf-hint" id="reg-draft-hint">
-                {t("letters:register.draft.hint")}
-              </p>
+        <form
+          aria-label={t("letters:register.formLabel")}
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!pending && !uploading) void submit();
+          }}
+        >
+          <Card>
+            <div className="pf-fp-form">
               <div className="pf-newdoc-row">
-                <Field id="reg-draft-kind" label={t("letters:register.draft.kind")}>
+                <Field
+                  id={id("kind")}
+                  label={t("letters:register.kind.label")}
+                  hint={kinds.isError ? t("letters:register.kind.unavailable") : undefined}
+                  error={fieldError("kind")}
+                >
                   <Select
-                    id="reg-draft-kind"
-                    value={values.draftKind || ""}
-                    options={[
-                      { value: "", label: t("letters:register.draft.none") },
-                      ...RESOLUTION_KINDS.map((kind) => ({
-                        value: kind,
-                        label: resolutionKindName(kind),
-                      })),
-                    ]}
-                    onChange={(kind: LetterResolutionKind | "") => {
+                    id={id("kind")}
+                    value={values.kind || undefined}
+                    placeholder={t("letters:register.choose")}
+                    loading={kinds.isPending}
+                    options={kindOptions}
+                    status={errors.kind ? "error" : undefined}
+                    aria-invalid={errors.kind || undefined}
+                    aria-describedby={describedBy(id("kind"), kinds.isError, Boolean(errors.kind))}
+                    onChange={(code: string) => {
+                      touch("kind");
+                      const kind = kinds.data?.items.find((item) => item.code === code);
                       setValues((prev) => ({
                         ...prev,
-                        draftKind: kind,
-                        // шаблон текста по типу, пока текст не правили (как в форме резолюции)
-                        draftText:
-                          kind &&
-                          (prev.draftText === "" ||
-                            RESOLUTION_KINDS.some(
-                              (k) => t(`letters:office.template.${k}`) === prev.draftText,
-                            ))
-                            ? t(`letters:office.template.${kind}`)
-                            : prev.draftText,
+                        kind: code,
+                        // Требование ГНК сразу «срочно» (SPEC-v3 §3.2a п. 1); снять галочку можно, EDS всё равно поставит.
+                        urgent: kind?.urgent ? true : prev.urgent,
+                        receiptMethod:
+                          kind?.code === "tax_notice" && !prev.receiptMethod
+                            ? "taxpayer_cabinet"
+                            : prev.receiptMethod,
                       }));
                     }}
                   />
                 </Field>
-                {values.draftKind && values.draftKind !== "info" ? (
-                  <Field
-                    id="reg-draft-responsible"
-                    label={t("letters:office.responsible.label")}
-                    hint={t("letters:office.responsible.hint")}
-                  >
+                <Field
+                  id={id("receipt_method")}
+                  label={t("letters:register.method.label")}
+                  hint={methods.isError ? t("letters:register.method.unavailable") : undefined}
+                  error={fieldError("receipt_method")}
+                >
+                  <Select
+                    id={id("receipt_method")}
+                    value={values.receiptMethod || undefined}
+                    placeholder={t("letters:register.choose")}
+                    loading={methods.isPending}
+                    options={(methods.data?.items ?? []).map((item) => ({
+                      value: item.code,
+                      label: localName(item.name, i18n.language),
+                    }))}
+                    status={errors.receipt_method ? "error" : undefined}
+                    aria-invalid={errors.receipt_method || undefined}
+                    aria-describedby={describedBy(
+                      id("receipt_method"),
+                      methods.isError,
+                      Boolean(errors.receipt_method),
+                    )}
+                    onChange={(value) => {
+                      set("receiptMethod", value);
+                    }}
+                  />
+                </Field>
+              </div>
+              <div className="pf-newdoc-row">
+                <Field
+                  id={id("sender_name")}
+                  label={t("letters:register.sender.label")}
+                  hint={t("letters:register.sender.hint")}
+                  error={fieldError("sender_name")}
+                >
+                  <Input
+                    id={id("sender_name")}
+                    value={values.senderName}
+                    maxLength={255}
+                    autoComplete="off"
+                    status={errors.sender_name ? "error" : undefined}
+                    aria-invalid={errors.sender_name || undefined}
+                    aria-describedby={describedBy(
+                      id("sender_name"),
+                      true,
+                      Boolean(errors.sender_name),
+                    )}
+                    onChange={(event) => {
+                      set("senderName", event.target.value);
+                    }}
+                  />
+                </Field>
+                <Field
+                  id={id("sender_inn")}
+                  label={t("letters:register.inn.label")}
+                  error={fieldError("sender_inn")}
+                >
+                  <Input
+                    id={id("sender_inn")}
+                    value={values.senderInn}
+                    maxLength={14}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    status={errors.sender_inn ? "error" : undefined}
+                    aria-invalid={errors.sender_inn || undefined}
+                    aria-describedby={describedBy(
+                      id("sender_inn"),
+                      false,
+                      Boolean(errors.sender_inn),
+                    )}
+                    onChange={(event) => {
+                      set("senderInn", event.target.value);
+                    }}
+                  />
+                </Field>
+              </div>
+              <div className="pf-newdoc-row">
+                <Field id="reg-ref-number" label={t("letters:register.refNumber.label")}>
+                  <Input
+                    id="reg-ref-number"
+                    value={values.refNumber}
+                    maxLength={64}
+                    autoComplete="off"
+                    onChange={(event) => {
+                      set("refNumber", event.target.value);
+                    }}
+                  />
+                </Field>
+                <Field id="reg-ref-date" label={t("letters:register.refDate.label")}>
+                  <DateField
+                    id="reg-ref-date"
+                    value={values.refDate}
+                    onChange={(next) => {
+                      set("refDate", next);
+                    }}
+                  />
+                </Field>
+              </div>
+              <DuplicateWarning sender={values.senderName} refNumber={values.refNumber} />
+              <div className="pf-newdoc-row">
+                <Field id="reg-signed-by" label={t("letters:register.signedBy.label")}>
+                  <Input
+                    id="reg-signed-by"
+                    value={values.signedBy}
+                    maxLength={255}
+                    autoComplete="off"
+                    onChange={(event) => {
+                      set("signedBy", event.target.value);
+                    }}
+                  />
+                </Field>
+                <Field
+                  id={id("received_at")}
+                  label={t("letters:register.receivedAt.label")}
+                  error={fieldError("received_at")}
+                >
+                  <DateField
+                    id={id("received_at")}
+                    value={values.receivedAt}
+                    status={errors.received_at ? "error" : undefined}
+                    aria-invalid={errors.received_at || undefined}
+                    aria-describedby={describedBy(
+                      id("received_at"),
+                      false,
+                      Boolean(errors.received_at),
+                    )}
+                    onChange={(next) => {
+                      set("receivedAt", next);
+                    }}
+                  />
+                </Field>
+              </div>
+              <Field
+                id={id("subject")}
+                label={t("letters:register.subject.label")}
+                error={fieldError("subject")}
+              >
+                <Input
+                  id={id("subject")}
+                  value={values.subject}
+                  maxLength={300}
+                  autoComplete="off"
+                  status={errors.subject ? "error" : undefined}
+                  aria-invalid={errors.subject || undefined}
+                  aria-describedby={describedBy(id("subject"), false, Boolean(errors.subject))}
+                  onChange={(event) => {
+                    set("subject", event.target.value);
+                  }}
+                />
+              </Field>
+              <Field
+                id="reg-summary"
+                label={t("letters:register.summary.label")}
+                hint={t("letters:register.summary.hint")}
+              >
+                <Input.TextArea
+                  id="reg-summary"
+                  rows={4}
+                  maxLength={10000}
+                  value={values.summary}
+                  aria-describedby="reg-summary-hint"
+                  onChange={(event) => {
+                    set("summary", event.target.value);
+                  }}
+                />
+              </Field>
+              <div className="pf-newdoc-row">
+                <Field
+                  id="reg-document-due"
+                  label={t("letters:register.documentDue.label")}
+                  hint={t("letters:register.documentDue.hint")}
+                >
+                  <DateField
+                    id="reg-document-due"
+                    value={values.documentDue}
+                    aria-describedby="reg-document-due-hint"
+                    onChange={(next) => {
+                      set("documentDue", next);
+                    }}
+                  />
+                </Field>
+                <Field
+                  id="reg-addressee"
+                  label={t("letters:register.addressee.label")}
+                  hint={t("letters:register.addressee.hint")}
+                >
+                  {/* P8b: адресат — любой активный сотрудник; пусто — директор (его назначает EDS) */}
+                  <Select
+                    id="reg-addressee"
+                    value={values.addresseeId || undefined}
+                    placeholder={t("letters:register.addressee.default")}
+                    allowClear
+                    showSearch
+                    optionFilterProp="label"
+                    loading={staff.isPending}
+                    options={people}
+                    aria-describedby="reg-addressee-hint"
+                    onChange={(value: string | undefined) => {
+                      set("addresseeId", value ?? "");
+                    }}
+                  />
+                </Field>
+              </div>
+              <Checkbox
+                checked={values.urgent}
+                onChange={(event) => {
+                  set("urgent", event.target.checked);
+                }}
+              >
+                {t("letters:register.urgent")}
+              </Checkbox>
+              <Field
+                id={id("file_ids")}
+                label={t("letters:register.files.label")}
+                hint={t("letters:register.files.hint")}
+                error={fieldError("file_ids")}
+              >
+                <AttachmentsField
+                  id={id("file_ids")}
+                  value={values.attachments}
+                  onChange={setAttachments}
+                />
+              </Field>
+              <AiFillBar
+                attachments={values.attachments}
+                applied={ai?.left.size ?? 0}
+                linkQuery={
+                  canLink && !values.deal && ai
+                    ? { inn: values.senderInn.trim(), name: values.senderName.trim() }
+                    : null
+                }
+                onSuggestion={(suggestion) => {
+                  const result = applySuggestion(
+                    values,
+                    suggestion.fields,
+                    kinds.data?.items ?? [],
+                  );
+                  setValues(result.values);
+                  setAi({
+                    id: suggestion.suggestion_id,
+                    filled: result.filled,
+                    left: new Set(result.filled),
+                  });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                onRevert={() => {
+                  if (!ai) return;
+                  setValues((prev) => revertSuggestion(prev, [...ai.left]));
+                  report("manual");
+                  setAi(null);
+                }}
+                onLinkDeal={(choice) => {
+                  set("deal", choice);
+                }}
+              />
+              {canLink ? (
+                <Field
+                  id="reg-deal"
+                  label={t("letters:register.deal.label")}
+                  hint={t("letters:register.deal.hint")}
+                >
+                  <DealField
+                    id="reg-deal"
+                    value={values.deal}
+                    onChange={(choice) => {
+                      set("deal", choice);
+                    }}
+                    describedBy="reg-deal-hint"
+                    invalid={false}
+                  />
+                </Field>
+              ) : null}
+              <Field
+                id={id("related_number")}
+                label={t("letters:register.related.label")}
+                hint={t("letters:register.related.hint")}
+                error={fieldError("related_number")}
+              >
+                <Input
+                  id={id("related_number")}
+                  value={values.relatedNumber}
+                  maxLength={32}
+                  autoComplete="off"
+                  placeholder="ВХ-101/26"
+                  status={errors.related_number ? "error" : undefined}
+                  aria-invalid={errors.related_number || undefined}
+                  aria-describedby={describedBy(
+                    id("related_number"),
+                    true,
+                    Boolean(errors.related_number),
+                  )}
+                  onChange={(event) => {
+                    set("relatedNumber", event.target.value);
+                  }}
+                />
+              </Field>
+              <fieldset className="pf-reg-draft" aria-describedby="reg-draft-hint">
+                <legend>{t("letters:register.draft.legend")}</legend>
+                <p className="pf-hint" id="reg-draft-hint">
+                  {t("letters:register.draft.hint")}
+                </p>
+                <div className="pf-newdoc-row">
+                  <Field id="reg-draft-kind" label={t("letters:register.draft.kind")}>
                     <Select
-                      id="reg-draft-responsible"
-                      value={values.draftResponsibleId || undefined}
-                      placeholder={t("letters:office.responsible.choose")}
-                      allowClear
-                      showSearch
-                      optionFilterProp="label"
-                      options={people}
-                      aria-describedby="reg-draft-responsible-hint"
-                      onChange={(value: string | undefined) => {
-                        set("draftResponsibleId", value ?? "");
+                      id="reg-draft-kind"
+                      value={values.draftKind || ""}
+                      options={[
+                        { value: "", label: t("letters:register.draft.none") },
+                        ...RESOLUTION_KINDS.map((kind) => ({
+                          value: kind,
+                          label: resolutionKindName(kind),
+                        })),
+                      ]}
+                      onChange={(kind: LetterResolutionKind | "") => {
+                        setValues((prev) => ({
+                          ...prev,
+                          draftKind: kind,
+                          // шаблон текста по типу, пока текст не правили (как в форме резолюции)
+                          draftText:
+                            kind &&
+                            (prev.draftText === "" ||
+                              RESOLUTION_KINDS.some(
+                                (k) => t(`letters:office.template.${k}`) === prev.draftText,
+                              ))
+                              ? t(`letters:office.template.${kind}`)
+                              : prev.draftText,
+                        }));
                       }}
                     />
                   </Field>
-                ) : null}
-              </div>
-              {values.draftKind ? (
-                <div className="pf-newdoc-row">
-                  {values.draftKind !== "info" ? (
-                    <Field id="reg-draft-due" label={t("letters:office.due.label")}>
-                      <DateField
-                        id="reg-draft-due"
-                        value={values.draftDue}
-                        min={today}
-                        onChange={(next) => {
-                          set("draftDue", next);
+                  {values.draftKind && values.draftKind !== "info" ? (
+                    <Field
+                      id="reg-draft-responsible"
+                      label={t("letters:office.responsible.label")}
+                      hint={t("letters:office.responsible.hint")}
+                    >
+                      <Select
+                        id="reg-draft-responsible"
+                        value={values.draftResponsibleId || undefined}
+                        placeholder={t("letters:office.responsible.choose")}
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        options={people}
+                        aria-describedby="reg-draft-responsible-hint"
+                        onChange={(value: string | undefined) => {
+                          set("draftResponsibleId", value ?? "");
                         }}
                       />
                     </Field>
@@ -692,52 +756,68 @@ export function RegisterLetterPage() {
                       }}
                     />
                   </Field>
-                  <Field id="reg-draft-text" label={t("letters:office.text.label")}>
-                    <Input.TextArea
-                      id="reg-draft-text"
-                      value={values.draftText}
-                      maxLength={4000}
-                      autoSize={{ minRows: 2, maxRows: 6 }}
-                      onChange={(event) => {
-                        set("draftText", event.target.value);
-                      }}
-                    />
-                  </Field>
                 </div>
-              ) : null}
-            </fieldset>
-            <Consequence
-              items={t("letters:register.consequence", { returnObjects: true }) as string[]}
-            />
+                {values.draftKind ? (
+                  <div className="pf-newdoc-row">
+                    {values.draftKind !== "info" ? (
+                      <Field id="reg-draft-due" label={t("letters:office.due.label")}>
+                        <DateField
+                          id="reg-draft-due"
+                          value={values.draftDue}
+                          min={today}
+                          onChange={(next) => {
+                            set("draftDue", next);
+                          }}
+                        />
+                      </Field>
+                    ) : null}
+                    <Field id="reg-draft-text" label={t("letters:office.text.label")}>
+                      <Input.TextArea
+                        id="reg-draft-text"
+                        value={values.draftText}
+                        maxLength={4000}
+                        autoSize={{ minRows: 2, maxRows: 6 }}
+                        onChange={(event) => {
+                          set("draftText", event.target.value);
+                        }}
+                      />
+                    </Field>
+                  </div>
+                ) : null}
+              </fieldset>
+              <Consequence
+                items={t("letters:register.consequence", { returnObjects: true }) as string[]}
+              />
+            </div>
+          </Card>
+          <div className="pf-newdoc-actions">
+            {Object.keys(errors).length > 0 && !note ? (
+              <ErrorNote message={t("letters:register.summaryError")} />
+            ) : null}
+            {note ? <ErrorNote message={note} /> : null}
+            <div className="pf-fp-row">
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={pending}
+                disabled={uploading}
+                title={uploading ? t("documents:form.submit.uploadWait") : undefined}
+              >
+                {t("letters:register.submit")}
+              </Button>
+              <Button
+                htmlType="button"
+                disabled={pending}
+                onClick={() => {
+                  void navigate("/eds/inbox");
+                }}
+              >
+                {t("letters:register.cancel")}
+              </Button>
+            </div>
           </div>
-        </Card>
-        <div className="pf-newdoc-actions">
-          {Object.keys(errors).length > 0 && !note ? (
-            <ErrorNote message={t("letters:register.summaryError")} />
-          ) : null}
-          {note ? <ErrorNote message={note} /> : null}
-          <div className="pf-fp-row">
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={pending}
-              disabled={uploading}
-              title={uploading ? t("documents:form.submit.uploadWait") : undefined}
-            >
-              {t("letters:register.submit")}
-            </Button>
-            <Button
-              htmlType="button"
-              disabled={pending}
-              onClick={() => {
-                void navigate("/eds/inbox");
-              }}
-            >
-              {t("letters:register.cancel")}
-            </Button>
-          </div>
-        </div>
-      </form>
+        </form>
+      </SuggestedFields.Provider>
     </div>
   );
 }

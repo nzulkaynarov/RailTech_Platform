@@ -13,6 +13,7 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.6",
     "pydantic-settings>=2.15.0",
     "pyjwt>=2.15.1",
+    "pypdf>=6.1.0",
     "python-multipart>=0.0.20",
     "rt-bus[fastapi,sqlalchemy]",
     "rt-contracts",

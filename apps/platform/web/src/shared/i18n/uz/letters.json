@@ -373,6 +373,30 @@
       "none": "Loyihasiz",
       "acquaint": "Tanishtirish",
       "acquaintHint": "Xat nusxasidagi xodimlar; majburiy emas"
+    },
+    "ai": {
+      "group": "Fayldan to‘ldirish",
+      "fill": "Fayldan to‘ldirish",
+      "needFile": "Avval xat faylini biriktiring.",
+      "hintText": "Matnli PDF — yordamchi maydonlarni taklif qiladi. Skan va fotolar — qo‘lda.",
+      "hintScans": "Xatning PDF yoki fotosi — yordamchi maydonlarni taklif qiladi, tekshiring.",
+      "chip": "SI taklifi",
+      "applied_one": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
+      "applied_few": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
+      "applied_many": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
+      "applied_other": "Fayldan to‘ldirildi: {{count}} maydon — «SI taklifi» belgilanganlarini tekshiring.",
+      "revert": "Taklifni olib tashlash",
+      "deal": "Ehtimoliy bog‘lanish: {{label}}",
+      "link": "Bog‘lash",
+      "errors": {
+        "scan_recognition_disabled": "Bu skan yoki foto: yordamchi ularni hozircha o‘qimaydi. Qo‘lda to‘ldiring.",
+        "file_too_large": "Fayl 5 MB dan katta — yordamchi uni o‘qimaydi. Qo‘lda to‘ldiring.",
+        "ai_unavailable": "Yordamchi hozir javob bermadi. Qo‘lda to‘ldiring yoki keyinroq urinib ko‘ring.",
+        "ai_budget_exceeded": "Yordamchining kunlik limiti tugadi. Qo‘lda to‘ldiring.",
+        "nothing_recognized": "Yordamchi faylda hech narsa topmadi. Qo‘lda to‘ldiring.",
+        "unsupported_file": "PDF yoki xat fotosidan to‘ldirish mumkin.",
+        "DEFAULT": "Fayldan to‘ldirib bo‘lmadi. Qo‘lda to‘ldiring."
+      }
     }
   },
   "office": {
@@ -870,11 +894,12 @@
     "replyTag": "Zanjirda javob"
   },
   "settings": {
-    "subtitle": "Xatlar ma’lumotnomalari va rezolyutsiya shablonlari.",
+    "subtitle": "Xatlar ma’lumotnomalari, rezolyutsiya shablonlari va ro‘yxatga olish SI yordamchisi.",
     "tabsLabel": "Hujjat aylanishi bo‘limlari",
     "tabs": {
       "dictionaries": "Ma’lumotnomalar",
-      "templates": "Rezolyutsiya shablonlari"
+      "templates": "Rezolyutsiya shablonlari",
+      "ai": "SI yordamchi"
     },
     "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
     "dict": {
@@ -960,6 +985,14 @@
         "title": "Shablonlar yo‘q",
         "text": "Odatiy xatlar uchun umumiy shablon qo‘shing."
       }
+    },
+    "ai": {
+      "title": "Fayldan to‘ldirish",
+      "hint": "Kiruvchi xatlarni ro‘yxatga olish yordamchisi: tugma bilan, maydonlarni taklif qiladi, inson hal qiladi.",
+      "text": "Matnli PDF har doim o‘qiladi: shaxsiy ma’lumotlar modelga yuborishdan oldin yashiriladi.",
+      "off": "Yordamchi sozlanmagan: modellar shlyuzi kaliti yo‘q. Shakl qo‘lda to‘ldiriladi.",
+      "scansLater": "Skan va fotolarni yordamchi hozircha o‘qimaydi: ular qo‘lda to‘ldiriladi.",
+      "scansOn": "Tashkilotlar xatlarining skan va fotolarini ham yordamchi o‘qiydi."
     }
   },
   "listKind": {
