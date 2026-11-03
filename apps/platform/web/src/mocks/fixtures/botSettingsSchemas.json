@@ -312,5 +312,12 @@
       }
     },
     "type": "object"
+  },
+  "ai": {
+    "additionalProperties": false,
+    "properties": {
+      "pii_policy": { "default": "business", "enum": ["business", "strict"], "type": "string" }
+    },
+    "type": "object"
   }
 }

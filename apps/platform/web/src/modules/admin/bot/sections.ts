@@ -24,6 +24,8 @@ export const BOT_PLACEMENT: Readonly<Record<string, string>> = {
   service_alerts: "notifications",
   deals: "dictionaries",
   budget: "spend",
+  // «Защита данных для ИИ» рисуется своей карточкой на странице «Расходы на ИИ» (`PiiPolicyCard`), не общей формой.
+  ai: "spend.policy",
 };
 
 /** Порядок разделов внутри страницы — порядок `BOT_PLACEMENT`; неизвестные — в конце «Поведения». */

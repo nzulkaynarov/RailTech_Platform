@@ -361,7 +361,7 @@
     "urgent": "Urgent",
     "files": {
       "label": "Document file",
-      "hint": "A scan or file of the letter is required. PDF, images, Office documents, up to 25 MB."
+      "hint": "A scan or file of the letter is required. PDF, images, Office documents, up to 25 MB. Do not upload passports or personal documents."
     },
     "deal": {
       "label": "Link to a request or project",
@@ -423,8 +423,8 @@
       "group": "Fill from file",
       "fill": "Fill from file",
       "needFile": "Attach the letter file first.",
-      "hintText": "A PDF with text — the assistant suggests the fields. Scans and photos — manually.",
-      "hintScans": "A PDF or photo of the letter — the assistant suggests the fields; check them.",
+      "hintText": "PDF with text — the assistant suggests fields. Scans and photos — by hand.",
+      "hintScans": "PDF or photo of the letter — the assistant suggests fields, check them.",
       "chip": "Suggested by AI",
       "applied_one": "Filled from the file: {{count}} field — check those marked “Suggested by AI”.",
       "applied_few": "Filled from the file: {{count}} fields — check those marked “Suggested by AI”.",
@@ -434,7 +434,7 @@
       "deal": "Possible link: {{label}}",
       "link": "Link",
       "errors": {
-        "scan_recognition_disabled": "This is a scan or photo: the assistant does not read them yet. Fill in manually.",
+        "scan_recognition_disabled": "This is a scan or photo: the assistant does not read those right now. Fill it in manually.",
         "file_too_large": "The file is over 5 MB — the assistant cannot read it. Fill in manually.",
         "ai_unavailable": "The assistant did not respond. Fill in manually or try later.",
         "ai_budget_exceeded": "The assistant's daily limit is used up. Fill in manually.",
@@ -1044,10 +1044,28 @@
     "ai": {
       "title": "Fill from file",
       "hint": "Registration assistant: called by a button, suggests fields, a person decides.",
-      "text": "PDFs with text are always read: personal data is hidden before it reaches the model.",
+      "text": "PDFs with text are always read: data from the chosen protection policy is hidden before it reaches the model.",
       "off": "The assistant is not set up: no model gateway key. The form is filled in manually.",
-      "scansLater": "The assistant does not read scans and photos yet: fill those in manually.",
-      "scansOn": "The assistant also reads scans and photos of letters from organizations."
+      "scans": {
+        "label": "Read scans and photos of letters",
+        "hint": "Do not upload passports or personal documents.",
+        "on": "The assistant reads scans and photos of letters from organizations.",
+        "off": "The assistant does not read scans and photos: fill those in manually.",
+        "strict": "Under the Strict policy scans and photos are not sent to the model.",
+        "saved": "Setting saved",
+        "error": "Could not save. Try again."
+      },
+      "policy": {
+        "title": "Data protection for AI",
+        "hint": "What is hidden in the text sent to the model: the mail assistant and “Fill from file”. Logs always hide everything. AI suggests, a person confirms.",
+        "legend": "Data protection policy",
+        "business": "Business (recommended)",
+        "businessText": "Passport, personal ID (PINFL), card numbers and birth dates are hidden. Company details, phones, email and names stay.",
+        "strict": "Strict",
+        "strictText": "Phones, email, tax IDs and bank accounts are hidden too. Scans and photos are not sent to the model.",
+        "readOnly": "Only an administrator changes the policy.",
+        "saved": "Policy saved: “{{name}}”"
+      }
     }
   },
   "listKind": {

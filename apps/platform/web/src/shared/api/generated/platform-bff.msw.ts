@@ -17319,6 +17319,7 @@ export const getGetDocflowSettingsResponseMock = (
   overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
 ): DocflowSettings => ({
   recognize_scans: faker.datatype.boolean(),
+  pii_policy: faker.helpers.arrayElement(["business", "strict"] as const),
   ai_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
@@ -17327,6 +17328,7 @@ export const getUpdateDocflowSettingsResponseMock = (
   overrideResponse: Partial<Extract<DocflowSettings, object>> = {},
 ): DocflowSettings => ({
   recognize_scans: faker.datatype.boolean(),
+  pii_policy: faker.helpers.arrayElement(["business", "strict"] as const),
   ai_available: faker.datatype.boolean(),
   ...overrideResponse,
 });

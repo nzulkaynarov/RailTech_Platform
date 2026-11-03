@@ -7,3 +7,52 @@
 .pf-docflow-kinds > .ant-segmented {
   display: inline-flex;
 }
+
+/* Защита данных для ИИ (PD-BIZ): две политики с пояснением, переключатель сканов. Один столбец на любой ширине. */
+.pf-pii-options.ant-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-pii-option.ant-radio-wrapper {
+  display: flex;
+  align-items: flex-start;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  white-space: normal;
+}
+.pf-pii-option .ant-radio {
+  margin-top: 3px;
+}
+.pf-pii-option span.ant-radio + span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pf-pii-name {
+  font-weight: 600;
+}
+.pf-pii-text {
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-pii-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px 12px;
+}
+.pf-pii-scans {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pf-pii-scans > .ant-switch {
+  flex: none;
+  margin-top: 2px;
+}
