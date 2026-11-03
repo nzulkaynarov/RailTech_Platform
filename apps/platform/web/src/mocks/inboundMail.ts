@@ -3,6 +3,8 @@ import { HttpResponse, delay, http } from "msw";
 import type {
   EdsFile,
   ImapConnector,
+  ImapHistory,
+  ImapSettingsIn,
   InboundMail,
   InboundMailItem,
   QueueCard,
@@ -14,7 +16,8 @@ import type { MockRole } from "./fixtures/roles";
  * Моки входящей почты общего ящика (W18A-P2): очередь первой линии, карточка письма, действия, приём в «Подключениях».
  * Хранилище — `localStorage` страницы, как у обращений: письмо, разобранное делопроизводителем, не возвращается после
  * перезагрузки. `localStorage["rt-pf-mock-imap-off"] = "1"` — приём не настроен (пустая очередь и подсказка). Данные
- * вымышленные.
+ * вымышленные. W18A-P2-2: письмо из папки «Спам» — во вкладке «Подозрительные»; «Загрузить письма за период» в
+ * «Подключениях» добавляет два письма «из истории» (не строками «Моих задач»).
  */
 const KEY = "rt-pf-mock-inbound-mail";
 export const MOCK_IMAP_OFF_KEY = "rt-pf-mock-imap-off";
@@ -40,6 +43,7 @@ function seed(): StoredMail[] {
     replies: [],
     lead: null,
     client: null,
+    from_history: false,
   } satisfies Partial<StoredMail>;
   return [
     {
@@ -107,6 +111,69 @@ function seed(): StoredMail[] {
         action: "archive",
       },
     },
+    {
+      ...base,
+      id: 20,
+      status: "spam",
+      from_email: "tender@zavod-demo.example",
+      from_name: "АО «Демо-Завод»",
+      subject: "Приглашение к участию в тендере на поставку шпал",
+      received_at: minutesAgo(240),
+      sent_at: minutesAgo(241),
+      preview:
+        "Приглашаем принять участие в закупке железобетонных шпал. Документация во вложении.",
+      text:
+        "Добрый день!\n\nПриглашаем принять участие в закупке железобетонных шпал. Документация во вложении, " +
+        "приём заявок до 20 ноября.\n\nОтдел закупок АО «Демо-Завод»",
+      attachments_count: 0,
+      attachments: [],
+      assist: { status: "none", kind: null, summary: null, action: null },
+    },
+  ];
+}
+
+/** Письма, которые «Загрузить письма за период» найдёт в ящике (старше 3 дней — «из истории»). */
+function historyMails(): StoredMail[] {
+  const [first] = seed();
+  if (!first) return [];
+  const day = 24 * 60;
+  return [
+    {
+      ...first,
+      id: 31,
+      from_email: "office@partner-demo.example",
+      from_name: "ООО «Демо-Партнёр»",
+      subject: "Договор поставки — подписанный экземпляр",
+      received_at: minutesAgo(1),
+      sent_at: minutesAgo(9 * day),
+      preview: "Направляем подписанный с нашей стороны договор поставки № 14.",
+      text: "Направляем подписанный с нашей стороны договор поставки № 14.",
+      attachments_count: 0,
+      attachments: [],
+      skipped: [],
+      inns: [],
+      client: null,
+      assist: { status: "none", kind: null, summary: null, action: null },
+      from_history: true,
+    },
+    {
+      ...first,
+      id: 32,
+      from_email: "sklad@logist-demo.example",
+      from_name: "Демо-Логистика",
+      subject: "Счёт за хранение за сентябрь",
+      received_at: minutesAgo(1),
+      sent_at: minutesAgo(21 * day),
+      preview: "Счёт за ответственное хранение груза за сентябрь.",
+      text: "Счёт за ответственное хранение груза за сентябрь.",
+      attachments_count: 0,
+      attachments: [],
+      skipped: [],
+      inns: [],
+      client: null,
+      assist: { status: "none", kind: null, summary: null, action: null },
+      from_history: true,
+    },
   ];
 }
 
@@ -159,6 +226,7 @@ function itemOf(mail: StoredMail): InboundMailItem {
     assist: mail.assist,
     client: mail.client,
     lead: mail.lead,
+    from_history: mail.from_history,
   };
 }
 
@@ -204,8 +272,16 @@ function clerkRole(view: readonly MockRole[]): MockRole | undefined {
   return view.find((r) => r.access["crm.leads.triage"] === "full");
 }
 
+function byStatus(status: string, history: boolean | null): StoredMail[] {
+  if (imapOff()) return [];
+  return read()
+    .filter((m) => m.status === status && (history === null || m.from_history === history))
+    .sort((a, b) => (b.sent_at ?? b.received_at).localeCompare(a.sent_at ?? a.received_at));
+}
+
+/** Строки «Моих задач» — без писем «из истории» (как `history=false` у BFF). */
 function waiting(): StoredMail[] {
-  return imapOff() ? [] : read().filter((m) => m.status === "new");
+  return byStatus("new", false);
 }
 
 /** Строки «Моих задач» первой линии (как `mail_rows` BFF). */
@@ -265,21 +341,67 @@ let imap: ImapConnector = {
   last_ok_at: minutesAgo(1),
   last_error_kind: null,
   last_error: null,
+  folders: [{ name: "INBOX", label: "INBOX", spam: false }],
+  history: null,
 };
 
+/** Ход загрузки истории: каждое чтение настроек — ещё одна пачка, как фоновая задача. */
+function advanceHistory(): void {
+  const row = imap.history;
+  if (!row || row.status !== "running") return;
+  const processed = Math.min(row.found, row.processed + 1);
+  let next: ImapHistory = { ...row, processed };
+  if (processed >= row.found) {
+    const known = new Set(read().map((m) => m.id));
+    const fresh = historyMails().filter((m) => !known.has(m.id));
+    write([...read(), ...fresh]);
+    next = {
+      ...next,
+      status: "done",
+      created: fresh.length,
+      finished_at: new Date().toISOString(),
+    };
+  }
+  imap = { ...imap, history: next };
+}
+
+const FOLDERS = [
+  { name: "INBOX", label: "INBOX", junk: false, selectable: true },
+  { name: "Sent", label: "Sent", junk: false, selectable: true },
+  { name: "Spam", label: "Spam", junk: true, selectable: true },
+  { name: "Trash", label: "Trash", junk: false, selectable: true },
+];
+
+function spamAction(id: number, change: (mail: StoredMail) => StoredMail) {
+  const current = read().find((m) => m.id === id);
+  if (!current) return notFound();
+  if (current.status !== "spam") return conflict();
+  update(id, change);
+  return new HttpResponse(null, { status: 204 });
+}
+
 export const inboundMailHandlers = [
-  http.get("*/inbound-mail", () =>
-    HttpResponse.json({
-      items: waiting().map(itemOf),
-      total: waiting().length,
+  http.get("*/inbound-mail", ({ request }) => {
+    const url = new URL(request.url);
+    const status = url.searchParams.get("status") ?? "new";
+    const raw = url.searchParams.get("history");
+    const items = byStatus(status, raw === null ? null : raw === "true");
+    return HttpResponse.json({
+      items: items.map(itemOf),
+      total: items.length,
+      counts: {
+        new: byStatus("new", null).length,
+        history: byStatus("new", true).length,
+        spam: byStatus("spam", null).length,
+      },
       mailbox: {
         configured: !imapOff(),
         last_poll_at: imapOff() ? null : minutesAgo(1),
         last_ok_at: imapOff() ? null : minutesAgo(1),
         last_error_kind: null,
       },
-    }),
-  ),
+    });
+  }),
   http.get("*/inbound-mail/:id/attachments/:index", () =>
     HttpResponse.text(PDF, { headers: { "content-type": "application/octet-stream" } }),
   ),
@@ -348,6 +470,17 @@ export const inboundMailHandlers = [
     }));
     return new HttpResponse(null, { status: 204 });
   }),
+  http.post("*/inbound-mail/:id/not-spam", ({ params }) =>
+    spamAction(Number(params.id), (mail) => ({ ...mail, status: "new" })),
+  ),
+  http.post("*/inbound-mail/:id/discard", ({ params }) =>
+    spamAction(Number(params.id), (mail) => ({
+      ...mail,
+      status: "archived",
+      archive_reason: "Спам",
+      handled_at: new Date().toISOString(),
+    })),
+  ),
   http.post("*/inbound-mail/:id/reply", async ({ params, request }) => {
     const id = Number(params.id);
     await request.json();
@@ -369,23 +502,22 @@ export const inboundMailHandlers = [
     if (!updated) return notFound();
     return HttpResponse.json(updated.replies[updated.replies.length - 1]);
   }),
-  http.get("*/admin/integrations/imap", () => HttpResponse.json(imap)),
+  http.get("*/admin/integrations/imap", () => {
+    advanceHistory();
+    return HttpResponse.json(imap);
+  }),
   http.put("*/admin/integrations/imap", async ({ request }) => {
-    const body = (await request.json()) as {
-      host: string;
-      port?: number;
-      security?: "ssl" | "starttls";
-      mailbox?: string;
-      assist_enabled?: boolean;
-      username?: string | null;
-      imap_password?: string | null;
-    };
+    const body = (await request.json()) as ImapSettingsIn;
+    const folders = body.folders
+      ? body.folders.map((f) => ({ name: f.name, label: f.name, spam: Boolean(f.spam) }))
+      : imap.folders;
     imap = {
       ...imap,
+      folders,
       host: body.host,
       port: body.port ?? 993,
       security: body.security ?? "ssl",
-      mailbox: body.mailbox ?? "INBOX",
+      mailbox: folders.find((f) => !f.spam)?.name ?? body.mailbox ?? "INBOX",
       assist_enabled: body.assist_enabled ?? true,
       username: body.username ?? imap.username,
       password_last4: body.imap_password ? body.imap_password.slice(-4) : imap.password_last4,
@@ -396,4 +528,39 @@ export const inboundMailHandlers = [
   http.post("*/admin/integrations/imap/check", () =>
     HttpResponse.json({ ok: true, error_kind: null, detail: null, messages: 128, latency_ms: 240 }),
   ),
+  http.post("*/admin/integrations/imap/folders", async () => {
+    await delay(150);
+    return HttpResponse.json({
+      ok: true,
+      error_kind: null,
+      detail: null,
+      folders: FOLDERS,
+      spam_suggestion: "Spam",
+    });
+  }),
+  http.post("*/admin/integrations/imap/history", async ({ request }) => {
+    const body = (await request.json()) as { days: number };
+    if (imap.history?.status === "running") return HttpResponse.json(imap.history);
+    imap = {
+      ...imap,
+      history: {
+        id: (imap.history?.id ?? 0) + 1,
+        days: body.days,
+        status: "running",
+        found: 3,
+        processed: 0,
+        created: 0,
+        limited: false,
+        error_kind: null,
+        started_at: new Date().toISOString(),
+        finished_at: null,
+      },
+    };
+    return HttpResponse.json(imap.history);
+  }),
 ];
+
+/** Тесты: настройки приёма заново. */
+export function resetImapMock(): void {
+  imap = { ...imap, folders: [{ name: "INBOX", label: "INBOX", spam: false }], history: null };
+}

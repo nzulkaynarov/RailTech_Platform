@@ -22,7 +22,8 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { registerFromMailPath, useRefreshMail } from "./mailModel";
+import { arrivedAt, registerFromMailPath, useRefreshMail } from "./mailModel";
+import { SpamActions } from "./SpamActions";
 
 type Step = "lead" | "archive" | null;
 
@@ -310,9 +311,14 @@ function Content({ mail, reload }: { mail: InboundMail; reload: () => void }) {
         title={subject}
         subtitle={mail.from_name ? `${mail.from_name} · ${mail.from_email}` : mail.from_email}
         extra={
-          <StatusTag kind="inboundMail" status={mail.status}>
-            {t(`mail.status.${mail.status}`)}
-          </StatusTag>
+          <div className="pf-fp-row">
+            {mail.from_history ? (
+              <StatusTag tone="default">{t("mail.historyTag")}</StatusTag>
+            ) : null}
+            <StatusTag kind="inboundMail" status={mail.status}>
+              {t(`mail.status.${mail.status}`)}
+            </StatusTag>
+          </div>
         }
       />
       <div className="pf-letters-grid">
@@ -322,7 +328,7 @@ function Content({ mail, reload }: { mail: InboundMail; reload: () => void }) {
               items={[
                 { label: t("mail.fields.from"), value: mail.from_email },
                 { label: t("mail.fields.to"), value: mail.to.join(", ") || null },
-                { label: t("mail.fields.received"), value: date(mail.received_at, "datetime") },
+                { label: t("mail.fields.received"), value: date(arrivedAt(mail), "datetime") },
                 { label: t("mail.fields.client"), value: mail.client?.name ?? null },
                 { label: t("mail.fields.lead"), value: mail.lead?.number ?? null },
                 { label: t("mail.fields.inns"), value: mail.inns.join(", ") || null },
@@ -368,6 +374,8 @@ function Content({ mail, reload }: { mail: InboundMail; reload: () => void }) {
                 <Assist mail={mail} onChange={reload} />
                 <Actions mail={mail} onDone={() => void refresh()} />
               </div>
+            ) : mail.status === "spam" ? (
+              <SpamActions mail={mail} onDone={() => void refresh()} />
             ) : (
               <>
                 <h3 className="pf-res-subhead">{t("mail.result.title")}</h3>

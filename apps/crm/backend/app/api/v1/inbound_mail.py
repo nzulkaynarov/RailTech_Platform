@@ -1,7 +1,8 @@
 """Входящая почта (W18A-P2, B-INB-5): очередь, карточка, действия; приём в «Подключениях».
 
 Очередь и действия — `mail_inbox:read|work` (раздел каталога `crm.leads.triage`); настройки
-приёма — `integrations:read|write`, как SMTP карточки «Почта».
+приёма — `integrations:read|write`, как SMTP карточки «Почта». Папки «Спам» и загрузка писем за
+период — W18A-P2-2.
 """
 
 from typing import Annotated, Literal
@@ -14,6 +15,9 @@ from app.api.deps import ContainerDep, require
 from app.schemas.inbound_mail import (
     ImapCheckOut,
     ImapConnectorIn,
+    ImapFoldersOut,
+    ImapHistoryIn,
+    ImapHistoryOut,
     ImapStatusOut,
     InboundMailArchiveIn,
     InboundMailAssist,
@@ -43,12 +47,14 @@ def _disposition(name: str) -> str:
 async def list_inbound_mail(
     _: Reader,
     container: ContainerDep,
-    status: Literal["new", "registered", "lead", "archived"] = Query("new"),
+    status: Literal["new", "spam", "registered", "lead", "archived"] = Query("new"),
+    history: bool | None = Query(None),
 ) -> InboundMailPage:
     """Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
     приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
-    Почта»)."""
-    return await container.inbound_mail.page(status)
+    Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
+    (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок."""
+    return await container.inbound_mail.page(status, history)
 
 
 @router.get("/inbound-mail/{mail_id}", response_model=InboundMailOut)
@@ -103,6 +109,20 @@ async def archive_inbound_mail(
     return Response(status_code=204)
 
 
+@router.post("/inbound-mail/{mail_id}/not-spam", status_code=204)
+async def not_spam_inbound_mail(mail_id: MailId, who: Worker, container: ContainerDep) -> Response:
+    """«Не спам → в очередь»: подозрительное письмо становится «Ждёт разбора». Не `spam` — 409."""
+    await container.inbound_mail.not_spam(who, mail_id)
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{mail_id}/discard", status_code=204)
+async def discard_inbound_mail(mail_id: MailId, who: Worker, container: ContainerDep) -> Response:
+    """«Убрать» подозрительное письмо: в архив с причиной «Спам». Не `spam` — 409."""
+    await container.inbound_mail.discard(who, mail_id)
+    return Response(status_code=204)
+
+
 @router.post("/inbound-mail/{mail_id}/reply", response_model=InboundMailReply)
 async def reply_inbound_mail(
     mail_id: MailId, body: InboundMailReplyIn, who: Worker, container: ContainerDep
@@ -137,6 +157,7 @@ async def put_imap_connector(
         username=body.username,
         password=secret,
         admin_password=body.password.get_secret_value(),
+        folders=body.folders,
     )
 
 
@@ -146,3 +167,20 @@ async def check_imap_connector(_: AdminWriter, container: ContainerDep) -> ImapC
     `error_kind` — `not_configured`, `invalid_host`, `unavailable`, `tls_failed`, `auth_failed`,
     `mailbox_missing`."""
     return await container.imap_connector.check()
+
+
+@router.post("/integrations/imap/folders", response_model=ImapFoldersOut)
+async def imap_folders(_: AdminWriter, container: ContainerDep) -> ImapFoldersOut:
+    """«Найти папки»: папки ящика (IMAP `LIST`) и подсказка спам-папки по флагу `\\Junk`. Итог —
+    в ответе, `error_kind` — как у «Проверить приём»."""
+    return await container.imap_connector.folders()
+
+
+@router.post("/integrations/imap/history", response_model=ImapHistoryOut)
+async def start_imap_history(
+    body: ImapHistoryIn, who: AdminWriter, container: ContainerDep
+) -> ImapHistoryOut:
+    """«Загрузить письма за период» (7, 14, 30 или 90 дней) — фоном; ход и итог — в ответе и в
+    `GET /integrations/imap` (`history`). Уже идёт — та же загрузка. Дубли по Message-ID не
+    создаются. Приём не настроен — 409."""
+    return await container.inbound_mail_history.start(who, body.days)

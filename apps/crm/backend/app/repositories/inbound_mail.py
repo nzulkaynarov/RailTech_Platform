@@ -1,14 +1,15 @@
 """Запросы входящей почты (W18A-P2): письма очереди, состояние папки, связка с клиентом и лидом."""
 
 from collections.abc import Sequence
+from datetime import datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.clients import Client, ClientContact
 from app.models.email import EmailLog
-from app.models.inbound_mail import InboundMail, InboundMailbox
+from app.models.inbound_mail import InboundMail, InboundMailbox, InboundMailImport
 from app.models.leads import Lead
 
 REF_KIND = "inbound_mail"
@@ -39,19 +40,66 @@ async def get(
     return (await session.scalars(stmt)).first()
 
 
-async def page(session: AsyncSession, status: str, limit: int) -> Sequence[InboundMail]:
+def _filter(status: str, history: bool | None) -> list[ColumnElement[bool]]:
+    where = [InboundMail.status == status]
+    if history is not None:
+        where.append(InboundMail.from_history.is_(history))
+    return where
+
+
+async def page(
+    session: AsyncSession, status: str, limit: int, history: bool | None = None
+) -> Sequence[InboundMail]:
+    """Письма статуса; новые сверху по дате письма (у загруженных из истории дата приёма — сегодня);
+    дата из будущего (часы отправителя) не выше даты приёма — `LEAST` пропускает NULL."""
     stmt = (
         select(InboundMail)
-        .where(InboundMail.status == status)
-        .order_by(InboundMail.received_at.desc(), InboundMail.id.desc())
+        .where(*_filter(status, history))
+        .order_by(
+            func.least(InboundMail.sent_at, InboundMail.received_at).desc(),
+            InboundMail.id.desc(),
+        )
         .limit(limit)
     )
     return (await session.scalars(stmt)).all()
 
 
-async def count(session: AsyncSession, status: str) -> int:
-    stmt = select(func.count()).select_from(InboundMail).where(InboundMail.status == status)
+async def count(session: AsyncSession, status: str, history: bool | None = None) -> int:
+    stmt = select(func.count()).select_from(InboundMail).where(*_filter(status, history))
     return int((await session.execute(stmt)).scalar_one())
+
+
+async def promote_from_spam(session: AsyncSession, message_id: str, mailbox: str) -> int | None:
+    """Письмо, которое было в «Спаме», нашлось в обычной папке (его переложили): в очередь."""
+    stmt = (
+        update(InboundMail)
+        .where(InboundMail.message_id == message_id, InboundMail.status == "spam")
+        .values(status="new", mailbox=mailbox)
+        .returning(InboundMail.id)
+    )
+    return (await session.execute(stmt)).scalar_one_or_none()
+
+
+async def mailboxes(session: AsyncSession, names: Sequence[str]) -> list[InboundMailbox]:
+    stmt = select(InboundMailbox).where(InboundMailbox.mailbox.in_(list(names)))
+    return list((await session.scalars(stmt)).all())
+
+
+async def last_import(session: AsyncSession) -> InboundMailImport | None:
+    stmt = select(InboundMailImport).order_by(InboundMailImport.id.desc()).limit(1)
+    return (await session.scalars(stmt)).first()
+
+
+async def running_import(session: AsyncSession, fresh_after: datetime) -> InboundMailImport | None:
+    """Идущая загрузка, обновлявшаяся после `fresh_after` (зависшая после сбоя воркера — нет)."""
+    stmt = (
+        select(InboundMailImport)
+        .where(InboundMailImport.status == "running", InboundMailImport.updated_at >= fresh_after)
+        .order_by(InboundMailImport.id.desc())
+        .limit(1)
+        .with_for_update()
+    )
+    return (await session.scalars(stmt)).first()
 
 
 async def mailbox(

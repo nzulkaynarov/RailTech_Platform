@@ -1,9 +1,13 @@
-import { fireEvent, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
 
+import { resetImapMock } from "../../../mocks/inboundMail";
 import { panelEl, renderAt, signIn, setupIntegrationsTests } from "./testkit";
 
 setupIntegrationsTests();
+beforeEach(() => {
+  resetImapMock();
+});
 
 async function mailPanel(email = "admin@demo.example"): Promise<HTMLElement> {
   signIn(email);
@@ -31,4 +35,30 @@ describe("карточка «Почта» · приём (W18A-P2)", () => {
     expect(within(form).queryByRole("group", { name: "Что произойдёт" })).toBeNull();
     expect(within(form).getByRole("checkbox", { name: /Помощник канцелярии/ })).toBeChecked();
   });
+
+  it("«Найти папки» подсказывает «Спам» по флагу сервера; сохранение — с папками", async () => {
+    const side = await mailPanel();
+    fireEvent.click(await within(side).findByRole("button", { name: "Настроить приём" }));
+    const form = within(side).getByRole("form", { name: "Приём почты" });
+    fireEvent.click(within(form).getByRole("button", { name: "Найти папки" }));
+    expect(await within(form).findByText("Найдено папок: 4")).toBeVisible();
+    const spam = within(form).getByLabelText("Папка «Спам»");
+    await waitFor(() => {
+      expect(spam.closest(".ant-select")).toHaveTextContent("Spam");
+    });
+    fireEvent.change(within(form).getByLabelText("Ваш пароль администратора"), {
+      target: { value: "admin-pass" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить настройки" }));
+    expect(await within(side).findByText("INBOX, Spam (спам)")).toBeVisible();
+  });
+
+  it("«Загрузить письма за период»: ход и итог «загружено N»", async () => {
+    const side = await mailPanel();
+    fireEvent.click(await within(side).findByRole("button", { name: "Загрузить" }));
+    expect(
+      await within(side).findByText(/Загружено новых писем: 2 из 3/, {}, { timeout: 15000 }),
+    ).toBeVisible();
+    expect(within(side).getByText(/Повторная загрузка безопасна/)).toBeVisible();
+  }, 20000);
 });

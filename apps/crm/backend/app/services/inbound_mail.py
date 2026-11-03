@@ -13,6 +13,10 @@
 * «Зарегистрировать ВХ» делает EDS (форма P8 с `source_mail_id`); CRM узнаёт номер из события
   `uz.railtech.eds.letter.registered.v1` (`accept_registered`, в транзакции inbox шины).
 
+Письма из спам-папки (W18A-P2-2, эталон — Zendesk «Suspended tickets»: подозрительное — отдельная
+очередь на проверку человеком) — статус `spam`, вкладка «Подозрительные»: «Не спам» — в очередь
+(`new`), «Убрать» — в архив с причиной «Спам». Ящик на сервере не меняется (только чтение).
+
 «Ответить» — письмо через почтовый сервис P1 в ту же цепочку (`In-Reply-To`, `References`), в
 журнале доставки с объектом `inbound_mail:<id>`.
 """
@@ -50,6 +54,7 @@ logger = structlog.get_logger(__name__)
 LETTER_REGISTERED = "uz.railtech.eds.letter.registered.v1"
 PAGE_LIMIT = 200
 PREVIEW_CHARS = 200
+SPAM_REASON = "Спам"
 _NOTE_MARK = "[почта] "
 _SUMMARY_MAX = 2000
 
@@ -78,6 +83,7 @@ def _item_fields(
         "assist": assist_view(row, assist_on),
         "client": _link(clients, row.client_id),
         "lead": _link(leads, row.matched_lead_id),
+        "from_history": row.from_history,
     }
 
 
@@ -102,10 +108,18 @@ class InboundMailService:
     async def _assist_on(self) -> bool:
         return (await self._settings.get()).integrations.imap.assist_enabled
 
-    async def page(self, status: dto.MailStatus) -> dto.InboundMailPage:
+    async def page(
+        self, status: dto.MailStatus, history: bool | None = None
+    ) -> dto.InboundMailPage:
+        """`history`: `false` — без писем «из истории» («Мои задачи»), `true` — только они."""
         async with self._sessions() as session:
-            rows = await repo.page(session, status, PAGE_LIMIT)
-            total = await repo.count(session, status)
+            rows = await repo.page(session, status, PAGE_LIMIT, history)
+            total = await repo.count(session, status, history)
+            counts = dto.InboundMailCounts(
+                new=await repo.count(session, "new"),
+                history=await repo.count(session, "new", True),
+                spam=await repo.count(session, "spam"),
+            )
             state = await repo.last_mailbox(session)
             clients, leads = await repo.names(
                 session,
@@ -120,7 +134,7 @@ class InboundMailService:
         )
         on = await self._assist_on()
         items = [dto.InboundMailItem(**_item_fields(r, clients, leads, on)) for r in rows]
-        return dto.InboundMailPage(items=items, total=total, mailbox=mailbox)
+        return dto.InboundMailPage(items=items, total=total, mailbox=mailbox, counts=counts)
 
     async def get(self, mail_id: int) -> dto.InboundMailOut:
         async with self._sessions() as session:
@@ -225,6 +239,33 @@ class InboundMailService:
             )
         logger.info("inbound_mail_archived", mail_id=mail_id)
 
+    async def not_spam(self, who: Principal, mail_id: int) -> None:
+        """«Не спам → в очередь»: письмо становится обычным «Ждёт разбора»."""
+        async with self._sessions() as session, session.begin():
+            row = await _open_row(session, mail_id, "spam")
+            row.status = "new"
+            await audit.record(
+                session, who.actor, "inbound_mail.not_spam", "inbound_mail", row.id, after={}
+            )
+        logger.info("inbound_mail_not_spam", mail_id=mail_id)
+
+    async def discard(self, who: Principal, mail_id: int) -> None:
+        """«Убрать» подозрительное письмо: в архив с причиной «Спам» (ничего не удаляется)."""
+        now = datetime.now(UTC)
+        async with self._sessions() as session, session.begin():
+            row = await _open_row(session, mail_id, "spam")
+            _handled(row, "archived", who, now)
+            row.archive_reason = SPAM_REASON
+            await audit.record(
+                session,
+                who.actor,
+                "inbound_mail.discard",
+                "inbound_mail",
+                row.id,
+                after={"reason": SPAM_REASON},
+            )
+        logger.info("inbound_mail_discarded", mail_id=mail_id)
+
     async def reply(self, who: Principal, mail_id: int, text: str) -> dto.InboundMailReply:
         async with self._sessions() as session:
             row = await repo.get(session, mail_id)
@@ -286,11 +327,11 @@ def _obj(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-async def _open_row(session: AsyncSession, mail_id: int) -> InboundMail:
+async def _open_row(session: AsyncSession, mail_id: int, status: str = "new") -> InboundMail:
     row = await repo.get(session, mail_id, for_update=True)
     if row is None:
         raise NotFoundError("mail not found")
-    if row.status != "new":
+    if row.status != status:
         raise ConflictError("mail is already handled", status=row.status)
     return row
 

@@ -380,6 +380,26 @@
         "invalid_host": "The server address is wrong (for example, imap.yandex.ru)",
         "tls_failed": "Could not establish a secure connection — check the port and encryption",
         "unavailable": "The IMAP server does not respond — check the address and port"
+      },
+      "folders": "Folders",
+      "foldersHint": "Usually Inbox; tick the Spam folder so no mail is lost",
+      "find": "Find folders",
+      "findOk": "Folders found: {{count}}",
+      "spamFolder": "Spam folder",
+      "spamNone": "Do not check",
+      "spamMark": "spam",
+      "history": {
+        "title": "Load mail for a period",
+        "period": "Period",
+        "days": "{{count}} days",
+        "button": "Load",
+        "hint": "Mail older than 3 days is listed with a “from history” mark",
+        "running": "Loading: {{processed}} of {{found}}",
+        "searching": "Searching the mailbox…",
+        "done": "New mail loaded: {{created}} of {{found}}",
+        "limited": "The period has more than 2000 messages — the latest 2000 were loaded. Pick a shorter period.",
+        "error": "Loading stopped: {{reason}}",
+        "again": "Loading again is safe: mail already loaded is not repeated."
       }
     }
   },

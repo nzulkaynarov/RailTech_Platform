@@ -324,3 +324,10 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+/* Подраздел карточки (W18A-P2-2: «Загрузить письма за период»). */
+.pf-int-subhead {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}

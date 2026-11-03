@@ -4,12 +4,13 @@
  */
 
 /**
- * new — ждёт разбора; registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
+ * new — ждёт разбора; spam — «Подозрительные» (из спам-папки, W18A-P2-2); registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
  */
 export type InboundMailStatus = (typeof InboundMailStatus)[keyof typeof InboundMailStatus];
 
 export const InboundMailStatus = {
   new: "new",
+  spam: "spam",
   registered: "registered",
   lead: "lead",
   archived: "archived",

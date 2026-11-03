@@ -3742,6 +3742,15 @@ components:
           default: true
           title: Assist Enabled
           type: boolean
+        folders:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ImapFolderIn'
+            maxItems: 10
+            type: array
+          - type: 'null'
+          description: Папки опроса; `null` — прежние. Задано — `mailbox` = первая не спам
+          title: Folders
         host:
           maxLength: 253
           title: Host
@@ -3792,6 +3801,170 @@ components:
       - password
       title: ImapConnectorIn
       type: object
+    ImapFolderIn:
+      additionalProperties: false
+      description: 'Папка опроса: имя как на сервере (modified UTF-7), `spam` — письма «Подозрительные».'
+      properties:
+        name:
+          maxLength: 200
+          minLength: 1
+          title: Name
+          type: string
+        spam:
+          default: false
+          title: Spam
+          type: boolean
+      required:
+      - name
+      title: ImapFolderIn
+      type: object
+    ImapFolderOut:
+      additionalProperties: false
+      properties:
+        label:
+          description: Имя для человека (modified UTF-7 раскодирован)
+          title: Label
+          type: string
+        name:
+          maxLength: 200
+          minLength: 1
+          title: Name
+          type: string
+        spam:
+          default: false
+          title: Spam
+          type: boolean
+      required:
+      - name
+      - label
+      title: ImapFolderOut
+      type: object
+    ImapFoldersOut:
+      description: '«Найти папки»: список папок ящика (`LIST`) или причина словом-кодом.'
+      properties:
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Detail
+        error_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Kind
+        folders:
+          items:
+            $ref: '#/components/schemas/ImapServerFolder'
+          title: Folders
+          type: array
+        ok:
+          title: Ok
+          type: boolean
+        spam_suggestion:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Спам-папка по флагу \Junk или единственному привычному имени
+          title: Spam Suggestion
+      required:
+      - ok
+      title: ImapFoldersOut
+      type: object
+    ImapHistoryIn:
+      additionalProperties: false
+      properties:
+        days:
+          enum:
+          - 7
+          - 14
+          - 30
+          - 90
+          title: Days
+          type: integer
+      required:
+      - days
+      title: ImapHistoryIn
+      type: object
+    ImapHistoryOut:
+      description: 'Загрузка писем за период: ход и итог. `found` — сколько берём (не больше 2000), `limited` —
+
+        в периоде писем больше, взяты новые.'
+      properties:
+        created:
+          title: Created
+          type: integer
+        days:
+          title: Days
+          type: integer
+        error_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Kind
+        finished_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Finished At
+        found:
+          title: Found
+          type: integer
+        id:
+          title: Id
+          type: integer
+        limited:
+          title: Limited
+          type: boolean
+        processed:
+          title: Processed
+          type: integer
+        started_at:
+          format: date-time
+          title: Started At
+          type: string
+        status:
+          enum:
+          - running
+          - done
+          - error
+          title: Status
+          type: string
+      required:
+      - id
+      - days
+      - status
+      - found
+      - processed
+      - created
+      - limited
+      - error_kind
+      - started_at
+      - finished_at
+      title: ImapHistoryOut
+      type: object
+    ImapServerFolder:
+      properties:
+        junk:
+          description: Сервер отметил папку флагом \Junk (RFC 6154)
+          title: Junk
+          type: boolean
+        label:
+          title: Label
+          type: string
+        name:
+          title: Name
+          type: string
+        selectable:
+          title: Selectable
+          type: boolean
+      required:
+      - name
+      - label
+      - junk
+      - selectable
+      title: ImapServerFolder
+      type: object
     ImapStatusOut:
       description: 'Приём почты: несекретное и состояние секретов (только на запись).'
       properties:
@@ -3801,6 +3974,17 @@ components:
         configured:
           title: Configured
           type: boolean
+        folders:
+          description: Папки опроса; по умолчанию одна — `mailbox`
+          items:
+            $ref: '#/components/schemas/ImapFolderOut'
+          title: Folders
+          type: array
+        history:
+          anyOf:
+          - $ref: '#/components/schemas/ImapHistoryOut'
+          - type: 'null'
+          description: Последняя загрузка писем за период
         host:
           title: Host
           type: string
@@ -3949,6 +4133,24 @@ components:
       - size
       title: InboundMailAttachment
       type: object
+    InboundMailCounts:
+      description: 'Числа вкладок списка: ждут разбора (из них «из истории») и подозрительные.'
+      properties:
+        history:
+          title: History
+          type: integer
+        new:
+          title: New
+          type: integer
+        spam:
+          title: Spam
+          type: integer
+      required:
+      - new
+      - history
+      - spam
+      title: InboundMailCounts
+      type: object
     InboundMailItem:
       properties:
         assist:
@@ -3963,6 +4165,11 @@ components:
         from_email:
           title: From Email
           type: string
+        from_history:
+          default: false
+          description: 'Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»'
+          title: From History
+          type: boolean
         from_name:
           title: From Name
           type: string
@@ -3991,6 +4198,7 @@ components:
         status:
           enum:
           - new
+          - spam
           - registered
           - lead
           - archived
@@ -4073,6 +4281,11 @@ components:
         from_email:
           title: From Email
           type: string
+        from_history:
+          default: false
+          description: 'Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач»'
+          title: From History
+          type: boolean
         from_name:
           title: From Name
           type: string
@@ -4131,6 +4344,7 @@ components:
         status:
           enum:
           - new
+          - spam
           - registered
           - lead
           - archived
@@ -4178,6 +4392,8 @@ components:
       type: object
     InboundMailPage:
       properties:
+        counts:
+          $ref: '#/components/schemas/InboundMailCounts'
         items:
           items:
             $ref: '#/components/schemas/InboundMailItem'
@@ -4192,6 +4408,7 @@ components:
       - items
       - total
       - mailbox
+      - counts
       title: InboundMailPage
       type: object
     InboundMailReply:
@@ -8918,7 +9135,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.17.0
+  version: 0.18.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -11175,7 +11392,9 @@ paths:
 
         приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
 
-        Почта»).'
+        Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
+
+        (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок.'
       operationId: list_inbound_mail
       parameters:
       - in: query
@@ -11185,11 +11404,20 @@ paths:
           default: new
           enum:
           - new
+          - spam
           - registered
           - lead
           - archived
           title: Status
           type: string
+      - in: query
+        name: history
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: History
       responses:
         '200':
           content:
@@ -11342,6 +11570,32 @@ paths:
       summary: Get Inbound Mail Attachment
       tags:
       - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/discard:
+    post:
+      description: '«Убрать» подозрительное письмо: в архив с причиной «Спам». Не `spam` — 409.'
+      operationId: discard_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Discard Inbound Mail
+      tags:
+      - inbound-mail
   /api/v1/inbound-mail/{mail_id}/lead:
     post:
       description: '«Создать лид»: лид без ответственного во «Входящих» или заметка в открытом лиде с этим
@@ -11372,6 +11626,32 @@ paths:
       security:
       - HTTPBearer: []
       summary: Create Lead From Mail
+      tags:
+      - inbound-mail
+  /api/v1/inbound-mail/{mail_id}/not-spam:
+    post:
+      description: '«Не спам → в очередь»: подозрительное письмо становится «Ждёт разбора». Не `spam` — 409.'
+      operationId: not_spam_inbound_mail
+      parameters:
+      - in: path
+        name: mail_id
+        required: true
+        schema:
+          minimum: 1
+          title: Mail Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Not Spam Inbound Mail
       tags:
       - inbound-mail
   /api/v1/inbound-mail/{mail_id}/reply:
@@ -11711,6 +11991,62 @@ paths:
       security:
       - HTTPBearer: []
       summary: Check Imap Connector
+      tags:
+      - inbound-mail
+  /api/v1/integrations/imap/folders:
+    post:
+      description: '«Найти папки»: папки ящика (IMAP `LIST`) и подсказка спам-папки по флагу `\Junk`. Итог —
+
+        в ответе, `error_kind` — как у «Проверить приём».'
+      operationId: imap_folders
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapFoldersOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Imap Folders
+      tags:
+      - inbound-mail
+  /api/v1/integrations/imap/history:
+    post:
+      description: '«Загрузить письма за период» (7, 14, 30 или 90 дней) — фоном; ход и итог — в ответе и в
+
+        `GET /integrations/imap` (`history`). Уже идёт — та же загрузка. Дубли по Message-ID не
+
+        создаются. Приём не настроен — 409.'
+      operationId: start_imap_history
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImapHistoryIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImapHistoryOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Start Imap History
       tags:
       - inbound-mail
   /api/v1/integrations/offsite:

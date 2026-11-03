@@ -100,6 +100,9 @@ import type {
   HealthResponse,
   ImapCheckOut,
   ImapConnectorIn,
+  ImapFoldersOut,
+  ImapHistoryIn,
+  ImapHistoryOut,
   ImapStatusOut,
   InboundMailArchiveIn,
   InboundMailAssist,
@@ -6906,7 +6909,8 @@ export const getListInboundMailUrl = (params?: ListInboundMailParams) => {
 /**
  * Очередь «Входящая почта» (по умолчанию — необработанные, новые сверху, до 200) и состояние
  * приёма: `mailbox.configured = false` — приём не настроен (подсказка «Настройки · Подключения ·
- * Почта»).
+ * Почта»). `spam` — «Подозрительные» (из спам-папки). `history=false` — без писем «из истории»
+ * (строки «Моих задач»: за последние 3 дня), `true` — только они; `counts` — числа вкладок.
  * @summary List Inbound Mail
  */
 export const listInboundMail = async (
@@ -7489,6 +7493,92 @@ export function useGetInboundMailAttachment<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getDiscardInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/discard`;
+};
+
+/**
+ * «Убрать» подозрительное письмо: в архив с причиной «Спам». Не `spam` — 409.
+ * @summary Discard Inbound Mail
+ */
+export const discardInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDiscardInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDiscardInboundMailMutationKey = () => ["discardInboundMail"] as const;
+
+export const getDiscardInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discardInboundMail>>,
+    TError,
+    DiscardInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discardInboundMail>>,
+  TError,
+  DiscardInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDiscardInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discardInboundMail>>,
+    DiscardInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return discardInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscardInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof discardInboundMail>>
+>;
+
+export type DiscardInboundMailMutationError = ErrorType<ErrorOut>;
+export type DiscardInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Discard Inbound Mail
+ */
+export const useDiscardInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof discardInboundMail>>,
+      TError,
+      DiscardInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof discardInboundMail>>,
+  TError,
+  DiscardInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getDiscardInboundMailMutationOptions(options), queryClient);
+};
+
 export const getCreateLeadFromMailUrl = (mailId: number) => {
   return `/api/v1/inbound-mail/${mailId}/lead`;
 };
@@ -7574,6 +7664,92 @@ export const useCreateLeadFromMail = <TError = ErrorType<ErrorOut>, TContext = u
   TContext
 > => {
   return useMutation(getCreateLeadFromMailMutationOptions(options), queryClient);
+};
+
+export const getNotSpamInboundMailUrl = (mailId: number) => {
+  return `/api/v1/inbound-mail/${mailId}/not-spam`;
+};
+
+/**
+ * «Не спам → в очередь»: подозрительное письмо становится «Ждёт разбора». Не `spam` — 409.
+ * @summary Not Spam Inbound Mail
+ */
+export const notSpamInboundMail = async (
+  mailId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getNotSpamInboundMailUrl(mailId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getNotSpamInboundMailMutationKey = () => ["notSpamInboundMail"] as const;
+
+export const getNotSpamInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof notSpamInboundMail>>,
+    TError,
+    NotSpamInboundMailMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof notSpamInboundMail>>,
+  TError,
+  NotSpamInboundMailMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNotSpamInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof notSpamInboundMail>>,
+    NotSpamInboundMailMutationVariables
+  > = (props) => {
+    const { mailId } = props ?? {};
+
+    return notSpamInboundMail(mailId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NotSpamInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof notSpamInboundMail>>
+>;
+
+export type NotSpamInboundMailMutationError = ErrorType<ErrorOut>;
+export type NotSpamInboundMailMutationVariables = { mailId: number };
+
+/**
+ * @summary Not Spam Inbound Mail
+ */
+export const useNotSpamInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof notSpamInboundMail>>,
+      TError,
+      NotSpamInboundMailMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof notSpamInboundMail>>,
+  TError,
+  NotSpamInboundMailMutationVariables,
+  TContext
+> => {
+  return useMutation(getNotSpamInboundMailMutationOptions(options), queryClient);
 };
 
 export const getReplyInboundMailUrl = (mailId: number) => {
@@ -8631,6 +8807,173 @@ export const useCheckImapConnector = <TError = ErrorType<ErrorOut>, TContext = u
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof checkImapConnector>>, TError, void, TContext> => {
   return useMutation(getCheckImapConnectorMutationOptions(options), queryClient);
+};
+
+export const getImapFoldersUrl = () => {
+  return `/api/v1/integrations/imap/folders`;
+};
+
+/**
+ * «Найти папки»: папки ящика (IMAP `LIST`) и подсказка спам-папки по флагу `\Junk`. Итог —
+ * в ответе, `error_kind` — как у «Проверить приём».
+ * @summary Imap Folders
+ */
+export const imapFolders = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ImapFoldersOut> => {
+  return http<ImapFoldersOut>(getImapFoldersUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getImapFoldersMutationKey = () => ["imapFolders"] as const;
+
+export const getImapFoldersMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof imapFolders>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof imapFolders>>, TError, void, TContext> => {
+  const mutationKey = getImapFoldersMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof imapFolders>>, void> = () => {
+    return imapFolders(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImapFoldersMutationResult = NonNullable<Awaited<ReturnType<typeof imapFolders>>>;
+
+export type ImapFoldersMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Imap Folders
+ */
+export const useImapFolders = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof imapFolders>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof imapFolders>>, TError, void, TContext> => {
+  return useMutation(getImapFoldersMutationOptions(options), queryClient);
+};
+
+export const getStartImapHistoryUrl = () => {
+  return `/api/v1/integrations/imap/history`;
+};
+
+/**
+ * «Загрузить письма за период» (7, 14, 30 или 90 дней) — фоном; ход и итог — в ответе и в
+ * `GET /integrations/imap` (`history`). Уже идёт — та же загрузка. Дубли по Message-ID не
+ * создаются. Приём не настроен — 409.
+ * @summary Start Imap History
+ */
+export const startImapHistory = async (
+  imapHistoryIn: ImapHistoryIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ImapHistoryOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ImapHistoryOut>(getStartImapHistoryUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(imapHistoryIn),
+  });
+};
+
+export const getStartImapHistoryMutationKey = () => ["startImapHistory"] as const;
+
+export const getStartImapHistoryMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startImapHistory>>,
+    TError,
+    StartImapHistoryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startImapHistory>>,
+  TError,
+  StartImapHistoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartImapHistoryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startImapHistory>>,
+    StartImapHistoryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return startImapHistory(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartImapHistoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof startImapHistory>>
+>;
+export type StartImapHistoryMutationBody = ImapHistoryIn;
+export type StartImapHistoryMutationError = ErrorType<ErrorOut>;
+export type StartImapHistoryMutationVariables = { data: ImapHistoryIn };
+
+/**
+ * @summary Start Imap History
+ */
+export const useStartImapHistory = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startImapHistory>>,
+      TError,
+      StartImapHistoryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startImapHistory>>,
+  TError,
+  StartImapHistoryMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartImapHistoryMutationOptions(options), queryClient);
 };
 
 export const getGetOffsiteStatusUrl = () => {

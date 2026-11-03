@@ -8,6 +8,7 @@ export type InboundMailItemStatus =
 
 export const InboundMailItemStatus = {
   new: "new",
+  spam: "spam",
   registered: "registered",
   lead: "lead",
   archived: "archived",
