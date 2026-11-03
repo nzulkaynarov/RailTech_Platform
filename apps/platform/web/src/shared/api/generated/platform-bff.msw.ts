@@ -68,6 +68,8 @@ import {
   QuoteDeliveryReason,
   QuoteDeliveryStatus,
   QuoteSendChannel,
+  ResolutionTemplateResponsibleType,
+  ResolutionTemplateScope,
   RestrictedField,
   ServiceAction,
   ServiceOwner,
@@ -272,6 +274,8 @@ import type {
   RequestCreatedView,
   RequestRetriedView,
   ResolutionAssignees,
+  ResolutionTemplate,
+  ResolutionTemplateList,
   Role,
   RoleJournal,
   RoleList,
@@ -16238,6 +16242,150 @@ export const getDecideInstructionExtensionResponseMock = (
   ...overrideResponse,
 });
 
+export const getListResolutionTemplatesResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListResolutionTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplateList, object>> = {},
+): ResolutionTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+    kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+    responsible: faker.helpers.arrayElement([
+      { ...getListResolutionTemplatesResponsePersonRefMock() },
+      null,
+    ]),
+    co_executors: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    })),
+    acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      }),
+    ),
+    due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    owner: faker.helpers.arrayElement([
+      { ...getListResolutionTemplatesResponsePersonRefMock() },
+      null,
+    ]),
+    editable: faker.datatype.boolean(),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateResolutionTemplateResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateResolutionTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplate, object>> = {},
+): ResolutionTemplate => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+  kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+  responsible: faker.helpers.arrayElement([
+    { ...getCreateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  co_executors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  owner: faker.helpers.arrayElement([
+    { ...getCreateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  editable: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateResolutionTemplateResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateResolutionTemplateResponseMock = (
+  overrideResponse: Partial<Extract<ResolutionTemplate, object>> = {},
+): ResolutionTemplate => ({
+  id: faker.string.uuid(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  scope: faker.helpers.arrayElement(Object.values(ResolutionTemplateScope)),
+  kind: faker.helpers.arrayElement(Object.values(LetterResolutionKind)),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  responsible_type: faker.helpers.arrayElement(Object.values(ResolutionTemplateResponsibleType)),
+  responsible: faker.helpers.arrayElement([
+    { ...getUpdateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  co_executors: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  acquaint: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    }),
+  ),
+  due_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  owner: faker.helpers.arrayElement([
+    { ...getUpdateResolutionTemplateResponsePersonRefMock() },
+    null,
+  ]),
+  editable: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
 export const getListEdsStaffResponseMock = (
   overrideResponse: Partial<Extract<EdsStaffList, object>> = {},
 ): EdsStaffList => ({
@@ -29731,6 +29879,96 @@ export const getDecideInstructionExtensionMockHandler = (
   );
 };
 
+export const getListResolutionTemplatesMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ResolutionTemplateList> | ResolutionTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/resolution-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListResolutionTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateResolutionTemplateMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ResolutionTemplate> | ResolutionTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/resolution-templates",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateResolutionTemplateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateResolutionTemplateMockHandler = (
+  overrideResponse?:
+    | ResolutionTemplate
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ResolutionTemplate> | ResolutionTemplate),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/eds/resolution-templates/:id",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateResolutionTemplateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteResolutionTemplateMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/eds/resolution-templates/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getListEdsStaffMockHandler = (
   overrideResponse?:
     | EdsStaffList
@@ -32274,6 +32512,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCompleteInstructionMockHandler(),
   getRequestInstructionExtensionMockHandler(),
   getDecideInstructionExtensionMockHandler(),
+  getListResolutionTemplatesMockHandler(),
+  getCreateResolutionTemplateMockHandler(),
+  getUpdateResolutionTemplateMockHandler(),
+  getDeleteResolutionTemplateMockHandler(),
   getListEdsStaffMockHandler(),
   getListCrmMessagesMockHandler(),
   getGetCrmConversationMockHandler(),

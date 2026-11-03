@@ -182,6 +182,7 @@ describe("EDS · справочники в форме регистрации (ED
   it("способы получения и виды — из справочника: скрытого нет, добавленный администратором есть", async () => {
     const state = readDictionaries();
     writeDictionaries({
+      ...state,
       "letter-kinds": state["letter-kinds"].map((item) =>
         item.code === "bank" ? { ...item, active: false } : item,
       ),

@@ -23,6 +23,7 @@ import { bridgeHandlers } from "./bridgeHandlers";
 import { edsInstructionsHandlers } from "./edsInstructions";
 import { dictionariesHandlers } from "./dictionaries";
 import { edsLettersHandlers } from "./edsLetters";
+import { resolutionTemplatesHandlers } from "./resolutionTemplates";
 import { erpCalcHandlers } from "./erpCalc";
 import { erpStockHandlers } from "./erpStock";
 import { adminUsersHandlers } from "./adminUsers";
@@ -175,6 +176,7 @@ export const handlers = [
   ...edsInstructionsHandlers, // P8b: до писем — `*/eds/letters/*` иначе перехватил бы POST-пути
   ...edsLettersHandlers,
   ...dictionariesHandlers,
+  ...resolutionTemplatesHandlers,
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,
   ...erpCalcHandlers,

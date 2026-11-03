@@ -8537,6 +8537,115 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/resolution-templates:
+    get:
+      tags: [letters]
+      operationId: listResolutionTemplates
+      summary: 'EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)'
+      description: >-
+        EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только
+        заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin`
+        — чтение.
+      responses:
+        '200':
+          description: Шаблоны
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [letters]
+      operationId: createResolutionTemplate
+      summary: 'EDS · Сохранить шаблон резолюции'
+      description: >-
+        Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе
+        403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '201':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/resolution-templates/{id}:
+    put:
+      tags: [letters]
+      operationId: updateResolutionTemplate
+      summary: 'EDS · Изменить шаблон резолюции'
+      description: 'Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ResolutionTemplateIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionTemplateIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionTemplate'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [letters]
+      operationId: deleteResolutionTemplate
+      summary: 'EDS · Удалить шаблон резолюции'
+      description: 'Личный — владелец, общий — `admin: full`.'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ResolutionTemplateIdPath'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/staff:
     get:
       tags: [letters]
@@ -8544,8 +8653,8 @@ paths:
       summary: 'EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)'
       description: >-
         EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел
-        `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник,
-        без проверки зоны (SPEC-v3 §3.2a п. 2).
+        `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель
+        резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
       responses:
         '200':
           description: Сотрудники
@@ -11643,6 +11752,14 @@ components:
       schema:
         $ref: '#/components/schemas/ReferenceKind'
 
+    ResolutionTemplateIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID шаблона резолюции (EDS)
+      schema:
+        type: string
+        format: uuid
     InstructionIdPath:
       name: id
       in: path
@@ -18374,7 +18491,80 @@ components:
     LetterResolutionKind:
       type: string
       enum: [execute, reply, info]
-      description: '`execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.'
+      description: >-
+        `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список).
+        Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только
+        переименовать и переставить.
+
+    ResolutionTemplateScope:
+      type: string
+      enum: [personal, company]
+      description: '`personal` — свой шаблон, `company` — общий, ведёт администратор'
+
+    ResolutionTemplateResponsibleType:
+      type: string
+      enum: [person, addressee, none]
+      description: '`person` — этот сотрудник, `addressee` — адресат письма, `none` — выбрать при резолюции'
+
+    ResolutionTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [name, scope, kind, text]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 120}
+        scope: {$ref: '#/components/schemas/ResolutionTemplateScope'}
+        kind: {$ref: '#/components/schemas/LetterResolutionKind'}
+        text: {type: string, minLength: 1, maxLength: 4000}
+        responsible_type: {$ref: '#/components/schemas/ResolutionTemplateResponsibleType'}
+        responsible_id: {type: [string, 'null'], pattern: '^[1-9][0-9]*$', description: Только при `responsible_type = person`}
+        co_executor_ids:
+          type: array
+          maxItems: 20
+          uniqueItems: true
+          items: {type: string, pattern: '^[1-9][0-9]*$'}
+        acquaint_ids:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: {type: string, pattern: '^[1-9][0-9]*$'}
+        due_days: {type: [integer, 'null'], minimum: 1, maximum: 365, description: 'Срок через N дней; `null` — подсказка срока письма'}
+
+    ResolutionTemplate:
+      type: object
+      additionalProperties: false
+      required: [id, name, scope, kind, text, responsible_type, responsible, co_executors, acquaint, due_days, owner, editable]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        scope: {$ref: '#/components/schemas/ResolutionTemplateScope'}
+        kind: {$ref: '#/components/schemas/LetterResolutionKind'}
+        text: {type: string}
+        responsible_type: {$ref: '#/components/schemas/ResolutionTemplateResponsibleType'}
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        co_executors:
+          type: array
+          items: {$ref: '#/components/schemas/PersonRef'}
+        acquaint:
+          type: array
+          items: {$ref: '#/components/schemas/PersonRef'}
+        due_days: {type: [integer, 'null']}
+        owner:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        editable: {type: boolean}
+
+    ResolutionTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ResolutionTemplate'}
 
     LetterResolutionDraft:
       type: object

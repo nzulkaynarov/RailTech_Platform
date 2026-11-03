@@ -36,6 +36,7 @@ from app.services import journal
 
 LETTER_KINDS: Final = "letter-kinds"
 RECEIPT_METHODS: Final = "receipt-methods"
+RESOLUTION_KINDS: Final = "resolution-kinds"
 POSITION_STEP = 10
 
 
@@ -91,6 +92,13 @@ SPECS: Final[dict[str, Spec]] = {
             RECEIPT_METHODS,
             ("Способы получения", "Qabul qilish usullari", "Receipt methods"),
             Letter.receipt_method,
+        ),
+        # Виды резолюции — поведение системы (поручение, ответ, ознакомление): только переименовать и переставить.
+        Spec(
+            RESOLUTION_KINDS,
+            ("Виды резолюции", "Rezolyutsiya turlari", "Resolution types"),
+            Letter.resolution_kind,
+            closed=True,
         ),
     )
 }

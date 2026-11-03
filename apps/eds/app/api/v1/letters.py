@@ -248,6 +248,10 @@ async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTask
     return await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
 
 
+# Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG).
+StaffReader = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE))]
+
+
 @router.get("/employees", response_model=EmployeeList, operation_id="listActiveEmployees")
-async def list_active_employees(_: Drafter, session: Session) -> EmployeeList:
+async def list_active_employees(_: StaffReader, session: Session) -> EmployeeList:
     return await instructions.active_employees(session)

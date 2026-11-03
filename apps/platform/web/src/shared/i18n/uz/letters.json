@@ -465,7 +465,32 @@
       "return": "Xat ish yurituvchiga qaytarildi",
       "reject": "Xat rad etildi"
     },
-    "failed": "Saqlanmadi: {{reason}}."
+    "failed": "Saqlanmadi: {{reason}}.",
+    "templates": {
+      "pick": "Shablondan",
+      "placeholder": "Shablonni tanlang",
+      "hint": "Maydonlarni to‘ldiradi — ularni tuzatish mumkin.",
+      "none": "Hozircha shablon yo‘q — rezolyutsiyani shablon sifatida saqlang.",
+      "unavailable": "Shablonlar yuklanmadi — qo‘lda to‘ldiring.",
+      "mine": "Meniki",
+      "company": "Umumiy",
+      "applied": "«{{name}}» shablonidan to‘ldirildi — maydonlarni tekshiring.",
+      "saveAs": "Shablon sifatida saqlash",
+      "saveTitle": "Shablon sifatida saqlash",
+      "name": "Shablon nomi",
+      "nameHint": "Masalan: «Soliq — buxgalteriya javobi».",
+      "nameRequired": "Nomini kiriting.",
+      "shared": "Umumiy — rezolyutsiya tayyorlovchilarning barchasi uchun",
+      "save": "Saqlash",
+      "cancel": "Bekor qilish",
+      "saved": "«{{name}}» shabloni saqlandi.",
+      "errors": {
+        "name_taken": "Bunday nomli shablon bor.",
+        "company_template_admin_only": "Umumiy shablonlarni administrator yuritadi.",
+        "invalid": "Rezolyutsiyadagi xodimlarni tekshiring: kimdir o‘chirilgan.",
+        "DEFAULT": "Shablonni saqlab bo‘lmadi. Qayta urinib ko‘ring."
+      }
+    }
   },
   "instr": {
     "title": "Topshiriqlar",
@@ -670,10 +695,11 @@
     "fromMailFailed": "Ilovalarni ko‘chirib bo‘lmadi — fayllarni qo‘lda ilova qiling."
   },
   "settings": {
-    "subtitle": "Xatlar ma’lumotnomalari: hujjat turlari va qabul qilish usullari.",
+    "subtitle": "Xatlar ma’lumotnomalari va rezolyutsiya shablonlari.",
     "tabsLabel": "Hujjat aylanishi bo‘limlari",
     "tabs": {
-      "dictionaries": "Ma’lumotnomalar"
+      "dictionaries": "Ma’lumotnomalar",
+      "templates": "Rezolyutsiya shablonlari"
     },
     "readOnly": "Faqat ko‘rish: ma’lumotnomalarni administrator o‘zgartiradi.",
     "dict": {
@@ -729,6 +755,36 @@
         "load": "Ma’lumotnomalar yuklanmadi."
       },
       "retry": "Qayta urinish"
+    },
+    "templates": {
+      "title": "Rezolyutsiya shablonlari",
+      "hint": "Direktor rezolyutsiyada shablonni tanlaydi va tuzatadi. O‘z shablonlari — rezolyutsiya shaklidan.",
+      "add": "Shablon qo‘shish",
+      "name": "Nomi",
+      "kind": "Turi",
+      "responsible": "Mas’ul",
+      "due": "Muddat",
+      "scope": "Kim ko‘radi",
+      "company": "Hamma",
+      "personal": "Faqat {{name}}",
+      "addressee": "Xat adresati",
+      "chooseLater": "Rezolyutsiyada tanlash",
+      "days_one": "{{count}} kun",
+      "days_few": "{{count}} kun",
+      "days_many": "{{count}} kun",
+      "days_other": "{{count}} kun",
+      "dueDays": "Muddat, kun",
+      "dueHint": "Bo‘sh — xat muddati maslahati.",
+      "addTitle": "Yangi rezolyutsiya shabloni",
+      "editTitle": "Shablonni o‘zgartirish",
+      "required": "Maydonni to‘ldiring",
+      "deleted": "Shablon o‘chirildi",
+      "deleteTitle": "«{{name}}» shabloni o‘chirilsinmi?",
+      "consequence": "Shablon «Shablondan» ro‘yxatidan yo‘qoladi. Qo‘yilgan rezolyutsiyalar o‘zgarmaydi.",
+      "empty": {
+        "title": "Shablonlar yo‘q",
+        "text": "Odatiy xatlar uchun umumiy shablon qo‘shing."
+      }
     }
   },
   "listKind": {

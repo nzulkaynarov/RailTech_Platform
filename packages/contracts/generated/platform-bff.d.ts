@@ -4432,6 +4432,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/resolution-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+     * @description EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin` — чтение.
+     */
+    get: operations["listResolutionTemplates"];
+    put?: never;
+    /**
+     * EDS · Сохранить шаблон резолюции
+     * @description Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе 403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+     */
+    post: operations["createResolutionTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/resolution-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * EDS · Изменить шаблон резолюции
+     * @description Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.
+     */
+    put: operations["updateResolutionTemplate"];
+    post?: never;
+    /**
+     * EDS · Удалить шаблон резолюции
+     * @description Личный — владелец, общий — `admin: full`.
+     */
+    delete: operations["deleteResolutionTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/staff": {
     parameters: {
       query?: never;
@@ -4441,7 +4489,7 @@ export interface paths {
     };
     /**
      * EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
-     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
      */
     get: operations["listEdsStaff"];
     put?: never;
@@ -10325,10 +10373,51 @@ export interface components {
      */
     LetterTrack: "calc" | "office";
     /**
-     * @description `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения». Слова — в словаре интерфейса.
+     * @description `execute` — «К исполнению», `reply` — «Подготовить ответ», `info` — «Для сведения»: поведение системы (закрытый список). Названия на экране — справочник `resolution-kinds` (`GET /dictionaries/resolution-kinds`, EDS-REG): только переименовать и переставить.
      * @enum {string}
      */
     LetterResolutionKind: "execute" | "reply" | "info";
+    /**
+     * @description `personal` — свой шаблон, `company` — общий, ведёт администратор
+     * @enum {string}
+     */
+    ResolutionTemplateScope: "personal" | "company";
+    /**
+     * @description `person` — этот сотрудник, `addressee` — адресат письма, `none` — выбрать при резолюции
+     * @enum {string}
+     */
+    ResolutionTemplateResponsibleType: "person" | "addressee" | "none";
+    ResolutionTemplateIn: {
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["LetterResolutionKind"];
+      text: string;
+      responsible_type?: components["schemas"]["ResolutionTemplateResponsibleType"];
+      /** @description Только при `responsible_type = person` */
+      responsible_id?: string | null;
+      co_executor_ids?: string[];
+      acquaint_ids?: string[];
+      /** @description Срок через N дней; `null` — подсказка срока письма */
+      due_days?: number | null;
+    };
+    ResolutionTemplate: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      scope: components["schemas"]["ResolutionTemplateScope"];
+      kind: components["schemas"]["LetterResolutionKind"];
+      text: string;
+      responsible_type: components["schemas"]["ResolutionTemplateResponsibleType"];
+      responsible: components["schemas"]["PersonRef"] | null;
+      co_executors: components["schemas"]["PersonRef"][];
+      acquaint: components["schemas"]["PersonRef"][];
+      due_days: number | null;
+      owner: components["schemas"]["PersonRef"] | null;
+      editable: boolean;
+    };
+    ResolutionTemplateList: {
+      items: components["schemas"]["ResolutionTemplate"][];
+    };
     /** @description Проект резолюции делопроизводителя; директор утверждает его одним действием или правит */
     LetterResolutionDraft: {
       kind: components["schemas"]["LetterResolutionKind"] | null;
@@ -13120,6 +13209,8 @@ export interface components {
     DictionaryCodePath: string;
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
+    /** @description UUID шаблона резолюции (EDS) */
+    ResolutionTemplateIdPath: string;
     /** @description UUID поручения (EDS, P8b) */
     InstructionIdPath: string;
     /** @description UUID входящего письма (EDS) */
@@ -21236,6 +21327,125 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["LetterConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listResolutionTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID шаблона резолюции (EDS) */
+        id: components["parameters"]["ResolutionTemplateIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionTemplate"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteResolutionTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID шаблона резолюции (EDS) */
+        id: components["parameters"]["ResolutionTemplateIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

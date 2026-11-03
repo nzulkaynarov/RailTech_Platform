@@ -46,7 +46,11 @@ class Owner:
 _DOCUMENTS = Owner(
     "eds", "documents", (("eds.inbox", "read"), ("eds.inbox.register", "full"), ("admin", "read"))
 )
-OWNERS: Final[dict[str, Owner]] = {"letter-kinds": _DOCUMENTS, "receipt-methods": _DOCUMENTS}
+OWNERS: Final[dict[str, Owner]] = {
+    "letter-kinds": _DOCUMENTS,
+    "receipt-methods": _DOCUMENTS,
+    "resolution-kinds": _DOCUMENTS,
+}
 
 Admin = Annotated[Authed, Depends(require("admin", "full"))]
 CatalogReader = Annotated[Authed, Depends(require("admin", "read"))]
