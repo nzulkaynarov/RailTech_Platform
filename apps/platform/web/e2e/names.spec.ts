@@ -47,8 +47,9 @@ const RU = [
     code: "admin",
     name: "Настройки",
     title: "Настройки компании",
-    path: /\/admin\/roles$/,
-    first: "Роли и права",
+    // SET-IA: рейл «Настройки» открывает индекс «Все настройки»
+    path: /\/admin$/,
+    first: "Все настройки",
   },
 ] as const;
 

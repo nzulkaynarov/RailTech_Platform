@@ -11,8 +11,8 @@ import {
   isShortField,
   matchesText,
   pickerToTime,
-  resolveSection,
-  sectionGroups,
+  BOT_PLACEMENT,
+  botSectionsFor,
   textGroups,
   timeToPicker,
   widgetFor,
@@ -22,33 +22,23 @@ const SCHEMAS = schemas as Record<string, JsonSchema>;
 const KEYS = Object.keys(SCHEMAS);
 
 describe("разделы настроек", () => {
-  it("четырнадцать разделов CRM раскладываются по группам без потерь", () => {
+  it("четырнадцать разделов CRM раскладываются по страницам Настроек без потерь и повторов (SET-IA)", () => {
     expect(KEYS).toHaveLength(14);
-    const grouped = sectionGroups(KEYS).flatMap((g) => g.sections);
-    expect([...grouped].sort()).toEqual([...KEYS].sort());
-    expect(sectionGroups(KEYS).map((g) => g.key)).toEqual([
-      "company",
+    const pages = [...new Set(Object.values(BOT_PLACEMENT))];
+    const placed = pages.flatMap((page) => botSectionsFor(page, KEYS));
+    expect([...placed].sort()).toEqual([...KEYS].sort());
+    expect(botSectionsFor("timing", KEYS)).toEqual(["business_hours", "escalation"]);
+    expect(botSectionsFor("notifications", KEYS)).toEqual(["notifications", "service_alerts"]);
+    expect(botSectionsFor("dictionaries", KEYS)).toEqual(["deals"]);
+    expect(botSectionsFor("spend", KEYS)).toEqual(["budget"]);
+  });
+
+  it("новый раздел CRM попадает в «Telegram · Поведение», отсутствующие не показываются", () => {
+    expect(botSectionsFor("telegram.behavior", ["bot", "future_section"])).toEqual([
       "bot",
-      "handoff",
-      "team",
-      "spend",
+      "future_section",
     ]);
-  });
-
-  it("новый раздел CRM попадает в «Другое», пустые группы не показываются", () => {
-    const groups = sectionGroups(["company", "future_section"]);
-    expect(groups).toEqual([
-      { key: "company", sections: ["company"] },
-      { key: "other", sections: ["future_section"] },
-    ]);
-  });
-
-  it("раздел из адреса: известный, шаблоны, выгрузки; чужой — первый по порядку", () => {
-    expect(resolveSection("escalation", KEYS)).toBe("escalation");
-    expect(resolveSection("templates", KEYS)).toBe("templates");
-    expect(resolveSection("exports", KEYS)).toBe("exports");
-    expect(resolveSection("nope", KEYS)).toBe("company");
-    expect(resolveSection(null, [])).toBeNull();
+    expect(botSectionsFor("timing", ["bot"])).toEqual([]);
   });
 
   it("тексты бота: каждый ключ схемы texts в какой-то группе, порядок групп", () => {

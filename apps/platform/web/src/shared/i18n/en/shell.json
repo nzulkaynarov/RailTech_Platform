@@ -12,7 +12,8 @@
     "nav": "Module sections",
     "collapse": "Collapse menu",
     "show": "Menu",
-    "needsAction": "needs action"
+    "needsAction": "needs action",
+    "settings": "Settings: {{group}}"
   },
   "topbar": {
     "crumbs": "Breadcrumbs",
@@ -250,12 +251,9 @@
       "erp": {
         "calc": "calculator, cost",
         "catalog": "reference, items"
-      },
-      "admin": {
-        "company": "templates, details, numbering",
-        "integrations": "smtp, mail, litellm",
-        "audit": "audit, log"
       }
-    }
+    },
+    "settingsGroup": "Settings",
+    "settingTag": "Setting"
   }
 }

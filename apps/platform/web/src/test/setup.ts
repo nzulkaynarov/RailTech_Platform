@@ -95,3 +95,8 @@ afterEach(() => {
 afterAll(() => {
   server.close();
 });
+
+// jsdom не умеет прокручивать: Настройки (SET-IA) прокручивают к группе и к части страницы по адресу.
+if (typeof Element.prototype.scrollIntoView !== "function") {
+  Element.prototype.scrollIntoView = () => undefined;
+}

@@ -187,23 +187,15 @@ test.describe("Обращения к администратору", () => {
     await done.getByRole("button", { name: "Закрыть", exact: true }).click();
     await signOut(page);
 
-    // 2. Администратор находит обращение в «Настройки · Обращения сотрудников» и в колокольчике.
+    // 2. Администратор находит обращение в «Моих задачах» (SET-IA: в Настройках — только счётчик) и открывает карточку.
     await login(page, "admin@demo.example");
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await page
-      .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: "Настройки" })
-      .click();
-    await page
-      .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: /Обращения сотрудников/ })
-      .click();
+    await expect(page.getByText("Ответить на обращение ОБР-0001")).toBeVisible();
+    await page.goto("/admin/tickets/ОБР-0001?panel=open&tab=card");
     await expect(
       page.getByRole("heading", { level: 1, name: "Обращения сотрудников" }),
     ).toBeVisible();
-    const row = page.getByRole("link", { name: "Открыть обращение ОБР-0001" });
-    await expect(row).toBeVisible();
-    await row.click();
+    await expect(page.getByRole("link", { name: "Открыть обращение ОБР-0001" })).toBeVisible();
     const card = page.getByRole("heading", { level: 3, name: /ОБР-0001/ });
     await expect(card).toBeVisible();
     await expect(page.getByText("Демо Менеджеров").first()).toBeVisible();
@@ -241,14 +233,12 @@ test.describe("Обращения к администратору", () => {
     await expect(page.getByRole("link", { name: "Открыть обращение ОБР-0001" })).toBeVisible();
   });
 
-  test("пустой список: текст из задачи", async ({ page }) => {
+  test("старый адрес списка обращений ведёт в «Мои задачи» (SET-IA)", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await page.goto("/admin/tickets");
-    await expect(page.getByText("Обращений нет")).toBeVisible();
-    await expect(
-      page.getByText("Сотрудники пишут сюда с экрана «Нет доступа» и из «Помощи»."),
-    ).toBeVisible();
-    await shoot(page, "tickets-empty");
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page).toHaveURL(/\/dashboard\/queue$/);
+    await shoot(page, "tickets-moved");
   });
 });
 

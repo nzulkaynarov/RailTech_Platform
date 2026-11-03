@@ -70,7 +70,8 @@ def test_link_base_gives_typed_shortcuts() -> None:
 
 
 def test_every_platform_route_exists_in_the_platform_sections() -> None:
-    """Маршруты карты — разделы Платформы (`modules/*/module.ts`), а не «не найдено»."""
+    """Маршруты карты — разделы Платформы (`modules/*/module.ts`; адреса Настроек — в реестре
+    `modules/admin/settingsRegistry.ts`, SET-IA), а не «не найдено»."""
     import re
     from pathlib import Path
 
@@ -79,10 +80,11 @@ def test_every_platform_route_exists_in_the_platform_sections() -> None:
     modules = Path(__file__).resolve().parents[5] / "platform" / "web" / "src" / "modules"
     if not modules.is_dir():
         pytest.skip("исходники Платформы недоступны в этом окружении")
+    sources = [*modules.glob("*/module.ts"), *modules.glob("*/settingsRegistry.ts")]
     declared = {
         path
-        for module in modules.glob("*/module.ts")
-        for path in re.findall(r'path: "(/[^"]+)"', module.read_text(encoding="utf-8"))
+        for source in sources
+        for path in re.findall(r'path: "(/[^"]+)"', source.read_text(encoding="utf-8"))
     }
     for route in _PLATFORM.values():
         assert route.split("?")[0] in declared, route

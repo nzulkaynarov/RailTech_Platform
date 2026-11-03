@@ -35,7 +35,7 @@
     "extra": "More"
   },
   "keys": {
-    "company": "Company",
+    "company": "Contacts for clients",
     "business_hours": "Working hours",
     "texts": "Bot texts",
     "bot": "Bot behaviour",
@@ -71,8 +71,8 @@
     "invalidField": "Check the value"
   },
   "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
-  "channelMoved": "The team channel is chosen on the “Connection” tab; here — whom to mention and how often to write to a manager.",
-  "openIntegrations": "Open “Connection”",
+  "channelMoved": "The team channel is chosen in “Telegram”, on the “Connection” tab; here — whom to mention and how often to write to a manager.",
+  "openIntegrations": "Open “Telegram”",
   "weekdays": {
     "mon": "Mon",
     "tue": "Tue",
@@ -719,7 +719,7 @@
     "label": "Telegram bot sections",
     "connection": "Connection",
     "texts": "Texts",
-    "behavior": "Behaviour & handoff",
+    "behavior": "Behaviour",
     "kb": "Knowledge base",
     "templates": "Reply templates",
     "exports": "Exports",
@@ -730,9 +730,5 @@
     "text": "The documents the bot answers from, the “What the bot finds” search, gaps and the sandbox are on the knowledge base screen. Below — how the bot uses the base.",
     "readOnlyText": "Documents, gaps and the “What the bot finds” search are on the knowledge base screen, read only.",
     "open": "Open the knowledge base"
-  },
-  "seeAlso": {
-    "company": "Details for documents — in “Company & letterhead”",
-    "budget": "Model spend across the system — in “Connections · Spend”"
   }
 }

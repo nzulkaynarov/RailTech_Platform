@@ -31,7 +31,9 @@ describe("Admin · Журнал интеграций: подписчики", () 
     renderAt("/admin/bus");
 
     // один «Журнал» (W15-H4): обмен между системами — его фильтр
-    expect(await screen.findByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Обмен между системами" }),
+    ).toBeVisible();
     expect(
       within(screen.getByRole("navigation", { name: "Что показать в журнале" })).getByRole("link", {
         name: "Обмен между системами",
@@ -208,14 +210,12 @@ describe("Admin · Журнал интеграций: права", () => {
     },
   );
 
-  it("администратор: отдельного пункта нет — «Журнал» подсвечен, обмен между системами — фильтр (W15-H4)", async () => {
+  it("администратор: «Обмен между системами» — свой пункт группы «Система» (SET-IA); директору пункта нет", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/bus");
-    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(await within(menu).findByRole("link", { name: "Журнал" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
-    expect(within(menu).queryByRole("link", { name: "Обмен между системами" })).toBeNull();
+    const system = await screen.findByRole("group", { name: "Система" });
+    expect(
+      await within(system).findByRole("link", { name: "Обмен между системами" }),
+    ).toHaveAttribute("aria-current", "page");
   });
 });

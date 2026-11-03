@@ -406,12 +406,12 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
 
 /** Карточка «Почта» — один отправитель ансамбля (W18A-P1): SMTP (настройки, пароль — маска), «Проверить связь»,
  * «Проверить отправку» с итогом словами, журнал доставки писем CRM, ERP и EDS. */
-export function MailPanel({ editable }: { editable: boolean }) {
+export function MailPanel({ editable, titled = true }: { editable: boolean; titled?: boolean }) {
   const { t } = useTranslation("integrations");
   const query = useGetSmtpConnector();
   return (
     <div className="pf-panel-stack">
-      <PanelTitle>{t("cards.mail.title")}</PanelTitle>
+      {titled ? <PanelTitle>{t("cards.mail.title")}</PanelTitle> : null}
       <PanelState query={query}>
         {(smtp) => (
           <>

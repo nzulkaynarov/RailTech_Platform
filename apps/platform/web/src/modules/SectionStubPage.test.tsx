@@ -79,12 +79,12 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(page).not.toHaveTextContent("старой CRM");
   });
 
-  it("«Каналы связи» отсылают в «Настройки · Telegram-бот», а не в «Подключения» (W15-G-8)", async () => {
+  it("«Каналы связи» отсылают в «Настройки · Telegram», а не в «Подключения» (W15-G-8, SET-IA)", async () => {
     signInAs("all@demo.example");
     renderApp("/crm/channels");
     const page = await main();
-    const open = await within(page).findByRole("link", { name: /Открыть «Telegram-бот»/ });
-    expect(open).toHaveAttribute("href", "/admin/bot");
+    const open = await within(page).findByRole("link", { name: /Открыть «Telegram»/ });
+    expect(open).toHaveAttribute("href", "/admin/telegram");
     expect(page).not.toHaveTextContent("Подключения");
   });
 

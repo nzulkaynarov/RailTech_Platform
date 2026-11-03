@@ -62,9 +62,9 @@ describe("«Выставить счёт» из Платформы (B-D24-4)", ()
     );
     expect(notice).toBeVisible();
     expect(
-      within(main).getByText("Заполняет администратор: Настройки · Компания и бланки."),
+      within(main).getByText("Заполняет администратор: Настройки · Реквизиты и бланк."),
     ).toBeVisible();
-    expect(within(main).queryByRole("link", { name: "Открыть «Компания и бланки»" })).toBeNull();
+    expect(within(main).queryByRole("link", { name: "Открыть «Реквизиты и бланк»" })).toBeNull();
 
     fireEvent.click(
       await screen.findByRole("link", { name: `Показать счёт ${DRAFT} в боковом окне` }),

@@ -335,7 +335,7 @@
         "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Office documents are accepted",
         "REQUEST_TIMEOUT": "the server did not respond in time",
         "DEFAULT": "the server returned an error, try again",
-        "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Company and letterheads”",
+        "letterhead_missing": "the company letterhead is not set — an administrator saves “Settings · Details & letterhead”",
         "no_body": "the letter has no letterhead text",
         "pdf_not_ready": "the PDF is still being prepared",
         "mail_in_progress": "sending is in progress, wait for the result"
@@ -376,8 +376,8 @@
       "hintNone": "Empty — the signatory from the company letterhead (director)."
     },
     "letterhead": {
-      "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Company and letterheads”.",
-      "open": "Open “Company and letterheads”"
+      "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Details & letterhead”.",
+      "open": "Open “Details & letterhead”"
     }
   },
   "preview": {

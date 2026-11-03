@@ -1,4 +1,4 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { createQueryClient } from "../../../app/queryClient";
 import { RouterProvider, createMemoryRouter } from "react-router";
 import { afterEach, beforeEach, expect } from "vitest";
@@ -39,6 +39,30 @@ export async function panelEl(): Promise<HTMLElement> {
   });
 }
 
+/** Карточки «Подключений» со своей страницей Настроек (SET-IA): адрес и заголовок страницы. */
+const OWN_PAGE: Partial<Record<string, readonly [string, string]>> = {
+  telegram: ["/admin/telegram", "Telegram"],
+  mail: ["/admin/mail", "Почта"],
+  spend: ["/admin/ai-spend", "Расходы на ИИ"],
+};
+
+/**
+ * Содержимое карточки: у Telegram, Почты и Расходов — своя страница (основное окно), у остальных — боковое окно
+ * «Подключений» (`?card=`). Вход — до вызова (`signIn`).
+ */
+export async function openCard(card: string): Promise<HTMLElement> {
+  const own = OWN_PAGE[card];
+  if (!own) {
+    renderAt(`/admin/integrations?card=${card}&panel=open`);
+    return panelEl();
+  }
+  renderAt(own[0]);
+  await screen.findByRole("heading", { level: 1, name: own[1] });
+  const main = document.getElementById("main-content");
+  if (!main) throw new Error("нет основного окна");
+  return main;
+}
+
 const missing: string[] = [];
 
 /** Подготовка и уборка теста: чистое состояние моков, ширина 1440, русский язык, ни одного пропущенного ключа словаря. */
@@ -50,8 +74,10 @@ export function setupIntegrationsTests(width = 1440): void {
     setViewportWidth(width);
     missing.length = 0;
     i18n.options.saveMissing = true;
-    i18n.options.missingKeyHandler = (_languages, namespace, key) => {
-      missing.push(`${namespace}:${key}`);
+    // Ключ с пустым запасным значением (`defaultValue: ""`) — осознанно необязательный (подсказка поля формы бота на
+    // странице «Расходы на ИИ», SET-IA), как в оснастке настроек бота.
+    i18n.options.missingKeyHandler = (_languages, namespace, key, fallback) => {
+      if (fallback !== "") missing.push(`${namespace}:${key}`);
     };
     void i18n.changeLanguage("ru");
   });

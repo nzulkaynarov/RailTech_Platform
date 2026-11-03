@@ -71,6 +71,15 @@ function load(): HelpArticle[] {
 
 export const HELP_ARTICLES: readonly HelpArticle[] = load();
 
+/**
+ * Прежние адреса статей → новые (SET-IA: «Telegram-бот» стал «Telegram», «Документооборот» — «Справочники»): ссылки из
+ * «Что нового», закладок и писем ведут на действующую статью.
+ */
+export const ARTICLE_ALIASES: Readonly<Record<string, string>> = {
+  "admin-bot": "admin-telegram",
+  "docflow-settings": "admin-dictionaries",
+};
+
 export function findArticle(slug: string): HelpArticle | undefined {
   return HELP_ARTICLES.find((article) => article.slug === slug);
 }

@@ -337,18 +337,45 @@ describe("Глобальный поиск", () => {
     });
   });
 
-  it("синонимы раздела — по началу слова: «лог» находит журнал администратора и только его", async () => {
+  it("настройки — своей группой «Настройки» из реестра (SET-IA): «лог» находит «Журнал», а не «каталог»", async () => {
     signInAs("admin@demo.example");
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
     type(box, "лог");
-    const nav = await screen.findByRole("group", { name: "Разделы" });
-    expect(
-      within(nav)
-        .getAllByRole("option")
-        .map((o) => o.textContent),
-    ).toEqual([expect.stringContaining("Журнал")]);
+    const settings = await screen.findByRole("group", { name: "Настройки" });
+    const found = within(settings)
+      .getAllByRole("option")
+      .map((o) => o.textContent);
+    expect(found).toEqual(expect.arrayContaining([expect.stringContaining("Журнал")]));
+    expect(found.join(" ")).not.toMatch(/Номенклатура|Каталог/);
+    // разделы Настроек не дублируются в группе «Разделы»
+    expect(screen.queryByRole("group", { name: "Разделы" })).toBeNull();
+  });
+
+  it("«почта» в поиске — страница «Почта» группы «Каналы связи»; переход по Enter", async () => {
+    signInAs("admin@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "почта");
+    const settings = await screen.findByRole("group", { name: "Настройки" });
+    const first = within(settings).getAllByRole("option")[0] as HTMLElement;
+    expect(first).toHaveTextContent("Почта");
+    expect(first).toHaveTextContent("Каналы связи");
+    fireEvent.click(first);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/admin/mail");
+    });
+  });
+
+  it("менеджер без Настроек не видит группу «Настройки»", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+    type(box, "почта");
+    await new Promise((resolve) => setTimeout(resolve, 400));
+    expect(screen.queryByRole("group", { name: "Настройки" })).toBeNull();
   });
 
   it("у всех действий поиска есть экран: подписи «Пока делается в старой системе» нет", async () => {

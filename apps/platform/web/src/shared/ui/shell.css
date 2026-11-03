@@ -106,6 +106,40 @@
   flex-direction: column;
   gap: 2px;
 }
+/* Подменю с группами (Настройки, SET-IA): заголовок группы 12/20 #595959, пункты ниже — 30 px, чтобы пять групп
+   помещались на экран 1440×900; если не помещаются — прокручивается список, а не всё подменю. */
+.pf-menu-groups {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* Отступ снизу и граница над кнопкой действия: последний пункт («Выгрузки», «Обмен между системами») прокручивается
+     целиком над кнопкой «Пригласить сотрудника», а не уходит под неё */
+  margin: 0 -8px 12px;
+  padding: 0 8px 12px;
+  scroll-padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-menu-group {
+  margin: 0;
+  padding: 2px 12px 0;
+  color: #595959;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.pf-menu-list--grouped {
+  gap: 0;
+}
+.pf-menu-list--grouped .pf-menu-item {
+  /* Длинная подпись («Обмен между системами») переносится внутри подсветки, а не вылезает за неё */
+  height: auto;
+  min-height: 30px;
+  padding-block: 4px;
+  line-height: 20px;
+}
 .pf-menu-item {
   display: flex;
   align-items: center;

@@ -94,18 +94,19 @@ describe("Обращения к администратору", () => {
     cleanup();
     endSession();
 
-    // 2. Администратор видит обращение в разделе и в колокольчике.
+    // 2. Администратор видит обращение в «Моих задачах» (SET-IA: списка в Настройках нет) и открывает его карточку.
     signInAs("admin@demo.example");
-    renderApp("/admin/tickets");
+    renderApp("/dashboard/queue");
+    expect(await screen.findByText("Ответить на обращение ОБР-0001")).toBeInTheDocument();
+    cleanup();
+    renderApp("/admin/tickets/ОБР-0001?panel=open&tab=card");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Обращения сотрудников" }),
     ).toBeInTheDocument();
     const row = await screen.findByRole("link", { name: "Открыть обращение ОБР-0001" });
     expect(row.closest("tr")).toHaveTextContent("Демо Менеджеров");
     expect(row.closest("tr")).toHaveTextContent("Новое");
-    expect(screen.getByText(/Новых: 1/)).toBeInTheDocument();
 
-    fireEvent.click(row);
     const panel = await screen.findByRole("heading", { level: 3, name: /ОБР-0001/ });
     const card = panel.parentElement as HTMLElement;
     expect(within(card).getByText(/Оргструктура/)).toBeInTheDocument();
@@ -172,13 +173,22 @@ describe("Обращения к администратору", () => {
     expect(screen.queryByText("Ответить на обращение ОБР-0001")).toBeNull();
   });
 
-  it("пустой список — текст из задачи; фильтр без совпадений предлагает сбросить", async () => {
+  it("старый адрес списка обращений ведёт в «Мои задачи» (SET-IA); на индексе Настроек — счётчик со ссылкой", async () => {
     signInAs("admin@demo.example");
-    renderApp("/admin/tickets");
-    expect(await screen.findByText("Обращений нет")).toBeInTheDocument();
+    const { router } = renderApp("/admin/tickets");
     expect(
-      screen.getByText("Сотрудники пишут сюда с экрана «Нет доступа» и из «Помощи»."),
+      await screen.findByRole("heading", { level: 1, name: "Мои задачи" }),
     ).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/dashboard/queue");
+    cleanup();
+    renderApp("/admin");
+    expect(
+      await screen.findByText(/Обращения сотрудников — в «Моих задачах», новых: \d+\./),
+    ).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Открыть" })).toHaveAttribute(
+      "href",
+      "/dashboard/queue",
+    );
   });
 
   it("директор читает обращения, но отвечать не может", async () => {
@@ -198,7 +208,7 @@ describe("Обращения к администратору", () => {
 
   it("сотрудник без доступа к Admin не открывает чужие обращения", async () => {
     signInAs("manager@demo.example");
-    renderApp("/admin/tickets");
+    renderApp("/admin/tickets/ОБР-0001");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Нет доступа" }),
     ).toBeInTheDocument();

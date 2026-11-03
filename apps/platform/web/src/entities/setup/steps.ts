@@ -25,9 +25,9 @@ export const STEP_TARGET: Record<SetupStepKey, string> = Object.fromEntries(
 
 /** Где тот же шаг настраивается после первого запуска (ссылка «Открыть в Настройках» в окне шага). */
 export const STEP_HOME: Record<SetupStepKey, string> = {
-  bot: "/admin/bot?part=connection",
+  bot: "/admin/telegram",
   erp: "/admin/integrations?card=erp&panel=open",
-  mail: "/admin/integrations?card=mail&panel=open",
+  mail: "/admin/mail",
   models: "/admin/integrations?card=models&panel=open",
   first_employee: "/admin/org",
 };
@@ -59,8 +59,8 @@ export function needsSetup(checklist: SetupChecklist): boolean {
   );
 }
 
-/** Где администратор вводит р/с и МФО своей компании (D26G-6): «Настройки · Компания и бланки», вкладка «Реквизиты». */
-export const BANK_DETAILS_PATH = "/admin/company?tab=details";
+/** Где администратор вводит р/с и МФО своей компании (D26G-6): «Настройки · Реквизиты и бланк» (SET-IA). */
+export const BANK_DETAILS_PATH = "/admin/company";
 
 /**
  * Своя компания есть, а банковских реквизитов для счетов нет (D26G-6, признак ERP — та же проверка, что «Выставить

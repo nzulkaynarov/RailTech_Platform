@@ -24,7 +24,9 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 async function openJournal(page: Page, view?: string): Promise<void> {
   await spaGoto(page, view ? `/admin/bus?view=${view}` : "/admin/bus");
   // один «Журнал» (W15-H4): обмен между системами — его фильтр
-  await expect(page.getByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Обмен между системами" }),
+  ).toBeVisible();
   await expect(
     page
       .getByRole("navigation", { name: "Что показать в журнале" })

@@ -1,41 +1,22 @@
 import { Alert, Card } from "antd";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { canEdit } from "../../../app/access";
+import { canEdit, canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import { useGetCompany, useGetNumberingScheme } from "../../../shared/api/generated/platform-bff";
-import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
-import { PageHeader } from "../../../shared/ui/PageHeader";
-import { SectionTabs } from "./SectionTabs";
+import { BotSettingsSections } from "../settings/BotSettingsSections";
+import { SettingsPage } from "../settings/SettingsPage";
 import { BrandTab } from "./tabs/BrandTab";
-import { CategoriesTab } from "./tabs/CategoriesTab";
-import { ChargesTab } from "./tabs/ChargesTab";
 import { DetailsTab } from "./tabs/DetailsTab";
-import { NumberingTab } from "./tabs/NumberingTab";
-import { PlatformTab } from "./tabs/PlatformTab";
-import { QuoteTab } from "./tabs/QuoteTab";
-import { ReferenceTab } from "./tabs/ReferenceTab";
-import { TemplatesTab } from "./tabs/TemplatesTab";
 
 import "./company.css";
 
-const TABS = [
-  { key: "details", Content: DetailsTab },
-  { key: "brand", Content: BrandTab },
-  { key: "numbering", Content: NumberingTab },
-  { key: "quote", Content: QuoteTab },
-  { key: "charges", Content: ChargesTab },
-  { key: "templates", Content: TemplatesTab },
-  { key: "reference", Content: ReferenceTab },
-  { key: "categories", Content: CategoriesTab },
-  { key: "platform", Content: PlatformTab },
-] as const;
-
-type TabKey = (typeof TABS)[number]["key"];
-const isTab = (value: string | null): value is TabKey => TABS.some((tab) => tab.key === value);
+/** Части страницы, к которым ведут старые ссылки (`?part=brand` — бывшая вкладка «Бланк и бренд»). */
+const PARTS = ["details", "brand", "contacts"] as const;
 
 /** Боковое окно «Карточка»: сводка по своей компании, пока открыта любая вкладка настроек. */
 function CompanySummary() {
@@ -61,52 +42,42 @@ function CompanySummary() {
 }
 
 /**
- * Admin · Компания (SPEC-v3 §7.6, W13-A3): настройки своей компании в ERP — реквизиты и логотип, бланк и бренд, нумерация,
- * условия КП, статьи расхода, шаблоны, справочники, категории каталога и платформенные настройки. Разделы — вкладками
- * (`?tab=`). Раздел `company.settings`: администратор и директор — полный доступ; при доступе «чтение» все поля заблокированы.
+ * Компания · Реквизиты и бланк (SPEC-v3 §7.6, W13-A3; SET-IA): одна страница с частями вместо девяти вкладок — реквизиты и
+ * логотип, бланк и бренд документов, контакты, которые бот называет клиентам (раздел `company` настроек бота; одни реквизиты
+ * на всю платформу — этап 2, BACKLOG). Нумерация, налоги, шаблоны и справочники — свои страницы групп «Компания» и «Процессы».
+ * `company.settings`: администратор и директор — полный доступ; при доступе «чтение» поля заблокированы.
  */
 export function CompanyPage() {
   const { t } = useTranslation(["company", "modules"]);
   const { me } = useAuth();
-  const [params, setParams] = useSearchParams();
-  const requested = params.get("tab");
-  const active: TabKey = isTab(requested) ? requested : "details";
+  const [params] = useSearchParams();
   const readOnly = !canEdit(me, "company.settings");
   const company = useGetCompany();
-  const title = t("modules:admin.sections.company");
-  useDocumentTitle(title);
+  const part = params.get("part");
+
+  // Старая ссылка на вкладку ведёт к своей части страницы.
+  useEffect(() => {
+    if (!part || !PARTS.includes(part as (typeof PARTS)[number])) return;
+    document.getElementById(`pf-co-part-${part}`)?.scrollIntoView({ block: "start" });
+  }, [part]);
 
   return (
-    <div className="pf-co">
-      <PageHeader title={title} subtitle={company.data?.name ?? t("company:subtitle")} />
-      <Card styles={{ body: { padding: 0 } }}>
-        {readOnly ? (
-          <Alert type="info" showIcon style={{ margin: 16 }} message={t("company:readOnly")} />
-        ) : null}
-        <SectionTabs
-          label={t("company:tabsLabel")}
-          active={active}
-          onChange={(key) => {
-            setParams(
-              (prev) => {
-                const next = new URLSearchParams(prev);
-                next.set("tab", key);
-                return next;
-              },
-              { replace: true },
-            );
-          }}
-          tabs={TABS.map(({ key }) => ({ key, label: t(`company:tabs.${key}`) }))}
-        >
-          {(() => {
-            const Content = TABS.find((tab) => tab.key === active)?.Content ?? DetailsTab;
-            return <Content />;
-          })()}
-        </SectionTabs>
+    <SettingsPage sectionKey="company" subtitle={company.data?.name}>
+      {readOnly ? <Alert type="info" showIcon message={t("company:readOnly")} /> : null}
+      <Card id="pf-co-part-details" styles={{ body: { padding: 0 } }}>
+        <DetailsTab />
       </Card>
+      <Card id="pf-co-part-brand" styles={{ body: { padding: 0 } }}>
+        <BrandTab />
+      </Card>
+      {canSee(me, { resource: "admin" }) ? (
+        <section id="pf-co-part-contacts" className="pf-panel-stack">
+          <BotSettingsSections page="company" />
+        </section>
+      ) : null}
       <PanelPortal tab="card">
         <CompanySummary />
       </PanelPortal>
-    </div>
+    </SettingsPage>
   );
 }

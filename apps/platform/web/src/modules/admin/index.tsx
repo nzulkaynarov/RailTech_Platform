@@ -1,4 +1,5 @@
-import { useLocation } from "react-router";
+import type { ComponentType } from "react";
+import { Navigate, useLocation } from "react-router";
 
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
@@ -6,98 +7,83 @@ import { matchSection } from "../registry";
 import { ArticlesPage } from "./articles/ArticlesPage";
 import { AuditPage } from "./audit/AuditPage";
 import { BusJournalPage } from "./bus/BusJournalPage";
-import { BotPage } from "./bot/BotPage";
-import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { CompanyPage } from "./company/CompanyPage";
-import { DocflowPage } from "./docflow/DocflowPage";
+import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { OrgPage } from "./org/OrgPage";
+import { legacySettingsPath } from "./redirects";
 import { RolesPage } from "./roles/RolesPage";
+import { DictionariesPage } from "./settings/DictionariesPage";
+import {
+  AiSpendPage,
+  ExportsPage,
+  MailPage,
+  NotificationsPage,
+  NumberingPage,
+  ResolutionsPage,
+  TaxesPage,
+  TimingPage,
+  WebFormsPage,
+} from "./settings/pages";
+import { SettingsHome } from "./settings/SettingsHome";
+import { TelegramPage } from "./settings/TelegramPage";
+import { TemplatesPage } from "./settings/TemplatesPage";
 import { SetupWizardPage } from "./setup/SetupWizardPage";
 import { TicketsPage } from "./tickets/TicketsPage";
 
+/** Страницы разделов без своего номера объекта; ключ — раздел модуля (`module.ts`, реестр настроек). */
+const PAGES: Readonly<Record<string, ComponentType>> = {
+  overview: SettingsHome,
+  roles: RolesPage,
+  company: CompanyPage,
+  numbering: NumberingPage,
+  taxes: TaxesPage,
+  articles: ArticlesPage,
+  telegram: TelegramPage,
+  mail: MailPage,
+  forms: WebFormsPage,
+  dictionaries: DictionariesPage,
+  resolutions: ResolutionsPage,
+  templates: TemplatesPage,
+  timing: TimingPage,
+  notifications: NotificationsPage,
+  integrations: IntegrationsPage,
+  spend: AiSpendPage,
+  audit: AuditPage,
+  exports: ExportsPage,
+  bus: BusJournalPage,
+  setup: SetupWizardPage,
+};
+
 /**
- * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1), Компания (W13-A3), Журнал
- * интеграций (W13-A2), первый запуск (W13-A4) Настройки бота (W13-A5), Обращения сотрудников (W15-H7) и Статьи компании (W18A-P5) — настоящие экраны; остальные разделы пока заглушки каркаса.
+ * Модуль Admin — Настройки (SET-IA): индекс с поиском и пять групп страниц. Старые адреса (Telegram-бот, Компания и бланки,
+ * Документооборот, список обращений, карточки «Подключений» с своей страницей) уводятся на новые без лишней записи в историю.
  */
 export function Component() {
   const location = useLocation();
+  const legacy = legacySettingsPath(location.pathname, location.search);
+  if (legacy) return <Navigate to={legacy} replace />;
   const match = matchSection(location.pathname, location.search);
-  if (match?.module.code === "admin" && match.section.key === "org") {
+  if (match?.module.code !== "admin") return <ModuleRoutes />;
+  const { section, objectId } = match;
+  if (section.key === "org") {
     return (
-      <RequireAccess rule={match.section.access}>
-        <OrgPage objectId={match.objectId} />
+      <RequireAccess rule={section.access}>
+        <OrgPage objectId={objectId} />
       </RequireAccess>
     );
   }
-  if (match?.module.code === "admin" && match.section.key === "roles") {
+  if (section.key === "tickets") {
     return (
-      <RequireAccess rule={match.section.access}>
-        <RolesPage />
+      <RequireAccess rule={section.access}>
+        <TicketsPage objectId={objectId} />
       </RequireAccess>
     );
   }
-  if (match?.module.code === "admin" && match.section.key === "audit") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <AuditPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "integrations") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <IntegrationsPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "company") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <CompanyPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "docflow") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <DocflowPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "bus") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <BusJournalPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "setup") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <SetupWizardPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "tickets") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <TicketsPage objectId={match.objectId} />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "articles") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <ArticlesPage />
-      </RequireAccess>
-    );
-  }
-  if (match?.module.code === "admin" && match.section.key === "bot") {
-    return (
-      <RequireAccess rule={match.section.access}>
-        <BotPage />
-      </RequireAccess>
-    );
-  }
-  return <ModuleRoutes />;
+  const Page = PAGES[section.key];
+  if (!Page) return <ModuleRoutes />;
+  return (
+    <RequireAccess rule={section.access}>
+      <Page />
+    </RequireAccess>
+  );
 }

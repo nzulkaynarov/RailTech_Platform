@@ -66,14 +66,7 @@ test.describe("Настройки без переброса", () => {
       await expectNoViolations(page, `banner ${String(width)}`);
       await shot(page, "banner");
 
-      // Мастер: пункт меню есть, пока шаги не завершены; шаг открывается в боковом окне мастера
-      if (!mobile) {
-        await expect(
-          page
-            .getByRole("navigation", { name: "Разделы модуля" })
-            .getByRole("link", { name: "Первый запуск" }),
-        ).toBeVisible();
-      }
+      // Мастер: шаг открывается в боковом окне мастера (пункта меню нет — чек-лист на «Все настройки», SET-IA)
       await banner.getByRole("link", { name: "Продолжить настройку" }).click();
       await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
@@ -103,9 +96,18 @@ test.describe("Настройки без переброса", () => {
         page.locator(PANEL).getByRole("heading", { level: 3, name: "Шаг 3 из 5: Почта" }),
       ).toBeFocused();
 
-      // Telegram-бот в одном месте
+      // Чек-лист «Первый запуск» на индексе Настроек, пока шаги не завершены (SET-IA)
+      await spaGoto(page, "/admin");
+      await expect(
+        page.getByRole("region", { name: /^Первый запуск: готово \d+ из \d+$/ }),
+      ).toBeVisible();
+      await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
+
+      // Telegram в одном месте (старый адрес бота уводит на «Каналы связи · Telegram»)
       await spaGoto(page, "/admin/bot");
-      await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Telegram", exact: true }),
+      ).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByRole("tabpanel").getByText("@demo_railtech_bot")).toBeVisible();
       await expect(page.locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
@@ -134,7 +136,10 @@ test.describe("Настройки без переброса", () => {
       await expect(page).toHaveURL(/\/admin\/bus$/);
       await expect(page.getByRole("heading", { level: 3, name: "CRM отправляет" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
-      await expect(page).toHaveTitle("Журнал · Обмен между системами — RailTech Platform");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Обмен между системами" }),
+      ).toBeVisible();
+      await expect(page).toHaveTitle("Обмен между системами — RailTech Platform");
       await expectNoViolations(page, `journal systems ${String(width)}`);
       await shot(page, "journal-systems");
 
@@ -143,16 +148,13 @@ test.describe("Настройки без переброса", () => {
       await expect(page.getByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Настройка Платформы" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "Обмен между системами" })).toHaveAttribute(
-        "href",
-        "/admin/bus",
-      );
       await expectNoViolations(page, `integrations ${String(width)}`);
       await shot(page, "integrations");
-      await spaGoto(page, "/admin/integrations?card=telegram&panel=open");
-      await expect(page.locator(PANEL).getByRole("link", { name: "Настроить бота" })).toBeVisible();
-      await expectNoViolations(page, `integrations telegram ${String(width)}`);
-      await shot(page, "integrations-telegram");
+      // Карточка Telegram ведёт на страницу канала, а не повторяет её в боковом окне (SET-IA)
+      await expect(page.getByRole("link", { name: "Открыть: Telegram" })).toHaveAttribute(
+        "href",
+        "/admin/telegram",
+      );
     });
   }
 });

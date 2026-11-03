@@ -33,14 +33,30 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
+/** Карточки со своей страницей Настроек (SET-IA): Telegram, Почта и Расходы открываются там, а не в боковом окне. */
+const OWN_PAGE: Partial<Record<string, readonly [string, string]>> = {
+  telegram: ["/admin/telegram", "Telegram"],
+  mail: ["/admin/mail", "Почта"],
+  spend: ["/admin/ai-spend", "Расходы на ИИ"],
+};
+/** Открыта ли сейчас своя страница карточки (тогда её содержимое — в основном окне). */
+let ownPage = false;
+
 async function openIntegrations(page: Page, card?: string): Promise<void> {
+  const own = card ? OWN_PAGE[card] : undefined;
+  ownPage = own !== undefined;
+  if (own) {
+    await spaGoto(page, own[0]);
+    await expect(page.getByRole("heading", { level: 1, name: own[1], exact: true })).toBeVisible();
+    return;
+  }
   await spaGoto(page, card ? `/admin/integrations?card=${card}&panel=open` : "/admin/integrations");
   await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
 }
 
 function side(page: Page): Locator {
-  return page.locator(PANEL);
+  return ownPage ? page.locator("#main-content") : page.locator(PANEL);
 }
 
 function offsiteSection(page: Page): Locator {
@@ -131,18 +147,17 @@ test.describe("Внешние интеграции: администратор",
     await expect(tile(page, "erp").getByText("Идёт переход на новые ключи")).toBeVisible();
   });
 
-  test("Telegram: в «Подключениях» — состояние и «Настроить бота»; токен, канал и профиль — в Настройках · Telegram-бот", async ({
+  test("Telegram: карточка «Подключений» ведёт на «Каналы связи · Telegram» — токен, канал и профиль там (SET-IA)", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
-    await openIntegrations(page, "telegram");
-    const summary = side(page);
-    await expect(summary.getByText("@demo_railtech_bot")).toBeVisible();
-    await expect(summary.getByRole("button", { name: "Сменить токен" })).toHaveCount(0);
+    await openIntegrations(page);
     await settledScreenshot(page, "telegram-summary");
-    await summary.getByRole("link", { name: "Настроить бота" }).click();
-    await expect(page).toHaveURL(/\/admin\/bot\?part=connection/);
-    await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+    await tile(page, "telegram").getByRole("link", { name: "Открыть: Telegram" }).click();
+    await expect(page).toHaveURL(/\/admin\/telegram$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Telegram", exact: true }),
+    ).toBeVisible();
     const panel = page.getByRole("tabpanel");
     await expect(panel.getByText("•••• Qw7x")).toBeVisible();
 
@@ -331,12 +346,13 @@ test.describe("Внешние интеграции: администратор",
   test("Расходы, хранилище и бэкапы, состояние системы", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await openIntegrations(page, "spend");
-    const panel = side(page);
+    let panel = side(page);
     await expect(panel.getByRole("table", { name: "Провайдеры за сегодня" })).toBeVisible();
     await expect(panel.getByRole("table", { name: "Расходы по группам" })).toBeVisible();
     await tallScreenshot(page, "spend-panel");
 
     await openIntegrations(page, "storage");
+    panel = side(page);
     await expect(panel.getByText("crm-2026-10-26.dump")).toBeVisible();
     await panel.getByRole("button", { name: "Сделать копию сейчас" }).click();
     await expect(
@@ -421,7 +437,7 @@ test.describe("Внешние интеграции: axe и снимки", () => 
 
       for (const card of CARDS) {
         await openIntegrations(page, card);
-        await expect(side(page).getByRole("heading", { level: 3 }).first()).toBeVisible();
+        await expect(side(page).getByRole("heading").first()).toBeVisible();
         // дожидаемся данных панели: скелетона и «Загрузка» уже нет
         await expect(side(page).locator(".ant-skeleton, [data-pf-skeleton]")).toHaveCount(0);
         await expectNoViolations(page, `${card} ${String(width)}`);
@@ -433,7 +449,7 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await side(page).getByRole("button", { name: "Подключить заново" }).click();
       await expect(side(page).getByRole("form", { name: "Подключить ERP" })).toBeVisible();
       await expectNoViolations(page, `erp form ${String(width)}`);
-      await spaGoto(page, "/admin/bot?part=connection");
+      await spaGoto(page, "/admin/telegram");
       await page.getByRole("tabpanel").getByRole("button", { name: "Сменить токен" }).click();
       await expectNoViolations(page, `telegram form ${String(width)}`);
       await openIntegrations(page, "models");

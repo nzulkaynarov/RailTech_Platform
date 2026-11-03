@@ -442,7 +442,7 @@
     "done": "Invoice {{number}} issued.",
     "reasons": {
       "already_issued": "The invoice is already issued. The card has been refreshed.",
-      "bank_details_required": "An invoice cannot be issued without the company's bank account and MFO: fill them in “Settings · Company & letterhead”.",
+      "bank_details_required": "An invoice cannot be issued without the company's bank account and MFO: fill them in “Settings · Details & letterhead”.",
       "forbidden": "Your role may not issue invoices.",
       "not_found": "Invoice not found. Refresh the list.",
       "unavailable": "ERP is not responding. Try again shortly.",
@@ -451,7 +451,7 @@
   },
   "bankDetails": {
     "title": "The company has no bank details — the invoice cannot be issued.",
-    "text": "An administrator fills them in: Settings · Company & letterhead.",
-    "open": "Open “Company & letterhead”"
+    "text": "An administrator fills them in: Settings · Details & letterhead.",
+    "open": "Open “Details & letterhead”"
   }
 }

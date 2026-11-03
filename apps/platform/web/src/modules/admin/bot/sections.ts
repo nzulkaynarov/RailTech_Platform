@@ -1,77 +1,37 @@
 /**
- * Раскладка экрана «Настройки бота»: группы разделов, группы текстов бота, выбор виджета поля. Чистые функции — без React
+ * Раскладка настроек бота: где какой раздел (SET-IA), группы текстов бота, выбор виджета поля. Чистые функции — без React
  * и сети. Ключи разделов и текстов приходят из CRM; неизвестные (новые в CRM) попадают в «Другое» и не теряются.
  */
 import { type JsonSchema, kindOf } from "./schemaForm";
 
-export interface SectionGroup {
-  key: string;
-  sections: string[];
-}
-
-/** Порядок групп и разделов в навигации. */
-const SECTION_GROUPS: readonly SectionGroup[] = [
-  { key: "company", sections: ["company", "business_hours"] },
-  { key: "bot", sections: ["texts", "bot", "kb", "stop_words", "competitors"] },
-  { key: "handoff", sections: ["escalation", "qualification", "web_form"] },
-  { key: "team", sections: ["notifications", "service_alerts", "deals"] },
-  { key: "spend", sections: ["budget"] },
-];
-
-export function sectionGroups(available: readonly string[]): SectionGroup[] {
-  const known = new Set(SECTION_GROUPS.flatMap((g) => g.sections));
-  const groups = SECTION_GROUPS.map((g) => ({
-    key: g.key,
-    sections: g.sections.filter((s) => available.includes(s)),
-  }));
-  groups.push({ key: "other", sections: available.filter((s) => !known.has(s)) });
-  return groups.filter((g) => g.sections.length > 0);
-}
-
 /**
- * Вкладки экрана «Telegram-бот» (W15-H4, UX-оценка §5 P1-6): бот настраивается в одном месте. «Тексты» и «База знаний» —
- * свои разделы настроек CRM (`texts`, `kb`), «Поведение и передача» — остальные разделы, «Подключение» — токен, канал и
- * профиль (раньше — в «Подключениях»).
+ * Где живёт каждый раздел настроек бота после SET-IA (ресёрч «Настройки» §4.1): не вкладками внутри «Telegram-бота», а на
+ * странице своей группы Настроек. Ключ страницы — ключ раздела модуля admin (`telegram.<вкладка>` — вкладка страницы
+ * Telegram). Раздел, которого здесь нет (новый в CRM), попадает в «Telegram · Поведение» и не теряется.
  */
-export const BOT_PARTS = ["connection", "texts", "behavior", "kb", "templates", "exports"] as const;
-export type BotPart = (typeof BOT_PARTS)[number];
+export const BOT_PLACEMENT: Readonly<Record<string, string>> = {
+  texts: "telegram.texts",
+  kb: "telegram.kb",
+  bot: "telegram.behavior",
+  qualification: "telegram.behavior",
+  stop_words: "telegram.behavior",
+  competitors: "telegram.behavior",
+  company: "company",
+  business_hours: "timing",
+  escalation: "timing",
+  web_form: "forms",
+  notifications: "notifications",
+  service_alerts: "notifications",
+  deals: "dictionaries",
+  budget: "spend",
+};
 
-/** Разделы настроек, у которых своя вкладка, а не место в «Поведении и передаче». */
-const OWN_PART: Record<string, BotPart> = { texts: "texts", kb: "kb" };
-
-/** Разделы «Поведения и передачи»: всё, кроме текстов и базы знаний. */
-export function behaviorKeys(available: readonly string[]): string[] {
-  return available.filter((key) => OWN_PART[key] === undefined);
-}
-
-/**
- * Вкладка и раздел из адреса: `?part=` — вкладка; старый `?section=` (ссылки до W15-H4) ведёт на вкладку своего раздела.
- */
-export function resolvePart(part: string | null, section: string | null): BotPart {
-  const found = BOT_PARTS.find((p) => p === part);
-  if (found) return found;
-  if (section === "templates" || section === "exports") return section;
-  if (section && OWN_PART[section]) return OWN_PART[section];
-  if (section) return "behavior";
-  return "connection";
-}
-
-/** Не разделы настроек, а соседние части экрана: шаблоны ответов и выгрузки. */
-export const EXTRA_SECTIONS = ["templates", "exports"] as const;
-export type ExtraSection = (typeof EXTRA_SECTIONS)[number];
-
-export function isExtra(value: string | null): value is ExtraSection {
-  return value !== null && (EXTRA_SECTIONS as readonly string[]).includes(value);
-}
-
-/** Раздел из `?section=`: шаблоны, выгрузки или известный раздел настроек, иначе первый по порядку навигации. */
-export function resolveSection(
-  requested: string | null,
-  available: readonly string[],
-): string | null {
-  if (isExtra(requested)) return requested;
-  if (requested && available.includes(requested)) return requested;
-  return sectionGroups(available)[0]?.sections[0] ?? null;
+/** Порядок разделов внутри страницы — порядок `BOT_PLACEMENT`; неизвестные — в конце «Поведения». */
+export function botSectionsFor(page: string, available: readonly string[]): string[] {
+  const order = Object.keys(BOT_PLACEMENT);
+  const placed = order.filter((key) => BOT_PLACEMENT[key] === page && available.includes(key));
+  if (page !== "telegram.behavior") return placed;
+  return [...placed, ...available.filter((key) => BOT_PLACEMENT[key] === undefined)];
 }
 
 const TEXT_GROUPS: Record<string, readonly string[]> = {

@@ -2,7 +2,7 @@ import { theme } from "antd";
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 
-import { CollapseLeftIcon } from "./icons";
+import { CollapseLeftIcon, SettingsIcon } from "./icons";
 import "./shell.css";
 
 export interface MenuBadge {
@@ -19,6 +19,8 @@ export interface MenuItem {
   label: string;
   active: boolean;
   badge?: MenuBadge;
+  /** Заголовок группы (Настройки, SET-IA): пункты с одной группой идут подряд под её заголовком */
+  group?: string | undefined;
 }
 
 export interface ModuleMenuLabels {
@@ -38,6 +40,60 @@ export interface ModuleMenuContentProps {
   onCollapse: () => void;
   /** Вызывается при переходе по пункту (закрыть Drawer) */
   onNavigate?: () => void;
+  /** ⚙ в заголовке: своя группа Настроек модуля (SET-IA, HubSpot) */
+  settings?: { to: string; label: string };
+}
+
+/** Пункты подряд по группам: заголовок группы — перед первым её пунктом. */
+function groupedItems(
+  items: readonly MenuItem[],
+): { group: string | undefined; items: MenuItem[] }[] {
+  const out: { group: string | undefined; items: MenuItem[] }[] = [];
+  for (const item of items) {
+    const last = out[out.length - 1];
+    if (last && last.group === item.group) last.items.push(item);
+    else out.push({ group: item.group, items: [item] });
+  }
+  return out;
+}
+
+function MenuLink({
+  item,
+  labels,
+  onNavigate,
+}: {
+  item: MenuItem;
+  labels: ModuleMenuLabels;
+  onNavigate?: (() => void) | undefined;
+}) {
+  return (
+    <Link
+      to={item.to}
+      className="pf-menu-item pf-focusable"
+      aria-current={item.active ? "page" : undefined}
+      onClick={onNavigate}
+    >
+      <span>{item.label}</span>
+      {item.badge ? (
+        <>
+          <span
+            className={item.badge.attention ? "pf-badge" : "pf-badge pf-badge--quiet"}
+            title={item.badge.hint}
+            aria-hidden="true"
+          >
+            {item.badge.count}
+          </span>
+          <span className="pf-sr-only">
+            {item.badge.hint
+              ? `${String(item.badge.count)}, ${item.badge.hint}`
+              : item.badge.attention
+                ? `${String(item.badge.count)}, ${labels.needsAction}`
+                : String(item.badge.count)}
+          </span>
+        </>
+      ) : null}
+    </Link>
+  );
 }
 
 /** Заголовок 56 px, пункты 40 px с бейджами, внизу главное действие (docs/architecture/platform-frontend.md §4, зона 2). */
@@ -48,6 +104,7 @@ export function ModuleMenuContent({
   action,
   onCollapse,
   onNavigate,
+  settings,
 }: ModuleMenuContentProps) {
   const { token } = theme.useToken();
   return (
@@ -68,7 +125,19 @@ export function ModuleMenuContent({
           flex: "0 0 auto",
         }}
       >
-        <span style={{ fontWeight: 600 }}>{title}</span>
+        <span style={{ fontWeight: 600, flex: 1, minWidth: 0 }}>{title}</span>
+        {settings ? (
+          <Link
+            to={settings.to}
+            aria-label={settings.label}
+            title={settings.label}
+            className="pf-icon-btn pf-focusable"
+            style={{ width: 28, height: 28 }}
+            onClick={onNavigate}
+          >
+            <SettingsIcon />
+          </Link>
+        ) : null}
         <button
           type="button"
           aria-label={labels.collapse}
@@ -79,38 +148,42 @@ export function ModuleMenuContent({
           <CollapseLeftIcon />
         </button>
       </div>
-      <ul className="pf-menu-list">
-        {items.map((item) => (
-          <li key={item.key}>
-            <Link
-              to={item.to}
-              className="pf-menu-item pf-focusable"
-              aria-current={item.active ? "page" : undefined}
-              onClick={onNavigate}
-            >
-              <span>{item.label}</span>
-              {item.badge ? (
-                <>
-                  <span
-                    className={item.badge.attention ? "pf-badge" : "pf-badge pf-badge--quiet"}
-                    title={item.badge.hint}
-                    aria-hidden="true"
-                  >
-                    {item.badge.count}
-                  </span>
-                  <span className="pf-sr-only">
-                    {item.badge.hint
-                      ? `${String(item.badge.count)}, ${item.badge.hint}`
-                      : item.badge.attention
-                        ? `${String(item.badge.count)}, ${labels.needsAction}`
-                        : String(item.badge.count)}
-                  </span>
-                </>
-              ) : null}
-            </Link>
-          </li>
-        ))}
-      </ul>
+      {items.some((item) => item.group) ? (
+        <div className="pf-menu-groups">
+          {groupedItems(items).map((block, index) =>
+            block.group ? (
+              <div key={block.group} role="group" aria-labelledby={`pf-menu-g-${String(index)}`}>
+                <p className="pf-menu-group" id={`pf-menu-g-${String(index)}`}>
+                  {block.group}
+                </p>
+                <ul className="pf-menu-list pf-menu-list--grouped">
+                  {block.items.map((item) => (
+                    <li key={item.key}>
+                      <MenuLink item={item} labels={labels} onNavigate={onNavigate} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <ul key={`top-${String(index)}`} className="pf-menu-list pf-menu-list--grouped">
+                {block.items.map((item) => (
+                  <li key={item.key}>
+                    <MenuLink item={item} labels={labels} onNavigate={onNavigate} />
+                  </li>
+                ))}
+              </ul>
+            ),
+          )}
+        </div>
+      ) : (
+        <ul className="pf-menu-list">
+          {items.map((item) => (
+            <li key={item.key}>
+              <MenuLink item={item} labels={labels} onNavigate={onNavigate} />
+            </li>
+          ))}
+        </ul>
+      )}
       <div style={{ flex: 1 }} />
       {action}
     </nav>

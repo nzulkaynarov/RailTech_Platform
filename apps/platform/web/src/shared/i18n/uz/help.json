@@ -331,7 +331,7 @@
     "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
     "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
     "consequence": [
-      "Administrator murojaatni «Sozlamalar · Xodimlar murojaatlari»da va Telegramda oladi.",
+      "Administrator murojaatni «Mening vazifalarim»da va Telegramda oladi.",
       "Sahifa va rolingiz o‘zi biriktiriladi.",
       "Javob qo‘ng‘iroqchaga va (ulangan bo‘lsa) Telegramga keladi; holat «Mening murojaatlarim»da."
     ],

@@ -36,20 +36,29 @@ const BASIS_FLAGS = [
 
 type Values = Partial<Omit<ReferenceItem, "id">> & { code: string; name: string };
 
-/** Справочники ERP, у которых есть API: страны, валюты, единицы измерения, базисы поставки (ERP `master-data/*`). */
-export function ReferenceTab() {
+/**
+ * Справочники ERP, у которых есть API: страны, валюты, единицы измерения, базисы поставки (ERP `master-data/*`). На странице
+ * «Процессы · Справочники» (SET-IA) справочник выбран слева (`kind`) — переключателя нет; без `kind` — переключатель сверху.
+ */
+export function ReferenceTab({ kind: fixed }: { kind?: ReferenceKind } = {}) {
   const { t } = useTranslation("company");
   const { me } = useAuth();
-  const [kind, setKind] = useState<ReferenceKind>("countries");
+  const [chosen, setKind] = useState<ReferenceKind>("countries");
+  const kind = fixed ?? chosen;
   return (
     <div className="pf-co-body">
-      <TabHeader title={t("reference.title")} hint={t("reference.hint")} />
-      <Segmented<ReferenceKind>
-        aria-label={t("reference.kind")}
-        value={kind}
-        onChange={setKind}
-        options={KINDS.map((value) => ({ value, label: t(`reference.kinds.${value}`) }))}
+      <TabHeader
+        title={fixed ? t(`reference.kinds.${fixed}`) : t("reference.title")}
+        hint={t("reference.hint")}
       />
+      {fixed ? null : (
+        <Segmented<ReferenceKind>
+          aria-label={t("reference.kind")}
+          value={kind}
+          onChange={setKind}
+          options={KINDS.map((value) => ({ value, label: t(`reference.kinds.${value}`) }))}
+        />
+      )}
       <ReferenceList key={kind} kind={kind} />
       {canSee(me, { resource: "erp.stock" }) ? (
         <Alert
@@ -64,6 +73,9 @@ export function ReferenceTab() {
     </div>
   );
 }
+
+/** Виды справочников ERP в порядке показа. */
+export const REFERENCE_KINDS: readonly ReferenceKind[] = KINDS;
 
 function ReferenceList({ kind }: { kind: ReferenceKind }) {
   const { t } = useTranslation("company");

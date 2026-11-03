@@ -126,13 +126,13 @@ describe("Admin · Внешние интеграции: обзор", () => {
     const { router } = renderAt("/admin/integrations");
     await screen.findByRole("heading", { level: 2, name: "Сервисы" });
 
-    fireEvent.click(within(tile("Telegram")).getByRole("link", { name: "Открыть: Telegram" }));
+    fireEvent.click(within(tile("Модели ИИ")).getByRole("link", { name: "Открыть: Модели ИИ" }));
 
     expect(
-      await within(await panelEl()).findByRole("heading", { level: 3, name: "Telegram" }),
+      await within(await panelEl()).findByRole("heading", { level: 3, name: "Модели ИИ" }),
     ).toBeVisible();
-    expect(router.state.location.search).toContain("card=telegram");
-    expect(tile("Telegram")).toHaveAttribute("data-selected", "true");
+    expect(router.state.location.search).toContain("card=models");
+    expect(tile("Модели ИИ")).toHaveAttribute("data-selected", "true");
   });
 
   it("«Проверить» на карточке «Почта»: итог словами, сервис восстановлен — строка уходит из «Требует внимания»", async () => {
@@ -200,9 +200,10 @@ describe("Admin · Внешние интеграции: обзор", () => {
 
   it("директор читает расходы", async () => {
     signIn("director@demo.example");
+    // Расходы — своя страница «Система · Расходы на ИИ» (SET-IA); старый адрес карточки уводит туда
     renderAt("/admin/integrations?card=spend&panel=open");
-
-    const side = await panelEl();
+    await screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" });
+    const side = document.getElementById("main-content") as HTMLElement;
     expect(
       await within(side).findByRole("heading", { level: 4, name: "Расходы бота" }),
     ).toBeVisible();

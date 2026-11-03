@@ -330,11 +330,11 @@ function EnsembleSpend() {
 }
 
 /** Карточка «Расходы»: бот (`/spend`) и весь ансамбль (`/admin/ai-spend`); директору — на чтение. */
-export function SpendPanel() {
+export function SpendPanel({ titled = true }: { titled?: boolean }) {
   const { t } = useTranslation("integrations");
   return (
     <div className="pf-panel-stack">
-      <PanelTitle>{t("cards.spend.title")}</PanelTitle>
+      {titled ? <PanelTitle>{t("cards.spend.title")}</PanelTitle> : null}
       <BotSpend />
       <EnsembleSpend />
     </div>

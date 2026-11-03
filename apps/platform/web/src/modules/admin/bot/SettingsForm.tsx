@@ -64,16 +64,7 @@ function DryRun({ body, disabled }: { body: () => Values; disabled: boolean }) {
   );
 }
 
-/** Форма одного раздела настроек бота по схеме CRM: «Что произойдёт», сохранение, отмена, пробный прогон правил передачи. */
-/**
- * Ссылки вместо дублей (S4, ресёрч 2026-11-02 «Настройки» §1.4): то, что в разделе бота похоже на общую настройку,
- * настраивается в своём месте — реквизиты для документов в «Компания и бланки», расходы на модели в «Подключения · Расходы».
- */
-const SEE_ALSO: Partial<Record<string, string>> = {
-  company: "/admin/company?tab=details",
-  budget: "/admin/integrations?card=spend&panel=open",
-};
-
+/** Форма одного раздела настроек бота по схеме CRM: сохранение, отмена, пробный прогон правил передачи. */
 export function SettingsForm({
   settingKey,
   title,
@@ -114,6 +105,8 @@ export function SettingsForm({
   return (
     <Form
       form={form}
+      // Имя формы — приставка к id полей: на странице Настроек несколько разделов бота, у полей не должно быть общих id.
+      name={`bot-${settingKey}`}
       layout="vertical"
       className="pf-bot-form"
       disabled={!editable}
@@ -127,7 +120,7 @@ export function SettingsForm({
     >
       <UnsavedGuard when={dirty} busy={save.isPending} />
       <div className="pf-bot-form-head">
-        <h2 className="pf-bot-section-title" id="pf-bot-section-title">
+        <h2 className="pf-bot-section-title" id={`pf-bot-section-${settingKey}`}>
           {title}
         </h2>
         {editable ? (
@@ -159,13 +152,6 @@ export function SettingsForm({
       {t(`bot:sectionHints.${settingKey}`, { defaultValue: "" }) ? (
         <p className="pf-fp-sub">{t(`bot:sectionHints.${settingKey}`)}</p>
       ) : null}
-      {SEE_ALSO[settingKey] ? (
-        <p className="pf-fp-sub">
-          <Link className="pf-focusable" to={SEE_ALSO[settingKey]}>
-            {t(`bot:seeAlso.${settingKey}`)}
-          </Link>
-        </p>
-      ) : null}
       <ErrorNote message={save.isError ? botErrorText(t, save.error) : null} />
       <Card size="small">
         {settingKey === "qualification" ? (
@@ -183,7 +169,7 @@ export function SettingsForm({
             className="pf-bot-alert"
             message={t("bot:channelMoved")}
             action={
-              <Link className="pf-focusable" to="/admin/bot?part=connection">
+              <Link className="pf-focusable" to="/admin/telegram">
                 {t("bot:openIntegrations")}
               </Link>
             }

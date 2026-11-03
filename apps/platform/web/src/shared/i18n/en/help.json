@@ -331,7 +331,7 @@
     "auto": "Attached automatically: page {{page}}, role {{role}}, Platform version.",
     "autoNoPage": "Attached automatically: role {{role}}, Platform version.",
     "consequence": [
-      "The administrator gets the request in “Settings · Staff requests” and in Telegram.",
+      "The administrator gets the request in “My tasks” and in Telegram.",
       "The page and your role are attached automatically.",
       "The reply arrives in the bell and in Telegram if linked; the status is in “My requests”."
     ],

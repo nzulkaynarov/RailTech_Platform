@@ -171,22 +171,67 @@
     "name": "Settings",
     "title": "Company settings",
     "sections": {
-      "roles": "Roles & permissions",
+      "overview": "All settings",
       "org": "Employees",
-      "integrations": "Connections",
-      "bus": "System exchange",
-      "tickets": "Staff requests",
+      "roles": "Roles & permissions",
+      "company": "Details & letterhead",
+      "numbering": "Numbering",
+      "taxes": "Taxes & currencies",
       "articles": "Company articles",
-      "company": "Company & letterhead",
-      "docflow": "Document flow",
+      "telegram": "Telegram",
+      "mail": "Mail",
+      "forms": "Website forms",
+      "dictionaries": "Lists",
+      "resolutions": "Resolution templates",
+      "templates": "Document templates",
+      "timing": "Hours & deadlines",
+      "notifications": "Notifications",
+      "integrations": "Connections",
+      "spend": "AI spend",
+      "audit": "Log",
+      "exports": "Exports",
+      "bus": "System exchange",
       "setup": "First-time setup",
-      "bot": "Telegram bot",
-      "audit": "Log"
+      "tickets": "Staff requests"
+    },
+    "groups": {
+      "people": "People & access",
+      "company": "Company",
+      "channels": "Channels",
+      "processes": "Processes",
+      "system": "System"
+    },
+    "home": {
+      "viewOnly": "View only",
+      "searchLabel": "Find a setting",
+      "searchPlaceholder": "Find a setting: mail, rate, loss reasons",
+      "found": "Settings found: {{count}}",
+      "results": "Found settings",
+      "none": "No settings match “{{query}}”.",
+      "clear": "Clear search",
+      "matchedBy": "Found by “{{word}}”",
+      "setupTitle": "First run: {{done}} of {{total}} done",
+      "tickets": "Staff requests are in “My tasks”, new: {{count}}.",
+      "ticketsLink": "Open",
+      "more": "Learn more",
+      "moreAria": "Learn more about “{{title}}” in Help",
+      "allGroups": "All settings groups"
+    },
+    "dictionaries": {
+      "nav": "Lists by area",
+      "sales": "Sales",
+      "documents": "Documents",
+      "calc": "Pricing"
+    },
+    "notifications": {
+      "personal": "Personal notifications are set in Profile.",
+      "profile": "Open Profile"
     },
     "action": "Invite employee",
     "setup": {
       "title": "First run",
-      "subtitle": "Six first-run steps; any of them can wait.",
+      "subtitle": "Any step can be done later.",
+      "subtitleCount": "{{done}} of {{total}} done; any step can be done later.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator created: {{name}}.",
       "companyTitle": "Your company",
@@ -206,7 +251,7 @@
       "companySubmit": "Create the company",
       "companyConsequence": [
         "Your company appears with the “seller” type, and you become its owner.",
-        "Details, letterhead and numbering can be completed later in Settings · Company & letterhead.",
+        "Details, letterhead and numbering can be completed later in Settings · Company.",
         "The wizard creates the company once: it cannot be created again."
       ],
       "companyCreated": "Company “{{name}}” created",
@@ -291,10 +336,10 @@
       "cabinetTitle": "Client cabinet address",
       "bankTitle": "Bank details for invoices",
       "bankDone": "Bank account and MFO are set: invoices to clients can be issued.",
-      "bankTodo": "Without the bank account and MFO, no invoice can be issued to a client. Enter them in “Settings · Company & letterhead”, the “Details” tab.",
+      "bankTodo": "Without the bank account and MFO, no invoice can be issued to a client. Enter them in “Settings · Details & letterhead”.",
       "bankWaitCompany": "Create your company first: bank details are entered in its card.",
       "bankUnknown": "No data yet — the bank details state appears once the server answers.",
-      "bankOpen": "Open “Company & letterhead”"
+      "bankOpen": "Open “Details & letterhead”"
     },
     "org": {
       "title": "Employees",

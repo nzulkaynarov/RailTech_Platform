@@ -335,7 +335,7 @@
         "UNSUPPORTED_MEDIA_TYPE": "PDF, rasmlar va Office hujjatlari qabul qilinadi",
         "REQUEST_TIMEOUT": "server o‘z vaqtida javob bermadi",
         "DEFAULT": "server xato qaytardi, qayta urining",
-        "letterhead_missing": "kompaniya blanki berilmagan — administrator «Sozlamalar · Kompaniya va blankalar»ni saqlaydi",
+        "letterhead_missing": "kompaniya blanki berilmagan — administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi",
         "no_body": "xatning blankdagi matni yo‘q",
         "pdf_not_ready": "PDF hali tayyorlanmoqda",
         "mail_in_progress": "yuborish davom etmoqda, natijani kuting"
@@ -376,8 +376,8 @@
       "hintNone": "Bo‘sh — kompaniya blankidagi imzolovchi (direktor)."
     },
     "letterhead": {
-      "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Kompaniya va blankalar»ni saqlaydi.",
-      "open": "«Kompaniya va blankalar»ni ochish"
+      "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",
+      "open": "«Rekvizitlar va blanka»ni ochish"
     }
   },
   "preview": {

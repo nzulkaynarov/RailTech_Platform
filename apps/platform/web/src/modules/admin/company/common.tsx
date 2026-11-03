@@ -1,7 +1,7 @@
 import type { UseQueryResult } from "@tanstack/react-query";
 import { Alert, Button, Modal, Skeleton, Table } from "antd";
 import type { TableColumnsType } from "antd";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useContext, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { canEdit } from "../../../app/access";
@@ -12,14 +12,17 @@ import { ContextualSaveBar } from "../../../shared/ui/ContextualSaveBar";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { FilePicker } from "../../../shared/ui/FileField";
 import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
+import { SoloSection } from "./solo";
 
 import "./company.css";
 
 /** Заголовок вкладки: `h2` и пояснение `#595959` (на странице один `h1` — «Компания»). */
+
 export function TabHeader({ title, hint }: { title: string; hint?: string }) {
+  const solo = useContext(SoloSection);
   return (
     <header className="pf-co-head">
-      <h2 className="pf-co-title">{title}</h2>
+      <h2 className={solo ? "pf-co-title pf-sr-only" : "pf-co-title"}>{title}</h2>
       {hint ? <p className="pf-co-hint">{hint}</p> : null}
     </header>
   );

@@ -171,22 +171,67 @@
     "name": "Sozlamalar",
     "title": "Kompaniya sozlamalari",
     "sections": {
-      "roles": "Rollar va huquqlar",
+      "overview": "Barcha sozlamalar",
       "org": "Xodimlar",
-      "integrations": "Ulanishlar",
-      "bus": "Tizimlararo almashinuv",
-      "tickets": "Xodimlar murojaatlari",
+      "roles": "Rollar va huquqlar",
+      "company": "Rekvizitlar va blanka",
+      "numbering": "Raqamlash",
+      "taxes": "Soliqlar va valyutalar",
       "articles": "Kompaniya maqolalari",
-      "company": "Kompaniya va blankalar",
-      "docflow": "Hujjat aylanishi",
+      "telegram": "Telegram",
+      "mail": "Pochta",
+      "forms": "Sayt shakllari",
+      "dictionaries": "Ma’lumotnomalar",
+      "resolutions": "Rezolyutsiya shablonlari",
+      "templates": "Hujjat shablonlari",
+      "timing": "Vaqt va muddatlar",
+      "notifications": "Bildirishnomalar",
+      "integrations": "Ulanishlar",
+      "spend": "SI xarajatlari",
+      "audit": "Jurnal",
+      "exports": "Eksport",
+      "bus": "Tizimlararo almashinuv",
       "setup": "Birinchi ishga tushirish",
-      "bot": "Telegram-bot",
-      "audit": "Jurnal"
+      "tickets": "Xodimlar murojaatlari"
+    },
+    "groups": {
+      "people": "Odamlar va kirish",
+      "company": "Kompaniya",
+      "channels": "Aloqa kanallari",
+      "processes": "Jarayonlar",
+      "system": "Tizim"
+    },
+    "home": {
+      "viewOnly": "Faqat ko‘rish",
+      "searchLabel": "Sozlamani topish",
+      "searchPlaceholder": "Sozlamani topish: pochta, kurs, rad sabablari",
+      "found": "Topilgan sozlamalar: {{count}}",
+      "results": "Topilgan sozlamalar",
+      "none": "«{{query}}» bo‘yicha sozlama yo‘q.",
+      "clear": "Qidiruvni tozalash",
+      "matchedBy": "«{{word}}» so‘zi bo‘yicha topildi",
+      "setupTitle": "Birinchi ishga tushirish: {{done}} / {{total}} tayyor",
+      "tickets": "Xodimlar murojaatlari — «Mening vazifalarim»da, yangi: {{count}}.",
+      "ticketsLink": "Ochish",
+      "more": "Batafsil",
+      "moreAria": "«{{title}}» sahifasi haqida Yordamda batafsil",
+      "allGroups": "Barcha sozlamalar guruhlari"
+    },
+    "dictionaries": {
+      "nav": "Bo‘limlar bo‘yicha ma’lumotnomalar",
+      "sales": "Savdo",
+      "documents": "Hujjatlar",
+      "calc": "Hisob-kitob"
+    },
+    "notifications": {
+      "personal": "Shaxsiy bildirishnomalar — Profilda.",
+      "profile": "Profilni ochish"
     },
     "action": "Xodimni taklif qilish",
     "setup": {
       "title": "Birinchi ishga tushirish",
-      "subtitle": "Birinchi ishga tushirishning olti qadami; istalganini keyinroq bajarish mumkin.",
+      "subtitle": "Har qanday qadamni keyinroq bajarish mumkin.",
+      "subtitleCount": "{{total}} tadan {{done}} tasi tayyor; har qanday qadamni keyinroq bajarish mumkin.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator yaratildi: {{name}}.",
       "companyTitle": "Sizning kompaniyangiz",
@@ -206,7 +251,7 @@
       "companySubmit": "Kompaniyani yaratish",
       "companyConsequence": [
         "«Sotuvchi» turidagi kompaniyangiz paydo bo‘ladi, siz uning egasi bo‘lasiz.",
-        "Rekvizitlar, blank va raqamlashni keyinroq Sozlamalar · Kompaniya va blankalar bo‘limida to'ldirish mumkin.",
+        "Rekvizitlar, blanka va raqamlashni keyinroq Sozlamalar · Kompaniya bo‘limida to‘ldirish mumkin.",
         "Ustoz kompaniyani bir marta yaratishni taklif qiladi: uni qayta yaratib bo'lmaydi."
       ],
       "companyCreated": "«{{name}}» kompaniyasi yaratildi",
@@ -291,10 +336,10 @@
       "cabinetTitle": "Mijoz kabineti manzili",
       "bankTitle": "Hisoblar uchun bank rekvizitlari",
       "bankDone": "Hisob raqami va MFO kiritilgan: mijozga hisob chiqariladi.",
-      "bankTodo": "Hisob raqami va MFOsiz mijozga hisob chiqarib bo‘lmaydi. Ularni «Sozlamalar · Kompaniya va blankalar», «Rekvizitlar» bo‘limida kiriting.",
+      "bankTodo": "Hisob raqami va MFOsiz mijozga hisob chiqarib bo‘lmaydi. Ularni «Sozlamalar · Rekvizitlar va blanka»da kiriting.",
       "bankWaitCompany": "Avval kompaniyangizni yarating: rekvizitlar uning kartasida kiritiladi.",
       "bankUnknown": "Hali ma’lumot yo‘q — rekvizitlar holati server javob bergach ko‘rinadi.",
-      "bankOpen": "«Kompaniya va blankalar»ni ochish"
+      "bankOpen": "«Rekvizitlar va blanka»ni ochish"
     },
     "org": {
       "title": "Xodimlar",
