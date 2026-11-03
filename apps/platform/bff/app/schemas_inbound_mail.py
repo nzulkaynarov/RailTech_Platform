@@ -1,6 +1,6 @@
 """Схемы входящей почты общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0;
 папки «Спам» и загрузка писем за период — W18A-P2-2, 0.35.0; обращение — статусы, «в работе»,
-цепочки, адресаты — W18A-P2-3, 0.36.0)."""
+цепочки, адресаты — W18A-P2-3, 0.36.0; показ письма: безопасный HTML, текст без цитаты — P2-4)."""
 
 from datetime import datetime
 from typing import Literal
@@ -196,6 +196,7 @@ class InboundMailAttachment(_Out):
     name: str
     content_type: str
     size: int
+    inline: bool
 
 
 class InboundMailSkipped(_Out):
@@ -225,6 +226,9 @@ class InboundMailMessage(_Out):
     from_name: str
     at: datetime
     text: str
+    text_tail: str
+    html: str | None
+    html_remote_images: int
     attachments: list[InboundMailAttachment]
 
 
@@ -384,6 +388,9 @@ def to_mail(src: crm.InboundMailOut) -> InboundMail:
                 from_name=m.from_name,
                 at=m.at,
                 text=m.text,
+                text_tail=m.text_tail,
+                html=m.html,
+                html_remote_images=m.html_remote_images,
                 attachments=[
                     InboundMailAttachment.model_validate(a.model_dump()) for a in m.attachments
                 ],

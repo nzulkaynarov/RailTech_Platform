@@ -9,6 +9,7 @@ import type {
 import { getDownloadInboundMailAttachmentUrl } from "../../../shared/api/generated/platform-bff";
 import { formatFileSize } from "../../../shared/lib/fileSize";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { MailBody } from "./MailBody";
 import { timeline } from "./mailModel";
 
 /** Адреса письма словами: «Иванов (сотрудник), client@…», общий ящик помечен. */
@@ -72,8 +73,8 @@ function Incoming({
           when: date(message.at, "datetime"),
         })}
       </p>
-      <pre className="pf-mail-text">{message.text}</pre>
-      <Files mailId={message.id} files={message.attachments} />
+      <MailBody message={message} subject={mail.subject || t("mail.noSubject")} />
+      <Files mailId={message.id} files={message.attachments.filter((file) => !file.inline)} />
       {first
         ? mail.skipped.map((file) => (
             <p key={file.name} className="pf-hint pf-mail-what">

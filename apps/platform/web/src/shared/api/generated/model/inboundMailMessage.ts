@@ -12,6 +12,19 @@ export interface InboundMailMessage {
   from_email: string;
   from_name: string;
   at: string;
+  /** Текст без цитаты и подписи, нормализованный: пустые строки подряд — одна. Именно он уходит в лид, входящее и помощнику */
   text: string;
+  /** Цитата прошлой переписки и подпись; интерфейс показывает их свёрнутыми под «…» */
+  text_tail: string;
+  /**
+   * HTML-версия письма, очищенная на сервере по белому списку (без скриптов, фреймов, форм, обработчиков, javascript:). Показывать только в iframe с sandbox без allow-scripts, srcdoc и строгим CSP. Внешние картинки без src — адрес в data-rt-src, подставляется по кнопке; встроенные cid: уже data:-адресами, потерянные — data-rt-missing. null — письмо без HTML (текст), старое или слишком большое
+   * @nullable
+   */
+  html: string | null;
+  /**
+   * Сколько внешних картинок ждут кнопки «Показать картинки»
+   * @minimum 0
+   */
+  html_remote_images: number;
   attachments: InboundMailAttachment[];
 }

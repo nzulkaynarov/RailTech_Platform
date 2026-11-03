@@ -10746,6 +10746,8 @@ export interface components {
       name: string;
       content_type: string;
       size: number;
+      /** @description Картинка встроена в письмо (логотип, баннер): в списке вложений не показывается и к входящему не прикладывается */
+      inline: boolean;
     };
     InboundMailSkipped: {
       name: string;
@@ -10782,7 +10784,14 @@ export interface components {
       from_name: string;
       /** Format: date-time */
       at: string;
+      /** @description Текст без цитаты и подписи, нормализованный: пустые строки подряд — одна. Именно он уходит в лид, входящее и помощнику */
       text: string;
+      /** @description Цитата прошлой переписки и подпись; интерфейс показывает их свёрнутыми под «…» */
+      text_tail: string;
+      /** @description HTML-версия письма, очищенная на сервере по белому списку (без скриптов, фреймов, форм, обработчиков, javascript:). Показывать только в iframe с sandbox без allow-scripts, srcdoc и строгим CSP. Внешние картинки без src — адрес в data-rt-src, подставляется по кнопке; встроенные cid: уже data:-адресами, потерянные — data-rt-missing. null — письмо без HTML (текст), старое или слишком большое */
+      html: string | null;
+      /** @description Сколько внешних картинок ждут кнопки «Показать картинки» */
+      html_remote_images: number;
       attachments: components["schemas"]["InboundMailAttachment"][];
     };
     /** @description Строка журнала письма: кто и что сделал; подпись — по коду `action` (take, takeover, release, reply, lead, archive, register_start, register_cancel, thread_reply, personal, not_spam, discard) */

@@ -64,7 +64,13 @@ def card(**over: Any) -> dict[str, Any]:
         "cc": [],
         "text": "Добрый день, направляем акт сверки за октябрь.",
         "attachments": [
-            {"index": 0, "name": "акт.pdf", "content_type": "application/pdf", "size": len(PDF)}
+            {
+                "index": 0,
+                "name": "акт.pdf",
+                "content_type": "application/pdf",
+                "size": len(PDF),
+                "inline": False,
+            }
         ],
         "skipped": [{"name": "macro.exe", "reason": "type"}],
         "too_large": False,
@@ -77,8 +83,17 @@ def card(**over: Any) -> dict[str, Any]:
                 "from_name": "ООО Пример Поставка",
                 "at": "2026-11-02T04:59:00Z",
                 "text": "Добрый день, направляем акт сверки за октябрь.",
+                "text_tail": "",
+                "html": None,
+                "html_remote_images": 0,
                 "attachments": [
-                    {"index": 0, "name": "акт.pdf", "content_type": "application/pdf", "size": 15}
+                    {
+                        "index": 0,
+                        "name": "акт.pdf",
+                        "content_type": "application/pdf",
+                        "size": 15,
+                        "inline": False,
+                    }
                 ],
             }
         ],
@@ -927,3 +942,76 @@ async def test_registrar_gets_new_and_own_work_rows_with_first_line_paths(
         ("mail:41", "inbound_mail", "/eds/mail/41"),
         ("mail:42", "inbound_mail_mine", "/eds/mail/42"),
     }
+
+
+HTML_CARD = card(
+    messages=[
+        {
+            **card()["messages"][0],
+            "text": "Новинки недели",
+            "text_tail": "On Mon, A wrote:\n> старое",
+            "html": '<p>Новинки</p><img data-rt-src="https://cdn.example.test/a.png">',
+            "html_remote_images": 1,
+            "attachments": [
+                {
+                    "index": 0,
+                    "name": "logo.png",
+                    "content_type": "image/png",
+                    "size": 90,
+                    "inline": True,
+                }
+            ],
+        }
+    ],
+    attachments=[
+        {"index": 0, "name": "logo.png", "content_type": "image/png", "size": 90, "inline": True},
+        {
+            "index": 1,
+            "name": "акт.pdf",
+            "content_type": "application/pdf",
+            "size": len(PDF),
+            "inline": False,
+        },
+    ],
+)
+
+
+async def test_card_passes_html_tail_and_remote_image_count(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=HTML_CARD))
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get("/api/v1/inbound-mail/17")
+
+    check(response, "/inbound-mail/{id}", "get")
+    [message] = response.json()["messages"]
+    assert message["html"] == '<p>Новинки</p><img data-rt-src="https://cdn.example.test/a.png">'
+    assert (message["text"], message["text_tail"]) == (
+        "Новинки недели",
+        "On Mon, A wrote:\n> старое",
+    )
+    assert message["html_remote_images"] == 1
+    assert message["attachments"][0]["inline"] is True
+
+
+async def test_inline_images_are_not_copied_to_the_registered_letter(
+    web: Web, be: Backends, eds: EdsFake, check: ContractChecker
+) -> None:
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=HTML_CARD))
+    asked = be.router.get(f"{CRM}/17/attachments/1").mock(
+        return_value=httpx.Response(200, content=PDF)
+    )
+    logo = be.router.get(f"{CRM}/17/attachments/0").mock(
+        return_value=httpx.Response(200, content=b"x")
+    )
+    await web.login(["REGISTRAR"])
+
+    copied = await web.client.post(
+        "/api/v1/inbound-mail/17/eds-files", headers={CSRF_HEADER: web.csrf}
+    )
+
+    check(copied, "/inbound-mail/{id}/eds-files", "post")
+    assert [f["name"] for f in copied.json()] == ["акт.pdf"]
+    assert asked.called
+    assert not logo.called, "логотип из тела письма в файлы входящего не попадает"
