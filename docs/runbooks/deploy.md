@@ -270,7 +270,8 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   «Подключить ERP»; `crm-erp-pairing.md`). Внешний адрес ERP в «Подключениях» для этого не годится — он даст 404. Сопряжение CRM с ERP
   на **другом сервере** требует внутренней связи между серверами (частная сеть/VPN, адрес ERP — частный IP или имя без точки; ADR-0009 это
   допускает, внешний `https://erp…` для `/api/integration` — нет).
-* **Попасть в Django admin (Unfold).** SSH-туннель к контейнеру `erp-backend` (порт наружу не публикуется), на VPS 1 из каталога релиза:
+* **Попасть в Django admin (Unfold).** Обычный путь — из Платформы: «Подключения» → «ERP» → «Открыть консоль: панель базы»
+  (`https://<Платформа>/console/erp/admin/`, раздел «Служебная консоль через Платформу» ниже). Аварийный путь — SSH-туннель к контейнеру `erp-backend` (порт наружу не публикуется), на VPS 1 из каталога релиза:
   ```bash
   # 1) адрес контейнера erp-backend в сети compose
   docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$(docker compose … ps -q erp-backend)"
@@ -285,6 +286,39 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   `docs/runbooks/rt-bus-erp.md`.
 * **Откат на релиз до S0-5:** его Caddy ещё отдаёт `/admin/` и `/api/integration` наружу, поэтому smoke отката (404 на этих путях) будет красным,
   хотя откат выполнен; это ожидаемо, повторный деплой текущего релиза закрывает пути.
+
+### Служебная консоль через Платформу (OPS-CONSOLE, DECISIONS 2026-11-03)
+
+Через домен Платформы по пути открывается одна консоль — **панель базы ERP (Django admin)**:
+`https://<Платформа>/console/erp/admin/`. Свой вход — учётка ERP суперпользователя или группы `system_engineers`. Под путём ERP живёт
+по `ERP_CONSOLE_PREFIX=/console/erp` (`core/console_mount.py`, статика — `core/static_storage.py`); `PLATFORM_DOMAIN` — в `ALLOWED_HOSTS` ERP.
+Новых поддоменов и портов нет.
+
+Как устроено: перед каждым запросом к `/console/*` Caddy (`service_consoles` в `Caddyfile.prod`/`.dev`) спрашивает BFF
+`GET /api/v1/consoles/erp/auth` (`forward_auth`): нет сессии Платформы — редирект на `/login`, не администратор (`admin: full`) или не
+сменён временный пароль — 403, консоль выключена — 404; ответы BFF не кэшируются. Под `/console/erp` открыты только `admin/` и `static/`
+(машинный API, шина и портал — 404 и в Caddy, и в ERP). CSP с `'unsafe-eval'` — только на пути консоли, остальной сайт — прежняя
+строгая CSP. Первое открытие за 30 минут сессии — запись журнала аудита «Открыл служебную консоль» (Настройки → Журнал; в журнале BFF —
+`console_open`).
+
+**Изоляция cookie (общий origin с Платформой).** В ERP уходят только `sessionid` и `csrftoken` — cookie Платформы (`rt_pf_*`) и любые
+другие Caddy не передаёт (`header_up Cookie`). Cookie консоли ставятся с `Path=/console/erp`: их переписывает сам ERP (слой ASGI знает
+префикс запроса и ловит любую cookie, в том числе удаление при выходе; `SESSION_COOKIE_PATH` не годится — он общий с API и порталом без
+префикса), Caddy — второй барьер (`header >Set-Cookie`). SPA Платформы эти cookie не видит и не шлёт. Остаточный риск общего origin
+(XSS в интерфейсе Django admin затрагивает сессию Платформы) принят владельцем — DECISIONS 2026-11-03. Проверка — `make deploy-check`
+(`infra/deploy/tests/console-edge-test.sh`) и `core/tests/test_console_mount.py` ERP.
+
+**Отключить.** `PLATFORM_CONSOLES=` (пустое значение) в `/opt/rt/.env.prod`, затем `docker compose … up -d platform-bff`: BFF отвечает 404,
+кнопка в «Подключениях» пропадает. Не задано — `erp`. Совсем убрать маршрут — откат `Caddyfile.prod` на релиз до OPS-CONSOLE.
+
+Не через Платформу:
+- **LiteLLM** — его интерфейс ставит cookie `token` с ключом администратора шлюза без `HttpOnly` и на `Path=/`; на общем домене её
+  прочитал бы любой скрипт. Модели, ключи и расходы ведутся экранами Платформы («Модели ИИ», «Расходы»); интерфейс шлюза в аварии —
+  SSH-туннель на порт 4000 контейнера `litellm`, как для Django admin выше.
+- **RustFS** — без консоли (Q-OPS-CONSOLE-1): состояние — «Хранилище и бэкапы»; в аварии — `RUSTFS_CONSOLE_ENABLE=true` для `rustfs` и
+  SSH-туннель на порт 9001 контейнера.
+- **Langfuse** — на проде не запущен.
+- Полные консоли сервисов на отдельном поддомене — только с согласия владельца.
 
 ## 3. Откат
 

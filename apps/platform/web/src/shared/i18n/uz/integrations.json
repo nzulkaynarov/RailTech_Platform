@@ -884,5 +884,48 @@
       "bad_status": "Kabinet {{code}} kodi bilan javob berdi — manzilni tekshiring.",
       "not_cabinet": "Manzilda mijoz kabineti emas, boshqa narsa javob bermoqda — manzilni tekshiring."
     }
+  },
+  "links": {
+    "groupAria": "Xizmat kabinetlari",
+    "newTabAria": "{{name}} — yangi oynada ochiladi",
+    "mail": {
+      "yandex": {
+        "admin": "Yandex 360 boshqaruvi",
+        "mail": "Yandex Pochta"
+      },
+      "google": {
+        "admin": "Google Workspace boshqaruvi",
+        "mail": "Gmail"
+      },
+      "mailru": {
+        "admin": "Mail.ru biznes uchun",
+        "mail": "Mail.ru pochta"
+      }
+    },
+    "models": {
+      "anthropic": "Anthropic konsoli",
+      "openai": "OpenAI konsoli",
+      "gemini": "Google AI Studio",
+      "mistral": "Mistral konsoli",
+      "deepseek": "DeepSeek konsoli",
+      "groq": "Groq konsoli",
+      "openrouter": "OpenRouter kalitlari"
+    },
+    "telegram": {
+      "botfather": "BotFather",
+      "bot": "Telegramdagi bot"
+    },
+    "offsite": {
+      "yandex": "Yandex Diskdagi papka",
+      "gdrive": "Google Diskdagi papka"
+    }
+  },
+  "consoles": {
+    "open": "Konsolni ochish: {{name}}",
+    "openAria": "«{{name}}» konsolini yangi oynada ochish",
+    "ownLogin": "Kirish — xizmatning o‘z kaliti yoki paroli bilan.",
+    "erp": {
+      "name": "baza paneli"
+    }
   }
 }

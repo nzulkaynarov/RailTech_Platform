@@ -72,6 +72,7 @@ import {
   ResolutionTemplateScope,
   RestrictedField,
   ServiceAction,
+  ServiceConsoleKey,
   ServiceOwner,
   ServiceState,
   SetupCompanyBlocker,
@@ -287,6 +288,7 @@ import type {
   SandboxTurn,
   SearchResult,
   SentMessage,
+  ServiceConsoleList,
   Session,
   SetupCabinet,
   SetupCabinetCheck,
@@ -10524,6 +10526,16 @@ export const getGetSystemStatusResponseMock = (
     }),
   ),
   status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
+  ...overrideResponse,
+});
+
+export const getListServiceConsolesResponseMock = (
+  overrideResponse: Partial<Extract<ServiceConsoleList, object>> = {},
+): ServiceConsoleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.arrayElement(Object.values(ServiceConsoleKey)),
+    url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
   ...overrideResponse,
 });
 
@@ -27544,6 +27556,48 @@ export const getGetSystemStatusMockHandler = (
   );
 };
 
+export const getListServiceConsolesMockHandler = (
+  overrideResponse?:
+    | ServiceConsoleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ServiceConsoleList> | ServiceConsoleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/consoles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListServiceConsolesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAuthorizeServiceConsoleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/consoles/:key/auth",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getGetBusJournalMockHandler = (
   overrideResponse?:
     | BusJournal
@@ -32748,6 +32802,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetBackupsMockHandler(),
   getRequestBackupMockHandler(),
   getGetSystemStatusMockHandler(),
+  getListServiceConsolesMockHandler(),
+  getAuthorizeServiceConsoleMockHandler(),
   getGetBusJournalMockHandler(),
   getListBusDeliveriesMockHandler(),
   getListBusInboxMockHandler(),

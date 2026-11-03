@@ -77,6 +77,7 @@ export * from "./componentStatusOutStatus";
 export * from "./consentRecord";
 export * from "./consentRecordMethod";
 export * from "./consentResult";
+export * from "./consoleOpenIn";
 export * from "./contactIn";
 export * from "./contactInPreferredChannel";
 export * from "./contactOut";

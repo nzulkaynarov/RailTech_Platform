@@ -361,6 +361,8 @@ import type {
   SearchResult,
   SearchStockTraceParams,
   SentMessage,
+  ServiceConsoleKey,
+  ServiceConsoleList,
   ServiceSwitchIn,
   Session,
   SessionExpiredResponse,
@@ -18692,6 +18694,270 @@ export function useGetSystemStatus<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getGetSystemStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListServiceConsolesUrl = () => {
+  return `/api/v1/admin/consoles`;
+};
+
+/**
+ * OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+ * @summary Служебные консоли сервисов, открытые через Платформу
+ */
+export const listServiceConsoles = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ServiceConsoleList> => {
+  return http<ServiceConsoleList>(getListServiceConsolesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListServiceConsolesQueryKey = () => {
+  return [`/api/v1/admin/consoles`] as const;
+};
+
+export const getListServiceConsolesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listServiceConsoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listServiceConsoles>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListServiceConsolesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listServiceConsoles>>> = ({ signal }) =>
+    listServiceConsoles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listServiceConsoles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListServiceConsolesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listServiceConsoles>>
+>;
+export type ListServiceConsolesQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useListServiceConsoles<
+  TData = Awaited<ReturnType<typeof listServiceConsoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceConsoles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceConsoles>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceConsoles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListServiceConsoles<
+  TData = Awaited<ReturnType<typeof listServiceConsoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceConsoles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listServiceConsoles>>,
+          TError,
+          Awaited<ReturnType<typeof listServiceConsoles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListServiceConsoles<
+  TData = Awaited<ReturnType<typeof listServiceConsoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceConsoles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Служебные консоли сервисов, открытые через Платформу
+ */
+
+export function useListServiceConsoles<
+  TData = Awaited<ReturnType<typeof listServiceConsoles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listServiceConsoles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListServiceConsolesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getAuthorizeServiceConsoleUrl = (key: ServiceConsoleKey) => {
+  return `/api/v1/consoles/${key}/auth`;
+};
+
+/**
+ * OPS-CONSOLE. Caddy вызывает этот адрес перед каждым запросом к `/console/<ключ>/…` с cookie браузера: 204 — пропустить, 401 — нет сессии Платформы, 403 — не администратор (`admin: full`) или не сменён временный пароль, 404 — консоль не включена (`PLATFORM_CONSOLES`). Ответ не кэшируется (`Cache-Control: no-store`). Первое открытие консоли за 30 минут сессии пишется в журнал аудита (`console.open`, объект `console`, ключ консоли) — кто, когда, какая.
+ * @summary Проверка доступа к консоли сервиса для Caddy forward_auth
+ */
+export const authorizeServiceConsole = async (
+  key: ServiceConsoleKey,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getAuthorizeServiceConsoleUrl(key), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getAuthorizeServiceConsoleQueryKey = (key: ServiceConsoleKey) => {
+  return [`/api/v1/consoles/${key}/auth`] as const;
+};
+
+export const getAuthorizeServiceConsoleQueryOptions = <
+  TData = Awaited<ReturnType<typeof authorizeServiceConsole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  key: ServiceConsoleKey,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getAuthorizeServiceConsoleQueryKey(key);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof authorizeServiceConsole>>> = ({
+    signal,
+  }) => authorizeServiceConsole(key, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: key !== null && key !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type AuthorizeServiceConsoleQueryResult = NonNullable<
+  Awaited<ReturnType<typeof authorizeServiceConsole>>
+>;
+export type AuthorizeServiceConsoleQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse
+>;
+
+export function useAuthorizeServiceConsole<
+  TData = Awaited<ReturnType<typeof authorizeServiceConsole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  key: ServiceConsoleKey,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof authorizeServiceConsole>>,
+          TError,
+          Awaited<ReturnType<typeof authorizeServiceConsole>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAuthorizeServiceConsole<
+  TData = Awaited<ReturnType<typeof authorizeServiceConsole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  key: ServiceConsoleKey,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof authorizeServiceConsole>>,
+          TError,
+          Awaited<ReturnType<typeof authorizeServiceConsole>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useAuthorizeServiceConsole<
+  TData = Awaited<ReturnType<typeof authorizeServiceConsole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  key: ServiceConsoleKey,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Проверка доступа к консоли сервиса для Caddy forward_auth
+ */
+
+export function useAuthorizeServiceConsole<
+  TData = Awaited<ReturnType<typeof authorizeServiceConsole>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | NotFoundResponse>,
+>(
+  key: ServiceConsoleKey,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof authorizeServiceConsole>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getAuthorizeServiceConsoleQueryOptions(key, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

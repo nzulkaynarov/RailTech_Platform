@@ -1596,6 +1596,18 @@ components:
       - recorded
       title: ConsentResult
       type: object
+    ConsoleOpenIn:
+      description: 'Открытие служебной консоли через Платформу (OPS-CONSOLE): какая консоль.'
+      properties:
+        console:
+          description: 'Ключ консоли: litellm, erp и т. п.'
+          pattern: ^[a-z][a-z0-9-]{1,31}$
+          title: Console
+          type: string
+      required:
+      - console
+      title: ConsoleOpenIn
+      type: object
     ContactIn:
       description: Телефон — в любом виде с кодом страны, сервер приводит к E.164; пустая строка — нет.
       properties:
@@ -9465,6 +9477,32 @@ paths:
       security:
       - HTTPBearer: []
       summary: List Audit
+      tags:
+      - admin
+  /api/v1/audit/console-open:
+    post:
+      description: 'Запись «открыл служебную консоль» (OPS-CONSOLE): BFF Платформы пускает администратора в
+
+        консоль сервиса по пути `/console/<ключ>/` и отмечает это здесь — кто, когда, какая.'
+      operationId: audit_console_open
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsoleOpenIn'
+        required: true
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Audit Console Open
       tags:
       - admin
   /api/v1/auth/change-password:

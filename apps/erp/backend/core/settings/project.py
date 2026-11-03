@@ -76,10 +76,17 @@ MINIO_TEMP_BUCKET = os.environ.get("MINIO_TEMP_BUCKET", "erp-temp")
 
 # Голый `default_storage` тоже уходит в S3 (бакет erp-private): иначе любое место, забывшее выбрать хранилище, молча писало
 # бы на диск контейнера, а воркер Celery не нашёл бы файл, положенный backend'ом.
+# Статика — с префиксом пути запроса: Django admin под /console/erp на домене Платформы (OPS-CONSOLE, core/static_storage.py).
+_STATIC_STORAGE = {"BACKEND": "core.static_storage.ScriptPrefixStaticFilesStorage"}
 if MINIO_ENDPOINT:
     STORAGES = {
         "default": {"BACKEND": "core.default_storage.DefaultPrivateStorage"},
-        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+        "staticfiles": _STATIC_STORAGE,
+    }
+else:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": _STATIC_STORAGE,
     }
 
 _MISSING_S3_SETTINGS = [

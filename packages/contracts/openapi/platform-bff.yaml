@@ -5106,6 +5106,57 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/consoles:
+    get:
+      tags: [integrations]
+      operationId: listServiceConsoles
+      summary: 'Служебные консоли сервисов, открытые через Платформу'
+      description: >-
+        OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене
+        Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых
+        консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор
+        (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+      responses:
+        '200':
+          description: Включённые консоли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServiceConsoleList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /consoles/{key}/auth:
+    get:
+      tags: [integrations]
+      operationId: authorizeServiceConsole
+      summary: 'Проверка доступа к консоли сервиса для Caddy forward_auth'
+      description: >-
+        OPS-CONSOLE. Caddy вызывает этот адрес перед каждым запросом к `/console/<ключ>/…` с cookie браузера: 204 — пропустить,
+        401 — нет сессии Платформы, 403 — не администратор (`admin: full`) или не сменён временный пароль, 404 — консоль не
+        включена (`PLATFORM_CONSOLES`). Ответ не кэшируется (`Cache-Control: no-store`). Первое открытие консоли за 30 минут
+        сессии пишется в журнал аудита (`console.open`, объект `console`, ключ консоли) — кто, когда, какая.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: {$ref: '#/components/schemas/ServiceConsoleKey'}
+      responses:
+        '204':
+          description: Доступ разрешён
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema: {type: string}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
   /admin/bus:
     get:
       tags: [bus]
@@ -12991,6 +13042,26 @@ components:
         technical:
           type: [string, 'null']
           description: 'Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»'
+
+    ServiceConsoleKey:
+      type: string
+      enum: [erp]
+      description: '`erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)'
+    ServiceConsole:
+      type: object
+      additionalProperties: false
+      required: [key, url]
+      properties:
+        key: {$ref: '#/components/schemas/ServiceConsoleKey'}
+        url: {type: string, description: 'Адрес на домене Платформы, например `/console/erp/admin/`'}
+    ServiceConsoleList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ServiceConsole'}
 
     IntegrationsOverview:
       type: object
