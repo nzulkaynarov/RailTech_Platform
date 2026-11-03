@@ -242,7 +242,11 @@ export function RegisterLetterPage() {
         setServerDup({ ...found, match: "exact" });
         setNote(t("letters:register.duplicate.blocked", { number: found.number }));
         window.setTimeout(() => {
-          document.getElementById("reg-duplicates")?.scrollIntoView?.({ block: "center" });
+          // фокус на «Открыть» найденного ВХ: блок прокручивается в вид и читается экранным диктором
+          document
+            .getElementById("reg-duplicates")
+            ?.querySelector<HTMLElement>("a, button")
+            ?.focus();
         }, 0);
         return;
       }
