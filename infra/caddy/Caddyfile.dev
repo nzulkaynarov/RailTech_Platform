@@ -55,6 +55,54 @@
 	log_append request_id {http.request.header.X-Request-ID}
 }
 
+# Служебные консоли сервисов на домене Платформы (OPS-CONSOLE, DECISIONS 2026-11-03): без новых поддоменов, по пути
+# /console/<ключ>/. Перед каждым запросом Caddy спрашивает BFF (`forward_auth`, GET /api/v1/consoles/<ключ>/auth): 204 —
+# пропустить (сессия Платформы и право `admin: full`), 401 — на экран входа, 403/404 — ответ BFF как есть (no-store).
+# Путь уходит в сервис целиком: LiteLLM живёт под SERVER_ROOT_PATH=/console/litellm, Django admin ERP — под
+# ERP_CONSOLE_PREFIX=/console/erp (core/console_mount.py). Cookie сессии Платформы (`rt_pf_*`) в сервис не уходят; свой вход
+# консоли (мастер-ключ LiteLLM, вход Django admin) остаётся. CSP консоли — только на её пути, остальной сайт не ослаблен.
+# RustFS под путь не встаёт (консоль и S3 подписывают адреса от корня домена) — docs/QUESTIONS.md, Q-OPS-CONSOLE-1.
+# Выключить: PLATFORM_CONSOLES= (пусто) в окружении BFF — 404 на всех консолях; docs/runbooks/deploy.md.
+(console_gate) {
+	forward_auth platform-bff:8000 {
+		uri /api/v1/consoles/{args[0]}/auth
+		@console_anon status 401
+		handle_response @console_anon {
+			header Cache-Control "no-store"
+			redir * /login 302
+		}
+	}
+}
+
+(console_upstream) {
+	header_up Cookie "rt_pf_(session|csrf)=[^;]*;?\s*" ""
+}
+
+(service_consoles) {
+	handle /console/litellm/* {
+		import console_gate litellm
+		# Интерфейс LiteLLM (Next.js): встроенные скрипты и eval — только на этом пути.
+		header >Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		reverse_proxy litellm:4000 {
+			import console_upstream
+		}
+	}
+	# Django admin ERP: только admin/ и static/ под префиксом (машинный API, шина и портал сюда не попадают).
+	@console_erp path /console/erp/admin /console/erp/admin/* /console/erp/static/*
+	handle @console_erp {
+		import console_gate erp
+		# Unfold (Alpine.js) компилирует директивы через new Function() — 'unsafe-eval' только здесь (как core/csp.py ERP).
+		header >Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		reverse_proxy erp-backend:8000 {
+			import console_upstream
+		}
+	}
+	@console_other path /console /console/*
+	handle @console_other {
+		respond 404
+	}
+}
+
 # ─── CRM — фронт-офис (apps/crm) ───────────────────────────────────────────────────────────
 http://crm.localhost {
 	import access_log
@@ -79,7 +127,7 @@ http://crm.localhost {
 
 # Машинный API ERP (/api/integration — вызовы CRM и коннекторов) и Django admin (/admin) — только внутри сети compose
 # (`http://erp-backend:8000`), снаружи 404 на всех доменах (S0-5); так же приёмник шины rt_bus `/bus/v1/events` (B3). Матчер — по префиксу пути `/admin`: `/api/v1/admin/...`
-# (API шаблонов писем и др.) не затрагивается. Администратору в Django admin — SSH-туннель (docs/runbooks/deploy.md).
+# (API шаблонов писем и др.) не затрагивается. Администратору в Django admin — /console/erp/admin/ на домене Платформы (service_consoles) или SSH-туннель.
 (no_erp_internal) {
 	@erp_internal path /api/integration /api/integration/* /admin /admin/* /bus /bus/*
 	handle @erp_internal {
@@ -148,9 +196,11 @@ http://platform.localhost {
 		X-Frame-Options "DENY"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=()"
-		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		-Server
 	}
+	# CSP отдельной строкой, как в prod: блок с `-Server` выполняется отложенно и перебил бы CSP консолей (/console/*).
+	header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+	import service_consoles
 	handle /api/v1/me/avatar {
 		# Фото профиля (W15-H6): тело больше 1 МБ с запасом на multipart отсекается до BFF
 		request_body {

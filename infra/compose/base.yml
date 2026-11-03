@@ -306,6 +306,9 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/litellm
       STORE_MODEL_IN_DB: "True"
       LITELLM_SALT_KEY: ${LITELLM_SALT_KEY:?set in .env}
+      # Интерфейс шлюза — на домене Платформы по пути /console/litellm/ui/ (OPS-CONSOLE, Caddy forward_auth). API отвечает
+      # и с префиксом, и без: CRM, ERP и healthcheck ходят по-прежнему на http://litellm:4000/... (проверено на 1.105.0).
+      SERVER_ROOT_PATH: /console/litellm
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     volumes:
@@ -515,7 +518,9 @@ services:
       DJANGO_DEBUG: ${ERP_DEBUG:-true}
       DJANGO_LOG_LEVEL: ${LOG_LEVEL:-INFO}
       AUTO_MIGRATE: "true"
-      ALLOWED_HOSTS: erp.localhost,cabinet.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz},${CABINET_DOMAIN:-cabinet.railtech.uz}
+      ALLOWED_HOSTS: erp.localhost,cabinet.localhost,platform.localhost,localhost,127.0.0.1,erp-backend,${ERP_DOMAIN:-erp.railtech.uz},${CABINET_DOMAIN:-cabinet.railtech.uz}
+      # Django admin под /console/erp на домене Платформы (OPS-CONSOLE): core/console_mount.py; пусто — выключено.
+      ERP_CONSOLE_PREFIX: /console/erp
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/erp?sslmode=disable
       DB_SSLMODE: disable
       REDIS_CACHE_URL: redis://:${REDIS_CACHE_PASSWORD:?set in .env}@redis-cache:6379/0
@@ -726,6 +731,9 @@ services:
       PLATFORM_COOKIE_SECURE: ${PLATFORM_COOKIE_SECURE:-true}
       PLATFORM_ERP_REFRESH_COOKIE: ${PLATFORM_ERP_REFRESH_COOKIE:-refresh_token}
       PLATFORM_LOGIN_RATE_PER_MINUTE: ${PLATFORM_LOGIN_RATE_PER_MINUTE:-10}
+      # Служебные консоли через Платформу (OPS-CONSOLE): /console/litellm/, /console/erp/admin/ — только администратору.
+      # Не задано — обе; пустое значение (PLATFORM_CONSOLES=) выключает все (дефис, не `:-`: пусто ≠ не задано).
+      PLATFORM_CONSOLES: ${PLATFORM_CONSOLES-litellm,erp}
       # Таймаут вызовов CRM из BFF, секунды (T5, runbook r3 O-1) и прокси, которым BFF верит в X-Forwarded-For (Caddy в сети compose).
       PLATFORM_CRM_TIMEOUT_SECONDS: ${PLATFORM_CRM_TIMEOUT_SECONDS:-5}
       PLATFORM_TRUSTED_PROXIES: ${PLATFORM_TRUSTED_PROXIES:-127.0.0.0/8,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7}
