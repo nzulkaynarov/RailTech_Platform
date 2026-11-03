@@ -173,6 +173,7 @@ export const settings = {
     deals: "Сделки",
     web_form: "Форма «Запрос» с сайта",
     service_alerts: "Оповещения о сбоях сервисов",
+    ai: "Защита данных для ИИ",
     // Правятся в «Подключениях», на экране «Настройки» не показываются.
     bot_profile: "Профиль бота в Telegram",
     integrations: "Коннекторы",
@@ -291,6 +292,7 @@ export const settings = {
     rate_limit_per_hour: "Запросов с одного адреса в час",
     max_text_chars: "Максимум символов в поле «Что нужно»",
     first_response_sla_minutes: "Срок первого ответа на запрос с сайта",
+    pii_policy: "Политика защиты данных (деловая или строгая)",
     telegram_admins: "Личное сообщение админам в Telegram",
     telegram_channel: "Сообщение в канал команды",
     email_admins: "Письмо админам на почту",
