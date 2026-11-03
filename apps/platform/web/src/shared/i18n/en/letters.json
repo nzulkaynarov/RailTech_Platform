@@ -289,7 +289,8 @@
       "paper": "Paper (handed in)",
       "taxpayer_cabinet": "Taxpayer cabinet my.soliq",
       "courier": "Courier",
-      "email": "Email"
+      "email": "Email",
+      "unavailable": "The receipt methods did not load. Refresh the page."
     },
     "sender": {
       "label": "Correspondent",
@@ -466,7 +467,32 @@
       "return": "Letter returned to the registrar",
       "reject": "Letter rejected"
     },
-    "failed": "Not saved: {{reason}}."
+    "failed": "Not saved: {{reason}}.",
+    "templates": {
+      "pick": "From a template",
+      "placeholder": "Choose a template",
+      "hint": "Fills the fields — you can still edit them.",
+      "none": "No templates yet — save a resolution as a template.",
+      "unavailable": "Templates did not load — fill in manually.",
+      "mine": "Mine",
+      "company": "Shared",
+      "applied": "Filled from “{{name}}” — check the fields.",
+      "saveAs": "Save as template",
+      "saveTitle": "Save as template",
+      "name": "Template name",
+      "nameHint": "For example: “Tax office — reply by accounting”.",
+      "nameRequired": "Enter a name.",
+      "shared": "Shared — for everyone who prepares resolutions",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Template “{{name}}” saved.",
+      "errors": {
+        "name_taken": "A template with this name already exists.",
+        "company_template_admin_only": "Shared templates are managed by an administrator.",
+        "invalid": "Check the people in the resolution: someone is disabled.",
+        "DEFAULT": "Could not save the template. Try again."
+      }
+    }
   },
   "instr": {
     "title": "Instructions",
@@ -571,6 +597,14 @@
   },
   "mail": {
     "subtitle": "Shared mailbox letters: handle each — register it as incoming, create a lead or archive it",
+    "caption": {
+      "new": "Letters waiting to be handled",
+      "mine": "My letters in progress",
+      "in_work": "Letters in progress",
+      "done": "Handled letters",
+      "spam": "Suspicious letters",
+      "all": "All letters"
+    },
     "open": "Open the letter “{{subject}}”",
     "noSubject": "(no subject)",
     "attachments": "Attachments: {{count}}",
@@ -578,6 +612,53 @@
       "title": "Mail is not connected",
       "text": "The administrator connects the shared mailbox in Settings · Connections · Mail → “Receiving”. Letters will then appear here automatically.",
       "action": "Open Connections"
+    },
+    "empty": {
+      "title": "No new letters",
+      "text": "Shared mailbox letters appear here within 2 minutes after they arrive.",
+      "new": {
+        "title": "No new letters",
+        "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
+      },
+      "mine": {
+        "title": "Nothing in progress with you",
+        "text": "Take a letter from New and it will show up here."
+      },
+      "in_work": {
+        "title": "Nothing in progress",
+        "text": "Letters that someone took are visible here to everyone."
+      },
+      "done": {
+        "title": "No handled letters yet",
+        "text": "Letters with an outcome land here: incoming number, lead, reply or archive."
+      },
+      "all": {
+        "title": "No letters",
+        "text": "Shared mailbox letters will appear here once they arrive."
+      },
+      "spam": {
+        "title": "No suspicious mail",
+        "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
+      },
+      "history": {
+        "title": "No letters from history",
+        "text": "The administrator loads old letters in Settings · Connections · Mail."
+      },
+      "search": {
+        "title": "Nothing found",
+        "text": "Change the query: we search by sender and subject."
+      }
+    },
+    "status": {
+      "new": "New",
+      "registered": "Registered",
+      "lead": "Sent to leads",
+      "archived": "Archived",
+      "spam": "Suspicious",
+      "newReply": "New · reply in thread",
+      "in_work": "In progress",
+      "registering": "Registering",
+      "done": "Handled"
     },
     "kind": {
       "buyer": "Buyer",
@@ -637,7 +718,12 @@
       "failed": "Failed: {{reason}}"
     },
     "result": {
-      "title": "Outcome"
+      "title": "Outcome",
+      "registered": "Registered: {{number}}",
+      "openLetter": "Open {{number}}",
+      "lead": "Lead: {{number}}",
+      "openLead": "Open the lead",
+      "archived": "Archived: {{reason}}"
     },
     "reply": {
       "title": "Reply",
@@ -661,6 +747,16 @@
     "fromMail": "From the letter “{{subject}}” by {{sender}}",
     "fromMailLoading": "Copying the letter attachments…",
     "fromMailFailed": "Could not copy the attachments — attach the files manually.",
+    "tabs": {
+      "new": "New",
+      "spam": "Suspicious",
+      "label": "Mail",
+      "mine": "Mine in progress",
+      "in_work": "All in progress",
+      "done": "Handled",
+      "all": "All",
+      "ownAll": "All mine"
+    },
     "filter": {
       "label": "Show",
       "all": "All",
@@ -669,6 +765,14 @@
     "historyTag": "From history",
     "spamCaption": "Suspicious mail",
     "spamIntro": "Mail from the mailbox Spam folder. Return the ones you need to the queue.",
+    "spamEmpty": {
+      "title": "No suspicious mail",
+      "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
+    },
+    "historyEmpty": {
+      "title": "No mail from history",
+      "text": "An administrator loads older mail in Settings · Connections · Mail."
+    },
     "spam": {
       "title": "Suspicious mail",
       "what": "Arrived in the mailbox Spam folder. Check the sender and the text.",
@@ -680,69 +784,9 @@
       "notSpamWhat": "The mail goes to “New” like any other",
       "discardWhat": "“Remove” archives it with the reason “Spam”; nothing is deleted"
     },
-    "tabs": {
-      "new": "New",
-      "mine": "Mine in progress",
-      "in_work": "All in progress",
-      "done": "Handled",
-      "spam": "Suspicious",
-      "all": "All",
-      "ownAll": "All mine",
-      "label": "Mail"
-    },
-    "caption": {
-      "new": "Letters waiting to be handled",
-      "mine": "My letters in progress",
-      "in_work": "Letters in progress",
-      "done": "Handled letters",
-      "spam": "Suspicious letters",
-      "all": "All letters"
-    },
-    "empty": {
-      "new": {
-        "title": "No new letters",
-        "text": "Shared mailbox letters appear here within 2 minutes after they arrive."
-      },
-      "mine": {
-        "title": "Nothing in progress with you",
-        "text": "Take a letter from New and it will show up here."
-      },
-      "in_work": {
-        "title": "Nothing in progress",
-        "text": "Letters that someone took are visible here to everyone."
-      },
-      "done": {
-        "title": "No handled letters yet",
-        "text": "Letters with an outcome land here: incoming number, lead, reply or archive."
-      },
-      "all": {
-        "title": "No letters",
-        "text": "Shared mailbox letters will appear here once they arrive."
-      },
-      "spam": {
-        "title": "No suspicious mail",
-        "text": "Mail from the Spam folder lands here if the folder is chosen in the receiving settings."
-      },
-      "history": {
-        "title": "No letters from history",
-        "text": "The administrator loads old letters in Settings · Connections · Mail."
-      },
-      "search": {
-        "title": "Nothing found",
-        "text": "Change the query: we search by sender and subject."
-      }
-    },
     "search": {
       "label": "Search by sender and subject",
       "placeholder": "Sender or subject"
-    },
-    "status": {
-      "new": "New",
-      "newReply": "New · reply in thread",
-      "in_work": "In progress",
-      "registering": "Registering",
-      "done": "Handled",
-      "spam": "Suspicious"
     },
     "unread": "Unread",
     "select": "Select letter “{{subject}}”",
@@ -824,5 +868,102 @@
     },
     "inWorkSince": "{{name}}, since {{time}}",
     "replyTag": "Reply in thread"
+  },
+  "settings": {
+    "subtitle": "Letter lists and resolution templates.",
+    "tabsLabel": "Document flow sections",
+    "tabs": {
+      "dictionaries": "Lists",
+      "templates": "Resolution templates"
+    },
+    "readOnly": "View only: an administrator changes the lists.",
+    "dict": {
+      "title": "Lists",
+      "hint": "New values appear in forms at once. A used value can only be hidden.",
+      "kindLabel": "List",
+      "add": "Add value",
+      "name": "Name",
+      "nameRu": "Name in Russian",
+      "nameUz": "Name in Uzbek",
+      "nameEn": "Name in English",
+      "nameHint": "Empty — the Russian name is shown.",
+      "order": "Order",
+      "status": "Status",
+      "active": "Active",
+      "hidden": "Hidden",
+      "actions": "Actions",
+      "edit": "Edit",
+      "editNamed": "Edit: {{name}}",
+      "hide": "Hide",
+      "hideNamed": "Hide: {{name}}",
+      "show": "Restore",
+      "showNamed": "Restore: {{name}}",
+      "delete": "Delete",
+      "deleteNamed": "Delete: {{name}}",
+      "up": "Move up: {{name}}",
+      "down": "Move down: {{name}}",
+      "yes": "Yes",
+      "no": "—",
+      "generalRule": "general rule",
+      "dueHint": "Empty — urgent 3 days, normal 10.",
+      "addTitle": "New value",
+      "editTitle": "Edit value",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Saved",
+      "hiddenToast": "Hidden: no longer offered in forms",
+      "shownToast": "The value is back in forms",
+      "deleted": "Deleted",
+      "required": "Enter a name",
+      "deleteTitle": "Delete “{{name}}”?",
+      "consequence": "The value disappears from the list and forms. No letters use it.",
+      "empty": {
+        "title": "No values",
+        "text": "Add the first value."
+      },
+      "errors": {
+        "name_taken": "This name is already in the list.",
+        "value_in_use": "Letters already use this value — it can only be hidden.",
+        "dictionary_closed": "This list can only be renamed.",
+        "FORBIDDEN": "Only an administrator can change the lists.",
+        "DEFAULT": "Could not save. Try again.",
+        "load": "The lists did not load."
+      },
+      "retry": "Retry"
+    },
+    "templates": {
+      "title": "Resolution templates",
+      "hint": "The director picks a template in the resolution and edits it. Own templates — from the resolution form.",
+      "add": "Add template",
+      "name": "Name",
+      "kind": "Type",
+      "responsible": "Responsible",
+      "due": "Due",
+      "scope": "Visible to",
+      "company": "Everyone",
+      "personal": "Only {{name}}",
+      "addressee": "Letter addressee",
+      "chooseLater": "Choose in the resolution",
+      "days_one": "{{count}} day",
+      "days_few": "{{count}} days",
+      "days_many": "{{count}} days",
+      "days_other": "{{count}} days",
+      "dueDays": "Due in, days",
+      "dueHint": "Empty — the letter's suggested due date.",
+      "addTitle": "New resolution template",
+      "editTitle": "Edit template",
+      "required": "Fill in the field",
+      "deleted": "Template deleted",
+      "deleteTitle": "Delete template “{{name}}”?",
+      "consequence": "The template disappears from “From a template”. Existing resolutions do not change.",
+      "empty": {
+        "title": "No templates",
+        "text": "Add a shared template for typical letters."
+      }
+    }
+  },
+  "listKind": {
+    "label": "Document type",
+    "all": "All types"
   }
 }

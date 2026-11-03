@@ -6,7 +6,7 @@
 зарегистрированные до этой ревизии, поля не имеют (источник был только в событии). Откат снимает индекс и поле.
 
 Revision ID: b8774e6a6f55
-Revises: 983e0473b753
+Revises: 549002bb5ead
 Create Date: 2026-11-03 04:25:28.676606+00:00
 """
 
@@ -16,7 +16,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "b8774e6a6f55"
-down_revision: str | Sequence[str] | None = "983e0473b753"
+down_revision: str | Sequence[str] | None = "549002bb5ead"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

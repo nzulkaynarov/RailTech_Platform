@@ -9,6 +9,7 @@ import { BusJournalPage } from "./bus/BusJournalPage";
 import { BotPage } from "./bot/BotPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { CompanyPage } from "./company/CompanyPage";
+import { DocflowPage } from "./docflow/DocflowPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 import { SetupWizardPage } from "./setup/SetupWizardPage";
@@ -53,6 +54,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <CompanyPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "docflow") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <DocflowPage />
       </RequireAccess>
     );
   }

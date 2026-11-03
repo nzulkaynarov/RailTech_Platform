@@ -3,6 +3,8 @@ import type {
   LetterResolutionKind,
   OfficeResolutionIn,
   ResolutionDraftIn,
+  ResolutionTemplate,
+  ResolutionTemplateIn,
 } from "../../../shared/api/generated/model";
 
 /**
@@ -130,4 +132,80 @@ export function draftAsResolution(
     acquaintIds: draft.acquaint.map((p) => p.id),
   };
   return Object.keys(validateOffice(values, today)).length === 0 ? toOfficeBody(values) : null;
+}
+
+// --- Шаблоны резолюций (EDS-REG, R2): «Из шаблона» заполняет форму, «Сохранить как шаблон» берёт её ---------------
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Дата `YYYY-MM-DD` через `days` дней; суббота и воскресенье — на понедельник (как подсказка срока EDS). */
+export function dueIn(today: string, days: number): string {
+  const at = new Date(`${today}T00:00:00Z`);
+  at.setUTCDate(at.getUTCDate() + days);
+  const weekday = at.getUTCDay();
+  if (weekday === 6) at.setUTCDate(at.getUTCDate() + 2);
+  if (weekday === 0) at.setUTCDate(at.getUTCDate() + 1);
+  return at.toISOString().slice(0, 10);
+}
+
+/** Сколько дней от `today` до `due` (не меньше 1); пусто — `null`. */
+export function daysUntil(today: string, due: string): number | null {
+  if (!due) return null;
+  const days = Math.round(
+    (Date.parse(`${due}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / DAY_MS,
+  );
+  return Math.min(365, Math.max(1, days));
+}
+
+/**
+ * Применить шаблон: вид, текст, люди и срок из шаблона, ответственный «адресат» — адресат письма. Срок шаблона не задан —
+ * подсказка срока письма. Форму потом можно поправить: шаблон только заполняет.
+ */
+export function applyTemplate(
+  template: ResolutionTemplate,
+  letter: Pick<LetterCard, "addressee" | "suggested_due">,
+  today: string,
+): OfficeValues {
+  const executor = needsExecutor(template.kind);
+  const responsibleId =
+    template.responsible_type === "person"
+      ? (template.responsible?.id ?? "")
+      : template.responsible_type === "addressee"
+        ? letter.addressee.id
+        : "";
+  return {
+    kind: template.kind,
+    text: template.text,
+    templated: false,
+    responsibleId: executor ? responsibleId : "",
+    due: executor
+      ? template.due_days
+        ? dueIn(today, template.due_days)
+        : (letter.suggested_due ?? "")
+      : "",
+    coIds: executor ? template.co_executors.map((p) => p.id) : [],
+    acquaintIds: template.acquaint.map((p) => p.id),
+  };
+}
+
+/** Тело «Сохранить как шаблон» из формы: ответственный — сотрудник или «выбрать при резолюции», срок — в днях от сегодня. */
+export function templateFromForm(
+  values: OfficeValues,
+  name: string,
+  scope: ResolutionTemplateIn["scope"],
+  today: string,
+): ResolutionTemplateIn {
+  const executor = needsExecutor(values.kind);
+  const responsible = executor && values.responsibleId ? values.responsibleId : null;
+  return {
+    name: name.trim(),
+    scope,
+    kind: values.kind || "execute",
+    text: values.text.trim(),
+    responsible_type: responsible ? "person" : "none",
+    responsible_id: responsible,
+    co_executor_ids: executor ? uniq(values.coIds, values.responsibleId) : [],
+    acquaint_ids: uniq(values.acquaintIds, ""),
+    due_days: executor ? daysUntil(today, values.due) : null,
+  };
 }

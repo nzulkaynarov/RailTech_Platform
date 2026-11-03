@@ -68,6 +68,7 @@ async def test_list_maps_rows_and_passes_filters_with_the_eds_token(
             ("status", "awaiting_resolution"),
             ("status", "returned"),
             ("q", " стрелочные "),
+            ("kind", "bank"),
             ("limit", 20),
         ],
     )
@@ -97,6 +98,7 @@ async def test_list_maps_rows_and_passes_filters_with_the_eds_token(
     assert call.url.params.get_list("status") == ["awaiting_resolution", "returned"]
     assert call.url.params["q"] == "стрелочные"
     assert call.url.params["limit"] == "20"
+    assert call.url.params["kind"] == "bank"  # EDS-REG: вид документа из справочника
     # токен доступа EDS — из обмена SSO-токена CRM `aud=eds`; токен CRM в EDS не уходит
     assert call.headers["authorization"] == "Bearer eds-access-1"
     assert json.loads(eds.exchange.calls.last.request.content) == {"token": "sso-eds-2"}

@@ -100,6 +100,12 @@ import type {
   CreatedId,
   CsrfFailedResponse,
   DeputyUpdate,
+  DictionaryItem,
+  DictionaryItemIn,
+  DictionaryItemList,
+  DictionaryItemPatch,
+  DictionaryList,
+  DictionaryOrderIn,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -223,6 +229,7 @@ import type {
   ListCategoryRequestsParams,
   ListCrmClientsParams,
   ListCrmLeadsParams,
+  ListDictionaryItemsParams,
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
   ListEdsProjectsParams,
@@ -333,6 +340,9 @@ import type {
   ResolutionAssignees,
   ResolutionDraftIn,
   ResolutionIn,
+  ResolutionTemplate,
+  ResolutionTemplateIn,
+  ResolutionTemplateList,
   ReturnToBotIn,
   Role,
   RoleCreate,
@@ -30051,6 +30061,798 @@ export const useRegisterLetter = <
   return useMutation(getRegisterLetterMutationOptions(options), queryClient);
 };
 
+export const getListDictionariesUrl = () => {
+  return `/api/v1/dictionaries`;
+};
+
+/**
+ * Справочники всех доменов для экрана администратора: вид, домен-владелец, область (`documents` — документооборот), название, закрытый ли список (только переименовать и переставить), дополнительные поля (`attrs`). Раздел `admin` — чтение. Домен не ответил — 503.
+ * @summary Справочники · каталог
+ */
+export const listDictionaries = async (
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryList> => {
+  return http<DictionaryList>(getListDictionariesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDictionariesQueryKey = () => {
+  return [`/api/v1/dictionaries`] as const;
+};
+
+export const getListDictionariesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDictionariesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDictionaries>>> = ({ signal }) =>
+    listDictionaries({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDictionaries>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDictionariesQueryResult = NonNullable<Awaited<ReturnType<typeof listDictionaries>>>;
+export type ListDictionariesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaries>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaries>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочники · каталог
+ */
+
+export function useListDictionaries<
+  TData = Awaited<ReturnType<typeof listDictionaries>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDictionaries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDictionariesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListDictionaryItemsUrl = (kind: string, params?: ListDictionaryItemsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/dictionaries/${kind}?${stringifiedParams}`
+    : `/api/v1/dictionaries/${kind}`;
+};
+
+/**
+ * Значения в порядке показа: по умолчанию действующие (формы), `include_hidden=true` — все со скрытыми и признаком `used` (экран администратора; названия у старых писем). Доступ — по домену вида: справочники документооборота читают `eds.inbox`, `eds.inbox.register` и `admin`. Неизвестный вид — 404.
+ * @summary Справочники · значения
+ */
+export const listDictionaryItems = async (
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItemList> => {
+  return http<DictionaryItemList>(getListDictionaryItemsUrl(kind, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDictionaryItemsQueryKey = (
+  kind: string,
+  params?: ListDictionaryItemsParams,
+) => {
+  return [`/api/v1/dictionaries/${kind}`, ...(params ? [params] : [])] as const;
+};
+
+export const getListDictionaryItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDictionaryItemsQueryKey(kind, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDictionaryItems>>> = ({ signal }) =>
+    listDictionaryItems(kind, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: kind !== null && kind !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListDictionaryItemsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDictionaryItems>>
+>;
+export type ListDictionaryItemsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params: undefined | ListDictionaryItemsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaryItems>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaryItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDictionaryItems>>,
+          TError,
+          Awaited<ReturnType<typeof listDictionaryItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Справочники · значения
+ */
+
+export function useListDictionaryItems<
+  TData = Awaited<ReturnType<typeof listDictionaryItems>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  kind: string,
+  params?: ListDictionaryItemsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDictionaryItems>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDictionaryItemsQueryOptions(kind, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateDictionaryItemUrl = (kind: string) => {
+  return `/api/v1/dictionaries/${kind}`;
+};
+
+/**
+ * Раздел `admin` — полный. Код создаёт домен из названия; значение встаёт в конец. Название уже есть — 409 `name_taken`; закрытый справочник — 409 `dictionary_closed`.
+ * @summary Справочники · добавить значение
+ */
+export const createDictionaryItem = async (
+  kind: string,
+  dictionaryItemIn: DictionaryItemIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItem>(getCreateDictionaryItemUrl(kind), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryItemIn),
+  });
+};
+
+export const getCreateDictionaryItemMutationKey = () => ["createDictionaryItem"] as const;
+
+export const getCreateDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createDictionaryItem>>,
+    TError,
+    CreateDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createDictionaryItem>>,
+  TError,
+  CreateDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createDictionaryItem>>,
+    CreateDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, data } = props ?? {};
+
+    return createDictionaryItem(kind, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createDictionaryItem>>
+>;
+export type CreateDictionaryItemMutationBody = DictionaryItemIn;
+export type CreateDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateDictionaryItemMutationVariables = { kind: string; data: DictionaryItemIn };
+
+/**
+ * @summary Справочники · добавить значение
+ */
+export const useCreateDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createDictionaryItem>>,
+      TError,
+      CreateDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createDictionaryItem>>,
+  TError,
+  CreateDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateDictionaryItemMutationOptions(options), queryClient);
+};
+
+export const getReorderDictionaryItemsUrl = (kind: string) => {
+  return `/api/v1/dictionaries/${kind}/order`;
+};
+
+/**
+ * Раздел `admin` — полный. Все коды справочника (со скрытыми) в новом порядке.
+ * @summary Справочники · порядок
+ */
+export const reorderDictionaryItems = async (
+  kind: string,
+  dictionaryOrderIn: DictionaryOrderIn,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItemList> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItemList>(getReorderDictionaryItemsUrl(kind), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryOrderIn),
+  });
+};
+
+export const getReorderDictionaryItemsMutationKey = () => ["reorderDictionaryItems"] as const;
+
+export const getReorderDictionaryItemsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reorderDictionaryItems>>,
+    TError,
+    ReorderDictionaryItemsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>,
+  TError,
+  ReorderDictionaryItemsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReorderDictionaryItemsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reorderDictionaryItems>>,
+    ReorderDictionaryItemsMutationVariables
+  > = (props) => {
+    const { kind, data } = props ?? {};
+
+    return reorderDictionaryItems(kind, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReorderDictionaryItemsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>
+>;
+export type ReorderDictionaryItemsMutationBody = DictionaryOrderIn;
+export type ReorderDictionaryItemsMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReorderDictionaryItemsMutationVariables = { kind: string; data: DictionaryOrderIn };
+
+/**
+ * @summary Справочники · порядок
+ */
+export const useReorderDictionaryItems = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reorderDictionaryItems>>,
+      TError,
+      ReorderDictionaryItemsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reorderDictionaryItems>>,
+  TError,
+  ReorderDictionaryItemsMutationVariables,
+  TContext
+> => {
+  return useMutation(getReorderDictionaryItemsMutationOptions(options), queryClient);
+};
+
+export const getUpdateDictionaryItemUrl = (kind: string, code: string) => {
+  return `/api/v1/dictionaries/${kind}/${code}`;
+};
+
+/**
+ * Раздел `admin` — полный. Код не меняется. В закрытом справочнике меняются только названия.
+ * @summary Справочники · переименовать, скрыть, вернуть
+ */
+export const updateDictionaryItem = async (
+  kind: string,
+  code: string,
+  dictionaryItemPatch: DictionaryItemPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<DictionaryItem> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<DictionaryItem>(getUpdateDictionaryItemUrl(kind, code), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(dictionaryItemPatch),
+  });
+};
+
+export const getUpdateDictionaryItemMutationKey = () => ["updateDictionaryItem"] as const;
+
+export const getUpdateDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateDictionaryItem>>,
+    TError,
+    UpdateDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateDictionaryItem>>,
+  TError,
+  UpdateDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateDictionaryItem>>,
+    UpdateDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, code, data } = props ?? {};
+
+    return updateDictionaryItem(kind, code, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateDictionaryItem>>
+>;
+export type UpdateDictionaryItemMutationBody = DictionaryItemPatch;
+export type UpdateDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateDictionaryItemMutationVariables = {
+  kind: string;
+  code: string;
+  data: DictionaryItemPatch;
+};
+
+/**
+ * @summary Справочники · переименовать, скрыть, вернуть
+ */
+export const useUpdateDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateDictionaryItem>>,
+      TError,
+      UpdateDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateDictionaryItem>>,
+  TError,
+  UpdateDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateDictionaryItemMutationOptions(options), queryClient);
+};
+
+export const getDeleteDictionaryItemUrl = (kind: string, code: string) => {
+  return `/api/v1/dictionaries/${kind}/${code}`;
+};
+
+/**
+ * Раздел `admin` — полный. Значение уже использовано — 409 `value_in_use` (его скрывают).
+ * @summary Справочники · удалить неиспользованное
+ */
+export const deleteDictionaryItem = async (
+  kind: string,
+  code: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteDictionaryItemUrl(kind, code), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteDictionaryItemMutationKey = () => ["deleteDictionaryItem"] as const;
+
+export const getDeleteDictionaryItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteDictionaryItem>>,
+    TError,
+    DeleteDictionaryItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>,
+  TError,
+  DeleteDictionaryItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteDictionaryItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteDictionaryItem>>,
+    DeleteDictionaryItemMutationVariables
+  > = (props) => {
+    const { kind, code } = props ?? {};
+
+    return deleteDictionaryItem(kind, code, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteDictionaryItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>
+>;
+
+export type DeleteDictionaryItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | BackendUnavailableResponse
+>;
+export type DeleteDictionaryItemMutationVariables = { kind: string; code: string };
+
+/**
+ * @summary Справочники · удалить неиспользованное
+ */
+export const useDeleteDictionaryItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteDictionaryItem>>,
+      TError,
+      DeleteDictionaryItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteDictionaryItem>>,
+  TError,
+  DeleteDictionaryItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteDictionaryItemMutationOptions(options), queryClient);
+};
+
 export const getListLetterKindsUrl = () => {
   return `/api/v1/eds/letter-kinds`;
 };
@@ -31896,12 +32698,496 @@ export const useDecideInstructionExtension = <
   return useMutation(getDecideInstructionExtensionMutationOptions(options), queryClient);
 };
 
+export const getListResolutionTemplatesUrl = () => {
+  return `/api/v1/eds/resolution-templates`;
+};
+
+/**
+ * EDS `GET /resolution-templates`: общие (`company`, ведёт администратор) и свои личные (`personal`). Шаблон только заполняет форму резолюции, его можно поправить. Раздел `eds.inbox` или `eds.inbox.register` — полный, или `admin` — чтение.
+ * @summary EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+ */
+export const listResolutionTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplateList> => {
+  return http<ResolutionTemplateList>(getListResolutionTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResolutionTemplatesQueryKey = () => {
+  return [`/api/v1/eds/resolution-templates`] as const;
+};
+
+export const getListResolutionTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListResolutionTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listResolutionTemplates>>> = ({
+    signal,
+  }) => listResolutionTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResolutionTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListResolutionTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResolutionTemplates>>
+>;
+export type ListResolutionTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Шаблоны резолюций — общие и свои (EDS-REG, R2)
+ */
+
+export function useListResolutionTemplates<
+  TData = Awaited<ReturnType<typeof listResolutionTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListResolutionTemplatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateResolutionTemplateUrl = () => {
+  return `/api/v1/eds/resolution-templates`;
+};
+
+/**
+ * Личный — директор и делопроизводитель (`eds.inbox` или `eds.inbox.register` полный), общий — `admin: full` (иначе 403). Название уже есть — 409 `name_taken`; человек не активен — 422.
+ * @summary EDS · Сохранить шаблон резолюции
+ */
+export const createResolutionTemplate = async (
+  resolutionTemplateIn: ResolutionTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ResolutionTemplate>(getCreateResolutionTemplateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionTemplateIn),
+  });
+};
+
+export const getCreateResolutionTemplateMutationKey = () => ["createResolutionTemplate"] as const;
+
+export const getCreateResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createResolutionTemplate>>,
+    TError,
+    CreateResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createResolutionTemplate>>,
+  TError,
+  CreateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createResolutionTemplate>>,
+    CreateResolutionTemplateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createResolutionTemplate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createResolutionTemplate>>
+>;
+export type CreateResolutionTemplateMutationBody = ResolutionTemplateIn;
+export type CreateResolutionTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateResolutionTemplateMutationVariables = { data: ResolutionTemplateIn };
+
+/**
+ * @summary EDS · Сохранить шаблон резолюции
+ */
+export const useCreateResolutionTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createResolutionTemplate>>,
+      TError,
+      CreateResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createResolutionTemplate>>,
+  TError,
+  CreateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getUpdateResolutionTemplateUrl = (id: string) => {
+  return `/api/v1/eds/resolution-templates/${id}`;
+};
+
+/**
+ * Тело целиком, `scope` не меняется. Личный — владелец (чужой — 404), общий — `admin: full`.
+ * @summary EDS · Изменить шаблон резолюции
+ */
+export const updateResolutionTemplate = async (
+  id: string,
+  resolutionTemplateIn: ResolutionTemplateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionTemplate> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ResolutionTemplate>(getUpdateResolutionTemplateUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionTemplateIn),
+  });
+};
+
+export const getUpdateResolutionTemplateMutationKey = () => ["updateResolutionTemplate"] as const;
+
+export const getUpdateResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateResolutionTemplate>>,
+    TError,
+    UpdateResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>,
+  TError,
+  UpdateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateResolutionTemplate>>,
+    UpdateResolutionTemplateMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateResolutionTemplate(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>
+>;
+export type UpdateResolutionTemplateMutationBody = ResolutionTemplateIn;
+export type UpdateResolutionTemplateMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateResolutionTemplateMutationVariables = { id: string; data: ResolutionTemplateIn };
+
+/**
+ * @summary EDS · Изменить шаблон резолюции
+ */
+export const useUpdateResolutionTemplate = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateResolutionTemplate>>,
+      TError,
+      UpdateResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateResolutionTemplate>>,
+  TError,
+  UpdateResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateResolutionTemplateMutationOptions(options), queryClient);
+};
+
+export const getDeleteResolutionTemplateUrl = (id: string) => {
+  return `/api/v1/eds/resolution-templates/${id}`;
+};
+
+/**
+ * Личный — владелец, общий — `admin: full`.
+ * @summary EDS · Удалить шаблон резолюции
+ */
+export const deleteResolutionTemplate = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteResolutionTemplateUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteResolutionTemplateMutationKey = () => ["deleteResolutionTemplate"] as const;
+
+export const getDeleteResolutionTemplateMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+    TError,
+    DeleteResolutionTemplateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+  TError,
+  DeleteResolutionTemplateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteResolutionTemplateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+    DeleteResolutionTemplateMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteResolutionTemplate(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteResolutionTemplateMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>
+>;
+
+export type DeleteResolutionTemplateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteResolutionTemplateMutationVariables = { id: string };
+
+/**
+ * @summary EDS · Удалить шаблон резолюции
+ */
+export const useDeleteResolutionTemplate = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+      TError,
+      DeleteResolutionTemplateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteResolutionTemplate>>,
+  TError,
+  DeleteResolutionTemplateMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteResolutionTemplateMutationOptions(options), queryClient);
+};
+
 export const getListEdsStaffUrl = () => {
   return `/api/v1/eds/staff`;
 };
 
 /**
- * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный. Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+ * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
  * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
  */
 export const listEdsStaff = async (options?: Parameters<typeof http>[1]): Promise<EdsStaffList> => {

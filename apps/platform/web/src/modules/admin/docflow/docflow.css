@@ -1,0 +1,9 @@
+/* Переключатель справочников: на узком экране прокручивается вбок, а не обрезается (UX-2b). */
+.pf-docflow-kinds {
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+.pf-docflow-kinds > .ant-segmented {
+  display: inline-flex;
+}

@@ -7,7 +7,7 @@ import { canSee } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
-import type { LetterKind, LetterResolutionKind } from "../../../shared/api/generated/model";
+import type { LetterResolutionKind } from "../../../shared/api/generated/model";
 import {
   registerLetter,
   useFindLetterDuplicates,
@@ -27,8 +27,8 @@ import { AttachmentsField } from "../new/AttachmentsField";
 import { DealField } from "../new/DealField";
 import type { Attachment } from "../new/formModel";
 import { todayInCompanyZone } from "../new/formModel";
+import { localName, useLetterDictionary, useResolutionKindName } from "../dictionaries";
 import {
-  RECEIPT_METHODS,
   REGISTER_ORDER,
   type RegisterErrors,
   type RegisterField,
@@ -82,11 +82,6 @@ function describedBy(id: string, hint: boolean, error: boolean): string | undefi
 function newKey(): string {
   if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
   return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
-}
-
-function kindName(kind: LetterKind, language: string): string {
-  const lang = language.slice(0, 2) as "ru" | "uz" | "en";
-  return kind.name[lang] || kind.name.ru;
 }
 
 /** Поля ошибки сервера (`details.fields`: `body.kind` от BFF, `related_number` от EDS) → поля формы. */
@@ -183,6 +178,8 @@ export function RegisterLetterPage() {
   const fromMail = useMailPrefill(mailId, applyMail);
   const refreshMail = useRefreshMail();
   const kinds = useListLetterKinds({ query: { staleTime: 5 * 60_000 } });
+  const methods = useLetterDictionary("receipt-methods");
+  const resolutionKindName = useResolutionKindName();
   const staff = useListEdsStaff({ query: { staleTime: 5 * 60_000 } });
   const people = (staff.data?.items ?? []).map((person) => ({
     value: person.id,
@@ -253,7 +250,7 @@ export function RegisterLetterPage() {
   const id = registerFieldId;
   const kindOptions = (kinds.data?.items ?? []).map((kind) => ({
     value: kind.code,
-    label: kindName(kind, i18n.language),
+    label: localName(kind.name, i18n.language),
   }));
 
   return (
@@ -346,21 +343,23 @@ export function RegisterLetterPage() {
               <Field
                 id={id("receipt_method")}
                 label={t("letters:register.method.label")}
+                hint={methods.isError ? t("letters:register.method.unavailable") : undefined}
                 error={fieldError("receipt_method")}
               >
                 <Select
                   id={id("receipt_method")}
                   value={values.receiptMethod || undefined}
                   placeholder={t("letters:register.choose")}
-                  options={RECEIPT_METHODS.map((value) => ({
-                    value,
-                    label: t(`letters:register.method.${value}`),
+                  loading={methods.isPending}
+                  options={(methods.data?.items ?? []).map((item) => ({
+                    value: item.code,
+                    label: localName(item.name, i18n.language),
                   }))}
                   status={errors.receipt_method ? "error" : undefined}
                   aria-invalid={errors.receipt_method || undefined}
                   aria-describedby={describedBy(
                     id("receipt_method"),
-                    false,
+                    methods.isError,
                     Boolean(errors.receipt_method),
                   )}
                   onChange={(value) => {
@@ -619,7 +618,7 @@ export function RegisterLetterPage() {
                       { value: "", label: t("letters:register.draft.none") },
                       ...RESOLUTION_KINDS.map((kind) => ({
                         value: kind,
-                        label: t(`letters:office.kind.${kind}`),
+                        label: resolutionKindName(kind),
                       })),
                     ]}
                     onChange={(kind: LetterResolutionKind | "") => {

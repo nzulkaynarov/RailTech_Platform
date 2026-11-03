@@ -97,16 +97,18 @@ def track_of(letter: Letter) -> LetterTrack:
     return LetterTrack.OFFICE
 
 
-def suggested_due(letter: Letter, today: date) -> date | None:
-    """Подсказка срока резолюции пути `office`: срок по документу минус рабочий день; иначе регистрация + 3 дня
-    («срочно») или + 10 дней, выходной — на понедельник; не раньше `today`."""
+def suggested_due(letter: Letter, today: date, kind_days: int | None = None) -> date | None:
+    """Подсказка срока резолюции пути `office`: срок по документу минус рабочий день; иначе регистрация + срок вида
+    документа (`kind_days`, справочник `letter-kinds`, EDS-REG), а без него + 3 дня («срочно») или + 10 дней; выходной —
+    на понедельник; не раньше `today`."""
     if track_of(letter) is not LetterTrack.OFFICE:
         return None
     if letter.document_due is not None:
         hint = prev_workday(letter.document_due)
     else:
         start = clock.company_date(letter.registered_at)
-        hint = next_workday(start + timedelta(days=URGENT_DAYS if letter.urgent else NORMAL_DAYS))
+        days = kind_days if kind_days is not None else (URGENT_DAYS if letter.urgent else NORMAL_DAYS)
+        hint = next_workday(start + timedelta(days=days))
     return max(hint, today)
 
 

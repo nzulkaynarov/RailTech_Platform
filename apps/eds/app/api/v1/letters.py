@@ -31,7 +31,7 @@ from app.schemas.letters import (
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import idempotency, instructions, letter_kinds, letters, letters_read
+from app.services import dictionaries, idempotency, instructions, letters, letters_read
 
 router = APIRouter(prefix="/api/v1", tags=["letters"])
 
@@ -50,9 +50,19 @@ Bus = Annotated[AsyncBus, Depends(get_bus)]
 
 
 @router.get("/letter-kinds", response_model=LetterKindList, operation_id="listLetterKinds")
-async def list_letter_kinds(_: Clerk) -> LetterKindList:
+async def list_letter_kinds(_: Clerk, session: Session) -> LetterKindList:
+    """Действующие виды документа — справочник `letter-kinds` (EDS-REG); весь — `/dictionaries/letter-kinds`."""
+    found = await dictionaries.list_items(session, dictionaries.LETTER_KINDS)
     return LetterKindList(
-        items=[LetterKindItem(code=k.code, name=k.names(), urgent=k.urgent) for k in letter_kinds.KINDS]
+        items=[
+            LetterKindItem(
+                code=item.code,
+                name=item.name.model_dump(),
+                urgent=bool(item.attrs.get("urgent")),
+                due_days=item.attrs.get("due_days") if isinstance(item.attrs.get("due_days"), int) else None,
+            )
+            for item in found.items
+        ]
     )
 
 
@@ -77,11 +87,19 @@ async def list_letters(
     q: Annotated[str | None, Query(max_length=200)] = None,
     on_control: Annotated[bool | None, Query()] = None,
     overdue: Annotated[bool | None, Query()] = None,
+    kind: Annotated[str | None, Query(pattern=r"^[a-z][a-z_]{0,31}$")] = None,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> LetterPage:
     return await letters_read.list_page(
-        session, statuses=status, q=q, cursor=cursor, limit=limit, on_control=on_control, overdue=overdue
+        session,
+        statuses=status,
+        q=q,
+        cursor=cursor,
+        limit=limit,
+        on_control=on_control,
+        overdue=overdue,
+        kind=kind,
     )
 
 
@@ -240,6 +258,10 @@ async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTask
     return await instructions.my_tasks(session, crm_user_id=employee.crm_user_id)
 
 
+# Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG).
+StaffReader = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE))]
+
+
 @router.get("/employees", response_model=EmployeeList, operation_id="listActiveEmployees")
-async def list_active_employees(_: Drafter, session: Session) -> EmployeeList:
+async def list_active_employees(_: StaffReader, session: Session) -> EmployeeList:
     return await instructions.active_employees(session)
