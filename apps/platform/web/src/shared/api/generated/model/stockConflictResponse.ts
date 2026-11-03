@@ -5,6 +5,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`)
+ * 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`, `serial_exists` и `details.number` — серийный уже принят, `unit_not_available` и `details.number`, `details.max` — единица уже отгружена или партии не хватает)
  */
 export type StockConflictResponse = Error;

@@ -302,6 +302,7 @@ import type {
   ProjectCard,
   ProjectConflictResponse,
   ProjectContractActionIn,
+  ProjectDeliveryMarkIn,
   ProjectFileGenerating,
   ProjectPage,
   ProjectPayloadTooLargeResponse,
@@ -347,6 +348,7 @@ import type {
   SearchCalcCatalogParams,
   SearchParams,
   SearchResult,
+  SearchStockTraceParams,
   SentMessage,
   ServiceSwitchIn,
   Session,
@@ -377,6 +379,7 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  StockTraceList,
   SupplierCreate,
   SupplierDetail,
   SupplierOfferCreate,
@@ -7523,7 +7526,7 @@ export const getGetEdsProjectUrl = (ref: string) => {
 };
 
 /**
- * ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
+ * ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка, строки поставки и отметки доставки `fulfillment.actions`) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
  * @summary EDS · Карточка проекта
  */
 export const getEdsProject = async (
@@ -8264,6 +8267,283 @@ export const useScanEdsProjectAct = <
 > => {
   return useMutation(getScanEdsProjectActMutationOptions(options), queryClient);
 };
+
+export const getMarkEdsProjectDeliveryUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/delivery`;
+};
+
+/**
+ * ERP `POST /crm/projects/{id}/delivery/` (multipart). `action`: `in_transit` — товар отправлен клиенту и в пути, `delivered` — доставлен (клиент после этого принимает поставку в кабинете: «Принять» / «Есть замечания»). `on_date` — дата отправки или доставки, не позже сегодня и не раньше отправки; `waybill` — № накладной перевозчика или трек (необязательно); `file` — подтверждение доставки: подписанная накладная, фото, PDF (необязательно, до 20 МБ). Действие — на весь проект, как у исполнения сделки ERP; переход проверяет ERP по статусу исполнения (`actions` в карточке): иначе 409 `delivery_transition_not_allowed`, исполнения ещё нет — 409 `fulfillment_not_ready`. Право ERP `fulfillment.manage` (раздел `erp.stock` полный), иначе 403. Раздел `eds.projects` — чтение. BFF читает тело потоком до 20 МБ и multipart не разбирает. Ответ — обновлённая карточка.
+ * @summary EDS · Проект: отметить доставку клиенту — «В пути» или «Доставлено»
+ */
+export const markEdsProjectDelivery = async (
+  ref: string,
+  projectDeliveryMarkIn: ProjectDeliveryMarkIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const formData = new FormData();
+  formData.append(`action`, projectDeliveryMarkIn.action);
+  formData.append(`on_date`, projectDeliveryMarkIn.on_date);
+  if (projectDeliveryMarkIn.waybill !== undefined) {
+    formData.append(`waybill`, projectDeliveryMarkIn.waybill);
+  }
+  if (projectDeliveryMarkIn.file !== undefined) {
+    formData.append(`file`, projectDeliveryMarkIn.file);
+  }
+
+  return http<ProjectCard>(getMarkEdsProjectDeliveryUrl(ref), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getMarkEdsProjectDeliveryMutationKey = () => ["markEdsProjectDelivery"] as const;
+
+export const getMarkEdsProjectDeliveryMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markEdsProjectDelivery>>,
+    TError,
+    MarkEdsProjectDeliveryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markEdsProjectDelivery>>,
+  TError,
+  MarkEdsProjectDeliveryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkEdsProjectDeliveryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markEdsProjectDelivery>>,
+    MarkEdsProjectDeliveryMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return markEdsProjectDelivery(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkEdsProjectDeliveryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof markEdsProjectDelivery>>
+>;
+export type MarkEdsProjectDeliveryMutationBody = ProjectDeliveryMarkIn;
+export type MarkEdsProjectDeliveryMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ProjectPayloadTooLargeResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type MarkEdsProjectDeliveryMutationVariables = { ref: string; data: ProjectDeliveryMarkIn };
+
+/**
+ * @summary EDS · Проект: отметить доставку клиенту — «В пути» или «Доставлено»
+ */
+export const useMarkEdsProjectDelivery = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markEdsProjectDelivery>>,
+      TError,
+      MarkEdsProjectDeliveryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof markEdsProjectDelivery>>,
+  TError,
+  MarkEdsProjectDeliveryMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkEdsProjectDeliveryMutationOptions(options), queryClient);
+};
+
+export const getDownloadEdsProjectDeliveryProofUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/delivery/proof`;
+};
+
+/**
+ * Файл потоком всегда как вложение (`attachment`, тип не доверяется): ERP `GET /sourcing/attachments/{id}/download/`, id файла BFF берёт из исполнения в карточке проекта, а не из запроса. Файла нет — 404. Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: файл подтверждения доставки
+ */
+export const downloadEdsProjectDeliveryProof = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadEdsProjectDeliveryProofUrl(ref), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadEdsProjectDeliveryProofQueryKey = (ref: string) => {
+  return [`/api/v1/eds/projects/${ref}/delivery/proof`] as const;
+};
+
+export const getDownloadEdsProjectDeliveryProofQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadEdsProjectDeliveryProofQueryKey(ref);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>> = ({
+    signal,
+  }) => downloadEdsProjectDeliveryProof(ref, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ref !== null && ref !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type DownloadEdsProjectDeliveryProofQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>
+>;
+export type DownloadEdsProjectDeliveryProofQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadEdsProjectDeliveryProof<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsProjectDeliveryProof<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsProjectDeliveryProof<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Проект: файл подтверждения доставки
+ */
+
+export function useDownloadEdsProjectDeliveryProof<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectDeliveryProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadEdsProjectDeliveryProofQueryOptions(ref, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getDownloadEdsProjectFileUrl = (
   ref: string,
@@ -38140,6 +38420,167 @@ export const useShipFromStock = <
 > => {
   return useMutation(getShipFromStockMutationOptions(options), queryClient);
 };
+
+export const getSearchStockTraceUrl = (params: SearchStockTraceParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/trace?${stringifiedParams}`
+    : `/api/v1/erp/stock/trace`;
+};
+
+/**
+ * ERP `GET /stock/trace/?q=` (ADR-0021, L0-3): единицы прослеживаемости по номеру — точное совпадение первым, затем по части номера (от 2 знаков, до 50). Назад — приёмка, заказ поставщику, поставщик, изготовитель, документ соответствия; вперёд — отгрузки, клиент, проект. Короче 2 знаков — пустой список. Раздел `erp.stock` — чтение.
+ * @summary Склад · Прослеживаемость: поиск по серийному номеру или партии
+ */
+export const searchStockTrace = async (
+  params: SearchStockTraceParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockTraceList> => {
+  return http<StockTraceList>(getSearchStockTraceUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchStockTraceQueryKey = (params?: SearchStockTraceParams) => {
+  return [`/api/v1/erp/stock/trace`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchStockTraceQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchStockTraceQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchStockTrace>>> = ({ signal }) =>
+    searchStockTrace(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchStockTrace>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchStockTraceQueryResult = NonNullable<Awaited<ReturnType<typeof searchStockTrace>>>;
+export type SearchStockTraceQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchStockTrace>>,
+          TError,
+          Awaited<ReturnType<typeof searchStockTrace>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchStockTrace>>,
+          TError,
+          Awaited<ReturnType<typeof searchStockTrace>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Прослеживаемость: поиск по серийному номеру или партии
+ */
+
+export function useSearchStockTrace<
+  TData = Awaited<ReturnType<typeof searchStockTrace>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchStockTraceParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchStockTrace>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchStockTraceQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListOverdueSupplierOrdersUrl = () => {
   return `/api/v1/erp/stock/overdue`;

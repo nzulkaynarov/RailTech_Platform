@@ -1533,7 +1533,19 @@ async def test_categories_follow_pages_and_crud(
             )
         return httpx.Response(
             200,
-            json={"count": 2, "next": None, "results": [{"id": 2, "name": "Крепёж", "parent": 1}]},
+            json={
+                "count": 2,
+                "next": None,
+                "results": [
+                    {
+                        "id": 2,
+                        "name": "Крепёж",
+                        "parent": 1,
+                        "tracking": "lot",
+                        "requires_conformity_doc": True,
+                    }
+                ],
+            },
         )
 
     listing = erp.get(f"{API}/catalog/categories/").mock(side_effect=page)
@@ -1554,19 +1566,49 @@ async def test_categories_follow_pages_and_crud(
     changed = await web.send(
         "PATCH", "/api/v1/admin/company/categories/3", json={"name": "Шпалы ЖБ", "parent_id": None}
     )
+    # ADR-0021 (L0-3): учёт единиц и документ соответствия — данные категории, правит администратор.
+    tracked = await web.send(
+        "PATCH",
+        "/api/v1/admin/company/categories/3",
+        json={"tracking": "serial", "requires_conformity_doc": True},
+    )
+    bad = await web.send("PATCH", "/api/v1/admin/company/categories/3", json={"tracking": "unit"})
     blocked = await web.send("DELETE", "/api/v1/admin/company/categories/1")
 
     assert listing.call_count == 2
     check(listed, "/admin/company/categories", "get")
     assert listed.json()["items"] == [
-        {"id": "1", "name": "Рельсы", "parent_id": None},
-        {"id": "2", "name": "Крепёж", "parent_id": "1"},
+        {
+            "id": "1",
+            "name": "Рельсы",
+            "parent_id": None,
+            "tracking": "none",
+            "requires_conformity_doc": False,
+        },
+        {
+            "id": "2",
+            "name": "Крепёж",
+            "parent_id": "1",
+            "tracking": "lot",
+            "requires_conformity_doc": True,
+        },
     ]
     assert created.status_code == 201
     check(created, "/admin/company/categories", "post")
     check(changed, "/admin/company/categories/{id}", "patch")
-    assert sent(create) == {"name": "Шпалы", "parent": 1}
-    assert sent(patch) == {"name": "Шпалы ЖБ", "parent": None}
+    assert sent(create) == {
+        "name": "Шпалы",
+        "parent": 1,
+        "tracking": "none",
+        "requires_conformity_doc": False,
+    }
+    assert json.loads(patch.calls[0].request.content) == {"name": "Шпалы ЖБ", "parent": None}
+    assert tracked.status_code == 200
+    assert json.loads(patch.calls[1].request.content) == {
+        "tracking": "serial",
+        "requires_conformity_doc": True,
+    }
+    assert bad.status_code == 422
     assert blocked.status_code == 409
     check(blocked, "/admin/company/categories/{id}", "delete")
     assert blocked.json()["details"]["reason"] == "category_has_children"

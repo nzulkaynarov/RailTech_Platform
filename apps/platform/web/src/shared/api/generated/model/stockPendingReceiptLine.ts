@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { StockRequestRef } from "./stockRequestRef";
+import type { TrackingClass } from "./trackingClass";
 
 export interface StockPendingReceiptLine {
   order_number: string;
@@ -21,4 +22,7 @@ export interface StockPendingReceiptLine {
   /** @minimum 0 */
   received_quantity: number;
   request: StockRequestRef | null;
+  tracking: TrackingClass;
+  /** Спросить № сертификата или декларации и срок действия */
+  requires_doc: boolean;
 }

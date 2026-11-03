@@ -63,6 +63,7 @@ import {
   PaymentProofSource,
   PaymentTab,
   PriceImportMode,
+  ProjectDeliveryAction,
   QueueItemKind,
   QuoteDeliveryReason,
   QuoteDeliveryStatus,
@@ -80,6 +81,7 @@ import {
   TechDocKind,
   TicketStatus,
   TicketSubject,
+  TrackingClass,
 } from "./model";
 import type {
   About,
@@ -296,9 +298,11 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  StockTraceList,
   SupplierDetail,
   SupplierOfferHistory,
   SupplierOrderDetail,
+  SupplierOrderLineOffer,
   SupplierOrderList,
   SupplierPage,
   SystemStatus,
@@ -2947,6 +2951,15 @@ export const getGetEdsProjectResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -3341,6 +3354,15 @@ export const getCreateEdsProjectContractResponseProjectFulfillmentMock = (
       null,
     ]),
     carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
@@ -3765,6 +3787,15 @@ export const getActEdsProjectContractResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -4183,6 +4214,15 @@ export const getScanEdsProjectContractResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -4595,6 +4635,15 @@ export const getActEdsProjectActResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5004,6 +5053,15 @@ export const getScanEdsProjectActResponseProjectFulfillmentMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5142,6 +5200,436 @@ export const getScanEdsProjectActResponseMock = (
   ),
   ...overrideResponse,
 });
+
+export const getMarkEdsProjectDeliveryResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseOnBehalfNoteMock = (
+  overrideResponse: Partial<OnBehalfNote> = {},
+): OnBehalfNote => ({
+  ...{
+    channel: faker.helpers.arrayElement(Object.values(OnBehalfChannel)),
+    counterparty_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getMarkEdsProjectDeliveryResponseOnBehalfNoteMock() },
+          null,
+        ]),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+      null,
+    ]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        on_behalf: faker.helpers.arrayElement([
+          { ...getMarkEdsProjectDeliveryResponseOnBehalfNoteMock() },
+          null,
+        ]),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    actions: faker.helpers.arrayElements(Object.values(ProjectDeliveryAction)),
+    proof_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    proof_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getMarkEdsProjectDeliveryResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+    null,
+  ]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([
+      { ...getMarkEdsProjectDeliveryResponseProjectActRefMock() },
+      null,
+    ]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectQuoteMock() },
+    null,
+  ]),
+  contract: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getMarkEdsProjectDeliveryResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getMarkEdsProjectDeliveryResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getMarkEdsProjectDeliveryResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      on_behalf: faker.helpers.arrayElement([
+        { ...getMarkEdsProjectDeliveryResponseOnBehalfNoteMock() },
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getDownloadEdsProjectDeliveryProofResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getDownloadEdsProjectFileResponseMock = (
   overrideResponse: Partial<Extract<Blob | ProjectFileGenerating, object>> = {},
@@ -11199,6 +11687,8 @@ export const getListCatalogCategoriesResponseMock = (
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_conformity_doc: faker.datatype.boolean(),
   })),
   ...overrideResponse,
 });
@@ -11209,6 +11699,8 @@ export const getCreateCatalogCategoryResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+  requires_conformity_doc: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -11218,6 +11710,8 @@ export const getUpdateCatalogCategoryResponseMock = (
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+  requires_conformity_doc: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -18185,6 +18679,19 @@ export const getGetStockProductResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+      units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.helpers.fromRegExp("^[0-9]+$"),
+          kind: faker.helpers.arrayElement(["serial", "lot"] as const),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          available: faker.number.int({ min: 0 }),
+        }),
+      ),
     }),
   ),
   incoming_orders: Array.from(
@@ -18257,6 +18764,19 @@ export const getAdjustStockResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+      units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          id: faker.helpers.fromRegExp("^[0-9]+$"),
+          kind: faker.helpers.arrayElement(["serial", "lot"] as const),
+          number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          available: faker.number.int({ min: 0 }),
+        }),
+      ),
     }),
   ),
   incoming_orders: Array.from(
@@ -18315,6 +18835,19 @@ export const getListStockReservationsResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        kind: faker.helpers.arrayElement(["serial", "lot"] as const),
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        expiry_date: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        available: faker.number.int({ min: 0 }),
+      }),
+    ),
   })),
   ...overrideResponse,
 });
@@ -18343,6 +18876,14 @@ export const getReleaseStockReservationResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+  units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    kind: faker.helpers.arrayElement(["serial", "lot"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    expiry_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    available: faker.number.int({ min: 0 }),
+  })),
   ...overrideResponse,
 });
 
@@ -18995,6 +19536,20 @@ export const getCreateSupplierOrderResponseStockRequestRefMock = (
   ...overrideResponse,
 });
 
+export const getCreateSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getCreateSupplierOrderResponseMock = (
   overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
 ): SupplierOrderDetail => ({
@@ -19078,6 +19633,12 @@ export const getCreateSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19102,6 +19663,21 @@ export const getCreateSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19144,6 +19720,20 @@ export const getCreateSupplierOrderFromRequestResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderFromRequestResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19231,6 +19821,12 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderFromRequestResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19255,6 +19851,21 @@ export const getCreateSupplierOrderFromRequestResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19297,6 +19908,20 @@ export const getGetSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19384,6 +20009,12 @@ export const getGetSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getGetSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19408,6 +20039,21 @@ export const getGetSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19450,6 +20096,20 @@ export const getUpdateSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19537,6 +20197,12 @@ export const getUpdateSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getUpdateSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19561,6 +20227,21 @@ export const getUpdateSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19603,6 +20284,20 @@ export const getSendSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19690,6 +20385,12 @@ export const getSendSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getSendSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19714,6 +20415,21 @@ export const getSendSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19756,6 +20472,20 @@ export const getConfirmSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19843,6 +20573,12 @@ export const getConfirmSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getConfirmSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -19867,6 +20603,21 @@ export const getConfirmSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -19909,6 +20660,20 @@ export const getCancelSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCancelSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -19996,6 +20761,12 @@ export const getCancelSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getCancelSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -20020,6 +20791,21 @@ export const getCancelSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -20062,6 +20848,20 @@ export const getReceiveSupplierOrderResponseStockRequestRefMock = (
       null,
     ]),
     path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReceiveSupplierOrderResponseSupplierOrderLineOfferMock = (
+  overrideResponse: Partial<SupplierOrderLineOffer> = {},
+): SupplierOrderLineOffer => ({
+  ...{
+    incoterms: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    expired: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -20149,6 +20949,12 @@ export const getReceiveSupplierOrderResponseMock = (
       null,
     ]),
     line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    offer: faker.helpers.arrayElement([
+      { ...getReceiveSupplierOrderResponseSupplierOrderLineOfferMock() },
+      null,
+    ]),
+    tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+    requires_doc: faker.datatype.boolean(),
   })),
   receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -20173,6 +20979,21 @@ export const getReceiveSupplierOrderResponseMock = (
           quantity: faker.number.int({ min: 1 }),
           cell: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+            () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+          ),
+          expiry_date: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
+            null,
+          ]),
+          doc_number: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          doc_valid_until: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 10),
             null,
           ]),
         }),
@@ -20242,6 +21063,8 @@ export const getListStockReceiptsResponseMock = (
         { ...getListStockReceiptsResponseStockRequestRefMock() },
         null,
       ]),
+      tracking: faker.helpers.arrayElement(Object.values(TrackingClass)),
+      requires_doc: faker.datatype.boolean(),
     }),
   ),
   done: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
@@ -20265,6 +21088,21 @@ export const getListStockReceiptsResponseMock = (
         quantity: faker.number.int({ min: 1 }),
         cell: faker.helpers.arrayElement([
           faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+          () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+        ),
+        expiry_date: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        doc_number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        doc_valid_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
           null,
         ]),
       }),
@@ -20311,6 +21149,12 @@ export const getListStockShipmentsResponseMock = (
           faker.string.alpha({ length: { min: 10, max: 20 } }),
           null,
         ]),
+        units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+          () => ({
+            number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+            quantity: faker.number.int({ min: 1 }),
+          }),
+        ),
       }),
     ),
   })),
@@ -20347,6 +21191,88 @@ export const getShipFromStockResponseMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     quantity: faker.number.int({ min: 1 }),
     cell: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        quantity: faker.number.int({ min: 1 }),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getSearchStockTraceResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSearchStockTraceResponseMock = (
+  overrideResponse: Partial<Extract<StockTraceList, object>> = {},
+): StockTraceList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    kind: faker.helpers.arrayElement(["serial", "lot"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    expiry_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    quantity: faker.number.int({ min: 1 }),
+    shipped_quantity: faker.number.int({ min: 0 }),
+    status: faker.helpers.arrayElement(["in_stock", "shipped"] as const),
+    product: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    origin: {
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      order_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      order_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      manufacturer: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      doc_number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      doc_valid_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+      request: faker.helpers.arrayElement([
+        { ...getSearchStockTraceResponseStockRequestRefMock() },
+        null,
+      ]),
+    },
+    destinations: Array.from(
+      { length: faker.number.int({ min: 1, max: 10 }) },
+      (_, i) => i + 1,
+    ).map(() => ({
+      shipment_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      shipped_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      quantity: faker.number.int({ min: 1 }),
+      request: {
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        client: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+    })),
   })),
   ...overrideResponse,
 });
@@ -24379,6 +25305,53 @@ export const getScanEdsProjectActMockHandler = (
           : getScanEdsProjectActResponseMock(),
         { status: 200 },
       );
+    },
+    options,
+  );
+};
+
+export const getMarkEdsProjectDeliveryMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/delivery",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getMarkEdsProjectDeliveryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadEdsProjectDeliveryProofMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/projects/:ref/delivery/proof",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadEdsProjectDeliveryProofResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
     },
     options,
   );
@@ -29927,6 +30900,30 @@ export const getShipFromStockMockHandler = (
   );
 };
 
+export const getSearchStockTraceMockHandler = (
+  overrideResponse?:
+    | StockTraceList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockTraceList> | StockTraceList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/trace",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSearchStockTraceResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListOverdueSupplierOrdersMockHandler = (
   overrideResponse?:
     | SupplierOrderList
@@ -31085,6 +32082,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getScanEdsProjectContractMockHandler(),
   getActEdsProjectActMockHandler(),
   getScanEdsProjectActMockHandler(),
+  getMarkEdsProjectDeliveryMockHandler(),
+  getDownloadEdsProjectDeliveryProofMockHandler(),
   getDownloadEdsProjectFileMockHandler(),
   getRequestEdsDocumentPdfMockHandler(),
   getGetEdsDocumentPdfMockHandler(),
@@ -31325,6 +32324,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getListStockReceiptsMockHandler(),
   getListStockShipmentsMockHandler(),
   getShipFromStockMockHandler(),
+  getSearchStockTraceMockHandler(),
   getListOverdueSupplierOrdersMockHandler(),
   getListCrmLeadsMockHandler(),
   getGetCrmLeadMockHandler(),

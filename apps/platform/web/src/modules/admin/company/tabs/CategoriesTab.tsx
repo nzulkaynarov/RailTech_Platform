@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Button, Form, Input, Segmented, Select } from "antd";
+import { Alert, App, Button, Checkbox, Form, Input, Segmented, Select } from "antd";
 import { useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -7,6 +7,7 @@ import type {
   CatalogCategory,
   CatalogCategoryList,
   CategoryRequest,
+  TrackingClass,
 } from "../../../../shared/api/generated/model";
 import {
   getListCategoryRequestsQueryKey,
@@ -205,7 +206,18 @@ function CategoryNodes({
       {nodes.map((node) => (
         <li key={node.id}>
           <div className="pf-co-node">
-            <span>{node.name}</span>
+            <span>
+              {node.name}
+              {node.tracking !== "none" ? (
+                <span className="pf-hint">
+                  {" "}
+                  · {t(`categories.tracking.short.${node.tracking}`)}
+                </span>
+              ) : null}
+              {node.requires_conformity_doc ? (
+                <span className="pf-hint"> · {t("categories.docShort")}</span>
+              ) : null}
+            </span>
             <span className="pf-co-actions">
               <Button
                 type="link"
@@ -264,7 +276,11 @@ function flatten(nodes: Node[], depth = 0): { id: string; label: string }[] {
 interface CategoryValues {
   name: string;
   parent_id: string | null;
+  tracking: TrackingClass;
+  requires_conformity_doc: boolean;
 }
+
+const TRACKING: readonly TrackingClass[] = ["none", "lot", "serial"];
 
 function CategoryModal({
   roots,
@@ -307,6 +323,8 @@ function CategoryModal({
   const initial: CategoryValues = {
     name: node?.name ?? "",
     parent_id: node ? node.parent_id : (parentId ?? null),
+    tracking: node?.tracking ?? "none",
+    requires_conformity_doc: node?.requires_conformity_doc ?? false,
   };
 
   const submit = (values: CategoryValues) => {
@@ -320,7 +338,12 @@ function CategoryModal({
           })),
       );
     };
-    const data = { name: values.name.trim(), parent_id: values.parent_id ?? null };
+    const data = {
+      name: values.name.trim(),
+      parent_id: values.parent_id ?? null,
+      tracking: values.tracking,
+      requires_conformity_doc: values.requires_conformity_doc,
+    };
     if (node) update.mutate({ id: node.id, data }, { onError });
     else create.mutate({ data }, { onError });
   };
@@ -359,6 +382,27 @@ function CategoryModal({
             placeholder={t("categories.topLevel")}
             options={options}
           />
+        </Form.Item>
+        {/* ADR-0021: учёт единиц — данные категории; товары категории наследуют его. */}
+        <Form.Item
+          name="tracking"
+          label={t("categories.tracking.label")}
+          extra={t("categories.tracking.hint")}
+          style={{ marginTop: 16 }}
+        >
+          <Select
+            options={TRACKING.map((value) => ({
+              value,
+              label: t(`categories.tracking.options.${value}`),
+            }))}
+          />
+        </Form.Item>
+        <Form.Item
+          name="requires_conformity_doc"
+          valuePropName="checked"
+          style={{ marginBottom: 0 }}
+        >
+          <Checkbox>{t("categories.doc")}</Checkbox>
         </Form.Item>
       </Form>
     </FormModal>
