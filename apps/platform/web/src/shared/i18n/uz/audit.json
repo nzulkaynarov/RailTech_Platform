@@ -295,6 +295,9 @@
       "publish": "Kompaniya maqolasini eʼlon qildi",
       "unpublish": "Kompaniya maqolasini eʼlondan oldi",
       "delete": "Kompaniya maqolasini oʻchirdi"
+    },
+    "console": {
+      "open": "Xizmat konsolini ochdi"
     }
   },
   "entities": {
@@ -319,7 +322,8 @@
     "external_service": "Tashqi xizmat",
     "platform_role": "Platforma roli",
     "staff_ticket": "Xodim murojaati",
-    "company_article": "Kompaniya maqolasi"
+    "company_article": "Kompaniya maqolasi",
+    "console": "Xizmat konsoli"
   },
   "fields": {
     "email": "Elektron pochta",

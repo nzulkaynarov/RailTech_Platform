@@ -107,6 +107,7 @@ export const AUDIT_ACTIONS = [
   "export.deals",
   "external_service.disable",
   "external_service.enable",
+  "console.open",
 ] as const;
 
 export const AUDIT_ENTITIES = [
@@ -114,6 +115,7 @@ export const AUDIT_ENTITIES = [
   "platform_role",
   "staff_ticket",
   "company_article",
+  "console",
   "settings",
   "integration",
   "integration_secret",

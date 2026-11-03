@@ -16,6 +16,8 @@ import { TechnicalDetails } from "./HealthParts";
 import { bareModelName } from "./modelName";
 import { ActionForm, ErrorNote, Field, Masked, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
+import { ConsoleLink, ExternalLinks } from "./OpenLinks";
+import { modelProviderLinks } from "./serviceLinks";
 
 const PROVIDERS = ["anthropic", "gemini", "openai"] as const;
 type Provider = (typeof PROVIDERS)[number];
@@ -351,6 +353,7 @@ export function ModelsPanel({ editable }: { editable: boolean }) {
   return (
     <div className="pf-panel-stack">
       <PanelTitle>{t("cards.models.title")}</PanelTitle>
+      <ConsoleLink console="litellm" editable={editable} />
       {editable ? null : (
         <p className="pf-hint" style={{ margin: 0 }}>
           {t("common.readOnly")}
@@ -363,11 +366,14 @@ export function ModelsPanel({ editable }: { editable: boolean }) {
               {t("models.empty")}
             </p>
           ) : (
-            <ul className="pf-int-list" aria-label={t("cards.models.title")}>
-              {list.items.map((model) => (
-                <ModelRow key={model.alias} model={model} editable={editable} />
-              ))}
-            </ul>
+            <>
+              <ExternalLinks links={modelProviderLinks(list.items.map((m) => m.provider))} />
+              <ul className="pf-int-list" aria-label={t("cards.models.title")}>
+                {list.items.map((model) => (
+                  <ModelRow key={model.alias} model={model} editable={editable} />
+                ))}
+              </ul>
+            </>
           )
         }
       </PanelState>

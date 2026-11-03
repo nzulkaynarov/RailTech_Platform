@@ -864,5 +864,51 @@
       "bad_status": "The cabinet answered with code {{code}} — check the address.",
       "not_cabinet": "Something other than the client cabinet answers at this address — check the address."
     }
+  },
+  "links": {
+    "groupAria": "Service dashboards",
+    "newTabAria": "{{name}} — opens in a new tab",
+    "mail": {
+      "yandex": {
+        "admin": "Yandex 360 admin",
+        "mail": "Yandex Mail"
+      },
+      "google": {
+        "admin": "Google Workspace admin",
+        "mail": "Gmail"
+      },
+      "mailru": {
+        "admin": "Mail.ru for Business",
+        "mail": "Mail.ru mail"
+      }
+    },
+    "models": {
+      "anthropic": "Anthropic console",
+      "openai": "OpenAI console",
+      "gemini": "Google AI Studio",
+      "mistral": "Mistral console",
+      "deepseek": "DeepSeek console",
+      "groq": "Groq console",
+      "openrouter": "OpenRouter keys"
+    },
+    "telegram": {
+      "botfather": "BotFather",
+      "bot": "Bot in Telegram"
+    },
+    "offsite": {
+      "yandex": "Folder on Yandex Disk",
+      "gdrive": "Folder on Google Drive"
+    }
+  },
+  "consoles": {
+    "open": "Open console: {{name}}",
+    "openAria": "Open the “{{name}}” console in a new tab",
+    "ownLogin": "Sign in with the service's own key or password.",
+    "litellm": {
+      "name": "model gateway"
+    },
+    "erp": {
+      "name": "database panel"
+    }
   }
 }
