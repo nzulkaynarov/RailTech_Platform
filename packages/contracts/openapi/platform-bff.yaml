@@ -4993,7 +4993,7 @@ paths:
       operationId: listServiceConsoles
       summary: 'Служебные консоли сервисов, открытые через Платформу'
       description: >-
-        OPS-CONSOLE (DECISIONS 2026-11-03). Консоли внутренних сервисов (шлюз моделей, панель базы ERP) публикуются на домене
+        OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене
         Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых
         консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор
         (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
@@ -12800,15 +12800,15 @@ components:
 
     ServiceConsoleKey:
       type: string
-      enum: [litellm, erp]
-      description: '`litellm` — шлюз моделей (интерфейс LiteLLM), `erp` — панель базы ERP (Django admin)'
+      enum: [erp]
+      description: '`erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)'
     ServiceConsole:
       type: object
       additionalProperties: false
       required: [key, url]
       properties:
         key: {$ref: '#/components/schemas/ServiceConsoleKey'}
-        url: {type: string, description: 'Адрес на домене Платформы, например `/console/litellm/ui/`'}
+        url: {type: string, description: 'Адрес на домене Платформы, например `/console/erp/admin/`'}
     ServiceConsoleList:
       type: object
       additionalProperties: false

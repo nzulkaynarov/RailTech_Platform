@@ -40,7 +40,7 @@ export function ConsoleLink({
 }) {
   const { t } = useTranslation("integrations");
   const query = useListServiceConsoles({ query: { enabled: editable, staleTime: 60_000 } });
-  const item = editable ? query.data?.items.find((c) => c.key === key) : undefined;
+  const item = editable ? query.data?.items.find((c) => (c.key as string) === key) : undefined;
   if (!item) return null;
   const name = t(`consoles.${key}.name`);
   return (

@@ -37,21 +37,20 @@ test.describe("Консоли сервисов и внешние кабинет�
 
       await openCard(page, "models");
       const side = page.locator(PANEL);
-      const gateway = side.getByRole("link", {
-        name: "Открыть консоль «шлюз моделей» в новой вкладке",
-      });
-      await expect(gateway).toHaveAttribute("href", "/console/litellm/ui/");
-      await expect(gateway).toHaveAttribute("target", "_blank");
       await expect(
         side.getByRole("link", { name: "Консоль Anthropic — откроется в новой вкладке" }),
       ).toHaveAttribute("href", "https://console.anthropic.com/");
+      // Шлюз моделей через Платформу не открывается (DECISIONS 2026-11-03) — только кабинеты провайдеров.
+      await expect(side.getByRole("link", { name: /Открыть консоль/ })).toHaveCount(0);
       await expectNoViolations(page, `models ${String(width)}`);
       await settledScreenshot(page, "admin-models");
 
       await openCard(page, "erp");
-      await expect(
-        side.getByRole("link", { name: "Открыть консоль «панель базы» в новой вкладке" }),
-      ).toHaveAttribute("href", "/console/erp/admin/");
+      const erpConsole = side.getByRole("link", {
+        name: "Открыть консоль «панель базы» в новой вкладке",
+      });
+      await expect(erpConsole).toHaveAttribute("href", "/console/erp/admin/");
+      await expect(erpConsole).toHaveAttribute("target", "_blank");
       await expectNoViolations(page, `erp ${String(width)}`);
       await settledScreenshot(page, "admin-erp");
 

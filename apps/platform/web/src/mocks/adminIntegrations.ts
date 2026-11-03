@@ -384,16 +384,13 @@ function detail(service: ExternalService) {
 }
 
 export const adminIntegrationsHandlers = [
-  // Служебные консоли через Платформу (OPS-CONSOLE): список — только администратору; сами консоли MSW не открывает.
+  // Служебная консоль через Платформу (OPS-CONSOLE): список — только администратору; сами консоли MSW не открывает.
   http.get(
     "*/admin/consoles",
     () =>
       guard("full") ??
       HttpResponse.json({
-        items: [
-          { key: "litellm", url: "/console/litellm/ui/" },
-          { key: "erp", url: "/console/erp/admin/" },
-        ],
+        items: [{ key: "erp", url: "/console/erp/admin/" }],
       }),
   ),
   http.get("*/admin/integrations", () => {

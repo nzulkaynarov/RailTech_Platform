@@ -4,11 +4,10 @@
  */
 
 /**
- * `litellm` — шлюз моделей (интерфейс LiteLLM), `erp` — панель базы ERP (Django admin)
+ * `erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)
  */
 export type ServiceConsoleKey = (typeof ServiceConsoleKey)[keyof typeof ServiceConsoleKey];
 
 export const ServiceConsoleKey = {
-  litellm: "litellm",
   erp: "erp",
 } as const;

@@ -2641,7 +2641,7 @@ export interface paths {
     };
     /**
      * Служебные консоли сервисов, открытые через Платформу
-     * @description OPS-CONSOLE (DECISIONS 2026-11-03). Консоли внутренних сервисов (шлюз моделей, панель базы ERP) публикуются на домене Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
+     * @description OPS-CONSOLE (DECISIONS 2026-11-03). Консоль внутреннего сервиса (панель базы ERP) публикуется на домене Платформы по пути `/console/<ключ>/` за проверкой Caddy `forward_auth` (`GET /consoles/{key}/auth`). Список включённых консолей задаёт окружение BFF (`PLATFORM_CONSOLES`); пусто — консолей нет, кнопки не показываются. Только администратор (`admin: full`); директору — 403. У каждой консоли свой вход (ключ или пароль сервиса) — Платформа учётных данных не передаёт.
      */
     get: operations["listServiceConsoles"];
     put?: never;
@@ -6702,13 +6702,13 @@ export interface components {
       technical: string | null;
     };
     /**
-     * @description `litellm` — шлюз моделей (интерфейс LiteLLM), `erp` — панель базы ERP (Django admin)
+     * @description `erp` — панель базы ERP (Django admin). LiteLLM через Платформу не публикуется (DECISIONS 2026-11-03)
      * @enum {string}
      */
-    ServiceConsoleKey: "litellm" | "erp";
+    ServiceConsoleKey: "erp";
     ServiceConsole: {
       key: components["schemas"]["ServiceConsoleKey"];
-      /** @description Адрес на домене Платформы, например `/console/litellm/ui/` */
+      /** @description Адрес на домене Платформы, например `/console/erp/admin/` */
       url: string;
     };
     ServiceConsoleList: {

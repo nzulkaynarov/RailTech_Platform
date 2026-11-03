@@ -6,6 +6,6 @@ import type { ServiceConsoleKey } from "./serviceConsoleKey";
 
 export interface ServiceConsole {
   key: ServiceConsoleKey;
-  /** Адрес на домене Платформы, например `/console/litellm/ui/` */
+  /** Адрес на домене Платформы, например `/console/erp/admin/` */
   url: string;
 }

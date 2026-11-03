@@ -1,7 +1,7 @@
 # prod (M5-INF-01): четыре домена ансамбля (CRM, ERP, Cabinet, Платформа) с TLS (ACME, Let's Encrypt), security headers, маршруты как в
 # Caddyfile.dev. Домены и e-mail ACME — переменные окружения контейнера Caddy (infra/compose/prod.yml).
-# Служебные интерфейсы Langfuse и консоль RustFS наружу не публикуются (Langfuse — SSH-туннель на 127.0.0.1:3000); консоли LiteLLM и
-# Django admin ERP — только администратору Платформы на её домене по пути /console/<сервис>/ (сниппет service_consoles, OPS-CONSOLE).
+# Служебные интерфейсы Langfuse и консоль RustFS наружу не публикуются (Langfuse — SSH-туннель на 127.0.0.1:3000); Django admin
+# ERP — только администратору Платформы на её домене по пути /console/erp/admin/ (сниппет service_consoles, OPS-CONSOLE).
 
 # Журнал доступа и идентификатор запроса (S0-6, ADR-0017): один сниппет на все сайты. Логика и порядок — одна в
 # Caddyfile.prod и Caddyfile.dev, расхождение — дефект.
@@ -66,14 +66,15 @@
 	}
 }
 
-# Служебные консоли сервисов на домене Платформы (OPS-CONSOLE, DECISIONS 2026-11-03): без новых поддоменов, по пути
-# /console/<ключ>/. Перед каждым запросом Caddy спрашивает BFF (`forward_auth`, GET /api/v1/consoles/<ключ>/auth): 204 —
-# пропустить (сессия Платформы и право `admin: full`), 401 — на экран входа, 403/404 — ответ BFF как есть (no-store).
-# Путь уходит в сервис целиком: LiteLLM живёт под SERVER_ROOT_PATH=/console/litellm, Django admin ERP — под
-# ERP_CONSOLE_PREFIX=/console/erp (core/console_mount.py). Cookie сессии Платформы (`rt_pf_*`) в сервис не уходят; свой вход
-# консоли (мастер-ключ LiteLLM, вход Django admin) остаётся. CSP консоли — только на её пути, остальной сайт не ослаблен.
-# RustFS под путь не встаёт (консоль и S3 подписывают адреса от корня домена) — docs/QUESTIONS.md, Q-OPS-CONSOLE-1.
-# Выключить: PLATFORM_CONSOLES= (пусто) в окружении BFF — 404 на всех консолях; docs/runbooks/deploy.md.
+# Служебная консоль на домене Платформы (OPS-CONSOLE, DECISIONS 2026-11-03): без новых поддоменов, по пути /console/<ключ>/.
+# Сейчас одна — Django admin ERP (/console/erp/admin/). Перед каждым запросом Caddy спрашивает BFF (`forward_auth`,
+# GET /api/v1/consoles/<ключ>/auth): 204 — пропустить (сессия Платформы и право `admin: full`), 401 — на экран входа, 403/404 —
+# ответ BFF как есть (no-store). Путь уходит в ERP целиком (ERP_CONSOLE_PREFIX=/console/erp, core/console_mount.py); свой вход
+# Django admin остаётся. Изоляция cookie: в ERP уходят только `sessionid` и `csrftoken` (cookie Платформы и прочие — нет), а
+# cookie консоли ставятся с Path=/console/erp (ERP переписывает сам, Caddy — второй барьер), SPA Платформы их не видит.
+# Принятый риск общего origin — DECISIONS 2026-11-03. LiteLLM через Платформу не публикуется: его кука `token` (ключ админа
+# шлюза) доступна скриптам на Path=/ — модели и расходы ведутся экранами Платформы. RustFS — без консоли (Q-OPS-CONSOLE-1).
+# CSP консоли — только на её пути, остальной сайт не ослаблен. Выключить: PLATFORM_CONSOLES= (пусто) у BFF — 404.
 (console_gate) {
 	forward_auth platform-bff:8000 {
 		uri /api/v1/consoles/{args[0]}/auth
@@ -85,27 +86,18 @@
 	}
 }
 
-(console_upstream) {
-	header_up Cookie "rt_pf_(session|csrf)=[^;]*;?\s*" ""
-}
-
 (service_consoles) {
-	handle /console/litellm/* {
-		import console_gate litellm
-		# Интерфейс LiteLLM (Next.js): встроенные скрипты и eval — только на этом пути.
-		header >Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-		reverse_proxy litellm:4000 {
-			import console_upstream
-		}
-	}
 	# Django admin ERP: только admin/ и static/ под префиксом (машинный API, шина и портал сюда не попадают).
 	@console_erp path /console/erp/admin /console/erp/admin/* /console/erp/static/*
 	handle @console_erp {
 		import console_gate erp
 		# Unfold (Alpine.js) компилирует директивы через new Function() — 'unsafe-eval' только здесь (как core/csp.py ERP).
 		header >Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+		# Cookie консоли — только под её путём (если ERP уже поставил Path=/console/erp, замена не срабатывает).
+		header >Set-Cookie "(?i)(;\s*path=)/(\s*;|\s*$)" "$1/console/erp$2"
 		reverse_proxy erp-backend:8000 {
-			import console_upstream
+			# В ERP — только cookie Django admin; пустое значение Django считает отсутствующим.
+			header_up Cookie "sessionid={http.request.cookie.sessionid}; csrftoken={http.request.cookie.csrftoken}"
 		}
 	}
 	@console_other path /console /console/*

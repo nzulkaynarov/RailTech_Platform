@@ -54,36 +54,28 @@ describe("справочник внешних кабинетов (OPS-CONSOLE)",
 });
 
 describe("карточки: «Открыть» и «Открыть консоль»", () => {
-  it("администратор видит консоль шлюза моделей и консоли провайдеров в новой вкладке", async () => {
+  it("модели: только консоли провайдеров, шлюз моделей через Платформу не открывается", async () => {
     const side = await openPanel("models");
-    const consoleLink = await within(side).findByRole("link", {
-      name: "Открыть консоль «шлюз моделей» в новой вкладке",
-    });
-    expect(consoleLink).toHaveAttribute("href", "/console/litellm/ui/");
-    expect(consoleLink).toHaveAttribute("target", "_blank");
-    const provider = within(side).getByRole("link", {
+    const provider = await within(side).findByRole("link", {
       name: "Консоль Anthropic — откроется в новой вкладке",
     });
     expect(provider).toHaveAttribute("href", "https://console.anthropic.com/");
     expect(provider).toHaveAttribute("rel", "noopener noreferrer");
+    expect(within(side).queryByRole("link", { name: /Открыть консоль/ })).toBeNull();
   });
 
   it("администратор видит панель базы в карточке ERP", async () => {
     const side = await openPanel("erp");
-    expect(
-      await within(side).findByRole("link", {
-        name: "Открыть консоль «панель базы» в новой вкладке",
-      }),
-    ).toHaveAttribute("href", "/console/erp/admin/");
+    const consoleLink = await within(side).findByRole("link", {
+      name: "Открыть консоль «панель базы» в новой вкладке",
+    });
+    expect(consoleLink).toHaveAttribute("href", "/console/erp/admin/");
+    expect(consoleLink).toHaveAttribute("target", "_blank");
   });
 
-  it("директор — внешние кабинеты есть, служебных консолей нет", async () => {
-    const side = await openPanel("models", DIRECTOR);
-    expect(
-      await within(side).findByRole("link", {
-        name: "Консоль Anthropic — откроется в новой вкладке",
-      }),
-    ).toBeVisible();
+  it("директор — служебной консоли нет", async () => {
+    const side = await openPanel("erp", DIRECTOR);
+    expect(await within(side).findByText("Сопряжена")).toBeVisible();
     expect(within(side).queryByRole("link", { name: /Открыть консоль/ })).toBeNull();
     screen.getByRole("heading", { level: 1, name: "Подключения" });
   });

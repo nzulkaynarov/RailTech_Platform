@@ -904,9 +904,6 @@
     "open": "Open console: {{name}}",
     "openAria": "Open the “{{name}}” console in a new tab",
     "ownLogin": "Sign in with the service's own key or password.",
-    "litellm": {
-      "name": "model gateway"
-    },
     "erp": {
       "name": "database panel"
     }

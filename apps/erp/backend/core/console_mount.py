@@ -7,14 +7,26 @@
 без префикса (API, портал, домен ERP) идёт как раньше. Под префиксом открыты только `admin/` и
 `static/` — остальное 404, даже если маршрут Caddy расширят по ошибке.
 
+Cookie консоли (сессия и CSRF Django admin) живут на общем домене с Платформой, поэтому каждый `Set-Cookie` ответа под
+префиксом получает `Path=<префикс>` вместо `Path=/`: SPA Платформы их не видит и не шлёт, а удаление при выходе
+(тот же `Set-Cookie`) бьёт в тот же путь. Здесь, а не настройкой `SESSION_COOKIE_PATH`: настройка общая для API и
+портала ERP без префикса, а слой ASGI знает префикс запроса и ловит любую cookie (сессия, CSRF, тема Unfold).
+
 Префикс задаёт окружение `ERP_CONSOLE_PREFIX` (на проде `/console/erp`); пусто — обёртка выключена.
 """
 
 import os
+import re
 
 from django.http import HttpResponseNotFound
 
 ALLOWED_UNDER_PREFIX = ("/admin", "/static/")
+_ROOT_PATH_ATTR = re.compile(rb"(;\s*path=)/(?=\s*;|\s*$)", re.IGNORECASE)
+
+
+def scope_cookie_path(value: bytes, prefix: str) -> bytes:
+    """`Set-Cookie: …; Path=/` -> `Path=<префикс>`; другой путь не трогается."""
+    return _ROOT_PATH_ATTR.sub(lambda m: m.group(1) + prefix.encode(), value)
 
 
 def console_prefix() -> str:
@@ -40,7 +52,21 @@ class ConsolePrefixMount:
                     await _not_found(send)
                     return
                 scope = {**scope, "root_path": self.prefix}
+                await self.app(scope, receive, self._scoped_cookies(send))
+                return
         await self.app(scope, receive, send)
+
+    def _scoped_cookies(self, send):
+        async def wrapped(message):
+            if message["type"] == "http.response.start":
+                headers = [
+                    (name, scope_cookie_path(value, self.prefix) if name.lower() == b"set-cookie" else value)
+                    for name, value in message.get("headers", [])
+                ]
+                message = {**message, "headers": headers}
+            await send(message)
+
+        return wrapped
 
 
 async def _not_found(send):

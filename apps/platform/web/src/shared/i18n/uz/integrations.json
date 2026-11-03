@@ -904,9 +904,6 @@
     "open": "Konsolni ochish: {{name}}",
     "openAria": "«{{name}}» konsolini yangi oynada ochish",
     "ownLogin": "Kirish — xizmatning o‘z kaliti yoki paroli bilan.",
-    "litellm": {
-      "name": "modellar shlyuzi"
-    },
     "erp": {
       "name": "baza paneli"
     }

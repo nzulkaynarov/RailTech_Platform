@@ -1,10 +1,11 @@
 """Служебные консоли сервисов через Платформу (OPS-CONSOLE, DECISIONS 2026-11-03).
 
-Консоли внутренних сервисов публикуются на домене Платформы по пути `/console/<ключ>/`, а не на
-отдельных поддоменах. Перед каждым запросом туда Caddy спрашивает `GET /api/v1/consoles/{key}/auth`
-(`forward_auth`): пропускает только сотрудника с живой сессией Платформы и правом `admin: full`.
-Своя защита консоли (мастер-ключ LiteLLM, вход Django admin) остаётся — Платформа учётных данных не
-передаёт. Первое открытие консоли за `AUDIT_WINDOW_SECONDS` сессии — запись в журнале аудита CRM.
+Консоль внутреннего сервиса (сейчас одна — Django admin ERP) публикуется на домене Платформы по
+пути `/console/<ключ>/`, а не на поддомене. Перед каждым запросом туда Caddy спрашивает
+`GET /api/v1/consoles/{key}/auth` (`forward_auth`): пропускает только сотрудника с живой сессией
+Платформы и правом `admin: full`. Своя защита консоли (вход Django admin) остаётся — Платформа
+учётных данных не передаёт. Первое открытие консоли за `AUDIT_WINDOW_SECONDS` сессии — запись
+в журнале аудита CRM.
 """
 
 from typing import Annotated, Final, Literal
@@ -20,10 +21,11 @@ from app.errors import PlatformError
 router = APIRouter(tags=["integrations"])
 log = structlog.get_logger()
 
-ConsoleKey = Literal["litellm", "erp"]
+ConsoleKey = Literal["erp"]
 # Адрес входа в консоль на домене Платформы; маршрут и проверка — infra/caddy/Caddyfile.prod.
+# LiteLLM сюда не входит: его кука `token` (ключ админа шлюза) видна скриптам на Path=/ общего
+# домена (DECISIONS 2026-11-03) — модели и расходы ведутся экранами Платформы.
 CONSOLE_URLS: Final[dict[str, str]] = {
-    "litellm": "/console/litellm/ui/",
     "erp": "/console/erp/admin/",
 }
 # Одно «открытие» — первый запрос к консоли за полчаса сессии: Caddy спрашивает на каждый файл.
