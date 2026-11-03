@@ -3,7 +3,11 @@ import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { resetEds } from "../../../mocks/fixtures/edsDocuments";
-import { intakeDecisions, writeDocflowSettings } from "../../../mocks/letterIntake";
+import {
+  DEMO_SUGGESTION,
+  intakeDecisions,
+  writeDocflowSettings,
+} from "../../../mocks/letterIntake";
 import type { LetterRegisterIn } from "../../../shared/api/generated/model";
 import { selectedLabel } from "../../../test/fields";
 import { renderAt, signIn } from "../../../test/edsKit";
@@ -32,6 +36,36 @@ async function attach(name = "trebovanie.pdf", type = "application/pdf") {
 }
 
 describe("«Заполнить из файла» (EDS-REG)", () => {
+  it("EDS-DUP: письмо из файла уже зарегистрировано — блок «Похоже, это письмо уже зарегистрировано»", async () => {
+    // Помощник прочитал реквизиты ВХ-108/26 (ГНИ Демо-района, 04-12/3456 от 28.10.2026).
+    server.use(
+      http.post("*/eds/letter-intake", () =>
+        HttpResponse.json({
+          ...DEMO_SUGGESTION,
+          fields: {
+            ...DEMO_SUGGESTION.fields,
+            sender_ref_number: "04-12/3456",
+            sender_ref_date: "2026-10-28",
+          },
+          suggestion_id: "00000000-0000-4000-8000-0000000000dd",
+          source: "text",
+        }),
+      ),
+    );
+    await openForm();
+    await attach();
+    expect(screen.queryByText("Похоже, это письмо уже зарегистрировано")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
+
+    expect(
+      await screen.findByText("Похоже, это письмо уже зарегистрировано", {}, { timeout: 3000 }),
+    ).toBeVisible();
+    expect(screen.getByRole("link", { name: "ВХ-108/26" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Это другое письмо — зарегистрировать" }),
+    ).toBeVisible();
+  });
+
   it("предлагает поля, помечает их, правка снимает пометку; регистрация — решение «поправил»", async () => {
     let body = null as LetterRegisterIn | null;
     const searched: string[] = [];

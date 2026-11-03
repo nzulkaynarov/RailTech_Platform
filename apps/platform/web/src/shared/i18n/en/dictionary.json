@@ -18,7 +18,8 @@
       "rejected": "Rejected",
       "in_execution": "In execution",
       "executed": "Executed",
-      "noted": "Noted"
+      "noted": "Noted",
+      "duplicate": "Duplicate"
     },
     "quote": {
       "draft": "Draft",

@@ -18,7 +18,8 @@ NEW_LETTER: dict[str, Any] = {
     "subject": "Запрос на поставку стрелочных переводов",
     "summary": "Просим выставить коммерческое предложение на 12 комплектов.",
     "sender": {"name": "ООО «Пример Логистик»", "inn": "123456789"},
-    "sender_ref": {"number": "17/к", "date": "2026-10-20"},
+    # Без даты исходящего: тесты регистрируют это письмо много раз, проверка дубля (EDS-DUP) — test_letter_duplicates
+    "sender_ref": {"number": "17/к"},
     "received_at": "2026-10-25",
     "urgent": True,
     "links": {"erp_request_id": 77, "erp_deal_id": 905, "deal_number": "ЗВ-2026-104", "crm_client_id": 42},

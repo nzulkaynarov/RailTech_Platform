@@ -9,6 +9,7 @@
 import re
 from collections.abc import Awaitable, Callable
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -76,6 +77,7 @@ def eds_error(response: httpx.Response) -> PlatformError:
     for key in ("reason", "permission"):
         if isinstance(eds_details.get(key), str):
             details[key] = eds_details[key]
+    _duplicate_details(eds_details, details)
     if response.status_code == 422:
         raw_fields = eds_details.get("fields")
         details["fields"] = _field_names(raw_fields)
@@ -89,6 +91,23 @@ def eds_error(response: httpx.Response) -> PlatformError:
     return PlatformError(
         code, message, status_code=response.status_code, source="eds", details=details
     )
+
+
+def _duplicate_details(eds_details: dict[str, Any], details: dict[str, Any]) -> None:
+    """EDS-DUP: найденный ВХ (`duplicate_letter`) — со ссылкой на карточку в SPA;
+    `resolution_exists` — статус и сколько поручений в работе отменится."""
+    found = eds_details.get("duplicate")
+    if isinstance(found, dict) and isinstance(found.get("number"), str):
+        keep = ("id", "number", "subject", "received_at", "status", "registered_at", "match")
+        number = found["number"]
+        details["duplicate"] = {
+            **{k: found[k] for k in keep if k in found},
+            "path": f"/eds/inbox/{quote(number, safe='')}",
+        }
+    if isinstance(eds_details.get("status"), str):
+        details["status"] = eds_details["status"]
+    if isinstance(eds_details.get("instructions"), int):
+        details["instructions"] = eds_details["instructions"]
 
 
 class EdsLetters:
@@ -155,6 +174,20 @@ class EdsLetters:
     async def duplicates(self, params: dict[str, Any]) -> dict[str, Any]:
         found: dict[str, Any] = await self._json("GET", "/api/v1/letter-duplicates", params=params)
         return found
+
+    async def check_duplicates(self, body: dict[str, Any]) -> dict[str, Any]:
+        """EDS-DUP: точное совпадение и похожие до регистрации (`/letters/duplicates-check`)."""
+        found: dict[str, Any] = await self._json(
+            "POST", "/api/v1/letters/duplicates-check", json=body
+        )
+        return found
+
+    async def mark_duplicate(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """«Это дубль ВХ-…» (EDS-DUP)."""
+        letter: dict[str, Any] = await self._json(
+            "POST", f"/api/v1/letters/{letter_id}/duplicate", json=body
+        )
+        return letter
 
     async def resolve(self, letter_id: str, body: dict[str, Any]) -> dict[str, Any]:
         letter: dict[str, Any] = await self._json(

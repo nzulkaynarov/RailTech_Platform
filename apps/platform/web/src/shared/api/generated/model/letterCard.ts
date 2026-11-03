@@ -4,6 +4,7 @@
  */
 import type { LetterAcquaintance } from "./letterAcquaintance";
 import type { LetterClient } from "./letterClient";
+import type { LetterDuplicateOf } from "./letterDuplicateOf";
 import type { LetterFile } from "./letterFile";
 import type { LetterInstruction } from "./letterInstruction";
 import type { LetterJournalEntry } from "./letterJournalEntry";
@@ -90,4 +91,6 @@ export interface LetterCard {
    * @nullable
    */
   executed_at?: string | null;
+  /** Оригинал, если письмо закрыто как дубль (EDS-DUP) */
+  duplicate_of?: LetterDuplicateOf | null;
 }

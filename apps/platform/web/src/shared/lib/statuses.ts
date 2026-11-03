@@ -93,6 +93,8 @@ export const STATUS_TONE = {
     in_execution: GO,
     executed: OK,
     noted: OK,
+    // EDS-DUP: «Дубль» — закрыто, работа по оригиналу
+    duplicate: OFF,
   },
   /**
    * КП — одна карта для EDS («КП на одобрение», реестр, проект) и ERP (состояние КП в расчёте): «у директора» и «черновик ·
@@ -252,7 +254,7 @@ export const STATUS_TONE = {
   /** Значок вкладки уведомления: решения, клиенты (внешний канал), система */
   notification: { all: GO, decisions: W, clients: EXT, system: NO },
   /** Поручение по входящему (P8b): в работе, исполнено; просрочка — отдельный тег `due.overdue` */
-  instruction: { in_work: GO, executed: OK },
+  instruction: { in_work: GO, executed: OK, cancelled: OFF },
   /** Пункт чек-листа одобрения КП */
   check: { ok: OK, fail: NO, pending: W },
 } as const satisfies Record<string, Record<string, StatusTone>>;
@@ -276,6 +278,7 @@ export const DICTIONARY_STATUS = {
     "in_execution",
     "executed",
     "noted",
+    "duplicate",
   ],
   quote: ["draft", "revision", "approved", "sent", "accepted", "declined", "expired"],
   contract: ["draft", "agreed", "issued", "signed", "rejected"],

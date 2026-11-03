@@ -2,9 +2,12 @@ import { HttpResponse, http } from "msw";
 
 import { activeLetterKinds, isActiveValue } from "./dictionaries";
 import { markMailRegistered } from "./inboundMail";
+import { findDuplicates, letterNumber } from "./edsLetterDuplicates";
 import type {
   LetterCard,
+  LetterDuplicateCheckIn,
   LetterDuplicateList,
+  LetterMarkDuplicateIn,
   LetterPage,
   LetterRegisterIn,
   LetterRejectIn,
@@ -271,10 +274,90 @@ export const edsLettersHandlers = [
     return HttpResponse.json(found);
   }),
 
+  // EDS-DUP: фоновая проверка формы — то же письмо и похожие.
+  http.post("*/eds/letters/duplicates-check", async ({ request }) => {
+    const held = guard("read");
+    if (held.error) return held.error;
+    const probe = (await request.json()) as LetterDuplicateCheckIn;
+    const found: LetterDuplicateList = { items: findDuplicates(readLetters(), probe) };
+    return HttpResponse.json(found);
+  }),
+
+  // EDS-DUP: «Это дубль ВХ-…» — закрыть письмо со ссылкой на оригинал.
+  http.post("*/eds/letters/:id/duplicate", async ({ request, params }) => {
+    const held = guardRegister();
+    if (held.error) return held.error;
+    const letter = findLetter(String(params["id"]));
+    if (!letter) return failure(404, "NOT_FOUND", "Письмо не найдено.", "eds");
+    const body = (await request.json()) as LetterMarkDuplicateIn;
+    if (letter.status === "duplicate") {
+      return failure(409, "CONFLICT", "Письмо уже отмечено как дубль.", "eds", {
+        backend_status: 409,
+        reason: "invalid_state",
+      });
+    }
+    const original = findLetter(letterNumber(body.original_number));
+    if (!original) return invalid("original_number", "not_found", "Входящего с таким номером нет.");
+    if (original.id === letter.id) {
+      return invalid("original_number", "same_letter", "Это то же письмо.");
+    }
+    if (readLetters().some((l) => l.duplicate_of?.number === letter.number)) {
+      return invalid(
+        "original_number",
+        "letter_has_duplicates",
+        "У этого письма уже есть дубли — отметьте дублем другое письмо пары.",
+      );
+    }
+    const work = (letter.instructions ?? []).filter((i) => i.status === "in_work").length;
+    const resolved = !["awaiting_resolution", "returned"].includes(letter.status);
+    if (resolved && !body.confirm) {
+      return failure(409, "CONFLICT", "Подтвердите отмену поручений.", "eds", {
+        backend_status: 409,
+        reason: "resolution_exists",
+        status: letter.status,
+        instructions: work,
+      });
+    }
+    const comment = body.comment?.trim();
+    const next = update(letter.id, (current) => ({
+      ...current,
+      status: "duplicate",
+      on_control: false,
+      duplicate_of: {
+        number: original.number,
+        path: `/eds/inbox/${encodeURIComponent(original.number)}`,
+      },
+      instructions: (current.instructions ?? []).map((i) =>
+        i.status === "in_work" ? { ...i, status: "cancelled" as const } : i,
+      ),
+      acquaintances: (current.acquaintances ?? []).filter((a) => a.acknowledged_at),
+      journal: [
+        ...current.journal,
+        journalEntry(
+          "letter.marked_duplicate",
+          `Дубль ${original.number}${comment ? `: ${comment}` : ""}`,
+        ),
+      ],
+    }));
+    return HttpResponse.json(next ? present(next, held.margin) : letter);
+  }),
+
   http.post("*/eds/letters", async ({ request }) => {
     const held = guardRegister();
     if (held.error) return held.error;
     const body = (await request.json()) as LetterRegisterIn;
+    // EDS-DUP: то же письмо — 409 с найденным ВХ; «Это другое письмо» — `force` с причиной.
+    const [exact] = findDuplicates(readLetters(), body).filter((d) => d.match === "exact");
+    if (body.force && !body.force_reason?.trim()) {
+      return invalid("force_reason", "required", "Укажите, почему это другое письмо.");
+    }
+    if (exact && !body.force) {
+      return failure(409, "CONFLICT", `Это письмо уже зарегистрировано: ${exact.number}.`, "eds", {
+        backend_status: 409,
+        reason: "duplicate_letter",
+        duplicate: exact,
+      });
+    }
     const kind = activeLetterKinds().items.find((k) => k.code === body.kind);
     if (!kind) return invalid("kind", "unknown_kind", "Такого вида документа нет в справочнике.");
     if (!isActiveValue("receipt-methods", body.receipt_method)) {
@@ -339,7 +422,19 @@ export const edsLettersHandlers = [
       resolution: null,
       return_comment: null,
       reject_reason: null,
-      journal: [{ at: now, action: "letter.registered", by: registrar, comment: null }],
+      journal: [
+        { at: now, action: "letter.registered", by: registrar, comment: null },
+        ...(exact && body.force
+          ? [
+              {
+                at: now,
+                action: "letter.duplicate_forced",
+                by: registrar,
+                comment: `Совпадает с ${exact.number}: ${body.force_reason?.trim() ?? ""}`,
+              },
+            ]
+          : []),
+      ],
       sources: { crm: "ok", erp: "ok" },
       kind: kind.code,
       receipt_method: body.receipt_method,

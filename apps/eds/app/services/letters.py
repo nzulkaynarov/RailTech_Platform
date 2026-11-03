@@ -31,7 +31,7 @@ from app.schemas.letters import (
     LetterTrack,
     ResolutionIn,
 )
-from app.services import dictionaries, events, files, instructions, journal, numbering
+from app.services import dictionaries, events, files, instructions, journal, letter_dedup, numbering
 from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
@@ -277,16 +277,49 @@ async def register(session: AsyncSession, bus: AsyncBus, *, actor_id: int, data:
         values["resolution_draft"] = instructions.stamp_draft(
             await instructions.validate_draft(session, data.resolution_draft), actor_id
         )
+    same = letter_dedup.Probe(
+        name=data.sender.name,
+        inn=data.sender.inn,
+        client=links.crm_client_id,
+        ref=ref.number if ref else None,
+        ref_date=ref.date if ref else None,
+    )
+    forced = await _check_duplicate(session, same, data)
+    values["dedup_key"] = None if forced is not None else same.key
     try:
         source = data.source.model_dump() if data.source is not None else None
         if data.source is not None:
             values["source_mail_id"] = data.source.crm_inbound_mail_id
-        return await _insert(session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids, source=source)
+        async with session.begin_nested():
+            letter = await _insert(
+                session, bus, actor_id=actor_id, values=values, file_ids=data.file_ids, source=source
+            )
     except IntegrityError as exc:
         if "uq_letters_source_mail_id" in str(exc.orig):  # гонка двух регистраций одного письма ящика
             raise SourceMailTakenError from exc
+        if "uq_letters_dedup_key" in str(exc.orig):  # EDS-DUP: то же письмо только что зарегистрировал другой
+            winner = await letter_dedup.key_owner(session, same.key) or await letter_dedup.find_exact(session, same)
+            if winner is not None:
+                raise letter_dedup.duplicate_error(winner) from exc
+            raise conflict("letter_source_busy", "Письмо уже регистрируется: повторите запрос.") from exc
         # гонка с обработчиком `request.created`: заявку уже заняло другое письмо
         raise conflict("letter_exists_for_request", "Письмо по этой заявке уже зарегистрировано.") from exc
+    if forced is not None:
+        reason = (data.force_reason or "").strip()
+        comment = f"Совпадает с {forced.number}: {reason}"
+        await journal.record(session, "letter.duplicate_forced", by=actor_id, letter_id=letter.id, comment=comment)
+    return letter
+
+
+async def _check_duplicate(session: AsyncSession, probe: letter_dedup.Probe, data: LetterCreate) -> Letter | None:
+    """EDS-DUP: то же письмо уже есть — 409 `duplicate_letter`; с `force` и причиной — найденный ВХ (в журнал)."""
+    if data.force and not (data.force_reason or "").strip():
+        raise invalid_fields("Укажите, почему это другое письмо.", force_reason="required")
+    # По полям; иначе — тот, кто держит ключ в индексе (его поля могли отличаться: ключ остался от прежних данных).
+    found = await letter_dedup.find_exact(session, probe) or await letter_dedup.key_owner(session, probe.key)
+    if found is not None and not data.force:
+        raise letter_dedup.duplicate_error(found)
+    return found
 
 
 class SourceMailTakenError(Exception):
