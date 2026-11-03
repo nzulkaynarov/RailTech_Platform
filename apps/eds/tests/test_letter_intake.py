@@ -264,8 +264,8 @@ async def test_scans_follow_the_policy_and_the_admin_switch(
 
     assert await deliver_policy(client, container, "strict") == "processed"
     strict = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
-    assert_error(strict, 409, "CONFLICT", reason="scan_recognition_disabled")
-    assert "строгой" in strict.json()["error"]["message"] or "строгая" in strict.json()["error"]["message"].lower()
+    body = assert_error(strict, 409, "CONFLICT", reason="scan_recognition_disabled")
+    assert "строгой политике" in body["message"]
     assert len(model.bodies) == 1  # при «Строгой» в модель ничего не ушло
     shown = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
     assert shown.json() == {"recognize_scans": True, "pii_policy": "strict", "ai_available": True}
