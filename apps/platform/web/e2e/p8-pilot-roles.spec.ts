@@ -99,10 +99,14 @@ test.describe("P8: роли пилота и регистрация входящ�
       await expect(page.getByRole("checkbox", { name: "Срочно" })).toBeChecked();
       await page.getByLabel("Корреспондент", { exact: true }).fill("ГНИ Демо-района");
       await page.getByLabel("Исходящий номер отправителя").fill("04-12/3456");
-      // тот же корреспондент и исходящий номер — предупреждение со ссылкой на ВХ-108/26
-      await expect(page.getByText(/Возможно, это письмо уже зарегистрировано/)).toBeVisible();
-      await expect(page.getByRole("link", { name: "ВХ-108/26" })).toBeVisible();
+      // EDS-DUP: тот же корреспондент и исх. № (дата у отправителя не указана) — «Похожие письма» со ссылкой на ВХ-108/26;
+      // подсказка, а не запрет. Другой номер — блок уходит, регистрация без «Это другое письмо».
+      const similar = page.getByRole("status").filter({ hasText: "Похожие письма" });
+      await expect(similar).toBeVisible();
+      await expect(similar.getByRole("link", { name: "ВХ-108/26" })).toBeVisible();
       await page.getByLabel("Исходящий номер отправителя").fill("04-12/4100");
+      await expect(similar).toHaveCount(0);
+      await expect(page.getByText("Похоже, это письмо уже зарегистрировано")).toHaveCount(0);
       await page.getByLabel("Подписал").fill("Начальник инспекции Демо Налогов");
       await page.getByLabel("Тема").fill("Требование о представлении пояснений по НДС за октябрь");
       await pickFiles(page.getByLabel("Файл документа"), {
