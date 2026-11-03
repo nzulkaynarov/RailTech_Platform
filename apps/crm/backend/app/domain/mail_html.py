@@ -26,7 +26,12 @@ from urllib.parse import unquote
 
 import nh3
 
-MAX_HTML_CHARS: Final = 800_000  # больше — письмо показывается текстом
+MAX_HTML_CHARS: Final = (
+    800_000  # больше — письмо показывается текстом; текст из HTML берётся с этого же предела
+)
+MAX_DEPTH: Final = (
+    1000  # глубже вложенность — письмо показывается текстом (очистка nh3 квадратична по глубине)
+)
 MAX_SAFE_CHARS: Final = 2_200_000
 MAX_INLINE_ONE: Final = 400 * 1024
 MAX_INLINE_TOTAL: Final = 1024 * 1024
@@ -232,9 +237,42 @@ def _inline_uri(src: str, inline: Mapping[str, InlineImage], budget: list[int]) 
     return src.strip()
 
 
+_OPEN_CLOSE: Final = re.compile(r"<(/?)([a-zA-Z][a-zA-Z0-9]*)[^<>]*?(/?)>")
+#: Теги без парного закрытия или с необязательным — глубину не растят.
+_FLAT: Final = frozenset(
+    {"br", "hr", "img", "input", "meta", "link", "area", "base", "col", "wbr", "source", "param"}
+    | {"p", "li", "td", "th", "tr", "dt", "dd", "thead", "tbody", "tfoot", "colgroup", "caption"}
+    | {"option", "html", "head", "body"}
+)
+
+
+def too_deep(raw: str) -> bool:
+    """Вложенность тегов глубже `MAX_DEPTH`: один проход со стеком, непарные закрывающие теги
+    глубину не снижают (иначе повторённое `<div></i>` обошло бы проверку); время — линейное."""
+    stack: list[str] = []
+    open_count: dict[str, int] = {}
+    for found in _OPEN_CLOSE.finditer(raw):
+        closing, name, selfclosing = found.groups()
+        name = name.lower()
+        if name in _FLAT or selfclosing:
+            continue
+        if not closing:
+            stack.append(name)
+            open_count[name] = open_count.get(name, 0) + 1
+            if len(stack) > MAX_DEPTH:
+                return True
+        elif open_count.get(name, 0) > 0:
+            while True:
+                top = stack.pop()
+                open_count[top] -= 1
+                if top == name:
+                    break
+    return False
+
+
 def sanitize_html(raw: str, inline: Mapping[str, InlineImage] | None = None) -> SafeHtml | None:
-    """HTML письма → безопасная разметка; пусто, слишком велико или без видимого — None."""
-    if not raw.strip() or len(raw) > MAX_HTML_CHARS:
+    """HTML письма → безопасная разметка; пусто, слишком велико или глубоко, без видимого — None."""
+    if not raw.strip() or len(raw) > MAX_HTML_CHARS or too_deep(raw):
         return None
     cleaned = nh3.clean(
         raw,
@@ -276,15 +314,27 @@ _HIDDEN_STYLE: Final = re.compile(
 )
 
 
+_INVISIBLE_SPACE: Final = re.compile(r"[\s\u200b-\u200f\u2060-\u2064\u00ad\u034f\ufeff]*")
+
+
+def _blank(text: str) -> bool:
+    return _INVISIBLE_SPACE.fullmatch(text) is not None
+
+
 class _TextExtractor(HTMLParser):
     """HTML → (основной текст, цитата): скрытое и служебное пропускается, блоки — переводами строк,
-    ячейки таблицы — пробелом; `blockquote`, `gmail_quote`, `yahoo_quoted` и т.п. — в цитату."""
+    ячейки таблицы — пробелом; `blockquote`, `gmail_quote`, `yahoo_quoted` и т.п. — цитата.
+
+    Цитатой (хвостом) считается только то, что идёт после всего основного текста: ответ под
+    цитатой и цитата между абзацами остаются в основном тексте; тело, целиком состоящее из цитаты,
+    — тоже основной текст. Время линейное: закрывающий тег без пары пропускается по счётчику, а не
+    поиском по стеку."""
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
-        self._main: list[str] = []
-        self._quote: list[str] = []
+        self._segments: list[tuple[bool, list[str]]] = []
         self._stack: list[tuple[str, str]] = []
+        self._open: dict[str, int] = {}
         self._skip = 0
         self._quoted = 0
 
@@ -303,8 +353,12 @@ class _TextExtractor(HTMLParser):
         return ""
 
     def _emit(self, text: str) -> None:
-        if not self._skip:
-            (self._quote if self._quoted else self._main).append(text)
+        if self._skip:
+            return
+        quoted = self._quoted > 0
+        if not self._segments or self._segments[-1][0] != quoted:
+            self._segments.append((quoted, []))
+        self._segments[-1][1].append(text)
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag in _VOID:
@@ -313,6 +367,7 @@ class _TextExtractor(HTMLParser):
             return
         mode = self._mode(tag, attrs)
         self._stack.append((tag, mode))
+        self._open[tag] = self._open.get(tag, 0) + 1
         self._skip += mode == "skip"
         self._quoted += mode == "quote"
         if tag in _BREAK_TAGS:
@@ -323,17 +378,15 @@ class _TextExtractor(HTMLParser):
         self.handle_endtag(tag)
 
     def handle_endtag(self, tag: str) -> None:
-        if tag in _VOID:
+        if tag in _VOID or self._open.get(tag, 0) == 0:
             return
-        for index in range(len(self._stack) - 1, -1, -1):
-            if self._stack[index][0] == tag:
-                for _, mode in self._stack[index:]:
-                    self._skip -= mode == "skip"
-                    self._quoted -= mode == "quote"
-                del self._stack[index:]
+        while True:  # каждый элемент снимается со стека один раз — в сумме линейно
+            name, mode = self._stack.pop()
+            self._open[name] -= 1
+            self._skip -= mode == "skip"
+            self._quoted -= mode == "quote"
+            if name == tag:
                 break
-        else:
-            return
         if tag in _BREAK_TAGS:
             self._emit("\n")
         elif tag in _CELL_TAGS:
@@ -343,12 +396,21 @@ class _TextExtractor(HTMLParser):
         self._emit(data)
 
     def parts(self) -> tuple[str, str]:
-        return "".join(self._main), "".join(self._quote)
+        texts = [(quoted, "".join(chunks)) for quoted, chunks in self._segments]
+        last = max(
+            (i for i, (quoted, t) in enumerate(texts) if not quoted and not _blank(t)), default=-1
+        )
+        if last == -1:  # всё тело — цитата: это и есть письмо
+            return "".join(t for _, t in texts), ""
+        head = "".join(t for _, t in texts[: last + 1])
+        tail = "".join(t for quoted, t in texts[last + 1 :] if quoted)
+        return head, tail
 
 
 def html_text_parts(raw: str) -> tuple[str, str]:
-    """HTML → (основной текст, цитата) без нормализации; нормализует вызывающий (`mail_text`)."""
+    """HTML → (основной текст, цитата в конце) без нормализации (её делает `mail_text`). Берутся
+    первые `MAX_HTML_CHARS` знаков: письмо до 60 МБ не должно держать разбор."""
     parser = _TextExtractor()
-    parser.feed(raw)
+    parser.feed(raw[:MAX_HTML_CHARS])
     parser.close()
     return parser.parts()

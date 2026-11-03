@@ -2,10 +2,18 @@
 
 import base64
 import re
+import time
+from collections.abc import Callable
 
 import pytest
 
-from app.domain.mail_html import InlineImage, html_text_parts, sanitize_html
+from app.domain.mail_html import (
+    MAX_DEPTH,
+    InlineImage,
+    html_text_parts,
+    sanitize_html,
+    too_deep,
+)
 
 PNG = base64.b64decode(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=="
@@ -314,9 +322,91 @@ def test_text_parts_quote_goes_to_tail(html: str) -> None:
 
 def test_text_parts_nested_quotes_and_unclosed_tags() -> None:
     main, quoted = html_text_parts(
-        "<p>Ответ<blockquote>1<blockquote>2</blockquote>ещё 1</blockquote><p>после"
+        "<p>Ответ<blockquote>1<blockquote>2</blockquote>ещё 1</blockquote>"
     )
-    assert "Ответ" in main
-    assert "после" in main
+    assert main.strip() == "Ответ"
     assert "ещё 1" in quoted
     assert "2" in quoted
+
+
+def test_text_parts_reply_under_quote_keeps_everything_in_main() -> None:
+    main, quoted = html_text_parts(
+        '<p>Здравствуйте</p><blockquote style="margin:0">'
+        "Позиции: 20 вагонов, ИНН 123456789</blockquote>"
+        "<p>Спасибо</p>"
+    )
+    assert "ИНН 123456789" in main
+    assert "Спасибо" in main
+    assert quoted == ""
+
+
+def test_text_parts_body_that_is_all_quote_is_the_text() -> None:
+    main, quoted = html_text_parts("<blockquote>Прошу 20 вагонов, ИНН 123456789</blockquote>")
+    assert main.strip() == "Прошу 20 вагонов, ИНН 123456789"
+    assert quoted == ""
+
+
+def test_text_parts_blank_after_quote_does_not_hide_it() -> None:
+    main, quoted = html_text_parts(
+        "<p>Ответ</p><blockquote>старое</blockquote><p>&nbsp;</p><div>\u200c</div>"
+    )
+    assert main.strip() == "Ответ"
+    assert quoted.strip() == "старое"
+
+
+# --- Враждебные письма: время ограничено (DoS одним письмом) -----------------------------------
+BUDGET = 3.0  # секунд на самый тяжёлый случай; прежнее поведение — десятки секунд
+
+
+def _timed(call: Callable[[], object]) -> float:
+    started = time.perf_counter()
+    call()
+    return time.perf_counter() - started
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        pytest.param(
+            "<div>" * 60_000 + "x" + "</i>" * 60_000, id="text-extractor-unpaired-closers"
+        ),
+        pytest.param("<div></i>" * 60_000 + "x", id="depth-hidden-behind-closers"),
+        pytest.param("<div>" * 150_000 + "x", id="nh3-deep-div"),
+        pytest.param("<span><b>" * 80_000 + "x", id="nh3-deep-inline"),
+        pytest.param("<b><i>" * 60_000 + "x" + "</b>" * 60_000, id="misnested-formatting"),
+        pytest.param("<table><tr><td>x</td></tr>" * 30_000, id="flat-table"),
+    ],
+)
+def test_hostile_html_is_bounded(html: str) -> None:
+    assert _timed(lambda: sanitize_html(html)) < BUDGET
+    assert _timed(lambda: html_text_parts(html)) < BUDGET
+
+
+def test_deep_html_is_shown_as_text() -> None:
+    assert sanitize_html("<div>" * (MAX_DEPTH + 1) + "x") is None
+    assert sanitize_html("<div></i>" * (MAX_DEPTH + 1) + "x") is None, (
+        "закрывающие без пары не прячут глубину"
+    )
+    assert sanitize_html("<div>" * (MAX_DEPTH - 1) + "x") is not None
+
+
+def test_text_of_oversized_html_is_cut_by_input_size() -> None:
+    html = "<p>начало</p>" + "<p>строка</p>" * 400_000
+    started = time.perf_counter()
+    main, _ = html_text_parts(html)
+    assert time.perf_counter() - started < BUDGET
+    assert main.startswith("\nначало")
+    assert len(main) < 1_000_000
+
+
+@pytest.mark.parametrize(
+    "html",
+    [
+        "<div>x</div>" * 3,
+        "<p>a<p>b<li>c<td>d",
+        "<ul><li>a<li>b</ul>" * 100,
+        "<table><tr><td>a</table>",
+    ],
+)
+def test_too_deep_ignores_optional_end_tags(html: str) -> None:
+    assert too_deep(html) is False

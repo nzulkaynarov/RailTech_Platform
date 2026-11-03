@@ -2,6 +2,7 @@
 
 import base64
 import re
+import time
 from email.message import EmailMessage
 
 from app.domain import inbound_mail as im
@@ -119,3 +120,82 @@ def test_plain_only_mail_has_no_html() -> None:
     parsed = im.parse_message(msg.as_bytes())
     assert parsed.html is None
     assert parsed.text_tail == ""
+
+
+def test_all_blockquote_body_is_the_text_not_empty() -> None:
+    msg = _base()
+    msg.set_content("<blockquote>Прошу 20 вагонов, ИНН 123456789</blockquote>", subtype="html")
+    parsed = im.parse_message(msg.as_bytes())
+    assert parsed.text == "Прошу 20 вагонов, ИНН 123456789"
+    assert parsed.text_tail == ""
+    assert im.find_inns(parsed.text) == ["123456789"]
+
+
+def test_quote_between_paragraphs_stays_in_text() -> None:
+    msg = _base()
+    msg.set_content(
+        "<p>Здравствуйте</p><blockquote>Позиции: 20 вагонов, ИНН 123456789</blockquote>"
+        "<p>Спасибо</p>",
+        subtype="html",
+    )
+    parsed = im.parse_message(msg.as_bytes())
+    assert "ИНН 123456789" in parsed.text
+    assert parsed.text.startswith("Здравствуйте")
+    assert parsed.text.endswith("Спасибо")
+    assert parsed.text_tail == ""
+
+
+def test_ordinary_phrase_with_colon_is_not_cut_as_quote() -> None:
+    msg = _base()
+    msg.set_content(
+        "Добрый день!\nКак нам написал ваш менеджер:\nнужно 20 вагонов до 15.11.\nИНН 123456789"
+    )
+    parsed = im.parse_message(msg.as_bytes())
+    assert "нужно 20 вагонов" in parsed.text
+    assert im.find_inns(parsed.text) == ["123456789"]
+    assert parsed.text_tail == ""
+
+
+def test_html_reply_attribution_goes_with_the_quote_block() -> None:
+    msg = _base("Re: КП")
+    msg.set_content(
+        "<div>Спасибо, берём.</div><div>On Mon, 2 Nov 2026 at 10:00, M &lt;m@company.test&gt; "
+        "wrote:</div><blockquote>Отправляем КП</blockquote>",
+        subtype="html",
+    )
+    parsed = im.parse_message(msg.as_bytes())
+    assert parsed.text == "Спасибо, берём."
+    assert parsed.text_tail.startswith("On Mon, 2 Nov 2026")
+    assert "Отправляем КП" in parsed.text_tail
+
+
+def test_cid_images_of_an_attached_message_are_not_taken() -> None:
+    inner = EmailMessage()
+    inner["Subject"] = "Пересланное"
+    inner.set_content("x")
+    inner.add_alternative('<img src="cid:logo@shop.test">', subtype="html")
+    html_part = inner.get_body(preferencelist=("html",))
+    assert html_part is not None
+    html_part.add_related(PNG, maintype="image", subtype="png", cid="<logo@shop.test>")
+    outer = _base()
+    outer.set_content("x")
+    outer.add_alternative('<p>Письмо</p><img src="cid:logo@shop.test" alt="Лого">', subtype="html")
+    outer.add_attachment(inner)
+    parsed = im.parse_message(outer.as_bytes())
+    assert [f.content_id for f in parsed.files] == []
+    assert parsed.html is not None
+    assert parsed.html.missing_images == 1
+    assert "data:image/png" not in parsed.html.html
+
+
+def test_hostile_deep_html_mail_is_parsed_in_bounded_time() -> None:
+    """554 КБ вложенных `<div>` с непарными `</i>` разбирались почти минуту (квадрат по глубине)."""
+    msg = _base()
+    msg.set_content("<div>" * 60_000 + "x" + "</i>" * 60_000, subtype="html")
+    raw = msg.as_bytes()
+    assert len(raw) > 500_000
+    started = time.perf_counter()
+    parsed = im.parse_message(raw)
+    assert time.perf_counter() - started < 3.0
+    assert parsed.html is None, "слишком глубокое письмо показывается текстом"
+    assert parsed.text == "x"

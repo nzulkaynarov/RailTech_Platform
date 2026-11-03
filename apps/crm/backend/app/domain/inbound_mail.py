@@ -15,6 +15,7 @@ import hashlib
 import json
 import mimetypes
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 from email import message_from_bytes, policy
@@ -151,14 +152,15 @@ def _content(part: MIMEPart | None) -> str:
 
 def _text_parts(plain: str | None, html: str | None) -> tuple[str, str]:
     """(текст без цитаты и подписи, свёрнутый хвост). Есть текстовая часть — она; иначе текст из
-    HTML (цитата — `blockquote`/`gmail_quote`, потом те же признаки по строкам)."""
+    HTML (цитата — блок `blockquote`/`gmail_quote` в конце письма, потом те же признаки по
+    строкам). Тело, целиком состоящее из цитаты, — это и есть текст письма."""
     if plain is not None:
         return split_quote(normalize_text(plain))
     if html is None:
         return "", ""
     main_raw, quoted_raw = html_text_parts(html)
-    main, tail = split_quote(normalize_text(main_raw))
     quoted = normalize_text(quoted_raw)
+    main, tail = split_quote(normalize_text(main_raw), html_quote=bool(quoted))
     return main, "\n\n".join(part for part in (tail, quoted) if part)[:MAX_TEXT_CHARS]
 
 
@@ -173,20 +175,24 @@ def _bodies(message: EmailMessage, files: tuple[MailFile, ...]) -> tuple[str, st
     return text, tail, safe
 
 
+def _related_images(part: EmailMessage) -> Iterator[EmailMessage]:
+    """Встроенные картинки с Content-ID из вложенных `multipart/*`; внутрь приложенных писем
+    (`message/rfc822`) не заходим: чужие картинки не должны подменять картинки этого письма."""
+    for sub in part.iter_parts():
+        if not isinstance(sub, EmailMessage) or sub.get_content_type() == "message/rfc822":
+            continue
+        if sub.is_multipart():
+            yield from _related_images(sub)
+        elif sub.get_content_maintype() == "image" and _header(sub, "Content-ID"):
+            yield sub
+
+
 def _file_parts(message: EmailMessage) -> list[EmailMessage]:
-    """Вложения письма и встроенные картинки с Content-ID из вложенного `multipart/related`
-    (рассылка `alternative[plain, related[html, image]]`), которые `iter_attachments` не отдаёт."""
+    """Вложения письма и встроенные картинки из вложенного `multipart/related` (рассылка
+    `alternative[plain, related[html, image]]`), которые `iter_attachments` не отдаёт."""
     parts = [p for p in message.iter_attachments() if isinstance(p, EmailMessage)]
     seen = {id(p) for p in parts}
-    for part in message.walk():
-        if (
-            isinstance(part, EmailMessage)
-            and id(part) not in seen
-            and not part.is_multipart()
-            and part.get_content_maintype() == "image"
-            and _header(part, "Content-ID")
-        ):
-            parts.append(part)
+    parts.extend(p for p in _related_images(message) if id(p) not in seen)
     return parts
 
 

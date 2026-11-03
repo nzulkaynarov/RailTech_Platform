@@ -1015,3 +1015,32 @@ async def test_inline_images_are_not_copied_to_the_registered_letter(
     assert [f["name"] for f in copied.json()] == ["акт.pdf"]
     assert asked.called
     assert not logo.called, "логотип из тела письма в файлы входящего не попадает"
+
+
+def _old_crm_card() -> dict[str, Any]:
+    """Ответ CRM до P2-4: у сообщений и вложений нет полей показа письма."""
+    old = card()
+    for message in old["messages"]:
+        for field in ("text_tail", "html", "html_remote_images"):
+            message.pop(field)
+        for file in message["attachments"]:
+            file.pop("inline")
+    for file in old["attachments"]:
+        file.pop("inline")
+    return old
+
+
+async def test_card_from_old_crm_without_display_fields_still_works(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    be.router.get(f"{CRM}/17").mock(return_value=httpx.Response(200, json=_old_crm_card()))
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get("/api/v1/inbound-mail/17")
+
+    check(response, "/inbound-mail/{id}", "get")
+    assert response.status_code == 200
+    [message] = response.json()["messages"]
+    assert (message["text_tail"], message["html"], message["html_remote_images"]) == ("", None, 0)
+    assert message["attachments"][0]["inline"] is False
+    assert response.json()["attachments"][0]["inline"] is False

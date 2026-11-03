@@ -18,6 +18,7 @@
 ящиком в копии при включённом правиле сразу «в работе» у этого сотрудника («адресовано лично»).
 """
 
+import asyncio
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
@@ -172,7 +173,8 @@ class InboundMailIngest:
         """Письмо → строка очереди; уже есть (Message-ID) — None. `history_at` — время загрузки
         истории: письмо старше окна задач помечается «из истории». `mailbox_address` — адрес самого
         общего ящика (логин приёма) для правила «адресовано лично»."""
-        parsed = parse_message(item.raw)
+        # Разбор (очистка HTML, цитаты) — CPU: вне цикла событий, тяжёлое письмо не вешает воркер.
+        parsed = await asyncio.to_thread(parse_message, item.raw)
         async with self._sessions() as session, session.begin():
             if await repo.exists(session, parsed.message_id):
                 if not folder.spam and await repo.promote_from_spam(

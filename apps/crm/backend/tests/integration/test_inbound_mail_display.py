@@ -217,3 +217,40 @@ async def test_old_row_without_html_shows_as_before(
     (message,) = card["messages"]
     assert (message["html"], message["text_tail"]) == (None, "")
     assert message["text"] == "Старое письмо\n\n> цитата как была"
+
+
+async def test_parsing_runs_off_the_event_loop(stand: Stand) -> None:
+    """Очистка HTML и разбор цитат — CPU; тяжёлое письмо не должно останавливать цикл воркера."""
+    import threading
+
+    from app.domain.inbound_mail import ParsedMail, parse_message
+    from app.services import inbound_mail_ingest as ingest
+
+    seen: list[str] = []
+
+    def spy(raw: bytes) -> ParsedMail:
+        seen.append(threading.current_thread().name)
+        return parse_message(raw)
+
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(ingest, "parse_message", spy)
+        await _store(stand, 1, _newsletter())
+    assert seen
+    assert threading.current_thread().name not in seen
+
+
+async def test_hostile_deep_mail_is_stored_as_text_quickly(stand: Stand) -> None:
+    import time
+
+    msg = EmailMessage()
+    msg["From"] = "Враг <evil@example.test>"
+    msg["To"] = "info@company.test"
+    msg["Subject"] = "Глубокое письмо"
+    msg["Message-ID"] = "<deep-1@example.test>"
+    msg.set_content("<div>" * 60_000 + "Просим КП" + "</i>" * 60_000, subtype="html")
+    started = time.perf_counter()
+    await _store(stand, 1, _crlf(msg))
+    assert time.perf_counter() - started < 10
+    (mail,) = await stand.mails()
+    assert mail.html_sanitized is None
+    assert mail.text == "Просим КП"

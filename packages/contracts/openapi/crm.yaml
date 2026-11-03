@@ -4434,6 +4434,7 @@ components:
             строгим CSP); внешние картинки без src — адрес в data-rt-src; нет — письмо без HTML или слишком большое
           title: Html
         html_remote_images:
+          default: 0
           description: Сколько внешних картинок ждут кнопки «Показать»
           title: Html Remote Images
           type: integer
@@ -4445,6 +4446,7 @@ components:
           title: Text
           type: string
         text_tail:
+          default: ''
           description: Цитата прошлой переписки и подпись — свёрнуты под «…»
           title: Text Tail
           type: string
@@ -4454,9 +4456,6 @@ components:
       - from_name
       - at
       - text
-      - text_tail
-      - html
-      - html_remote_images
       - attachments
       title: InboundMailMessage
       type: object

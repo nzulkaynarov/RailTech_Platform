@@ -60,9 +60,39 @@ RU_ATTR = "Пн, 2 нояб. 2026 г. в 10:00, Иван Тестов <ivan@exam
         ),
         pytest.param(
             f"{REPLY}\n\n{EN_ATTR}\nНужен счёт без угловых скобок\nстрока два",
+            f"{REPLY}\n\n{EN_ATTR}\nНужен счёт без угловых скобок\nстрока два",
+            "",
+            id="attribution-without-quote-stays-text",
+        ),
+        pytest.param(
+            "Добрый день!\nКак нам написал ваш менеджер:\nнужно 20 вагонов.\nИНН 123456789",
+            "Добрый день!\nКак нам написал ваш менеджер:\nнужно 20 вагонов.\nИНН 123456789",
+            "",
+            id="manager-wrote-is-ordinary-text",
+        ),
+        pytest.param(
+            "Здравствуйте.\nНаш директор пишет:\nсогласны на предоплату 50%.\nДоговор во вложении.",
+            "Здравствуйте.\nНаш директор пишет:\nсогласны на предоплату 50%.\nДоговор во вложении.",
+            "",
+            id="director-says-is-ordinary-text",
+        ),
+        pytest.param(
+            "Оплата:\nПишите на <buh@client.uz>:\nтел. +998 90 000 00 00\nСчёт 45 на 10 млн сум",
+            "Оплата:\nПишите на <buh@client.uz>:\nтел. +998 90 000 00 00\nСчёт 45 на 10 млн сум",
+            "",
+            id="email-colon-is-ordinary-text",
+        ),
+        pytest.param(
+            f"{REPLY}\n\nИван пишет:\n\n> q1\n\n> q2",
             REPLY,
-            f"{EN_ATTR}\nНужен счёт без угловых скобок\nстрока два",
-            id="attribution-without-gt-everything-after",
+            "Иван пишет:\n\n> q1\n\n> q2",
+            id="attribution-blank-line-before-quote",
+        ),
+        pytest.param(
+            "Заявка\nВагоны: 20\nЦена за тонну:\n--\nСрок: 15.11\nСтанция: Чукурсай",
+            "Заявка\nВагоны: 20\nЦена за тонну:\n--\nСрок: 15.11\nСтанция: Чукурсай",
+            "",
+            id="dashes-row-in-table-is-not-signature",
         ),
         pytest.param(
             f"{REPLY}\n\n-----Original Message-----\nFrom: A\nSent: B\n\nТело",
@@ -99,19 +129,19 @@ RU_ATTR = "Пн, 2 нояб. 2026 г. в 10:00, Иван Тестов <ivan@exam
         pytest.param(
             f"{REPLY}\n\n-- \nИван Тестов\nООО «Тест»\n+998 00 000 00 00",
             REPLY,
-            "--\nИван Тестов\nООО «Тест»\n+998 00 000 00 00",
+            "-- \nИван Тестов\nООО «Тест»\n+998 00 000 00 00",
             id="signature",
         ),
         pytest.param(
             f"{REPLY}\n\n--\nПодпись",
-            REPLY,
-            "--\nПодпись",
-            id="signature-no-space",
+            f"{REPLY}\n\n--\nПодпись",
+            "",
+            id="dashes-without-space-are-not-signature",
         ),
         pytest.param(
             f"{REPLY}\n\n-- \nПодпись\n\n{EN_ATTR}\n> q",
             REPLY,
-            f"--\nПодпись\n\n{EN_ATTR}\n> q",
+            f"-- \nПодпись\n\n{EN_ATTR}\n> q",
             id="signature-then-quote",
         ),
         pytest.param(
@@ -170,3 +200,46 @@ def test_split_quote(raw: str, main: str, tail: str) -> None:
 
 def test_split_quote_empty() -> None:
     assert split_quote("") == ("", "")
+
+
+@pytest.mark.parametrize(
+    ("raw", "main", "tail"),
+    [
+        pytest.param(
+            f"{REPLY}\n{EN_ATTR}",
+            REPLY,
+            EN_ATTR,
+            id="attribution-last-line-before-html-quote",
+        ),
+        pytest.param(
+            f"{REPLY}\n{RU_ATTR}\n",
+            REPLY,
+            RU_ATTR,
+            id="ru-attribution-last-line-before-html-quote",
+        ),
+        pytest.param(
+            f"{REPLY}\nКак нам написал менеджер:\nнужно 20 вагонов\n{EN_ATTR}",
+            f"{REPLY}\nКак нам написал менеджер:\nнужно 20 вагонов",
+            EN_ATTR,
+            id="only-the-last-line-counts",
+        ),
+        pytest.param(
+            "Наш директор пишет:\nсогласны на предоплату.",
+            "Наш директор пишет:\nсогласны на предоплату.",
+            "",
+            id="ordinary-phrase-with-text-below-stays",
+        ),
+    ],
+)
+def test_split_quote_with_html_quote_block(raw: str, main: str, tail: str) -> None:
+    assert split_quote(normalize_text(raw), html_quote=True) == (main, tail)
+
+
+def test_signature_marker_survives_normalization_only_with_space() -> None:
+    assert normalize_text("a\n-- \nb") == "a\n-- \nb"
+    assert normalize_text("a\n--  \nb") == "a\n-- \nb"
+    assert normalize_text("a\n--\nb") == "a\n--\nb"
+
+
+def test_normalize_text_cuts_huge_input_before_work() -> None:
+    assert len(normalize_text("я" * 5_000_000)) == 50_000
