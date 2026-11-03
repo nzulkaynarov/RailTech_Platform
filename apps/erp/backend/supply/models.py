@@ -100,6 +100,15 @@ class SupplierOrderLine(models.Model):
     quote_item = models.ForeignKey(
         "sales.QuoteItem", null=True, blank=True, on_delete=models.SET_NULL, related_name="supplier_order_lines"
     )
+    # ADR-0021 п. 6 (L0-3): цена поставщика, из которой создана строка, — Incoterms и срок цены видны в заказе.
+    supplier_offer = models.ForeignKey(
+        "catalog.SupplierOffer",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="order_lines",
+        verbose_name=_("Цена поставщика"),
+    )
 
     class Meta:
         verbose_name = _("Строка заказа поставщику")
@@ -142,6 +151,11 @@ class GoodsReceiptLine(models.Model):
         "inventory.Warehouse", null=True, blank=True, on_delete=models.PROTECT, related_name="+"
     )
     cell = models.CharField(max_length=32, blank=True, default="")
+    # ADR-0021 п. 3 (L0-3): документ соответствия, если категория его требует (запись сертификата — MVP-T1).
+    conformity_doc_number = models.CharField(
+        max_length=100, blank=True, default="", verbose_name=_("№ сертификата или декларации")
+    )
+    conformity_doc_valid_until = models.DateField(null=True, blank=True, verbose_name=_("Документ действует до"))
 
     class Meta:
         verbose_name = _("Строка приёмки")

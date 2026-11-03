@@ -139,6 +139,58 @@ def test_parse_assist_rejects_garbage(raw: str) -> None:
     assert im.parse_assist(raw) is None
 
 
+@pytest.mark.parametrize(
+    ("raw", "kind"),
+    [
+        # Форматы ответа, которые встречаются у моделей через LiteLLM (прод 2026-11-03: 200 и None).
+        ('```json\n{"kind": "buyer", "summary": "Просят КП"}\n```', "buyer"),
+        ('```\n{"kind": "official", "summary": "Письмо банка"}\n```', "official"),
+        ('Вот ответ:\n{"kind": "other", "summary": "Реклама"}\nНадеюсь, помог.', "other"),
+        ('{"kind": "Buyer", "summary": "Просят КП"}', "buyer"),
+        ('{"kind": "BUYER", "summary": "Просят КП"}', "buyer"),
+        ('{"kind": "customer", "summary": "Просят КП"}', "buyer"),
+        ('{"kind": "покупатель", "summary": "Просят КП"}', "buyer"),
+        ('{"kind": "Официальное письмо", "summary": "Налоговая"}', "official"),
+        ('{"kind": "supplier", "summary": "Счёт"}', "supplier_doc"),
+        ('{"kind": "supplier-doc", "summary": "Счёт"}', "supplier_doc"),
+        ('{"kind": "Счёт или документ поставщика", "summary": "Акт"}', "supplier_doc"),
+        ('{"kind": "поставщик", "summary": "Акт"}', "supplier_doc"),
+        ('{"kind": "прочее", "summary": "Рассылка"}', "other"),
+        ('{"kind": " other ", "summary": "Рассылка", "extra": 1}', "other"),
+        ('[1, 2] {"kind": "buyer", "summary": "КП"}', "buyer"),
+    ],
+)
+def test_parse_assist_tolerates_model_formats(raw: str, kind: str) -> None:
+    verdict, problem = im.parse_assist_reason(raw)
+    assert problem is None
+    assert verdict is not None
+    assert (verdict.kind, verdict.action) == (kind, im.SUGGESTED_ACTION[kind])  # type: ignore[index]
+
+
+@pytest.mark.parametrize(
+    ("raw", "reason"),
+    [
+        ("", "not_json"),
+        (None, "not_json"),
+        ("Не могу помочь с этим письмом.", "not_json"),
+        ("```json\n{broken\n```", "not_json"),
+        ("[1, 2, 3]", "no_object"),
+        ('{"kind": "delete_everything", "summary": "x"}', "unknown_kind=delete_everything"),
+        ('{"summary": "x"}', "unknown_kind=None"),
+        ('{"kind": "buyer"}', "empty_summary"),
+        ('{"kind": "buyer", "summary": "   "}', "empty_summary"),
+        ('{"kind": "buyer", "summary": 5}', "empty_summary"),
+    ],
+)
+def test_parse_assist_reason_names_the_problem(raw: str | None, reason: str) -> None:
+    assert im.parse_assist_reason(raw) == (None, reason)
+
+
+def test_unknown_kind_in_reason_is_short() -> None:
+    _, reason = im.parse_assist_reason('{"kind": "' + "x" * 500 + '", "summary": "s"}')
+    assert reason == "unknown_kind=" + "x" * 32
+
+
 def test_reply_headers() -> None:
     assert im.reply_subject("Запрос КП") == "Re: Запрос КП"
     assert im.reply_subject("RE: Запрос") == "RE: Запрос"

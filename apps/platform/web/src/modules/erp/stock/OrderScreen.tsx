@@ -37,6 +37,26 @@ function OrderLog({ order }: { order: SupplierOrderDetail }) {
   return <History items={items} label={t("order.log.label")} />;
 }
 
+/** Цена поставщика, из которой создана строка (ADR-0021 п. 6): базис поставки и срок цены. */
+function OfferNote({
+  offer,
+}: {
+  offer: NonNullable<SupplierOrderDetail["lines"][number]["offer"]>;
+}) {
+  const { t } = useTranslation("stock");
+  const { date } = useFormat();
+  const parts = [
+    offer.incoterms ? t("order.offer.incoterms", { code: offer.incoterms }) : null,
+    offer.valid_until
+      ? t(offer.expired ? "order.offer.expired" : "order.offer.validUntil", {
+          date: date(offer.valid_until),
+        })
+      : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return <div className="pf-hint">{t("order.offer.label", { text: parts.join(" · ") })}</div>;
+}
+
 function Lines({ order }: { order: SupplierOrderDetail }) {
   const { t } = useTranslation("stock");
   const { number } = useFormat();
@@ -75,6 +95,7 @@ function Lines({ order }: { order: SupplierOrderDetail }) {
               <td>
                 <div>{l.name}</div>
                 <div className="pf-hint pf-num">{l.article}</div>
+                {l.offer ? <OfferNote offer={l.offer} /> : null}
               </td>
               <td>
                 {l.request ? (

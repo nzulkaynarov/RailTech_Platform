@@ -10,4 +10,30 @@ export type SupplierOrderReceiptInLinesItem = {
   quantity: number;
   /** @maxLength 32 */
   cell?: string;
+  /**
+   * Серийные номера (`tracking = serial`): их число = количеству, без повторов; иначе 422
+   * @maxItems 1000
+   * @items.maxLength 100
+   */
+  serials?: string[];
+  /**
+   * Партия (`tracking = lot`) — обязательна
+   * @maxLength 100
+   */
+  lot?: string;
+  /**
+   * Годен до (партия)
+   * @nullable
+   */
+  expiry_date?: string | null;
+  /**
+   * № сертификата или декларации (`requires_doc`) — обязателен
+   * @maxLength 100
+   */
+  doc_number?: string;
+  /**
+   * Документ действует до — обязателен и не в прошлом при `requires_doc`
+   * @nullable
+   */
+  doc_valid_until?: string | null;
 };

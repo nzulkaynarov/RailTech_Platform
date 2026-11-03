@@ -170,6 +170,43 @@ async def act_scan(ref: Ref, request: Request, authed: Writer) -> ProjectCard:
     return await _erp(authed).act_scan(ref, content, content_type)
 
 
+# --- доставка клиенту (L0-1) ---------------------------------------------------------------------
+
+
+@router.post(
+    "/projects/{ref}/delivery", response_model=ProjectCard, operation_id="markEdsProjectDelivery"
+)
+async def mark_delivery(ref: Ref, request: Request, authed: Reader) -> ProjectCard:
+    """«В пути» / «Доставлено»: раздел — чтение, право `fulfillment.manage` и переход решает ERP."""
+    content, content_type = await _scan_body(request)
+    return await _erp(authed).mark_delivery(ref, content, content_type)
+
+
+@router.get(
+    "/projects/{ref}/delivery/proof",
+    response_class=StreamingResponse,
+    responses={200: {"content": {"application/octet-stream": {}}}},
+    operation_id="downloadEdsProjectDeliveryProof",
+)
+async def download_delivery_proof(ref: Ref, authed: Reader) -> Response:
+    """Файл подтверждения доставки потоком, всегда как вложение (тип не доверяется)."""
+    path = await _erp(authed).delivery_proof_path(ref)
+    upstream = await authed.call("erp", "GET", path, stream=True)
+    if upstream.status_code != 200:
+        try:
+            await upstream.aread()
+            raise project_error(upstream)
+        finally:
+            await upstream.aclose()
+    headers = {
+        "Content-Disposition": 'attachment; filename="delivery-proof"',
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "X-Content-Type-Options": "nosniff",
+        "Cache-Control": "private, no-store",
+    }
+    return FileStream(upstream, headers, "application/octet-stream")
+
+
 # --- файлы -------------------------------------------------------------------------------------
 
 

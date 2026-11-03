@@ -314,3 +314,48 @@ def test_orders_receipts_overdue_and_price_requests_conform(world):
         {"note": ""},
         status=404,
     )
+
+
+def test_tracked_receipt_shipment_and_trace_search_conform(world):
+    """L0-3 (ADR-0021): приёмка с серийными и документом, отгрузка с выбором единиц, поиск по номеру."""
+    from catalog.models import Category
+
+    world["rail"].category = Category.objects.create(name="Серийные", tracking="serial", requires_conformity_doc=True)
+    world["rail"].save(update_fields=["category"])
+    supply, reader = api(world["supply"]), api(world["reader"])
+    deal, _q, (item,) = make_deal(world, [(world["rail"], 1)], approved=True, signed=True)
+    line = {"product_id": world["rail"].pk, "quantity": 1, "deal_id": deal.pk, "quote_item_id": item.pk}
+    order = supply.post(f"{S}orders/", {"supplier_id": world["vendor"].pk, "lines": [line]}, format="json").json()
+    supply.post(f"{S}orders/{order['id']}/send/", {}, format="json")
+    tomorrow = (timezone.localdate() + timedelta(days=1)).isoformat()
+    supply.post(f"{S}orders/{order['id']}/confirm/", {"expected_date": tomorrow}, format="json")
+    _call(reader, "get", f"{S}receipts/", f"{S}receipts/", status=200)
+    order_line = supply.get(f"{S}orders/{order['id']}/").json()["lines"][0]["id"]
+    template = f"{S}orders/{{order_id}}/receipts/"
+    url = f"{S}orders/{order['id']}/receipts/"
+    receipt = {
+        "lines": [
+            {
+                "order_line_id": order_line,
+                "quantity": 1,
+                "serials": ["SN-1"],
+                "lot": "",
+                "expiry_date": None,
+                "doc_number": "ДС-1",
+                "doc_valid_until": (timezone.localdate() + timedelta(days=90)).isoformat(),
+            }
+        ]
+    }
+    _call(supply, "post", template, url, {"lines": [{**receipt["lines"][0], "serials": []}]}, status=400)
+    _call(supply, "post", template, url, receipt, status=200)
+
+    reservation = _call(reader, "get", f"{S}reservations/", f"{S}reservations/", status=200, deal_id=deal.pk)
+    row = reservation.json()["results"][0]
+    ship = {"deal_id": deal.pk, "lines": [{"reservation_id": row["id"], "quantity": 1}]}
+    shipper = api(world["shipper"])
+    _call(shipper, "post", f"{S}shipments/", f"{S}shipments/", ship, status=400)
+    picked = {**ship, "lines": [{**ship["lines"][0], "units": [{"unit_id": row["units"][0]["id"], "quantity": 1}]}]}
+    _call(shipper, "post", f"{S}shipments/", f"{S}shipments/", picked, status=201)
+    _call(shipper, "post", f"{S}shipments/", f"{S}shipments/", picked, status=409)
+    _call(reader, "get", f"{S}trace/", f"{S}trace/", status=200, q="SN-1")
+    _call(api(world["outsider"]), "get", f"{S}trace/", f"{S}trace/", status=403, q="SN-1")

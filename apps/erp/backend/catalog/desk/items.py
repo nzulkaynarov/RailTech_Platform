@@ -61,6 +61,7 @@ def list_queryset(params):
             offers_count=Count("offers", filter=Q(offers__is_active=True), distinct=True),
             nearest_valid_until=Min("offers__valid_until", filter=current_offer_q("offers__", today)),
             docs_count=Count("tech_documents", distinct=True),
+            proposals_count=Count("field_proposals", filter=Q(field_proposals__status="pending"), distinct=True),
         )
     )
     text = (params.get("q") or "").strip()
@@ -81,6 +82,9 @@ def list_queryset(params):
     category = params.get("category")
     if category and str(category).isdigit():
         queryset = queryset.filter(category_id=int(category))
+    if params.get("proposals") == "pending":
+        # CAT-1: позиции с изменениями от поставщиков, ждущими одобрения.
+        queryset = queryset.filter(proposals_count__gt=0)
     return queryset.order_by("name", "id")
 
 
@@ -122,6 +126,7 @@ def item_row(product, vat_default) -> dict:
         "offers_count": getattr(product, "offers_count", 0),
         "nearest_valid_until": getattr(product, "nearest_valid_until", None),
         "docs_count": getattr(product, "docs_count", 0),
+        "proposals_count": getattr(product, "proposals_count", 0),
     }
 
 
@@ -144,6 +149,10 @@ def offer_row(offer, *, show_price: bool, today=None) -> dict:
         "in_stock_lead_days": offer.in_stock_lead_time_days,
         "order_lead_days": offer.order_lead_time_days,
         "stock_status": offer.stock_status.code if offer.stock_status_id else None,
+        "delivery_basis": offer.delivery_basis.code if offer.delivery_basis_id else None,
+        "lead_time": offer.delivery_lead_time or "",
+        "source": offer.source,
+        "updated_at": offer.updated_at,
         "valid_from": offer.valid_from,
         "valid_until": offer.valid_until,
         "is_active": offer.is_active,
@@ -154,8 +163,11 @@ def offer_row(offer, *, show_price: bool, today=None) -> dict:
 def item_detail(product, user) -> dict:
     today = timezone.localdate()
     show_price = can_view_supplier_prices(user)
+    from catalog.completeness import completeness
+    from catalog.desk.proposals import proposal_row
+
     offers = list(
-        product.offers.select_related("supplier", "product", "currency", "stock_status").order_by(
+        product.offers.select_related("supplier", "product", "currency", "stock_status", "delivery_basis").order_by(
             "supplier__name", "id"
         )
     )
@@ -176,6 +188,12 @@ def item_detail(product, user) -> dict:
             "hs_code": product.hs_code,
             "manufacturer_part_number": product.manufacturer_part_number,
             "brand": product.brand.name if product.brand_id else None,
+            "brand_id": product.brand_id,
+            "source_supplier": (
+                {"id": product.source_supplier_id, "name": product.source_supplier.name}
+                if product.source_supplier_id
+                else None
+            ),
             "offers": [offer_row(o, show_price=show_price, today=today) for o in offers],
             "prices_visible": show_price,
             "tech_docs": [
@@ -185,6 +203,17 @@ def item_detail(product, user) -> dict:
         }
     )
     row["docs_count"] = product.tech_documents.count()  # полное число, как в списке (в карточке показаны последние 20)
+    # CAT-1: изменения от поставщиков на одобрении и что мешает публикации (тем же движком, что кнопка «Опубликовать»).
+    pending = list(
+        product.field_proposals.filter(status="pending").select_related("supplier").order_by("created_at", "id")
+    )
+    row["proposals"] = [proposal_row(p) for p in pending]
+    row["proposals_count"] = len(pending)
+    report = completeness(product)
+    row["publish"] = {
+        "publishable": bool(report["is_publishable"]),
+        "missing": [item["code"] for item in report["missing"]],
+    }
     return row
 
 
@@ -262,7 +291,25 @@ def create_item(data: dict, actor) -> Product:
     return product
 
 
-def update_item(product: Product, data: dict) -> Product:
+def _brand(brand_id):
+    from catalog.models import Manufacturer
+
+    if brand_id is None:
+        return None
+    brand = Manufacturer.objects.filter(pk=brand_id).first()
+    if brand is None:
+        raise ItemError("BRAND_NOT_FOUND", "brand_id")
+    return brand
+
+
+def _hs_code(value) -> str:
+    digits = "".join(ch for ch in str(value or "") if ch.isdigit())
+    if str(value or "").strip() and (digits != str(value).strip() or len(digits) not in (2, 4, 6, 8, 10)):
+        raise ItemError("ITEM_HS_CODE_INVALID", "hs_code")
+    return digits
+
+
+def update_item(product: Product, data: dict, actor=None) -> Product:
     if "name" in data:
         name = (data["name"] or "").strip()
         if not name:
@@ -280,5 +327,35 @@ def update_item(product: Product, data: dict) -> Product:
         if data["kind"] not in (KIND_STOCK, KIND_ON_ORDER, *SERVICE_KINDS):
             raise ItemError("ITEM_KIND_INVALID", "kind")
         _apply_kind(product, data["kind"])
+    # CAT-1: изготовитель (бренд), артикул изготовителя и код ТН ВЭД — правятся в Платформе.
+    if "brand_id" in data:
+        product.brand = _brand(data["brand_id"])
+    if "manufacturer_part_number" in data:
+        product.manufacturer_part_number = (data["manufacturer_part_number"] or "").strip()
+    old_hs = product.hs_code or ""
+    if "hs_code" in data:
+        product.hs_code = _hs_code(data["hs_code"])
     product.save()
+    if "hs_code" in data:
+        from catalog.services import log_hs_code_change
+
+        log_hs_code_change(product, old_hs, actor, origin="manual")
+    return product
+
+
+def set_published(product: Product, publish: bool, actor) -> Product:
+    """«Опубликовать» / «Снять с публикации» (`catalog/publishing.py`: порог полноты, право `catalog.publish`).
+
+    Карточку без владельца (старая, ничья) публикует сотрудник своей компании — владельцем становится своя компания:
+    иначе `can_manage` не пустил бы никого, кроме администратора.
+    """
+    from catalog.publishing import publish_product, unpublish_product
+    from core.tenant import own_company_id
+
+    if product.owner_company_id is None and own_company_id():
+        product.owner_company_id = own_company_id()
+        product.save(update_fields=["owner_company", "updated_at"])
+    _, error = (publish_product if publish else unpublish_product)(product, actor)
+    if error:
+        raise ItemError(error.split(":", 1)[0])
     return product

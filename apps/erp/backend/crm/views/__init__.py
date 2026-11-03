@@ -24,7 +24,7 @@ from crm.views.deals import DealStageViewSet, DealViewSet  # noqa: F401
 from crm.views.documents import DocumentTemplateViewSet, GeneratedDocumentViewSet  # noqa: F401
 from crm.views.documents_public import PublicDocumentView  # noqa: F401
 from crm.views.numbering import NumberingSchemePreviewView, NumberingSchemeView  # noqa: F401
-from crm.views.projects import ProjectDetailView, ProjectListView  # noqa: F401
+from crm.views.projects import ProjectDeliveryView, ProjectDetailView, ProjectListView  # noqa: F401
 from crm.views.quotes import (  # noqa: F401
     ChargeTemplateViewSet,
     ChargeTypeViewSet,
@@ -73,6 +73,7 @@ __all__ = [
     "ContractViewSet",
     "InvoiceViewSet",
     "PaymentViewSet",
+    "ProjectDeliveryView",
     "ProjectDetailView",
     "ProjectListView",
     "ActViewSet",

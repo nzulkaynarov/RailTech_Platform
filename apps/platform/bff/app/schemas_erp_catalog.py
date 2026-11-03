@@ -14,7 +14,7 @@
 from collections.abc import Mapping
 from typing import Any, ClassVar, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.feeds.numbers import deal_number
 from app.schemas_company import Body, Patch, dec, ident, opt_ident, text
@@ -24,6 +24,21 @@ BrigadeKindName = Literal["brigade", "person", "subcontractor"]
 TechDocKindName = Literal["tz", "drawing", "certificate", "pnr", "other"]
 Validity = Literal["ok", "expiring", "expired"]
 RateUnit = Literal["day", "hour"]
+OfferSource = Literal["price_list", "rfq_reply", "manual"]
+ProposalField = Literal[
+    "name", "description", "category", "hs_code", "uom", "domain_type", "gost_drawing"
+]
+ImportMode = Literal["xlsx", "ai"]
+_SOURCES = {"price_list", "rfq_reply", "manual"}
+_PROPOSAL_FIELDS = {
+    "name",
+    "description",
+    "category",
+    "hs_code",
+    "uom",
+    "domain_type",
+    "gost_drawing",
+}
 _KINDS = {"stock", "on_order", "service_fixed", "service_milestones", "service_time"}
 
 
@@ -113,10 +128,18 @@ class Offer(Out):
     in_stock_lead_days: int
     order_lead_days: int
     stock_status: str | None
+    delivery_basis: str | None
+    lead_time: str
+    source: OfferSource
+    updated_at: str
     valid_from: str | None
     valid_until: str | None
     is_active: bool
     validity: Validity
+
+
+def _source(value: Any) -> OfferSource:
+    return value if value in _SOURCES else "manual"
 
 
 def to_offer(raw: Mapping[str, Any], *, show_prices: bool) -> Offer:
@@ -138,6 +161,10 @@ def to_offer(raw: Mapping[str, Any], *, show_prices: bool) -> Offer:
         in_stock_lead_days=int(raw.get("in_stock_lead_days") or 0),
         order_lead_days=int(raw.get("order_lead_days") or 0),
         stock_status=raw.get("stock_status"),
+        delivery_basis=raw.get("delivery_basis") or None,
+        lead_time=text(raw.get("lead_time")),
+        source=_source(raw.get("source")),
+        updated_at=text(raw.get("updated_at")),
         valid_from=raw.get("valid_from"),
         valid_until=raw.get("valid_until"),
         is_active=bool(raw.get("is_active", True)),
@@ -158,6 +185,7 @@ class Item(Out):
     offers_count: int
     nearest_valid_until: str | None
     docs_count: int
+    proposals_count: int
 
 
 class TechDocRef(Out):
@@ -166,15 +194,47 @@ class TechDocRef(Out):
     kind: TechDocKindName
 
 
+class Proposal(Out):
+    id: str
+    field: ProposalField
+    current: str
+    proposed: str
+    supplier: NamedRef | None
+    created_at: str
+
+
+class PublishState(Out):
+    publishable: bool
+    missing: list[str]
+
+
 class ItemDetail(Item):
     description: str
     gost_drawing: str
     hs_code: str
     manufacturer_part_number: str
     brand: str | None
+    brand_id: str | None
+    source_supplier: NamedRef | None
     offers: list[Offer]
     prices_visible: bool
     tech_docs: list[TechDocRef]
+    proposals: list[Proposal]
+    publish: PublishState
+
+
+def to_proposal(raw: Mapping[str, Any]) -> Proposal | None:
+    field = raw.get("field")
+    if field not in _PROPOSAL_FIELDS or raw.get("id") is None:
+        return None
+    return Proposal(
+        id=ident(raw["id"]),
+        field=field,
+        current=text(raw.get("current")),
+        proposed=text(raw.get("proposed")),
+        supplier=_named(raw.get("supplier")),
+        created_at=text(raw.get("created_at")),
+    )
 
 
 class ItemPage(PageOut):
@@ -205,6 +265,7 @@ def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
         "offers_count": int(raw.get("offers_count") or 0),
         "nearest_valid_until": raw.get("nearest_valid_until"),
         "docs_count": int(raw.get("docs_count") or 0),
+        "proposals_count": int(raw.get("proposals_count") or 0),
     }
 
 
@@ -223,6 +284,8 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
         hs_code=text(raw.get("hs_code")),
         manufacturer_part_number=text(raw.get("manufacturer_part_number")),
         brand=raw.get("brand"),
+        brand_id=opt_ident(raw.get("brand_id")),
+        source_supplier=_named(raw.get("source_supplier")),
         offers=[
             to_offer(o, show_prices=show_prices)
             for o in raw.get("offers") or []
@@ -230,6 +293,15 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
         ],
         prices_visible=show_prices and bool(raw.get("prices_visible")),
         tech_docs=docs,
+        proposals=[
+            p
+            for p in (to_proposal(r) for r in raw.get("proposals") or [] if isinstance(r, Mapping))
+            if p is not None
+        ],
+        publish=PublishState(
+            publishable=bool((raw.get("publish") or {}).get("publishable")),
+            missing=[str(m) for m in (raw.get("publish") or {}).get("missing") or []],
+        ),
     )
 
 
@@ -249,18 +321,25 @@ class ItemCreate(Body):
 
 
 class ItemUpdate(Patch):
-    nullable: ClassVar[frozenset[str]] = frozenset({"unit_id", "category_id", "vat_rate"})
+    nullable: ClassVar[frozenset[str]] = frozenset(
+        {"unit_id", "category_id", "vat_rate", "brand_id"}
+    )
     name: str | None = None
     kind: ItemKind | None = None
     description: str | None = None
     unit_id: str | None = None
     category_id: str | None = None
     vat_rate: str | None = None
+    brand_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    manufacturer_part_number: str | None = Field(default=None, max_length=120)
+    hs_code: str | None = Field(
+        default=None, pattern=r"^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$"
+    )
 
 
 def item_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
     out = dict(sent)
-    for key in ("unit_id", "category_id"):
+    for key in ("unit_id", "category_id", "brand_id"):
         if key in out and out[key] is not None:
             out[key] = int(out[key])
     return out
@@ -273,7 +352,11 @@ class SupplierRow(Out):
     id: str
     name: str
     tin: str
+    registration_number: str
     country: str | None
+    country_id: str | None
+    currency: str | None
+    is_manufacturer: bool
     offers_count: int
     expired_count: int
     expiring_count: int
@@ -288,6 +371,8 @@ class SupplierDetail(SupplierRow):
     legal_address: str
     offers: list[Offer]
     prices_visible: bool
+    brands: list[NamedRef]
+    manufactured_brands: list[NamedRef]
 
 
 class SupplierPage(PageOut):
@@ -299,7 +384,11 @@ def to_supplier(raw: Mapping[str, Any]) -> dict[str, Any]:
         "id": ident(raw.get("id")),
         "name": text(raw.get("name")),
         "tin": text(raw.get("tin")),
+        "registration_number": text(raw.get("registration_number")),
         "country": raw.get("country"),
+        "country_id": opt_ident(raw.get("country_id")),
+        "currency": raw.get("currency") or None,
+        "is_manufacturer": bool(raw.get("is_manufacturer")),
         "offers_count": int(raw.get("offers_count") or 0),
         "expired_count": int(raw.get("expired_count") or 0),
         "expiring_count": int(raw.get("expiring_count") or 0),
@@ -321,7 +410,13 @@ def to_supplier_detail(raw: Mapping[str, Any], *, show_prices: bool) -> Supplier
             if isinstance(o, Mapping)
         ],
         prices_visible=show_prices and bool(raw.get("prices_visible")),
+        brands=_named_list(raw.get("brands")),
+        manufactured_brands=_named_list(raw.get("manufactured_brands")),
     )
+
+
+def _named_list(raw: Any) -> list[NamedRef]:
+    return [n for n in (_named(r) for r in raw or []) if n is not None]
 
 
 def to_supplier_page(data: Any, page: int, page_size: int) -> SupplierPage:
@@ -342,6 +437,223 @@ class OfferUpdate(Patch):
     valid_from: str | None = None
     valid_until: str | None = None
     is_active: bool | None = None
+    delivery_basis: str | None = Field(default=None, max_length=10)
+    lead_time: str | None = Field(default=None, max_length=100)
+    supplier_sku: str | None = Field(default=None, max_length=100)
+    source: OfferSource | None = None
+
+
+class OfferCreate(Body):
+    product_id: str = Field(pattern=r"^[0-9]+$")
+    price: MoneyIn
+    delivery_basis: str | None = Field(default=None, max_length=10)
+    min_order_qty: int | None = Field(default=None, ge=1)
+    quota_qty: int | None = Field(default=None, ge=0)
+    in_stock_lead_days: int | None = Field(default=None, ge=0)
+    order_lead_days: int | None = Field(default=None, ge=0)
+    lead_time: str | None = Field(default=None, max_length=100)
+    supplier_sku: str | None = Field(default=None, max_length=100)
+    valid_from: str | None = None
+    valid_until: str | None = None
+    source: OfferSource | None = None
+
+
+def offer_create_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
+    out = {k: v for k, v in sent.items() if v is not None}
+    out["product_id"] = int(out["product_id"])
+    return out
+
+
+class OfferHistoryRow(Out):
+    at: str
+    price: Money | None
+    valid_from: str | None
+    valid_until: str | None
+    delivery_basis: str | None
+    source: OfferSource
+    by: str | None
+
+
+class OfferHistory(Out):
+    items: list[OfferHistoryRow]
+
+
+def to_offer_history(data: Any, *, show_prices: bool) -> OfferHistory:
+    rows = data if isinstance(data, list) else []
+    return OfferHistory(
+        items=[
+            OfferHistoryRow(
+                at=text(r.get("at")),
+                price=_money(r.get("price")) if show_prices else None,
+                valid_from=r.get("valid_from"),
+                valid_until=r.get("valid_until"),
+                delivery_basis=r.get("delivery_basis") or None,
+                source=_source(r.get("source")),
+                by=r.get("by") or None,
+            )
+            for r in rows
+            if isinstance(r, Mapping)
+        ]
+    )
+
+
+class SupplierCreate(Body):
+    name: str = Field(min_length=1, max_length=255)
+    country_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    tin: str | None = Field(default=None, pattern=r"^([0-9]{9})?$")
+    registration_number: str | None = Field(default=None, max_length=64)
+    currency: str | None = Field(default=None, max_length=3)
+    contact_person: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=254)
+    website: str | None = Field(default=None, max_length=255)
+    is_manufacturer: bool | None = None
+
+
+class SupplierUpdate(Patch):
+    nullable: ClassVar[frozenset[str]] = frozenset({"country_id", "currency"})
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    country_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    tin: str | None = Field(default=None, pattern=r"^([0-9]{9})?$")
+    registration_number: str | None = Field(default=None, max_length=64)
+    currency: str | None = Field(default=None, max_length=3)
+    contact_person: str | None = Field(default=None, max_length=255)
+    phone: str | None = Field(default=None, max_length=50)
+    email: str | None = Field(default=None, max_length=254)
+    website: str | None = Field(default=None, max_length=255)
+    is_manufacturer: bool | None = None
+
+
+def supplier_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
+    out = dict(sent)
+    if out.get("country_id") is not None:
+        out["country_id"] = int(out["country_id"])
+    return out
+
+
+# --- загрузка прайса (CAT-1) --------------------------------------------------------------------
+
+
+class PriceImportJob(Out):
+    job_id: str
+    mode: ImportMode
+
+
+class PriceImportApplyIn(Body):
+    supplier_id: str = Field(pattern=r"^[0-9]+$")
+    rows_token: str = Field(pattern=r"^[0-9a-f]{32}$")
+    valid_from: str | None = None
+    valid_until: str | None = None
+
+
+class RowNote(Out):
+    row: int
+    code: str
+    value: str
+
+
+class ImportProposal(Out):
+    row: int
+    product_id: str
+    product_name: str
+    field: ProposalField
+    current: str
+    proposed: str
+
+
+class PriceImportReport(Out):
+    checked: bool
+    items_created: int
+    items_matched: int
+    offers_created: int
+    offers_updated: int
+    proposal_count: int
+    proposals: list[ImportProposal]
+    error_count: int
+    errors: list[RowNote]
+    warning_count: int
+    warnings: list[RowNote]
+    rows_truncated: int
+    unpublishable: int
+    rows_token: str | None
+    ai_used: bool | None
+
+
+class PriceImportStatus(Out):
+    state: Literal["running", "done", "failed"]
+    report: PriceImportReport | None
+    error: str | None
+
+
+def _notes(raw: Any) -> list[RowNote]:
+    out = []
+    for r in raw or []:
+        if not isinstance(r, Mapping):
+            continue
+        code, _, value = text(r.get("message")).partition(":")
+        out.append(RowNote(row=int(r.get("row") or 0), code=code or "ROW_FAILED", value=value))
+    return out
+
+
+def _count(raw: Mapping[str, Any], key: str) -> int:
+    value = raw.get(key)
+    return value if isinstance(value, int) and value > 0 else 0
+
+
+def to_import_report(raw: Mapping[str, Any]) -> PriceImportReport:
+    proposals = [
+        ImportProposal(
+            row=int(p.get("row") or 0),
+            product_id=ident(p.get("product_id")),
+            product_name=text(p.get("product_name")),
+            field=p["field"],
+            current=text(p.get("current")),
+            proposed=text(p.get("proposed")),
+        )
+        for p in raw.get("proposals") or []
+        if isinstance(p, Mapping) and p.get("field") in _PROPOSAL_FIELDS
+    ]
+    ai_used = raw.get("ai_used")
+    token = raw.get("rows_token")
+    return PriceImportReport(
+        checked=bool(raw.get("dry_run")),
+        items_created=_count(raw, "created"),
+        items_matched=_count(raw, "updated"),
+        offers_created=_count(raw, "offers_created"),
+        offers_updated=_count(raw, "offers_updated"),
+        proposal_count=_count(raw, "proposal_count"),
+        proposals=proposals,
+        error_count=_count(raw, "error_count"),
+        errors=_notes(raw.get("errors")),
+        warning_count=_count(raw, "warning_count"),
+        warnings=_notes(raw.get("warnings")),
+        rows_truncated=_count(raw, "rows_truncated"),
+        unpublishable=_count(raw, "unpublishable"),
+        rows_token=token if isinstance(token, str) else None,
+        ai_used=ai_used if isinstance(ai_used, bool) else None,
+    )
+
+
+def to_import_status(data: Any) -> PriceImportStatus:
+    """Ответ ERP `import-status` / `ai-status` → состояние загрузки.
+
+    Сбой воркера или файла — `failed` с кодом."""
+    if not isinstance(data, Mapping):
+        return PriceImportStatus(state="failed", report=None, error="IMPORT_FAILED")
+    result = data.get("result")
+    if not isinstance(result, Mapping):
+        state = text(data.get("status")).upper()
+        if state in ("FAILURE", "REVOKED"):
+            return PriceImportStatus(state="failed", report=None, error="IMPORT_FAILED")
+        return PriceImportStatus(state="running", report=None, error=None)
+    status = result.get("status")
+    if status in ("error", "failed"):
+        message = text(result.get("message"))
+        code = (
+            message if message.replace("_", "").isalnum() and message.isupper() else "IMPORT_FAILED"
+        )
+        return PriceImportStatus(state="failed", report=None, error=code)
+    return PriceImportStatus(state="done", report=to_import_report(result), error=None)
 
 
 # --- бригады ------------------------------------------------------------------------------------
@@ -535,6 +847,7 @@ class Manufacturer(Out):
     country_name: str | None
     website: str
     is_active: bool
+    company_id: str | None
 
 
 class ManufacturerPage(PageOut):
@@ -549,6 +862,7 @@ def to_manufacturer(raw: Mapping[str, Any]) -> Manufacturer:
         country_name=raw.get("country_name") or None,
         website=text(raw.get("website")),
         is_active=bool(raw.get("is_active", True)),
+        company_id=opt_ident(raw.get("company")),
     )
 
 
@@ -563,21 +877,24 @@ class ManufacturerCreate(Body):
     country_id: str | None = None
     website: str | None = None
     is_active: bool | None = None
+    company_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
 
 
 class ManufacturerUpdate(Patch):
-    nullable: ClassVar[frozenset[str]] = frozenset({"country_id"})
+    nullable: ClassVar[frozenset[str]] = frozenset({"country_id", "company_id"})
     name: str | None = None
     country_id: str | None = None
     website: str | None = None
     is_active: bool | None = None
+    company_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
 
 
 def manufacturer_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
     out = dict(sent)
-    if "country_id" in out:
-        value = out.pop("country_id")
-        out["country"] = int(value) if value is not None else None
+    for ours, erp in (("country_id", "country"), ("company_id", "company")):
+        if ours in out:
+            value = out.pop(ours)
+            out[erp] = int(value) if value is not None else None
     return out
 
 
@@ -592,11 +909,17 @@ class LookupCurrency(Out):
     symbol: str
 
 
+class DeliveryBasisRef(Out):
+    code: str
+    name: str
+
+
 class Lookups(Out):
     units: list[Unit]
     categories: list[LookupCategory]
     currencies: list[LookupCurrency]
     countries: list[NamedRef]
+    delivery_bases: list[DeliveryBasisRef]
 
 
 # --- техдокументация ---------------------------------------------------------------------------

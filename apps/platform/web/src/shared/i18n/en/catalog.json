@@ -10,7 +10,8 @@
     "brigades": "Crews",
     "refs": "Reference lists",
     "requests": "Category requests",
-    "requestsCount": "Category requests ({{count}})"
+    "requestsCount": "Category requests ({{count}})",
+    "import": "Price list upload"
   },
   "kinds": {
     "stock": "Goods from stock",
@@ -104,7 +105,26 @@
       "name_required": "Enter the name.",
       "already_reviewed": "The request is already decided. Refresh the list.",
       "category_required": "Choose an existing category.",
-      "reason_required": "Enter the reason for refusal."
+      "reason_required": "Enter the reason for refusal.",
+      "supplier_exists": "This supplier already exists: find it in the list.",
+      "offer_exists": "This supplier already has a price for the item — edit it.",
+      "proposal_decided": "The change is already decided. Refresh the card.",
+      "proposal_stale": "The value is no longer in the reference. Reject the change.",
+      "product_incomplete": "Fill in the missing fields, then publish.",
+      "supplier_id_required": "Enter a TIN or a foreign registration number.",
+      "tin_invalid": "TIN is 9 digits.",
+      "supplier_name_required": "Enter the supplier name.",
+      "country_not_found": "No such country.",
+      "currency_not_found": "No such currency.",
+      "brand_not_found": "No such manufacturer.",
+      "item_hs_code_invalid": "HS code is 2, 4, 6, 8 or 10 digits.",
+      "delivery_basis_not_found": "No such delivery basis.",
+      "supplier_not_found": "Choose a supplier or manufacturer from the list.",
+      "supplier_invalid": "Choose a supplier from the list.",
+      "valid_date_invalid": "Date format is DD.MM.YYYY.",
+      "rows_token_invalid": "The check is out of date. Press “Check” again.",
+      "offer_source_invalid": "Choose the price source.",
+      "role_not_permitted": "Catalog and procurement rights are needed."
     }
   },
   "items": {
@@ -148,7 +168,9 @@
       "status": "Card status",
       "brand": "Manufacturer",
       "gost": "Standard / drawing",
-      "hs": "HS code"
+      "hs": "HS code",
+      "mpn": "Manufacturer part no.",
+      "source": "Created from price list of"
     },
     "offers": "Supplier offers",
     "offersTable": "Supplier offers for the item",
@@ -175,7 +197,11 @@
         "Changes are saved in the item card.",
         "New costings use the updated unit and VAT.",
         "Quotes already sent do not change."
-      ]
+      ],
+      "brand": "Manufacturer (brand)",
+      "mpn": "Manufacturer part no.",
+      "hs": "HS code",
+      "hsHint": "2, 4, 6, 8 or 10 digits"
     }
   },
   "offers": {
@@ -231,7 +257,7 @@
     "nearest": "nearest end {{date}}",
     "empty": {
       "title": "No suppliers",
-      "text": "Suppliers appear together with their offers for items.",
+      "text": "Add a supplier or upload their price list.",
       "filtered": "No suppliers for this query."
     },
     "fields": {
@@ -241,11 +267,21 @@
       "phone": "Phone",
       "email": "Email",
       "website": "Website",
-      "address": "Address"
+      "address": "Address",
+      "reg": "Registration no.",
+      "currency": "Price currency",
+      "kind": "Type",
+      "brands": "Supplies brands",
+      "madeBrands": "Makes brands"
     },
     "offers": "Offers by item",
     "offersTable": "Supplier offers",
-    "noOffers": "No offers."
+    "noOffers": "No offers.",
+    "reg": "reg. no. {{reg}}",
+    "add": "Add supplier",
+    "edit": "Edit",
+    "maker": "Manufacturer",
+    "dealer": "Supplier"
   },
   "brigades": {
     "search": "Search by name and specialisation",
@@ -524,6 +560,159 @@
         "It appears for the item and the request it is linked to.",
         "The file is not sent to the client."
       ]
+    }
+  },
+  "supplierForm": {
+    "addTitle": "New supplier",
+    "editTitle": "Supplier",
+    "add": "Add",
+    "steps": [
+      "The supplier appears in the list and in price list upload.",
+      "They have no login: you keep the card."
+    ],
+    "name": "Name",
+    "country": "Country",
+    "currency": "Price currency",
+    "tin": "TIN",
+    "tinHint": "9 digits, for Uzbek companies",
+    "reg": "Registration no.",
+    "regHint": "For a foreign company instead of TIN",
+    "contact": "Contact person",
+    "email": "Email",
+    "phone": "Phone",
+    "maker": "Makes the goods (manufacturer)"
+  },
+  "offerCreate": {
+    "open": "Add price",
+    "title": "Supplier price: {{name}}",
+    "add": "Add",
+    "steps": [
+      "The price appears for the supplier and on the item card.",
+      "New calculations can use it."
+    ],
+    "product": "Item",
+    "currency": "Currency",
+    "basis": "Delivery basis (Incoterms)",
+    "lead": "Lead time",
+    "leadHint": "As in the price list, e.g. “30 days”",
+    "source": "Price source"
+  },
+  "offerSource": {
+    "price_list": "price list",
+    "rfq_reply": "quote reply",
+    "manual": "manual"
+  },
+  "history": {
+    "title": "Price history: {{name}}",
+    "empty": "No changes yet.",
+    "table": "Price history",
+    "at": "When",
+    "source": "Source",
+    "open": "History",
+    "openNamed": "Price history for {{name}}"
+  },
+  "proposals": {
+    "count": "to approve: {{count}}",
+    "filter": "Changes to approve",
+    "title": "Changes from suppliers",
+    "current": "Now",
+    "proposed": "Proposed",
+    "accept": "Accept",
+    "reject": "Reject",
+    "acceptNamed": "Accept change: {{field}}",
+    "rejectNamed": "Reject change: {{field}}"
+  },
+  "proposalField": {
+    "name": "Name",
+    "description": "Description",
+    "category": "Category",
+    "hs_code": "HS code",
+    "uom": "Unit",
+    "domain_type": "Line",
+    "gost_drawing": "Standard / drawing"
+  },
+  "publish": {
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "missing": "To publish, fill in: {{fields}}.",
+    "fields": {
+      "name": "name",
+      "uom": "unit",
+      "category": "category",
+      "hs_code": "HS code",
+      "list_price": "list price"
+    }
+  },
+  "import": {
+    "noAccess": {
+      "title": "Price list upload is not available",
+      "text": "Price lists are uploaded by procurement or the director."
+    },
+    "supplier": "Supplier",
+    "supplierPlaceholder": "Find by name or number",
+    "newSupplier": "New supplier",
+    "mode": "File type",
+    "modes": {
+      "xlsx": "Template (xlsx)",
+      "ai": "Any: PDF, photo"
+    },
+    "modeHint": {
+      "xlsx": "Columns as in the template",
+      "ai": "AI suggests rows — check the report"
+    },
+    "file": "Price list file",
+    "template": "Download template",
+    "templateError": "Could not download the template.",
+    "validFrom": "Prices valid from",
+    "validUntil": "Prices valid until",
+    "validHint": "For the whole file; file columns win",
+    "check": "Check",
+    "apply": "Apply",
+    "reportTitle": "Upload report",
+    "reportChecked": "Check: nothing saved",
+    "reportApplied": "Price list uploaded",
+    "aiNote": "AI read the rows. Compare them with the file before “Apply”.",
+    "stats": {
+      "itemsCreated": "New items",
+      "itemsMatched": "Found in catalog",
+      "offersCreated": "New prices",
+      "offersUpdated": "Updated prices",
+      "proposals": "To approve",
+      "errors": "Rows with errors"
+    },
+    "unpublishable": "Items missing data for publishing: {{count}}. Complete them on the card.",
+    "proposalsTitle": "Card changes to approve",
+    "proposalsNote": "The price list does not change others’ or published cards — decide on the item card.",
+    "openPending": "Open items to approve",
+    "errorsTitle": "Rows with errors — not uploaded",
+    "warningsTitle": "Uploaded with a note",
+    "shown": "Showing the first {{shown}} of {{total}}.",
+    "row": "Row",
+    "item": "Item",
+    "field": "Field",
+    "reason": "What is wrong",
+    "codes": {
+      "DEFAULT": "Could not read the row {{value}}",
+      "UNKNOWN_CURRENCY": "Unknown currency “{{value}}”",
+      "UNKNOWN_STOCK_STATUS": "Unknown stock status “{{value}}”",
+      "UNKNOWN_CATEGORY": "No such category “{{value}}”",
+      "UNKNOWN_DOMAIN": "No such line “{{value}}”",
+      "PRICE_NOT_A_NUMBER": "Price is not a number",
+      "PRICE_NOT_POSITIVE": "Price must be above zero",
+      "VALID_DATE_INVALID": "Validity date — DD.MM.YYYY",
+      "OFFER_VALIDITY_RANGE_INVALID": "“Valid until” is before “Valid from”",
+      "ROW_FAILED": "Could not upload the row",
+      "HS_CODE_TOO_LONG": "HS code longer than 10 digits — not saved: {{value}}",
+      "HS_CODE_NOT_IN_CLASSIFIER": "HS code not in the classifier: {{value}}",
+      "HS_CODE_RETIRED": "HS code no longer valid: {{value}}"
+    },
+    "fileErrors": {
+      "IMPORT_FAILED": "The file was not uploaded. Check it and try again.",
+      "NAME_COLUMN_NOT_FOUND": "The file has no “Name” column. Use the template.",
+      "AI_EXTRACT_FAILED": "AI could not read the file. Try another file or the template.",
+      "AI_EXTRACT_EMPTY": "AI found no item rows in the file.",
+      "ROWS_TOKEN_EXPIRED": "The check is out of date. Press “Check” again.",
+      "AI_JOB_FAILED": "AI could not read the file. Try again later."
     }
   }
 }
