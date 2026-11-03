@@ -747,7 +747,8 @@
       "archive_mailing": "Archive as a newsletter",
       "reply_template": "Reply",
       "suspicious": "To Suspicious",
-      "more": "Another action"
+      "more": "Another action",
+      "price_handover": "Hand over for price upload"
     },
     "fields": {
       "from": "From",
@@ -809,7 +810,11 @@
       "handoverDone": "Letter handed over: {{name}}",
       "suspiciousWhat": "The letter moves to the Suspicious tab — you can bring it back from there (“Not spam”). The mailbox itself is not changed.",
       "suspiciousConfirm": "To Suspicious",
-      "suspiciousDone": "Letter moved to Suspicious"
+      "suspiciousDone": "Letter moved to Suspicious",
+      "priceHandoverNone": "Nobody to hand over to: no employee may upload price lists and see supplier prices. Assign such a role in Settings · Roles.",
+      "priceHandoverWhat": "The letter leaves “New” and appears in My tasks of the chosen colleague, who will upload the price list.",
+      "priceHandoverConfirm": "Hand over for upload",
+      "priceHandoverDone": "Letter handed over for price upload: {{name}}"
     },
     "result": {
       "title": "Outcome",
@@ -990,7 +995,12 @@
         "button": "Always treat letters from {{pattern}} as “{{type}}”",
         "what": "New letters from it get this type by themselves, before the assistant.",
         "created": "Rule created. More letters got the type: {{count}}",
-        "exists": "This rule already exists."
+        "exists": "This rule already exists.",
+        "publicDomain": "This is a public mail service — the rule will catch letters from anyone. An exact address is better."
+      },
+      "senderCheck": {
+        "unverified": "The sender is not verified: the SPF/DKIM/DMARC check failed, the address may be forged. The rule type was not set.",
+        "unknown": "The sender cannot be verified: the letter has no mark from the mail server. The rule type was not set."
       }
     }
   },
@@ -1079,7 +1089,8 @@
           "mail_type_inactive": "This type is hidden — choose another.",
           "DEFAULT": "Could not save the rule. Check the address or domain.",
           "load": "Rules did not load."
-        }
+        },
+        "publicDomain": "This is a public mail service — the rule will catch letters from anyone. An exact address is better."
       }
     },
     "templates": {

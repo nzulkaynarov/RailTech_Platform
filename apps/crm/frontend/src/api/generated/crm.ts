@@ -116,6 +116,7 @@ import type {
   InboundMailBulkArchiveOut,
   InboundMailHandoverIn,
   InboundMailHandoverTargets,
+  InboundMailHandoverTargetsParams,
   InboundMailLeadOut,
   InboundMailOut,
   InboundMailPage,
@@ -7847,43 +7848,62 @@ export const useBulkArchiveInboundMail = <TError = ErrorType<ErrorOut>, TContext
   return useMutation(getBulkArchiveInboundMailMutationOptions(options), queryClient);
 };
 
-export const getInboundMailHandoverTargetsUrl = () => {
-  return `/api/v1/inbound-mail/handover-targets`;
+export const getInboundMailHandoverTargetsUrl = (params?: InboundMailHandoverTargetsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/inbound-mail/handover-targets?${stringifiedParams}`
+    : `/api/v1/inbound-mail/handover-targets`;
 };
 
 /**
- * Кому передать счёт: активные сотрудники, чья роль даёт подтверждать оплату.
+ * Кому передать письмо: `payments` — чья роль даёт подтверждать оплату (счёт); `price` — чья
+ * роль даёт загружать прайсы поставщиков и видеть их цены.
  * @summary Inbound Mail Handover Targets
  */
 export const inboundMailHandoverTargets = async (
+  params?: InboundMailHandoverTargetsParams,
   options?: Parameters<typeof http>[1],
 ): Promise<InboundMailHandoverTargets> => {
-  return http<InboundMailHandoverTargets>(getInboundMailHandoverTargetsUrl(), {
+  return http<InboundMailHandoverTargets>(getInboundMailHandoverTargetsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getInboundMailHandoverTargetsQueryKey = () => {
-  return [`/api/v1/inbound-mail/handover-targets`] as const;
+export const getInboundMailHandoverTargetsQueryKey = (
+  params?: InboundMailHandoverTargetsParams,
+) => {
+  return [`/api/v1/inbound-mail/handover-targets`, ...(params ? [params] : [])] as const;
 };
 
 export const getInboundMailHandoverTargetsQueryOptions = <
   TData = Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
   TError = ErrorType<ErrorOut>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
-  >;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: InboundMailHandoverTargetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getInboundMailHandoverTargetsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getInboundMailHandoverTargetsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof inboundMailHandoverTargets>>> = ({
     signal,
-  }) => inboundMailHandoverTargets({ signal, ...requestOptions });
+  }) => inboundMailHandoverTargets(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
@@ -7901,6 +7921,7 @@ export function useInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
   TError = ErrorType<ErrorOut>,
 >(
+  params: undefined | InboundMailHandoverTargetsParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
@@ -7921,6 +7942,7 @@ export function useInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
   TError = ErrorType<ErrorOut>,
 >(
+  params?: InboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
@@ -7941,6 +7963,7 @@ export function useInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
   TError = ErrorType<ErrorOut>,
 >(
+  params?: InboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
@@ -7957,6 +7980,7 @@ export function useInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof inboundMailHandoverTargets>>,
   TError = ErrorType<ErrorOut>,
 >(
+  params?: InboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof inboundMailHandoverTargets>>, TError, TData>
@@ -7965,7 +7989,7 @@ export function useInboundMailHandoverTargets<
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getInboundMailHandoverTargetsQueryOptions(options);
+  const queryOptions = getInboundMailHandoverTargetsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

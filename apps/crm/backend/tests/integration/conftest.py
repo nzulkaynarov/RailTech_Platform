@@ -108,8 +108,8 @@ async def reseed_mail_types(session: AsyncSession) -> None:
     """Стартовый набор типов писем как после миграции (MAIL-TYPES)."""
     insert = text(
         "INSERT INTO mail_types "
-        "(code, name_ru, name_uz, name_en, color, icon, default_action, position) "
-        "VALUES (:code, :ru, :uz, :en, :color, :icon, :action, :position)"
+        "(code, name_ru, name_uz, name_en, color, icon, default_action, letter_kind, position) "
+        "VALUES (:code, :ru, :uz, :en, :color, :icon, :action, :kind, :position)"
     )
     for index, seed in enumerate(SEED):
         await session.execute(
@@ -122,6 +122,7 @@ async def reseed_mail_types(session: AsyncSession) -> None:
                 "color": seed.color,
                 "icon": seed.icon,
                 "action": seed.action,
+                "kind": seed.letter_kind,
                 "position": (index + 1) * 10,
             },
         )

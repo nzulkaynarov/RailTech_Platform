@@ -23,6 +23,7 @@ from typing import Final, Literal
 
 from app.domain.mail_html import InlineImage, SafeHtml, html_text_parts, sanitize_html
 from app.domain.mail_text import MAX_TEXT_CHARS, normalize_text, split_quote
+from app.domain.sender_auth import verdict as sender_verdict
 
 SkipReason = Literal["type", "size", "count"]
 
@@ -83,6 +84,7 @@ class ParsedMail:
     files: tuple[MailFile, ...] = ()
     text_tail: str = ""  # цитата прошлой переписки и подпись — свёрнуты под «…»
     html: SafeHtml | None = None
+    sender_auth: str = "unknown"  # подтверждён ли отправитель (`domain/sender_auth.py`)
     skipped: tuple[SkippedFile, ...] = field(default_factory=tuple)
 
 
@@ -242,6 +244,9 @@ def parse_message(raw: bytes) -> ParsedMail:
         skipped=skipped,
         text_tail=tail,
         html=safe_html,
+        sender_auth=sender_verdict(
+            [str(h) for h in message.get_all("Authentication-Results", [])], from_email
+        ),
     )
 
 

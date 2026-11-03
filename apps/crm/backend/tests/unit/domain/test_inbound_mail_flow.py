@@ -101,6 +101,7 @@ def test_claim_of(status: str, assignee: int | None, actor: int, expected: str) 
     [
         ("done", "archived", True),
         ("done", "replied", True),
+        ("done", "price", True),
         ("done", "registered", False),
         ("done", "lead", False),
         ("in_work", None, True),

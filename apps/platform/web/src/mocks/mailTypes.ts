@@ -21,6 +21,14 @@ import { buildMe, readSession } from "./mockSession";
  */
 const KEY = "rt-pf-mock-mail-rules";
 
+/** Публичные почтовые сервисы: правило на такой домен получает предупреждение (как у CRM). */
+const PUBLIC_DOMAINS: ReadonlySet<string> = new Set([
+  "gmail.com",
+  "mail.ru",
+  "yandex.ru",
+  "outlook.com",
+]);
+
 let memory: MailSenderRule[] | null = null;
 
 export function readRules(): MailSenderRule[] {
@@ -65,6 +73,7 @@ function typeOf(row: DictionaryItem, source: InboundMailTypeSource): InboundMail
     color: String(row.attrs["color"]) as InboundMailTypeColor,
     icon: String(row.attrs["icon"]) as InboundMailTypeIcon,
     default_action: String(row.attrs["default_action"]) as InboundMailTypeDefaultAction,
+    letter_kind: typeof row.attrs["letter_kind"] === "string" ? row.attrs["letter_kind"] : null,
     active: row.active,
     source,
   };
@@ -138,7 +147,11 @@ export const mailTypesHandlers = [
     };
     writeRules([...readRules(), rule]);
     const applied = apply(pattern, type.code, body.mail_id ?? null);
-    return HttpResponse.json({ ...rule, applied }, { status: 201 });
+    const domain = pattern.split("@").pop() ?? "";
+    return HttpResponse.json(
+      { ...rule, applied, caution: PUBLIC_DOMAINS.has(domain) ? "public_domain" : null },
+      { status: 201 },
+    );
   }),
   http.delete("*/mail-sender-rules/:id", ({ params }) => {
     if (!allowed("admin", "full")) return forbidden();

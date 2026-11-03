@@ -552,6 +552,7 @@ def test_mail_types_revision_seeds_types_moves_old_hints_and_rolls_back(
             "meeting",
             "supplier_price",
             "supplier_invoice",
+            "supplier_document",
             "official",
             "mailing",
             "spam",
@@ -562,7 +563,7 @@ def test_mail_types_revision_seeds_types_moves_old_hints_and_rolls_back(
         assert moved == [
             ("a", "client_request", "ai"),
             ("b", "official", "ai"),
-            ("c", "supplier_invoice", "ai"),
+            ("c", "supplier_document", "ai"),
             ("d", None, None),
         ]
         conn.execute(

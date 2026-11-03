@@ -11099,6 +11099,11 @@ export interface components {
       maximum?: number | null;
       /** @description Допустимые значения `type = choice` — закрытый список кода (MAIL-TYPES); у остальных полей нет */
       options?: components["schemas"]["DictionaryAttrOption"][] | null;
+      /**
+       * @description `false` — поле можно оставить пустым (вид документа EDS у типа письма)
+       * @default true
+       */
+      required: boolean;
     };
     DictionaryAttrOption: {
       /** @example create_lead */
@@ -11125,6 +11130,8 @@ export interface components {
     };
     DictionaryList: {
       items: components["schemas"]["Dictionary"][];
+      /** @description Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
+      unavailable: ("eds" | "crm")[];
     };
     /** @description Значения полей `attrs` (`urgent`, `due_days` у видов документа; `default_action`, `color`, `icon` у типов писем — строки из `options`); `null` — не задано */
     DictionaryAttrValues: {
@@ -11394,6 +11401,8 @@ export interface components {
         | "archive_mailing"
         | "reply_template"
         | "suspicious";
+      /** @description Вид документа EDS (код `letter-kinds`): им форма «Зарегистрировать входящее» из письма этого типа предзаполняется */
+      letter_kind: string | null;
       active: boolean;
       /**
        * @description Кто выбрал тип: правило отправителя, помощник (человек подтверждает) или человек
@@ -11407,6 +11416,12 @@ export interface components {
     };
     InboundMailHandoverIn: {
       user_id: number;
+      /**
+       * @description `payments` — счёт тому, кто подтверждает оплату; `price` — прайс тому, кто загружает прайсы поставщиков
+       * @default payments
+       * @enum {string}
+       */
+      purpose: "payments" | "price";
     };
     InboundMailHandoverTargets: {
       items: {
@@ -11435,6 +11450,11 @@ export interface components {
       mail_id?: number | null;
     };
     MailSenderRuleOut: {
+      /**
+       * @description `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
+       * @enum {string|null}
+       */
+      caution: "public_domain" | null;
       id: number;
       pattern: string;
       type_code: string;
@@ -11489,6 +11509,11 @@ export interface components {
       assist: components["schemas"]["InboundMailAssist"];
       /** @description Тип письма из справочника «Типы входящих писем»; `null` — не определён */
       type: components["schemas"]["InboundMailType"] | null;
+      /**
+       * @description Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+       * @enum {string|null}
+       */
+      sender_check: "unverified" | "unknown" | null;
       /** @description Известный клиент — по адресу контакта или ИНН в тексте */
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
@@ -11630,6 +11655,11 @@ export interface components {
       assist: components["schemas"]["InboundMailAssist"];
       /** @description Тип письма из справочника «Типы входящих писем»; `null` — не определён */
       type: components["schemas"]["InboundMailType"] | null;
+      /**
+       * @description Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+       * @enum {string|null}
+       */
+      sender_check: "unverified" | "unknown" | null;
       /** @description Известный клиент — по адресу контакта или ИНН в тексте */
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
@@ -17894,7 +17924,10 @@ export interface operations {
   };
   listInboundMailHandoverTargets: {
     parameters: {
-      query?: never;
+      query?: {
+        /** @description `payments` (по умолчанию) — подтверждающие оплату; `price` — загружающие прайсы и видящие цены поставщиков */
+        purpose?: "payments" | "price";
+      };
       header?: never;
       path?: never;
       cookie?: never;

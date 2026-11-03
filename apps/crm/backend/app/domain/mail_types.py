@@ -71,6 +71,8 @@ class SeedType:
     color: str
     icon: str
     action: Action
+    #: Вид документа EDS (код `letter-kinds`) для предзаполнения формы ВХ; нет такого — не трогаем.
+    letter_kind: str | None = None
 
 
 # : Стартовый набор: администратор может переименовать, поменять действие, отключить; удалить
@@ -122,6 +124,16 @@ SEED: Final[tuple[SeedType, ...]] = (
         "to_accountant",
     ),
     SeedType(
+        "supplier_document",
+        "Документ поставщика (договор, акт сверки)",
+        "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
+        "Supplier document (contract, reconciliation act)",
+        "blue",
+        "file",
+        "register_incoming",
+        "supplier",
+    ),
+    SeedType(
         "official",
         "Официальное письмо (госорган, банк, налоговая)",
         "Rasmiy xat (davlat organi, bank, soliq)",
@@ -129,6 +141,7 @@ SEED: Final[tuple[SeedType, ...]] = (
         "red",
         "bank",
         "register_incoming",
+        "government",
     ),
     SeedType(
         "mailing",
@@ -351,3 +364,48 @@ def slug(name: str) -> str:
     text = re.sub(r"[^a-z]+", "_", name.lower().translate(_TRANSLIT)).strip("_")
     text = text[:28].rstrip("_")
     return text if text else "item"
+
+
+#: Публичные почтовые сервисы: правило на такой домен ловит кого угодно — админу предупреждение.
+PUBLIC_DOMAINS: Final[frozenset[str]] = frozenset(
+    {
+        "gmail.com",
+        "googlemail.com",
+        "mail.ru",
+        "inbox.ru",
+        "list.ru",
+        "bk.ru",
+        "internet.ru",
+        "yandex.ru",
+        "yandex.com",
+        "ya.ru",
+        "yahoo.com",
+        "outlook.com",
+        "hotmail.com",
+        "live.com",
+        "icloud.com",
+        "me.com",
+        "rambler.ru",
+        "proton.me",
+        "protonmail.com",
+        "aol.com",
+        "gmx.com",
+        "zoho.com",
+        "mail.com",
+        "bk.uz",
+        "inbox.uz",
+        "umail.uz",
+        "mail.uz",
+    }
+)
+
+
+def is_public_domain(pattern: str) -> bool:
+    """Шаблон правила — публичный почтовый сервис (домен или адрес на нём)."""
+    domain = pattern.rpartition("@")[2]
+    return domain in PUBLIC_DOMAINS or any(domain.endswith("." + d) for d in PUBLIC_DOMAINS)
+
+
+def pattern_matches(pattern: str, sender: str) -> bool:
+    """Подходит ли отправитель под шаблон правила (адрес целиком или домен с поддоменами)."""
+    return best_rule(sender, [(pattern, True)]) is True

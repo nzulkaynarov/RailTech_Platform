@@ -169,7 +169,10 @@ function imapOff(): boolean {
 }
 
 /** Кто подтверждает оплату (роль с «Платежи: полный») — адресаты «Передать бухгалтеру». */
-const HANDOVER_TARGETS: InboundMailPerson[] = [{ id: 7002, name: "Бухгалтер Демо" }];
+const HANDOVER_TARGETS: Record<"payments" | "price", InboundMailPerson[]> = {
+  payments: [{ id: 7002, name: "Бухгалтер Демо" }],
+  price: [{ id: 7003, name: "Снабженец Демо" }],
+};
 
 const CARD_ONLY = new Set([
   "to",
@@ -547,9 +550,11 @@ export const inboundMailHandlers = [
     }
     return HttpResponse.json({ archived, skipped });
   }),
-  http.get("*/inbound-mail/handover-targets", () => {
+  http.get("*/inbound-mail/handover-targets", ({ request }) => {
     if (!viewer().full) return forbidden();
-    return HttpResponse.json({ items: HANDOVER_TARGETS });
+    const purpose =
+      new URL(request.url).searchParams.get("purpose") === "price" ? "price" : "payments";
+    return HttpResponse.json({ items: HANDOVER_TARGETS[purpose] });
   }),
   http.get("*/inbound-mail/:id/attachments/:index", () =>
     HttpResponse.text(PDF, { headers: { "content-type": "application/octet-stream" } }),
@@ -584,7 +589,9 @@ export const inboundMailHandlers = [
     const returnable =
       current.status === "in_work" ||
       (current.status === "done" &&
-        (current.result?.outcome === "archived" || current.result?.outcome === "replied"));
+        (current.result?.outcome === "archived" ||
+          current.result?.outcome === "replied" ||
+          current.result?.outcome === "price"));
     if (!returnable)
       return failure(409, "CONFLICT", "Это письмо нельзя вернуть в «Новые».", {
         reason: "mail_not_returnable",
@@ -675,9 +682,9 @@ export const inboundMailHandlers = [
   http.post("*/inbound-mail/:id/handover", async ({ params, request }) => {
     const v = viewer();
     const id = Number(params.id);
-    const body = (await request.json()) as { user_id: number };
+    const body = (await request.json()) as { user_id: number; purpose?: "payments" | "price" };
     if (!v.full) return forbidden();
-    const target = HANDOVER_TARGETS.find((t) => t.id === body.user_id);
+    const target = HANDOVER_TARGETS[body.purpose ?? "payments"].find((t) => t.id === body.user_id);
     if (!target)
       return failure(409, "CONFLICT", "Некого выбрать.", { reason: "mail_no_handover_target" });
     const got = claim(id, v);
@@ -834,6 +841,8 @@ setRuleApplier((pattern, code, exceptId) => {
       ? sender === pattern
       : domain === pattern || domain.endsWith(`.${pattern}`);
     if (!hit || mail.status !== "new") return mail;
+    // Тип по правилу — только письмам с подтверждённым отправителем.
+    if (mail.sender_check) return mail;
     if (mail.id === exceptId) return mail;
     if (mail.type?.source === "manual" || mail.type?.source === "rule") return mail;
     applied += 1;

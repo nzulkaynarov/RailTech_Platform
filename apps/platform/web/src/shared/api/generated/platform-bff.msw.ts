@@ -9476,6 +9476,10 @@ export const getListInboundMailResponseInboundMailTypeMock = (
       "reply_template",
       "suspicious",
     ] as const),
+    letter_kind: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     active: faker.datatype.boolean(),
     source: faker.helpers.arrayElement(["rule", "ai", "manual"] as const),
   },
@@ -9564,6 +9568,10 @@ export const getListInboundMailResponseMock = (
     },
     type: faker.helpers.arrayElement([
       { ...getListInboundMailResponseInboundMailTypeMock() },
+      null,
+    ]),
+    sender_check: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["unverified", "unknown"] as const),
       null,
     ]),
     client: faker.helpers.arrayElement([
@@ -9671,6 +9679,10 @@ export const getGetInboundMailResponseInboundMailTypeMock = (
       "reply_template",
       "suspicious",
     ] as const),
+    letter_kind: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     active: faker.datatype.boolean(),
     source: faker.helpers.arrayElement(["rule", "ai", "manual"] as const),
   },
@@ -9751,6 +9763,10 @@ export const getGetInboundMailResponseMock = (
     ]),
   },
   type: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailTypeMock() }, null]),
+  sender_check: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["unverified", "unknown"] as const),
+    null,
+  ]),
   client: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   from_history: faker.datatype.boolean(),
@@ -13099,6 +13115,10 @@ export const getListMailSenderRulesResponseMock = (
 export const getCreateMailSenderRuleResponseMock = (
   overrideResponse: Partial<Extract<MailSenderRuleOut, object>> = {},
 ): MailSenderRuleOut => ({
+  caution: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["public_domain"] as const),
+    null,
+  ]),
   id: faker.number.int(),
   pattern: faker.string.alpha({ length: { min: 10, max: 20 } }),
   type_code: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
@@ -13148,9 +13168,11 @@ export const getListDictionariesResponseMock = (
           ),
           null,
         ]),
+        required: faker.datatype.boolean(),
       }),
     ),
   })),
+  unavailable: faker.helpers.arrayElements(["eds", "crm"] as const),
   ...overrideResponse,
 });
 

@@ -8,6 +8,7 @@ import type { InboundMailAttachment } from "./inboundMailAttachment";
 import type { InboundMailEvent } from "./inboundMailEvent";
 import type { InboundMailLink } from "./inboundMailLink";
 import type { InboundMailMessage } from "./inboundMailMessage";
+import type { InboundMailOutSenderCheck } from "./inboundMailOutSenderCheck";
 import type { InboundMailOutStatus } from "./inboundMailOutStatus";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailReply } from "./inboundMailReply";
@@ -59,6 +60,8 @@ export interface InboundMailOut {
   reply_to: string;
   /** Итог у `done` */
   result?: InboundMailResult | null;
+  /** Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`) */
+  sender_check?: InboundMailOutSenderCheck;
   sent_at: string | null;
   skipped: InboundMailSkipped[];
   status: InboundMailOutStatus;

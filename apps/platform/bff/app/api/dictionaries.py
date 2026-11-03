@@ -10,7 +10,7 @@
 """
 
 from dataclasses import dataclass
-from typing import Annotated, Any, Final
+from typing import Annotated, Any, Final, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, Response
@@ -24,6 +24,7 @@ from app.schemas_dictionaries import (
     CODE,
     KIND,
     Dictionary,
+    DictionaryAttrOption,
     DictionaryItem,
     DictionaryItemIn,
     DictionaryItemList,
@@ -101,11 +102,17 @@ def _parse[M: BaseModel](model: type[M], response: httpx.Response, owner: Owner)
 
 @router.get("", response_model=DictionaryList, operation_id="listDictionaries")
 async def list_dictionaries(authed: CatalogReader) -> DictionaryList:
-    """Каталог справочников доменов; BFF добавляет домен-владельца и область экрана."""
+    """Каталог справочников доменов; BFF добавляет домен-владельца и область экрана.
+
+    Домен не ответил — справочники остальных всё равно показываются, недоступный назван в
+    `unavailable` (все домены не ответили — ошибка). Варианты поля «вид документа» у типов писем
+    (`letter_kind`) BFF берёт из справочника EDS «Виды входящих документов»."""
     items: list[Dictionary] = []
+    unavailable: list[Literal["eds", "crm"]] = []
+    failure: PlatformError | None = None
     for owner in (_DOCUMENTS, _MAIL):  # по одному запросу на домен-владельца
-        raw = (await _call(authed, owner, "GET", "")).json()
         try:
+            raw = (await _call(authed, owner, "GET", "")).json()
             for entry in raw["items"]:
                 found = OWNERS.get(entry.get("kind"))
                 if found is not None and found.domain == owner.domain:
@@ -114,9 +121,34 @@ async def list_dictionaries(authed: CatalogReader) -> DictionaryList:
                             {**entry, "owner": found.domain, "area": found.area}
                         )
                     )
-        except (KeyError, TypeError, AttributeError, ValidationError) as exc:
-            raise backend_unavailable(owner.domain, "bad_dictionary") from exc
-    return DictionaryList(items=items)
+        except PlatformError as exc:
+            failure = failure or exc
+            unavailable.append(owner.domain)  # type: ignore[arg-type]
+        except (KeyError, TypeError, AttributeError, ValidationError, ValueError):
+            failure = failure or backend_unavailable(owner.domain, "bad_dictionary")
+            unavailable.append(owner.domain)  # type: ignore[arg-type]
+    if failure is not None and not items:
+        raise failure
+    if "eds" not in unavailable:
+        await _letter_kind_options(authed, items)
+    return DictionaryList(items=items, unavailable=unavailable)
+
+
+async def _letter_kind_options(authed: Authed, items: list[Dictionary]) -> None:
+    """Подставить в `letter_kind` типов писем действующие виды документа EDS (нет — пусто)."""
+    targets = [
+        a for d in items if d.kind == "mail-types" for a in d.attrs if a.key == "letter_kind"
+    ]
+    if not targets:
+        return
+    try:
+        response = await _call(authed, _DOCUMENTS, "GET", "/letter-kinds")
+        kinds = _parse(DictionaryItemList, response, _DOCUMENTS).items
+    except PlatformError:
+        return
+    options = [DictionaryAttrOption(value=k.code, name=k.name) for k in kinds if k.active]
+    for attr in targets:
+        attr.options = options
 
 
 @router.get("/{kind}", response_model=DictionaryItemList, operation_id="listDictionaryItems")

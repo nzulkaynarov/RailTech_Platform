@@ -72,20 +72,34 @@ async function expectFits(page: Page, context: string): Promise<void> {
   expect(overflow, context).toBeLessThanOrEqual(0);
 }
 
+// Делопроизводитель, которому выдана ещё и роль снабженца (7 и 4): у него есть право загружать прайсы.
+const REGISTRAR_WITH_SUPPLY = {
+  id: "u-demo-registrar",
+  name: "Демо Канцелярова",
+  initials: "ДК",
+  email: REGISTRAR,
+  position: "Делопроизводитель",
+  role_ids: ["7", "4"],
+  access: { crm: true, erp: true },
+  status: "active",
+  telegram_linked: false,
+  erp_sync: "ok",
+};
+
 async function signInAt(
   page: Page,
   width: number,
   email: string,
-  withClerkRole = false,
+  employee?: object,
 ): Promise<void> {
   await page.setViewportSize({ width, height: width < 768 ? 844 : 900 });
   if (page.url().startsWith("http")) {
     const clear = KEYS.map((key) => `window.localStorage.removeItem("${key}");`).join(" ");
     await page.evaluate(clear);
   }
-  if (withClerkRole) {
+  if (employee) {
     await page.goto("/login");
-    const employees = JSON.stringify([ADMIN_WITH_CLERK]);
+    const employees = JSON.stringify([employee]);
     await page.evaluate(
       `window.localStorage.setItem("rt-pf-mock-employees", ${JSON.stringify(employees)})`,
     );
@@ -94,7 +108,7 @@ async function signInAt(
 }
 
 for (const width of WIDTHS) {
-  test(`@mobile типы писем: список, фильтр, «Загрузить прайс», смена типа · ${String(width)}`, async ({
+  test(`@mobile типы писем: список, фильтр, «Передать на загрузку прайса», смена типа · ${String(width)}`, async ({
     page,
   }) => {
     await signInAt(page, width, REGISTRAR);
@@ -118,13 +132,14 @@ for (const width of WIDTHS) {
     await expect(page.getByRole("tab", { name: "Новые · 6" })).toBeVisible();
     await settledScreenshot(page, "mail-types-filter");
 
-    // письмо с типом «КП поставщика»: основная кнопка — «Загрузить прайс»
+    // письмо с типом «КП поставщика»: у делопроизводителя нет права на каталог — основная кнопка «Передать на загрузку прайса»
     await page.getByRole("link", { name: /Открыть письмо «Коммерческое предложение/ }).click();
     await expect(
       page.getByRole("heading", { level: 1, name: "Коммерческое предложение на скрепления КБ-65" }),
     ).toBeVisible();
-    const primary = page.getByRole("button", { name: "Загрузить прайс" });
+    const primary = page.getByRole("button", { name: "Передать на загрузку прайса" });
     await expect(primary).toBeVisible();
+    await expect(page.getByRole("button", { name: "Загрузить прайс", exact: true })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Создать лид" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: /Другое действие/ })).toBeVisible();
     await expectNoViolations(page, "карточка КП поставщика");
@@ -135,17 +150,38 @@ for (const width of WIDTHS) {
     await chooseOption(page.getByRole("combobox", { name: "Сменить тип" }), "Запрос клиента");
     await expect(page.getByText("Тип изменён").first()).toBeVisible();
     await expect(page.getByRole("button", { name: "Создать лид" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Загрузить прайс" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Передать на загрузку прайса" })).toHaveCount(0);
     await expect(page.getByText("выбрал сотрудник")).toBeVisible();
     await expect(page.getByText(/сменил тип — Запрос клиента/)).toBeVisible();
     await settledScreenshot(page, "mail-types-card-changed", "Тип письма");
 
-    // вернули «КП поставщика» и закрыли письмо: прайс загружен — письмо ушло из «Новых»
+    // вернули «КП поставщика» и передали снабженцу: письмо ушло из «Новых»
     await chooseOption(
       page.getByRole("combobox", { name: "Сменить тип" }),
       "КП или прайс поставщика",
     );
-    await page.getByRole("button", { name: "Загрузить прайс" }).click();
+    await page.getByRole("button", { name: "Передать на загрузку прайса" }).click();
+    await expect(page.getByText("Снабженец Демо")).toBeVisible();
+    await settledScreenshot(page, "mail-types-price-handover", "Тип письма");
+    await page.getByRole("button", { name: "Передать на загрузку", exact: true }).click();
+    await expect(
+      page.getByText("Письмо передано на загрузку прайса: Снабженец Демо"),
+    ).toBeVisible();
+    const queue = page.getByRole("list", { name: "Письма, ждущие разбора" });
+    await expect(queue.getByText("Коммерческое предложение на скрепления КБ-65")).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "Новые · 5" })).toBeVisible();
+    await expectNoViolations(page, "список после оформления");
+  });
+
+  test(`типы писем: «Загрузить прайс» при праве на каталог, итог «Прайс загружен» и возврат · ${String(width)}`, async ({
+    page,
+  }) => {
+    await signInAt(page, width, REGISTRAR, REGISTRAR_WITH_SUPPLY);
+    await spaGoto(page, "/eds/mail/28");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Коммерческое предложение на скрепления КБ-65" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Загрузить прайс", exact: true }).click();
     await expect(page.getByRole("link", { name: "Открыть загрузку прайса" })).toHaveAttribute(
       "href",
       "/erp/catalog?part=import",
@@ -153,14 +189,18 @@ for (const width of WIDTHS) {
     await settledScreenshot(page, "mail-types-price-step", "Тип письма");
     await page.getByRole("button", { name: "Прайс загружен — убрать из очереди" }).click();
     await expect(page.getByText("Письмо разобрано: прайс загружен")).toBeVisible();
-    const queue = page.getByRole("list", { name: "Письма, ждущие разбора" });
-    await expect(queue.getByText("Коммерческое предложение на скрепления КБ-65")).toHaveCount(0);
-    await expect(page.getByRole("tab", { name: "Новые · 5" })).toBeVisible();
-    await expectNoViolations(page, "список после оформления");
+    await spaGoto(page, "/eds/mail?tab=done");
+    const done = page.getByRole("list", { name: "Разобранные письма" });
+    const row = done.getByRole("listitem").filter({ hasText: "Коммерческое предложение" });
+    await expect(row).toContainText("Прайс загружен");
+    // ошибочно закрытое письмо не потеряно: его можно вернуть в «Новые»
+    await row.getByRole("button", { name: "Вернуть в Новые" }).click();
+    await expect(page.getByText("Письмо вернулось в «Новые»")).toBeVisible();
+    await expectNoViolations(page, "после возврата письма");
   });
 
   test(`типы писем: правило отправителя из карточки · ${String(width)}`, async ({ page }) => {
-    await signInAt(page, width, CHIEF, true);
+    await signInAt(page, width, CHIEF, ADMIN_WITH_CLERK);
     await spaGoto(page, "/eds/mail/29");
     await expect(
       page.getByRole("heading", { level: 1, name: "Требование о предоставлении документов" }),
@@ -178,6 +218,8 @@ for (const width of WIDTHS) {
     await expect(page.getByRole("button", { name: "Создать лид" })).toHaveCount(0);
     const rule = page.getByRole("button", { name: /Всегда считать письма от soliq.example/ });
     await expect(rule).toBeVisible();
+    // письмо без отметки почтового сервера: пометка, почему тип по правилу не поставлен
+    await expect(page.getByText(/Нельзя проверить отправителя/)).toBeVisible();
     await expectNoViolations(page, "карточка с правилом");
     await expectFits(page, "карточка с правилом");
     await settledScreenshot(page, "mail-types-card-rule", "Тип письма");
@@ -192,6 +234,13 @@ for (const width of WIDTHS) {
     await spaGoto(page, "/admin/dictionaries?list=doc%3Amail-types");
     await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
     await expect(page.getByText("Создать лид → менеджеру").first()).toBeVisible();
+    // таблица не шире окна: названия и «Цвет» не обрезаются, горизонтальной прокрутки таблицы нет
+    const clipped = await page
+      .locator(".pf-co-table-wrap")
+      .first()
+      .evaluate((el) => el.scrollWidth - el.clientWidth);
+    // на 390 таблица прокручивается в своём окне (так задумано); на широком экране обрезки быть не должно
+    if (width >= 1000) expect(clipped, "таблица типов шире окна").toBeLessThanOrEqual(0);
     await expectNoViolations(page, "справочник типов");
     await expectFits(page, "справочник типов");
     await settledScreenshot(page, "mail-types-settings");

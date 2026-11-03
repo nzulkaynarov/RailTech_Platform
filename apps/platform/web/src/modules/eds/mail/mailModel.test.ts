@@ -18,6 +18,7 @@ function mail(over: Partial<InboundMail> = {}): InboundMail {
     attachments_count: 0,
     assist: { status: "done", kind: null, summary: "Письмо банка", action: null },
     type: null,
+    sender_check: null,
     client: null,
     lead: null,
     from_history: false,

@@ -79,10 +79,11 @@ const mailType = (
   color: string,
   icon: string,
   action: string,
+  letterKind: string | null = null,
 ): DictionaryItem => ({
   code,
   name,
-  attrs: { default_action: action, color, icon },
+  attrs: { default_action: action, color, icon, letter_kind: letterKind },
   active: true,
   position,
 });
@@ -209,26 +210,40 @@ function seed(): State {
         "to_accountant",
       ),
       mailType(
+        "supplier_document",
+        names(
+          "Документ поставщика (договор, акт сверки)",
+          "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
+          "Supplier document (contract, reconciliation act)",
+        ),
+        60,
+        "blue",
+        "file",
+        "register_incoming",
+        "supplier",
+      ),
+      mailType(
         "official",
         names(
           "Официальное письмо (госорган, банк, налоговая)",
           "Rasmiy xat (davlat organi, bank, soliq)",
           "Official letter (authority, bank, tax)",
         ),
-        60,
+        70,
         "red",
         "bank",
         "register_incoming",
+        "government",
       ),
       mailType(
         "mailing",
         names("Рассылка", "Reklama xabarnomasi", "Newsletter"),
-        70,
+        80,
         "default",
         "notification",
         "archive_mailing",
       ),
-      mailType("spam", names("Спам", "Spam", "Spam"), 80, "default", "stop", "suspicious"),
+      mailType("spam", names("Спам", "Spam", "Spam"), 90, "default", "stop", "suspicious"),
     ],
     // Виды резолюции — поведение кода (закрытый список): только переименовать и переставить.
     "resolution-kinds": [
@@ -264,6 +279,17 @@ const CATALOG: Dictionary[] = [
         type: "choice",
         name: names("Значок", "Belgi", "Icon"),
         options: options(ICONS),
+      },
+      {
+        key: "letter_kind",
+        type: "choice",
+        name: names(
+          "Вид документа при регистрации",
+          "Ro‘yxatga olishdagi hujjat turi",
+          "Document type on registration",
+        ),
+        options: [],
+        required: false,
       },
     ],
   },
@@ -301,6 +327,19 @@ const CATALOG: Dictionary[] = [
     attrs: [],
   },
 ];
+
+/** Каталог, как отдаёт BFF: варианты «вида документа» у типов писем — действующие виды EDS. */
+function catalogWithKinds(): Dictionary[] {
+  const kinds = readDictionaries()
+    ["letter-kinds"].filter((item) => item.active)
+    .map((item) => ({ value: item.code, name: item.name }));
+  return CATALOG.map((dictionary) => ({
+    ...dictionary,
+    attrs: dictionary.attrs.map((attr) =>
+      attr.key === "letter_kind" ? { ...attr, options: kinds } : attr,
+    ),
+  }));
+}
 
 let memory: State | null = null;
 
@@ -443,7 +482,7 @@ export const dictionariesHandlers = [
     if (!readSession()) return failure(401, "SESSION_EXPIRED", "Сессия истекла");
     if (!isAdmin() && !canRead())
       return failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.");
-    return HttpResponse.json({ items: CATALOG });
+    return HttpResponse.json({ items: catalogWithKinds(), unavailable: [] });
   }),
 
   http.get("*/dictionaries/:kind", ({ params, request }) => {
@@ -484,7 +523,7 @@ export const dictionariesHandlers = [
       kind === "letter-kinds"
         ? { urgent: false, due_days: null }
         : kind === "mail-types"
-          ? { color: "default", icon: "mail" }
+          ? { color: "default", icon: "mail", letter_kind: null }
           : {};
     const created: DictionaryItem = {
       code,

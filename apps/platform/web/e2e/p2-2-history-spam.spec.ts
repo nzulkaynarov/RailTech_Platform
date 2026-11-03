@@ -92,7 +92,7 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
 
       await spaGoto(page, "/eds/mail");
       const queue = page.getByRole("list", { name: "Письма, ждущие разбора" });
-      await expect(queue.getByRole("listitem")).toHaveCount(6);
+      await expect(queue.getByRole("listitem")).toHaveCount(8);
       await page.getByText("Из истории · 2").click();
       await expect(queue.getByRole("listitem")).toHaveCount(2);
       await expect(queue.getByText("Из истории").first()).toBeVisible();
@@ -118,7 +118,7 @@ test.describe("P2-2: старые письма и папка «Спам»", () =
       await expect(page.getByRole("radio", { name: /Все/ })).toBeChecked();
       await expect(
         page.getByRole("list", { name: "Письма, ждущие разбора" }).getByRole("listitem"),
-      ).toHaveCount(7);
+      ).toHaveCount(9);
     }
   });
 });

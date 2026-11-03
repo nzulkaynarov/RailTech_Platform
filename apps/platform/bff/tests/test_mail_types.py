@@ -157,7 +157,7 @@ async def test_type_change_and_actions_belong_to_the_first_line(
     for method, path, body in calls:
         assert (await web.send(method, path, json=body)).status_code == 204, path
     assert put.calls[0].request.read() == b'{"type_code":"meeting"}'
-    assert hand.calls[0].request.read() == b'{"user_id":9}'
+    assert hand.calls[0].request.read() == b'{"user_id":9,"purpose":"payments"}'
     listed = await web.client.get("/api/v1/inbound-mail/handover-targets")
     check(listed, "/inbound-mail/handover-targets", "get")
     assert listed.json() == {"items": [{"id": 9, "name": "Бухгалтер Один"}]}
@@ -193,3 +193,38 @@ async def test_list_passes_the_type_filter_to_crm(web: Web, be: Backends) -> Non
     assert route.calls[0].request.url.params["type"] == "meeting"
     bad = await web.client.get("/api/v1/inbound-mail", params={"type": "Bad Code!"})
     assert bad.status_code == 422
+
+
+async def test_price_handover_asks_crm_for_price_candidates(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    targets = be.router.get(f"{MAIL}/handover-targets").mock(
+        return_value=httpx.Response(200, json={"items": [{"id": 4, "name": "Снабженец Демо"}]})
+    )
+    hand = be.router.post(f"{MAIL}/17/handover").mock(return_value=httpx.Response(204))
+    assert (await web.login(["REGISTRAR"])).status_code == 200
+    listed = await web.client.get(
+        "/api/v1/inbound-mail/handover-targets", params={"purpose": "price"}
+    )
+    check(listed, "/inbound-mail/handover-targets", "get")
+    assert targets.calls[0].request.url.params["purpose"] == "price"
+    sent = await web.send(
+        "POST", "/api/v1/inbound-mail/17/handover", json={"user_id": 4, "purpose": "price"}
+    )
+    assert sent.status_code == 204
+    assert hand.calls[0].request.read() == b'{"user_id":4,"purpose":"price"}'
+    bad = await web.client.get("/api/v1/inbound-mail/handover-targets", params={"purpose": "x"})
+    assert bad.status_code == 422
+
+
+async def test_rule_on_a_public_domain_comes_back_with_a_caution(web: Web, be: Backends) -> None:
+    be.router.post(RULES).mock(
+        return_value=httpx.Response(
+            201, json={**RULE, "pattern": "gmail.com", "applied": 0, "caution": "public_domain"}
+        )
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.send(
+        "POST", "/api/v1/mail-sender-rules", json={"pattern": "gmail.com", "type_code": "spam"}
+    )
+    assert (response.status_code, response.json()["caution"]) == (201, "public_domain")

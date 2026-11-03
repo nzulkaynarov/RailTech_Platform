@@ -2441,8 +2441,14 @@ components:
               $ref: '#/components/schemas/DictionaryAttrOption'
             type: array
           - type: 'null'
-          description: Допустимые значения для `type = choice` (закрытый список кода)
+          description: Допустимые значения `type = choice` (закрытый список кода; пусто — варианты подставляет Платформа из
+            справочника другого домена)
           title: Options
+        required:
+          default: true
+          description: '`false` — поле можно оставить пустым'
+          title: Required
+          type: boolean
         type:
           enum:
           - boolean
@@ -4475,6 +4481,14 @@ components:
     InboundMailHandoverIn:
       additionalProperties: false
       properties:
+        purpose:
+          default: payments
+          description: '`payments` — счёт тому, кто подтверждает оплату; `price` — прайс тому, кто загружает прайсы поставщиков'
+          enum:
+          - payments
+          - price
+          title: Purpose
+          type: string
         user_id:
           minimum: 1.0
           title: User Id
@@ -4581,6 +4595,16 @@ components:
           - $ref: '#/components/schemas/InboundMailResult'
           - type: 'null'
           description: Итог у `done`
+        sender_check:
+          anyOf:
+          - enum:
+            - unverified
+            - unknown
+            type: string
+          - type: 'null'
+          description: 'Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC
+            не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)'
+          title: Sender Check
         sent_at:
           anyOf:
           - format: date-time
@@ -4842,6 +4866,16 @@ components:
           - $ref: '#/components/schemas/InboundMailResult'
           - type: 'null'
           description: Итог у `done`
+        sender_check:
+          anyOf:
+          - enum:
+            - unverified
+            - unknown
+            type: string
+          - type: 'null'
+          description: 'Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC
+            не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)'
+          title: Sender Check
         sent_at:
           anyOf:
           - format: date-time
@@ -5143,6 +5177,12 @@ components:
         icon:
           title: Icon
           type: string
+        letter_kind:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: 'Вид документа EDS (код): им форма ВХ из письма этого типа предзаполняется'
+          title: Letter Kind
         name:
           $ref: '#/components/schemas/LocalizedName'
         source:
@@ -6091,6 +6131,14 @@ components:
           description: Сколько открытых писем «Новые» получили тип по этому правилу
           title: Applied
           type: integer
+        caution:
+          anyOf:
+          - const: public_domain
+            type: string
+          - type: 'null'
+          description: '`public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма
+            кого угодно'
+          title: Caution
         created_at:
           format: date-time
           title: Created At
@@ -12568,8 +12616,21 @@ paths:
       - inbound-mail
   /api/v1/inbound-mail/handover-targets:
     get:
-      description: 'Кому передать счёт: активные сотрудники, чья роль даёт подтверждать оплату.'
+      description: 'Кому передать письмо: `payments` — чья роль даёт подтверждать оплату (счёт); `price` — чья
+
+        роль даёт загружать прайсы поставщиков и видеть их цены.'
       operationId: inbound_mail_handover_targets
+      parameters:
+      - in: query
+        name: purpose
+        required: false
+        schema:
+          default: payments
+          enum:
+          - payments
+          - price
+          title: Purpose
+          type: string
       responses:
         '200':
           content:

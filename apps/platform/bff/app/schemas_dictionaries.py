@@ -44,6 +44,8 @@ class DictionaryAttr(BaseModel):
     maximum: int | None = None
     #: Допустимые значения `choice` (MAIL-TYPES); у EDS поля нет — `None`.
     options: list[DictionaryAttrOption] | None = None
+    #: `False` — поле можно оставить пустым (CRM: вид документа EDS у типа письма).
+    required: bool = True
 
 
 class Dictionary(BaseModel):
@@ -57,6 +59,8 @@ class Dictionary(BaseModel):
 
 class DictionaryList(BaseModel):
     items: list[Dictionary]
+    #: Домены, чьи справочники не ответили: список частичный, экран говорит об этом.
+    unavailable: list[Literal["eds", "crm"]] = []
 
 
 class DictionaryItem(BaseModel):

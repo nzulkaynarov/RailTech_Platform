@@ -10,8 +10,8 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Query, Response, status
 
-from app.api.deps import ContainerDep, PrincipalDep, require
-from app.domain.errors import PasswordChangeRequiredError
+from app.api.deps import ContainerDep, PrincipalDep, get_rbac, require
+from app.domain.errors import ForbiddenError, PasswordChangeRequiredError
 from app.schemas.mail_types import (
     DICTIONARY_KIND,
     Code,
@@ -21,6 +21,7 @@ from app.schemas.mail_types import (
     DictionaryItemPatch,
     DictionaryList,
     DictionaryOrderIn,
+    HandoverPurpose,
     InboundMailHandoverIn,
     InboundMailHandoverTargets,
     InboundMailTypeIn,
@@ -29,6 +30,7 @@ from app.schemas.mail_types import (
     MailSenderRuleOut,
 )
 from app.security.principal import Principal
+from app.security.rbac import Rbac
 from app.services import mail_types as catalog
 
 router = APIRouter(prefix="/api/v1", tags=["mail-types"])
@@ -49,6 +51,27 @@ async def staff(principal: PrincipalDep) -> Principal:
 
 
 Reader = Annotated[Principal, Depends(staff)]
+
+
+async def rules_reader(
+    principal: PrincipalDep, rbac: Annotated[Rbac, Depends(get_rbac)]
+) -> Principal:
+    """Правила видит первая линия (`mail_inbox:read`) и тот, кто читает «Почту» в подключениях
+    (`integrations:read`): чужим сотрудникам список адресов отправителей ни к чему."""
+    if principal.must_change_password:
+        raise PasswordChangeRequiredError("change the temporary password first")
+    roles, platform = principal.rbac_roles, principal.platform_role_ids
+    if not (
+        rbac.allowed(roles, "mail_inbox", "read", platform)
+        or rbac.allowed(roles, "integrations", "read", platform)
+    ):
+        raise ForbiddenError(
+            "mail_inbox:read or integrations:read is required", resource="mail_inbox"
+        )
+    return principal
+
+
+RulesReader = Annotated[Principal, Depends(rules_reader)]
 
 
 @router.get("/dictionaries", response_model=DictionaryList)
@@ -112,7 +135,7 @@ async def delete_dictionary_item(
 
 
 @router.get("/mail-sender-rules", response_model=MailSenderRuleList)
-async def list_mail_sender_rules(_: Reader, container: ContainerDep) -> MailSenderRuleList:
+async def list_mail_sender_rules(_: RulesReader, container: ContainerDep) -> MailSenderRuleList:
     """Правила «отправитель или домен → тип» по возрасту."""
     return await container.mail_types.list_rules()
 
@@ -163,10 +186,13 @@ async def supplier_price_inbound_mail(
 
 @router.get("/inbound-mail/handover-targets", response_model=InboundMailHandoverTargets)
 async def inbound_mail_handover_targets(
-    _: Worker, container: ContainerDep
+    _: Worker,
+    container: ContainerDep,
+    purpose: Annotated[HandoverPurpose, Query()] = "payments",
 ) -> InboundMailHandoverTargets:
-    """Кому передать счёт: активные сотрудники, чья роль даёт подтверждать оплату."""
-    return await container.inbound_mail_actions.handover_targets()
+    """Кому передать письмо: `payments` — чья роль даёт подтверждать оплату (счёт); `price` — чья
+    роль даёт загружать прайсы поставщиков и видеть их цены."""
+    return await container.inbound_mail_actions.handover_targets(purpose)
 
 
 @router.post("/inbound-mail/{mail_id}/handover", status_code=status.HTTP_204_NO_CONTENT)
@@ -177,7 +203,7 @@ async def handover_inbound_mail(
     ведёт другой — 409 `mail_in_work_by_other`; нет такого коллеги — 409
     `mail_no_handover_target`.
     """
-    await container.inbound_mail_actions.handover(who, mail_id, body.user_id)
+    await container.inbound_mail_actions.handover(who, mail_id, body.user_id, body.purpose)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

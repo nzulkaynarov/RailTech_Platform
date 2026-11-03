@@ -18,6 +18,11 @@ export interface InboundMailType {
   color: InboundMailTypeColor;
   icon: InboundMailTypeIcon;
   default_action: InboundMailTypeDefaultAction;
+  /**
+   * Вид документа EDS (код `letter-kinds`): им форма «Зарегистрировать входящее» из письма этого типа предзаполняется
+   * @nullable
+   */
+  letter_kind: string | null;
   active: boolean;
   /** Кто выбрал тип: правило отправителя, помощник (человек подтверждает) или человек */
   source: InboundMailTypeSource;

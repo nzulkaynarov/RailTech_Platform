@@ -68,6 +68,7 @@ class InboundMail(TimestampMixin, Base):
         CheckConstraint(
             "type_source IS NULL OR type_source IN ('rule', 'ai', 'manual')", name="type_source"
         ),
+        CheckConstraint("sender_auth IN ('verified', 'unverified', 'unknown')", name="sender_auth"),
         Index("ix_inbound_mail_type_code", "type_code"),
         Index("uq_inbound_mail_message_id", "message_id", unique=True),
         Index("ix_inbound_mail_status_activity", "status", "activity_at"),
@@ -138,6 +139,10 @@ class InboundMail(TimestampMixin, Base):
     # остаётся; `type_source` — кто выбрал: правило отправителя, помощник или человек.
     type_code: Mapped[str | None] = mapped_column(String(32))
     type_source: Mapped[str | None] = mapped_column(String(8))
+    # Подтверждён ли отправитель (SPF/DKIM/DMARC, `domain/sender_auth.py`) и пропущено ли из-за
+    # этого правило «отправитель → тип» (тип по правилу ставится только подтверждённым).
+    sender_auth: Mapped[str] = mapped_column(String(10), nullable=False, server_default="unknown")
+    rule_skipped: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=false())
     # «В работе у …» (Help Scout «assigned to»): кто и с какого времени; `registering_at` — ВХ
     # создаётся.
     assignee_id: Mapped[int | None] = mapped_column(

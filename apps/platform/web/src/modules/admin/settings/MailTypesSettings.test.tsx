@@ -35,7 +35,7 @@ async function rowOf(name: string): Promise<HTMLElement> {
 }
 
 describe("Настройки · Процессы · Справочники · Типы входящих писем (MAIL-TYPES)", () => {
-  it("раздел «Почта» слева; восемь стартовых типов с действием по умолчанию из закрытого списка; использованный не удаляется", async () => {
+  it("раздел «Почта» слева; девять стартовых типов с действием по умолчанию из закрытого списка; использованный не удаляется", async () => {
     signInAs("admin@demo.example");
     renderApp(PAGE);
     expect(await screen.findByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
@@ -50,9 +50,11 @@ describe("Настройки · Процессы · Справочники · Т
       "Загрузить прайс или КП поставщика",
     );
     expect(await rowOf("Спам")).toHaveTextContent("В «Подозрительные» (спам)");
-    expect(readDictionaries()["mail-types"]).toHaveLength(8);
-    // «Счёт поставщика» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
-    expect(screen.queryByRole("button", { name: "Удалить: Счёт поставщика" })).toBeNull();
+    expect(readDictionaries()["mail-types"]).toHaveLength(9);
+    // «Документ поставщика» уже стоит у демо-писем — удалить нельзя, только скрыть; «Приглашение на встречу» не использовано
+    expect(
+      screen.queryByRole("button", { name: "Удалить: Документ поставщика (договор, акт сверки)" }),
+    ).toBeNull();
     expect(screen.getByRole("button", { name: "Удалить: Приглашение на встречу" })).toBeEnabled();
   });
 
@@ -69,6 +71,11 @@ describe("Настройки · Процессы · Справочники · Т
 
     fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: "Действие по умолчанию" }));
     fireEvent.click(await screen.findByTitle("Передать бухгалтеру"));
+    // вид документа при регистрации — необязательный, варианты из справочника «Виды входящих документов»
+    fireEvent.mouseDown(
+      within(dialog).getByRole("combobox", { name: "Вид документа при регистрации" }),
+    );
+    fireEvent.click(await screen.findByTitle("Письмо контрагента"));
     fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
     const row = await rowOf("Жалоба покупателя");
     expect(row).toHaveTextContent("Передать бухгалтеру");
@@ -77,6 +84,7 @@ describe("Настройки · Процессы · Справочники · Т
       default_action: "to_accountant",
       color: "default",
       icon: "mail",
+      letter_kind: "counterparty",
     });
   });
 

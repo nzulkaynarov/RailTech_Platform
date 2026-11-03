@@ -16,6 +16,8 @@ export interface InboundMailType {
   color: string;
   default_action: string;
   icon: string;
+  /** Вид документа EDS (код): им форма ВХ из письма этого типа предзаполняется */
+  letter_kind?: string | null;
   name: LocalizedName;
   /** Кто выбрал: правило отправителя, помощник (человек подтверждает) или человек */
   source: InboundMailTypeSource;

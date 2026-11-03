@@ -222,7 +222,12 @@
       "sales": "Sales",
       "documents": "Documents",
       "calc": "Pricing",
-      "mail": "Mail"
+      "mail": "Mail",
+      "partial": "Some lists did not load ({{lists}}) — the others are shown. Try again later.",
+      "domain": {
+        "eds": "documents",
+        "crm": "mail"
+      }
     },
     "notifications": {
       "personal": "Personal notifications are set in Profile.",

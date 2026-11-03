@@ -4,6 +4,9 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
+
 import type {
   InboundMail,
   InboundMailTypeDefaultAction,
@@ -23,7 +26,11 @@ import { ReleaseButton } from "./ReleaseButton";
 import { type MailRun, useMailRun } from "./useMailRun";
 import { MAIL_ACTIONS, PRICE_UPLOAD_PATH, listPath, registerFromMailPath } from "./mailModel";
 
-type Step = Exclude<InboundMailTypeDefaultAction, "register_incoming" | "reply_template"> | null;
+/** Шаги с подтверждением; `handover_price` — «Передать на загрузку прайса» (у сотрудника нет права загрузки). */
+type Step =
+  | Exclude<InboundMailTypeDefaultAction, "register_incoming" | "reply_template">
+  | "handover_price"
+  | null;
 
 interface StepProps {
   mail: InboundMail;
@@ -138,10 +145,21 @@ function PriceStep({ mail, run, pending, cancel, done }: StepProps) {
   );
 }
 
-/** Счёт поставщика: письмо уходит тому, кто подтверждает оплату (роль — данные, список даёт CRM). */
-function HandoverStep({ mail, run, pending, cancel, done }: StepProps) {
+/**
+ * Передача письма сотруднику: счёт — тому, кто подтверждает оплату; прайс — тому, кто загружает прайсы и видит цены
+ * поставщиков (роль — данные, список даёт CRM по правам ролей).
+ */
+function HandoverStep({
+  mail,
+  run,
+  pending,
+  cancel,
+  done,
+  purpose,
+}: StepProps & { purpose: "payments" | "price" }) {
   const { t } = useTranslation("letters");
-  const targets = useListInboundMailHandoverTargets();
+  const key = purpose === "price" ? "priceHandover" : "handover";
+  const targets = useListInboundMailHandoverTargets({ purpose });
   const items = targets.data?.items ?? [];
   const [chosen, setChosen] = useState<number | null>(null);
   const to = chosen ?? (items.length === 1 ? (items[0]?.id ?? null) : null);
@@ -149,7 +167,7 @@ function HandoverStep({ mail, run, pending, cancel, done }: StepProps) {
   return (
     <div className="pf-mail-actions">
       {targets.isPending ? null : items.length === 0 ? (
-        <Alert type="info" showIcon role="status" message={t("mail.actions.handoverNone")} />
+        <Alert type="info" showIcon role="status" message={t(`mail.actions.${key}None`)} />
       ) : (
         <>
           <label htmlFor="mail-handover-to">{t("mail.actions.handoverTo")}</label>
@@ -160,19 +178,19 @@ function HandoverStep({ mail, run, pending, cancel, done }: StepProps) {
             options={items.map((item) => ({ value: item.id, label: item.name }))}
             onChange={setChosen}
           />
-          <Consequence title={t("mail.actions.what")} items={[t("mail.actions.handoverWhat")]} />
+          <Consequence title={t("mail.actions.what")} items={[t(`mail.actions.${key}What`)]} />
         </>
       )}
       <Buttons
-        confirm={t("mail.actions.handoverConfirm")}
+        confirm={t(`mail.actions.${key}Confirm`)}
         loading={pending}
         disabled={to === null}
         cancel={cancel}
         onClick={() =>
           void run(async () => {
             if (to === null) return "";
-            await handoverInboundMail(mail.id, { user_id: to });
-            return t("mail.actions.handoverDone", { name });
+            await handoverInboundMail(mail.id, { user_id: to, purpose });
+            return t(`mail.actions.${key}Done`, { name });
           }, done)
         }
       />
@@ -204,7 +222,8 @@ const STEPS: Record<NonNullable<Step>, (props: StepProps) => React.JSX.Element> 
   create_lead: LeadStep,
   archive_mailing: ArchiveStep,
   supplier_price: PriceStep,
-  to_accountant: HandoverStep,
+  to_accountant: (props) => <HandoverStep {...props} purpose="payments" />,
+  handover_price: (props) => <HandoverStep {...props} purpose="price" />,
   suspicious: SuspiciousStep,
 };
 
@@ -233,10 +252,16 @@ export function Working({
   const navigate = useNavigate();
   const { run, pending, error } = useMailRun(reload);
   const [step, setStep] = useState<Step>(null);
+  const { me } = useAuth();
+  // Загружать прайсы может тот, у кого есть право на каталог; остальным — передать на загрузку сотруднику с правом.
+  const canLoadPrices = canEdit(me, "erp.stock");
   const primary = mail.type?.default_action ?? null;
   const done = () => void navigate(listPath(false));
+  const label = (action: InboundMailTypeDefaultAction) =>
+    t(`mail.action.${action === "supplier_price" && !canLoadPrices ? "price_handover" : action}`);
   const start = (action: InboundMailTypeDefaultAction) => {
     if (action === "reply_template") focusReply();
+    else if (action === "supplier_price" && !canLoadPrices) setStep("handover_price");
     else if (action !== "register_incoming") setStep(action);
   };
   const button = (action: InboundMailTypeDefaultAction, main: boolean) =>
@@ -246,7 +271,7 @@ export function Working({
         type={main ? "primary" : "default"}
         to={registerFromMailPath(mail.id)}
       >
-        {t(`mail.action.${action}`)}
+        {label(action)}
       </LinkButton>
     ) : (
       <Button
@@ -256,7 +281,7 @@ export function Working({
           start(action);
         }}
       >
-        {t(`mail.action.${action}`)}
+        {label(action)}
       </Button>
     );
   const others = MAIL_ACTIONS.filter((action) => action !== primary);
@@ -286,7 +311,7 @@ export function Working({
               menu={{
                 items: others.map((action) => ({
                   key: action,
-                  label: t(`mail.action.${action}`),
+                  label: label(action),
                 })),
                 onClick: ({ key }) => {
                   if (key === "register_incoming") {

@@ -1,12 +1,16 @@
 """Типы входящих писем как справочник и правила отправителя (MAIL-TYPES)
 
 * `mail_types` — справочник: код, название ru/uz/en, цвет и значок из закрытого набора, действие по
-  умолчанию из закрытого списка кода, «действует», порядок; стартовый набор из восьми типов (можно
+  умолчанию из закрытого списка кода, «действует», порядок; стартовый набор из девяти типов (можно
   править и отключать);
 * `mail_sender_rules` — «отправитель или домен → тип», один шаблон — одно правило;
 * `inbound_mail.type_code` и `type_source` (`rule | ai | manual`); старые подсказки помощника
   переносятся в тип: покупатель → «Запрос клиента», официальное → «Официальное письмо», документ
-  поставщика → «Счёт поставщика», «прочее» остаётся без типа;
+  поставщика → «Документ поставщика», «прочее» остаётся без типа;
+* `inbound_mail.sender_auth` (`verified | unverified | unknown`: SPF/DKIM/DMARC по
+  `Authentication-Results`) и `rule_skipped` — правило «отправитель → тип» ставится только письмам с
+  подтверждённым отправителем; `mail_types.letter_kind` — вид документа EDS для предзаполнения формы
+  ВХ;
 * итог письма `price` («прайс загружен»); `assist_action` шире — туда пишется код действия по
   умолчанию типа.
 
@@ -40,8 +44,8 @@ _OUTCOME_NEW = (
 )
 _OLD_ACTIONS = "'register', 'lead', 'archive'"
 
-# code, ru, uz, en, color, icon, action
-_SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
+# code, ru, uz, en, color, icon, action, letter_kind (код вида документа EDS или None)
+_SEED: tuple[tuple[str, str, str, str, str, str, str, str | None], ...] = (
     (
         "client_request",
         "Запрос клиента",
@@ -50,6 +54,7 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "green",
         "mail",
         "create_lead",
+        None,
     ),
     (
         "cooperation",
@@ -59,6 +64,7 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "purple",
         "team",
         "register_incoming",
+        None,
     ),
     (
         "meeting",
@@ -68,6 +74,7 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "cyan",
         "calendar",
         "reply_template",
+        None,
     ),
     (
         "supplier_price",
@@ -77,6 +84,7 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "blue",
         "file",
         "supplier_price",
+        None,
     ),
     (
         "supplier_invoice",
@@ -86,6 +94,17 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "gold",
         "wallet",
         "to_accountant",
+        None,
+    ),
+    (
+        "supplier_document",
+        "Документ поставщика (договор, акт сверки)",
+        "Yetkazib beruvchi hujjati (shartnoma, solishtirma dalolatnoma)",
+        "Supplier document (contract, reconciliation act)",
+        "blue",
+        "file",
+        "register_incoming",
+        "supplier",
     ),
     (
         "official",
@@ -95,6 +114,7 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "red",
         "bank",
         "register_incoming",
+        "government",
     ),
     (
         "mailing",
@@ -104,8 +124,18 @@ _SEED: tuple[tuple[str, str, str, str, str, str, str], ...] = (
         "default",
         "notification",
         "archive_mailing",
+        None,
     ),
-    ("spam", "Спам", "Spam", "Spam", "default", "stop", "suspicious"),
+    (
+        "spam",
+        "Спам",
+        "Spam",
+        "Spam",
+        "default",
+        "stop",
+        "suspicious",
+        None,
+    ),
 )
 
 
@@ -119,6 +149,7 @@ def upgrade() -> None:
         sa.Column("color", sa.String(length=16), server_default="default", nullable=False),
         sa.Column("icon", sa.String(length=16), server_default="mail", nullable=False),
         sa.Column("default_action", sa.String(length=24), nullable=False),
+        sa.Column("letter_kind", sa.String(length=32), nullable=True),
         sa.Column("active", sa.Boolean(), server_default=sa.true(), nullable=False),
         sa.Column("position", sa.Integer(), server_default="0", nullable=False),
         sa.Column(
@@ -154,6 +185,7 @@ def upgrade() -> None:
         sa.column("color", sa.String),
         sa.column("icon", sa.String),
         sa.column("default_action", sa.String),
+        sa.column("letter_kind", sa.String),
         sa.column("position", sa.Integer),
     )
     op.bulk_insert(
@@ -167,9 +199,10 @@ def upgrade() -> None:
                 "color": color,
                 "icon": icon,
                 "default_action": action,
+                "letter_kind": letter_kind,
                 "position": (index + 1) * 10,
             }
-            for index, (code, ru, uz, en, color, icon, action) in enumerate(_SEED)
+            for index, (code, ru, uz, en, color, icon, action, letter_kind) in enumerate(_SEED)
         ],
     )
 
@@ -210,13 +243,26 @@ def upgrade() -> None:
         "type_source IS NULL OR type_source IN ('rule', 'ai', 'manual')",
     )
     op.create_index("ix_inbound_mail_type_code", table_name, ["type_code"])
+    op.add_column(
+        table_name,
+        sa.Column("sender_auth", sa.String(length=10), server_default="unknown", nullable=False),
+    )
+    op.add_column(
+        table_name,
+        sa.Column("rule_skipped", sa.Boolean(), server_default=sa.false(), nullable=False),
+    )
+    op.create_check_constraint(
+        op.f("ck_inbound_mail_sender_auth"),
+        table_name,
+        "sender_auth IN ('verified', 'unverified', 'unknown')",
+    )
     op.alter_column(table_name, "assist_action", type_=sa.String(length=32), existing_nullable=True)
     op.drop_constraint(op.f("ck_inbound_mail_outcome"), table_name, type_="check")
     op.create_check_constraint(op.f("ck_inbound_mail_outcome"), table_name, _OUTCOME_NEW)
     op.execute(
         "UPDATE inbound_mail SET type_code = CASE assist_kind "
         "WHEN 'buyer' THEN 'client_request' WHEN 'official' THEN 'official' "
-        "WHEN 'supplier_doc' THEN 'supplier_invoice' END, type_source = 'ai' "
+        "WHEN 'supplier_doc' THEN 'supplier_document' END, type_source = 'ai' "
         "WHERE assist_status = 'done' AND assist_kind IN ('buyer', 'official', 'supplier_doc')"
     )
 
@@ -238,6 +284,9 @@ def downgrade() -> None:
         f"UPDATE inbound_mail SET assist_action = NULL WHERE assist_action NOT IN ({_OLD_ACTIONS})"
     )
     op.alter_column(table_name, "assist_action", type_=sa.String(length=16), existing_nullable=True)
+    op.drop_constraint(op.f("ck_inbound_mail_sender_auth"), table_name, type_="check")
+    op.drop_column(table_name, "rule_skipped")
+    op.drop_column(table_name, "sender_auth")
     op.drop_index("ix_inbound_mail_type_code", table_name=table_name)
     op.drop_constraint(op.f("ck_inbound_mail_type_source"), table_name, type_="check")
     op.drop_column(table_name, "type_source")

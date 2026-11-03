@@ -195,9 +195,13 @@ class InboundMailIngest:
             now = datetime.now(UTC)
             values = await _row(session, parsed, files)
             # Правило «отправитель или домен → тип» применяется до помощника и побеждает его.
+            # Только письмам с подтверждённым отправителем (SPF/DKIM/DMARC): `From` подделывается.
+            values["sender_auth"] = parsed.sender_auth
             by_rule = await types_repo.rule_type_for(session, parsed.from_email)
-            if by_rule is not None:
+            if by_rule is not None and parsed.sender_auth == "verified":
                 values.update(type_code=by_rule, type_source="rule")
+            elif by_rule is not None:
+                values["rule_skipped"] = True
             values.update(
                 mailbox=folder.name,
                 uidvalidity=uidvalidity,

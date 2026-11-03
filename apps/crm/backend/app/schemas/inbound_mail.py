@@ -86,6 +86,12 @@ class InboundMailItem(BaseModel):
     type: InboundMailType | None = Field(
         default=None, description="Тип письма из справочника; `null` — не определён"
     )
+    sender_check: Literal["unverified", "unknown"] | None = Field(
+        default=None,
+        description="Правило «отправитель → тип» не применено: `unverified` — отправитель не "
+        "подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка "
+        "`Authentication-Results`)",
+    )
     client: InboundMailLink | None = None
     lead: InboundMailLink | None = Field(
         default=None, description="Открытый лид с этим адресом (связка) или лид-итог"

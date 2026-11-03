@@ -103,7 +103,8 @@ function attrText(
     return value === true ? t("settings.dict.yes") : t("settings.dict.no");
   if (attr.type === "choice") {
     const option = attr.options?.find((o) => o.value === value);
-    return option ? localName(option.name, language) : t("settings.dict.no");
+    if (option) return localName(option.name, language);
+    return typeof value === "string" ? value : t("settings.dict.no");
   }
   return typeof value === "number" ? String(value) : t("settings.dict.generalRule");
 }
@@ -177,6 +178,7 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
         <Alert type="error" showIcon role="alert" message={t("settings.dict.errors.load")} />
       ) : null}
       <ListTable<DictionaryItem>
+        wrap
         label={localName(dictionary.name, i18n.language)}
         data={items}
         loading={query.isPending}
@@ -193,12 +195,15 @@ function DictionaryTable({ dictionary, readOnly }: { dictionary: Dictionary; rea
             key: "name",
             render: (_: unknown, row) => <b>{name(row)}</b>,
           },
-          ...dictionary.attrs.map((attr) => ({
-            title: localName(attr.name, i18n.language),
-            key: attr.key,
-            render: (_: unknown, row: DictionaryItem) =>
-              attrText(t, attr, row.attrs[attr.key], i18n.language),
-          })),
+          // «Значок» виден в самой метке типа; в таблице он только отнимал бы ширину.
+          ...dictionary.attrs
+            .filter((attr) => attr.key !== "icon")
+            .map((attr) => ({
+              title: localName(attr.name, i18n.language),
+              key: attr.key,
+              render: (_: unknown, row: DictionaryItem) =>
+                attrText(t, attr, row.attrs[attr.key], i18n.language),
+            })),
           {
             title: t("settings.dict.status"),
             key: "active",
@@ -441,16 +446,21 @@ function ItemModal({
               name={["attrs", attr.key]}
               label={localName(attr.name, i18n.language)}
               // Не `required: true`: antd кладёт `aria-required` на корневой div списка, а он не поле (axe).
-              rules={[
-                {
-                  validator: (_rule, value: unknown) =>
-                    value
-                      ? Promise.resolve()
-                      : Promise.reject(new Error(t("settings.dict.chooseRequired"))),
-                },
-              ]}
+              rules={
+                attr.required === false
+                  ? []
+                  : [
+                      {
+                        validator: (_rule, value: unknown) =>
+                          value
+                            ? Promise.resolve()
+                            : Promise.reject(new Error(t("settings.dict.chooseRequired"))),
+                      },
+                    ]
+              }
             >
               <Select
+                allowClear={attr.required === false}
                 placeholder={t("settings.dict.choose")}
                 options={(attr.options ?? []).map((o) => ({
                   value: o.value,

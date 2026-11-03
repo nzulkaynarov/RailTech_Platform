@@ -51,8 +51,11 @@ class DictionaryAttr(BaseModel):
     minimum: int | None = None
     maximum: int | None = None
     options: list[DictionaryAttrOption] | None = Field(
-        default=None, description="Допустимые значения для `type = choice` (закрытый список кода)"
+        default=None,
+        description="Допустимые значения `type = choice` (закрытый список кода; пусто — варианты "
+        "подставляет Платформа из справочника другого домена)",
     )
+    required: bool = Field(default=True, description="`false` — поле можно оставить пустым")
 
 
 class Dictionary(BaseModel):
@@ -103,6 +106,10 @@ class InboundMailType(BaseModel):
     color: str
     icon: str
     default_action: str
+    letter_kind: str | None = Field(
+        default=None,
+        description="Вид документа EDS (код): им форма ВХ из письма этого типа предзаполняется",
+    )
     active: bool = Field(
         description="Тип отключён: у письма остаётся, предлагать его больше не будем"
     )
@@ -135,14 +142,27 @@ class MailSenderRuleIn(_Strict):
 
 class MailSenderRuleOut(MailSenderRule):
     applied: int = Field(description="Сколько открытых писем «Новые» получили тип по этому правилу")
+    caution: Literal["public_domain"] | None = Field(
+        default=None,
+        description="`public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): "
+        "правило поймает письма кого угодно",
+    )
 
 
 class InboundMailTypeIn(_Strict):
     type_code: Code | None = Field(description="Код типа или `null` — снять тип")
 
 
+HandoverPurpose = Literal["payments", "price"]
+
+
 class InboundMailHandoverIn(_Strict):
     user_id: int = Field(ge=1)
+    purpose: HandoverPurpose = Field(
+        default="payments",
+        description="`payments` — счёт тому, кто подтверждает оплату; `price` — прайс тому, кто "
+        "загружает прайсы поставщиков",
+    )
 
 
 class InboundMailHandoverTarget(BaseModel):

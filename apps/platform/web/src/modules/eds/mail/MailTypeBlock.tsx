@@ -73,6 +73,14 @@ export function MailTypeBlock({ mail, reload }: { mail: InboundMail; reload: () 
       ) : (
         <p className="pf-hint pf-mail-what">{t("mail.type.empty")}</p>
       )}
+      {mail.sender_check ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          message={t(`mail.type.senderCheck.${mail.sender_check}`)}
+        />
+      ) : null}
       <label htmlFor="mail-type-select">{t("mail.type.change")}</label>
       <Select
         id="mail-type-select"
@@ -97,7 +105,9 @@ function SenderRule({ mail, typeName }: { mail: InboundMail; typeName: string })
   const refresh = useRefreshMail();
   const [scope, setScope] = useState<"domain" | "address">("domain");
   const [pending, setPending] = useState(false);
-  const [note, setNote] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [note, setNote] = useState<{ type: "error" | "success" | "warning"; text: string } | null>(
+    null,
+  );
   const email = mail.from_email.toLowerCase();
   const domain = email.split("@")[1] ?? "";
   const pattern = scope === "domain" ? domain : email;
@@ -113,8 +123,12 @@ function SenderRule({ mail, typeName }: { mail: InboundMail; typeName: string })
         mail_id: mail.id,
       });
       const text = t("mail.type.rule.created", { count: rule.applied });
+      if (rule.caution) void message.warning(t("mail.type.rule.publicDomain"));
       void message.success(text);
-      setNote({ type: "success", text });
+      setNote({
+        type: rule.caution ? "warning" : "success",
+        text: rule.caution ? `${text} ${t("mail.type.rule.publicDomain")}` : text,
+      });
       await refresh();
     } catch (failure) {
       const exists =

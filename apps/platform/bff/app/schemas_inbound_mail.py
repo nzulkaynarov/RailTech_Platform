@@ -143,6 +143,7 @@ class InboundMailType(_Out):
     color: Literal["blue", "green", "gold", "red", "purple", "cyan", "default"]
     icon: Literal["mail", "team", "calendar", "file", "wallet", "bank", "notification", "stop"]
     default_action: MailTypeAction
+    letter_kind: str | None
     active: bool
     source: Literal["rule", "ai", "manual"]
 
@@ -157,6 +158,7 @@ class InboundMailHandoverIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     user_id: int = Field(ge=1)
+    purpose: Literal["payments", "price"] = "payments"
 
 
 class InboundMailHandoverTarget(_Out):
@@ -182,6 +184,7 @@ class MailSenderRuleList(_Out):
 
 class MailSenderRuleOut(MailSenderRule):
     applied: int
+    caution: Literal["public_domain"] | None
 
 
 class MailSenderRuleIn(BaseModel):
@@ -226,6 +229,7 @@ class InboundMailItem(_Out):
     attachments_count: int
     assist: InboundMailAssist
     type: InboundMailType | None
+    sender_check: Literal["unverified", "unknown"] | None
     client: InboundMailLink | None
     lead: InboundMailLink | None
     from_history: bool
@@ -428,6 +432,7 @@ def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
         attachments_count=src.attachments_count,
         assist=_assist(src.assist),
         type=_type(src.type),
+        sender_check=src.sender_check,
         client=_client(src.client),
         lead=_lead(src.lead),
         from_history=bool(src.from_history),

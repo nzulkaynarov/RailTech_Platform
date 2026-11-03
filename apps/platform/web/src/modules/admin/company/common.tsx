@@ -408,6 +408,7 @@ export function ListTable<T extends object>({
   loading,
   empty,
   pageSize,
+  wrap,
 }: {
   label: string;
   columns: TableColumnsType<T>;
@@ -416,13 +417,15 @@ export function ListTable<T extends object>({
   loading?: boolean;
   empty: { title: string; text: string; action?: ReactNode };
   pageSize?: number;
+  /** Текст в ячейках переносится, таблица не шире окна (без горизонтальной прокрутки): справочники с длинными названиями. */
+  wrap?: boolean;
 }) {
   return (
     <div className="pf-co-table-wrap" tabIndex={0} role="region" aria-label={label}>
       <Table<T>
         size="middle"
         pagination={pageSize ? { pageSize, hideOnSinglePage: true, showSizeChanger: false } : false}
-        scroll={{ x: "max-content" }}
+        scroll={wrap ? undefined : { x: "max-content" }}
         loading={loading}
         columns={columns}
         dataSource={data}

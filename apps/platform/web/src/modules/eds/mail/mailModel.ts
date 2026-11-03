@@ -38,10 +38,13 @@ export const OWN_TABS: readonly MailTab[] = ["mine", "done", "all"];
 /** Вкладки, где можно выбрать письма и отправить в архив пачкой (первая линия). */
 export const BULK_TABS: readonly MailTab[] = ["new", "in_work", "all", "spam"];
 
-/** «Вернуть в Новые» у разобранного архивом или ответом (ничего не потеряно); остальное возвращать нельзя. */
+/** «Вернуть в Новые» у разобранного архивом, ответом или «прайс загружен» (ничего не потеряно). */
 export function canReturn(mail: Pick<InboundMail, "status" | "result">): boolean {
   const outcome = mail.result?.outcome;
-  return mail.status === "done" && (outcome === "archived" || outcome === "replied");
+  return (
+    mail.status === "done" &&
+    (outcome === "archived" || outcome === "replied" || outcome === "price")
+  );
 }
 
 /** Ключ слова статуса: «Новое · ответ в цепочке» у разобранного, на которое ответил клиент. */

@@ -105,6 +105,9 @@ def item_fields(
         "attachments_count": sum(1 for a in row.attachments or [] if not a.get("inline")),
         "assist": assist_view(row, assist_on),
         "type": _type(row, types),
+        "sender_check": row.sender_auth
+        if row.rule_skipped and row.sender_auth != "verified"
+        else None,
         "client": names.link("client", row.client_id),
         "lead": names.link("lead", row.matched_lead_id),
         "from_history": row.from_history,

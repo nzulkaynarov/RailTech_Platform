@@ -222,7 +222,12 @@
       "sales": "Savdo",
       "documents": "Hujjatlar",
       "calc": "Hisob-kitob",
-      "mail": "Pochta"
+      "mail": "Pochta",
+      "partial": "Ba’zi ma’lumotnomalar yuklanmadi ({{lists}}) — qolganlari ko‘rsatilgan. Keyinroq qayta urining.",
+      "domain": {
+        "eds": "hujjatlar",
+        "crm": "pochta"
+      }
     },
     "notifications": {
       "personal": "Shaxsiy bildirishnomalar — Profilda.",

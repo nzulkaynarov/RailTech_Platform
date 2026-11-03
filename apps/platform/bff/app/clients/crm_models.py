@@ -6,7 +6,7 @@ from datetime import date
 from enum import StrEnum
 from typing import Annotated, Any, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, RootModel
 
 
 class Action(StrEnum):
@@ -262,6 +262,21 @@ class CabinetUrlOut(BaseModel):
     url: Annotated[str | None, Field(title="Url")]
     """
     Действующий адрес; null — не задан ни в настройках, ни в окружении
+    """
+
+
+class CautionEnum(StrEnum):
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
+    """
+
+    public_domain = "public_domain"
+
+
+class Caution(RootModel[CautionEnum | None]):
+    root: Annotated[CautionEnum | None, Field(title="Caution")] = None
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
     """
 
 
@@ -911,6 +926,10 @@ class InboundMailItem(BaseModel):
     """
     Итог у `done`
     """
+    sender_check: Annotated[SenderCheck | None, Field(title="Sender Check")] = None
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     status: Annotated[Status7, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
@@ -1047,6 +1066,10 @@ class InboundMailOut(BaseModel):
     """
     Итог у `done`
     """
+    sender_check: Annotated[SenderCheck | None, Field(title="Sender Check")] = None
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
     skipped: Annotated[list[InboundMailSkipped], Field(title="Skipped")]
     status: Annotated[Status7, Field(title="Status")]
@@ -1137,6 +1160,10 @@ class InboundMailType(BaseModel):
     color: Annotated[str, Field(title="Color")]
     default_action: Annotated[str, Field(title="Default Action")]
     icon: Annotated[str, Field(title="Icon")]
+    letter_kind: Annotated[str | None, Field(title="Letter Kind")] = None
+    """
+    Вид документа EDS (код): им форма ВХ из письма этого типа предзаполняется
+    """
     name: LocalizedName
     source: Annotated[Source4, Field(title="Source")]
     """
@@ -1402,6 +1429,10 @@ class MailSenderRuleOut(BaseModel):
     applied: Annotated[int, Field(title="Applied")]
     """
     Сколько открытых писем «Новые» получили тип по этому правилу
+    """
+    caution: Annotated[Caution | None, Field(title="Caution")] = None
+    """
+    `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно
     """
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     created_by: Annotated[str | None, Field(title="Created By")] = None
@@ -1703,6 +1734,15 @@ class Security1(StrEnum):
     starttls = "starttls"
     ssl = "ssl"
     none = "none"
+
+
+class SenderCheck(StrEnum):
+    """
+    Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли), `unknown` — проверить нельзя (нет заголовка `Authentication-Results`)
+    """
+
+    unverified = "unverified"
+    unknown = "unknown"
 
 
 class SentViaEnum(StrEnum):

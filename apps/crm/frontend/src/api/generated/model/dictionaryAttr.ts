@@ -11,7 +11,9 @@ export interface DictionaryAttr {
   maximum?: number | null;
   minimum?: number | null;
   name: LocalizedName;
-  /** Допустимые значения для `type = choice` (закрытый список кода) */
+  /** Допустимые значения `type = choice` (закрытый список кода; пусто — варианты подставляет Платформа из справочника другого домена) */
   options?: DictionaryAttrOption[] | null;
+  /** `false` — поле можно оставить пустым */
+  required?: boolean;
   type: DictionaryAttrType;
 }

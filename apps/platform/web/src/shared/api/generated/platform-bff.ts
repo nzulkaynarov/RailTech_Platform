@@ -246,6 +246,7 @@ import type {
   ListEmployeesParams,
   ListExternalChatsParams,
   ListHsCodesParams,
+  ListInboundMailHandoverTargetsParams,
   ListInboundMailParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
@@ -15715,8 +15716,22 @@ export function useListInboundMail<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export const getListInboundMailHandoverTargetsUrl = () => {
-  return `/api/v1/inbound-mail/handover-targets`;
+export const getListInboundMailHandoverTargetsUrl = (
+  params?: ListInboundMailHandoverTargetsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/inbound-mail/handover-targets?${stringifiedParams}`
+    : `/api/v1/inbound-mail/handover-targets`;
 };
 
 /**
@@ -15724,34 +15739,40 @@ export const getListInboundMailHandoverTargetsUrl = () => {
  * @summary Входящая почта: кому передать счёт
  */
 export const listInboundMailHandoverTargets = async (
+  params?: ListInboundMailHandoverTargetsParams,
   options?: Parameters<typeof http>[1],
 ): Promise<InboundMailHandoverTargets> => {
-  return http<InboundMailHandoverTargets>(getListInboundMailHandoverTargetsUrl(), {
+  return http<InboundMailHandoverTargets>(getListInboundMailHandoverTargetsUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getListInboundMailHandoverTargetsQueryKey = () => {
-  return [`/api/v1/inbound-mail/handover-targets`] as const;
+export const getListInboundMailHandoverTargetsQueryKey = (
+  params?: ListInboundMailHandoverTargetsParams,
+) => {
+  return [`/api/v1/inbound-mail/handover-targets`, ...(params ? [params] : [])] as const;
 };
 
 export const getListInboundMailHandoverTargetsQueryOptions = <
   TData = Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
->(options?: {
-  query?: Partial<
-    UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
-  >;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: ListInboundMailHandoverTargetsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getListInboundMailHandoverTargetsQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getListInboundMailHandoverTargetsQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>> = ({
     signal,
-  }) => listInboundMailHandoverTargets({ signal, ...requestOptions });
+  }) => listInboundMailHandoverTargets(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
@@ -15771,6 +15792,7 @@ export function useListInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
 >(
+  params: undefined | ListInboundMailHandoverTargetsParams,
   options: {
     query: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
@@ -15791,6 +15813,7 @@ export function useListInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
 >(
+  params?: ListInboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
@@ -15811,6 +15834,7 @@ export function useListInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
 >(
+  params?: ListInboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
@@ -15827,6 +15851,7 @@ export function useListInboundMailHandoverTargets<
   TData = Awaited<ReturnType<typeof listInboundMailHandoverTargets>>,
   TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
 >(
+  params?: ListInboundMailHandoverTargetsParams,
   options?: {
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listInboundMailHandoverTargets>>, TError, TData>
@@ -15835,7 +15860,7 @@ export function useListInboundMailHandoverTargets<
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getListInboundMailHandoverTargetsQueryOptions(options);
+  const queryOptions = getListInboundMailHandoverTargetsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

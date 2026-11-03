@@ -86,6 +86,7 @@ async def test_catalog_adds_owner_and_area(web: Web, eds: EdsFake, check: Contra
     assert (await web.login(["ADMIN"])).status_code == 200
     response = await web.client.get(BASE)
     check(response, "/dictionaries", "get")
+    assert response.json()["unavailable"] == []
     assert [(d["kind"], d["owner"], d["area"]) for d in response.json()["items"]] == [
         ("letter-kinds", "eds", "documents"),
         ("mail-types", "crm", "mail"),
@@ -162,3 +163,59 @@ async def test_only_admin_full_changes(web: Web, eds: EdsFake) -> None:
         assert response.status_code == 403
         assert (await web.send("DELETE", f"{BASE}/letter-kinds/other")).status_code == 403
     assert eds.made("POST", "dictionaries/letter-kinds") == []
+
+
+async def test_catalog_is_partial_when_crm_is_down_and_all_down_is_an_error(
+    web: Web, be: Backends, eds: EdsFake
+) -> None:
+    be.router.get(f"{CRM_URL}/api/v1/dictionaries").mock(return_value=httpx.Response(503))
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.client.get(BASE)
+    assert response.status_code == 200
+    assert [d["kind"] for d in response.json()["items"]] == ["letter-kinds"]
+    assert response.json()["unavailable"] == ["crm"]
+
+    eds.answer("GET", "dictionaries", httpx.Response(503))
+    assert (await web.client.get(BASE)).status_code == 503
+
+
+async def test_catalog_gives_the_letter_kind_field_options_from_eds(web: Web, eds: EdsFake) -> None:
+    eds.answer(
+        "GET",
+        "dictionaries/letter-kinds",
+        httpx.Response(
+            200,
+            json={
+                "items": [
+                    ITEM,
+                    {**ITEM, "code": "old", "active": False, "name": {**NAME, "ru": "Старый"}},
+                ]
+            },
+        ),
+    )
+    be_catalog = {
+        "items": [
+            {
+                "kind": "mail-types",
+                "name": NAME,
+                "closed": False,
+                "attrs": [
+                    {
+                        "key": "letter_kind",
+                        "type": "choice",
+                        "name": NAME,
+                        "options": [],
+                        "required": False,
+                    }
+                ],
+            }
+        ]
+    }
+    web.be.router.get(f"{CRM_URL}/api/v1/dictionaries").mock(
+        return_value=httpx.Response(200, json=be_catalog)
+    )
+    assert (await web.login(["ADMIN"])).status_code == 200
+    response = await web.client.get(BASE)
+    mail = next(d for d in response.json()["items"] if d["kind"] == "mail-types")
+    [attr] = mail["attrs"]
+    assert (attr["required"], [o["value"] for o in attr["options"]]) == (False, ["bank"])

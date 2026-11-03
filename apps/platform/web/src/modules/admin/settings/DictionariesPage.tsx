@@ -1,4 +1,4 @@
-import { Card } from "antd";
+import { Alert, Card } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -126,8 +126,20 @@ export function DictionariesPage() {
     );
   }
 
+  const unavailable = catalog.data?.unavailable ?? [];
   return (
     <SettingsPage sectionKey="dictionaries">
+      {unavailable.length > 0 ? (
+        <Alert
+          type="warning"
+          showIcon
+          role="status"
+          style={{ marginBottom: 16 }}
+          message={t("modules:admin.dictionaries.partial", {
+            lists: unavailable.map((d) => t(`modules:admin.dictionaries.domain.${d}`)).join(", "),
+          })}
+        />
+      ) : null}
       <div className="pf-bot-layout">
         <SettingsNav
           label={t("modules:admin.dictionaries.nav")}

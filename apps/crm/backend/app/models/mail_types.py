@@ -55,6 +55,8 @@ class MailType(TimestampMixin, Base):
     color: Mapped[str] = mapped_column(String(16), nullable=False, server_default="default")
     icon: Mapped[str] = mapped_column(String(16), nullable=False, server_default="mail")
     default_action: Mapped[str] = mapped_column(String(24), nullable=False)
+    # Вид документа EDS (код `letter-kinds`) для предзаполнения формы ВХ из письма этого типа.
+    letter_kind: Mapped[str | None] = mapped_column(String(32))
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=true())
     position: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
 

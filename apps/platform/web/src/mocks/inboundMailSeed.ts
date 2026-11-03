@@ -60,6 +60,7 @@ const BASE = {
   attachments_count: 0,
   assist: { status: "none", kind: null, summary: null, action: null },
   type: null as InboundMailType | null,
+  sender_check: null as InboundMail["sender_check"],
 } satisfies Partial<StoredMail>;
 
 /** Тело письма, которого нет в карточке верхнего уровня: HTML после санитизации и свёрнутая цитата (P2-4). */
@@ -171,7 +172,7 @@ export function seed(): StoredMail[] {
         summary: "Поставщик прислал акт сверки за октябрь, просит подписать до 10 ноября.",
         action: null,
       },
-      type: resolveType("supplier_invoice", "ai"),
+      type: resolveType("supplier_document", "ai"),
       to: [addr(MAILBOX), addr("buh.copy@company.example")],
       cc: [addr("sidorov@railtech.example")],
       reply_all_copy: ["buh.copy@company.example", "sidorov@railtech.example"],
@@ -389,6 +390,8 @@ export function seed(): StoredMail[] {
       text:
         "Уважаемый руководитель!\n\nВ соответствии с запросом просим представить документы по сделкам за III квартал " +
         "в срок до 15 ноября.\n\nНалоговая служба Демо",
+      // Заголовка `Authentication-Results` нет — правило «домен → тип» к письму не применено (его просто не проверить).
+      sender_check: "unknown",
     }),
   ];
 }

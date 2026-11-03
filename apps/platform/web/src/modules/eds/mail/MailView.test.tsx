@@ -57,16 +57,18 @@ describe("Карточка письма: подсказка и действия 
   it("«Зарегистрировать как ВХ» открывает форму, заполненную из письма, с вложением и адресатами из копии", async () => {
     signIn(REGISTRAR);
     renderAt("/eds/mail/17");
-    // у «Счёта поставщика» основная кнопка — «Передать бухгалтеру», регистрация — в меню «Другое действие»
-    expect(await screen.findByRole("button", { name: "Передать бухгалтеру" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Зарегистрировать как ВХ" })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: /Другое действие/ }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Зарегистрировать как ВХ" }));
+    // «Документ поставщика»: основная кнопка — «Зарегистрировать как ВХ», остальные действия — в меню
+    const register = await screen.findByRole("link", { name: "Зарегистрировать как ВХ" });
+    expect(register).toHaveAttribute("href", "/eds/register?mail=17");
+    expect(register).toHaveClass("ant-btn-primary");
+    fireEvent.click(register);
     expect(
       await screen.findByText("Из письма: «Акт сверки за октябрь» от ООО «Демо-Поставка»"),
     ).toBeVisible();
     expect(screen.getByLabelText(/Тема/)).toHaveValue("Акт сверки за октябрь");
     expect(await screen.findByText("акт-сверки-октябрь.pdf")).toBeVisible();
+    // вид документа предзаполнен по типу письма («Документ поставщика» → «Письмо поставщика»)
+    expect(await screen.findByText("Письмо поставщика")).toBeVisible();
   });
 });
 

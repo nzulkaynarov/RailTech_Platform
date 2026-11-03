@@ -95,10 +95,10 @@ def claim_of(status: str, assignee_id: int | None, actor_id: int) -> Claim:
 
 
 def can_return(status: str, outcome: str | None) -> bool:
-    """«Вернуть в Новые»: своё «в работе» и разобранное архивом или ответом (ничего не потеряно)."""
+    """«Вернуть в Новые»: своё «в работе» и разобранное архивом, ответом или «прайс загружен»."""
     if status == "in_work":
         return True
-    return status == "done" and outcome in ("archived", "replied")
+    return status == "done" and outcome in ("archived", "replied", "price")
 
 
 def status_after_reply(status: str) -> str:

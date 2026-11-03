@@ -48,6 +48,7 @@ def item(**over: Any) -> dict[str, Any]:
             "color": "gold",
             "icon": "wallet",
             "default_action": "to_accountant",
+            "letter_kind": None,
             "active": True,
             "source": "ai",
         },

@@ -70,14 +70,16 @@ class InboundMailActions:
             )
         logger.info("inbound_mail_price_done", mail_id=mail_id)
 
-    async def handover_targets(self) -> dto.InboundMailHandoverTargets:
+    async def handover_targets(self, purpose: str = "payments") -> dto.InboundMailHandoverTargets:
         async with self._sessions() as session:
-            found = await types_repo.handover_targets(session)
+            found = await types_repo.handover_targets(session, purpose)
         return dto.InboundMailHandoverTargets(
             items=[dto.InboundMailHandoverTarget(id=i, name=n) for i, n in found]
         )
 
-    async def handover(self, who: Principal, mail_id: int, user_id: int) -> None:
+    async def handover(
+        self, who: Principal, mail_id: int, user_id: int, purpose: str = "payments"
+    ) -> None:
         """«Передать бухгалтеру»: письмо «В работе» у выбранного сотрудника — из «Новых» оно
         уходит, у него появляется в «Моих задачах». Адресат — только из тех, кто
         подтверждает оплату (данные ролей).
@@ -86,18 +88,27 @@ class InboundMailActions:
         async with self._sessions() as session, session.begin():
             row = await work.lock(session, mail_id)
             await work.claim(session, row, who, now)
-            if user_id not in {i for i, _ in await types_repo.handover_targets(session)}:
+            if user_id not in {i for i, _ in await types_repo.handover_targets(session, purpose)}:
                 raise ConflictError("no such colleague", reason=Reason.MAIL_NO_HANDOVER_TARGET)
             names = await views.user_names(session, [user_id])
             row.status, row.assignee_id, row.assigned_at = "in_work", user_id, now
-            await record_decision(session, row, "to_accountant", who.actor)
+            await record_decision(
+                session,
+                row,
+                "to_accountant" if purpose == "payments" else "supplier_price",
+                who.actor,
+            )
             await audit.record(
                 session,
                 who.actor,
                 "inbound_mail.handover",
                 "inbound_mail",
                 row.id,
-                after={"assignee_id": user_id, "type_name": names.get(user_id, "")},
+                after={
+                    "assignee_id": user_id,
+                    "type_name": names.get(user_id, ""),
+                    "purpose": purpose,
+                },
             )
         logger.info("inbound_mail_handed_over", mail_id=mail_id, to=user_id)
 

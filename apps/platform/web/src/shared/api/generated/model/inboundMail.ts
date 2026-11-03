@@ -11,6 +11,7 @@ import type { InboundMailMessage } from "./inboundMailMessage";
 import type { InboundMailPerson } from "./inboundMailPerson";
 import type { InboundMailReply } from "./inboundMailReply";
 import type { InboundMailResult } from "./inboundMailResult";
+import type { InboundMailSenderCheck } from "./inboundMailSenderCheck";
 import type { InboundMailSkipped } from "./inboundMailSkipped";
 import type { InboundMailStatus } from "./inboundMailStatus";
 import type { InboundMailType } from "./inboundMailType";
@@ -35,6 +36,11 @@ export interface InboundMail {
   assist: InboundMailAssist;
   /** Тип письма из справочника «Типы входящих писем»; `null` — не определён */
   type: InboundMailType | null;
+  /**
+   * Правило «отправитель → тип» не применено: `unverified` — отправитель не подтверждён (SPF/DKIM/DMARC не прошли, возможна подделка `From`), `unknown` — проверить нельзя (у письма нет заголовка `Authentication-Results`)
+   * @nullable
+   */
+  sender_check: InboundMailSenderCheck;
   /** Известный клиент — по адресу контакта или ИНН в тексте */
   client: InboundMailLink | null;
   /** Открытый лид с этим адресом */

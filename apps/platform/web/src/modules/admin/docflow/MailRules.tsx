@@ -43,10 +43,11 @@ export function MailRules({ readOnly }: { readOnly: boolean }) {
   };
   const add = useCreateMailSenderRule({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (rule) => {
         refresh();
         setPattern("");
         void message.success(t("settings.dict.rules.added"));
+        if (rule.caution) void message.warning(t("settings.dict.rules.publicDomain"), 8);
       },
     },
   });

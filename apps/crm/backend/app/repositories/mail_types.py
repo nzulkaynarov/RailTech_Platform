@@ -1,8 +1,9 @@
 """Запросы справочника типов писем и правил отправителя (MAIL-TYPES)."""
 
 from collections.abc import Sequence
+from typing import Final
 
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import ColumnElement, and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.mail_types import best_rule
@@ -10,6 +11,9 @@ from app.models.auth import User
 from app.models.inbound_mail import InboundMail
 from app.models.mail_types import MailSenderRule, MailType
 from app.models.platform_roles import PlatformRole, UserPlatformRole
+
+#: Цель передачи → раздел каталога Платформы, дающий право.
+PURPOSES: Final = {"payments": "eds.payments", "price": "erp.stock"}
 
 
 async def all_types(session: AsyncSession, *, include_hidden: bool = True) -> Sequence[MailType]:
@@ -86,48 +90,62 @@ async def rule_type_for(session: AsyncSession, sender: str) -> str | None:
     return best_rule(sender, [(p, c) for p, c in rows])
 
 
+def _sender_clause(pattern: str) -> ColumnElement[bool]:
+    """Отправитель подходит под шаблон: адрес целиком или домен с поддоменами (граница по точке)."""
+    if "@" in pattern:
+        return func.lower(InboundMail.from_email) == pattern
+    domain = func.split_part(func.lower(InboundMail.from_email), "@", 2)
+    return or_(domain == pattern, domain.like(func.concat("%.", pattern)))
+
+
 async def apply_rule_to_open(
     session: AsyncSession, pattern: str, type_code: str, *, except_id: int | None = None
 ) -> int:
-    """Правило применено к открытым «Новым» письмам этого отправителя без выбора человека."""
-    if "@" in pattern:
-        sender = func.lower(InboundMail.from_email) == pattern
-    else:
-        domain = func.split_part(func.lower(InboundMail.from_email), "@", 2)
-        sender = or_(domain == pattern, domain.like(f"%.{pattern}"))
+    """Правило применено к открытым «Новым» письмам этого отправителя без выбора человека.
+
+    Тип ставится только письмам с подтверждённым отправителем; остальным — пометка «правило не
+    применено» (в карточке видно, почему)."""
     where = [
         InboundMail.status == "new",
         InboundMail.thread_root_id.is_(None),
-        sender,
+        _sender_clause(pattern),
         or_(InboundMail.type_source.is_(None), InboundMail.type_source == "ai"),
     ]
     if except_id is not None:
         where.append(InboundMail.id != except_id)
     stmt = (
         update(InboundMail)
-        .where(and_(*where))
-        .values(type_code=type_code, type_source="rule")
+        .where(and_(*where, InboundMail.sender_auth == "verified"))
+        .values(type_code=type_code, type_source="rule", rule_skipped=False)
         .returning(InboundMail.id)
     )
-    return len((await session.execute(stmt)).all())
+    applied = len((await session.execute(stmt)).all())
+    await session.execute(
+        update(InboundMail)
+        .where(and_(*where, InboundMail.sender_auth != "verified"))
+        .values(rule_skipped=True)
+    )
+    return applied
 
 
-async def handover_targets(session: AsyncSession) -> list[tuple[int, str]]:
-    """Кому передать счёт: активные сотрудники, чья роль даёт подтверждать оплату (`eds.payments:
-    full`).
+async def handover_targets(
+    session: AsyncSession, purpose: str = "payments"
+) -> list[tuple[int, str]]:
+    """Кому передать письмо: активные сотрудники, чья роль даёт нужное право (данные, не коды).
 
-    Роли — данные; по кодам ролей («бухгалтер») код не ищет: кто подтверждает оплату, того и
-    называет роль."""
+    `payments` — подтверждать оплату (`eds.payments: full`); `price` — загружать прайсы и видеть
+    цены поставщиков (`erp.stock: full` и поле `supplier_prices` в списке видимых полей роли)."""
+    roles = (
+        select(UserPlatformRole.user_id)
+        .join(PlatformRole, PlatformRole.id == UserPlatformRole.role_id)
+        .where(PlatformRole.access[PURPOSES[purpose]].astext == "full")
+    )
+    if purpose == "price":
+        # `restricted_fields` роли — поля с ограничением, которые она ВИДИТ (platform-rbac.yaml)
+        roles = roles.where(PlatformRole.restricted_fields.contains(["supplier_prices"]))
     stmt = (
         select(User.id, User.full_name)
-        .where(
-            User.is_active.is_(True),
-            User.id.in_(
-                select(UserPlatformRole.user_id)
-                .join(PlatformRole, PlatformRole.id == UserPlatformRole.role_id)
-                .where(PlatformRole.access["eds.payments"].astext == "full")
-            ),
-        )
+        .where(User.is_active.is_(True), User.id.in_(roles))
         .order_by(User.full_name, User.id)
     )
     return [(int(i), str(n)) for i, n in (await session.execute(stmt)).all()]

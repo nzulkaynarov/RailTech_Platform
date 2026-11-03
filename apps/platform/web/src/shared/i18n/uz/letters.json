@@ -747,7 +747,8 @@
       "archive_mailing": "Reklama sifatida arxivga",
       "reply_template": "Javob berish",
       "suspicious": "«Shubhali»ga",
-      "more": "Boshqa harakat"
+      "more": "Boshqa harakat",
+      "price_handover": "Narxnomani yuklashga topshirish"
     },
     "fields": {
       "from": "Kimdan",
@@ -809,7 +810,11 @@
       "handoverDone": "Xat topshirildi: {{name}}",
       "suspiciousWhat": "Xat «Shubhali» bo‘limiga o‘tadi — u yerdan qaytarish mumkin («Spam emas»). Pochta qutisida hech narsa o‘zgarmaydi.",
       "suspiciousConfirm": "«Shubhali»ga",
-      "suspiciousDone": "Xat «Shubhali»da"
+      "suspiciousDone": "Xat «Shubhali»da",
+      "priceHandoverNone": "Topshiradigan kishi yo‘q: hech bir xodimda narxnomalarni yuklash va yetkazib beruvchi narxlarini ko‘rish huquqi yo‘q. Bunday rolni «Sozlamalar · Rollar»da tayinlang.",
+      "priceHandoverWhat": "Xat «Yangi»dan chiqadi va tanlangan xodimning «Mening vazifalarim»ida paydo bo‘ladi — u narxnomani yuklaydi.",
+      "priceHandoverConfirm": "Yuklashga topshirish",
+      "priceHandoverDone": "Xat narxnomani yuklashga topshirildi: {{name}}"
     },
     "result": {
       "title": "Natija",
@@ -990,7 +995,12 @@
         "button": "{{pattern}} xatlarini doim «{{type}}» deb hisoblash",
         "what": "Undan kelgan yangi xatlar bu turni yordamchidan oldin o‘zi oladi.",
         "created": "Qoida yaratildi. Yana shuncha xat turga ega bo‘ldi: {{count}}",
-        "exists": "Bunday qoida allaqachon bor."
+        "exists": "Bunday qoida allaqachon bor.",
+        "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
+      },
+      "senderCheck": {
+        "unverified": "Jo‘natuvchi tasdiqlanmagan: SPF/DKIM/DMARC tekshiruvi o‘tmadi, manzil soxtalashtirilgan bo‘lishi mumkin. Qoida bo‘yicha tur qo‘yilmadi.",
+        "unknown": "Jo‘natuvchini tekshirib bo‘lmaydi: xatda pochta serveri belgisi yo‘q. Qoida bo‘yicha tur qo‘yilmadi."
       }
     }
   },
@@ -1079,7 +1089,8 @@
           "mail_type_inactive": "Bu tur o‘chirilgan — boshqasini tanlang.",
           "DEFAULT": "Qoidani saqlab bo‘lmadi. Manzil yoki domenni tekshiring.",
           "load": "Qoidalar yuklanmadi."
-        }
+        },
+        "publicDomain": "Bu umumiy pochta xizmati — qoida istalgan kishining xatini ushlaydi. Aniq manzilni ko‘rsatgan ma’qul."
       }
     },
     "templates": {

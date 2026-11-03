@@ -15,6 +15,21 @@ beforeEach(() => {
 const REGISTRAR = "registrar@demo.example";
 // Администратор, которому в «Оргструктуре» выдали ещё и роль первой линии почты, — создаёт правило из карточки.
 const ADMIN = "admin@demo.example";
+/** Сотрудник «Делопроизводитель» с ещё одной ролью — как после выдачи роли в Оргструктуре. */
+function registrarWith(roleId: string) {
+  return {
+    id: "u-demo-registrar",
+    name: "Демо Канцелярова",
+    initials: "ДК",
+    email: REGISTRAR,
+    position: "Делопроизводитель",
+    role_ids: [ROLE_ID.REGISTRAR, roleId],
+    access: { crm: true, erp: true },
+    status: "active" as const,
+    telegram_linked: false,
+    erp_sync: "ok" as const,
+  };
+}
 const heading = (name: string) => screen.findByRole("heading", { level: 1, name });
 const listOf = (name: string) => screen.findByRole("list", { name });
 
@@ -40,7 +55,28 @@ describe("Типы входящих писем: тег, фильтр, основ
     expect(screen.getByText("Скидки недели на канцтовары")).toBeVisible();
   });
 
-  it("«КП поставщика»: основная кнопка — «Загрузить прайс»; письмо закрывает человек, когда прайс загружен", async () => {
+  it("«КП поставщика», у сотрудника нет права на каталог: «Передать на загрузку прайса» — письмо уходит снабженцу", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail/28");
+    expect(await heading("Коммерческое предложение на скрепления КБ-65")).toBeVisible();
+    const primary = screen.getByRole("button", { name: "Передать на загрузку прайса" });
+    expect(primary).toHaveClass("ant-btn-primary");
+    expect(screen.queryByRole("button", { name: "Загрузить прайс" })).toBeNull();
+    fireEvent.click(primary);
+    // единственный кандидат — снабженец (право на каталог и цены поставщиков) — подставлен сам
+    expect(await screen.findByText("Снабженец Демо")).toBeVisible();
+    expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Передать на загрузку" }));
+    expect(
+      await screen.findByText("Письмо передано на загрузку прайса: Снабженец Демо"),
+    ).toBeVisible();
+    const list = await listOf("Письма, ждущие разбора");
+    expect(within(list).queryByText("Коммерческое предложение на скрепления КБ-65")).toBeNull();
+  });
+
+  it("«КП поставщика», право на каталог есть: «Загрузить прайс» → «Прайс загружен» → письмо в «Разобранных», его можно вернуть", async () => {
+    // делопроизводителю в Оргструктуре выдана и роль снабженца
+    writeEmployees([...readEmployees(), registrarWith(ROLE_ID.SUPPLY)]);
     signIn(REGISTRAR);
     renderAt("/eds/mail/28");
     expect(await heading("Коммерческое предложение на скрепления КБ-65")).toBeVisible();
@@ -59,11 +95,14 @@ describe("Типы входящих писем: тег, фильтр, основ
     const list = await listOf("Письма, ждущие разбора");
     expect(within(list).queryByText("Коммерческое предложение на скрепления КБ-65")).toBeNull();
 
-    // письмо не потеряно: оно в «Разобранных» с итогом
+    // письмо не потеряно: оно в «Разобранных» с итогом, и его можно вернуть в «Новые»
     fireEvent.click(screen.getByRole("tab", { name: /Разобранные/ }));
     const done = await listOf("Разобранные письма");
     const link = await within(done).findByText("Коммерческое предложение на скрепления КБ-65");
     expect(link.closest("li")).toHaveTextContent("Прайс загружен");
+    expect(within(done).getAllByRole("button", { name: "Вернуть в Новые" }).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("человек меняет тип одним щелчком: основная кнопка меняется, в журнале — запись", async () => {
@@ -83,8 +122,10 @@ describe("Типы входящих писем: тег, фильтр, основ
 
   it("счёт поставщика: «Передать бухгалтеру» — письмо уходит выбранному сотруднику, из «Новых» пропадает", async () => {
     signIn(REGISTRAR);
-    renderAt("/eds/mail/17");
-    await heading("Акт сверки за октябрь");
+    renderAt("/eds/mail/18");
+    await heading("Запрос КП на стрелочные переводы");
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
+    fireEvent.click(await screen.findByTitle("Счёт поставщика"));
     fireEvent.click(await screen.findByRole("button", { name: "Передать бухгалтеру" }));
     expect(await screen.findByText("Бухгалтер Демо")).toBeVisible();
     expect(screen.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
@@ -92,7 +133,33 @@ describe("Типы входящих писем: тег, фильтр, основ
     fireEvent.click(confirm ?? screen.getByRole("button", { name: "Передать" }));
     expect(await screen.findByText("Письмо передано: Бухгалтер Демо")).toBeVisible();
     const list = await listOf("Письма, ждущие разбора");
-    expect(within(list).queryByText("Акт сверки за октябрь")).toBeNull();
+    expect(within(list).queryByText("Запрос КП на стрелочные переводы")).toBeNull();
+  });
+
+  it("письмо с неподтверждённым отправителем: пометка в карточке, тип по правилу не поставлен", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail/29");
+    await heading("Требование о предоставлении документов");
+    expect(
+      await screen.findByText(
+        /Нельзя проверить отправителя: у письма нет отметки почтового сервера/,
+      ),
+    ).toBeVisible();
+  });
+
+  it("форма «Зарегистрировать входящее» предзаполняет вид документа по типу письма", async () => {
+    signIn(REGISTRAR);
+    renderAt("/eds/mail/29");
+    await heading("Требование о предоставлении документов");
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Сменить тип" }));
+    fireEvent.click(await screen.findByTitle("Официальное письмо (госорган, банк, налоговая)"));
+    const register = await screen.findByRole("link", { name: "Зарегистрировать как ВХ" });
+    fireEvent.click(register);
+    expect(
+      await screen.findByText(/Из письма: «Требование о предоставлении документов»/),
+    ).toBeVisible();
+    // у «Официального письма» вид документа — «Письмо госоргана» (код government)
+    expect(await screen.findByText("Письмо госоргана")).toBeVisible();
   });
 
   it("рассылка из меню действий: «В Подозрительные» уносит письмо во вкладку «Подозрительные»", async () => {

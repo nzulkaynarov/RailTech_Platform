@@ -23,4 +23,6 @@ export interface DictionaryAttr {
    * @nullable
    */
   options?: DictionaryAttrOption[] | null;
+  /** `false` — поле можно оставить пустым (вид документа EDS у типа письма) */
+  required?: boolean;
 }

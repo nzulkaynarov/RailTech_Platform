@@ -11,6 +11,7 @@
 меняет администратор (`integrations:write`).
 """
 
+import re
 from collections.abc import Sequence
 from typing import Any, Final
 
@@ -19,12 +20,15 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.domain.errors import ConflictError, NotFoundError, Reason, ValidationFailedError
 from app.domain.mail_types import (
     ACTIONS,
+    CODE_PATTERN,
     COLORS,
     ICONS,
     KIND,
     POSITION_STEP,
     ActiveType,
+    is_public_domain,
     normalize_pattern,
+    pattern_matches,
     slug,
 )
 from app.models.mail_types import MailSenderRule, MailType
@@ -91,6 +95,12 @@ _ICON_NAMES: Final[dict[str, tuple[str, str, str]]] = {
     "stop": ("Стоп", "To'xtash", "Stop"),
 }
 _ATTR_NAMES = {"default_action": _ACTION_NAMES, "color": _COLOR_NAMES, "icon": _ICON_NAMES}
+_LETTER_KIND_NAME: Final = (
+    "Вид документа при регистрации",
+    "Ro'yxatga olishdagi hujjat turi",
+    "Document type on registration",
+)
+_LETTER_KIND: Final = re.compile(CODE_PATTERN)
 _DEFAULTS: Final = {"color": "default", "icon": "mail"}
 
 
@@ -110,6 +120,16 @@ def catalog() -> dto.DictionaryList:
         )
         for key, name, options in _ATTRS
     ]
+    # Вид документа EDS: варианты знает EDS, их подставляет BFF; поле необязательное.
+    attrs.append(
+        dto.DictionaryAttr(
+            key="letter_kind",
+            type="choice",
+            name=_names(_LETTER_KIND_NAME),
+            options=[],
+            required=False,
+        )
+    )
     return dto.DictionaryList(
         items=[dto.Dictionary(kind=KIND, name=_names(_NAME), closed=False, attrs=attrs)]
     )
@@ -119,7 +139,12 @@ def present(row: MailType, used: bool | None = None) -> dto.DictionaryItem:
     return dto.DictionaryItem(
         code=row.code,
         name=dto.LocalizedName(ru=row.name_ru, uz=row.name_uz, en=row.name_en),
-        attrs={"default_action": row.default_action, "color": row.color, "icon": row.icon},
+        attrs={
+            "default_action": row.default_action,
+            "color": row.color,
+            "icon": row.icon,
+            "letter_kind": row.letter_kind,
+        },
         active=row.active,
         position=row.position,
         used=used,
@@ -135,6 +160,7 @@ def mail_type_out(row: MailType, source: str) -> dto.InboundMailType:
             "color": row.color,
             "icon": row.icon,
             "default_action": row.default_action,
+            "letter_kind": row.letter_kind,
             "active": row.active,
             "source": source,
         }
@@ -152,11 +178,14 @@ def _spec(kind: str) -> None:
         raise NotFoundError("dictionary not found")
 
 
-def _clean_attrs(values: dict[str, Any], base: dict[str, str]) -> dict[str, str]:
+def _clean_attrs(values: dict[str, Any], base: dict[str, str | None]) -> dict[str, str | None]:
     options = {key: set(opts) for key, _, opts in _ATTRS}
     bad: dict[str, str] = {}
     for key, value in values.items():
-        if key not in options:
+        if key == "letter_kind":
+            if value is not None and not (isinstance(value, str) and _LETTER_KIND.match(value)):
+                bad["attrs.letter_kind"] = "invalid_value"
+        elif key not in options:
             bad["attrs." + key] = "unknown_attr"
         elif not isinstance(value, str) or value not in options[key]:
             bad["attrs." + key] = "invalid_value"
@@ -167,7 +196,11 @@ def _clean_attrs(values: dict[str, Any], base: dict[str, str]) -> dict[str, str]
         raise ValidationFailedError(
             "default action is required", fields={"attrs.default_action": "required"}
         )
-    return {key: merged.get(key) or _DEFAULTS.get(key, "") for key, _, _ in _ATTRS}
+    clean: dict[str, str | None] = {
+        key: merged.get(key) or _DEFAULTS.get(key, "") for key, _, _ in _ATTRS
+    }
+    clean["letter_kind"] = merged.get("letter_kind") or None
+    return clean
 
 
 async def _free_code(session: AsyncSession, base: str) -> str:
@@ -213,9 +246,10 @@ class MailTypesService:
                 name_ru=data.name.ru,
                 name_uz=data.name.uz,
                 name_en=data.name.en,
-                color=attrs["color"],
-                icon=attrs["icon"],
-                default_action=attrs["default_action"],
+                color=str(attrs["color"]),
+                icon=str(attrs["icon"]),
+                default_action=str(attrs["default_action"]),
+                letter_kind=attrs["letter_kind"],
                 active=True,
                 position=await repo.last_position(session) + POSITION_STEP,
             )
@@ -243,13 +277,16 @@ class MailTypesService:
                     raise _taken()
                 row.name_ru, row.name_uz, row.name_en = patch.name.ru, patch.name.uz, patch.name.en
             if patch.attrs is not None:
-                base = {"default_action": row.default_action, "color": row.color, "icon": row.icon}
+                base: dict[str, str | None] = {
+                    "default_action": row.default_action,
+                    "color": row.color,
+                    "icon": row.icon,
+                    "letter_kind": row.letter_kind,
+                }
                 clean = _clean_attrs(patch.attrs, base)
-                row.default_action, row.color, row.icon = (
-                    clean["default_action"],
-                    clean["color"],
-                    clean["icon"],
-                )
+                row.default_action = str(clean["default_action"])
+                row.color, row.icon = str(clean["color"]), str(clean["icon"])
+                row.letter_kind = clean["letter_kind"]
             await session.flush()
             await audit.record(session, who.actor, action, "mail_type", code, after={"kind": KIND})
             return present(row, used=code in await repo.used_codes(session))
@@ -293,9 +330,12 @@ class MailTypesService:
         return dto.MailSenderRuleList(items=[_rule_out(r, names) for r in rows])
 
     async def add_rule(self, who: Principal, body: dto.MailSenderRuleIn) -> dto.MailSenderRuleOut:
-        """Правило «отправитель или домен → тип»; письмо из карточки получает тип сразу, как и
-        открытые «Новые»
-        этого отправителя, где тип не выбирал человек."""
+        """Правило «отправитель или домен → тип».
+
+        Письмо из карточки (`mail_id`) должно подходить под шаблон и быть не разобрано; тип по
+        правилу получают письмо из карточки и открытые «Новые» этого отправителя, где тип не
+        выбирал человек, — только с подтверждённым отправителем (SPF/DKIM/DMARC). На публичный
+        почтовый домен правило создаётся с предупреждением."""
         pattern = normalize_pattern(body.pattern)
         if pattern is None:
             raise ValidationFailedError("not an address or a domain", field="pattern")
@@ -307,17 +347,27 @@ class MailTypesService:
                 raise ConflictError("type is hidden", reason=Reason.MAIL_TYPE_INACTIVE)
             if await repo.rule_by_pattern(session, pattern) is not None:
                 raise ConflictError("rule exists", reason=Reason.MAIL_RULE_EXISTS)
+            mail = None
+            if body.mail_id is not None:
+                mail = await mail_repo.get(session, body.mail_id, for_update=True)
+                if mail is None:
+                    raise NotFoundError("mail not found")
+                if mail.status == "done":
+                    raise ConflictError("mail is already handled", reason=Reason.MAIL_HANDLED)
+                if not pattern_matches(pattern, mail.from_email):
+                    raise ValidationFailedError("sender does not match the rule", field="mail_id")
             rule = MailSenderRule(pattern=pattern, type_code=kind.code, created_by=who.user_id)
             session.add(rule)
             await session.flush()
             applied = await repo.apply_rule_to_open(
                 session, pattern, kind.code, except_id=body.mail_id
             )
-            if body.mail_id is not None:
-                mail = await mail_repo.get(session, body.mail_id, for_update=True)
-                if mail is not None and mail.type_source != "manual":
-                    mail.type_code, mail.type_source = kind.code, "rule"
+            if mail is not None and mail.type_source != "manual":
+                if mail.sender_auth == "verified":
+                    mail.type_code, mail.type_source, mail.rule_skipped = kind.code, "rule", False
                     applied += 1
+                else:
+                    mail.rule_skipped = True
             await audit.record(
                 session,
                 who.actor,
@@ -329,7 +379,11 @@ class MailTypesService:
             await session.refresh(rule)
             names = await _creators(session, [rule])
             out = _rule_out(rule, names)
-        return dto.MailSenderRuleOut(**out.model_dump(), applied=applied)
+        return dto.MailSenderRuleOut(
+            **out.model_dump(),
+            applied=applied,
+            caution="public_domain" if is_public_domain(pattern) else None,
+        )
 
     async def delete_rule(self, who: Principal, rule_id: int) -> None:
         async with self._sessions() as session, session.begin():

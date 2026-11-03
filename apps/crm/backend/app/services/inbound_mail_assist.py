@@ -223,5 +223,5 @@ class InboundMailAssist:
         row.assist_kind = None  # устаревшее поле: тип письма — `type_code`
         found = await types_repo.get_type(session, verdict.type_code) if verdict.type_code else None
         row.assist_action = found.default_action if found is not None else None
-        if found is not None and row.type_source in (None, "ai"):
+        if found is not None and found.active and row.type_source in (None, "ai"):
             row.type_code, row.type_source = found.code, "ai"

@@ -3,7 +3,10 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { Dictionary } from "./dictionary";
+import type { DictionaryListUnavailableItem } from "./dictionaryListUnavailableItem";
 
 export interface DictionaryList {
   items: Dictionary[];
+  /** Домены, чьи справочники не ответили — список частичный (экран говорит об этом) */
+  unavailable: DictionaryListUnavailableItem[];
 }

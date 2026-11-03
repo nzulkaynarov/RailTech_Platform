@@ -8,9 +8,9 @@
 кандидат, правило ли побеждает ИИ); BFF проверяет раздел и переводит ошибки.
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 
 from app.api.inbound_mail import CRM, Clerk, MailId, _json
 from app.clients import crm_models as crm
@@ -38,9 +38,11 @@ RULES = "/api/v1/mail-sender-rules"
     response_model=InboundMailHandoverTargets,
     operation_id="listInboundMailHandoverTargets",
 )
-async def handover_targets(authed: Clerk) -> InboundMailHandoverTargets:
-    """Кому передать счёт: сотрудники, чья роль даёт подтверждать оплату."""
-    raw = await _json(authed, "GET", f"{CRM}/handover-targets")
+async def handover_targets(
+    authed: Clerk, purpose: Annotated[Literal["payments", "price"], Query()] = "payments"
+) -> InboundMailHandoverTargets:
+    """Кому передать письмо: `payments` — подтверждающие оплату, `price` — загружающие прайсы."""
+    raw = await _json(authed, "GET", f"{CRM}/handover-targets", params={"purpose": purpose})
     return InboundMailHandoverTargets.model_validate(
         crm.InboundMailHandoverTargets.model_validate(raw).model_dump()
     )
@@ -74,7 +76,12 @@ async def to_suspicious(authed: Clerk, id: MailId) -> Response:
 @router.post("/inbound-mail/{id}/handover", status_code=204, operation_id="handoverInboundMail")
 async def handover(body: InboundMailHandoverIn, authed: Clerk, id: MailId) -> Response:
     """«Передать бухгалтеру»: письмо «В работе» у выбранного сотрудника."""
-    await _json(authed, "POST", f"{CRM}/{id}/handover", json={"user_id": body.user_id})
+    await _json(
+        authed,
+        "POST",
+        f"{CRM}/{id}/handover",
+        json={"user_id": body.user_id, "purpose": body.purpose},
+    )
     return Response(status_code=204)
 
 

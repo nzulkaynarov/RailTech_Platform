@@ -9,8 +9,10 @@ from app.domain.mail_types import (
     SEED,
     ActiveType,
     best_rule,
+    is_public_domain,
     normalize_pattern,
     parse_verdict,
+    pattern_matches,
     pick_type,
     types_block,
 )
@@ -23,7 +25,7 @@ TYPES = [
 
 def test_seed_is_consistent_with_closed_sets() -> None:
     codes = [s.code for s in SEED]
-    assert len(codes) == len(set(codes)) == 8
+    assert len(codes) == len(set(codes)) == 9
     assert {s.action for s in SEED} <= set(ACTIONS)
     assert {s.color for s in SEED} <= set(COLORS)
     assert {s.icon for s in SEED} <= set(ICONS)
@@ -151,3 +153,36 @@ def test_parse_verdict_tolerates_model_formats(raw: str) -> None:
     assert problem is None
     assert verdict is not None
     assert verdict.type_code == "official"
+
+
+def test_exact_address_rule_does_not_match_a_longer_local_part() -> None:
+    rules = [("boss@soliq.uz", "boss")]
+    assert best_rule("boss@soliq.uz", rules) == "boss"
+    assert best_rule("xboss@soliq.uz", rules) is None
+    assert best_rule("boss@mail.soliq.uz", rules) is None
+
+
+@pytest.mark.parametrize(
+    ("pattern", "sender", "expected"),
+    [
+        ("soliq.uz", "a@soliq.uz", True),
+        ("soliq.uz", "a@evil-soliq.uz", False),
+        ("boss@soliq.uz", "BOSS@soliq.uz", True),
+        ("boss@soliq.uz", "other@soliq.uz", False),
+    ],
+)
+def test_pattern_matches(pattern: str, sender: str, expected: bool) -> None:
+    assert pattern_matches(pattern, sender) is expected
+
+
+@pytest.mark.parametrize(
+    ("pattern", "expected"),
+    [("gmail.com", True), ("ivan@mail.ru", True), ("m.gmail.com", True), ("soliq.uz", False)],
+)
+def test_public_domains(pattern: str, expected: bool) -> None:
+    assert is_public_domain(pattern) is expected
+
+
+def test_seed_supplier_document_registers_and_points_at_the_supplier_letter_kind() -> None:
+    seed = next(s for s in SEED if s.code == "supplier_document")
+    assert (seed.action, seed.letter_kind) == ("register_incoming", "supplier")

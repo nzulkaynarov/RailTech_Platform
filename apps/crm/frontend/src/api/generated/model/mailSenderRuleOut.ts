@@ -6,6 +6,8 @@
 export interface MailSenderRuleOut {
   /** Сколько открытых писем «Новые» получили тип по этому правилу */
   applied: number;
+  /** `public_domain` — шаблон на публичный почтовый сервис (gmail.com, mail.ru …): правило поймает письма кого угодно */
+  caution?: "public_domain" | null;
   created_at: string;
   /** Кто создал (имя сотрудника) */
   created_by?: string | null;
