@@ -11,6 +11,9 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { choiceOf, foldersOf } from "./folderChoice";
+import { InboundFolders } from "./InboundFolders";
+import { InboundHistory } from "./InboundHistory";
 import { ActionForm, ActionToggle, ErrorNote, Field, Masked, PanelState } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 import { useQueryClient } from "@tanstack/react-query";
@@ -34,7 +37,7 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
   const [host, setHost] = useState(imap.host);
   const [port, setPort] = useState<number | null>(imap.port);
   const [security, setSecurity] = useState<(typeof SECURITY)[number]>(imap.security);
-  const [mailbox, setMailbox] = useState(imap.mailbox);
+  const [folders, setFolders] = useState(() => choiceOf(imap.folders, imap.mailbox));
   const [username, setUsername] = useState(imap.username);
   const [appPassword, setAppPassword] = useState("");
   const [assist, setAssist] = useState(imap.assist_enabled);
@@ -55,7 +58,7 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
       submitLabel={t("mail.settings.submit")}
       pending={save.isPending}
       error={save.error}
-      invalid={port === null || mailbox.trim() === ""}
+      invalid={port === null || foldersOf(folders).every((f) => f.spam)}
       onCancel={onDone}
       onSubmit={(password) => {
         save.mutate({
@@ -63,7 +66,8 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
             host: host.trim(),
             port: port ?? 993,
             security,
-            mailbox: mailbox.trim(),
+            mailbox: folders.regular[0] ?? "INBOX",
+            folders: foldersOf(folders),
             assist_enabled: assist,
             username: username.trim() === "" ? null : username.trim(),
             imap_password: appPassword === "" ? null : appPassword,
@@ -107,16 +111,12 @@ function InboundForm({ imap, onDone }: { imap: ImapConnector; onDone: () => void
           />
         </Field>
       </div>
-      <Field id="imap-mailbox" label={t("mail.inbound.mailbox")}>
-        <Input
-          id="imap-mailbox"
-          value={mailbox}
-          autoComplete="off"
-          onChange={(event) => {
-            setMailbox(event.target.value);
-          }}
-        />
-      </Field>
+      <InboundFolders
+        known={imap.folders}
+        value={folders}
+        onChange={setFolders}
+        canFind={imap.configured}
+      />
       <Field id="imap-username" label={t("mail.inbound.username")}>
         <Input
           id="imap-username"
@@ -178,7 +178,14 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
             label: t("mail.server"),
             value: imap.host ? `${imap.host}:${String(imap.port)}` : null,
           },
-          { label: t("mail.inbound.mailbox"), value: imap.host ? imap.mailbox : null },
+          {
+            label: t("mail.inbound.folders"),
+            value: imap.host
+              ? imap.folders
+                  .map((f) => (f.spam ? `${f.label} (${t("mail.inbound.spamMark")})` : f.label))
+                  .join(", ") || imap.mailbox
+              : null,
+          },
           { label: t("mail.inbound.username"), value: imap.username || null },
           {
             label: t("mail.inbound.appPassword"),
@@ -220,6 +227,7 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
             />
           ) : null}
           <ErrorNote error={check.error} />
+          {imap.configured ? <InboundHistory history={imap.history} reason={reason} /> : null}
           <ActionToggle label={t("mail.inbound.button")} open={open} onToggle={setOpen}>
             <InboundForm
               imap={imap}
@@ -238,7 +246,12 @@ function InboundBody({ imap, editable }: { imap: ImapConnector; editable: boolea
  * выключатель помощника канцелярии, итог последнего опроса. */
 export function InboundMailBlock({ editable }: { editable: boolean }) {
   const { t } = useTranslation("integrations");
-  const query = useGetImapConnector();
+  // Пока идёт загрузка писем за период — ход раз в 2 секунды (W18A-P2-2).
+  const query = useGetImapConnector({
+    query: {
+      refetchInterval: (q) => (q.state.data?.history?.status === "running" ? 2000 : false),
+    },
+  });
   return (
     <section className="pf-int-block" aria-labelledby="imap-title">
       <h4 id="imap-title">{t("mail.inbound.title")}</h4>

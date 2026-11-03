@@ -7,6 +7,7 @@ export type InboundMailOutStatus = (typeof InboundMailOutStatus)[keyof typeof In
 
 export const InboundMailOutStatus = {
   new: "new",
+  spam: "spam",
   registered: "registered",
   lead: "lead",
   archived: "archived",

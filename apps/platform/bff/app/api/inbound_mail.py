@@ -6,6 +6,9 @@
 `source_mail_id`); чтобы форма открылась с вложениями, `POST /inbound-mail/{id}/eds-files` читает
 файлы письма из CRM и загружает их в EDS (`POST /files`) от имени того же сотрудника — как если бы
 он приложил их сам. Приём — карточка «Почта» «Подключений» (`/admin/integrations/imap*`).
+
+W18A-P2-2 (контракт 0.35.0): вкладка «Подозрительные» (`status=spam`), «Не спам» и «Убрать»;
+`history` — фильтр «из истории»; «Найти папки» и «Загрузить письма за период» в «Подключениях».
 """
 
 from typing import Annotated, Any
@@ -23,6 +26,9 @@ from app.schemas_eds_documents import EdsFile
 from app.schemas_inbound_mail import (
     ImapCheck,
     ImapConnector,
+    ImapFolders,
+    ImapHistory,
+    ImapHistoryIn,
     ImapSettingsIn,
     InboundMail,
     InboundMailArchiveIn,
@@ -32,6 +38,9 @@ from app.schemas_inbound_mail import (
     InboundMailReply,
     InboundMailReplyIn,
     MailStatus,
+    to_connector,
+    to_folders,
+    to_history,
     to_mail,
     to_page,
 )
@@ -52,6 +61,7 @@ _MESSAGES = {
     "assist_disabled": "Помощник канцелярии выключен администратором — разберите письмо вручную.",
 }
 _HANDLED = "Письмо уже обработано: обновите очередь."
+_NOT_CONFIGURED = "Сначала настройте приём почты: сервер, логин и пароль приложения."
 
 
 def error_of(response: httpx.Response) -> PlatformError:
@@ -85,9 +95,14 @@ async def mail_card(authed: Authed, mail_id: int) -> crm.InboundMailOut:
 
 @router.get("/inbound-mail", response_model=InboundMailPage, operation_id="listInboundMail")
 async def list_inbound_mail(
-    authed: Clerk, status: Annotated[MailStatus, Query()] = "new"
+    authed: Clerk,
+    status: Annotated[MailStatus, Query()] = "new",
+    history: Annotated[bool | None, Query()] = None,
 ) -> InboundMailPage:
-    raw = await _json(authed, "GET", CRM, params={"status": status})
+    params: dict[str, str] = {"status": status}
+    if history is not None:
+        params["history"] = "true" if history else "false"
+    raw = await _json(authed, "GET", CRM, params=params)
     return to_page(crm.InboundMailPage.model_validate(raw))
 
 
@@ -194,6 +209,20 @@ async def archive(body: InboundMailArchiveIn, authed: Clerk, id: MailId) -> Resp
     return Response(status_code=204)
 
 
+@router.post("/inbound-mail/{id}/not-spam", status_code=204, operation_id="markInboundMailNotSpam")
+async def not_spam(authed: Clerk, id: MailId) -> Response:
+    """«Не спам → в очередь» (W18A-P2-2): ящик на сервере не меняется."""
+    await _json(authed, "POST", f"{CRM}/{id}/not-spam")
+    return Response(status_code=204)
+
+
+@router.post("/inbound-mail/{id}/discard", status_code=204, operation_id="discardInboundMail")
+async def discard(authed: Clerk, id: MailId) -> Response:
+    """«Убрать» подозрительное письмо — в архив с причиной «Спам»."""
+    await _json(authed, "POST", f"{CRM}/{id}/discard")
+    return Response(status_code=204)
+
+
 @router.post(
     "/inbound-mail/{id}/reply", response_model=InboundMailReply, operation_id="replyInboundMail"
 )
@@ -206,7 +235,7 @@ async def reply(body: InboundMailReplyIn, authed: Clerk, id: MailId) -> InboundM
 
 
 def _connector(raw: Any) -> ImapConnector:
-    return ImapConnector.model_validate(crm.ImapStatusOut.model_validate(raw).model_dump())
+    return to_connector(crm.ImapStatusOut.model_validate(raw))
 
 
 @admin_router.get("/imap", response_model=ImapConnector, operation_id="getImapConnector")
@@ -221,6 +250,7 @@ async def save_imap(body: ImapSettingsIn, authed: AdminWrite) -> ImapConnector:
         "port": body.port,
         "security": body.security,
         "mailbox": body.mailbox,
+        "folders": [f.model_dump() for f in body.folders] if body.folders is not None else None,
         "assist_enabled": body.assist_enabled,
         "username": body.username,
         "imap_password": body.imap_password.get_secret_value() if body.imap_password else None,
@@ -233,3 +263,25 @@ async def save_imap(body: ImapSettingsIn, authed: AdminWrite) -> ImapConnector:
 async def check_imap(authed: AdminWrite) -> ImapCheck:
     raw = await _json(authed, "POST", "/api/v1/integrations/imap/check", probe=True)
     return ImapCheck.model_validate(crm.ImapCheckOut.model_validate(raw).model_dump())
+
+
+@admin_router.post("/imap/folders", response_model=ImapFolders, operation_id="findImapFolders")
+async def find_folders(authed: AdminWrite) -> ImapFolders:
+    raw = await _json(authed, "POST", "/api/v1/integrations/imap/folders", probe=True)
+    return to_folders(crm.ImapFoldersOut.model_validate(raw))
+
+
+@admin_router.post("/imap/history", response_model=ImapHistory, operation_id="startImapHistory")
+async def start_history(body: ImapHistoryIn, authed: AdminWrite) -> ImapHistory:
+    response = await authed.call(
+        "crm", "POST", "/api/v1/integrations/imap/history", json={"days": body.days}
+    )
+    if response.status_code >= 300:
+        err = error_of(response)
+        if response.status_code == 409:
+            err.body.message = _NOT_CONFIGURED
+        raise err
+    try:
+        return to_history(crm.ImapHistoryOut.model_validate(response.json()))
+    except ValueError as exc:
+        raise backend_unavailable("crm", "bad_response") from exc

@@ -2188,6 +2188,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/imap/folders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Найти папки ящика
+     * @description CRM `POST /integrations/imap/folders` (W18A-P2-2): папки ящика по IMAP `LIST` с сохранённым входом, только чтение. Имена у провайдеров разные, поэтому не хардкодятся: `spam_suggestion` — папка с флагом `\Junk` (RFC 6154) или единственная с привычным именем, иначе `null` — выбирает человек. Итог — в ответе, `error_kind` — как у `ImapCheck`.
+     */
+    post: operations["findImapFolders"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/imap/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Загрузить письма за период
+     * @description CRM `POST /integrations/imap/history` (W18A-P2-2; эталон — импорт истории при подключении ящика в Front и Help Scout). Письма папок опроса за 7, 14, 30 или 90 дней — фоном, не больше 2000 за раз (новые раньше, `limited`). Ход и итог — в ответе и в `ImapConnector.history`. Дубль по Message-ID не создаётся — повтор безопасен. Письма старше 3 дней — «из истории» (`from_history`): в списке, не в «Моих задачах»; из спам-папки — в «Подозрительных». Уже идёт — та же загрузка. Приём не настроен — 409.
+     */
+    post: operations["startImapHistory"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/inbound-mail": {
     parameters: {
       query?: never;
@@ -2197,7 +2237,7 @@ export interface paths {
     };
     /**
      * Входящая почта: очередь писем общего ящика
-     * @description CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта».
+     * @description CRM `GET /inbound-mail` (W18A-P2, B-INB-5). Раздел первой линии `crm.leads.triage` — полный (делопроизводитель); без него — 403. По умолчанию — необработанные письма (`new`), новые сверху. `mailbox.configured = false` — приём почты не настроен: экран показывает «Настройки · Подключения · Почта». `spam` — «Подозрительные» (из спам-папки, W18A-P2-2). `history = false` — без писем «из истории» (строки «Моих задач»), `true` — только они; `counts` — числа вкладок.
      */
     get: operations["listInboundMail"];
     put?: never;
@@ -2322,6 +2362,46 @@ export interface paths {
      * @description CRM `POST /inbound-mail/{id}/archive`. Письмо уходит из очереди; уже обработано — 409 `CONFLICT`.
      */
     post: operations["archiveInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/not-spam": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Не спам → в очередь»
+     * @description CRM `POST /inbound-mail/{id}/not-spam` (W18A-P2-2): подозрительное письмо становится обычным «Ждёт разбора». Ящик на сервере не меняется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
+     */
+    post: operations["markInboundMailNotSpam"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/inbound-mail/{id}/discard": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: «Убрать» подозрительное письмо
+     * @description CRM `POST /inbound-mail/{id}/discard` (W18A-P2-2): в архив с причиной «Спам», ничего не удаляется. Письмо не из «Подозрительных» — 409 `CONFLICT`.
+     */
+    post: operations["discardInboundMail"];
     delete?: never;
     options?: never;
     head?: never;
@@ -10695,6 +10775,64 @@ export interface components {
       /** @description Причина последнего сбоя опроса словом-кодом (как `ImapCheck.error_kind`) */
       last_error_kind: string | null;
       last_error: string | null;
+      /** @description Папки опроса (W18A-P2-2); по умолчанию одна — `mailbox`. Итог опроса выше — сводка по папкам */
+      folders: components["schemas"]["ImapFolder"][];
+      /** @description Последняя загрузка писем за период */
+      history: components["schemas"]["ImapHistory"] | null;
+    };
+    ImapFolderIn: {
+      /** @description Имя папки как на сервере (modified UTF-7) */
+      name: string;
+      /**
+       * @description Письма отсюда — «Подозрительные», не в очередь
+       * @default false
+       */
+      spam: boolean;
+    };
+    ImapFolder: {
+      name: string;
+      /** @description Имя для человека (modified UTF-7 раскодирован) */
+      label: string;
+      spam: boolean;
+    };
+    ImapServerFolder: {
+      name: string;
+      label: string;
+      /** @description Сервер отметил папку флагом `\Junk` */
+      junk: boolean;
+      /** @description false — папка-контейнер, писем в ней нет */
+      selectable: boolean;
+    };
+    ImapFolders: {
+      ok: boolean;
+      error_kind: string | null;
+      detail: string | null;
+      folders: components["schemas"]["ImapServerFolder"][];
+      /** @description Имя спам-папки по флагу `\Junk` или привычному имени */
+      spam_suggestion: string | null;
+    };
+    ImapHistoryIn: {
+      /** @enum {integer} */
+      days: 7 | 14 | 30 | 90;
+    };
+    ImapHistory: {
+      id: number;
+      days: number;
+      /** @enum {string} */
+      status: "running" | "done" | "error";
+      /** @description Сколько писем берём (не больше 2000) */
+      found: number;
+      processed: number;
+      /** @description Новых в очереди (остальные уже были) */
+      created: number;
+      /** @description В периоде писем больше 2000 — загружены новые */
+      limited: boolean;
+      /** @description Как `ImapCheck.error_kind` */
+      error_kind: string | null;
+      /** Format: date-time */
+      started_at: string;
+      /** Format: date-time */
+      finished_at: string | null;
     };
     ImapSettingsIn: {
       /** @description Пусто — приём выключен */
@@ -10708,6 +10846,8 @@ export interface components {
       security: "ssl" | "starttls";
       /** @default INBOX */
       mailbox: string;
+      /** @description Папки опроса (W18A-P2-2); `null` — прежние. Задано — `mailbox` становится первой не спам */
+      folders?: components["schemas"]["ImapFolderIn"][] | null;
       /** @default true */
       assist_enabled: boolean;
       /** @description `null` — оставить прежний */
@@ -10726,10 +10866,10 @@ export interface components {
       latency_ms: number | null;
     };
     /**
-     * @description new — ждёт разбора; registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
+     * @description new — ждёт разбора; spam — «Подозрительные» (из спам-папки, W18A-P2-2); registered — ВХ в EDS; lead — лид или заметка в лиде; archived — архив с причиной
      * @enum {string}
      */
-    InboundMailStatus: "new" | "registered" | "lead" | "archived";
+    InboundMailStatus: "new" | "spam" | "registered" | "lead" | "archived";
     /** @description Подсказка помощника канцелярии: ничего не делает сама, действие подтверждает человек. В модель уходят отправитель, тема и текст после маскирования персональных данных (e-mail, телефоны, ИНН, ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда */
     InboundMailAssist: {
       /**
@@ -10769,6 +10909,8 @@ export interface components {
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
       lead: components["schemas"]["InboundMailLink"] | null;
+      /** @description Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
+      from_history: boolean;
     };
     InboundMailMailbox: {
       /** @description false — приём не настроен: «Настройки · Подключения · Почта» */
@@ -10783,6 +10925,16 @@ export interface components {
       items: components["schemas"]["InboundMailItem"][];
       total: number;
       mailbox: components["schemas"]["InboundMailMailbox"];
+      counts: components["schemas"]["InboundMailCounts"];
+    };
+    /** @description Числа вкладок списка «Входящая почта» */
+    InboundMailCounts: {
+      /** @description Ждут разбора (вместе с «из истории») */
+      new: number;
+      /** @description Из них — «из истории» */
+      history: number;
+      /** @description Подозрительные */
+      spam: number;
     };
     InboundMailAttachment: {
       index: number;
@@ -10827,6 +10979,8 @@ export interface components {
       client: components["schemas"]["InboundMailLink"] | null;
       /** @description Открытый лид с этим адресом */
       lead: components["schemas"]["InboundMailLink"] | null;
+      /** @description Загружено «за период» и старше 3 дней: в списке, не строкой «Моих задач» */
+      from_history: boolean;
       to: string[];
       /** @description Тело письма только текстом (HTML — без разметки) */
       text: string;
@@ -16937,10 +17091,70 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  findImapFolders: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImapFolders"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  startImapHistory: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ImapHistoryIn"];
+      };
+    };
+    responses: {
+      /** @description Загрузка начата или уже идёт */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ImapHistory"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listInboundMail: {
     parameters: {
       query?: {
         status?: components["schemas"]["InboundMailStatus"];
+        history?: boolean;
       };
       header?: never;
       path?: never;
@@ -17142,6 +17356,64 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["InboundMailConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markInboundMailNotSpam: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description В очереди */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  discardInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description id письма общего ящика (CRM `inbound_mail.id`) */
+        id: components["parameters"]["InboundMailId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description В архиве */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["InboundMailConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

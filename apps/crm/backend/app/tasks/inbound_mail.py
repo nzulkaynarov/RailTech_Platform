@@ -18,3 +18,18 @@ from app.tasks.queue import queue
 )
 async def inbound_mail_poll(timestamp: int) -> str:
     return (await get_container().inbound_mail_ingest.poll()).status
+
+
+@queue.task(
+    name="inbound_mail_history",
+    queue="ingest",
+    queueing_lock="inbound_mail_history",
+    lock="inbound_mail_history",
+)
+async def inbound_mail_history(import_id: int) -> str:
+    """«Загрузить письма за период» (W18A-P2-2): одна загрузка одновременно."""
+    return await get_container().inbound_mail_history.run(import_id)
+
+
+async def enqueue_history(import_id: int) -> object:
+    return await inbound_mail_history.defer_async(import_id=import_id)

@@ -3,12 +3,15 @@
  * RailTech CRM API
  */
 import type { ImapConnectorInSecurity } from "./imapConnectorInSecurity";
+import type { ImapFolderIn } from "./imapFolderIn";
 
 /**
  * Сохранение приёма: логин/пароль `None` — оставить прежние; пустой хост выключает приём.
  */
 export interface ImapConnectorIn {
   assist_enabled?: boolean;
+  /** Папки опроса; `null` — прежние. Задано — `mailbox` = первая не спам */
+  folders?: ImapFolderIn[] | null;
   /** @maxLength 253 */
   host: string;
   imap_password?: string | null;

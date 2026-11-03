@@ -47,6 +47,8 @@ ROOTS = (
     # W18A-P2: приём почты общего ящика и очередь «Входящая почта»
     "ImapStatusOut",
     "ImapCheckOut",
+    "ImapFoldersOut",
+    "ImapHistoryOut",
     "InboundMailPage",
     "InboundMailOut",
     "InboundMailLeadOut",

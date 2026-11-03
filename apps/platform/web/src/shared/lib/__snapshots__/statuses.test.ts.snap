@@ -89,6 +89,7 @@ exports[`карты статусов > снимок карты: изменени
     "lead": "green",
     "new": "blue",
     "registered": "blue",
+    "spam": "gold",
   },
   "incoming": {
     "awaiting_resolution": "gold",

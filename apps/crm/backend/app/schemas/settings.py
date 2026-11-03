@@ -385,6 +385,13 @@ class SmtpSettings(StrictModel):
     from_name: str = Field(default="", max_length=120)
 
 
+class ImapFolderSettings(StrictModel):
+    """Папка опроса (W18A-P2-2): имя как на сервере (modified UTF-7) и «письма отсюда — подозрительные»."""
+
+    name: str = Field(min_length=1, max_length=200)
+    spam: bool = False
+
+
 class ImapSettings(StrictModel):
     """Общий ящик входящей почты (W18A-P2, B-INB-5) без секретов.
 
@@ -398,6 +405,8 @@ class ImapSettings(StrictModel):
     # `ssl` — 993 (IMAPS, обычный вариант), `starttls` — 143.
     security: Literal["ssl", "starttls"] = "ssl"
     mailbox: str = Field(default="INBOX", min_length=1, max_length=200)
+    # Папки опроса (W18A-P2-2); пусто — одна `mailbox`. `mailbox` — первая не спам (совместимость).
+    folders: list[ImapFolderSettings] = Field(default_factory=list, max_length=10)
     # Помощник канцелярии (тип, суть, предложение действия) — выключатель админа, как Q-019.
     assist_enabled: bool = True
 

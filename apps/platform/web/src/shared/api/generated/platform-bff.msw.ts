@@ -186,6 +186,8 @@ import type {
   HsCodePage,
   ImapCheck,
   ImapConnector,
+  ImapFolders,
+  ImapHistory,
   InboundMail,
   InboundMailAssist,
   InboundMailLeadResult,
@@ -9217,6 +9219,30 @@ export const getListMailLogResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetImapConnectorResponseImapHistoryMock = (
+  overrideResponse: Partial<ImapHistory> = {},
+): ImapHistory => ({
+  ...{
+    id: faker.number.int(),
+    days: faker.number.int(),
+    status: faker.helpers.arrayElement(["running", "done", "error"] as const),
+    found: faker.number.int({ min: 0 }),
+    processed: faker.number.int({ min: 0 }),
+    created: faker.number.int({ min: 0 }),
+    limited: faker.datatype.boolean(),
+    error_kind: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    finished_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getGetImapConnectorResponseMock = (
   overrideResponse: Partial<Extract<ImapConnector, object>> = {},
 ): ImapConnector => ({
@@ -9253,6 +9279,38 @@ export const getGetImapConnectorResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  folders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      spam: faker.datatype.boolean(),
+    }),
+  ),
+  history: faker.helpers.arrayElement([{ ...getGetImapConnectorResponseImapHistoryMock() }, null]),
+  ...overrideResponse,
+});
+
+export const getSaveImapConnectorResponseImapHistoryMock = (
+  overrideResponse: Partial<ImapHistory> = {},
+): ImapHistory => ({
+  ...{
+    id: faker.number.int(),
+    days: faker.number.int(),
+    status: faker.helpers.arrayElement(["running", "done", "error"] as const),
+    found: faker.number.int({ min: 0 }),
+    processed: faker.number.int({ min: 0 }),
+    created: faker.number.int({ min: 0 }),
+    limited: faker.datatype.boolean(),
+    error_kind: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    finished_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -9292,6 +9350,14 @@ export const getSaveImapConnectorResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
   ]),
+  folders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      spam: faker.datatype.boolean(),
+    }),
+  ),
+  history: faker.helpers.arrayElement([{ ...getSaveImapConnectorResponseImapHistoryMock() }, null]),
   ...overrideResponse,
 });
 
@@ -9306,6 +9372,52 @@ export const getCheckImapResponseMock = (
   detail: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
   messages: faker.helpers.arrayElement([faker.number.int(), null]),
   latency_ms: faker.helpers.arrayElement([faker.number.int(), null]),
+  ...overrideResponse,
+});
+
+export const getFindImapFoldersResponseMock = (
+  overrideResponse: Partial<Extract<ImapFolders, object>> = {},
+): ImapFolders => ({
+  ok: faker.datatype.boolean(),
+  error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  detail: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  folders: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      junk: faker.datatype.boolean(),
+      selectable: faker.datatype.boolean(),
+    }),
+  ),
+  spam_suggestion: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getStartImapHistoryResponseMock = (
+  overrideResponse: Partial<Extract<ImapHistory, object>> = {},
+): ImapHistory => ({
+  id: faker.number.int(),
+  days: faker.number.int(),
+  status: faker.helpers.arrayElement(["running", "done", "error"] as const),
+  found: faker.number.int({ min: 0 }),
+  processed: faker.number.int({ min: 0 }),
+  created: faker.number.int({ min: 0 }),
+  limited: faker.datatype.boolean(),
+  error_kind: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  started_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  finished_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -9356,6 +9468,7 @@ export const getListInboundMailResponseMock = (
       { ...getListInboundMailResponseInboundMailLinkMock() },
       null,
     ]),
+    from_history: faker.datatype.boolean(),
   })),
   total: faker.number.int({ min: 0 }),
   mailbox: {
@@ -9372,6 +9485,11 @@ export const getListInboundMailResponseMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  counts: {
+    new: faker.number.int({ min: 0 }),
+    history: faker.number.int({ min: 0 }),
+    spam: faker.number.int({ min: 0 }),
   },
   ...overrideResponse,
 });
@@ -9416,6 +9534,7 @@ export const getGetInboundMailResponseMock = (
   },
   client: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
   lead: faker.helpers.arrayElement([{ ...getGetInboundMailResponseInboundMailLinkMock() }, null]),
+  from_history: faker.datatype.boolean(),
   to: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
     faker.string.alpha({ length: { min: 10, max: 20 } }),
   ),
@@ -26751,6 +26870,54 @@ export const getCheckImapMockHandler = (
   );
 };
 
+export const getFindImapFoldersMockHandler = (
+  overrideResponse?:
+    | ImapFolders
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ImapFolders> | ImapFolders),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/imap/folders",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getFindImapFoldersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getStartImapHistoryMockHandler = (
+  overrideResponse?:
+    | ImapHistory
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ImapHistory> | ImapHistory),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/imap/history",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getStartImapHistoryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListInboundMailMockHandler = (
   overrideResponse?:
     | InboundMailPage
@@ -26897,6 +27064,42 @@ export const getArchiveInboundMailMockHandler = (
 ) => {
   return http.post(
     "*/inbound-mail/:id/archive",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getMarkInboundMailNotSpamMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/not-spam",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getDiscardInboundMailMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/inbound-mail/:id/discard",
     async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
       if (typeof overrideResponse === "function") {
         await overrideResponse(info);
@@ -32375,6 +32578,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetImapConnectorMockHandler(),
   getSaveImapConnectorMockHandler(),
   getCheckImapMockHandler(),
+  getFindImapFoldersMockHandler(),
+  getStartImapHistoryMockHandler(),
   getListInboundMailMockHandler(),
   getGetInboundMailMockHandler(),
   getDownloadInboundMailAttachmentMockHandler(),
@@ -32382,6 +32587,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getAssistInboundMailMockHandler(),
   getCreateLeadFromInboundMailMockHandler(),
   getArchiveInboundMailMockHandler(),
+  getMarkInboundMailNotSpamMockHandler(),
+  getDiscardInboundMailMockHandler(),
   getReplyInboundMailMockHandler(),
   getListExternalServicesMockHandler(),
   getGetExternalServiceMockHandler(),
