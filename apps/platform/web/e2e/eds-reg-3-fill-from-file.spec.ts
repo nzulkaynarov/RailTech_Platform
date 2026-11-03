@@ -11,7 +11,7 @@ import {
 import { pickFiles } from "./support/fields";
 
 // EDS-REG PR 3 на MSW: «Заполнить из файла» в «Зарегистрировать входящее» — PDF письма, предложенные поля с пометкой
-// «Предложено ИИ», правка, отказ на скан (сканы — до решения Q-EDSREG-1); «ИИ-помощник» в Настройках. Модели нет —
+// «Предложено ИИ», правка, скан читается по умолчанию («Деловая» политика, PD-BIZ); «ИИ-помощник» в Настройках. Модели нет —
 // ответ мока вымышленный. axe 0 и снимки 1440 и 390 (`E2E_SCREENSHOT_DIR` → docs/screens/eds-reg-3/).
 const WIDTHS = [1440, 390] as const;
 
@@ -61,7 +61,9 @@ async function fillFromFile(page: Page, name: string, mimeType: string): Promise
 test.describe("EDS-REG · «Заполнить из файла»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("делопроизводитель заполняет форму из PDF; скан — только по настройке", async ({ page }) => {
+  test("делопроизводитель заполняет форму из PDF; скан — по умолчанию и по настройке", async ({
+    page,
+  }) => {
     await loginAndWait(page, "registrar@demo.example");
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
@@ -81,23 +83,21 @@ test.describe("EDS-REG · «Заполнить из файла»", () => {
       await page.getByRole("group", { name: "Заполнить из файла" }).scrollIntoViewIfNeeded();
       await settledScreenshot(page, "register-ai-bar");
 
-      // 2. Скан при выключенном распознавании — отказ словами, поля пустые.
+      // 2. Скан при «Деловой» политике (по умолчанию) читается, как PDF.
       await fillFromFile(page, "скан-письма.png", "image/png");
-      await expect(page.getByText(/помощник их пока не читает/)).toBeVisible();
-      await expect(page.getByLabel("Корреспондент", { exact: true })).toHaveValue("");
-      await expectNoViolations(page, `register-scan-off ${String(width)}`);
-      await settledScreenshot(page, "register-scan-off");
+      await expect(page.getByText(/Заполнено из файла: 8 полей/)).toBeVisible();
+      await expectNoViolations(page, `register-scan-on ${String(width)}`);
+      await settledScreenshot(page, "register-scan-on");
     }
     await page.setViewportSize({ width: 1440, height: 900 });
     await signOut(page);
 
-    // 3. Администратор: Настройки · Система · Расходы на ИИ, часть «ИИ-помощник» (SET-IA; старый адрес уводит туда) —
-    // состояние словами; переключателя сканов нет до решения владельца и юриста (Q-EDSREG-1).
+    // 3. Администратор: Настройки · Система · Расходы на ИИ, часть «Заполнить из файла» (SET-IA; старый адрес уводит
+    // туда) — переключатель сканов включён, подпись про паспорта и личные документы (PD-BIZ).
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/docflow?tab=ai");
-    const note = page.getByText("Сканы и фото помощник пока не читает: их заполняют вручную.");
-    await expect(note).toBeVisible();
-    await expect(page.locator(".pf-co-body", { has: note }).getByRole("switch")).toHaveCount(0);
+    await expect(page.getByRole("switch", { name: "Читать сканы и фото писем" })).toBeChecked();
+    await expect(page.getByText("Паспорта и личные документы не загружайте.")).toBeVisible();
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await expectNoViolations(page, `settings-ai ${String(width)}`);

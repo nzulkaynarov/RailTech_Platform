@@ -353,6 +353,7 @@
     "roles_count": "Rollar soni",
     "title": "Sarlavha",
     "status": "Holati",
-    "body_length": "Matn uzunligi"
+    "body_length": "Matn uzunligi",
+    "pii_policy": "SI uchun ma’lumotlar himoyasi siyosati"
   }
 }

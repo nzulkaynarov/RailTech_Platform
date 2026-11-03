@@ -1,8 +1,9 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
 import { resetEds } from "../../../mocks/fixtures/edsDocuments";
+import { readKb, writeKb } from "../../../mocks/fixtures/kb";
 import {
   DEMO_SUGGESTION,
   intakeDecisions,
@@ -131,15 +132,37 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("скан при выключенном распознавании — понятный отказ, форма остаётся ручной", async () => {
+    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: true });
     await openForm();
     await attach("скан.png", "image/png");
     fireEvent.click(await screen.findByRole("button", { name: "Заполнить из файла" }));
-    expect(await screen.findByText(/помощник их пока не читает/)).toBeVisible();
+    expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
     expect(screen.getByLabelText("Корреспондент")).toHaveValue("");
   });
 
+  it("PD-BIZ: скан при «Деловой» политике читается сразу, при «Строгой» — отказ; подпись у загрузки", async () => {
+    await openForm();
+    // У поля загрузки — короткая подсказка про паспорта и личные документы.
+    expect(screen.getByText(/Паспорта и личные документы не загружайте/)).toBeVisible();
+    await attach("скан.png", "image/png");
+    expect(await screen.findByText(/помощник предложит поля, проверьте их/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
+    expect(await screen.findByText(/Заполнено из файла: 8 полей/)).toBeVisible();
+    cleanup();
+
+    // Админ выбрал «Строгую»: подсказка у кнопки меняется, скан не читается.
+    const kb = readKb();
+    kb.settings["ai"] = { pii_policy: "strict" };
+    writeKb(kb);
+    await openForm();
+    await attach("скан.png", "image/png");
+    expect(await screen.findByText(/Сканы и фото — вручную/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Заполнить из файла" }));
+    expect(await screen.findByText(/помощник их сейчас не читает/)).toBeVisible();
+  });
+
   it("«Убрать предложенное» очищает непоправленные поля и пишет «вручную»", async () => {
-    writeDocflowSettings({ recognize_scans: true, ai_available: true });
+    writeDocflowSettings({ recognize_scans: true, pii_policy: "business", ai_available: true });
     await openForm();
     fireEvent.change(screen.getByLabelText("Тема"), { target: { value: "Своя тема" } });
     await attach();
@@ -155,7 +178,7 @@ describe("«Заполнить из файла» (EDS-REG)", () => {
   });
 
   it("помощник не настроен — кнопки нет", async () => {
-    writeDocflowSettings({ recognize_scans: false, ai_available: false });
+    writeDocflowSettings({ recognize_scans: false, pii_policy: "business", ai_available: false });
     await openForm();
     await attach();
     expect(screen.queryByRole("button", { name: "Заполнить из файла" })).toBeNull();

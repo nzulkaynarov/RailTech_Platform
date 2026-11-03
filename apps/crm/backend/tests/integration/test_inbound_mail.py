@@ -13,10 +13,12 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from rt_bus import Event
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents.llm import ChatResult, LlmUnavailableError
+from app.bus import runtime
+from app.bus.runtime import build_bus
 from app.config import Settings
 from app.main import create_app
 from app.models.auth import AuditLog
@@ -43,6 +45,7 @@ pytestmark = pytest.mark.integration
 SECRETS_KEY = "k" * 64
 PDF = b"%PDF-1.4 invoice 17"
 BUCKET = "test-attachments"
+POLICY_EVENT = "uz.railtech.crm.ai_policy.changed.v1"
 
 
 class FakeStorage:
@@ -143,6 +146,14 @@ class Stand:
 def server() -> Iterator[FakeImapServer]:
     with FakeImapServer() as running:
         yield running
+
+
+@pytest.fixture(autouse=True)
+def _bus(sessions: async_sessionmaker[AsyncSession]) -> Iterator[None]:
+    """Шина процесса: сохранение раздела «ИИ» настроек публикует политику защиты данных (PD-BIZ)."""
+    runtime.set_bus(build_bus(sessions, None))
+    yield
+    runtime.set_bus(None)
 
 
 @pytest.fixture
@@ -359,6 +370,9 @@ async def test_reply_goes_into_the_same_thread(stand: Stand) -> None:
 async def test_assist_by_button_suggests_but_does_nothing(
     stand: Stand, model: FakeModel, status: str, kind: str | None
 ) -> None:
+    await stand.settings.update(
+        "ai", {"pii_policy": "strict"}, None
+    )  # прежнее поведение — «Строгая»
     mail_id = await _one_mail(stand)
     (mail,) = await stand.mails()
     assert mail.assist_status == "none", "без кнопки модель не зовётся: опрос подсказку не просит"
@@ -395,6 +409,122 @@ async def test_assist_by_button_suggests_but_does_nothing(
         again = await assist.suggest(who, mail_id)
         assert again.kind == kind
         assert len(model.prompts) == 1, "повтор не зовёт модель второй раз"
+
+
+def _personal_mail(n: int = 1) -> bytes:
+    msg = EmailMessage()
+    msg["From"] = "Покупатель <buyer@example.test>"
+    msg["To"] = "info@company.test"
+    msg["Subject"] = f"Реквизиты {n}"
+    msg["Message-ID"] = f"<pd-{n}@example.test>"
+    msg.set_content(
+        "ООО Тест, ИНН 301234567, р/с 20208000900123456001, МФО 00014, тел. +998901234567, "
+        "почта office@example.test. Директор Иванов И. И., паспорт AA1234567, "
+        "ПИНФЛ 31234567890123, карта 4111 1111 1111 1111, дата рождения: 12.03.1985."
+    )
+    return msg.as_bytes().replace(b"\n", b"\r\n")
+
+
+async def _suggest_prompt(stand: Stand, assist: InboundMailAssist, mail_id: int) -> str:
+    """Подсказка с чистого листа: прежняя сброшена, чтобы модель позвали снова."""
+    async with stand.sessions() as session, session.begin():
+        await session.execute(
+            text(
+                "UPDATE inbound_mail SET assist_status = 'none', assist_kind = NULL, "
+                "assist_action = NULL"
+            )
+        )
+    model = cast(FakeModel, assist._model)
+    before = len(model.prompts)
+    await assist.suggest(await stand.principal(), mail_id)
+    assert len(model.prompts) == before + 1
+    return model.prompts[-1]
+
+
+async def test_policy_switch_changes_assist_prompt_without_restart(stand: Stand) -> None:
+    """PD-BIZ: «Деловая» по умолчанию прячет паспорт, ПИНФЛ, карты, даты рождения; «Строгая» — всё
+    прежнее. Тот же сервис помощника, без пересоздания: политику он читает при каждом вызове."""
+    await stand.configure()
+    stand.server.box.add(1, _personal_mail())
+    await stand.ingest.poll()
+    mail_id = (await stand.mails())[-1].id
+    assist = InboundMailAssist(
+        stand.sessions, stand.settings, FakeModel('{"kind": "buyer", "summary": "Реквизиты"}')
+    )
+
+    business = await _suggest_prompt(stand, assist, mail_id)
+    for kept in (
+        "301234567",
+        "20208000900123456001",
+        "00014",
+        "+998901234567",
+        "office@example.test",
+    ):
+        assert kept in business, kept
+    for hidden in ("AA1234567", "31234567890123", "4111 1111", "12.03.1985"):
+        assert hidden not in business, hidden
+
+    await stand.settings.update("ai", {"pii_policy": "strict"}, None)
+    strict = await _suggest_prompt(stand, assist, mail_id)
+    for hidden in (
+        "301234567",
+        "20208000900123456001",
+        "+998901234567",
+        "office@example.test",
+        "AA1234567",
+    ):
+        assert hidden not in strict, hidden
+
+    await stand.settings.update("ai", {"pii_policy": "business"}, None)
+    assert "301234567" in await _suggest_prompt(stand, assist, mail_id)
+
+
+async def test_policy_change_is_audited_and_published(stand: Stand) -> None:
+    """PD-BIZ: смена политики — в аудит (кто, было → стало) и событием для EDS."""
+    who = await stand.principal()
+    assert (await stand.settings.get()).ai.pii_policy == "business", "по умолчанию — «Деловая»"
+    await stand.settings.update("ai", {"pii_policy": "strict"}, who.user_id, who.actor)
+    async with stand.sessions() as session:
+        entry = (
+            await session.scalars(
+                select(AuditLog).where(
+                    AuditLog.action == "settings.update", AuditLog.entity_id == "ai"
+                )
+            )
+        ).one()
+        events = (
+            (
+                await session.execute(
+                    text("SELECT envelope FROM rt_bus_outbox WHERE type = :type"),
+                    {"type": POLICY_EVENT},
+                )
+            )
+            .scalars()
+            .all()
+        )
+    assert entry.actor_user_id == who.user_id
+    assert entry.before == {"pii_policy": "business"}
+    assert entry.after == {"pii_policy": "strict"}
+    (envelope,) = events
+    data = envelope["data"]
+    assert data["pii_policy"] == "strict"
+    assert data["actor"] == {"type": "staff", "crm_user_id": who.user_id}
+    assert envelope["subject"] == "ai_policy/pii"
+
+
+async def test_policy_rollback_publishes_nothing(stand: Stand) -> None:
+    """Откат сохранения откатывает и событие: EDS не узнаёт о политике, которой в CRM нет."""
+    with pytest.raises(ValueError, match="unknown"):
+        await stand.settings.update("ai", {"pii_policy": "unknown"}, None)
+    async with stand.sessions() as session:
+        count = (
+            await session.execute(
+                text("SELECT count(*) FROM rt_bus_outbox WHERE type = :type"),
+                {"type": POLICY_EVENT},
+            )
+        ).scalar_one()
+    assert count == 0
+    assert (await stand.settings.get()).ai.pii_policy == "business"
 
 
 async def test_assist_switch_off_does_not_call_model(stand: Stand) -> None:

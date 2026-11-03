@@ -450,6 +450,8 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.erp.letterhead.updated.v1",
         "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.crm.mail.failed.v1",
+        # PD-BIZ: политика защиты данных для ИИ — проекция для «Заполнить из файла».
+        "uz.railtech.crm.ai_policy.changed.v1",
     }
 
 

@@ -353,6 +353,7 @@
     "roles_count": "Number of roles",
     "title": "Title",
     "status": "Status",
-    "body_length": "Text length"
+    "body_length": "Text length",
+    "pii_policy": "AI data protection policy"
   }
 }

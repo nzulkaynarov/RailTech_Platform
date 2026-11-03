@@ -40,6 +40,8 @@ class AiDecisionIn(_In):
 
 class DocflowSettings(BaseModel):
     recognize_scans: bool
+    # Политика защиты данных для ИИ — проекция настройки CRM (`ai.pii_policy`), только чтение
+    pii_policy: Literal["business", "strict"]
     ai_available: bool
 
 

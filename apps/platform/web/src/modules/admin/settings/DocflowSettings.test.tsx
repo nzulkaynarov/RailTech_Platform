@@ -154,17 +154,14 @@ describe("Настройки · Процессы · Справочники пи�
     });
   });
 
-  it("ИИ-помощник: состояние словами, переключателя сканов нет до решения (Q-EDSREG-1)", async () => {
+  it("ИИ-помощник: старый адрес вкладки ведёт на «Расходы на ИИ»; сканы по умолчанию читаются (PD-BIZ)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/docflow?tab=ai");
     expect(
       await screen.findByRole("heading", { level: 1, name: "Расходы на ИИ" }),
     ).toBeInTheDocument();
-    const note = await screen.findByText(
-      "Сканы и фото помощник пока не читает: их заполняют вручную.",
-    );
-    // переключателя сканов нет в части «ИИ-помощник» (переключатели страницы — у расходов и лимита)
-    expect(within(note.closest(".pf-co-body") as HTMLElement).queryByRole("switch")).toBeNull();
-    expect(readDocflowSettings().recognize_scans).toBe(false);
+    const scans = await screen.findByRole("switch", { name: "Читать сканы и фото писем" });
+    expect(scans).toBeChecked();
+    expect(readDocflowSettings().recognize_scans).toBe(true);
   });
 });

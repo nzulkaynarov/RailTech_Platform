@@ -1,0 +1,641 @@
+{
+  "description": "Общие векторы маски ПД перед моделью (PD-BIZ): одинаковые строки — одинаковый результат у CRM (apps/crm/backend/app/security/pii.py) и EDS (apps/eds/app/security/pii.py). business_hidden/strict_hidden — подстроки, которых не должно остаться в тексте после маски политики; business_kept — подстроки, которые обязаны остаться. Данные вымышленные.",
+  "vectors": [
+    {
+      "text": "паспорт AA1234567 выдан",
+      "business_hidden": [
+        "AA1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "AA1234567"
+      ]
+    },
+    {
+      "text": "серия AB 7654321",
+      "business_hidden": [
+        "7654321"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "7654321"
+      ]
+    },
+    {
+      "text": "паспорт серии AA № 1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт: AA №1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт AA-1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт AA  1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт aa1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт АА1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "паспорт АА 1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "ID-карта AD1234567",
+      "business_hidden": [
+        "1234567"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234567"
+      ]
+    },
+    {
+      "text": "Исх. № KC1234567 от 28.10.2026, ИНН 305123456",
+      "business_hidden": [
+        "KC1234567"
+      ],
+      "business_kept": [
+        "28.10.2026",
+        "305123456"
+      ],
+      "strict_hidden": [
+        "KC1234567",
+        "305123456"
+      ]
+    },
+    {
+      "text": "от 1234567 до 7654321",
+      "business_hidden": [],
+      "business_kept": [
+        "от 1234567",
+        "до 7654321"
+      ],
+      "strict_hidden": [
+        "1234567",
+        "7654321"
+      ]
+    },
+    {
+      "text": "ПИНФЛ 31234567890123",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "ЖШШИР 31234567890123",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "JShShIR: 31234567890123",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "ПИНФЛ 3 1234 5678 9012 3",
+      "business_hidden": [
+        "1234 5678 9012"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234 5678 9012"
+      ]
+    },
+    {
+      "text": "ПИНФЛ 312 345 678 901 23",
+      "business_hidden": [
+        "312 345 678 901 23"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "312 345 678 901 23"
+      ]
+    },
+    {
+      "text": "личный номер 3 1234 5678 9012 3",
+      "business_hidden": [
+        "1234 5678 9012"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1234 5678 9012"
+      ]
+    },
+    {
+      "text": "1 31234567890123 Иванов И.И.",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [
+        "Иванов И.И."
+      ],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "Иванов 31234567890123 12.03.1985",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [
+        "Иванов"
+      ],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "31234567890123 2026",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [
+        "2026"
+      ],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "ПИНФЛ 31234567890123 1 экз.",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [
+        "1 экз."
+      ],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "ПИНФЛ 31234567890123.",
+      "business_hidden": [
+        "31234567890123"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "31234567890123"
+      ]
+    },
+    {
+      "text": "Карта 8600 1234 5678 9012",
+      "business_hidden": [
+        "8600 1234 5678 9012"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "8600 1234 5678 9012"
+      ]
+    },
+    {
+      "text": "Карта 8600 1234 5678 9012 03/27",
+      "business_hidden": [
+        "8600 1234 5678 9012"
+      ],
+      "business_kept": [
+        "03/27"
+      ],
+      "strict_hidden": [
+        "8600 1234 5678 9012"
+      ]
+    },
+    {
+      "text": "Карта 8600123456789012",
+      "business_hidden": [
+        "8600123456789012"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "8600123456789012"
+      ]
+    },
+    {
+      "text": "4111111111111111 12/28",
+      "business_hidden": [
+        "4111111111111111"
+      ],
+      "business_kept": [
+        "12/28"
+      ],
+      "strict_hidden": [
+        "4111111111111111"
+      ]
+    },
+    {
+      "text": "карта 4111-1111-1111-1111 и всё",
+      "business_hidden": [
+        "4111-1111-1111-1111"
+      ],
+      "business_kept": [
+        "и всё"
+      ],
+      "strict_hidden": [
+        "4111-1111-1111-1111"
+      ]
+    },
+    {
+      "text": "Карта 4111.1111.1111.1111",
+      "business_hidden": [
+        "4111.1111.1111.1111"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "4111.1111.1111.1111"
+      ]
+    },
+    {
+      "text": "Карта 4111  1111  1111  1111",
+      "business_hidden": [
+        "4111  1111  1111  1111"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "4111  1111  1111  1111"
+      ]
+    },
+    {
+      "text": "2 4111 1111 1111 1111",
+      "business_hidden": [
+        "4111 1111 1111 1111"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "4111 1111 1111 1111"
+      ]
+    },
+    {
+      "text": "Карта 4111 1111 1111 1111 2026",
+      "business_hidden": [
+        "4111 1111 1111 1111"
+      ],
+      "business_kept": [
+        "2026"
+      ],
+      "strict_hidden": [
+        "4111 1111 1111 1111"
+      ]
+    },
+    {
+      "text": "Карта 5555 5555 5555 4444.",
+      "business_hidden": [
+        "5555 5555 5555 4444"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "5555 5555 5555 4444"
+      ]
+    },
+    {
+      "text": "р/с 20208000900123456001, МФО 00014",
+      "business_hidden": [],
+      "business_kept": [
+        "20208000900123456001",
+        "00014"
+      ],
+      "strict_hidden": [
+        "20208000900123456001"
+      ]
+    },
+    {
+      "text": "р/с 2020 8000 9001 2345 6001",
+      "business_hidden": [],
+      "business_kept": [
+        "2020 8000 9001 2345 6001"
+      ],
+      "strict_hidden": [
+        "2020 8000 9001 2345 6001"
+      ]
+    },
+    {
+      "text": "р/с 20208-00090-01234-56001",
+      "business_hidden": [],
+      "business_kept": [
+        "20208-00090-01234-56001"
+      ],
+      "strict_hidden": [
+        "20208-00090-01234-56001"
+      ]
+    },
+    {
+      "text": "р/с 20208 000 900 123 456 001",
+      "business_hidden": [],
+      "business_kept": [
+        "20208 000 900 123 456 001"
+      ],
+      "strict_hidden": [
+        "20208 000 900 123 456 001"
+      ]
+    },
+    {
+      "text": "счёт 4111111111111111 и 20208000900123456001",
+      "business_hidden": [],
+      "business_kept": [
+        "20208000900123456001"
+      ],
+      "strict_hidden": [
+        "20208000900123456001"
+      ]
+    },
+    {
+      "text": "Карта 4111 1111 1111 1112",
+      "business_hidden": [],
+      "business_kept": [
+        "4111 1111 1111 1112"
+      ],
+      "strict_hidden": [
+        "4111 1111 1111 1112"
+      ]
+    },
+    {
+      "text": "номер 4111111111111112",
+      "business_hidden": [],
+      "business_kept": [
+        "4111111111111112"
+      ],
+      "strict_hidden": [
+        "4111111111111112"
+      ]
+    },
+    {
+      "text": "ИНН 305123456 ОКЭД 62010",
+      "business_hidden": [],
+      "business_kept": [
+        "305123456",
+        "62010"
+      ],
+      "strict_hidden": [
+        "305123456"
+      ]
+    },
+    {
+      "text": "тел. +998 90 123-45-67 и 901234567",
+      "business_hidden": [],
+      "business_kept": [
+        "+998 90 123-45-67",
+        "901234567"
+      ],
+      "strict_hidden": [
+        "+998 90 123-45-67",
+        "901234567"
+      ]
+    },
+    {
+      "text": "тел 998901234567",
+      "business_hidden": [],
+      "business_kept": [
+        "998901234567"
+      ],
+      "strict_hidden": [
+        "998901234567"
+      ]
+    },
+    {
+      "text": "почта ivan.petrov@mail.uz",
+      "business_hidden": [],
+      "business_kept": [
+        "ivan.petrov@mail.uz"
+      ],
+      "strict_hidden": [
+        "ivan.petrov@mail.uz"
+      ]
+    },
+    {
+      "text": "Иванов Иван Иванович, г. Ташкент, ул. Навои, 5",
+      "business_hidden": [],
+      "business_kept": [
+        "Иванов Иван Иванович",
+        "ул. Навои, 5"
+      ],
+      "strict_hidden": []
+    },
+    {
+      "text": "акт от 31.10.2026 на сумму 150 000 сум",
+      "business_hidden": [],
+      "business_kept": [
+        "31.10.2026",
+        "150 000 сум"
+      ],
+      "strict_hidden": []
+    },
+    {
+      "text": "договор № 12345678901 от 01.01.2026",
+      "business_hidden": [],
+      "business_kept": [
+        "12345678901"
+      ],
+      "strict_hidden": [
+        "12345678901"
+      ]
+    },
+    {
+      "text": "Нужно 3 кассы и 10 трекеров в 2026 году",
+      "business_hidden": [],
+      "business_kept": [
+        "3 кассы",
+        "2026 году"
+      ],
+      "strict_hidden": []
+    },
+    {
+      "text": "Дата рождения: 12.03.1985, г. Ташкент",
+      "business_hidden": [
+        "12.03.1985"
+      ],
+      "business_kept": [
+        "г. Ташкент"
+      ],
+      "strict_hidden": [
+        "12.03.1985"
+      ]
+    },
+    {
+      "text": "Иванов И.И., 12.05.1985 г.р.",
+      "business_hidden": [
+        "12.05.1985"
+      ],
+      "business_kept": [
+        "Иванов И.И."
+      ],
+      "strict_hidden": [
+        "12.05.1985"
+      ]
+    },
+    {
+      "text": "1985 г.р.",
+      "business_hidden": [
+        "1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1985"
+      ]
+    },
+    {
+      "text": "дата рожд. 12.05.1985",
+      "business_hidden": [
+        "12.05.1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "12.05.1985"
+      ]
+    },
+    {
+      "text": "дата рождения 12 мая 1985 г.",
+      "business_hidden": [
+        "12 мая 1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "12 мая 1985"
+      ]
+    },
+    {
+      "text": "дата рождения: 1985-05-12",
+      "business_hidden": [
+        "1985-05-12"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "1985-05-12"
+      ]
+    },
+    {
+      "text": "родился 12.05.1985",
+      "business_hidden": [
+        "12.05.1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "12.05.1985"
+      ]
+    },
+    {
+      "text": "д.р. 01/02/90",
+      "business_hidden": [
+        "01/02/90"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "01/02/90"
+      ]
+    },
+    {
+      "text": "туғилган сана 12.05.1985",
+      "business_hidden": [
+        "12.05.1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "12.05.1985"
+      ]
+    },
+    {
+      "text": "Tug'ilgan sana: 12.03.1985",
+      "business_hidden": [
+        "12.03.1985"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "12.03.1985"
+      ]
+    },
+    {
+      "text": "tug‘ilgan kun 5.6.1990",
+      "business_hidden": [
+        "5.6.1990"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "5.6.1990"
+      ]
+    },
+    {
+      "text": "Date of birth: 3 March 1990",
+      "business_hidden": [
+        "3 March 1990"
+      ],
+      "business_kept": [],
+      "strict_hidden": [
+        "3 March 1990"
+      ]
+    },
+    {
+      "text": "в 2026 г. рассмотрено, письмо от 12.05.2026",
+      "business_hidden": [],
+      "business_kept": [
+        "2026 г. рассмотрено",
+        "12.05.2026"
+      ],
+      "strict_hidden": []
+    }
+  ]
+}

@@ -233,6 +233,7 @@ export * from "./dictionaryOrderIn";
 export * from "./dictionaryOwner";
 export * from "./docflowSettings";
 export * from "./docflowSettingsPatch";
+export * from "./docflowSettingsPiiPolicy";
 export * from "./documentKind";
 export * from "./documentPlaceholder";
 export * from "./documentPlaceholderGroup";

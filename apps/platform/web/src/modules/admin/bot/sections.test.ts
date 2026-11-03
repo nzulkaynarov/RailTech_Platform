@@ -22,8 +22,8 @@ const SCHEMAS = schemas as Record<string, JsonSchema>;
 const KEYS = Object.keys(SCHEMAS);
 
 describe("разделы настроек", () => {
-  it("четырнадцать разделов CRM раскладываются по страницам Настроек без потерь и повторов (SET-IA)", () => {
-    expect(KEYS).toHaveLength(14);
+  it("пятнадцать разделов CRM раскладываются по страницам Настроек без потерь и повторов (SET-IA)", () => {
+    expect(KEYS).toHaveLength(15);
     const pages = [...new Set(Object.values(BOT_PLACEMENT))];
     const placed = pages.flatMap((page) => botSectionsFor(page, KEYS));
     expect([...placed].sort()).toEqual([...KEYS].sort());
@@ -31,6 +31,7 @@ describe("разделы настроек", () => {
     expect(botSectionsFor("notifications", KEYS)).toEqual(["notifications", "service_alerts"]);
     expect(botSectionsFor("dictionaries", KEYS)).toEqual(["deals"]);
     expect(botSectionsFor("spend", KEYS)).toEqual(["budget"]);
+    expect(botSectionsFor("spend.policy", KEYS)).toEqual(["ai"]); // своя карточка, общая форма её не рисует
   });
 
   it("новый раздел CRM попадает в «Telegram · Поведение», отсутствующие не показываются", () => {

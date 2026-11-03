@@ -128,7 +128,7 @@ export function AiFillBar({
         <span className="pf-hint" id="reg-ai-hint">
           {!file
             ? t("register.ai.needFile")
-            : settings.data.recognize_scans
+            : settings.data.recognize_scans && settings.data.pii_policy === "business"
               ? t("register.ai.hintScans")
               : t("register.ai.hintText")}
         </span>

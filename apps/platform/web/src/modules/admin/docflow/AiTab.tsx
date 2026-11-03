@@ -1,18 +1,42 @@
-import { Alert, Skeleton } from "antd";
+import { useQueryClient } from "@tanstack/react-query";
+import { Alert, App, Skeleton, Switch } from "antd";
 import { useTranslation } from "react-i18next";
 
-import { useGetDocflowSettings } from "../../../shared/api/generated/platform-bff";
+import { canEdit } from "../../../app/access";
+import { useAuth } from "../../../app/auth/useAuth";
+import {
+  getGetDocflowSettingsQueryKey,
+  useGetDocflowSettings,
+  useUpdateDocflowSettings,
+} from "../../../shared/api/generated/platform-bff";
 import { TabHeader } from "../company/common";
 
 /**
- * Настройки · Документооборот · ИИ-помощник (EDS-REG): «Заполнить из файла» в регистрации входящих. PDF с текстом
- * помощник читает всегда (персональные данные скрывает код до модели). Сканы и фото — серверная настройка
- * `recognize_scans` (по умолчанию выключена); переключателя здесь нет, пока владелец и юрист не решат, можно ли отправлять
- * сканы писем в модель (docs/QUESTIONS.md, Q-EDSREG-1). Экран показывает состояние словами.
+ * Настройки · Расходы на ИИ · «Заполнить из файла» (EDS-REG, PD-BIZ): помощник регистрации входящих. PDF с текстом
+ * читается всегда, персональные данные скрывает код по политике «Защиты данных для ИИ». Сканы и фото — выбор
+ * администратора (`recognize_scans`, по умолчанию включено) с подписью «Паспорта и личные документы не загружайте»;
+ * при «Строгой» политике сканы выключены. Состояние показывается словами.
  */
 export function AiTab() {
   const { t } = useTranslation("letters");
+  const { me } = useAuth();
+  const { message } = App.useApp();
+  const editable = canEdit(me, "admin");
+  const queryClient = useQueryClient();
   const settings = useGetDocflowSettings();
+  // Фактическое состояние документооборота: политику он получает из CRM по шине и может отставать (см. карточку выше).
+  const strict = settings.data?.pii_policy === "strict";
+  const update = useUpdateDocflowSettings({
+    mutation: {
+      onSuccess: async () => {
+        await queryClient.invalidateQueries({ queryKey: getGetDocflowSettingsQueryKey() });
+        void message.success(t("settings.ai.scans.saved"));
+      },
+      onError: () => {
+        void message.error(t("settings.ai.scans.error"));
+      },
+    },
+  });
 
   return (
     <div className="pf-co-body">
@@ -29,9 +53,27 @@ export function AiTab() {
           <p className="pf-hint" style={{ margin: 0 }}>
             {t("settings.ai.text")}
           </p>
-          <p className="pf-hint" style={{ margin: 0 }}>
-            {settings.data.recognize_scans ? t("settings.ai.scansOn") : t("settings.ai.scansLater")}
-          </p>
+          <div className="pf-pii-scans">
+            <Switch
+              id="pf-scans-switch"
+              checked={settings.data.recognize_scans && !strict}
+              disabled={!editable || strict || update.isPending}
+              loading={update.isPending}
+              aria-labelledby="pf-scans-label"
+              aria-describedby="pf-scans-hint"
+              onChange={(checked) => {
+                update.mutate({ data: { recognize_scans: checked } });
+              }}
+            />
+            <div>
+              <label id="pf-scans-label" htmlFor="pf-scans-switch" className="pf-pii-name">
+                {t("settings.ai.scans.label")}
+              </label>
+              <p className="pf-hint" id="pf-scans-hint" style={{ margin: 0 }}>
+                {strict ? t("settings.ai.scans.strict") : t("settings.ai.scans.hint")}
+              </p>
+            </div>
+          </div>
         </>
       ) : null}
     </div>

@@ -4127,7 +4127,7 @@ export interface paths {
     };
     /**
      * Настройки бота: значения и схемы разделов
-     * @description CRM `GET /settings`. Раздел `admin` — от чтения (директор видит без правки): компания, рабочие часы, тексты бота, поведение бота, поиск по базе знаний, стоп-слова, конкуренты, правила передачи, квалификация, канал команды, бюджет моделей, сделки, форма «Запрос», оповещения о сбоях. Ключ раздела и его схема приходят из CRM как есть (JSON Schema Pydantic CRM): экран строит форму по схеме, поэтому новый параметр в CRM появляется в Платформе без правки BFF. Профиль бота и коннекторы правятся в «Внешних интеграциях» и сюда не входят.
+     * @description CRM `GET /settings`. Раздел `admin` — от чтения (директор видит без правки): компания, рабочие часы, тексты бота, поведение бота, поиск по базе знаний, стоп-слова, конкуренты, правила передачи, квалификация, канал команды, бюджет моделей, сделки, форма «Запрос», оповещения о сбоях, защита данных для ИИ (`ai.pii_policy`: `business` — «Деловая», по умолчанию, `strict` — «Строгая»; смена пишется в журнал аудита CRM и уходит в EDS событием `crm.ai_policy.changed`). Ключ раздела и его схема приходят из CRM как есть (JSON Schema Pydantic CRM): экран строит форму по схеме, поэтому новый параметр в CRM появляется в Платформе без правки BFF. Профиль бота и коннекторы правятся в «Внешних интеграциях» и сюда не входят.
      */
     get: operations["getBotSettings"];
     put?: never;
@@ -4731,7 +4731,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · «Заполнить из файла» — ИИ-помощник регистрации (EDS-REG)
-     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст; скан или фото — только при настройке `recognize_scans` (по умолчанию выключена, без переключателя до решения Q-EDSREG-1). Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
+     * @description EDS `POST /letter-intake`: по загруженному файлу письма (`file_id` из `POST /eds/document-files`) — предложенные поля карточки. Только по кнопке; форма заполняется и вручную. PDF с текстом — в модель уходит маскированный текст (по политике защиты данных для ИИ `ai.pii_policy`: «Деловая» — паспорт, ПИНФЛ, карты, даты рождения; «Строгая» — всё); скан или фото — при «Деловой» политике и включённой настройке `recognize_scans` (по умолчанию включена). Вид документа — из справочника, ИНН — найден кодом. Раздел `eds.inbox.register` — полный. 409 `details.reason`: `scan_recognition_disabled`, `file_too_large`, `ai_unavailable`, `ai_budget_exceeded`, `nothing_recognized`; 422 — файл не PDF и не изображение.
      */
     post: operations["suggestLetterFromFile"];
     delete?: never;
@@ -4769,7 +4769,7 @@ export interface paths {
     };
     /**
      * EDS · Настройки документооборота
-     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию выключено), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
+     * @description `recognize_scans` — распознавать сканы и фото моделью (по умолчанию включено, действует при политике «Деловая»), `pii_policy` — политика защиты данных для ИИ, как её применил документооборот (проекция CRM, только чтение; её меняет `PUT /admin/bot/settings/ai`; пока событие не пришло — `strict`; расхождение с CRM экран показывает предупреждением), `ai_available` — помощник настроен. Раздел `eds.inbox.register` — полный или `admin` — чтение.
      */
     get: operations["getDocflowSettings"];
     put?: never;
@@ -10737,6 +10737,8 @@ export interface components {
     };
     DocflowSettings: {
       recognize_scans: boolean;
+      /** @enum {string} */
+      pii_policy: "business" | "strict";
       ai_available: boolean;
     };
     DocflowSettingsPatch: {

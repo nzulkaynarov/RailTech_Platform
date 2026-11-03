@@ -2,9 +2,11 @@
 
 Решение юриста 2026-11-02: модель зовётся только по кнопке «Подсказать» в карточке письма (без неё
 карточка работает вручную). В модель уходят домен отправителя (без имени и адреса), тема и текст —
-после маскирования персональных данных кодом (`security/pii.mask_text`: e-mail, телефоны, ИНН,
-ПИНФЛ, карты и счета, паспорт, дата рождения); вложения — никогда. Модель — существующий алиас
-`qualifier-model` под BudgetGuard, без резерва; текст письма — внутри XML-блока промпта
+после маскирования персональных данных кодом по политике из настройки `ai.pii_policy`
+(`security/pii.mask_for_model`; PD-BIZ, решение владельца 2026-11-03): «Деловая» (по умолчанию)
+скрывает паспорт, ПИНФЛ, номера карт и даты рождения, «Строгая» — ещё e-mail, телефоны, ИНН и счета;
+политика читается при каждом вызове, перезапуск не нужен; вложения — никогда. Модель — существующий
+алиас `qualifier-model` под BudgetGuard, без резерва; текст письма — внутри XML-блока промпта
 `prompts/mail_assist.md`. Ответ проверяет код (`domain/inbound_mail.parse_assist`): тип — только из
 минимального набора, действие по типу выбирает код; ничего не выполняется.
 
@@ -28,7 +30,7 @@ from app.models.inbound_mail import InboundMail
 from app.repositories import inbound_mail as repo
 from app.schemas.inbound_mail import InboundMailAssist as AssistOut
 from app.security import audit
-from app.security.pii import mask_text
+from app.security.pii import DEFAULT_POLICY, PiiPolicy, mask_for_model
 from app.security.principal import Principal
 from app.services.settings import SettingsService
 
@@ -42,15 +44,15 @@ RESPONSE_FORMAT = {"type": "json_object"}
 Decision = Literal["accepted", "other", "manual"]
 
 
-def masked_mail(row: InboundMail) -> str:
+def masked_mail(row: InboundMail, policy: PiiPolicy = DEFAULT_POLICY) -> str:
     """Что видит модель: домен отправителя (без имени и адреса), тема и текст без персональных
-    данных; вложений нет."""
+    данных по политике; вложений нет."""
     domain = row.from_email.rpartition("@")[2]
     lines = [
         f"От: домен {domain or 'неизвестен'}",
-        f"Тема: {mask_text(row.subject)}",
+        f"Тема: {mask_for_model(row.subject, policy)}",
         "",
-        mask_text(row.text[:TEXT_CHARS]),
+        mask_for_model(row.text[:TEXT_CHARS], policy),
     ]
     return prompts.xml_escape("\n".join(lines))
 
@@ -125,7 +127,9 @@ class InboundMailAssist:
         if row.status not in ("new", "in_work"):
             raise ConflictError("mail is already handled", status=row.status)
         version = prompts.version(PROMPT)
-        verdict, trace_id = await self._ask(who, cfg.company.name, masked_mail(row), version)
+        verdict, trace_id = await self._ask(
+            who, cfg.company.name, masked_mail(row, cfg.ai.pii_policy), version
+        )
         return await self._save(who, mail_id, verdict, trace_id, version)
 
     async def _ask(
