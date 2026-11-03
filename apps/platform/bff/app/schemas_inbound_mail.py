@@ -11,7 +11,7 @@ from app.clients import crm_models as crm
 from app.feeds.numbers import lead_number, letter_ref
 
 MailStatus = Literal["new", "in_work", "registering", "done", "spam"]
-MailOutcome = Literal["registered", "lead", "replied", "archived"]
+MailOutcome = Literal["registered", "lead", "replied", "archived", "price"]
 MailView = Literal["new", "mine", "in_work", "done", "spam", "all"]
 
 
@@ -119,6 +119,79 @@ class InboundMailAssist(_Out):
     action: Literal["register", "lead", "archive"] | None
 
 
+MailTypeAction = Literal[
+    "register_incoming",
+    "create_lead",
+    "supplier_price",
+    "to_accountant",
+    "archive_mailing",
+    "reply_template",
+    "suspicious",
+]
+TYPE_CODE = r"^[a-z][a-z_]{0,31}$"
+
+
+class LocalizedName(_Out):
+    ru: str
+    uz: str
+    en: str
+
+
+class InboundMailType(_Out):
+    code: str
+    name: LocalizedName
+    color: Literal["blue", "green", "gold", "red", "purple", "cyan", "default"]
+    icon: Literal["mail", "team", "calendar", "file", "wallet", "bank", "notification", "stop"]
+    default_action: MailTypeAction
+    active: bool
+    source: Literal["rule", "ai", "manual"]
+
+
+class InboundMailTypeIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type_code: str | None = Field(pattern=TYPE_CODE)
+
+
+class InboundMailHandoverIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    user_id: int = Field(ge=1)
+
+
+class InboundMailHandoverTarget(_Out):
+    id: int
+    name: str
+
+
+class InboundMailHandoverTargets(_Out):
+    items: list[InboundMailHandoverTarget]
+
+
+class MailSenderRule(_Out):
+    id: int
+    pattern: str
+    type_code: str
+    created_at: datetime
+    created_by: str | None
+
+
+class MailSenderRuleList(_Out):
+    items: list[MailSenderRule]
+
+
+class MailSenderRuleOut(MailSenderRule):
+    applied: int
+
+
+class MailSenderRuleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pattern: str = Field(min_length=3, max_length=255)
+    type_code: str = Field(pattern=TYPE_CODE)
+    mail_id: int | None = Field(default=None, ge=1)
+
+
 class InboundMailLink(_Out):
     id: int
     number: str
@@ -152,6 +225,7 @@ class InboundMailItem(_Out):
     preview: str
     attachments_count: int
     assist: InboundMailAssist
+    type: InboundMailType | None
     client: InboundMailLink | None
     lead: InboundMailLink | None
     from_history: bool
@@ -316,6 +390,11 @@ def _assist(src: crm.InboundMailAssist) -> InboundMailAssist:
     return InboundMailAssist.model_validate(src.model_dump(mode="json"))
 
 
+def _type(src: crm.InboundMailType | None) -> InboundMailType | None:
+    """Старый CRM (до MAIL-TYPES) поля `type` не знает: письмо без типа."""
+    return InboundMailType.model_validate(src.model_dump(mode="json")) if src else None
+
+
 def _person(src: crm.InboundMailPerson | None) -> InboundMailPerson | None:
     return InboundMailPerson(id=src.id, name=src.name) if src else None
 
@@ -348,6 +427,7 @@ def to_item(src: crm.InboundMailItem | crm.InboundMailOut) -> InboundMailItem:
         preview=src.preview,
         attachments_count=src.attachments_count,
         assist=_assist(src.assist),
+        type=_type(src.type),
         client=_client(src.client),
         lead=_lead(src.lead),
         from_history=bool(src.from_history),

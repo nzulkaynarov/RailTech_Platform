@@ -42,6 +42,15 @@ def item(**over: Any) -> dict[str, Any]:
         "preview": "Добрый день, направляем акт сверки",
         "attachments_count": 1,
         "assist": assist(),
+        "type": {
+            "code": "supplier_invoice",
+            "name": {"ru": "Счёт поставщика", "uz": "Hisob", "en": "Supplier invoice"},
+            "color": "gold",
+            "icon": "wallet",
+            "default_action": "to_accountant",
+            "active": True,
+            "source": "ai",
+        },
         "client": {"id": 42, "name": "ООО Пример Поставка"},
         "lead": None,
         "from_history": False,
@@ -225,6 +234,7 @@ async def test_list_card_and_attachment(web: Web, be: Backends, check: ContractC
 
     check(listed, "/inbound-mail", "get")
     check(shown, "/inbound-mail/{id}", "get")
+    assert listed.json()["items"][0]["type"]["default_action"] == "to_accountant"
     assert listed.json()["items"][0]["client"] == {
         "id": 42,
         "number": "42",

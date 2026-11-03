@@ -12,7 +12,7 @@ CODE = r"^[a-z][a-z_]{0,31}$"
 KIND = r"^[a-z][a-z-]{0,31}$"
 
 Code = Annotated[str, StringConstraints(pattern=CODE)]
-AttrValue = bool | int | None
+AttrValue = bool | int | str | None
 
 
 class _In(BaseModel):
@@ -31,18 +31,25 @@ class LocalizedNameIn(_In):
     en: Annotated[str, StringConstraints(strip_whitespace=True, max_length=120)] = ""
 
 
+class DictionaryAttrOption(BaseModel):
+    value: str
+    name: LocalizedName
+
+
 class DictionaryAttr(BaseModel):
     key: str
-    type: Literal["boolean", "integer"]
+    type: Literal["boolean", "integer", "choice"]
     name: LocalizedName
     minimum: int | None = None
     maximum: int | None = None
+    #: Допустимые значения `choice` (MAIL-TYPES); у EDS поля нет — `None`.
+    options: list[DictionaryAttrOption] | None = None
 
 
 class Dictionary(BaseModel):
     kind: Annotated[str, StringConstraints(pattern=KIND)]
-    owner: Literal["eds"]
-    area: Literal["documents"]
+    owner: Literal["eds", "crm"]
+    area: Literal["documents", "mail"]
     name: LocalizedName
     closed: bool
     attrs: list[DictionaryAttr]

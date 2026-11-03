@@ -8,6 +8,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
+from tests.consts import CRM_URL
 from tests.eds_letters_support import EdsFake, eds_error_body
 
 BASE = "/api/v1/dictionaries"
@@ -43,8 +44,32 @@ CATALOG = {
 }
 
 
+CRM_CATALOG = {
+    "items": [
+        {
+            "kind": "mail-types",
+            "name": {"ru": "Типы входящих писем", "uz": "Turlar", "en": "Mail types"},
+            "closed": False,
+            "attrs": [
+                {
+                    "key": "default_action",
+                    "type": "choice",
+                    "name": NAME,
+                    "minimum": None,
+                    "maximum": None,
+                    "options": [{"value": "create_lead", "name": NAME}],
+                }
+            ],
+        }
+    ]
+}
+
+
 @pytest.fixture
 def eds(be: Backends) -> EdsFake:
+    be.router.get(f"{CRM_URL}/api/v1/dictionaries").mock(
+        return_value=httpx.Response(200, json=CRM_CATALOG)
+    )
     fake = EdsFake(be)
     fake.answer("GET", "dictionaries", httpx.Response(200, json=CATALOG))
     fake.answer("GET", "dictionaries/letter-kinds", httpx.Response(200, json={"items": [ITEM]}))
@@ -62,8 +87,11 @@ async def test_catalog_adds_owner_and_area(web: Web, eds: EdsFake, check: Contra
     response = await web.client.get(BASE)
     check(response, "/dictionaries", "get")
     assert [(d["kind"], d["owner"], d["area"]) for d in response.json()["items"]] == [
-        ("letter-kinds", "eds", "documents")
+        ("letter-kinds", "eds", "documents"),
+        ("mail-types", "crm", "mail"),
     ]
+    [choice] = response.json()["items"][1]["attrs"]
+    assert (choice["type"], choice["options"][0]["value"]) == ("choice", "create_lead")
     assert (await web.login(["REGISTRAR"])).status_code == 200
     assert (await web.client.get(BASE)).status_code == 403
 
