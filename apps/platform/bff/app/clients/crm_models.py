@@ -810,6 +810,10 @@ class InboundMailAssist(BaseModel):
 class InboundMailAttachment(BaseModel):
     content_type: Annotated[str, Field(title="Content Type")]
     index: Annotated[int, Field(title="Index")]
+    inline: Annotated[bool | None, Field(title="Inline")] = False
+    """
+    Картинка встроена в письмо — в списке вложений не показывается
+    """
     name: Annotated[str, Field(title="Name")]
     size: Annotated[int, Field(title="Size")]
 
@@ -929,12 +933,27 @@ class InboundMailMessage(BaseModel):
     attachments: Annotated[list[InboundMailAttachment], Field(title="Attachments")]
     from_email: Annotated[str, Field(title="From Email")]
     from_name: Annotated[str, Field(title="From Name")]
+    html: Annotated[str | None, Field(title="Html")] = None
+    """
+    Безопасная HTML-версия (санитизация на сервере; показывать только в iframe с sandbox без скриптов и строгим CSP); внешние картинки без src — адрес в data-rt-src; нет — письмо без HTML или слишком большое
+    """
+    html_remote_images: Annotated[int | None, Field(title="Html Remote Images")] = 0
+    """
+    Сколько внешних картинок ждут кнопки «Показать»
+    """
     id: Annotated[int, Field(title="Id")]
     new_participant: Annotated[bool | None, Field(title="New Participant")] = False
     """
     Письмо от адреса, которого в цепочке не было («новый участник переписки»)
     """
     text: Annotated[str, Field(title="Text")]
+    """
+    Текст без цитаты и подписи, нормализованный
+    """
+    text_tail: Annotated[str | None, Field(title="Text Tail")] = ""
+    """
+    Цитата прошлой переписки и подпись — свёрнуты под «…»
+    """
 
 
 class InboundMailOut(BaseModel):

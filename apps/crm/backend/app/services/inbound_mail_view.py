@@ -92,7 +92,7 @@ def item_fields(
         "sent_at": row.sent_at,
         "activity_at": row.activity_at,
         "preview": row.text[:PREVIEW_CHARS],
-        "attachments_count": len(row.attachments or []),
+        "attachments_count": sum(1 for a in row.attachments or [] if not a.get("inline")),
         "assist": assist_view(row, assist_on),
         "client": names.link("client", row.client_id),
         "lead": names.link("lead", row.matched_lead_id),
@@ -145,7 +145,11 @@ async def build_page(
 def _files(row: InboundMail) -> list[dto.InboundMailAttachment]:
     return [
         dto.InboundMailAttachment(
-            index=i, name=a["name"], content_type=a["content_type"], size=a["size"]
+            index=i,
+            name=a["name"],
+            content_type=a["content_type"],
+            size=a["size"],
+            inline=bool(a.get("inline")),
         )
         for i, a in enumerate(row.attachments or [])
     ]
@@ -209,6 +213,9 @@ async def build_card(
             from_name=m.from_name,
             at=m.sent_at or m.received_at,
             text=m.text,
+            text_tail=m.text_tail,
+            html=m.html_sanitized,
+            html_remote_images=m.html_remote_images,
             attachments=_files(m),
             new_participant=m.new_participant,
         )

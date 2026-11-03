@@ -1,6 +1,6 @@
 """Схемы входящей почты общего ящика (W18A-P2, B-INB-5; контракт: tag `inbound-mail`, 0.34.0;
 папки «Спам» и загрузка писем за период — W18A-P2-2, 0.35.0; обращение — статусы, «в работе»,
-цепочки, адресаты — W18A-P2-3, 0.36.0)."""
+цепочки, адресаты — W18A-P2-3, 0.36.0; показ письма: безопасный HTML, текст без цитаты — P2-4)."""
 
 from datetime import datetime
 from typing import Literal
@@ -196,6 +196,7 @@ class InboundMailAttachment(_Out):
     name: str
     content_type: str
     size: int
+    inline: bool
 
 
 class InboundMailSkipped(_Out):
@@ -225,6 +226,9 @@ class InboundMailMessage(_Out):
     from_name: str
     at: datetime
     text: str
+    text_tail: str
+    html: str | None
+    html_remote_images: int
     attachments: list[InboundMailAttachment]
     new_participant: bool
 
@@ -371,30 +375,45 @@ def _address(src: crm.InboundMailAddress) -> InboundMailAddress:
     return InboundMailAddress(email=src.email, staff=_person(src.staff), mailbox=bool(src.mailbox))
 
 
+def _file(src: crm.InboundMailAttachment) -> InboundMailAttachment:
+    """`inline` у старого CRM (до P2-4) нет — тогда это обычное вложение."""
+    return InboundMailAttachment(
+        index=src.index,
+        name=src.name,
+        content_type=src.content_type,
+        size=src.size,
+        inline=bool(src.inline),
+    )
+
+
+def _message(src: crm.InboundMailMessage) -> InboundMailMessage:
+    """Поля показа письма (`text_tail`, `html`, `html_remote_images`) у старого CRM (до P2-4)
+    отсутствуют: BFF терпит порядок выкладки BFF → CRM."""
+    return InboundMailMessage(
+        id=src.id,
+        from_email=src.from_email,
+        from_name=src.from_name,
+        at=src.at,
+        text=src.text,
+        text_tail=src.text_tail or "",
+        html=src.html,
+        new_participant=bool(src.new_participant),
+        html_remote_images=src.html_remote_images or 0,
+        attachments=[_file(a) for a in src.attachments],
+    )
+
+
 def to_mail(src: crm.InboundMailOut) -> InboundMail:
     return InboundMail(
         **to_item(src).model_dump(),
         to=[_address(a) for a in src.to],
         cc=[_address(a) for a in src.cc],
         text=src.text,
-        attachments=[InboundMailAttachment.model_validate(a.model_dump()) for a in src.attachments],
+        attachments=[_file(a) for a in src.attachments],
         skipped=[InboundMailSkipped.model_validate(s.model_dump()) for s in src.skipped],
         too_large=src.too_large,
         inns=list(src.inns),
-        messages=[
-            InboundMailMessage(
-                id=m.id,
-                from_email=m.from_email,
-                from_name=m.from_name,
-                at=m.at,
-                text=m.text,
-                new_participant=bool(m.new_participant),
-                attachments=[
-                    InboundMailAttachment.model_validate(a.model_dump()) for a in m.attachments
-                ],
-            )
-            for m in src.messages
-        ],
+        messages=[_message(m) for m in src.messages],
         replies=[
             InboundMailReply(**{**r.model_dump(exclude={"by"}), "by": _person(r.by)})
             for r in src.replies

@@ -631,6 +631,15 @@
     },
     "open": "«{{subject}}» xatini ochish",
     "noSubject": "(mavzusiz)",
+    "view": {
+      "openFull": "Xatni to‘liq ochish",
+      "frameTitle": "«{{subject}}» xati",
+      "imagesHidden": "Tashqi rasmlar yuklanmagan",
+      "showImages": "Rasmlarni ko‘rsatish ({{count}})",
+      "quote": "Iqtibos va imzoni ko‘rsatish",
+      "quoteHide": "Iqtibos va imzoni yashirish",
+      "missingImage": "Rasm mavjud emas"
+    },
     "attachments": "Ilovalar: {{count}}",
     "off": {
       "title": "Pochta ulanmagan",

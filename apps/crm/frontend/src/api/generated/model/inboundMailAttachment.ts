@@ -6,6 +6,8 @@
 export interface InboundMailAttachment {
   content_type: string;
   index: number;
+  /** Картинка встроена в письмо — в списке вложений не показывается */
+  inline?: boolean;
   name: string;
   size: number;
 }
