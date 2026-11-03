@@ -484,5 +484,6 @@
     "email_admins": true,
     "extra_emails": [],
     "repeat_minutes": 60
-  }
+  },
+  "ai": { "pii_policy": "business" }
 }

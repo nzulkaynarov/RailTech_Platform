@@ -2,10 +2,14 @@
 `docs/research/2026-11-02-flexibility/5-ai-assist.md` §4; правила юриста — DECISIONS 2026-11-02).
 
 * Только по кнопке: сервис вызывается из `POST /letter-intake`, ничего не пишет в письмо — предлагает поля.
-* PDF с текстовым слоем: текст извлекает EDS (`pypdf`), персональные данные маскирует код (`security/pii.py`), в модель
-  уходит только маскированный текст; метки номеров `[number_N]` в ответе код возвращает локально.
-* Скан или фото без текста — модель с изображением, только при серверной настройке `recognize_scans` (по умолчанию
-  выключена, в интерфейсе переключателя нет до решения владельца и юриста — `docs/QUESTIONS.md`, Q-EDSREG-1).
+* PDF с текстовым слоем: текст извлекает EDS (`pypdf`), персональные данные маскирует код (`security/pii.py`) по
+  политике защиты данных для ИИ (PD-BIZ, DECISIONS 2026-11-03; «Деловая» по умолчанию — паспорт, ПИНФЛ, карты,
+  даты рождения; «Строгая» — ещё телефоны, почта, ИНН, счета). В модель уходит только маскированный текст;
+  метки `[number_N]` в ответе код возвращает локально. Политику каждый вызов читает из `docflow_settings`:
+  смена в CRM действует сразу.
+* Скан или фото без текста — модель с изображением: при «Деловой» и включённой настройке `recognize_scans` (по умолчанию
+  включена, переключатель — «Расходы на ИИ» Платформы, подпись «паспорта и личные документы не загружайте»); при
+  «Строгой» — отказ `scan_recognition_disabled` (409), как и при выключенной настройке.
 * Пределы проверяются до чтения файла: PDF — 10 МБ и 30 страниц, изображение — 5 МБ; разбор PDF — в потоке.
 * Код решает: вид документа — только действующий код справочника, даты — разбираются и проверяются, ИНН корреспондента
   ищет код в исходном тексте (не модель).
@@ -175,7 +179,8 @@ async def suggest(
     async with session.begin():
         await files.load_visible(session, employee, file_id)
         version = await files.get_version(session, file_id, None)
-        scans_on = await docflow_settings.recognize_scans(session)
+        policy = await docflow_settings.pii_policy(session)
+        scans_on = policy == "business" and await docflow_settings.recognize_scans(session)
         spent = await _spent_today(session)
         kinds = [(i.code, i.name.ru) for i in (await dictionaries.list_items(session, dictionaries.LETTER_KINDS)).items]
         own = await session.get(Letterhead, 1)
@@ -200,11 +205,16 @@ async def suggest(
         ) from exc
     source = IntakeSource.TEXT if len(raw) >= MIN_TEXT else IntakeSource.IMAGE
     if source is IntakeSource.IMAGE and not scans_on:
-        raise conflict("scan_recognition_disabled", "Это скан или фото: помощник их пока не читает. Заполните вручную.")
+        why = (
+            "при строгой политике защиты данных помощник сканы и фото не читает"
+            if policy == "strict"
+            else "чтение сканов и фото выключено в настройках"
+        )
+        raise conflict("scan_recognition_disabled", f"Это скан или фото: {why}. Заполните вручную.")
     if source is IntakeSource.IMAGE and len(data) > MAX_IMAGE_BYTES:
         raise conflict("file_too_large", _too_large(MAX_IMAGE_BYTES))
 
-    masked = mask_numbered(raw) if source is IntakeSource.TEXT else None
+    masked = mask_numbered(raw, policy) if source is IntakeSource.TEXT else None
     if masked is not None:
         letter: dict[str, Any] = {"type": "text", "text": f"<letter>\n{masked.text}\n</letter>"}
     elif version.content_type == PDF:

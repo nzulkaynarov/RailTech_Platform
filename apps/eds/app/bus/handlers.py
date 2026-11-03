@@ -7,6 +7,8 @@
 Документы проектов (D2-5): `erp.contract.status_changed`, `erp.invoice.*`, `erp.act.*` → проекция реестра
 `project_documents` (без публикации событий, идемпотентно, более старое событие не перезаписывает новое).
 
+Политика защиты данных для ИИ (PD-BIZ): `crm.ai_policy.changed` → проекция `docflow_settings.pii_policy`.
+
 Домен (E3): `erp.request.created` → входящее письмо по заявке (идемпотентно по `erp_request_id`);
 `erp.quote.ready_for_approval` → маршрут согласования КП (идемпотентно по КП и версии). Обработчики публикуют события
 EDS через шину процесса в той же транзакции, что и изменение.
@@ -21,8 +23,16 @@ from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated
-from app.bus.snapshots import UserDeactivated, UserEnvelope, parse_time
-from app.services import employees, letter_mail, letterhead, letters, project_documents, quotes
+from app.bus.snapshots import AiPolicyChanged, UserDeactivated, UserEnvelope, parse_time
+from app.services import (
+    docflow_settings,
+    employees,
+    letter_mail,
+    letterhead,
+    letters,
+    project_documents,
+    quotes,
+)
 
 log = structlog.get_logger(__name__)
 
@@ -34,6 +44,7 @@ QUOTE_READY = "uz.railtech.erp.quote.ready_for_approval.v1"
 LETTERHEAD_UPDATED = "uz.railtech.erp.letterhead.updated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
+AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
 
 
 async def on_user_snapshot(event: Event, session: AsyncSession) -> None:
@@ -86,6 +97,15 @@ async def on_mail_result(event: Event, session: AsyncSession) -> None:
     log.info("mail_result", event_type=event.type, request_key=data.request_key, applied=applied, event_id=event.id)
 
 
+async def on_ai_policy(event: Event, session: AsyncSession) -> None:
+    """Политика защиты данных для ИИ из CRM (PD-BIZ): проекция; более старое событие не применяется."""
+    data = AiPolicyChanged.model_validate(event.data)
+    applied = await docflow_settings.apply_policy(
+        session, data.pii_policy, changed_at=data.changed_at, actor_id=data.crm_user_id
+    )
+    log.info("ai_policy_projection", pii_policy=data.pii_policy, applied=applied, event_id=event.id)
+
+
 def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegistry:
     """Реестр обработчиков EDS; свой, а не общий `default_registry` — тесты и процессы не делят состояние.
 
@@ -101,6 +121,7 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     registry.add(LETTERHEAD_UPDATED, on_letterhead)
     registry.add(MAIL_SENT, on_mail_result)
     registry.add(MAIL_FAILED, on_mail_result)
+    registry.add(AI_POLICY_CHANGED, on_ai_policy)
     if get_bus is not None:
 
         async def request_created(event: Event, session: AsyncSession) -> None:

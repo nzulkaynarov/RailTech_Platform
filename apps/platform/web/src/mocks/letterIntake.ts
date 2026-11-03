@@ -9,25 +9,32 @@ import type {
   LetterIntakeSuggestion,
 } from "../shared/api/generated/model";
 import { readEds } from "./fixtures/edsDocuments";
+import { readKb } from "./fixtures/kb";
 import { buildMe, readSession } from "./mockSession";
 
 /**
  * Моки «Заполнить из файла» и настроек документооборота (EDS-REG). Модели нет: PDF «с текстом» отвечает вымышленным
  * требованием налоговой; скан или фото — только при включённом «Распознавать сканы». Решения пишутся в память — для
- * тестов (`intakeDecisions`). Настройки — `localStorage`, как остальные моки.
+ * тестов (`intakeDecisions`). Настройки — `localStorage`, как остальные моки. Политика защиты данных для ИИ (PD-BIZ) — из
+ * настроек CRM (раздел `ai`): в проде её доставляет событие шины, в моках мгновенно; при «Строгой» сканы не читаются.
  */
 const KEY = "rt-pf-mock-docflow-settings";
 export const intakeDecisions: AiDecisionIn["decision"][] = [];
 let memory: DocflowSettings | null = null;
 
-export function readDocflowSettings(): DocflowSettings {
+function stored(): DocflowSettings {
   try {
     const raw = window.localStorage.getItem(KEY);
     if (raw) return JSON.parse(raw) as DocflowSettings;
   } catch {
     // Хранилище недоступно — состояние в памяти.
   }
-  return memory ?? { recognize_scans: false, ai_available: true };
+  return memory ?? { recognize_scans: true, pii_policy: "business", ai_available: true };
+}
+
+export function readDocflowSettings(): DocflowSettings {
+  const policy = readKb().settings["ai"]?.["pii_policy"] === "strict" ? "strict" : "business";
+  return { ...stored(), pii_policy: policy };
 }
 
 export function writeDocflowSettings(next: DocflowSettings): void {
@@ -92,7 +99,8 @@ export const letterIntakeHandlers = [
         reason: "unsupported_file",
       });
     }
-    if (image && !readDocflowSettings().recognize_scans) {
+    const settings = readDocflowSettings();
+    if (image && (!settings.recognize_scans || settings.pii_policy === "strict")) {
       return fail(409, "CONFLICT", "Распознавание сканов выключено — заполните вручную.", {
         reason: "scan_recognition_disabled",
       });

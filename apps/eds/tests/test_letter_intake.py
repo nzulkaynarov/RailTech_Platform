@@ -1,6 +1,8 @@
-"""«Заполнить из файла» (EDS-REG, pg): PDF с текстом — в модель уходит маскированный текст, номера возвращает код;
-скан — только при включённом «Распознавать сканы»; вид — из справочника; ИНН — из текста кодом; журнал без текстов;
-настройки — у администратора. Модель — подмена транспорта (`httpx.MockTransport`), платных вызовов нет."""
+"""«Заполнить из файла» (EDS-REG, PD-BIZ, pg): PDF с текстом — в модель уходит маскированный текст по политике защиты
+данных («Деловая» по умолчанию, «Строгая» — прежнее поведение; политика приходит событием CRM и действует сразу, без
+перезапуска), номера возвращает код; скан — при «Деловой» и включённом «Распознавать сканы», при «Строгой» отказ; вид —
+из справочника; ИНН — из текста кодом; журнал без текстов; настройки — у администратора. Модель — подмена транспорта
+(`httpx.MockTransport`), платных вызовов нет."""
 
 import json
 from typing import Any
@@ -16,7 +18,9 @@ from app.container import Container
 from app.models import AiSuggestion, JournalEntry
 from app.services import letter_intake
 from app.services.letter_intake import find_inn, pdf_text
+from tests.conftest import BUS_SECRET_CRM_EDS
 from tests.domain import Person, validate
+from tests.helpers import example, signed
 from tests.test_api_auth import assert_error
 from tests.test_files import PNG, upload
 
@@ -102,6 +106,24 @@ async def intake(client: httpx.AsyncClient, who: Person, content: bytes, **kw: A
     return await client.post("/api/v1/letter-intake", json={"file_id": uploaded.json()["id"]}, headers=who.headers)
 
 
+async def deliver_policy(
+    client: httpx.AsyncClient, container: Container, policy: str, *, at: str = "2026-11-03T09:00:00Z"
+) -> str | None:
+    """Политика защиты данных из CRM: подписанная доставка события приёмнику и обработка inbox (как в проде)."""
+    envelope = example("crm/ai_policy.changed.v1")
+    envelope["data"].update(pii_policy=policy, changed_at=at)
+    headers, body = signed(envelope, publisher="crm", secret=BUS_SECRET_CRM_EDS)
+    response = await client.post("/bus/v1/events", headers=headers, content=body)
+    assert response.status_code == 200, response.text
+    return await container.bus.process_inbox(envelope["id"])
+
+
+BUSINESS_PERSONAL = (
+    "Director passport AA1234567, PINFL 31234567890123, card 4111 1111 1111 1111, birth date: 12.03.1985, "
+    "account 20208000900123456001"
+)
+
+
 def test_pdf_text_and_inn_are_read_by_code() -> None:
     text = pdf_text(make_pdf(LETTER_LINES))
     assert "Ref. No. 1234567/KC" in text
@@ -115,6 +137,8 @@ def test_pdf_text_and_inn_are_read_by_code() -> None:
 async def test_text_pdf_goes_masked_and_numbers_come_back(
     client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
 ) -> None:
+    """«Строгая» — прежнее поведение: номера, телефон и почта в модель не уходят."""
+    assert await deliver_policy(client, container, "strict") == "processed"
     response = await intake(client, staff["registrar"], make_pdf(LETTER_LINES), name="letter.pdf")
     assert response.status_code == 200, response.text
     body = response.json()
@@ -177,24 +201,80 @@ async def test_code_decides_kind_and_dates(
     assert_error(empty, 409, "CONFLICT", reason="nothing_recognized")
 
 
-async def test_scans_only_when_the_admin_turned_them_on(
-    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel
+async def test_until_the_first_policy_event_eds_is_strict(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
 ) -> None:
-    off = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
-    assert_error(off, 409, "CONFLICT", reason="scan_recognition_disabled")
-    assert model.bodies == []
+    """События CRM ещё не было — EDS не открывает больше, чем выбрал админ: «Строгая», сканы не читаются."""
+    shown = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
+    assert shown.json()["pii_policy"] == "strict"
+    await intake(client, staff["registrar"], make_pdf([*LETTER_LINES, BUSINESS_PERSONAL]))
+    sent = json.dumps(model.bodies[-1], ensure_ascii=False)
+    for secret in ("301234567", "20208000900123456001", "+998 90 123 45 67", "AA1234567"):
+        assert secret not in sent, secret
+    scan = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert_error(scan, 409, "CONFLICT", reason="scan_recognition_disabled")
+    # Первое событие CRM (даже «Деловая») снимает ограничение; повтор того же события безвреден.
+    assert await deliver_policy(client, container, "business") == "processed"
+    assert await deliver_policy(client, container, "business") == "processed"
+    ok = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert ok.status_code == 200, ok.text
 
+
+async def test_business_policy_masks_only_personal_ids_by_default(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
+) -> None:
+    """«Деловая» (по умолчанию в CRM): реквизиты компании модель видит, паспорт, ПИНФЛ, карту и дату рождения — нет;
+    номера из ответа код возвращает сам."""
+    assert await deliver_policy(client, container, "business") == "processed"
+    model.answer = {**ANSWER, "sender_ref_number": "1234567/KC"}
+    lines = [*LETTER_LINES, BUSINESS_PERSONAL]
+    body = (await intake(client, staff["registrar"], make_pdf(lines), name="letter.pdf")).json()
+    sent = json.dumps(model.bodies[0], ensure_ascii=False)
+    for kept in ("1234567/KC", "301234567", "20208000900123456001", "+998 90 123 45 67", "inspector@example.uz"):
+        assert kept in sent, kept
+    for hidden in ("AA1234567", "31234567890123", "4111 1111 1111 1111", "12.03.1985"):
+        assert hidden not in sent, hidden
+    assert "[passport]" in sent and "[date]" in sent
+    assert body["fields"]["sender_inn"] == "301234567"
+    assert body["fields"]["sender_ref_number"] == "1234567/KC"
+
+
+async def test_policy_switch_changes_masking_without_restart(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
+) -> None:
+    """Смена политики в CRM действует на следующий вызов того же процесса; старое событие её не откатывает."""
+    pdf = make_pdf([*LETTER_LINES, BUSINESS_PERSONAL])
+    assert await deliver_policy(client, container, "business", at="2026-11-03T08:00:00Z") == "processed"
+    await intake(client, staff["registrar"], pdf)
+    assert "301234567" in json.dumps(model.bodies[-1], ensure_ascii=False)
+
+    assert await deliver_policy(client, container, "strict", at="2026-11-03T10:00:00Z") == "processed"
+    await intake(client, staff["registrar"], pdf)
+    strict = json.dumps(model.bodies[-1], ensure_ascii=False)
+    for secret in ("301234567", "20208000900123456001", "+998 90 123 45 67", "inspector@example.uz", "AA1234567"):
+        assert secret not in strict, secret
+
+    # Опоздавшее событие («Деловая» в 09:00) строгую политику не отменяет; повтор — тоже.
+    assert await deliver_policy(client, container, "business", at="2026-11-03T09:30:00Z") == "processed"
+    await intake(client, staff["registrar"], pdf)
+    assert "301234567" not in json.dumps(model.bodies[-1], ensure_ascii=False)
+
+    assert await deliver_policy(client, container, "business", at="2026-11-03T11:00:00Z") == "processed"
+    await intake(client, staff["registrar"], pdf)
+    assert "301234567" in json.dumps(model.bodies[-1], ensure_ascii=False)
+    async with container.session_factory() as session:
+        journal = (await session.execute(select(JournalEntry.action))).scalars().all()
+    assert journal.count("docflow_settings.pii_policy") == 3  # применены 08:00, 10:00 и 11:00; опоздавшее 09:30 — нет
+
+
+async def test_scans_follow_the_policy_and_the_admin_switch(
+    client: httpx.AsyncClient, staff: dict[str, Person], model: FakeModel, container: Container
+) -> None:
+    """Скан или фото: «Деловая» и включённая настройка (по умолчанию) — в модель; иначе понятный отказ."""
+    assert await deliver_policy(client, container, "business", at="2026-11-03T08:00:00Z") == "processed"
     settings = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
     validate("DocflowSettings", settings.json())
-    assert settings.json() == {"recognize_scans": False, "ai_available": True}
-    denied = await client.patch(
-        "/api/v1/docflow-settings", json={"recognize_scans": True}, headers=staff["registrar"].headers
-    )
-    assert_error(denied, 403, "FORBIDDEN", permission="bus.manage")
-    turned = await client.patch(
-        "/api/v1/docflow-settings", json={"recognize_scans": True}, headers=staff["admin"].headers
-    )
-    assert turned.json()["recognize_scans"] is True
+    assert settings.json() == {"recognize_scans": True, "pii_policy": "business", "ai_available": True}
 
     on = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
     assert on.status_code == 200, on.text
@@ -203,6 +283,34 @@ async def test_scans_only_when_the_admin_turned_them_on(
     content = model.bodies[0]["messages"][1]["content"]
     assert content[1]["type"] == "image_url"
     assert content[1]["image_url"]["url"].startswith("data:image/png;base64,")
+
+    assert await deliver_policy(client, container, "strict") == "processed"
+    strict = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    body = assert_error(strict, 409, "CONFLICT", reason="scan_recognition_disabled")
+    assert "строгой политике" in body["message"]
+    assert len(model.bodies) == 1  # при «Строгой» в модель ничего не ушло
+    shown = await client.get("/api/v1/docflow-settings", headers=staff["registrar"].headers)
+    assert shown.json() == {"recognize_scans": True, "pii_policy": "strict", "ai_available": True}
+
+    assert await deliver_policy(client, container, "business", at="2026-11-03T12:00:00Z") == "processed"
+    denied = await client.patch(
+        "/api/v1/docflow-settings", json={"recognize_scans": False}, headers=staff["registrar"].headers
+    )
+    assert_error(denied, 403, "FORBIDDEN", permission="bus.manage")
+    turned = await client.patch(
+        "/api/v1/docflow-settings", json={"recognize_scans": False}, headers=staff["admin"].headers
+    )
+    assert turned.json() == {"recognize_scans": False, "pii_policy": "business", "ai_available": True}
+    off = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert_error(off, 409, "CONFLICT", reason="scan_recognition_disabled")
+    assert len(model.bodies) == 1
+
+    again = await client.patch(
+        "/api/v1/docflow-settings", json={"recognize_scans": True}, headers=staff["admin"].headers
+    )
+    assert again.json()["recognize_scans"] is True
+    back = await intake(client, staff["registrar"], PNG, name="scan.png", content_type="image/png")
+    assert back.status_code == 200, back.text
 
 
 async def test_helper_off_or_out_of_budget_tells_to_fill_by_hand(

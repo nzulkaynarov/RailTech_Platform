@@ -8,6 +8,7 @@ data = TYPES[env.type].model_validate(env.data)
 
 from pydantic import BaseModel
 from rt_contracts.events.crm import (
+    AiPolicyChangedV1,
     ClientCreatedV1,
     ClientUpdatedV1,
     ContactCreatedV1,
@@ -67,6 +68,7 @@ from rt_contracts.events.erp import (
 from rt_contracts.events.identity import UserCreatedV1, UserDeactivatedV1, UserUpdatedV1
 
 TYPES: dict[str, type[BaseModel]] = {
+    "uz.railtech.crm.ai_policy.changed.v1": AiPolicyChangedV1,
     "uz.railtech.crm.client.created.v1": ClientCreatedV1,
     "uz.railtech.crm.client.updated.v1": ClientUpdatedV1,
     "uz.railtech.crm.contact.created.v1": ContactCreatedV1,
@@ -129,6 +131,7 @@ __all__ = [
     "ActAcceptedV1",
     "ActIssuedV1",
     "ActReturnedV1",
+    "AiPolicyChangedV1",
     "ApprovalDecidedV1",
     "ApprovalRequestedV1",
     "ClientCreatedV1",

@@ -22,6 +22,7 @@ from app.schemas.settings_client import ClientBotTexts
 from app.schemas.settings_deals import DealsSettings
 from app.schemas.settings_hours import BusinessHoursSettings
 from app.schemas.settings_profile import BotProfileSettings
+from app.security.pii import DEFAULT_POLICY, PiiPolicy
 
 __all__ = ["AppSettings", "BusinessHoursSettings", "Language", "LocalizedText"]
 
@@ -486,6 +487,18 @@ class IntegrationsSettings(StrictModel):
     model_keys: dict[str, ModelKeyMask] = Field(default_factory=dict)
 
 
+class AiSettings(StrictModel):
+    """Защита персональных данных перед вызовом модели (PD-BIZ, решение владельца 2026-11-03).
+
+    `business` — «Деловая» (по умолчанию): в текст для модели не попадают только паспорт, ПИНФЛ, номера карт
+    и даты рождения; реквизиты компании, телефоны, почта и ФИО остаются. `strict` — «Строгая»: скрывается всё
+    (телефоны, почта, ИНН, счета), сканы и фото в модель не уходят. Одна политика на все системы: CRM берёт её
+    отсюда, EDS — из события `crm.ai_policy.changed`. Логи и трейсы от политики не зависят — маска там всегда строгая.
+    """
+
+    pii_policy: PiiPolicy = DEFAULT_POLICY
+
+
 class WebFormSettings(StrictModel):
     """Антиспам публичной формы «Запрос» с сайта (M3-CRM-05, `domain/web_form.py`).
 
@@ -530,6 +543,7 @@ SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {
     "integrations": IntegrationsSettings,
     "web_form": WebFormSettings,
     "service_alerts": ServiceAlertsSettings,
+    "ai": AiSettings,
 }
 
 
@@ -565,6 +579,7 @@ class AppSettings(StrictModel):
     integrations: IntegrationsSettings = Field(default_factory=IntegrationsSettings)
     web_form: WebFormSettings = Field(default_factory=WebFormSettings)
     service_alerts: ServiceAlertsSettings = Field(default_factory=ServiceAlertsSettings)
+    ai: AiSettings = Field(default_factory=AiSettings)
 
     def lead_notice(
         self,

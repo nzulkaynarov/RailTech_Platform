@@ -38,7 +38,7 @@ def eds(be: Backends) -> EdsFake:
     fake = EdsFake(be)
     fake.answer("POST", "letter-intake", httpx.Response(200, json=SUGGESTION))
     fake.answer("POST", f"ai-suggestions/{SUGGESTION_ID}/decision", httpx.Response(204))
-    settings = {"recognize_scans": False, "ai_available": True}
+    settings = {"recognize_scans": False, "pii_policy": "business", "ai_available": True}
     fake.answer("GET", "docflow-settings", httpx.Response(200, json=settings))
     fake.answer(
         "PATCH", "docflow-settings", httpx.Response(200, json={**settings, "recognize_scans": True})

@@ -15,14 +15,18 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain.platform_links import LinkBase
 from app.domain.public_urls import is_schema_default
 from app.models.leads import Setting
 from app.schemas.settings import SETTINGS_MODELS, AppSettings
 from app.security import audit
 from app.security.audit import Actor
+from app.security.pii import DEFAULT_POLICY
 
 logger = structlog.get_logger(__name__)
+
+AI_KEY = "ai"
 
 
 class UnknownSettingError(KeyError):
@@ -95,6 +99,11 @@ class SettingsService:
                 await audit.record(
                     session, actor, "settings.update", "settings", key, before=before, after=payload
                 )
+            if key == AI_KEY:
+                # PD-BIZ: EDS держит проекцию политики; событие — в транзакции сохранения.
+                await bus_events.ai_policy_changed(
+                    session, payload["pii_policy"], actor or Actor.system()
+                )
         self.invalidate()
         return validated
 
@@ -158,6 +167,8 @@ class SettingsService:
             raise UnknownSettingError(key)
         async with self._sessions() as session, session.begin():
             result = await session.execute(delete(Setting).where(Setting.key == key))
+            if key == AI_KEY:
+                await bus_events.ai_policy_changed(session, DEFAULT_POLICY, Actor.system())
         self.invalidate()
         return bool(getattr(result, "rowcount", 0))
 

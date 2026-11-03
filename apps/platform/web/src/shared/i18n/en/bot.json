@@ -48,7 +48,8 @@
     "budget": "Model budget",
     "deals": "Loss reasons",
     "web_form": "Website \"Request\" form",
-    "service_alerts": "Service failure alerts"
+    "service_alerts": "Service failure alerts",
+    "ai": "Data protection for AI"
   },
   "sectionHints": {
     "web_form": "Anti-spam for the \"Request\" form on the Cabinet sign-in page (no external services): a hidden field, a signed form token and a per-IP limit. A lead from the website lands in \"Inbox\" as \"Unassigned\".",
@@ -652,7 +653,8 @@
     "telegram_channel": "Message to the team channel",
     "email_admins": "Email to administrators",
     "extra_emails": "Additional email addresses",
-    "repeat_minutes": "At most one service failure alert per"
+    "repeat_minutes": "At most one service failure alert per",
+    "pii_policy": "Data protection policy"
   },
   "hints": {
     "cabinet_url": "The \"Cabinet\" button under quote and invoice messages; empty — no button.",

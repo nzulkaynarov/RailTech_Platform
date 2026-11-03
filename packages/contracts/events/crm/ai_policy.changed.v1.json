@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/ai_policy.changed.v1.json",
+  "title": "Политика защиты данных для ИИ изменена",
+  "description": "Тип uz.railtech.crm.ai_policy.changed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Админ сохранил раздел «ИИ» настроек CRM (политика защиты персональных данных перед моделью, решение владельца 2026-11-03): `business` («Деловая», по умолчанию) — в тексте для модели скрываются только паспорт, ПИНФЛ, номера карт и даты рождения; `strict` («Строгая») — ещё и телефоны, почта, ИНН, счета и прочие длинные числа, сканы и фото в модель не уходят. Снимок значения целиком: подписчик заменяет проекцию, снимок с `changed_at` старше или равным применённому не применяется. Событие публикуется и повторно при каждом старте воркера CRM (`changed_at` — время сохранения настройки, нет сохранённой — 1970-01-01). Данных людей и компаний нет.",
+  "type": "object",
+  "required": [
+    "pii_policy",
+    "changed_at",
+    "actor"
+  ],
+  "properties": {
+    "pii_policy": {
+      "type": "string",
+      "enum": [
+        "business",
+        "strict"
+      ],
+      "description": "Политика маскирования персональных данных перед вызовом модели"
+    },
+    "changed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Момент сохранения настройки в CRM (время базы)"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

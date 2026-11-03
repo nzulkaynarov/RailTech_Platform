@@ -48,7 +48,8 @@
     "budget": "Modellar byudjeti",
     "deals": "Rad etish sabablari",
     "web_form": "Saytdan «Ariza» formasi",
-    "service_alerts": "Xizmat nosozliklari haqida ogohlantirishlar"
+    "service_alerts": "Xizmat nosozliklari haqida ogohlantirishlar",
+    "ai": "SI uchun ma’lumotlar himoyasi"
   },
   "sectionHints": {
     "web_form": "Cabinet kirish sahifasidagi «Ariza» formasining spamga qarshi himoyasi (tashqi xizmatlarsiz): yashirin maydon, imzolangan forma tokeni va IP bo‘yicha limit. Saytdan kelgan lid «Kiruvchilar»ga «Mas’ulsiz» sifatida tushadi.",
@@ -652,7 +653,8 @@
     "telegram_channel": "Jamoa kanaliga xabar",
     "email_admins": "Administratorlarga pochta xati",
     "extra_emails": "Xatlar uchun qo‘shimcha manzillar",
-    "repeat_minutes": "Xizmat nosozligi haqida ogohlantirish bir martadan tez-tez emas"
+    "repeat_minutes": "Xizmat nosozligi haqida ogohlantirish bir martadan tez-tez emas",
+    "pii_policy": "Ma’lumotlar himoyasi siyosati"
   },
   "hints": {
     "cabinet_url": "TT va hisoblar haqidagi xabarlar ostidagi «Kabinet» tugmasi; bo‘sh — tugma yo‘q.",

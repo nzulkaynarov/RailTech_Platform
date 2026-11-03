@@ -9,6 +9,7 @@ import { SoloSection } from "../company/solo";
 import { NumberingTab } from "../company/tabs/NumberingTab";
 import { PlatformTab } from "../company/tabs/PlatformTab";
 import { AiTab } from "../docflow/AiTab";
+import { PiiPolicyCard } from "../docflow/PiiPolicyCard";
 import { TemplatesTab as ResolutionTemplates } from "../docflow/TemplatesTab";
 import { MailPanel } from "../integrations/MailPanel";
 import { SpendPanel } from "../integrations/SpendPanel";
@@ -112,7 +113,7 @@ export function NotificationsPage() {
   );
 }
 
-/** Система · Расходы на ИИ: отчёт, дневной лимит и ИИ-помощник в документах. */
+/** Система · Расходы на ИИ: отчёт, дневной лимит, защита данных для ИИ и ИИ-помощник в документах. */
 export function AiSpendPage() {
   return (
     <SettingsPage sectionKey="spend">
@@ -120,6 +121,9 @@ export function AiSpendPage() {
         <SpendPanel titled={false} />
       </Card>
       <BotSettingsSections page="spend" />
+      <Card styles={{ body: { padding: 0 } }}>
+        <PiiPolicyCard />
+      </Card>
       <Card styles={{ body: { padding: 0 } }}>
         <AiTab />
       </Card>
