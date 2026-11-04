@@ -42,6 +42,7 @@ ERROR_CODES = (
     "CONFLICT",
     "CONTACT_NOT_IN_CRM",
     "TELEGRAM_LINK_UNAVAILABLE",
+    "TELEGRAM_NOT_LINKED",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

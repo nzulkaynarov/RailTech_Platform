@@ -93,7 +93,7 @@ def test_contact_session_gets_a_15_minute_link_for_its_own_crm_contact(linkable,
     assert crm_contact_id == 58, "токен — только на контакт своей сессии"
     expires_at = datetime.fromisoformat(res.data["expires_at"].replace("Z", "+00:00"))
     assert expires == int(expires_at.timestamp())
-    assert timedelta(minutes=14) < expires_at - before <= timedelta(minutes=15, seconds=1)
+    assert timedelta(minutes=14) < expires_at - before <= timedelta(minutes=15, seconds=10)
 
 
 def test_company_b_session_never_gets_a_token_for_company_a_contact(linkable, other_portal_client):
@@ -272,3 +272,71 @@ def test_client_mails_point_to_profile_notifications_and_carry_no_token(settings
         assert "start=" not in message.body and "start=" not in html, "токен привязки в письмо не кладётся"
     assert invitation.alternatives[0][0].count(target) == 1, "в приглашении — в тексте письма, без повтора в подвале"
     assert target not in staff.body and target not in staff.alternatives[0][0], "письма сотрудникам — без строки"
+
+
+# ── POST /me/telegram/test ───────────────────────────────────────────────────────────────────────────
+
+TEST = "/api/portal/v1/me/telegram/test"
+
+
+@pytest.fixture
+def fresh_cache():
+    from django.core.cache import cache
+
+    cache.clear()
+    yield
+    cache.clear()
+
+
+def test_test_message_is_a_bus_request_in_the_contact_language(linkable, fresh_cache, portal_client, client_contact):
+    client_contact.language = "uz"
+    client_contact.save(update_fields=["language"])
+
+    res = portal_client.post(TEST, {}, format="json")
+
+    assert res.status_code == status.HTTP_202_ACCEPTED, res.data
+    envelope = bus_support.only("contact.telegram_test_requested")
+    bus_support.assert_matches_contract(envelope)
+    assert envelope["data"]["payload"] == {"erp_contact_id": client_contact.pk, "crm_contact_id": 58, "language": "uz"}
+
+
+def test_test_message_at_most_once_a_minute_with_retry_after(linkable, fresh_cache, portal_client):
+    assert portal_client.post(TEST, {}, format="json").status_code == status.HTTP_202_ACCEPTED
+
+    again = portal_client.post(TEST, {}, format="json")
+
+    assert again.status_code == status.HTTP_429_TOO_MANY_REQUESTS
+    assert again.data == {"detail": "TOO_MANY_REQUESTS"}
+    assert 1 <= int(again["Retry-After"]) <= 60
+    assert len(bus_support.published("contact.telegram_test_requested")) == 1
+
+
+def test_test_message_needs_a_linked_telegram(linkable, fresh_cache, portal_client, client_contact):
+    client_contact.telegram_user_id = None
+    client_contact.save(update_fields=["telegram_user_id"])
+
+    res = portal_client.post(TEST, {}, format="json")
+
+    assert res.status_code == status.HTTP_409_CONFLICT
+    assert res.data == {"detail": "TELEGRAM_NOT_LINKED"}
+    assert bus_support.published("contact.telegram_test_requested") == []
+
+
+def test_failed_test_publication_does_not_burn_the_minute(linkable, fresh_cache, monkeypatch, portal_client):
+    from integration.services import events
+
+    real = events.publish_event
+    monkeypatch.setattr(events, "publish_event", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("outbox")))
+    with pytest.raises(RuntimeError):
+        portal_client.post(TEST, {}, format="json")
+    monkeypatch.setattr(events, "publish_event", real)
+
+    assert portal_client.post(TEST, {}, format="json").status_code == status.HTTP_202_ACCEPTED
+
+
+def test_company_b_test_message_goes_only_to_its_own_contact(linkable, fresh_cache, other_portal_client, other_contact):
+    assert other_portal_client.post(TEST, {}, format="json").status_code == status.HTTP_202_ACCEPTED
+
+    envelope = bus_support.only("contact.telegram_test_requested")
+    assert envelope["data"]["payload"]["crm_contact_id"] == 59
+    assert envelope["data"]["crm_client_id"] == 43

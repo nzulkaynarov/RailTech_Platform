@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     from app.services.clients import ClientService
     from app.services.company_articles import CompanyArticleService
     from app.services.contact_telegram import ContactTelegramService
+    from app.services.contact_telegram_test import TelegramTestDelivery
     from app.services.documents import DocumentService
     from app.services.eds_notices import EdsNoticeService
     from app.services.erp_access import ErpAccessService
@@ -800,6 +801,15 @@ class Container:
 
         return ContactTelegramService(
             self.session_factory, erp_pair_secrets, on_chats_changed=_chats_changed
+        )
+
+    @cached_property
+    def contact_telegram_test(self) -> "TelegramTestDelivery":
+        """Проверочное сообщение контакту по запросу ERP (NOTIFY-1), inline."""
+        from app.services.contact_telegram_test import TelegramTestDelivery
+
+        return TelegramTestDelivery(
+            self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
 
     @cached_property

@@ -8,7 +8,9 @@ Telegram контакта принадлежит CRM (ADR-0015, один вла�
   `telegram_user_id` — проекция ERP заполняется (`integration/services/crm_projections.py`), Mini App начинает входить;
 * **отключение** — ERP публикует запрос `uz.railtech.erp.contact.telegram_unlink_requested.v1`, CRM отвязывает и публикует
   `crm.contact.updated` без `telegram_user_id`;
-* **статус** — по проекции (`telegram_user_id`), Cabinet опрашивает его, пока открыт экран.
+* **статус** — по проекции (`telegram_user_id`), Cabinet опрашивает его, пока открыт экран;
+* **проверочное сообщение** — ERP публикует запрос `uz.railtech.erp.contact.telegram_test_requested.v1`, бот CRM пишет
+  контакту; не чаще `TEST_INTERVAL` на контакт (кэш, атомарный `add`), иначе 429 с `Retry-After`.
 
 Токен (формат — контракт `POST /me/telegram-link`; разбор — `apps/crm/backend/app/domain/contact_link.py`, тест-вектор в обеих
 системах одинаковый). Параметр `start` Telegram — до 64 символов `[A-Za-z0-9_-]`, поэтому упаковка бинарная:
@@ -39,11 +41,13 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.utils import timezone
 from integration.models import CrmContactMapping
 from parties.models import Contact
-from portal.exceptions import PortalUnavailable, PortalValidationError
+from portal.exceptions import PortalConflict, PortalUnavailable, PortalValidationError
+from rest_framework.exceptions import Throttled
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +63,8 @@ _DATA = struct.Struct(">BB6sI9s")  # версия, язык, crm_contact_id (48 
 _MAX_CONTACT_ID = (1 << 48) - 1
 
 PUBLISHER, SUBSCRIBER = "erp", "crm"
+#: Проверочное сообщение — не чаще раза в минуту на контакт (защита бота и человека от серии нажатий).
+TEST_INTERVAL = timedelta(minutes=1)
 
 
 @dataclass(frozen=True)
@@ -149,4 +155,41 @@ def request_telegram_unlink(contact: Contact) -> dict:
         if event is None:  # компания не сопоставлена клиенту CRM — запрос некому доставить
             raise PortalValidationError("CONTACT_NOT_IN_CRM")
     logger.info("telegram_link: контакт #%s попросил отключить Telegram", contact.pk)
+    return telegram_status(contact)
+
+
+def _test_key(contact: Contact) -> str:
+    return f"portal:telegram-test:{contact.pk}"
+
+
+def request_telegram_test(contact: Contact, now: Optional[datetime] = None) -> dict:
+    """Проверочное сообщение в привязанный Telegram: запрос боту CRM через outbox.
+
+    Не привязан — 409 `TELEGRAM_NOT_LINKED`; нет сопоставления с CRM — 422 `CONTACT_NOT_IN_CRM`; чаще раза в минуту — 429
+    `TOO_MANY_REQUESTS` с `Retry-After` (DRF `Throttled`, код ставит `portal_exception_handler`). Отметка ставится атомарно
+    (`cache.add`) до публикации и снимается, если публикация не удалась: параллельные нажатия дают одно сообщение.
+    """
+    from integration.services import events
+
+    if not contact.telegram_user_id:
+        raise PortalConflict("TELEGRAM_NOT_LINKED")
+    crm_contact_id = _crm_contact_id(contact)
+    if crm_contact_id is None:
+        raise PortalValidationError("CONTACT_NOT_IN_CRM")
+    moment = now or timezone.now()
+    interval = int(TEST_INTERVAL.total_seconds())
+    if not cache.add(_test_key(contact), moment.timestamp(), interval):
+        sent_at = cache.get(_test_key(contact)) or moment.timestamp()
+        raise Throttled(wait=max(1, int(interval - (moment.timestamp() - float(sent_at)))))
+    published = False
+    try:
+        with transaction.atomic():
+            event = events.publish_contact_telegram_test_requested(contact, crm_contact_id)
+            if event is None:
+                raise PortalValidationError("CONTACT_NOT_IN_CRM")
+        published = True
+    finally:
+        if not published:  # сбой публикации не «съедает» минуту: повторить можно сразу
+            cache.delete(_test_key(contact))
+    logger.info("telegram_link: контакт #%s попросил проверочное сообщение", contact.pk)
     return telegram_status(contact)

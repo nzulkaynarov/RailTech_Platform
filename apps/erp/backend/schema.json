@@ -1295,6 +1295,34 @@
                 }
             }
         },
+        "/api/portal/v1/me/telegram/test": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_test_create",
+                "description": "POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram/test/": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_test_create_2",
+                "description": "POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/quotes": {
             "get": {
                 "operationId": "api_portal_v1_quotes_retrieve",

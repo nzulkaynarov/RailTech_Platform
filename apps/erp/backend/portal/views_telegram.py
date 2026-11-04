@@ -5,7 +5,12 @@
 """
 
 from portal.permissions import ANY_MODULE, HasPortalModule, IsPortalAuthenticated
-from portal.services.telegram_link import issue_telegram_link, request_telegram_unlink, telegram_status
+from portal.services.telegram_link import (
+    issue_telegram_link,
+    request_telegram_test,
+    request_telegram_unlink,
+    telegram_status,
+)
 from portal.views import BasePortalView
 from rest_framework import status
 from rest_framework.response import Response
@@ -36,3 +41,10 @@ class TelegramLinkView(_ContactSettingView):
             {"url": link.url, "expires_at": link.expires_at.isoformat().replace("+00:00", "Z")},
             status=status.HTTP_201_CREATED,
         )
+
+
+class TelegramTestView(_ContactSettingView):
+    """POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту)."""
+
+    def post(self, request):
+        return Response(request_telegram_test(request.portal_contact), status=status.HTTP_202_ACCEPTED)

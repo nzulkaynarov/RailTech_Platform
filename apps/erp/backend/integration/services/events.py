@@ -524,6 +524,23 @@ def publish_contact_telegram_unlink_requested(contact: Any, crm_contact_id: int)
     )
 
 
+def publish_contact_telegram_test_requested(contact: Any, crm_contact_id: int) -> Optional[Event]:
+    """Событие `contact.telegram_test_requested` (NOTIFY-1): проверочное сообщение в Telegram — пишет бот CRM.
+
+    `None` — компания не сопоставлена клиенту CRM. Язык — контакта в ERP; действующее лицо — клиент без имени.
+    """
+    payload: Dict[str, Any] = {"erp_contact_id": contact.id, "crm_contact_id": int(crm_contact_id)}
+    if contact.language in ("ru", "uz", "en"):
+        payload["language"] = contact.language
+    return publish_event(
+        "contact.telegram_test_requested",
+        erp_company_id=contact.company_id,
+        payload=payload,
+        deal=None,
+        actor={"type": "client"},
+    )
+
+
 #: Решение клиента по строке поставки → тип события (`DeliveryLineDecision.status`).
 DELIVERY_LINE_EVENTS = {"accepted": "delivery.line_accepted", "disputed": "delivery.line_disputed"}
 

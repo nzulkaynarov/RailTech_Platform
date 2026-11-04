@@ -205,6 +205,18 @@ _CONTACT_LINK_TAKEN: Final = {
 }
 
 
+_CONTACT_LINK_TEST: Final = {
+    "ru": "Проверка связи: уведомления кабинета «{company}» приходят сюда. Всё работает.",
+    "uz": "Aloqa tekshiruvi: «{company}» kabineti bildirishnomalari shu yerga keladi. Hammasi ishlayapti.",
+    "en": "Connection check: notifications from the «{company}» account arrive here. Everything works.",
+}
+
+
+def contact_link_test(language: str | None, company: str | None) -> str:
+    clean = " ".join((company or "").split())
+    return _pick(_CONTACT_LINK_TEST, language).format(company=clean).replace(" «»", "")
+
+
 def contact_link_bound(language: str | None, company: str | None) -> str:
     clean = " ".join((company or "").split())
     return _pick(_CONTACT_LINK_BOUND, language).format(company=clean).replace(" «»", "")

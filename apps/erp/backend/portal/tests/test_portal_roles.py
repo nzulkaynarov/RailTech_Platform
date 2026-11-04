@@ -272,7 +272,7 @@ class TestMe:
 #: Операции, открытые любой роли или без сессии: вход, выход и профиль. Всё остальное в контракте — по модулям.
 ANY_ROLE_PATHS = {"/auth/telegram", "/auth/magic-link", "/auth/magic", "/auth/code", "/auth/logout", "/me"}
 #: NOTIFY-1: Telegram — личная настройка контакта (модуль `profile` есть у любой сессии).
-ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram-link"}
+ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

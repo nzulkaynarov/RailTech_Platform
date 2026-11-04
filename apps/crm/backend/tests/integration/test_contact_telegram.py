@@ -1,6 +1,7 @@
 """Привязка Telegram контактом по ссылке из кабинета и отключение по запросу ERP (NOTIFY-1)."""
 
 import asyncio
+import dataclasses
 import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
@@ -19,6 +20,7 @@ from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity, TelegramLinkNonce
 from app.repositories import leads as repo
 from app.services.contact_telegram import UNLINK_REQUESTED, ContactTelegramService
+from app.services.contact_telegram_test import TEST_REQUESTED, TelegramTestDelivery
 from app.services.start_links import StartLinkService
 from tests.unit.test_contact_link import BEFORE, PAIR_SECRET, token
 
@@ -309,3 +311,71 @@ async def test_unlink_request_for_a_contact_of_another_client_is_ignored(
 
     assert (await contact_row(sessions, contact_id)).telegram_identity_id is not None
     assert len(await published(sessions, CONTACT_UPDATED)) == 1
+
+
+# ── проверочное сообщение ────────────────────────────────────────────────────────────────────────
+
+
+class FakeBot:
+    def __init__(self, error: Exception | None = None) -> None:
+        self.sent: list[tuple[int, str]] = []
+        self._error = error
+
+    async def send_message(self, chat_id: int, text: str, **kwargs: Any) -> None:
+        if self._error is not None:
+            raise self._error
+        self.sent.append((chat_id, text))
+
+
+def check_event(client_id: int, contact_id: int) -> Event:
+    event = unlink_event(client_id, contact_id)
+    event.data["payload"]["language"] = "uz"
+    return dataclasses.replace(event, type=TEST_REQUESTED)
+
+
+def delivery(sessions: async_sessionmaker[AsyncSession], bot: FakeBot) -> TelegramTestDelivery:
+    async def provider() -> Any:
+        return bot
+
+    return TelegramTestDelivery(sessions, provider)
+
+
+async def test_test_message_goes_to_the_contacts_own_telegram_in_its_language(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+    bot = FakeBot()
+
+    assert await delivery(sessions, bot).deliver(check_event(client_id, contact_id)) == "processed"
+
+    assert bot.sent == [(USER, client_texts.contact_link_test("uz", "ООО Альфа"))]
+
+
+async def test_test_message_is_not_sent_to_an_unlinked_or_foreign_contact(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    other_client, _ = await contact(sessions, "ООО Бета")
+    bot = FakeBot()
+
+    assert await delivery(sessions, bot).deliver(check_event(client_id, contact_id)) == "skipped"
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+    assert await delivery(sessions, bot).deliver(check_event(other_client, contact_id)) == "skipped"
+    assert bot.sent == []
+
+
+async def test_telegram_failure_of_the_test_message_is_reported_not_raised(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+
+    result = await delivery(sessions, FakeBot(TimeoutError())).deliver(
+        check_event(client_id, contact_id)
+    )
+
+    assert result == "failed"
