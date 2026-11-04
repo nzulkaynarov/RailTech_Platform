@@ -296,6 +296,10 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     assert invite_contact_to_portal(contact, channel="email")[1] is None
     # invite.requested — приглашение через Telegram: доставит бот CRM (D1-9)
     assert invite_contact_to_portal(contact, channel="telegram")[1] is None
+    # contact.telegram_unlink_requested — контакт отключил Telegram в Профиле: поле у CRM, ERP просит (NOTIFY-1)
+    from portal.services.telegram_link import request_telegram_unlink
+
+    request_telegram_unlink(contact)
     # deal.lost — закрытие сделки без продажи
     lost_deal = Deal.objects.create(
         title="Проиграна", company=company, client=buyer_user, stage=DealStage.objects.get(code="CALCULATING")

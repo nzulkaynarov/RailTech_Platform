@@ -508,6 +508,22 @@ def publish_invite_requested(contact: Any, actor: Optional[Dict[str, Any]] = Non
     return publish_event("invite.requested", erp_company_id=contact.company_id, payload=payload, deal=None, actor=actor)
 
 
+def publish_contact_telegram_unlink_requested(contact: Any, crm_contact_id: int) -> Optional[Event]:
+    """Событие `contact.telegram_unlink_requested` (NOTIFY-1, ADR-0023 п. 3): контакт отключил Telegram в кабинете.
+
+    Поле принадлежит CRM (ADR-0015): ERP просит, CRM отвязывает и публикует `contact.updated` без `telegram_user_id`.
+    `None` — компания не сопоставлена клиенту CRM. Действующее лицо — клиент, без имени (ПДн в событии не нужны).
+    """
+    payload: Dict[str, Any] = {"erp_contact_id": contact.id, "crm_contact_id": int(crm_contact_id)}
+    return publish_event(
+        "contact.telegram_unlink_requested",
+        erp_company_id=contact.company_id,
+        payload=payload,
+        deal=None,
+        actor={"type": "client"},
+    )
+
+
 #: Решение клиента по строке поставки → тип события (`DeliveryLineDecision.status`).
 DELIVERY_LINE_EVENTS = {"accepted": "delivery.line_accepted", "disputed": "delivery.line_disputed"}
 

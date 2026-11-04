@@ -39,6 +39,7 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_telegram import TelegramLinkView, TelegramStatusView
 
 urlpatterns = [
     # Auth
@@ -55,6 +56,11 @@ urlpatterns = [
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),
+    # Telegram контакта (NOTIFY-1, ADR-0023 п. 3)
+    path("me/telegram", TelegramStatusView.as_view(), name="portal-me-telegram"),
+    path("me/telegram/", TelegramStatusView.as_view(), name="portal-me-telegram-slash"),
+    path("me/telegram-link", TelegramLinkView.as_view(), name="portal-me-telegram-link"),
+    path("me/telegram-link/", TelegramLinkView.as_view(), name="portal-me-telegram-link-slash"),
     # Requests (Запросы клиента)
     path("requests", RequestListView.as_view(), name="portal-requests"),
     path("requests/", RequestListView.as_view(), name="portal-requests-slash"),

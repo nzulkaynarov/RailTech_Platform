@@ -40,6 +40,8 @@ ERROR_CODES = (
     "INVOICE_NOT_OPEN",
     "TEXT_REQUIRED",
     "CONFLICT",
+    "CONTACT_NOT_IN_CRM",
+    "TELEGRAM_LINK_UNAVAILABLE",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

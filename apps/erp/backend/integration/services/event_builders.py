@@ -49,6 +49,7 @@ VALID_EVENT_TYPES = {
     "invite.requested",
     "delivery.line_accepted",
     "delivery.line_disputed",
+    "contact.telegram_unlink_requested",
 }
 
 EVENT_TYPE_PREFIX = "uz.railtech.erp."

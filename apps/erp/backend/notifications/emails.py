@@ -152,6 +152,19 @@ def email_brand(company) -> dict:
     return brand
 
 
+#: Письма контакту клиента или партнёра (NOTIFY-1, ADR-0023 п. 3): в подвале — «Получать мгновенно в Telegram» со ссылкой на
+#: Профиль → «Уведомления» кабинета. Токен привязки в письмо не кладётся: 15-минутная ссылка к прочтению письма почти всегда
+#: просрочена, а письма пересылают — токен выпускается из сессии на странице Профиля (`portal/services/telegram_link.py`).
+CLIENT_MAIL_TEMPLATES = frozenset(
+    {"portal_invitation", "quote_sent", "quote_acceptance_code", "quote_accepted_contact", "generated_document"}
+)
+
+
+def telegram_notifications_url() -> str:
+    """Профиль → «Уведомления» в Cabinet (`CABINET_URL`); без входа Cabinet вернёт сюда после входа."""
+    return f"{getattr(settings, 'CABINET_URL', 'http://cabinet.localhost').rstrip('/')}/profile#notifications"
+
+
 def send_templated_email(
     template_name: str,
     context: dict,
@@ -211,6 +224,7 @@ def send_templated_email(
         "brand_name": platform_name,
         "support_email": support_email,
         "frontend_url": getattr(settings, "FRONTEND_URL", ""),
+        **({"telegram_notifications_url": telegram_notifications_url()} if template_name in CLIENT_MAIL_TEMPLATES else {}),
         **context,
     }
 

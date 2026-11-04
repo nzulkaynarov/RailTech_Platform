@@ -55,6 +55,17 @@ class PortalDeliveryFailed(APIException):
         super().__init__(detail=detail, code=detail)
 
 
+class PortalUnavailable(APIException):
+    """Сервис временно недоступен по настройке ансамбля (бот не задан, нет сопряжения с CRM): 503 с кодом (NOTIFY-1)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "TELEGRAM_LINK_UNAVAILABLE"
+    default_code = "unavailable"
+
+    def __init__(self, detail="TELEGRAM_LINK_UNAVAILABLE"):
+        super().__init__(detail=detail, code=detail)
+
+
 class PortalValidationError(APIException):
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_detail = "VALIDATION_ERROR"

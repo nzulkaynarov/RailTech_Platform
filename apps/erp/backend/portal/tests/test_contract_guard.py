@@ -61,6 +61,7 @@ GET_CASES = {
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
+    "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
 }
 
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
