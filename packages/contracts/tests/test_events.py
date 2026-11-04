@@ -505,7 +505,10 @@ def test_cabinet_chat_goes_between_crm_and_erp_only() -> None:
     assert {"client_message_id", "text", "author"} <= set(payload["required"])
     assert payload["properties"]["context"]["properties"]["kind"]["enum"] == ["deal", "quote", "invoice", "act"]
     erased = next(t for t in TYPES if t.name == "uz.railtech.crm.lead.erased.v1")
-    assert "cabinet_erp_company_id" not in load_json(erased.path)["required"]
+    erased_schema = load_json(erased.path)
+    assert "cabinet" not in erased_schema["required"]
+    # стирается только автор (scope=authors) либо вся лента при стирании клиента (scope=company)
+    assert erased_schema["properties"]["cabinet"]["properties"]["scope"]["enum"] == ["authors", "company"]
 
 
 # ─── сгенерированный пакет rt-contracts ────────────────────────────────────────────────────────

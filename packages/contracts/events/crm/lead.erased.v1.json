@@ -29,12 +29,38 @@
     "actor": {
       "$ref": "_defs.v1.json#/$defs/Actor"
     },
-    "cabinet_erp_company_id": {
+    "cabinet": {
       "type": [
-        "integer",
+        "object",
         "null"
       ],
-      "description": "Лид вёл беседу чата кабинета этой компании ERP (CHAT-1): её сообщения в CRM стёрты вместе с перепиской лида — подписчик ERP стирает ленту кабинета компании до erased_at и не принимает ответы менеджера с sent_at не позже erased_at. Нет поля или null — беседы кабинета у лида не было"
+      "description": "Чат кабинета (CHAT-1): чьи сообщения ленты кабинета стереть. Стирается только автор: scope=authors — сообщения перечисленных контактов ERP (их пишет человек, обезличенный этим событием; текст удаляется, автор — «Удалённый пользователь»), лента компании, сообщения менеджеров и других контактов остаются; scope=company — стирание клиента целиком: вся лента компании до erased_at, ответы менеджера с sent_at не позже erased_at больше не применяются. Нет поля или null — в ленте кабинета стирать нечего",
+      "required": [
+        "erp_company_id",
+        "scope",
+        "erp_contact_ids"
+      ],
+      "properties": {
+        "erp_company_id": {
+          "type": "integer",
+          "description": "Компания ERP, чья лента кабинета"
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "authors",
+            "company"
+          ]
+        },
+        "erp_contact_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer"
+          },
+          "description": "Контакты ERP — авторы, чьи сообщения стираются (scope=authors); при scope=company — пусто"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

@@ -2449,7 +2449,7 @@ components:
 
     PortalMessage:
       type: object
-      required: [id, direction, author_name, mine, text, context, created_at, client_message_id]
+      required: [id, direction, author_name, mine, text, context, created_at, client_message_id, erased]
       properties:
         id:
           type: integer
@@ -2476,6 +2476,11 @@ components:
         client_message_id:
           type: [string, 'null']
           description: Ключ повтора сообщения контакта (у ответа менеджера — `null`)
+        erased:
+          type: boolean
+          description: >-
+            Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet
+            показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется
       additionalProperties: false
 
     PortalMessagePage:
