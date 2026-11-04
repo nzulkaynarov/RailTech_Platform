@@ -13,6 +13,23 @@
 
 ## Открытые вопросы волн и задач
 
+## Q-NOTIFY1-1 · ErrorCode портала — постоянно открытое множество? (NOTIFY-1 → архитектор)
+
+**Контекст.** Новые коды ошибок портала (`TELEGRAM_*`, `CONTACT_NOT_IN_CRM`) oasdiff видит как «новое значение enum в
+ответе». Для `detail` (anyOf [ErrorCode, string]) это действительно добавление — клиенты понимают незнакомый код по
+HTTP-статусу (Q-17, ADR-0016 п. 2); запись в `packages/contracts/openapi-breaking-exceptions.yaml` сужена полем `text` до
+схемы ErrorCode в `detail` (`scripts/openapi_compat.py`, NOTIFY-1), срок 2026-12-31. Построчные ошибки «Моих товаров»
+(`POST /partner/products/submit`, `POST /partner/offers/confirm`, поле `errors[].code`) ссылаются на ErrorCode напрямую,
+без anyOf, — для них отдельные записи с путём.
+
+**Варианты.** 1) Правило «ErrorCode открыт» постоянное: запись без срока (нужна поддержка в `openapi_compat.py` и правка
+шапки файла исключений), `errors[].code` перевести на anyOf [ErrorCode, string]. 2) Каждый новый код — подъём минорной
+версии `erp-portal.yaml` (конфликты версий у параллельных PR). 3) Построчным ошибкам — свой закрытый перечень
+(`PartnerRowErrorCode`), общему `detail` — вариант 1.
+
+**Рекомендация.** 3 (по сути — 1 для `detail` и отдельный перечень строк): `detail` остаётся открытым по постоянному правилу,
+коды строк меняются редко и пусть ломают совместимость честно.
+
 ## Q-FIX38-1 · Смысл `erp_document_id` в контракте; индекс документов CRM; контекст ссылки; событие после появления сопоставления (FIX-38)
 
 **Контекст.** После FIX-38 `erp_document_id` в `GET /deals/{id}/documents`, `last_document`, `document.created`, `GET /documents/{id}/link` и MCP — идентификатор документа портала (`pk * 8 + слот вида`), а не `pk` записи `GeneratedDocument`. Тип остаётся целым (`integer`, `int64`), формат контракта 0.2.0 не менялся, контракт (`packages/contracts`) в этом PR не правился. CRM принимает число как `int` (`schemas/erp_events.py`), но **не сохраняет и не сверяет его**: обработчик `document.created` (`app/services/erp_events.py`, ~433–452) создаёт `Document` без `erp_document_id` и без проверки дублей, поэтому повторное событие по тому же документу даёт вторую строку индекса. Данных в проде нет — миграция данных CRM не нужна. Необязательное `erp_document_id` в `invoice.*` и `act.*` (`events.schema.json`) ERP по-прежнему не заполняет: событие несёт `erp_invoice_id` / `erp_act_id`, а документ счёта или акта рождает отдельное `document.created`.

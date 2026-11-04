@@ -250,6 +250,7 @@ telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
   phone_e164 NULL, verified_by_user_id NULL, verified_at NULL, is_blocked BOOL
 )                                                   -- verified_at без verified_by_user_id — подтвердил сам контакт (NOTIFY-1)
+                                                    -- + notifications_off_at NULL: контакт отключил Telegram — клиентские рассылки его не берут
 telegram_link_nonces(                               -- погашенные ссылки привязки Telegram контактом (NOTIFY-1)
   nonce VARCHAR(18) PK, crm_contact_id, tg_user_id, expires_at, used_at
 )
