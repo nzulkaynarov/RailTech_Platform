@@ -55,6 +55,12 @@ def quote_sent(quote, channels: Optional[list[str]] = None, bot_reaches: Optiona
     )
 
 
+def _currency(invoice) -> str:
+    """Код валюты счёта — как в событии `invoice.*` (`events.publish_invoice_event`): справочник или строка, нет — UZS."""
+    currency = getattr(invoice, "currency", None)
+    return (getattr(currency, "code", None) or (str(currency) if currency else "UZS")).upper()
+
+
 def invoice_issued(invoice, bot_reaches: Optional[bool] = None) -> None:
     deal = invoice.deal
     number = invoice.number or f"INV-{invoice.pk}"
@@ -65,7 +71,7 @@ def invoice_issued(invoice, bot_reaches: Optional[bool] = None) -> None:
         object_number=number,
         params={
             "number": number,
-            **projections.money(invoice.total_incl_vat, projections.currency_code(invoice.currency)),
+            **projections.money(invoice.total_incl_vat, _currency(invoice)),
             "due_date": invoice.due_date.isoformat() if invoice.due_date else "",
         },
         link=f"/invoices?focus={invoice.pk}",
@@ -85,7 +91,7 @@ def payment_overdue(invoice, bot_reaches: Optional[bool] = None) -> None:
         object_number=number,
         params={
             "number": number,
-            **projections.money(invoice.balance_due, projections.currency_code(invoice.currency)),
+            **projections.money(invoice.balance_due, _currency(invoice)),
             "due_date": invoice.due_date.isoformat() if invoice.due_date else "",
         },
         link=f"/invoices?focus={invoice.pk}",
