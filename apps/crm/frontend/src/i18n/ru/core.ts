@@ -88,6 +88,7 @@ export const core = {
     attachment_received: "Прислал файл",
     agent_unavailable: "Сбой ИИ-ассистента",
     delivery_failed: "Не удалось отправить файл",
+    cabinet_message: "Написал в кабинете",
   } as Record<string, string>,
   roles: { admin: "Администратор", manager: "Менеджер", viewer: "Наблюдатель" } as Record<
     string,

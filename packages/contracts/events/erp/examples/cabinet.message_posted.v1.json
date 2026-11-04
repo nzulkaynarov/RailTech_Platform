@@ -1,0 +1,37 @@
+{
+  "specversion": "1.0",
+  "id": "5b8e2f10-7c4d-4e9a-8a61-2d9c0b3e7f21",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.cabinet.message_posted.v1",
+  "time": "2026-11-04T07:40:00Z",
+  "subject": "company/118",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/cabinet.message_posted/v1",
+  "tenant": "railtech",
+  "correlationid": "0d2c6a8e-1f3b-4c5d-9e7a-6b8c9d0e1f23",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "actor": {
+      "type": "client",
+      "name": "Анна Петрова"
+    },
+    "payload": {
+      "erp_message_id": 9001,
+      "client_message_id": "cm_7Q2x9LkP4w",
+      "author": {
+        "erp_contact_id": 310,
+        "crm_contact_id": 58,
+        "name": "Анна Петрова"
+      },
+      "company_name": "ООО «Пример»",
+      "text": "Добрый день! Когда будет готов счёт?",
+      "context": {
+        "kind": "quote",
+        "erp_id": 301,
+        "number": "KP-2026-0042"
+      },
+      "posted_at": "2026-11-04T07:40:00Z"
+    }
+  }
+}

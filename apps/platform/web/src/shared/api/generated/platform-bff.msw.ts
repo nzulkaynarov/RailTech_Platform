@@ -235,6 +235,7 @@ import type {
   MemoApprovalCard,
   MemoApprovalPage,
   MenuCounters,
+  MessageContext,
   MessageInbox,
   NotificationPage,
   NotificationSettings,
@@ -17712,6 +17713,10 @@ export const getGetCrmConversationResponseMock = (
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   language: faker.helpers.arrayElement(Object.values(Language)),
   channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+  reply_channel: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    null,
+  ]),
   owner_mode: faker.helpers.arrayElement(Object.values(LeadOwnerMode)),
   assigned: faker.helpers.arrayElement([{ ...getGetCrmConversationResponsePersonRefMock() }, null]),
   consent_given_at: faker.helpers.arrayElement([
@@ -17768,6 +17773,16 @@ export const getGetCrmConversationResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetCrmThreadResponseMessageContextMock = (
+  overrideResponse: Partial<MessageContext> = {},
+): MessageContext => ({
+  ...{
+    kind: faker.helpers.arrayElement(["deal", "quote", "invoice", "act"] as const),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
 export const getGetCrmThreadResponseMock = (
   overrideResponse: Partial<Extract<ConversationThread, object>> = {},
 ): ConversationThread => ({
@@ -17779,6 +17794,8 @@ export const getGetCrmThreadResponseMock = (
       null,
     ]),
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    context: faker.helpers.arrayElement([{ ...getGetCrmThreadResponseMessageContextMock() }, null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({

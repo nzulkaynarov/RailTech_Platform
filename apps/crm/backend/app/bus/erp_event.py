@@ -35,7 +35,13 @@ NOT_FOR_CRM: Final = frozenset(
 )
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
 #: (W18A-P1, `app/services/mail_requests.py`) — не событие сделки, ленты и бота.
-OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})
+OWN_HANDLER: Final = frozenset(
+    {
+        "uz.railtech.erp.mail.requested.v1",
+        # CHAT-1: сообщение в чат кабинета — беседа `cabinet` (`app/services/cabinet_chat.py`).
+        "uz.railtech.erp.cabinet.message_posted.v1",
+    }
+)
 #: Партнёр приглашён в кабинет (PART-CRM): CRM заводит клиента — `app/services/partner_clients.py`.
 #: Не событие сделки (в `data` нет `crm_client_id`), поэтому `ErpEventsService` его не получает.
 PARTNER_REQUEST: Final = frozenset(

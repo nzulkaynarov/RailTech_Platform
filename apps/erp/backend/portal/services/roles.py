@@ -22,6 +22,7 @@ CLIENT_MODULES = (
     "invoices",
     "acts",
     "deliveries",
+    "messages",
     "company",
     "team",
     "profile",
@@ -31,17 +32,18 @@ CLIENT_MODULES = (
 #: счета, акты, отгрузки и документы партнёру не включаются: они появляются, когда компания становится клиентом.
 ROLE_MODULES: dict[str, tuple[str, ...]] = {
     RelationshipRole.CLIENT.value: CLIENT_MODULES,
-    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "profile"),
+    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "messages", "profile"),
 }
 
-#: Модули, которые есть у любой сессии кабинета и не выключаются переключателем: «Профиль» — выход и язык (владелец 2026-11-04).
-ALWAYS_ON = ("profile",)
+#: Модули, которые есть у любой сессии кабинета и не выключаются переключателем: «Профиль» — выход и язык (владелец 2026-11-04),
+#: «Сообщения» — чат с менеджером (CHAT-1, ADR-0023: связь с менеджером есть всегда).
+ALWAYS_ON = ("profile", "messages")
 
 #: Что получает новое отношение. Клиент — всё (тип CLIENT, отношения у клиента нет); партнёр — «Мои товары» и «Каталог и
 #: заявки» (владелец 2026-11-04: оба включены по умолчанию, сотрудник выключает переключателем в Платформе).
 ROLE_DEFAULT_MODULES: dict[str, tuple[str, ...]] = {
     RelationshipRole.CLIENT.value: CLIENT_MODULES,
-    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "profile"),
+    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "messages", "profile"),
 }
 
 #: Модули партнёра, которые сотрудник включает и выключает (шаблон роли без обязательных).

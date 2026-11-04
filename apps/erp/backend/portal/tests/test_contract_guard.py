@@ -64,6 +64,7 @@ GET_CASES = {
     ],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
+    "/messages": lambda w: ["/messages"],
 }
 
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
@@ -120,7 +121,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.5.0"
+    assert load_contract()["info"]["version"] == "0.6.0"
 
 
 #: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их

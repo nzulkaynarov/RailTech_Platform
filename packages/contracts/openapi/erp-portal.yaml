@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.5.0
+  version: 0.6.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -53,6 +53,12 @@ info:
     (`POST /partner/offers/confirm`), признак `freshness` (`fresh`, `expiring`, `stale`, `expired`). Изменяющие операции
     требуют `can_act`. Новые коды `ErrorCode`: `XLSX_REQUIRED`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`,
     `PRODUCT_NOT_SUBMITTABLE`, `OFFER_EXPIRED`, `IMPORT_FAILED`.
+
+    0.6.0 (CHAT-1, ADR-0023): чат кабинета — одна лента на компанию (видят все её контакты), канал `cabinet` в очереди
+    «Сообщения» Платформы. `GET /messages`, `POST /messages`, `POST /messages/read` — модуль `messages`: он в шаблонах обеих
+    ролей и не выключается (как `profile`); отправка — с `can_act`. `GET /me` несёт `unread` — непрочитанные контактом ответы
+    менеджера. Компания и автор — только из сессии; метка документа (`context`) проверяется на принадлежность компании
+    сессии — чужая сделка, КП, счёт или акт отвечают 404 без утечки.
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -76,6 +82,8 @@ tags:
   - name: company
   - name: partner
     description: Раздел «Мои товары» партнёра — модуль `my_products` (ADR-0022, PART-2)
+  - name: messages
+    description: Чат кабинета с менеджером (ADR-0023) — лента компании, обновление опросом
 
 paths:
   /auth/telegram:
@@ -1581,6 +1589,132 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /messages:
+    get:
+      tags: [messages]
+      operationId: listMessages
+      summary: Лента чата кабинета компании
+      description: |
+        Сообщения компании сессии по возрастанию `id`: с `after_id` — новые после него (опрос раз в 10 с, пока экран
+        открыт), без него — последние `limit`. Опрос отмечает присутствие контакта в кабинете (`last_seen`, с
+        прореживанием) — по нему уведомления решают, слать ли ответ менеджера во внешний канал. Модуль `messages`.
+      parameters:
+        - name: after_id
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Сообщения ленты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalMessagePage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+    post:
+      tags: [messages]
+      operationId: postMessage
+      summary: Написать менеджеру в чат кабинета
+      description: |
+        Сообщение контакта сессии в ленту его компании; запись и событие `uz.railtech.erp.cabinet.message_posted.v1`
+        — одной транзакцией. Повтор с тем же `client_message_id` в пределах компании возвращает прежнее сообщение (200),
+        второго не создаёт. `context` — метка документа, со страницы которого написали: сделка, КП, счёт или акт компании
+        сессии (номер подставляет ERP); чужой или невидимый клиенту документ — 404. Требует `can_act`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortalMessageCreate'
+      responses:
+        '201':
+          description: Сообщение принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalMessage'
+        '200':
+          description: Сообщение с этим `client_message_id` уже было — прежнее
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalMessage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Текст пуст (`TEXT_REQUIRED`) или длиннее 4000 символов, ключ повтора не по формату (`VALIDATION_ERROR`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /messages/read:
+    post:
+      tags: [messages]
+      operationId: markMessagesRead
+      summary: Контакт прочитал ленту до сообщения
+      description: |
+        Отметка «прочитано» контактом сессии: ответы менеджера с `id` не больше `last_id` перестают считаться в
+        `Me.unread`. Отметка не уходит назад; `last_id` — сообщение ленты своей компании, иначе 404. Модуль `messages`;
+        `can_act` не нужен (чтение).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PortalMessageReadMark'
+      responses:
+        '200':
+          description: Отметка сохранена, число непрочитанных после неё
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PortalMessageUnread'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
 components:
   securitySchemes:
     portalSession:
@@ -2360,13 +2494,17 @@ components:
           description: Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены.
           items:
             $ref: '#/components/schemas/ModuleCode'
-      required: [contact, company, can_act, auth_method, roles, modules]
+        unread:
+          type: integer
+          minimum: 0
+          description: Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет
+      required: [contact, company, can_act, auth_method, roles, modules, unread]
       x-role-modules:
-        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
-        partner: [my_products, catalog_requests, profile]
+        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, messages, company, team, profile]
+        partner: [my_products, catalog_requests, messages, profile]
       x-role-default-modules:
-        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
-        partner: [my_products, catalog_requests, profile]
+        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, messages, company, team, profile]
+        partner: [my_products, catalog_requests, messages, profile]
 
     PortalRole:
       type: string
@@ -2377,7 +2515,7 @@ components:
       description: |
         Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
         незнакомый пропускает.
-      enum: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile, my_products]
+      enum: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile, my_products, messages]
 
     RequestStatus:
       type: string
@@ -3078,3 +3216,121 @@ components:
         size_bytes:
           type: integer
           minimum: 0
+
+    MessageContextKind:
+      type: string
+      description: Вид документа метки сообщения
+      enum: [deal, quote, invoice, act]
+
+    MessageContextRef:
+      type: object
+      description: Метка документа в новом сообщении — вид и id; номер подставляет ERP
+      required: [kind, id]
+      properties:
+        kind:
+          $ref: '#/components/schemas/MessageContextKind'
+        id:
+          type: integer
+          format: int64
+      additionalProperties: false
+
+    MessageContext:
+      type: object
+      description: Метка документа у сообщения — вид, id и номер («КП KP-2026-0042»)
+      required: [kind, id, number]
+      properties:
+        kind:
+          $ref: '#/components/schemas/MessageContextKind'
+        id:
+          type: integer
+          format: int64
+        number:
+          type: string
+      additionalProperties: false
+
+    PortalMessageCreate:
+      type: object
+      required: [text, client_message_id]
+      properties:
+        text:
+          type: string
+          minLength: 1
+          maxLength: 4000
+          description: Текст как есть; Cabinet показывает его текстом, не HTML
+        client_message_id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{8,64}$'
+          description: Ключ повтора, выданный Cabinet при первой попытке; повтор отправки — тот же ключ
+        context:
+          oneOf:
+            - $ref: '#/components/schemas/MessageContextRef'
+            - type: 'null'
+      additionalProperties: false
+
+    PortalMessage:
+      type: object
+      required: [id, direction, author_name, mine, text, context, created_at, client_message_id, erased]
+      properties:
+        id:
+          type: integer
+          format: int64
+        direction:
+          type: string
+          enum: [client, manager]
+          description: '`client` — написал контакт компании, `manager` — ответ менеджера'
+        author_name:
+          type: [string, 'null']
+          description: Имя контакта или менеджера; `null` — имени нет
+        mine:
+          type: boolean
+          description: Сообщение написал контакт этой сессии
+        text:
+          type: string
+        context:
+          oneOf:
+            - $ref: '#/components/schemas/MessageContext'
+            - type: 'null'
+        created_at:
+          type: string
+          format: date-time
+        client_message_id:
+          type: [string, 'null']
+          description: Ключ повтора сообщения контакта (у ответа менеджера — `null`)
+        erased:
+          type: boolean
+          description: >-
+            Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet
+            показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется
+      additionalProperties: false
+
+    PortalMessagePage:
+      type: object
+      required: [items, has_more]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PortalMessage'
+        has_more:
+          type: boolean
+          description: С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние
+      additionalProperties: false
+
+    PortalMessageReadMark:
+      type: object
+      required: [last_id]
+      properties:
+        last_id:
+          type: integer
+          format: int64
+          minimum: 1
+      additionalProperties: false
+
+    PortalMessageUnread:
+      type: object
+      required: [unread]
+      properties:
+        unread:
+          type: integer
+          minimum: 0
+      additionalProperties: false

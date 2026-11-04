@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from app.services.auth import AuthService
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
+    from app.services.cabinet_chat import CabinetChatService
     from app.services.cabinet_url import CabinetUrlService
     from app.services.client_contacts import ClientContactService
     from app.services.client_notices import ClientNoticeService
@@ -597,6 +598,14 @@ class Container:
         ERP или EDS попросили отправить (W18A-P1) — в очередь."""
         await self.erp_notices.deliver(event_id)
         await self.mail_requests.dispatch(event_id)
+        await self.cabinet_chat.dispatch(event_id)
+
+    @cached_property
+    def cabinet_chat(self) -> "CabinetChatService":
+        """Чат кабинета (CHAT-1, ADR-0023): сообщение из кабинета — беседа `cabinet` и очередь."""
+        from app.services.cabinet_chat import CabinetChatService
+
+        return CabinetChatService(self.settings_service, _cabinet_escalation)
 
     @cached_property
     def mail_requests(self) -> "MailRequestService":
@@ -1009,6 +1018,13 @@ async def _escalation_changed(escalation_id: int) -> None:
     from app.tasks.notify import enqueue_escalation
 
     await enqueue_escalation(escalation_id, new=False)
+
+
+async def _cabinet_escalation(escalation_id: int, is_new: bool) -> None:
+    """Передача по сообщению кабинета: пост в канале команды; новой — ещё и проверка SLA."""
+    from app.tasks.notify import enqueue_escalation
+
+    await enqueue_escalation(escalation_id, new=is_new)
 
 
 async def _escalation_reopened(escalation_id: int) -> None:

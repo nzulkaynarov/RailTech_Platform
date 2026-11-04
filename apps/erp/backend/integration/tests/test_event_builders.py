@@ -70,7 +70,10 @@ def test_the_27_types_of_the_erp_are_the_files_of_the_contract():
     # Волна 12 (E5): quote.ready_for_approval публикует ERP (EDS-03); волна 16 (D1-9): invite.requested; волна 17 (D2-5): contract.status_changed — файлы контракта = VALID_EVENT_TYPES.
     # W18A-P1: mail.requested — не событие сущности, его публикует почтовый шов (`notifications/mail_bus.py`);
     # W18A-P4: letterhead.updated — бланк своей компании для EDS, публикует сервис профиля (`accounts/services/letterhead_event.py`).
-    assert names - {"mail.requested", "letterhead.updated"} == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 27
+    # CHAT-1: cabinet.message_posted — сообщение чата кабинета, публикует портал (`portal/services/messages.py`) и без
+    # сопоставления с CRM.
+    excluded = {"mail.requested", "letterhead.updated", "cabinet.message_posted"}
+    assert names - excluded == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 27
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
         assert json.loads((events_dir / f"{short}.v1.json").read_text(encoding="utf-8"))["type"] == "object"

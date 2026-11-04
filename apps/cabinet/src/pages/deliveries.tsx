@@ -76,7 +76,10 @@ export function DeliveriesPage() {
                     </span>
                   </h2>
                 </CardTitle>
-                <ManagerButton dealId={group.deal.id} label={t('manager.aboutDeal', { number: group.deal.number })} />
+                <ManagerButton
+                  context={{ kind: 'deal', id: group.deal.id, number: group.deal.number }}
+                  label={t('manager.aboutDeal', { number: group.deal.number })}
+                />
               </CardHeader>
               <CardContent className="px-4">
                 <ul className="flex flex-col divide-y" aria-label={t('common.dealNumber', { number: group.deal.number })}>

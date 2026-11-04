@@ -46,8 +46,8 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 29
-    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), partner (PART-CRM)
+        len([t for t in TYPES if t.domain == "erp"]) == 30
+    )  # + contract.status_changed, mail.requested, letterhead.updated, CHAT-1, partner (PART-CRM)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -160,6 +160,8 @@ ERP_EVENTS_W18A = {"mail.requested"}
 
 #: W18A-P4 (письмо на бланке): снимок бланка своей компании — проекция EDS; CRM тип не получает.
 ERP_EVENTS_W18A_P4 = {"letterhead.updated"}
+#: CHAT-1 (ADR-0023): сообщение контакта в чат кабинета — CRM кладёт его в беседу канала cabinet.
+ERP_EVENTS_CHAT = {"cabinet.message_posted"}
 
 #: PART-CRM: партнёр приглашён в кабинет — CRM заводит клиента (ответ — crm.partner.client_resolved).
 ERP_EVENTS_PART_CRM = {"partner.client_requested", "partner.client_rejected"}
@@ -176,6 +178,7 @@ def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> 
         | ERP_EVENTS_W18A
         | ERP_EVENTS_W18A_P4
         | ERP_EVENTS_PART_CRM
+        | ERP_EVENTS_CHAT
     )
 
 
@@ -406,10 +409,12 @@ def test_initial_subscriptions_v1() -> None:
     assert subs["crm"]["endpoint"] == "http://crm-api:8000/bus/v1/events"
     assert subs["erp"]["endpoint"] == "http://erp-backend:8000/bus/v1/events"
     assert sorted(_gets(subs["erp"])) == [
+        "uz.railtech.crm.cabinet.message_sent.v1",
         "uz.railtech.crm.client.updated.v1",
         "uz.railtech.crm.contact.created.v1",
         "uz.railtech.crm.contact.deleted.v1",
         "uz.railtech.crm.contact.updated.v1",
+        "uz.railtech.crm.lead.erased.v1",
         "uz.railtech.crm.mail.failed.v1",
         "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.crm.partner.client_resolved.v1",
@@ -490,6 +495,25 @@ def test_lead_message_added_goes_only_to_platform_bff_and_carries_no_text() -> N
     t = next(t for t in TYPES if t.name == name)
     props = set(load_json(t.path)["properties"])
     assert not props & {"text", "attachments", "phone", "email", "display_name", "lead"}
+
+
+def test_cabinet_chat_goes_between_crm_and_erp_only() -> None:
+    """CHAT-1 (ADR-0023): сообщение кабинета — ERP → CRM, ответ менеджера — CRM → ERP; ERP получает и обезличивание лида
+    (стирает ленту кабинета), но не прочие сигналы лидов. Ключ повтора и метка документа — в контракте."""
+    subs = {s["name"]: _gets(s) for s in SUBSCRIPTIONS["subscribers"]}
+    assert "uz.railtech.erp.cabinet.message_posted.v1" in subs["crm"]
+    assert "uz.railtech.crm.cabinet.message_sent.v1" in subs["erp"]
+    assert "uz.railtech.crm.lead.erased.v1" in subs["erp"]
+    assert "uz.railtech.crm.lead.updated.v1" not in subs["erp"]
+    posted = next(t for t in TYPES if t.name == "uz.railtech.erp.cabinet.message_posted.v1")
+    payload = load_json(posted.path)["properties"]["payload"]
+    assert {"client_message_id", "text", "author"} <= set(payload["required"])
+    assert payload["properties"]["context"]["properties"]["kind"]["enum"] == ["deal", "quote", "invoice", "act"]
+    erased = next(t for t in TYPES if t.name == "uz.railtech.crm.lead.erased.v1")
+    erased_schema = load_json(erased.path)
+    assert "cabinet" not in erased_schema["required"]
+    # стирается только автор (scope=authors) либо вся лента при стирании клиента (scope=company)
+    assert erased_schema["properties"]["cabinet"]["properties"]["scope"]["enum"] == ["authors", "company"]
 
 
 # ─── сгенерированный пакет rt-contracts ────────────────────────────────────────────────────────

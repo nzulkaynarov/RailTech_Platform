@@ -18,7 +18,7 @@ from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.bus_support import CRM_SECRET, delivery, envelope
 from tests.conftest import ContractChecker, Web
-from tests.messages_support import CrmMessagesFake, escalation, lead, message
+from tests.messages_support import CrmMessagesFake, escalation, lead, lead_detail, message
 from tests.test_events_stream import Asgi, until
 
 BASE = "/api/v1/crm/messages"
@@ -188,6 +188,41 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
     assert body["has_more"] is True
     assert [n["author_name"] for n in body["notes"]] == ["Дилшод Менеджеров"]
     assert crm.last("GET", "leads/2041/messages").url.params["limit"] == "4"
+
+
+async def test_cabinet_channel_is_kept_with_the_reply_channel_and_the_document_label(
+    web: Web, crm: CrmMessagesFake, check: ContractChecker
+) -> None:
+    """CHAT-1: канал `cabinet` не подменяется на telegram; в очереди — канал последнего сообщения
+    клиента, в карточке — куда уйдёт ответ, у сообщения из кабинета — имя контакта и метка."""
+    crm.answer(
+        "GET",
+        "inbox",
+        body={"escalations": [lead(2041, reply_channel="cabinet")], "mine": [], "unassigned": []},
+    )
+    crm.answer("GET", "leads/2041", body=lead_detail(2041, reply_channel="cabinet"))
+    context = {"kind": "quote", "erp_id": 301, "number": "KP-2026-0042"}
+    crm.answer(
+        "GET",
+        "leads/2041/messages",
+        body=[
+            message(95, channel="cabinet", author_name="Анна Петрова", context=context),
+            message(96, "manager", channel="cabinet"),
+        ],
+    )
+    await web.login(["MANAGER"])
+
+    inbox = check(await web.client.get(BASE), "/crm/messages", "get").json()
+    assert inbox["items"][0]["channel"] == "cabinet"
+    card = check(await web.client.get(f"{BASE}/L-2041"), "/crm/messages/{lead}", "get").json()
+    assert (card["channel"], card["reply_channel"]) == ("telegram", "cabinet")
+    thread = check(
+        await web.client.get(f"{BASE}/L-2041/thread"), "/crm/messages/{lead}/thread", "get"
+    ).json()
+    first, second = thread["items"]
+    assert (first["channel"], first["author_name"]) == ("cabinet", "Анна Петрова")
+    assert first["context"] == {"kind": "quote", "number": "KP-2026-0042"}
+    assert (second["channel"], second["context"]) == ("cabinet", None)
 
 
 def test_attachment_link_does_not_depend_on_the_storage_key_and_never_leaks_it() -> None:

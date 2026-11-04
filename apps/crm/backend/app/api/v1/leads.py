@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
@@ -18,6 +19,7 @@ from app.domain.errors import NotFoundError
 from app.models.clients import Client
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
+from app.repositories import cabinet_chat as cabinet_repo
 from app.repositories import crm, lead_status, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
@@ -39,6 +41,7 @@ from app.schemas.leads import (
     LeadDetail,
     LeadOut,
     LeadPage,
+    MessageContextOut,
     MessageOut,
     NoteCreate,
     NoteOut,
@@ -101,7 +104,10 @@ def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
 
 
 def lead_out(
-    lead: Lead, escalation: Escalation | None, names: dict[int, str] | None = None
+    lead: Lead,
+    escalation: Escalation | None,
+    names: dict[int, str] | None = None,
+    reply_channel: str | None = None,
 ) -> LeadOut:
     owner = lead.assigned_user_id
     return LeadOut(
@@ -122,6 +128,7 @@ def lead_out(
         escalation=escalation_out(escalation, names),
         source=lead.source,
         platform_status=_platform_status(lead, escalation),
+        reply_channel=reply_channel,
     )
 
 
@@ -152,15 +159,27 @@ def attachment_out(item: object) -> dict[str, object]:
 
 
 def message_out(m: Message) -> MessageOut:
+    meta = dict(m.meta or {})
     return MessageOut(
         id=m.id,
         role=m.role,
         text=m.text,
+        channel=str(meta.get("channel") or "telegram"),
+        context=_context(meta.get("context")),
+        author_name=meta.get("author_name") if isinstance(meta.get("author_name"), str) else None,
         attachments=[attachment_out(a) for a in m.attachments or []],
         sent_by_user_id=m.sent_by_user_id,
         created_at=m.created_at,
         meta=dict(m.meta or {}),
     )
+
+
+def _context(raw: object) -> MessageContextOut | None:
+    """Метка документа из `meta.context` сообщения кабинета; испорченная — без метки."""
+    try:
+        return MessageContextOut.model_validate(raw) if isinstance(raw, dict) else None
+    except ValidationError:
+        return None
 
 
 @router.get("/leads", response_model=LeadPage)
@@ -239,10 +258,11 @@ async def inbox(
             session, [*escalated, *mine, *unassigned], _handed_by(escalations)
         )
         notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
+        channels = await cabinet_repo.last_inbound_channels(session, ids)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
         return [
-            lead_out(r, escalations.get(r.id), names).model_copy(
+            lead_out(r, escalations.get(r.id), names, channels.get(r.id)).model_copy(
                 update={"handoff_note": notes.get(r.id)}
             )
             for r in rows
@@ -288,7 +308,8 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
             if client is not None
             else None
         )
-    base = lead_out(lead, escalation, names)
+        reply_channel = await cabinet_repo.last_inbound_channel(session, lead_id)
+    base = lead_out(lead, escalation, names, reply_channel)
     mode = await container.backoffice_mode()
     now = datetime.now(UTC)
     waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)

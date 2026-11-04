@@ -4,6 +4,7 @@ Strictly matches packages/contracts/openapi/erp-portal.yaml plus Q-14..Q-17 reso
 """
 
 from django.urls import path
+from portal.messages_views import MessageListView, MessageReadView
 from portal.views import (
     ActAcceptView,
     ActListView,
@@ -157,4 +158,9 @@ urlpatterns = [
     path("team/", TeamListView.as_view(), name="portal-team-slash"),
     path("team/invite", TeamInviteView.as_view(), name="portal-team-invite"),
     path("team/invite/", TeamInviteView.as_view(), name="portal-team-invite-slash"),
+    # Messages (Чат кабинета, CHAT-1)
+    path("messages", MessageListView.as_view(), name="portal-messages"),
+    path("messages/", MessageListView.as_view(), name="portal-messages-slash"),
+    path("messages/read", MessageReadView.as_view(), name="portal-messages-read"),
+    path("messages/read/", MessageReadView.as_view(), name="portal-messages-read-slash"),
 ]

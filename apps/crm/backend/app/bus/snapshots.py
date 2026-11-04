@@ -54,6 +54,10 @@ _LEAD_STAGES: Final = frozenset(
     }
 )
 _LEAD_SOURCES: Final = frozenset({"telegram", "web", "phone", "email", "referral", "sandbox"})
+#: Источники CRM вне перечня `LeadSource` v1 (ADR-0016: новое значение — только `lead.*.v2`):
+#: в `source` — ближайший канал перечня, точный источник — в `source_detail` (CHAT-1: лид-якорь
+#: чата кабинета — веб-канал `web`).
+_LEAD_SOURCE_DETAIL: Final = {"cabinet": "web"}
 _TEMPLATE_PREFIX: Final = "tpl:"
 
 
@@ -179,13 +183,22 @@ async def lead_snapshot(session: AsyncSession, lead: Lead) -> dict[str, Any]:
         "display_name": (lead.display_name or "").strip()[:255],
         "company_name": clip(lead.company_name, 255),
         "stage": lead.stage if lead.stage in _LEAD_STAGES else "new",
-        "source": lead.source if lead.source in _LEAD_SOURCES else "telegram",
+        **_lead_source(lead.source),
         "language": lead.language if lead.language in _LANGUAGES else "ru",
         "score": min(100, max(0, int(lead.score or 0))),
         "assigned_user": await user_ref(session, lead.assigned_user_id),
         "erp_request_id": lead.erp_request_id,
         "updated_at": utc(await fresh_updated_at(session, Lead, lead.id)),
     }
+
+
+def _lead_source(source: str | None) -> dict[str, Any]:
+    """`source` по перечню v1 и, если точного значения в перечне нет, `source_detail` (CHAT-1)."""
+    if source in _LEAD_SOURCES:
+        return {"source": source}
+    if source in _LEAD_SOURCE_DETAIL:
+        return {"source": _LEAD_SOURCE_DETAIL[source], "source_detail": source}
+    return {"source": "telegram"}
 
 
 def role_code(role: PlatformRole) -> str | None:

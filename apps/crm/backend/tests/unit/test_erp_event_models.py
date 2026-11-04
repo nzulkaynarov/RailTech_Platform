@@ -33,6 +33,7 @@ from app.bus.erp_event import (
     parse_erp_event,
     plain,
 )
+from app.services.cabinet_chat import POSTED_TYPE
 from tests.bus_events import event_types, example_envelope, example_types
 
 #: События ERP о сделке и клиенте, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`, и
@@ -56,10 +57,20 @@ def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> 
     """W18A-P1: `erp.mail.requested` — один обработчик (почтовый сервис), не `ErpEventsService`."""
     from app.bus.handlers import on_mail_requested
 
-    for event_type in OWN_HANDLER | {"uz.railtech.eds.mail.requested.v1"}:
+    for event_type in (OWN_HANDLER - {POSTED_TYPE}) | {"uz.railtech.eds.mail.requested.v1"}:
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
         assert handler.func is on_mail_requested
+
+
+def test_cabinet_message_goes_to_the_cabinet_chat_not_to_the_deal_feed() -> None:
+    """CHAT-1: сообщение кабинета — беседа `cabinet` в очереди, не лента сделки."""
+    from app.bus.handlers import on_cabinet_message
+
+    assert POSTED_TYPE in OWN_HANDLER
+    (handler,) = default_registry.match(POSTED_TYPE)
+    assert handler.inline is False
+    assert handler.func is on_cabinet_message
 
 
 def test_partner_client_events_have_their_own_handlers_and_no_deal_feed() -> None:

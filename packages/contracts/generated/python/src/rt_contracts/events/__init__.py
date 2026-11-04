@@ -9,6 +9,7 @@ data = TYPES[env.type].model_validate(env.data)
 from pydantic import BaseModel
 from rt_contracts.events.crm import (
     AiPolicyChangedV1,
+    CabinetMessageSentV1,
     ClientCreatedV1,
     ClientUpdatedV1,
     ContactCreatedV1,
@@ -41,6 +42,7 @@ from rt_contracts.events.erp import (
     ActAcceptedV1,
     ActIssuedV1,
     ActReturnedV1,
+    CabinetMessagePostedV1,
     ContractSignedV1,
     ContractStatusChangedV1,
     DealLostV1,
@@ -72,6 +74,7 @@ from rt_contracts.events.identity import UserCreatedV1, UserDeactivatedV1, UserU
 
 TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.crm.ai_policy.changed.v1": AiPolicyChangedV1,
+    "uz.railtech.crm.cabinet.message_sent.v1": CabinetMessageSentV1,
     "uz.railtech.crm.client.created.v1": ClientCreatedV1,
     "uz.railtech.crm.client.updated.v1": ClientUpdatedV1,
     "uz.railtech.crm.contact.created.v1": ContactCreatedV1,
@@ -89,6 +92,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.erp.act.accepted.v1": ActAcceptedV1,
     "uz.railtech.erp.act.issued.v1": ActIssuedV1,
     "uz.railtech.erp.act.returned.v1": ActReturnedV1,
+    "uz.railtech.erp.cabinet.message_posted.v1": CabinetMessagePostedV1,
     "uz.railtech.erp.contract.signed.v1": ContractSignedV1,
     "uz.railtech.erp.contract.status_changed.v1": ContractStatusChangedV1,
     "uz.railtech.erp.deal.lost.v1": DealLostV1,
@@ -140,6 +144,8 @@ __all__ = [
     "AiPolicyChangedV1",
     "ApprovalDecidedV1",
     "ApprovalRequestedV1",
+    "CabinetMessagePostedV1",
+    "CabinetMessageSentV1",
     "ClientCreatedV1",
     "ClientUpdatedV1",
     "ContactCreatedV1",

@@ -5830,6 +5830,11 @@ components:
           additionalProperties: true
           title: Qualification
           type: object
+        reply_channel:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reply Channel
         score:
           title: Score
           type: integer
@@ -5943,6 +5948,11 @@ components:
             type: string
           title: Product Interest
           type: array
+        reply_channel:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reply Channel
         score:
           title: Score
           type: integer
@@ -6594,6 +6604,29 @@ components:
           title: Whats New Shown
       title: MePatch
       type: object
+    MessageContextOut:
+      description: 'Метка документа у сообщения кабинета (CHAT-1): вид, id в ERP и номер.'
+      properties:
+        erp_id:
+          title: Erp Id
+          type: integer
+        kind:
+          enum:
+          - deal
+          - quote
+          - invoice
+          - act
+          title: Kind
+          type: string
+        number:
+          title: Number
+          type: string
+      required:
+      - kind
+      - erp_id
+      - number
+      title: MessageContextOut
+      type: object
     MessageOut:
       properties:
         attachments:
@@ -6602,6 +6635,19 @@ components:
             type: object
           title: Attachments
           type: array
+        author_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author Name
+        channel:
+          default: telegram
+          title: Channel
+          type: string
+        context:
+          anyOf:
+          - $ref: '#/components/schemas/MessageContextOut'
+          - type: 'null'
         created_at:
           format: date-time
           title: Created At

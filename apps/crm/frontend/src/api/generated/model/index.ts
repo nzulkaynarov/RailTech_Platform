@@ -306,6 +306,8 @@ export * from "./meOutPlatformAccessItem";
 export * from "./mePatch";
 export * from "./mePatchLanguage";
 export * from "./mePatchUiMode";
+export * from "./messageContextOut";
+export * from "./messageContextOutKind";
 export * from "./messageOut";
 export * from "./messageOutAttachmentsItem";
 export * from "./messageOutMeta";

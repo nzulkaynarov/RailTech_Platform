@@ -12100,8 +12100,14 @@ export interface components {
      * @enum {string}
      */
     LeadOwnerMode: "bot" | "waiting" | "manager";
-    /** @description Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана */
+    /** @description Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; у лида без переписки — источник `web`, `email`, `phone`, `referral`); подпись — у экрана */
     MessageChannel: string;
+    /** @description Метка документа у сообщения из кабинета (CHAT-1): клиент написал со страницы сделки, КП, счёта или акта; экран показывает плашку «КП KP-2026-0042» */
+    MessageContext: {
+      /** @enum {string} */
+      kind: "deal" | "quote" | "invoice" | "act";
+      number: string;
+    };
     /** @description Факты квалификации от бота; коды срока и роли подписывает экран */
     HandoffFacts: {
       /** @description Продукты по справочнику CRM (названия) */
@@ -12178,6 +12184,7 @@ export interface components {
       /** @enum {string} */
       group: "handoff" | "mine" | "unassigned";
       language: components["schemas"]["Language"];
+      /** @description Канал последнего сообщения клиента (туда уйдёт ответ), без переписки — источник лида */
       channel: components["schemas"]["MessageChannel"];
       /** @description Клиент написал после последнего ответа сотрудника */
       unread: boolean;
@@ -12231,6 +12238,8 @@ export interface components {
       name: string;
       language: components["schemas"]["Language"];
       channel: components["schemas"]["MessageChannel"];
+      /** @description Куда уйдёт ответ менеджера — канал последнего сообщения клиента (`telegram` или `cabinet`, CHAT-1); `null` — клиент ещё не писал */
+      reply_channel: components["schemas"]["MessageChannel"] | null;
       owner_mode: components["schemas"]["LeadOwnerMode"];
       assigned: components["schemas"]["PersonRef"] | null;
       /**
@@ -12257,9 +12266,13 @@ export interface components {
       id: number;
       /** @enum {string} */
       author: "lead" | "bot" | "manager" | "system";
-      /** @description Имя сотрудника у ответа менеджера */
+      /** @description Имя сотрудника у ответа менеджера; у сообщения из кабинета — имя контакта клиента */
       author_name: string | null;
       text: string;
+      /** @description Канал сообщения — `telegram` или `cabinet` (CHAT-1) */
+      channel: components["schemas"]["MessageChannel"];
+      /** @description Метка документа у сообщения из кабинета; `null` — без метки */
+      context: components["schemas"]["MessageContext"] | null;
       /** Format: date-time */
       created_at: string;
       attachments: components["schemas"]["ThreadAttachment"][];

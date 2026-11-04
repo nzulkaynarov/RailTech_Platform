@@ -32,6 +32,7 @@ from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.text import staff_name
 from app.models.leads import Lead
 from app.models.qualification import Escalation
+from app.repositories import cabinet_chat as cabinet_repo
 from app.repositories import crm as crm_repo
 from app.repositories import events
 from app.repositories import leads as repo
@@ -39,7 +40,7 @@ from app.repositories import users as users_repo
 from app.schemas.settings import Language
 from app.security import audit
 from app.security.principal import Principal
-from app.services import deals, lead_parts, lead_snooze, staff_notifications, stages
+from app.services import cabinet_chat, deals, lead_parts, lead_snooze, staff_notifications, stages
 from app.services import team as team_service
 from app.services.escalation import OPEN_STATUSES, open_escalation
 from app.services.lead_messenger import DeliveryError, LeadMessenger
@@ -443,10 +444,18 @@ class LeadService:
             if lead.owner_mode != OwnerMode.HUMAN:
                 raise ConflictError("take the lead before replying", reason=Reason.TAKE_FIRST)
             _require_owner(lead, who)
-            if lead.consent_given_at is None:
-                # Без согласия на обработку данных писать лиду нельзя (аудит P2).
+            # Ответ — в канал последнего сообщения клиента (CHAT-1): кабинет или Telegram.
+            channel = await cabinet_repo.last_inbound_channel(session, lead_id)
+            if lead.consent_given_at is None and channel != cabinet_repo.CABINET:
+                # Без согласия на обработку данных писать лиду в Telegram нельзя (аудит P2); в
+                # кабинет компания написала сама, по договору — ответ в её же канал.
                 raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
+        if channel == cabinet_repo.CABINET:
+            cabinet_id, _ = await cabinet_chat.send_reply(
+                self._sessions, lead_id, body, client_message_id, sent_by_user_id=who.user_id
+            )
+            return cabinet_id
         if client_message_id is not None:
             reply = await self._messenger.send_once(
                 lead_id, body, client_message_id, sent_by_user_id=who.user_id
