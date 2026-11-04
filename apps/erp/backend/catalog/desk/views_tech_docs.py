@@ -9,15 +9,15 @@ from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_sche
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
-from rest_framework.parsers import FormParser, MultiPartParser
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from catalog.desk import tech_docs
 from catalog.desk.audit import record
 from catalog.desk.items import ItemError
-from catalog.desk.serializers import DeskTechDoc, DeskTechDocUpload
+from catalog.desk.serializers import DeskDocumentKind, DeskTechDoc, DeskTechDocIn, DeskTechDocUpload
 from catalog.desk.views_base import FORBIDDEN, NOT_FOUND, PAGE, PAGE_SIZE, REFUSED, SEARCH, DeskViewSet, refuse
-from catalog.models import TechDocument
+from catalog.models import DocumentKind, TechDocument
 from core.file_streaming import storage_file_response
 
 logger = logging.getLogger(__name__)
@@ -36,11 +36,11 @@ class _Gone:
 class TechDocDeskViewSet(DeskViewSet):
     """Реестр читает любой сотрудник бэк-офиса; загрузка и удаление — `catalog.manage`."""
 
-    required_permissions = {"create": "catalog.manage", "destroy": "catalog.manage"}
+    required_permissions = {"create": "catalog.manage", "partial_update": "catalog.manage", "destroy": "catalog.manage"}
     lookup_value_regex = r"\d+"
     queryset = TechDocument.objects.none()
     serializer_class = DeskTechDoc
-    parser_classes = [MultiPartParser, FormParser]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
 
     def _doc(self, pk) -> TechDocument:
         doc = (
@@ -57,7 +57,7 @@ class TechDocDeskViewSet(DeskViewSet):
         summary="Technical documentation registry",
         parameters=[
             SEARCH,
-            OpenApiParameter("kind", str, enum=TechDocument.Kind.values),
+            OpenApiParameter("kind", str, description="Код вида из справочника видов."),
             OpenApiParameter("product", int, description="Id позиции номенклатуры."),
             OpenApiParameter("deal", int, description="Id заявки или проекта."),
             PAGE,
@@ -76,8 +76,10 @@ class TechDocDeskViewSet(DeskViewSet):
         summary="Upload a technical document",
         description=(
             "Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна "
-            "привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, "
-            "FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED."
+            "привязка к позиции (`product_id`) или заявке (`deal_id`). Вид — код из справочника (`catalog/document-kinds/`), "
+            "«видно клиенту» без значения берётся из вида. Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, "
+            "FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, TECH_DOC_KIND_INVALID, TECH_DOC_DATE_INVALID, "
+            "TECH_DOC_VALIDITY_RANGE_INVALID, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED."
         ),
         request={"multipart/form-data": DeskTechDocUpload},
         responses={201: DeskTechDoc, 400: REFUSED, 403: FORBIDDEN},
@@ -95,6 +97,25 @@ class TechDocDeskViewSet(DeskViewSet):
         return Response(tech_docs.doc_row(self._doc(doc.pk)), status=status.HTTP_201_CREATED)
 
     @extend_schema(
+        operation_id="catalog_tech_docs_update",
+        summary="Edit a technical document passport",
+        description="Needs `catalog.manage`. Вид, название, номер, кем выдан, даты, «видно клиенту»; файл не меняется.",
+        request=DeskTechDocIn,
+        responses={200: DeskTechDoc, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    def partial_update(self, request, pk=None):
+        doc = self._doc(pk)
+        body = DeskTechDocIn(data=request.data, partial=True)
+        body.is_valid(raise_exception=True)
+        try:
+            with transaction.atomic():
+                tech_docs.update_doc(doc, dict(body.validated_data))
+        except ItemError as error:
+            return refuse(error)
+        return Response(tech_docs.doc_row(self._doc(doc.pk)))
+
+    @extend_schema(
         operation_id="catalog_tech_docs_destroy",
         summary="Delete a technical document",
         description="Needs `catalog.manage`. Файл удаляется из хранилища.",
@@ -107,6 +128,7 @@ class TechDocDeskViewSet(DeskViewSet):
         before = {
             "title": doc.title,
             "kind": doc.kind,
+            "number": doc.number,
             "original_name": doc.original_name,
             "size_bytes": doc.size_bytes,
         }
@@ -165,3 +187,35 @@ class TechDocDeskViewSet(DeskViewSet):
         # Как у файлов EDS: даже если файл откроют во вкладке, он не исполняет ни скрипты, ни вложенное содержимое.
         response["Content-Security-Policy"] = "default-src 'none'; sandbox"
         return response
+
+
+class DocumentKindDeskViewSet(DeskViewSet):
+    """Виды документов товара (данные): читает любой сотрудник бэк-офиса, правит администратор в Django admin."""
+
+    lookup_value_regex = r"\d+"
+    queryset = DocumentKind.objects.none()
+    serializer_class = DeskDocumentKind
+
+    @extend_schema(
+        operation_id="catalog_document_kinds_list",
+        summary="Document kinds for product documents",
+        description="Действующие виды по порядку: код, название, «имеет срок действия», «по умолчанию видно клиенту».",
+        parameters=[PAGE, PAGE_SIZE],
+        responses={200: DeskDocumentKind},
+        tags=["Catalog"],
+    )
+    def list(self, request):
+        return self.page_of(
+            DocumentKind.objects.filter(is_active=True).order_by("sort_order", "id"),
+            lambda rows: [
+                {
+                    "id": k.pk,
+                    "code": k.code,
+                    "name": k.name,
+                    "has_validity": k.has_validity,
+                    "client_visible_default": k.client_visible_default,
+                    "sort_order": k.sort_order,
+                }
+                for k in rows
+            ],
+        )

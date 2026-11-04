@@ -17,7 +17,14 @@ PDF = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
 DOC = {
     "id": 5,
     "kind": "tz",
+    "kind_name": "Техническое задание",
     "title": "ТЗ на реле",
+    "number": "",
+    "issued_by": "",
+    "issued_at": None,
+    "valid_until": None,
+    "is_expired": False,
+    "client_visible": False,
     "original_name": "tz.pdf",
     "content_type": "application/pdf",
     "size_bytes": len(PDF),
@@ -86,7 +93,7 @@ async def test_list_forwards_filters_and_numbers_the_deal(
 
 async def test_bad_filters_are_refused_before_erp(web: Web, be: Backends) -> None:
     await web.login(["MANAGER"])
-    assert (await web.client.get("/api/v1/erp/docs/files?kind=poster")).status_code == 422
+    assert (await web.client.get("/api/v1/erp/docs/files?kind=Bad%20Kind")).status_code == 422
     assert (await web.client.get("/api/v1/erp/docs/files?product_id=x")).status_code == 422
     assert (await web.client.get("/api/v1/erp/docs/files/abc/content")).status_code == 422
 

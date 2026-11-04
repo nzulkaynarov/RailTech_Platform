@@ -82,7 +82,6 @@ import {
   SourceState,
   StepCode,
   SupplierOrderStatus,
-  TechDocKind,
   TicketStatus,
   TicketSubject,
   TrackingClass,
@@ -119,6 +118,7 @@ import type {
   CalcSupplier,
   CatalogCategory,
   CatalogCategoryList,
+  CatalogImage,
   CatalogItemDetail,
   CatalogItemPage,
   CatalogLookups,
@@ -23103,6 +23103,15 @@ export const getGetCatalogLookupsResponseMock = (
     code: faker.string.alpha({ length: { min: 10, max: 20 } }),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   })),
+  document_kinds: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    code: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    has_validity: faker.datatype.boolean(),
+    client_visible_default: faker.datatype.boolean(),
+  })),
   delivery_bases: Array.from(
     { length: faker.number.int({ min: 1, max: 10 }) },
     (_, i) => i + 1,
@@ -23304,9 +23313,49 @@ export const getCreateCatalogItemResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -23438,9 +23487,46 @@ export const getGetCatalogItemResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getGetCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogNamedRefMock() }, null]),
+    effective: faker.helpers.arrayElement([
+      { ...getGetCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -23575,9 +23661,49 @@ export const getUpdateCatalogItemResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -23599,6 +23725,29 @@ export const getUpdateCatalogItemResponseMock = (
   },
   ...overrideResponse,
 });
+
+export const getUploadCatalogItemImageResponseMock = (
+  overrideResponse: Partial<Extract<CatalogImage, object>> = {},
+): CatalogImage => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  is_main: faker.datatype.boolean(),
+  sort_order: faker.number.int({ min: 0 }),
+  alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemImageResponseMock = (
+  overrideResponse: Partial<Extract<CatalogImage, object>> = {},
+): CatalogImage => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  is_main: faker.datatype.boolean(),
+  sort_order: faker.number.int({ min: 0 }),
+  alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemImageContentResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
 
 export const getPublishCatalogItemResponseCatalogUnitMock = (
   overrideResponse: Partial<CatalogUnit> = {},
@@ -23712,9 +23861,49 @@ export const getPublishCatalogItemResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -23849,9 +24038,49 @@ export const getUnpublishCatalogItemResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -23989,9 +24218,49 @@ export const getAcceptCatalogProposalResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -24129,9 +24398,49 @@ export const getRejectCatalogProposalResponseMock = (
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
-      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
     }),
   ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
   proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
       id: faker.helpers.fromRegExp("^[0-9]+$"),
@@ -25394,8 +25703,15 @@ export const getListTechDocsResponseMock = (
 ): TechDocPage => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.helpers.fromRegExp("^[0-9]+$"),
-    kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+    kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+    kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    is_expired: faker.datatype.boolean(),
+    client_visible: faker.datatype.boolean(),
     original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
     size_bytes: faker.number.int({ min: 0 }),
@@ -25444,8 +25760,15 @@ export const getUploadTechDocResponseMock = (
   overrideResponse: Partial<Extract<TechDoc, object>> = {},
 ): TechDoc => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
-  kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+  kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_expired: faker.datatype.boolean(),
+  client_visible: faker.datatype.boolean(),
   original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
   size_bytes: faker.number.int({ min: 0 }),
@@ -25455,6 +25778,59 @@ export const getUploadTechDocResponseMock = (
     null,
   ]),
   deal: faker.helpers.arrayElement([{ ...getUploadTechDocResponseTechDocDealMock() }, null]),
+  uploaded_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getUpdateTechDocResponseCatalogProductRefMock = (
+  overrideResponse: Partial<CatalogProductRef> = {},
+): CatalogProductRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateTechDocResponseTechDocDealMock = (
+  overrideResponse: Partial<TechDocDeal> = {},
+): TechDocDeal => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateTechDocResponseMock = (
+  overrideResponse: Partial<Extract<TechDoc, object>> = {},
+): TechDoc => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+  kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_expired: faker.datatype.boolean(),
+  client_visible: faker.datatype.boolean(),
+  original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  size_bytes: faker.number.int({ min: 0 }),
+  previewable: faker.datatype.boolean(),
+  product: faker.helpers.arrayElement([
+    { ...getUpdateTechDocResponseCatalogProductRefMock() },
+    null,
+  ]),
+  deal: faker.helpers.arrayElement([{ ...getUpdateTechDocResponseTechDocDealMock() }, null]),
   uploaded_by: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     null,
@@ -33566,6 +33942,92 @@ export const getUpdateCatalogItemMockHandler = (
   );
 };
 
+export const getUploadCatalogItemImageMockHandler = (
+  overrideResponse?:
+    | CatalogImage
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CatalogImage> | CatalogImage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/items/:id/images",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadCatalogItemImageResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCatalogItemImageMockHandler = (
+  overrideResponse?:
+    | CatalogImage
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CatalogImage> | CatalogImage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/items/:id/images/:imageId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCatalogItemImageResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCatalogItemImageMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/erp/catalog/items/:id/images/:imageId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetCatalogItemImageContentMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/items/:id/images/:imageId/content",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCatalogItemImageContentResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
 export const getPublishCatalogItemMockHandler = (
   overrideResponse?:
     | CatalogItemDetail
@@ -34387,6 +34849,28 @@ export const getUploadTechDocMockHandler = (
   );
 };
 
+export const getUpdateTechDocMockHandler = (
+  overrideResponse?:
+    | TechDoc
+    | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<TechDoc> | TechDoc),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/docs/files/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateTechDocResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getDeleteTechDocMockHandler = (
   overrideResponse?:
     void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
@@ -34807,6 +35291,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateCatalogItemMockHandler(),
   getGetCatalogItemMockHandler(),
   getUpdateCatalogItemMockHandler(),
+  getUploadCatalogItemImageMockHandler(),
+  getUpdateCatalogItemImageMockHandler(),
+  getDeleteCatalogItemImageMockHandler(),
+  getGetCatalogItemImageContentMockHandler(),
   getPublishCatalogItemMockHandler(),
   getUnpublishCatalogItemMockHandler(),
   getAcceptCatalogProposalMockHandler(),
@@ -34842,6 +35330,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateManufacturerMockHandler(),
   getListTechDocsMockHandler(),
   getUploadTechDocMockHandler(),
+  getUpdateTechDocMockHandler(),
   getDeleteTechDocMockHandler(),
   getDownloadTechDocMockHandler(),
   getListTechDocDealOptionsMockHandler(),

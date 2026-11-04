@@ -71,6 +71,25 @@ REQUIREMENTS_BY_DOMAIN: dict[str, tuple] = {
 DEFAULT_REQUIREMENTS = (_NAME, _UOM, _CATEGORY, _HS)
 
 
+def _conformity_doc(product, ctx) -> bool:
+    """Если категория требует документ соответствия — у товара есть действующий документ с номером (CAT-CARD-1).
+
+    Документ подходит, когда его вид «имеет срок действия» или это сертификат/декларация (`CONFORMITY_KIND_CODES`), номер
+    заполнен, срок «действует до» не прошёл (пусто — бессрочно). Какие категории требуют такой документ — данные категории
+    (`Category.requires_conformity_doc`), в коде отраслей нет. Для категорий без требования проверка всегда выполнена.
+    """
+    if getattr(product, "category_id", None) not in ctx.conformity_categories:
+        return True
+    return product.pk in ctx.products_with_conformity_doc
+
+
+_CONFORMITY = (
+    "conformity_doc",
+    _("Действующий документ соответствия с номером"),
+    _conformity_doc,
+)
+
+
 #: Цена-витрина обязательна, только когда цену видно клиенту (политика `cabinet`): карточка
 #: «по запросу» без цены полна, а «цена в кабинете» без цены — нет (M1-ERP-07, BUSINESS §10.1).
 _LIST_PRICE = ("list_price", _("Цена-витрина"), lambda p, ctx: p.list_price is not None)
@@ -85,6 +104,8 @@ def requirements_for(product, ctx: "CompletenessContext | None" = None) -> tuple
     policy = ctx.policy_for(product) if ctx is not None else None
     if effective_price_visibility(product, policy) == PriceVisibility.CABINET:
         requirements = (*requirements, _LIST_PRICE)
+    if ctx is not None and getattr(product, "category_id", None) in ctx.conformity_categories:
+        requirements = (*requirements, _CONFORMITY)
     return requirements
 
 
@@ -104,6 +125,8 @@ class CompletenessContext:
 
         self._policies = load_policies(getattr(product, "owner_company_id", None) for product in products)
 
+        self._load_conformity(products)
+
         codes = {digits for digits in (hs_digits(product) for product in products) if digits}
         if not codes:
             return
@@ -120,6 +143,39 @@ class CompletenessContext:
             # Хоть один код страницы нашёлся — значит справочник наполнен, отдельный
             # `exists()` спрашивать не о чем.
             self._hs_populated = True
+
+    def _load_conformity(self, products) -> None:
+        """Категории с требованием документа соответствия и товары пачки, у которых такой документ есть (два запроса на пачку)."""
+        from django.db.models import Q
+        from django.utils import timezone
+
+        from catalog.models import CONFORMITY_KIND_CODES, Category, DocumentKind, TechDocument
+
+        self.conformity_categories: frozenset[int] = frozenset()
+        self.products_with_conformity_doc: frozenset[int] = frozenset()
+        category_ids = {product.category_id for product in products if getattr(product, "category_id", None)}
+        if not category_ids:
+            return
+        self.conformity_categories = frozenset(
+            Category.objects.filter(pk__in=category_ids, requires_conformity_doc=True).values_list("pk", flat=True)
+        )
+        needing = [p.pk for p in products if getattr(p, "category_id", None) in self.conformity_categories and p.pk]
+        if not needing:
+            return
+        suitable_kinds = set(DocumentKind.objects.filter(has_validity=True).values_list("code", flat=True))
+        suitable_kinds |= CONFORMITY_KIND_CODES
+        today = timezone.localdate()
+        found: set[int] = set()
+        for start in range(0, len(needing), COMPLETENESS_BATCH):
+            found |= set(
+                TechDocument.objects.filter(
+                    product_id__in=needing[start : start + COMPLETENESS_BATCH], kind__in=suitable_kinds
+                )
+                .exclude(number="")
+                .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+                .values_list("product_id", flat=True)
+            )
+        self.products_with_conformity_doc = frozenset(found)
 
     def policy_for(self, product):
         from .policy import DEFAULT_POLICY

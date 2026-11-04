@@ -186,9 +186,19 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 - **Тип позиции вычисляется**: услуга — по домену и `fulfillment_policy`; товар «со склада» — если у действующего предложения (активно, в окне
   цены) есть остаток или статус «в наличии» (то же правило, что `catalog.published.availability`). Квота предложения — `SupplierOffer.stock_quantity`.
   НДС позиции — `Product.vat_rate` (пусто — `CompanySettings.default_vat_rate`); в опубликованный слой поле не попадает (белый список).
-- **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид (ТЗ, чертёж, сертификат,
-  регламент ПНР, другое), привязка к позиции и/или сделке (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла.
-  Выдача — потоком через представление; `ProductDocument` (паспорт в карточке товара) остаётся для старого фронта.
+- **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид — код записи справочника
+  `catalog.DocumentKind` (данные, правит администратор в Django admin; сид — миграция `catalog/0011`), привязка к позиции и/или сделке
+  (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла. Паспорт документа (CAT-CARD-1): номер, кем выдан, выдан,
+  действует до (пусто — бессрочно), «видно клиенту» (без значения — по умолчанию вида); `PATCH catalog/tech-docs/{id}/` правит паспорт,
+  `GET catalog/document-kinds/` — виды для формы. Выдача — потоком через представление. `ProductDocument` остаётся только для старого
+  фронта до P6: его данные перенесены в `TechDocument`, Платформа работает с одним реестром.
+- **Карточка товара (CAT-CARD-1, `catalog/desk/images.py`).** Фото — `catalog.ProductImage` в публичном бакете: до 10 на товар, ровно одно
+  главное (первое — само; при удалении главного — следующее), порядок — позиции 0..n-1 без дыр, JPEG/PNG/WebP до 5 МБ; операции берут
+  строку товара под `select_for_update` (две загрузки не пробьют предел; тест с мутационной проверкой). `POST|PATCH|DELETE
+  catalog/items/{id}/images/…` — `catalog.manage`; в Платформу файл идёт только через BFF. Страна происхождения (`Product.country_of_origin`,
+  пусто — страна бренда) и гарантия (`warranty_months`, `warranty_terms`; пусто — `CompanySettings.default_warranty_months`): карточка отдаёт
+  действующее значение и источник (`origin`, `warranty`). Полнота (`catalog/completeness.py`): категория с `requires_conformity_doc`
+  требует действующий документ с номером вида, у которого «имеет срок» или код `certificate`/`declaration` (`CONFORMITY_KIND_CODES`).
 - **Поставщик и загрузка прайса (CAT-1).** Поставщик — простая карточка `parties.Company` (тип SUPPLIER, «изготовитель» —
   ещё MANUFACTURER; ИНН или `registration_number` нерезидента, `default_currency`), `catalog/desk/suppliers.save_supplier`.
   Цена поставщика — `SupplierOffer` с `source` (прайс / ответ на запрос / вручную) и историей `pghistory` (`offer.events`;

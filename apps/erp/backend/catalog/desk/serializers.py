@@ -8,7 +8,7 @@ from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
 from catalog.desk.items import ALL_KINDS
-from catalog.models import Brigade, ProductFieldProposal, SupplierOffer, TechDocument
+from catalog.models import Brigade, ProductFieldProposal, SupplierOffer
 
 
 class Money(serializers.Serializer):
@@ -96,9 +96,71 @@ class DeskPublishState(serializers.Serializer):
 
 
 class DeskTechDocRef(serializers.Serializer):
+    """Документ товара в карточке (CAT-CARD-1): вид из справочника, номер, орган, сроки, видимость клиенту."""
+
     id = serializers.IntegerField()
     title = serializers.CharField()
-    kind = serializers.ChoiceField(choices=TechDocument.Kind.values)
+    kind = serializers.CharField(help_text="Код вида из справочника видов документов.")
+    kind_name = serializers.CharField(help_text="Название вида.")
+    number = serializers.CharField(help_text="Номер документа (сертификата, декларации…); пусто, если не задан.")
+    issued_by = serializers.CharField(help_text="Кем выдан.")
+    issued_at = serializers.DateField(allow_null=True)
+    valid_until = serializers.DateField(allow_null=True, help_text="Действует до; null — бессрочно.")
+    is_expired = serializers.BooleanField(help_text="Срок «действует до» прошёл.")
+    client_visible = serializers.BooleanField(help_text="Клиент видит документ в кабинете.")
+    original_name = serializers.CharField()
+    size_bytes = serializers.IntegerField()
+    previewable = serializers.BooleanField()
+
+
+class DeskImage(serializers.Serializer):
+    id = serializers.IntegerField()
+    url = serializers.CharField(help_text="Путь файла в хранилище ERP (`/media/…`); в браузер его отдаёт только BFF.")
+    is_main = serializers.BooleanField()
+    sort_order = serializers.IntegerField(help_text="Позиция в галерее с нуля, без пропусков.")
+    alt = serializers.CharField(help_text="Подпись фото.")
+
+
+class DeskImageUpload(serializers.Serializer):
+    """multipart/form-data: JPEG, PNG или WebP до 5 МБ."""
+
+    image = serializers.FileField()
+    alt_text = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    is_main = serializers.BooleanField(required=False, help_text="Сделать главным; первое фото товара главное само.")
+
+
+class DeskImageIn(serializers.Serializer):
+    is_main = serializers.BooleanField(required=False, help_text="Только true: главное меняется назначением другого.")
+    sort_order = serializers.IntegerField(required=False, min_value=0, help_text="Новая позиция с нуля.")
+    alt_text = serializers.CharField(required=False, allow_blank=True, max_length=255)
+
+
+class DeskOrigin(serializers.Serializer):
+    own = DeskRef(allow_null=True, help_text="Страна, заданная в карточке.")
+    effective = DeskRef(allow_null=True, help_text="Показываемая страна: своя, иначе страна бренда.")
+    brand = DeskRef(allow_null=True, help_text="Страна бренда карточки (подсказка к пустому полю).")
+    source = serializers.ChoiceField(choices=["item", "brand", "none"], help_text="Откуда взята показываемая страна.")
+
+
+class DeskWarranty(serializers.Serializer):
+    months = serializers.IntegerField(allow_null=True, help_text="Срок, заданный в карточке.")
+    terms = serializers.CharField(help_text="Условия гарантии.")
+    effective_months = serializers.IntegerField(
+        allow_null=True, help_text="Показываемый срок: свой, иначе срок компании."
+    )
+    company_months = serializers.IntegerField(
+        allow_null=True, help_text="Срок компании по умолчанию (подсказка к пустому полю)."
+    )
+    source = serializers.ChoiceField(choices=["item", "company", "none"], help_text="Откуда взят показываемый срок.")
+
+
+class DeskDocumentKind(serializers.Serializer):
+    id = serializers.IntegerField()
+    code = serializers.CharField()
+    name = serializers.CharField()
+    has_validity = serializers.BooleanField(help_text="У документа этого вида есть срок действия.")
+    client_visible_default = serializers.BooleanField(help_text="Новый документ этого вида по умолчанию виден клиенту.")
+    sort_order = serializers.IntegerField()
 
 
 class DeskItemDetail(DeskItemRow):
@@ -112,6 +174,9 @@ class DeskItemDetail(DeskItemRow):
     offers = DeskOffer(many=True)
     prices_visible = serializers.BooleanField(help_text="Видит ли сотрудник цены поставщиков (иначе price = null).")
     tech_docs = DeskTechDocRef(many=True)
+    images = DeskImage(many=True, help_text="Фото по порядку; ровно одно главное, если фото есть.")
+    origin = DeskOrigin()
+    warranty = DeskWarranty()
     proposals = DeskProposal(many=True, help_text="Изменения от поставщиков на одобрении.")
     publish = DeskPublishState()
 
@@ -130,6 +195,13 @@ class DeskItemIn(serializers.Serializer):
     brand_id = serializers.IntegerField(required=False, allow_null=True, help_text="Изготовитель (бренд).")
     manufacturer_part_number = serializers.CharField(required=False, allow_blank=True, max_length=120)
     hs_code = serializers.CharField(required=False, allow_blank=True, max_length=20, help_text="2–10 цифр.")
+    country_of_origin_id = serializers.IntegerField(
+        required=False, allow_null=True, help_text="Страна происхождения; пусто — страна бренда."
+    )
+    warranty_months = serializers.IntegerField(
+        required=False, allow_null=True, help_text="Гарантия, мес. (0–600); пусто — срок компании по умолчанию."
+    )
+    warranty_terms = serializers.CharField(required=False, allow_blank=True, help_text="Условия гарантии.")
 
 
 class DeskSupplierRow(serializers.Serializer):
@@ -265,30 +337,36 @@ class DeskTechDocDeal(serializers.Serializer):
     created_at = serializers.DateTimeField()
 
 
-class DeskTechDoc(serializers.Serializer):
-    id = serializers.IntegerField()
-    kind = serializers.ChoiceField(choices=TechDocument.Kind.values)
-    title = serializers.CharField()
-    original_name = serializers.CharField()
+class DeskTechDoc(DeskTechDocRef):
     content_type = serializers.CharField()
-    size_bytes = serializers.IntegerField()
-    previewable = serializers.BooleanField(
-        help_text="PDF и изображения открываются для просмотра; остальное скачивается."
-    )
     product = DeskTechDocProduct(allow_null=True)
     deal = DeskTechDocDeal(allow_null=True)
     uploaded_by = serializers.CharField(allow_null=True)
     created_at = serializers.DateTimeField()
 
 
-class DeskTechDocUpload(serializers.Serializer):
+class DeskTechDocPassport(serializers.Serializer):
+    """Поля документа, общие для загрузки и правки."""
+
+    kind = serializers.CharField(required=False, help_text="Код вида из справочника (`catalog/document-kinds/`).")
+    title = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    number = serializers.CharField(required=False, allow_blank=True, max_length=100)
+    issued_by = serializers.CharField(required=False, allow_blank=True, max_length=255)
+    issued_at = serializers.DateField(required=False, allow_null=True)
+    valid_until = serializers.DateField(required=False, allow_null=True, help_text="Пусто — бессрочно.")
+    client_visible = serializers.BooleanField(required=False, help_text="Пусто — по умолчанию вида.")
+
+
+class DeskTechDocUpload(DeskTechDocPassport):
     """multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или заявка."""
 
     file = serializers.FileField()
-    kind = serializers.ChoiceField(required=False, choices=TechDocument.Kind.values)
-    title = serializers.CharField(required=False, allow_blank=True, max_length=255)
     product_id = serializers.IntegerField(required=False)
     deal_id = serializers.IntegerField(required=False)
+
+
+class DeskTechDocIn(DeskTechDocPassport):
+    """Правка паспорта документа (файл не меняется)."""
 
 
 class DeskHsCode(serializers.Serializer):

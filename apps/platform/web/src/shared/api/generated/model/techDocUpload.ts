@@ -11,6 +11,15 @@ export interface TechDocUpload {
   kind?: TechDocKind;
   /** @maxLength 255 */
   title?: string;
+  /** @maxLength 100 */
+  number?: string;
+  /** @maxLength 255 */
+  issued_by?: string;
+  issued_at?: string;
+  /** Пусто — бессрочно */
+  valid_until?: string;
+  /** Пусто — по умолчанию вида */
+  client_visible?: boolean;
   product_id?: CompanyItemRef;
   deal_id?: CompanyItemRef;
 }

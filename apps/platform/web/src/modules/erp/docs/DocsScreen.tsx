@@ -9,13 +9,14 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { downloadFile } from "../../../shared/api/download";
 import { ApiError } from "../../../shared/api/errors";
-import type { TechDoc, TechDocKind } from "../../../shared/api/generated/model";
+import type { TechDoc } from "../../../shared/api/generated/model";
 import {
   getDownloadTechDocQueryKey,
   getDownloadTechDocUrl,
   getListCatalogItemsQueryKey,
   getListTechDocsQueryKey,
   useDeleteTechDoc,
+  useGetCatalogLookups,
   useListCatalogItems,
   useListTechDocDealOptions,
   useListTechDocs,
@@ -31,6 +32,9 @@ import { FormField, QueryState } from "../../../shared/ui/FormParts";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { type Column, DataList, FormModal, PAGE_SIZE, Pager } from "../catalog/common";
+import { DocPassportFields } from "../catalog/DocPassport";
+import { passportFields, usePassport } from "../catalog/passportState";
+import { DocValidity } from "../catalog/ItemDocs";
 import { useDebounced } from "../catalog/useDebounced";
 import { errorFields } from "../catalog/errors";
 import { queryLabels } from "../catalog/labels";
@@ -39,7 +43,6 @@ import "../catalog/catalog.css";
 
 const PdfViewer = lazy(() => import("./PdfViewer"));
 
-const KINDS: readonly TechDocKind[] = ["tz", "drawing", "certificate", "pnr", "other"];
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx";
 
@@ -55,7 +58,8 @@ export function DocsScreen() {
   const { me } = useAuth();
   const [params, setParams] = useSearchParams();
   const [text, setText] = useState("");
-  const [kind, setKind] = useState<TechDocKind | undefined>(undefined);
+  const [kind, setKind] = useState<string | undefined>(undefined);
+  const kinds = useGetCatalogLookups().data?.document_kinds ?? [];
   const [page, setPage] = useState(1);
   const [uploading, setUploading] = useState(false);
   const q = useDebounced(text.trim());
@@ -110,7 +114,17 @@ export function DocsScreen() {
     {
       key: "kind",
       title: t("catalog:docs.columns.kind"),
-      render: (row) => <StatusTag tone="blue">{t(`catalog:docKinds.${row.kind}`)}</StatusTag>,
+      render: (row) => <StatusTag tone="blue">{row.kind_name}</StatusTag>,
+    },
+    {
+      key: "number",
+      title: t("catalog:docs.columns.number"),
+      render: (row) => row.number || "—",
+    },
+    {
+      key: "valid",
+      title: t("catalog:docs.columns.valid"),
+      render: (row) => <DocValidity doc={row} />,
     },
     {
       key: "link",
@@ -174,11 +188,11 @@ export function DocsScreen() {
             placeholder={t("catalog:docs.anyKind")}
             style={{ width: 220 }}
             value={kind}
-            onChange={(value: TechDocKind | undefined) => {
+            onChange={(value: string | undefined) => {
               setKind(value);
               setPage(1);
             }}
-            options={KINDS.map((k) => ({ value: k, label: t(`catalog:docKinds.${k}`) }))}
+            options={kinds.map((k) => ({ value: k.code, label: k.name }))}
           />
         </div>
         {productFilter || dealFilter ? (
@@ -307,7 +321,18 @@ function DocDrawer({
         <div className="pf-cat">
           <DefinitionList
             items={[
-              { label: t("docs.fields.kind"), value: t(`docKinds.${doc.kind}`) },
+              { label: t("docs.fields.kind"), value: doc.kind_name },
+              { label: t("docs.fields.number"), value: doc.number },
+              { label: t("docs.fields.issuedBy"), value: doc.issued_by },
+              {
+                label: t("docs.fields.issuedAt"),
+                value: doc.issued_at ? date(doc.issued_at) : undefined,
+              },
+              { label: t("docs.fields.validUntil"), value: <DocValidity doc={doc} /> },
+              {
+                label: t("docs.fields.clientVisible"),
+                value: doc.client_visible ? t("docs.fields.yes") : t("docs.fields.no"),
+              },
               {
                 label: t("docs.fields.file"),
                 value: `${doc.original_name} · ${formatFileSize(doc.size_bytes, i18n.language)}`,
@@ -413,7 +438,8 @@ function UploadForm({
   const { t } = useTranslation("catalog");
   const queryClient = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [kind, setKind] = useState<TechDocKind>("tz");
+  const kinds = useGetCatalogLookups().data?.document_kinds ?? [];
+  const [passport, setPassport] = usePassport(kinds);
   const [title, setTitle] = useState("");
   const [product, setProduct] = useState<string | undefined>(productId);
   const [deal, setDeal] = useState<string | undefined>(dealId);
@@ -425,7 +451,7 @@ function UploadForm({
     page_size: 20,
   });
   const deals = useListTechDocDealOptions(dealQuery.trim() ? { q: dealQuery.trim() } : {});
-  const ids = { file: useId(), kind: useId(), title: useId(), product: useId(), deal: useId() };
+  const ids = { file: useId(), title: useId(), product: useId(), deal: useId() };
   const mutation = useUploadTechDoc({
     mutation: {
       onSuccess: () => {
@@ -464,7 +490,7 @@ function UploadForm({
         mutation.mutate({
           data: {
             file,
-            kind,
+            ...passportFields(passport),
             ...(title.trim() ? { title: title.trim() } : {}),
             ...(product ? { product_id: product } : {}),
             ...(deal ? { deal_id: deal } : {}),
@@ -490,26 +516,17 @@ function UploadForm({
           {problem}
         </p>
       ) : null}
-      <div className="pf-cat-form-row">
-        <FormField id={ids.kind} label={t("docs.form.kind")}>
-          <Select
-            id={ids.kind}
-            value={kind}
-            onChange={setKind}
-            options={KINDS.map((k) => ({ value: k, label: t(`docKinds.${k}`) }))}
-          />
-        </FormField>
-        <FormField id={ids.title} label={t("docs.form.name")}>
-          <Input
-            id={ids.title}
-            value={title}
-            maxLength={255}
-            onChange={(e) => {
-              setTitle(e.target.value);
-            }}
-          />
-        </FormField>
-      </div>
+      <FormField id={ids.title} label={t("docs.form.name")}>
+        <Input
+          id={ids.title}
+          value={title}
+          maxLength={255}
+          onChange={(e) => {
+            setTitle(e.target.value);
+          }}
+        />
+      </FormField>
+      <DocPassportFields value={passport} onChange={setPassport} kinds={kinds} invalid={fields} />
       <FormField id={ids.product} label={t("docs.form.product")} hint={t("docs.form.linkHint")}>
         <Select
           id={ids.product}

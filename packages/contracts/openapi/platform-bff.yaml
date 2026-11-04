@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.40.0
+  version: 0.41.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -11283,6 +11283,124 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/images:
+    post:
+      tags: [erp-catalog]
+      operationId: uploadCatalogItemImage
+      summary: 'Расчёт · Номенклатура: загрузить фото позиции'
+      description: >-
+        ERP `POST catalog/items/{id}/images/` (multipart) — право `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на позицию; первое фото главное само, `is_main=true` ставит главным и не первое. Отказы (`details.fields`): `image` — файл не подошёл (`FILE_TOO_LARGE`, `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, `NO_FILE_PROVIDED`) или лимит (`IMAGE_LIMIT_REACHED`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CatalogImageUpload'
+      responses:
+        '201':
+          description: Загружено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogImage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/images/{image_id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateCatalogItemImage
+      summary: 'Расчёт · Номенклатура: главное фото, порядок, подпись'
+      description: >-
+        ERP `PATCH catalog/items/{id}/images/{image_id}/` — право `catalog.manage`. `is_main: true` — сделать главным; `sort_order` — новая позиция с нуля (остальные сдвигаются без пропусков); `alt_text` — подпись. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - $ref: '#/components/parameters/CatalogImageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogImageUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogImage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [erp-catalog]
+      operationId: deleteCatalogItemImage
+      summary: 'Расчёт · Номенклатура: удалить фото'
+      description: >-
+        ERP `DELETE catalog/items/{id}/images/{image_id}/` — право `catalog.manage`; файл удаляется, если было главное — главным становится следующее. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+        - $ref: '#/components/parameters/CatalogImageId'
+      responses:
+        '204':
+          description: Удалено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/images/{image_id}/content:
+    get:
+      tags: [erp-catalog]
+      operationId: getCatalogItemImageContent
+      summary: 'Расчёт · Номенклатура: файл фото'
+      description: >-
+        BFF берёт файл в ERP по адресу из карточки позиции (только путь `/media/products/{id}/images/…` этой позиции) и отдаёт с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет фото, чужой путь или не изображение — 404 `NOT_FOUND`. Раздел `erp.stock` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+        - $ref: '#/components/parameters/CatalogImageId'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/items/{id}/publish:
     post:
       tags: [erp-catalog]
@@ -12438,6 +12556,38 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
   /erp/docs/files/{id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateTechDoc
+      summary: 'Расчёт · Документы: изменить паспорт документа'
+      description: >-
+        ERP `PATCH catalog/tech-docs/{id}/` — право `catalog.manage`. Вид, название, номер, кем выдан, выдан, действует до, «видно клиенту»; сам файл не меняется. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TechDocUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechDoc'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
     delete:
       tags: [erp-catalog]
       operationId: deleteTechDoc
@@ -12687,6 +12837,13 @@ components:
       in: path
       required: true
       description: Id объекта ERP (строкой)
+      schema:
+        $ref: '#/components/schemas/CompanyItemRef'
+    CatalogImageId:
+      name: image_id
+      in: path
+      required: true
+      description: Id фото позиции (строкой)
       schema:
         $ref: '#/components/schemas/CompanyItemRef'
     DictionaryKindPath:
@@ -22864,15 +23021,75 @@ components:
     CatalogTechDocRef:
       type: object
       additionalProperties: false
-      required: [id, title, kind]
+      required: [id, title, kind, kind_name, number, issued_by, issued_at, valid_until, is_expired, client_visible, original_name, size_bytes, previewable]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         title: {type: string}
         kind: {$ref: '#/components/schemas/TechDocKind'}
+        kind_name: {type: string, description: Название вида из справочника}
+        number: {type: string, description: 'Номер документа; пусто, если не задан'}
+        issued_by: {type: string, description: Кем выдан}
+        issued_at: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date, description: 'Действует до; `null` — бессрочно'}
+        is_expired: {type: boolean, description: Срок «действует до» прошёл — пометка для сотрудника}
+        client_visible: {type: boolean, description: Клиент видит документ в кабинете}
+        original_name: {type: string}
+        size_bytes: {type: integer, minimum: 0}
+        previewable: {type: boolean}
+    CatalogImage:
+      type: object
+      additionalProperties: false
+      description: Фото позиции; файл — `GET /erp/catalog/items/{id}/images/{image_id}/content`
+      required: [id, is_main, sort_order, alt]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        is_main: {type: boolean, description: 'Главное фото; среди фото позиции ровно одно'}
+        sort_order: {type: integer, minimum: 0, description: 'Позиция в галерее с нуля, без пропусков'}
+        alt: {type: string, description: Подпись фото}
+    CatalogImageUpload:
+      type: object
+      required: [image]
+      properties:
+        image: {type: string, format: binary, description: 'JPEG, PNG или WebP до 5 МБ; SVG и GIF не принимаются'}
+        alt_text: {type: string, maxLength: 255}
+        is_main: {type: boolean, description: 'Сделать главным; первое фото позиции главное само'}
+    CatalogImageUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        is_main: {type: boolean, enum: [true], description: 'Назначить главным; снять флаг нельзя — главное меняется назначением другого'}
+        sort_order: {type: integer, minimum: 0, description: Новая позиция с нуля}
+        alt_text: {type: string, maxLength: 255}
+    CatalogOrigin:
+      type: object
+      additionalProperties: false
+      required: [own, effective, brand, source]
+      properties:
+        brand:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+          description: Страна бренда карточки — подсказка к пустому полю
+        own:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+          description: Страна, заданная в карточке
+        effective:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+          description: Показываемая страна — своя, иначе страна бренда
+        source: {type: string, enum: [item, brand, none], description: 'Откуда показываемая страна: карточка, бренд, нигде не задана'}
+    CatalogWarranty:
+      type: object
+      additionalProperties: false
+      required: [months, terms, effective_months, company_months, source]
+      properties:
+        company_months: {type: [integer, 'null'], minimum: 0, description: 'Срок компании по умолчанию — подсказка к пустому полю'}
+        months: {type: [integer, 'null'], minimum: 0, description: 'Срок, заданный в карточке'}
+        terms: {type: string, description: Условия гарантии}
+        effective_months: {type: [integer, 'null'], minimum: 0, description: 'Показываемый срок — свой, иначе срок компании'}
+        source: {type: string, enum: [item, company, none], description: 'Откуда показываемый срок: карточка, компания, нигде не задан'}
     CatalogItemDetail:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, proposals, publish]
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
@@ -22905,6 +23122,9 @@ components:
         offers: {type: array, items: {$ref: '#/components/schemas/CatalogOffer'}}
         prices_visible: {type: boolean, description: 'Видит ли сотрудник цены поставщиков'}
         tech_docs: {type: array, items: {$ref: '#/components/schemas/CatalogTechDocRef'}}
+        images: {type: array, items: {$ref: '#/components/schemas/CatalogImage'}, description: 'Фото по порядку; ровно одно главное, если фото есть'}
+        origin: {$ref: '#/components/schemas/CatalogOrigin'}
+        warranty: {$ref: '#/components/schemas/CatalogWarranty'}
         proposals: {type: array, items: {$ref: '#/components/schemas/CatalogProposal'}, description: Изменения от поставщиков на одобрении}
         publish: {$ref: '#/components/schemas/CatalogPublishState'}
     CatalogOfferSource:
@@ -22944,6 +23164,9 @@ components:
         unit_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         category_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
         vat_rate: {oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}], description: 'Процент 0..100; `null` — по умолчанию компании'}
+        country_of_origin_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: 'Страна происхождения; `null` — страна бренда'}
+        warranty_months: {type: [integer, 'null'], minimum: 0, maximum: 600, description: 'Гарантия, мес.; `null` — срок компании по умолчанию'}
+        warranty_terms: {type: string, maxLength: 5000, description: Условия гарантии}
     CatalogItemUpdate:
       type: object
       additionalProperties: false
@@ -22958,12 +23181,19 @@ components:
         brand_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: Изготовитель (бренд)}
         manufacturer_part_number: {type: string, maxLength: 120, description: Артикул изготовителя}
         hs_code: {type: string, pattern: '^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$', description: 'Код ТН ВЭД: 2–10 цифр; пусто — снять'}
+        country_of_origin_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}], description: 'Страна происхождения; `null` — страна бренда'}
+        warranty_months: {type: [integer, 'null'], minimum: 0, maximum: 600, description: 'Гарантия, мес.; `null` — срок компании по умолчанию'}
+        warranty_terms: {type: string, maxLength: 5000, description: Условия гарантии}
     CatalogLookups:
       type: object
       additionalProperties: false
-      required: [units, categories, currencies, countries, delivery_bases]
+      required: [units, categories, currencies, countries, delivery_bases, document_kinds]
       properties:
         units: {type: array, items: {$ref: '#/components/schemas/CatalogUnit'}}
+        document_kinds:
+          type: array
+          description: Виды документов товара (справочник); по порядку
+          items: {$ref: '#/components/schemas/CatalogDocumentKind'}
         delivery_bases:
           type: array
           description: Базисы поставки Incoterms
@@ -23494,8 +23724,17 @@ components:
         company_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
     TechDocKind:
       type: string
-      enum: [tz, drawing, certificate, pnr, other]
-      description: 'ТЗ, чертёж, сертификат, регламент ПНР, другое'
+      pattern: '^[a-z0-9_-]{1,32}$'
+      description: 'Код вида документа из справочника видов (`CatalogLookups.document_kinds`): `certificate`, `passport`, `tz`…'
+    CatalogDocumentKind:
+      type: object
+      additionalProperties: false
+      required: [code, name, has_validity, client_visible_default]
+      properties:
+        code: {$ref: '#/components/schemas/TechDocKind'}
+        name: {type: string}
+        has_validity: {type: boolean, description: 'У документа этого вида есть срок действия'}
+        client_visible_default: {type: boolean, description: 'Новый документ этого вида по умолчанию виден клиенту'}
     TechDocDeal:
       type: object
       additionalProperties: false
@@ -23508,11 +23747,18 @@ components:
     TechDoc:
       type: object
       additionalProperties: false
-      required: [id, kind, title, original_name, content_type, size_bytes, previewable, product, deal, uploaded_by, created_at]
+      required: [id, kind, kind_name, title, number, issued_by, issued_at, valid_until, is_expired, client_visible, original_name, content_type, size_bytes, previewable, product, deal, uploaded_by, created_at]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         kind: {$ref: '#/components/schemas/TechDocKind'}
+        kind_name: {type: string, description: Название вида из справочника}
         title: {type: string}
+        number: {type: string, description: 'Номер документа; пусто, если не задан'}
+        issued_by: {type: string, description: Кем выдан}
+        issued_at: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date, description: 'Действует до; `null` — бессрочно'}
+        is_expired: {type: boolean, description: Срок «действует до» прошёл — пометка для сотрудника}
+        client_visible: {type: boolean, description: Клиент видит документ в кабинете}
         original_name: {type: string}
         content_type: {type: string}
         size_bytes: {type: integer, minimum: 0}
@@ -23539,5 +23785,22 @@ components:
         file: {type: string, format: binary, description: 'До 20 МБ: PDF, PNG, JPEG, DOC(X), XLS(X)'}
         kind: {$ref: '#/components/schemas/TechDocKind'}
         title: {type: string, maxLength: 255}
+        number: {type: string, maxLength: 100}
+        issued_by: {type: string, maxLength: 255}
+        issued_at: {type: string, format: date}
+        valid_until: {type: string, format: date, description: 'Пусто — бессрочно'}
+        client_visible: {type: boolean, description: 'Пусто — по умолчанию вида'}
         product_id: {$ref: '#/components/schemas/CompanyItemRef'}
         deal_id: {$ref: '#/components/schemas/CompanyItemRef'}
+    TechDocUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        kind: {$ref: '#/components/schemas/TechDocKind'}
+        title: {type: string, maxLength: 255}
+        number: {type: string, maxLength: 100}
+        issued_by: {type: string, maxLength: 255}
+        issued_at: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date, description: '`null` — бессрочно'}
+        client_visible: {type: boolean}

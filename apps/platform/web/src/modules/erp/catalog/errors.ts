@@ -66,6 +66,13 @@ const REASONS = new Set([
   "module_not_allowed",
   "contact_name_required",
   "contact_email_required",
+  // CAT-CARD-1: фото, документы товара, гарантия
+  "image_limit_reached",
+  "image_main_required",
+  "image_order_invalid",
+  "warranty_months_invalid",
+  "tech_doc_date_invalid",
+  "tech_doc_validity_range_invalid",
 ]);
 
 /**

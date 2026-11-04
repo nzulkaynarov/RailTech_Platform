@@ -67,7 +67,45 @@ ITEM_DETAIL = {
     "source_supplier": None,
     "offers": [OFFER],
     "prices_visible": True,
-    "tech_docs": [{"id": 5, "title": "Паспорт кабеля", "kind": "certificate"}],
+    "tech_docs": [
+        {
+            "id": 5,
+            "title": "Паспорт кабеля",
+            "kind": "certificate",
+            "kind_name": "Сертификат соответствия",
+            "number": "RU-1",
+            "issued_by": "Орган",
+            "issued_at": "2026-01-10",
+            "valid_until": None,
+            "is_expired": False,
+            "client_visible": True,
+            "original_name": "cert.pdf",
+            "size_bytes": 10,
+            "previewable": True,
+        }
+    ],
+    "images": [
+        {
+            "id": 8,
+            "url": "/media/products/4/images/a.png",
+            "is_main": True,
+            "sort_order": 0,
+            "alt": "",
+        }
+    ],
+    "origin": {
+        "own": None,
+        "effective": {"id": 3, "name": "Узбекистан"},
+        "brand": {"id": 3, "name": "Узбекистан"},
+        "source": "brand",
+    },
+    "warranty": {
+        "months": None,
+        "terms": "",
+        "effective_months": 12,
+        "company_months": 12,
+        "source": "company",
+    },
     "proposals": [],
     "publish": {"publishable": False, "missing": ["hs_code"]},
 }
@@ -125,6 +163,7 @@ READS = (
     ("GET", "/erp/docs/files"),
     ("GET", "/erp/docs/files/5/content"),
     ("GET", "/erp/docs/deals"),
+    ("GET", "/erp/catalog/items/4/images/8/content"),
 )
 WRITES = (
     ("POST", "/erp/catalog/items"),
@@ -138,7 +177,11 @@ WRITES = (
     ("POST", "/erp/catalog/manufacturers"),
     ("PATCH", "/erp/catalog/manufacturers/2"),
     ("POST", "/erp/docs/files"),
+    ("PATCH", "/erp/docs/files/5"),
     ("DELETE", "/erp/docs/files/5"),
+    ("POST", "/erp/catalog/items/4/images"),
+    ("PATCH", "/erp/catalog/items/4/images/8"),
+    ("DELETE", "/erp/catalog/items/4/images/8"),
 )
 
 
@@ -263,7 +306,9 @@ async def test_item_card_supplier_price_follows_the_role_even_if_erp_sent_it(
         assert "12.50" not in response.text
     assert body["offers"][0]["quota_qty"] == 500
     assert body["offers"][0]["validity"] == "ok"
-    assert body["tech_docs"] == [{"id": "5", "title": "Паспорт кабеля", "kind": "certificate"}]
+    assert [(d["id"], d["title"], d["kind"]) for d in body["tech_docs"]] == [
+        ("5", "Паспорт кабеля", "certificate")
+    ]
 
 
 async def test_item_card_hides_price_when_erp_itself_withholds_it(web: Web, be: Any) -> None:
@@ -633,6 +678,23 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
             200, json=page([{"id": 1, "code": "FCA", "name": "Free Carrier"}])
         )
     )
+    router.get(f"{API}/catalog/document-kinds/").mock(
+        return_value=httpx.Response(
+            200,
+            json=page(
+                [
+                    {
+                        "id": 1,
+                        "code": "certificate",
+                        "name": "Сертификат соответствия",
+                        "has_validity": True,
+                        "client_visible_default": True,
+                        "sort_order": 10,
+                    }
+                ]
+            ),
+        )
+    )
 
     response = await web.client.get("/api/v1/erp/catalog/lookups")
 
@@ -644,6 +706,14 @@ async def test_lookups_collect_units_categories_currencies_and_countries(
     assert body["currencies"] == [{"code": "USD", "symbol": "$"}]
     assert body["countries"] == [{"id": "3", "name": "Узбекистан"}]
     assert body["delivery_bases"] == [{"code": "FCA", "name": "Free Carrier"}]
+    assert body["document_kinds"] == [
+        {
+            "code": "certificate",
+            "name": "Сертификат соответствия",
+            "has_validity": True,
+            "client_visible_default": True,
+        }
+    ]
 
 
 HS = {
@@ -778,3 +848,38 @@ async def test_erp_outage_is_service_unavailable(web: Web, be: Any) -> None:
     mock(be).get(f"{API}/catalog/items/").mock(side_effect=httpx.ConnectError("down"))
     response = await web.client.get("/api/v1/erp/catalog/items")
     assert response.status_code == 503
+
+
+async def test_lookups_skip_a_document_kind_with_a_code_outside_the_contract_pattern(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """Вид с кодом `ISO9001` не валит справочники форм: он пропущен, в логе — предупреждение."""
+    await web.login(["ENGINEER"])
+    router = mock(be)
+    for path in (
+        "master-data/units/",
+        "catalog/categories/",
+        "master-data/currencies/",
+        "master-data/countries/",
+        "master-data/delivery-basis/",
+    ):
+        router.get(f"{API}/{path}").mock(return_value=httpx.Response(200, json=[]))
+    kind = {"has_validity": False, "client_visible_default": False, "sort_order": 1}
+    router.get(f"{API}/catalog/document-kinds/").mock(
+        return_value=httpx.Response(
+            200,
+            json=page(
+                [
+                    {"id": 1, "code": "ISO9001", "name": "Сертификат ISO", **kind},
+                    {"id": 2, "code": "iso-9001", "name": "Сертификат ISO, строчный", **kind},
+                    {"id": 3, "code": "x" * 40, "name": "Слишком длинный", **kind},
+                ]
+            ),
+        )
+    )
+
+    response = await web.client.get("/api/v1/erp/catalog/lookups")
+
+    assert response.status_code == 200
+    check(response, "/erp/catalog/lookups", "get")
+    assert [k["code"] for k in response.json()["document_kinds"]] == ["iso-9001"]

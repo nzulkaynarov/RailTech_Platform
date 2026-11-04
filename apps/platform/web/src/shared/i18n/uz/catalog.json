@@ -24,13 +24,6 @@
     "DRAFT": "Qoralama",
     "PUBLISHED": "E'lon qilingan"
   },
-  "docKinds": {
-    "tz": "Texnik topshiriq",
-    "drawing": "Chizma",
-    "certificate": "Sertifikat",
-    "pnr": "Ishga tushirish reglamenti",
-    "other": "Boshqa"
-  },
   "brigadeKinds": {
     "brigade": "Brigada",
     "person": "Ijrochi",
@@ -130,7 +123,13 @@
       "email_delivery_failed": "Xat yuborilmadi. Pochta xizmatini tekshirib, qayta urinib ko'ring — kirish o'zgarmadi.",
       "module_not_allowed": "Bu bo'limni hamkor uchun yoqib bo'lmaydi.",
       "contact_name_required": "Kontaktning F.I.Sh. ni kiriting.",
-      "contact_email_required": "Kontaktning e-pochtasini kiriting."
+      "contact_email_required": "Kontaktning e-pochtasini kiriting.",
+      "image_limit_reached": "Chegaraga yetildi: pozitsiyaga 10 ta surat.",
+      "image_main_required": "Asosiy suratni boshqa suratni tanlab o‘zgartiring.",
+      "image_order_invalid": "Ro‘yxatda bunday o‘rin yo‘q.",
+      "warranty_months_invalid": "Kafolat — 0 dan 600 gacha oy soni.",
+      "tech_doc_date_invalid": "Sana noto‘g‘ri ko‘rsatilgan.",
+      "tech_doc_validity_range_invalid": "«Amal qilish muddati» «Berilgan sana»dan oldin bo‘lishi mumkin emas."
     }
   },
   "items": {
@@ -176,12 +175,14 @@
       "gost": "GOST / chizma",
       "hs": "TIF TN kodi",
       "mpn": "Ishlab chiqaruvchi artikuli",
-      "source": "Prays bo‘yicha yaratilgan"
+      "source": "Prays bo‘yicha yaratilgan",
+      "origin": "Ishlab chiqarilgan mamlakat",
+      "warranty": "Kafolat"
     },
     "offers": "Yetkazib beruvchilar takliflari",
     "offersTable": "Pozitsiya bo'yicha yetkazib beruvchilar takliflari",
-    "techDocs": "Texnik hujjatlar",
-    "noDocs": "Fayllar yo'q. Ularni «Texnik hujjatlar» bo'limida yuklang.",
+    "techDocs": "Hujjatlar",
+    "noDocs": "Hujjatlar yo‘q. Sertifikat, pasport yoki yo‘riqnoma qo‘shing.",
     "form": {
       "addTitle": "Pozitsiya qo'shish",
       "editTitle": "Pozitsiyani o'zgartirish",
@@ -207,8 +208,21 @@
       "brand": "Ishlab chiqaruvchi (brend)",
       "mpn": "Ishlab chiqaruvchi artikuli",
       "hs": "TIF TN kodi",
-      "hsHint": "2, 4, 6, 8 yoki 10 raqam"
-    }
+      "hsHint": "2, 4, 6, 8 yoki 10 raqam",
+      "country": "Ishlab chiqarilgan mamlakat",
+      "countryHintBrand": "Bo‘sh — ishlab chiqaruvchi mamlakati: {{country}}",
+      "countryHintNone": "Bo‘sh — ishlab chiqaruvchi mamlakati",
+      "warrantyMonths": "Kafolat, oy",
+      "warrantyMonthsHint": "Bo‘sh — {{months}} oy, kompaniyadagidek",
+      "warrantyMonthsHintNone": "Bo‘sh — kompaniya muddati belgilanmagan",
+      "warrantyTerms": "Kafolat shartlari"
+    },
+    "originBrand": "(ishlab chiqaruvchi mamlakati)",
+    "originNone": "Ko‘rsatilmagan",
+    "warrantyCompany": "(kompaniyaning odatdagisi)",
+    "warrantyMonths": "{{months}} oy",
+    "warrantyNone": "Belgilanmagan",
+    "warrantyTerms": "Kafolat shartlari"
   },
   "offers": {
     "supplier": "Yetkazib beruvchi",
@@ -503,7 +517,7 @@
     }
   },
   "docs": {
-    "subtitle": "TT, chizmalar, sertifikatlar va ishga tushirish reglamentlari — pozitsiya va arizaga bog'langan holda.",
+    "subtitle": "Pozitsiya va arizalar hujjatlari: sertifikat, pasport, yo‘riqnoma, chizma.",
     "search": "Nomi, fayl va pozitsiya bo'yicha qidiruv",
     "filterKind": "Turi",
     "anyKind": "Istalgan tur",
@@ -517,7 +531,9 @@
       "kind": "Turi",
       "link": "Bog'langan",
       "size": "Hajmi",
-      "uploaded": "Yuklagan"
+      "uploaded": "Yuklagan",
+      "number": "Raqami",
+      "valid": "Amal qiladi"
     },
     "empty": {
       "title": "Fayllar yo'q",
@@ -529,7 +545,15 @@
       "file": "Fayl",
       "product": "Pozitsiya",
       "deal": "Ariza yoki loyiha",
-      "uploaded": "Yuklangan"
+      "uploaded": "Yuklangan",
+      "number": "Raqami",
+      "issuedBy": "Kim bergan",
+      "issuedAt": "Berilgan sana",
+      "validUntil": "Amal qilish muddati",
+      "clientVisible": "Mijozga ko‘rinadi",
+      "yes": "Ha",
+      "no": "Yo‘q",
+      "forever": "Muddatsiz"
     },
     "download": "Yuklab olish",
     "downloadError": "Faylni yuklab bo'lmadi.",
@@ -562,10 +586,17 @@
       "dealPlaceholder": "Raqam yoki nomi bo'yicha topish",
       "linkHint": "Kamida bitta bog'lanish kerak: pozitsiya yoki ariza.",
       "steps": [
-        "Fayl ERP ning himoyalangan omborxonasida saqlanadi.",
-        "U bog'langan pozitsiya va arizada paydo bo'ladi.",
-        "Fayl mijozga yuborilmaydi."
-      ]
+        "Fayl himoyalangan omborda saqlanadi.",
+        "U bog‘langan pozitsiya va arizada paydo bo‘ladi.",
+        "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
+      ],
+      "number": "Raqami",
+      "issuedBy": "Kim bergan",
+      "issuedAt": "Berilgan sana",
+      "validUntil": "Amal qilish muddati",
+      "validUntilHint": "Bo‘sh — muddatsiz",
+      "clientVisible": "Mijozga ko‘rinadi",
+      "clientVisibleHint": "Mijoz kabineti uchun belgi; ko‘rsatish keyinroq yoqiladi."
     }
   },
   "supplierForm": {
@@ -737,7 +768,8 @@
       "uom": "o‘lchov birligi",
       "category": "toifa",
       "hs_code": "TIF TN kodi",
-      "list_price": "vitrina narxi"
+      "list_price": "vitrina narxi",
+      "conformity_doc": "raqamli amaldagi muvofiqlik hujjati"
     }
   },
   "import": {
@@ -811,5 +843,57 @@
       "ROWS_TOKEN_EXPIRED": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
       "AI_JOB_FAILED": "SI faylni o‘qiy olmadi. Keyinroq urinib ko‘ring."
     }
+  },
+  "photos": {
+    "title": "Suratlar",
+    "count": "{{max}} tadan {{count}}",
+    "hint": "Eng yaxshisi: yorqin fonda 900 px dan kvadrat. JPEG, PNG yoki WebP, 5 MB gacha.",
+    "empty": "Suratlar yo‘q. Birinchisini qo‘shing — u asosiy bo‘ladi.",
+    "add": "Surat qo‘shish",
+    "limit": "Chegaraga yetildi: {{max}} ta surat. Ortiqchasini o‘chiring.",
+    "list": "Pozitsiya suratlari",
+    "alt": "{{total}} tadan {{n}}-surat",
+    "main": "Asosiy",
+    "makeMain": "Asosiy qilish",
+    "makeMainNamed": "{{n}}-suratni asosiy qilish",
+    "up": "Yuqoriroq",
+    "upNamed": "{{n}}-suratni yuqoriga",
+    "down": "Pastroq",
+    "downNamed": "{{n}}-suratni pastga",
+    "remove": "O‘chirish",
+    "removeNamed": "{{n}}-suratni o‘chirish",
+    "deleteTitle": "{{n}}-suratni o‘chirasizmi?",
+    "deleteSteps": [
+      "Fayl saqlash joyidan o‘chiriladi.",
+      "Agar bu asosiy surat bo‘lsa, keyingisi asosiy bo‘ladi.",
+      "Suratni faqat qayta yuklash bilan tiklash mumkin."
+    ],
+    "uploaded": "Surat qo‘shildi.",
+    "deleted": "Surat o‘chirildi.",
+    "fileLabel": "Surat"
+  },
+  "cardDocs": {
+    "title": "Hujjatlar",
+    "empty": "Hujjatlar yo‘q. Sertifikat, pasport yoki yo‘riqnoma qo‘shing.",
+    "add": "Hujjat qo‘shish",
+    "edit": "O‘zgartirish",
+    "editNamed": "«{{title}}» hujjatini o‘zgartirish",
+    "open": "Ochish",
+    "expired": "Muddati o‘tgan",
+    "validUntil": "{{date}} gacha",
+    "forever": "muddatsiz",
+    "visible": "Mijozga ko‘rinadi",
+    "hidden": "Mijozga ko‘rinmaydi",
+    "numberless": "raqamsiz",
+    "list": "Pozitsiya hujjatlari",
+    "addTitle": "Hujjat qo‘shish",
+    "editTitle": "Hujjatni o‘zgartirish",
+    "addSteps": [
+      "Fayl himoyalangan omborda saqlanadi.",
+      "U pozitsiya kartasida va «Texnik hujjatlar» bo‘limida paydo bo‘ladi.",
+      "«Mijozga ko‘rinadi» belgisi saqlanadi; mijoz kabinetida keyinroq ko‘rinadi."
+    ],
+    "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
+    "saved": "Hujjat saqlandi."
   }
 }

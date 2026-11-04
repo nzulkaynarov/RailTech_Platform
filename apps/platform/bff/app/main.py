@@ -40,6 +40,7 @@ from app.api import (
     erp_calc,
     erp_catalog,
     erp_docs,
+    erp_images,
     erp_price_import,
     erp_stock,
     erp_supplier_access,
@@ -150,6 +151,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(erp_catalog.router, prefix=API_PREFIX)
     app.include_router(erp_supplier_access.router, prefix=API_PREFIX)
     app.include_router(erp_docs.router, prefix=API_PREFIX)
+    app.include_router(erp_images.router, prefix=API_PREFIX)
     app.include_router(erp_price_import.router, prefix=API_PREFIX)
     app.include_router(eds_payments.router, prefix=API_PREFIX)
     app.include_router(erp_calc.router, prefix=API_PREFIX)
