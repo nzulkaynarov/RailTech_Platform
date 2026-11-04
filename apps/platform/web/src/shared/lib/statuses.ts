@@ -183,6 +183,8 @@ export const STATUS_TONE = {
   movement: { in: OK, out: NONE },
   /** Срок действия цены поставщика */
   validity: { ok: OK, expiring: W, expired: NO },
+  /** Доступ партнёра в кабинет (PART-1): не открыт, приглашён, активен, приостановлен — слово даёт модуль */
+  cabinetAccess: { none: NONE, invited: W, active: OK, suspended: NO },
   /** Запрос на новую категорию каталога */
   categoryRequest: { pending: W, approved: OK, rejected: NO },
   /** Вид позиции каталога и строки расчёта — категория, не статус: товар, под заказ, услуга */

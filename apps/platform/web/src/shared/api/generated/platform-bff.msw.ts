@@ -318,6 +318,10 @@ import type {
   StockShipmentList,
   StockSupplierList,
   StockTraceList,
+  SupplierCabinetAccess,
+  SupplierCabinetContact,
+  SupplierCabinetPerson,
+  SupplierCabinetRelationship,
   SupplierDetail,
   SupplierOfferHistory,
   SupplierOrderDetail,
@@ -24551,6 +24555,392 @@ export const getGetSupplierOfferHistoryResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetSupplierCabinetAccessResponseSupplierCabinetPersonMock = (
+  overrideResponse: Partial<SupplierCabinetPerson> = {},
+): SupplierCabinetPerson => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierCabinetAccessResponseSupplierCabinetRelationshipMock = (
+  overrideResponse: Partial<SupplierCabinetRelationship> = {},
+): SupplierCabinetRelationship => ({
+  ...{
+    role: faker.helpers.arrayElement(["partner"] as const),
+    kind: faker.helpers.arrayElement([
+      "",
+      "manufacturer",
+      "supplier",
+      "principal",
+      "other",
+    ] as const),
+    modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    invited_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    activated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    suspended_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getGetSupplierCabinetAccessResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+    invited_by: faker.helpers.arrayElement([
+      { ...getGetSupplierCabinetAccessResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierCabinetAccessResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetAccess, object>> = {},
+): SupplierCabinetAccess => ({
+  company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  relationship: faker.helpers.arrayElement([
+    { ...getGetSupplierCabinetAccessResponseSupplierCabinetRelationshipMock() },
+    null,
+  ]),
+  contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      invited_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      last_login_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    }),
+  ),
+  partner_modules: {
+    allowed: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    default: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+  },
+  cabinet_roles: faker.helpers.arrayElements(["client", "partner"] as const),
+  cabinet_modules: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  can_manage: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getCreateSupplierCabinetContactResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetContact, object>> = {},
+): SupplierCabinetContact => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  invited_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_login_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierCabinetContactResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetContact, object>> = {},
+): SupplierCabinetContact => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  invited_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_login_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierCabinetRightsResponseSupplierCabinetPersonMock = (
+  overrideResponse: Partial<SupplierCabinetPerson> = {},
+): SupplierCabinetPerson => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierCabinetRightsResponseSupplierCabinetRelationshipMock = (
+  overrideResponse: Partial<SupplierCabinetRelationship> = {},
+): SupplierCabinetRelationship => ({
+  ...{
+    role: faker.helpers.arrayElement(["partner"] as const),
+    kind: faker.helpers.arrayElement([
+      "",
+      "manufacturer",
+      "supplier",
+      "principal",
+      "other",
+    ] as const),
+    modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    invited_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    activated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    suspended_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getUpdateSupplierCabinetRightsResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+    invited_by: faker.helpers.arrayElement([
+      { ...getUpdateSupplierCabinetRightsResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierCabinetRightsResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetAccess, object>> = {},
+): SupplierCabinetAccess => ({
+  company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  relationship: faker.helpers.arrayElement([
+    { ...getUpdateSupplierCabinetRightsResponseSupplierCabinetRelationshipMock() },
+    null,
+  ]),
+  contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      invited_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      last_login_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    }),
+  ),
+  partner_modules: {
+    allowed: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    default: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+  },
+  cabinet_roles: faker.helpers.arrayElements(["client", "partner"] as const),
+  cabinet_modules: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  can_manage: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getInviteSupplierToCabinetResponseSupplierCabinetPersonMock = (
+  overrideResponse: Partial<SupplierCabinetPerson> = {},
+): SupplierCabinetPerson => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getInviteSupplierToCabinetResponseSupplierCabinetRelationshipMock = (
+  overrideResponse: Partial<SupplierCabinetRelationship> = {},
+): SupplierCabinetRelationship => ({
+  ...{
+    role: faker.helpers.arrayElement(["partner"] as const),
+    kind: faker.helpers.arrayElement([
+      "",
+      "manufacturer",
+      "supplier",
+      "principal",
+      "other",
+    ] as const),
+    modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    invited_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    activated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    suspended_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getInviteSupplierToCabinetResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+    invited_by: faker.helpers.arrayElement([
+      { ...getInviteSupplierToCabinetResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getInviteSupplierToCabinetResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetAccess, object>> = {},
+): SupplierCabinetAccess => ({
+  company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  relationship: faker.helpers.arrayElement([
+    { ...getInviteSupplierToCabinetResponseSupplierCabinetRelationshipMock() },
+    null,
+  ]),
+  contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      invited_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      last_login_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    }),
+  ),
+  partner_modules: {
+    allowed: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    default: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+  },
+  cabinet_roles: faker.helpers.arrayElements(["client", "partner"] as const),
+  cabinet_modules: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  can_manage: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getSuspendSupplierCabinetAccessResponseSupplierCabinetPersonMock = (
+  overrideResponse: Partial<SupplierCabinetPerson> = {},
+): SupplierCabinetPerson => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSuspendSupplierCabinetAccessResponseSupplierCabinetRelationshipMock = (
+  overrideResponse: Partial<SupplierCabinetRelationship> = {},
+): SupplierCabinetRelationship => ({
+  ...{
+    role: faker.helpers.arrayElement(["partner"] as const),
+    kind: faker.helpers.arrayElement([
+      "",
+      "manufacturer",
+      "supplier",
+      "principal",
+      "other",
+    ] as const),
+    modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
+    invited_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    activated_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    suspended_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getSuspendSupplierCabinetAccessResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+    invited_by: faker.helpers.arrayElement([
+      { ...getSuspendSupplierCabinetAccessResponseSupplierCabinetPersonMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getSuspendSupplierCabinetAccessResponseMock = (
+  overrideResponse: Partial<Extract<SupplierCabinetAccess, object>> = {},
+): SupplierCabinetAccess => ({
+  company_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  relationship: faker.helpers.arrayElement([
+    { ...getSuspendSupplierCabinetAccessResponseSupplierCabinetRelationshipMock() },
+    null,
+  ]),
+  contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      invited_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+      last_login_at: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 19) + "Z",
+        null,
+      ]),
+    }),
+  ),
+  partner_modules: {
+    allowed: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    default: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+  },
+  cabinet_roles: faker.helpers.arrayElements(["client", "partner"] as const),
+  cabinet_modules: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+  can_manage: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
 export const getUpdateSupplierOfferResponseCatalogMoneyMock = (
   overrideResponse: Partial<CatalogMoney> = {},
 ): CatalogMoney => ({
@@ -33410,6 +33800,150 @@ export const getGetSupplierOfferHistoryMockHandler = (
   );
 };
 
+export const getGetSupplierCabinetAccessMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetAccess
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierCabinetAccess> | SupplierCabinetAccess),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/suppliers/:id/cabinet-access",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSupplierCabinetAccessResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateSupplierCabinetContactMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetContact
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierCabinetContact> | SupplierCabinetContact),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/suppliers/:id/cabinet-access/contacts",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateSupplierCabinetContactResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateSupplierCabinetContactMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetContact
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<SupplierCabinetContact> | SupplierCabinetContact),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/suppliers/:id/cabinet-access/contacts/:contactId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateSupplierCabinetContactResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateSupplierCabinetRightsMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetAccess
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<SupplierCabinetAccess> | SupplierCabinetAccess),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/suppliers/:id/cabinet-access/relationship",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateSupplierCabinetRightsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getInviteSupplierToCabinetMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetAccess
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierCabinetAccess> | SupplierCabinetAccess),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/suppliers/:id/cabinet-access/invite",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getInviteSupplierToCabinetResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSuspendSupplierCabinetAccessMockHandler = (
+  overrideResponse?:
+    | SupplierCabinetAccess
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierCabinetAccess> | SupplierCabinetAccess),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/suppliers/:id/cabinet-access/suspend",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSuspendSupplierCabinetAccessResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getUpdateSupplierOfferMockHandler = (
   overrideResponse?:
     | CatalogOffer
@@ -34277,6 +34811,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateCatalogSupplierMockHandler(),
   getCreateSupplierOfferMockHandler(),
   getGetSupplierOfferHistoryMockHandler(),
+  getGetSupplierCabinetAccessMockHandler(),
+  getCreateSupplierCabinetContactMockHandler(),
+  getUpdateSupplierCabinetContactMockHandler(),
+  getUpdateSupplierCabinetRightsMockHandler(),
+  getInviteSupplierToCabinetMockHandler(),
+  getSuspendSupplierCabinetAccessMockHandler(),
   getUpdateSupplierOfferMockHandler(),
   getDownloadPriceImportTemplateMockHandler(),
   getStartPriceImportMockHandler(),
