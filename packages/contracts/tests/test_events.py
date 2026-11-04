@@ -46,8 +46,8 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 27
-    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4)
+        len([t for t in TYPES if t.domain == "erp"]) == 28
+    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), partner (PART-CRM)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -161,11 +161,22 @@ ERP_EVENTS_W18A = {"mail.requested"}
 #: W18A-P4 (письмо на бланке): снимок бланка своей компании — проекция EDS; CRM тип не получает.
 ERP_EVENTS_W18A_P4 = {"letterhead.updated"}
 
+#: PART-CRM: партнёр приглашён в кабинет — CRM заводит клиента (ответ — crm.partner.client_resolved).
+ERP_EVENTS_PART_CRM = {"partner.client_requested"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
     erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
-    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1 | ERP_EVENTS_D2 | ERP_EVENTS_W18A | ERP_EVENTS_W18A_P4
+    assert erp == (
+        ERP_EVENTS
+        | ERP_EVENTS_C1
+        | ERP_EVENTS_D1
+        | ERP_EVENTS_D2
+        | ERP_EVENTS_W18A
+        | ERP_EVENTS_W18A_P4
+        | ERP_EVENTS_PART_CRM
+    )
 
 
 EDS_EVENTS = {
@@ -401,6 +412,7 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.contact.updated.v1",
         "uz.railtech.crm.mail.failed.v1",
         "uz.railtech.crm.mail.sent.v1",
+        "uz.railtech.crm.partner.client_resolved.v1",
         "uz.railtech.eds.approval.decided.v1",
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.resolved.v1",

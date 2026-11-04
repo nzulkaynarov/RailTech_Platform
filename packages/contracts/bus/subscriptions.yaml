@@ -19,6 +19,8 @@ subscribers:
       - uz.railtech.erp.delivery.*.v1
       - uz.railtech.erp.document.*.v1
       - uz.railtech.erp.invite.*.v1
+      # PART-CRM: партнёр приглашён в кабинет — CRM заводит (или находит) клиента и отвечает partner.client_resolved.
+      - uz.railtech.erp.partner.*.v1
       - uz.railtech.erp.invoice.*.v1
       - uz.railtech.erp.request.*.v1
       - uz.railtech.erp.quote.acceptance_code_requested.v1
@@ -44,6 +46,8 @@ subscribers:
     types:
       - uz.railtech.crm.client.updated.v1
       - uz.railtech.crm.contact.*.v1
+      # PART-CRM: итог «клиент партнёра в CRM» (сопоставление или конфликт).
+      - uz.railtech.crm.partner.*.v1
       # Волна 12 (EDS-01, EDS-03): резолюция → задание расчёта; отказ → сделка LOST; решение по КП.
       - uz.railtech.eds.letter.resolved.v1
       - uz.railtech.eds.letter.rejected.v1

@@ -146,6 +146,14 @@ class Contact(BaseModel):
     updated_at: AwareDatetime
 
 
+class Contact1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    crm_contact_id: int
+
+
 class ContactCreatedV1(BaseModel):
     """
     Тип uz.railtech.crm.contact.created.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок контакта. Подписчик ERP создаёт или обновляет проекцию контакта по crm_contact_id.
@@ -470,6 +478,52 @@ class MailSentV1(BaseModel):
     """
 
 
+class MatchedBy(StrEnum):
+    """
+    Как найден клиент: уже сопоставлен с этой компанией, по ИНН, по паре «страна + регистрационный номер» или создан новый (только при linked)
+    """
+
+    erp_company_id = "erp_company_id"
+    inn = "inn"
+    registration_number = "registration_number"
+    created = "created"
+
+
+class PartnerClientResolvedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.partner.client_resolved.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Ответ CRM на uz.railtech.erp.partner.client_requested.v1 (PART-CRM): компания партнёра стала клиентом CRM (linked: создан новый или найден существующий по erp_company_id, ИНН либо паре «страна + регистрационный номер») либо найденный клиент уже сопоставлен другой компании ERP (conflict: CRM ничего не перезаписывает, пишет в журнал и уведомляет ответственного). По linked ERP ставит сопоставление клиента, тип компании CLIENT, сопоставляет контакты и публикует заявки партнёра, ожидавшие сопоставления; по conflict — показывает сотруднику «конфликт» и ссылку на клиента CRM. Ответ — один на каждое запрошенное событие, повтор безопасен (ERP идемпотентна по erp_company_id). Только идентификаторы, данных людей нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания партнёра в ERP (из запроса)
+    """
+    status: Status
+    """
+    linked — клиент CRM сопоставлен компании ERP; conflict — найденный клиент сопоставлен другой компании, ничего не изменено
+    """
+    crm_client_id: int
+    """
+    Клиент CRM: сопоставленный (linked) или найденный и занятый другой компанией (conflict)
+    """
+    matched_by: MatchedBy | None = None
+    """
+    Как найден клиент: уже сопоставлен с этой компанией, по ИНН, по паре «страна + регистрационный номер» или создан новый (только при linked)
+    """
+    conflict_erp_company_id: int | None = None
+    """
+    Другая компания ERP, с которой клиент CRM уже сопоставлен (только при conflict)
+    """
+    contacts: Annotated[list[Contact1] | None, Field(max_length=50)] = None
+    """
+    Сопоставление контактов запроса с контактами CRM (только при linked); контакт без e-mail в запросе не приходит
+    """
+    actor: Actor
+
+
 class Phone(RootModel[str]):
     root: Annotated[str, Field(pattern="^\\+[1-9][0-9]{6,14}$")]
     """
@@ -502,6 +556,15 @@ class Ref(BaseModel):
     )
     kind: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,31}$")]
     id: Annotated[str, Field(max_length=64, min_length=1)]
+
+
+class Status(StrEnum):
+    """
+    linked — клиент CRM сопоставлен компании ERP; conflict — найденный клиент сопоставлен другой компании, ничего не изменено
+    """
+
+    linked = "linked"
+    conflict = "conflict"
 
 
 class Type(StrEnum):
