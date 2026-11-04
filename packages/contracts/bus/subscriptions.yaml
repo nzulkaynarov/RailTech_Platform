@@ -15,6 +15,8 @@ subscribers:
       - uz.railtech.erp.act.*.v1
       # NOTIFY-1 (ADR-0023 п. 3): контакт отключил Telegram в кабинете — привязка принадлежит CRM, ERP только просит.
       - uz.railtech.erp.contact.telegram_unlink_requested.v1
+      # NOTIFY-1: «Отправить проверочное сообщение» из Профиля кабинета — бот CRM пишет контакту.
+      - uz.railtech.erp.contact.telegram_test_requested.v1
       # D2-5: contract.status_changed адресован EDS (проекция реестра) — CRM его не получает (NOT_FOR_CRM).
       - uz.railtech.erp.contract.signed.v1
       - uz.railtech.erp.deal.*.v1

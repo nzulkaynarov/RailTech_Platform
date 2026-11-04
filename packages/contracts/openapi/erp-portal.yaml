@@ -350,6 +350,46 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /me/telegram/test:
+    post:
+      tags: [me]
+      operationId: sendTelegramTest
+      summary: Прислать проверочное сообщение в привязанный Telegram
+      description: |
+        Контакт проверяет, что уведомления доходят (NOTIFY-1). ERP в Telegram не пишет: публикует запрос
+        `uz.railtech.erp.contact.telegram_test_requested.v1`, бот CRM присылает короткое сообщение на языке контакта. Ответ
+        202 — запрос принят (итог доставки не возвращается). Не чаще раза в минуту на контакт: иначе 429 `TOO_MANY_REQUESTS`
+        с `Retry-After`. Telegram не привязан — 409 `TELEGRAM_NOT_LINKED`. Право «действовать» не нужно.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      responses:
+        '202':
+          description: Запрос проверочного сообщения принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramStatus'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Telegram не привязан (`TELEGRAM_NOT_LINKED`) — сначала «Подключить»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /me/telegram-link:
     post:
       tags: [me]
@@ -1538,6 +1578,7 @@ components:
         - CONFLICT
         - CONTACT_NOT_IN_CRM
         - TELEGRAM_LINK_UNAVAILABLE
+        - TELEGRAM_NOT_LINKED
 
     Reason:
       type: object

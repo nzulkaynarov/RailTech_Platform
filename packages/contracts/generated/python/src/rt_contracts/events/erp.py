@@ -171,6 +171,48 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class ContactTelegramTestRequested(BaseModel):
+    """
+    Кому прислать проверочное сообщение (NOTIFY-1)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
+    """
+    language: Language1 | None = None
+    """
+    Язык контакта в ERP; на нём бот пишет сообщение
+    """
+
+
+class ContactTelegramTestRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_test_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») нажал «Отправить проверочное сообщение»: ERP в Telegram не пишет (бот принадлежит CRM) — публикует запрос, бот CRM присылает контакту короткое сообщение на его языке на привязанный Telegram. ERP прореживает запросы (не чаще раза в минуту на контакт) и публикует только контакту с привязанным Telegram и сопоставлением с CRM (NOTIFY-1, ADR-0023 п. 3). Итог доставки не возвращается; секретов и персональных данных нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramTestRequested
+
+
 class ContactTelegramUnlinkRequested(BaseModel):
     """
     Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)
@@ -724,6 +766,16 @@ class Kind(StrEnum):
 class Language(StrEnum):
     """
     Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
+class Language1(StrEnum):
+    """
+    Язык контакта в ERP; на нём бот пишет сообщение
     """
 
     ru = "ru"

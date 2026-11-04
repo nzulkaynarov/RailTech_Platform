@@ -152,6 +152,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/telegram/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Прислать проверочное сообщение в привязанный Telegram
+         * @description Контакт проверяет, что уведомления доходят (NOTIFY-1). ERP в Telegram не пишет: публикует запрос
+         *     `uz.railtech.erp.contact.telegram_test_requested.v1`, бот CRM присылает короткое сообщение на языке контакта. Ответ
+         *     202 — запрос принят (итог доставки не возвращается). Не чаще раза в минуту на контакт: иначе 429 `TOO_MANY_REQUESTS`
+         *     с `Retry-After`. Telegram не привязан — 409 `TELEGRAM_NOT_LINKED`. Право «действовать» не нужно.
+         */
+        post: operations["sendTelegramTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/telegram-link": {
         parameters: {
             query?: never;
@@ -717,7 +740,7 @@ export interface components {
          * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
          * @enum {string}
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "CONTACT_NOT_IN_CRM" | "TELEGRAM_LINK_UNAVAILABLE";
+        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "CONTACT_NOT_IN_CRM" | "TELEGRAM_LINK_UNAVAILABLE" | "TELEGRAM_NOT_LINKED";
         Reason: {
             reason: string;
         };
@@ -1526,6 +1549,55 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) — отключить может менеджер */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    sendTelegramTest: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос проверочного сообщения принят */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Telegram не привязан (`TELEGRAM_NOT_LINKED`) — сначала «Подключить» */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) */
             422: {
                 headers: {
                     [name: string]: unknown;

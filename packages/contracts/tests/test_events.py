@@ -46,9 +46,9 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 28
+        len([t for t in TYPES if t.domain == "erp"]) == 29
     )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4),
-    # contact.telegram_unlink_requested (NOTIFY-1)
+    # contact.telegram_unlink_requested, contact.telegram_test_requested (NOTIFY-1)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -161,7 +161,7 @@ ERP_EVENTS_W18A = {"mail.requested"}
 
 #: W18A-P4 (письмо на бланке): снимок бланка своей компании — проекция EDS; CRM тип не получает.
 ERP_EVENTS_W18A_P4 = {"letterhead.updated"}
-ERP_EVENTS_NOTIFY = {"contact.telegram_unlink_requested"}
+ERP_EVENTS_NOTIFY = {"contact.telegram_unlink_requested", "contact.telegram_test_requested"}
 
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
