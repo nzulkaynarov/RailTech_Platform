@@ -318,3 +318,79 @@ def test_no_email_escapes_a_rolled_back_transaction(world):
         issue_invoice(invoice, world["seller_user"])
 
     assert _sent(mail) == []
+
+
+# ── 7. Контактам компании-клиента (NOTIFY-2, ADR-0023 п. 2) ─────────────────────────────────────────────────
+#
+# Прежде письма о счёте, акте и просрочке адресовались только `buyer_team_user_ids` — пользователям ERP компании-покупателя.
+# У клиентов кабинета пользователей ERP нет (FIX-13), поэтому контакты клиента этих писем не получали никогда. Теперь
+# маршрутизатор уведомлений шлёт письмо `portal_notice` каждому действующему контакту без Telegram (с Telegram — пишет бот
+# CRM), а пользователям покупателя — как прежде.
+
+
+@pytest.fixture
+def contacts(world):
+    from parties.models import Contact
+
+    plain = Contact.objects.create(
+        company=world["buyer_co"], name="Plain Contact", email="plain@buyer-g3.example", can_act=True, language="en"
+    )
+    telegram = Contact.objects.create(
+        company=world["buyer_co"],
+        name="Telegram Contact",
+        email="tg@buyer-g3.example",
+        telegram_user_id=4242,
+        can_act=True,
+    )
+    # Компания сопоставлена клиенту CRM: события доходят до бота, контакт с Telegram получает сообщение бота
+    from integration.models import CrmClientMapping
+
+    CrmClientMapping.objects.create(crm_client_id=99001, company=world["buyer_co"])
+    return {"plain": plain, "telegram": telegram}
+
+
+def _contact_mail(mock) -> list:
+    """Адресаты писем уведомлений кабинета, поставленных в очередь (id строки ленты → адрес контакта)."""
+    from portal.models import PortalNotice
+
+    ids = [call.args[0] for call in mock.delay.call_args_list]
+    return sorted(PortalNotice.objects.get(pk=pk).contact.email for pk in ids)
+
+
+def test_issuing_an_invoice_emails_contacts_without_telegram(world, contacts, django_capture_on_commit_callbacks):
+    from crm.services.invoice_lifecycle import issue_invoice
+
+    invoice = _invoice(world, "DRAFT")
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            issue_invoice(invoice, world["seller_user"])
+
+    assert _sent(users_mail)[0][1] == [world["buyer_user"].email], "пользователям покупателя — как прежде"
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"], "контакту без Telegram — письмо, с Telegram — бот"
+
+
+def test_issuing_an_act_emails_contacts_without_telegram(world, contacts, django_capture_on_commit_callbacks):
+    from crm.services.billing import generate_act
+
+    invoice = _invoice(world, "PAID", paid=Decimal("112"))
+    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+        with django_capture_on_commit_callbacks(execute=True):
+            act, error = generate_act(invoice.id, actor=world["seller_user"])
+
+    assert error is None, error
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example"]
+
+
+def test_payment_reminder_reaches_every_contact(world, contacts, django_capture_on_commit_callbacks):
+    """Бот о просрочке не пишет — письмо получает и контакт с Telegram (уведомление не теряется)."""
+    from crm.tasks import send_payment_reminders
+
+    _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
+    with patch("notifications.tasks.send_transactional_email"), patch("portal.tasks.send_notice_email") as contact_mail:
+        with django_capture_on_commit_callbacks(execute=True):
+            send_payment_reminders()
+
+    assert _contact_mail(contact_mail) == ["plain@buyer-g3.example", "tg@buyer-g3.example"]

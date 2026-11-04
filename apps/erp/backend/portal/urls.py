@@ -40,6 +40,7 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_notifications import NotificationListView, NotificationReadView
 from portal.views_partner import (
     PartnerConfirmView,
     PartnerPriceListTaskView,
@@ -65,6 +66,11 @@ urlpatterns = [
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),
+    # Колокольчик кабинета (NOTIFY-2)
+    path("notifications", NotificationListView.as_view(), name="portal-notifications"),
+    path("notifications/", NotificationListView.as_view(), name="portal-notifications-slash"),
+    path("notifications/read", NotificationReadView.as_view(), name="portal-notifications-read"),
+    path("notifications/read/", NotificationReadView.as_view(), name="portal-notifications-read-slash"),
     # Requests (Запросы клиента)
     path("requests", RequestListView.as_view(), name="portal-requests"),
     path("requests/", RequestListView.as_view(), name="portal-requests-slash"),

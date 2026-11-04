@@ -945,11 +945,15 @@ def remind_act_acceptance(act_id: int, actor: CustomUser) -> Tuple[Optional[obje
         deal=act.deal,
         company_id=act.deal.company_id,
     )
+    from portal.services import notice_sources
+
     from .deal_emails import email_act_awaiting_acceptance
     from .deal_notifications import notify_act_issued
 
     transaction.on_commit(lambda: notify_act_issued(act))
     email_act_awaiting_acceptance(act)
+    # Колокольчик и письмо контактам заказчика (NOTIFY-2): напоминание — новая строка ленты, событие шины не публикуется.
+    notice_sources.act_issued(act, reminder=True)
     return act, None
 
 

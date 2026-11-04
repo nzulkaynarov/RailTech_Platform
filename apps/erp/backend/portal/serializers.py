@@ -86,6 +86,7 @@ class MeSerializer(serializers.Serializer):
     company = CompanySerializer()
     can_act = serializers.BooleanField()
     auth_method = serializers.ChoiceField(choices=["telegram", "magic_link"])
+    notifications_unread = serializers.IntegerField(min_value=0)
     roles = serializers.ListField(child=serializers.ChoiceField(choices=["client", "partner"]))
     modules = serializers.ListField(child=serializers.CharField())
 

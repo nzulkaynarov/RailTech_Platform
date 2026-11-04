@@ -271,6 +271,8 @@ class TestMe:
 
 #: Операции, открытые любой роли или без сессии: вход, выход и профиль. Всё остальное в контракте — по модулям.
 ANY_ROLE_PATHS = {"/auth/telegram", "/auth/magic-link", "/auth/magic", "/auth/code", "/auth/logout", "/me"}
+#: Колокольчик (NOTIFY-2) — модуль `profile`, он есть у любой сессии: лента фильтруется по модулям, а не закрывается
+ANY_ROLE_PATHS |= {"/notifications", "/notifications/read"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

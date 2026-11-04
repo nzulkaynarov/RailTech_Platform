@@ -59,6 +59,7 @@ from portal.serializers import (
 )
 from portal.services import catalog_documents
 from portal.services import documents as portal_documents
+from portal.services import notices
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
 from portal.services.access import company_access
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
@@ -142,6 +143,7 @@ def _me_data(session, auth_method: str | None = None, access: tuple[list[str], l
         "company": CompanySerializer(session.company).data,
         "can_act": session.contact.can_act,
         "auth_method": auth_method or session.auth_method,
+        "notifications_unread": notices.unread_count(session.contact, session.company, modules),
         "roles": roles,
         "modules": modules,
     }

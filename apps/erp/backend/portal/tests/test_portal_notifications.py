@@ -1,0 +1,500 @@
+"""Колокольчик кабинета и маршрутизатор уведомлений контрагента (NOTIFY-2, ADR-0023 п. 2, ADR-0008).
+
+Что держат тесты:
+1. источники — события ERP для контрагента пишут строку ленты на каждый действующий контакт; повтор события строк и писем не
+   добавляет; группы, виды, объекты и действия — те же, что в контракте;
+2. маршрутизатор — один внешний канал на событие и контакт: бот CRM уже шлёт (Telegram привязан, компания сопоставлена CRM) —
+   ERP не дублирует; вид, который бот не шлёт, — письмом и контакту с Telegram; письмо КП уже ушло — второго нет;
+3. лента портала — по убыванию, страницы, прочитанность по контакту, «прочитать все», счётчик в `/me`, изоляция компаний,
+   контактов и модулей (чужое не читается и не помечается);
+4. письмо — шаблон `portal_notice` на языке контакта (ru/uz/en), подвал «Настроить уведомления»; отложенное письмо (ответ
+   менеджера) гасится прочтением и присутствием, повтор задачи второго письма не шлёт (мутационная проверка — в PR).
+"""
+
+from __future__ import annotations
+
+import re
+from datetime import timedelta
+
+import pytest
+from django.core import mail
+from django.db import transaction
+from django.test import override_settings
+from django.utils import timezone
+from integration.models import CrmClientMapping
+from parties.models import Contact
+from portal.models import NoticeChannel, NoticeEmailState, PortalNotice
+from portal.services import notice_sources, notices
+from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, make_portal_session
+from portal.tests.contract_support import component
+
+pytestmark = pytest.mark.django_db
+
+API = "/api/portal/v1"
+CYRILLIC = re.compile("[А-Яа-яЁё]")
+
+
+@pytest.fixture
+def no_tg_contact(client_company):
+    """Контакт без Telegram: внешний канал у него — письмо."""
+    return Contact.objects.create(
+        company=client_company, name="Nodira Accountant", email="nodira@client.example", can_act=True, language="uz"
+    )
+
+
+@pytest.fixture
+def crm_mapped(client_company):
+    return CrmClientMapping.objects.create(crm_client_id=7001, company=client_company)
+
+
+@pytest.fixture
+def enqueued(monkeypatch):
+    """Письма уведомлений, поставленные в очередь после коммита (id строк ленты)."""
+    from portal import tasks
+
+    sent: list[int] = []
+    monkeypatch.setattr(tasks.send_notice_email, "delay", lambda notice_id: sent.append(notice_id))
+    return sent
+
+
+def _notify(company, kind="invoice_issued", dedup="1", object_id=1, **extra):
+    extra.setdefault("link", "/invoices?focus=1")
+    return notices.notify(kind, company=company, object_id=object_id, object_number="INV-1", dedup=dedup, **extra)
+
+
+def _by_contact(rows):
+    return {row.contact_id: row for row in rows}
+
+
+def client_for(session):
+    from django.conf import settings
+
+    client = PortalAPIClient()
+    client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = session.raw_token
+    client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+    return client
+
+
+# ── 0. Перечни совпадают с контрактом ───────────────────────────────────────────────────────────────────────────────
+
+
+def test_kinds_groups_objects_and_actions_match_the_contract():
+    assert set(notices.KINDS) == set(component("NotificationKind")["enum"])
+    assert set(notices.GROUPS) == set(component("NotificationGroup")["enum"])
+    assert {kind.group for kind in notices.KINDS.values()} == set(notices.GROUPS)
+    assert {kind.object_type for kind in notices.KINDS.values()} == set(component("NotificationObjectType")["enum"])
+    assert {kind.action for kind in notices.KINDS.values()} == set(component("NotificationAction")["enum"])
+
+
+# ── 1. Маршрутизатор: один канал на событие и контакт ────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("kind", "telegram", "email", "bot_reaches", "emailed", "expected"),
+    [
+        ("invoice_issued", 1, "a@x.example", True, set(), NoticeChannel.TELEGRAM),  # бот уже шлёт — ERP молчит
+        ("invoice_issued", None, "a@x.example", True, set(), NoticeChannel.EMAIL),  # Telegram нет — письмо
+        ("invoice_issued", 1, "a@x.example", False, set(), NoticeChannel.EMAIL),  # компания не в CRM — бот не узнает
+        ("payment_overdue", 1, "a@x.example", True, set(), NoticeChannel.EMAIL),  # бот этот вид не шлёт — письмо
+        ("partner_card_returned", 1, "a@x.example", True, set(), NoticeChannel.EMAIL),
+        ("manager_replied", None, "a@x.example", True, set(), NoticeChannel.EMAIL_DELAYED),
+        ("delivery_status_changed", None, "a@x.example", True, set(), NoticeChannel.CABINET),  # не важное
+        ("quote_sent", None, "A@X.example", False, {"a@x.example"}, NoticeChannel.SOURCE),  # письмо КП уже ушло
+        ("act_issued", None, "", True, set(), NoticeChannel.CABINET),  # писать некуда
+    ],
+)
+def test_router_picks_one_channel(kind, telegram, email, bot_reaches, emailed, expected):
+    contact = Contact(name="X", email=email, telegram_user_id=telegram)
+    assert (
+        notices.choose_channel(notices.KINDS[kind], contact, bot_reaches=bot_reaches, already_emailed=emailed)
+        == expected
+    )
+
+
+# ── 2. Источники: событие → строка ленты на контакт, идемпотентно ────────────────────────────────────────────────────
+
+
+def test_invoice_issued_reaches_every_contact_once(
+    contract_world,
+    client_contact,
+    readonly_contact,
+    no_tg_contact,
+    crm_mapped,
+    enqueued,
+    django_capture_on_commit_callbacks,
+):
+    from integration.services import events
+
+    invoice = contract_world["invoices"]["partially_paid"]
+    with django_capture_on_commit_callbacks(execute=True):
+        events.publish_invoice_event("invoice.issued", invoice)
+        events.publish_invoice_event("invoice.issued", invoice)  # повтор события
+
+    rows = PortalNotice.objects.filter(kind="invoice_issued", object_id=invoice.pk)
+    assert rows.count() == 3, "строка на каждый контакт и ни одной лишней"
+    by = _by_contact(rows)
+    assert by[client_contact.pk].channel == NoticeChannel.TELEGRAM  # бот CRM уже шлёт — ERP не дублирует
+    assert by[readonly_contact.pk].channel == NoticeChannel.TELEGRAM
+    assert by[no_tg_contact.pk].channel == NoticeChannel.EMAIL
+    assert enqueued == [by[no_tg_contact.pk].pk], "письмо — только контакту без Telegram, и одно"
+    row = by[no_tg_contact.pk]
+    assert (row.group, row.object_type, row.action) == ("money", "invoice", "issued")
+    assert row.link == f"/invoices?focus={invoice.pk}"
+    assert row.params["number"] == invoice.number and row.params["currency"] == "UZS"
+
+
+def test_company_without_crm_mapping_gets_email_even_with_telegram(
+    contract_world, client_contact, enqueued, django_capture_on_commit_callbacks
+):
+    """События на шине нет (компания не сопоставлена клиенту CRM) — бот не напишет, поэтому письмо."""
+    from integration.services import events
+
+    act = contract_world["acts"]["accepted"]
+    with django_capture_on_commit_callbacks(execute=True):
+        assert events.publish_act_event("act.issued", act) is None
+    row = PortalNotice.objects.get(kind="act_issued", object_id=act.pk, contact=client_contact)
+    assert row.channel == NoticeChannel.EMAIL and row.action == "awaiting_acceptance"
+    assert row.pk in enqueued
+
+
+def test_overdue_payment_is_emailed_to_contacts_with_telegram_too(
+    contract_world, client_contact, crm_mapped, enqueued, django_capture_on_commit_callbacks
+):
+    from integration.services import events
+
+    invoice = contract_world["invoices"]["overdue"]
+    PortalNotice.objects.filter(kind="payment_overdue").delete()
+    with django_capture_on_commit_callbacks(execute=True):
+        events.publish_invoice_event("invoice.overdue", invoice)
+    row = PortalNotice.objects.get(kind="payment_overdue", contact=client_contact)
+    assert row.channel == NoticeChannel.EMAIL, "бот о просрочке не пишет — уведомление не теряется"
+    assert row.pk in enqueued
+
+
+def test_quote_sent_does_not_repeat_the_quote_email(contract_world, client_contact, no_tg_contact, enqueued):
+    """Письмо с КП получателю КП уже уходит (ERP-11): ему второе не шлём; коллеге без Telegram — уведомление письмом."""
+    quote = contract_world["quotes"]["viewed"]
+    notice_sources.quote_sent(quote, channels=["email"])
+    by = _by_contact(PortalNotice.objects.filter(kind="quote_sent", object_id=quote.pk))
+    assert by[client_contact.pk].channel == NoticeChannel.SOURCE  # получатель КП — контакт сделки
+    assert by[no_tg_contact.pk].channel == NoticeChannel.EMAIL
+    assert by[client_contact.pk].link == f"/quotes/{quote.pk}"
+    # переотправка той же версии — без новых строк
+    notice_sources.quote_sent(quote, channels=["telegram"])
+    assert PortalNotice.objects.filter(kind="quote_sent", object_id=quote.pk).count() == 2
+
+
+def test_delivery_status_is_bell_only_and_client_decisions_are_not_echoed(contract_world, client_contact, enqueued):
+    shipped = contract_world["deliveries"]["in_transit"]
+    notice_sources.delivery_status_changed(shipped, "in_transit")
+    row = PortalNotice.objects.get(kind="delivery_status_changed", object_id=shipped.pk, contact=client_contact)
+    assert row.channel == NoticeChannel.CABINET and row.email_state == ""
+    assert row.link == f"/deals/{shipped.deal_id}"
+    accepted = contract_world["deliveries"]["accepted"]
+    notice_sources.delivery_status_changed(accepted, "delivered")
+    assert not PortalNotice.objects.filter(object_id=accepted.pk, kind="delivery_status_changed").exists()
+
+
+def test_eta_shift_is_important(
+    contract_world, no_tg_contact, crm_mapped, enqueued, django_capture_on_commit_callbacks
+):
+    fulfillment = contract_world["deliveries"]["shipped"]
+    previous = fulfillment.expected_delivery_date
+    fulfillment.expected_delivery_date = previous + timedelta(days=5)
+    fulfillment.save(update_fields=["expected_delivery_date"])
+    with django_capture_on_commit_callbacks(execute=True):
+        notice_sources.delivery_eta_changed(fulfillment, previous)
+        notice_sources.delivery_eta_changed(fulfillment, previous)
+    row = PortalNotice.objects.get(kind="delivery_eta_changed", contact=no_tg_contact, object_id=fulfillment.pk)
+    assert row.channel == NoticeChannel.EMAIL
+    assert row.params["previous_eta"] == previous.isoformat()
+    assert enqueued.count(row.pk) == 1
+
+
+def test_archived_contacts_and_closed_companies_get_nothing(client_company, client_contact, no_tg_contact):
+    no_tg_contact.archived_at = timezone.now()
+    no_tg_contact.save(update_fields=["archived_at"])
+    rows = _notify(client_company)
+    assert [row.contact_id for row in rows] == [client_contact.pk]
+    type(client_company).objects.filter(pk=client_company.pk).update(is_active=False)  # архив — кабинет закрыт
+    assert _notify(client_company, dedup="2") == []
+
+
+def test_rollback_leaves_neither_notice_nor_email(client_company, client_contact, enqueued):
+    with pytest.raises(RuntimeError):
+        with transaction.atomic():
+            _notify(client_company, dedup="rollback")
+            raise RuntimeError("откат")
+    assert not PortalNotice.objects.filter(dedup_key="invoice_issued:rollback").exists()
+    assert enqueued == []
+
+
+# ── 3. Лента портала ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+def test_feed_is_newest_first_with_pages(portal_client, client_company, client_contact):
+    for n in range(5):
+        _notify(client_company, dedup=f"page-{n}", object_id=n + 1)
+    first = portal_client.get(f"{API}/notifications?limit=2").json()
+    assert first["has_more"] is True
+    ids = [item["id"] for item in first["items"]]
+    assert ids == sorted(ids, reverse=True)
+    rest = portal_client.get(f"{API}/notifications?limit=10&before_id={ids[-1]}").json()
+    assert rest["has_more"] is False and len(rest["items"]) == 3
+    item = first["items"][0]
+    assert item["object"] == {"type": "invoice", "id": 5, "number": "INV-1"}
+    assert item["read_at"] is None and item["text_key"] == "invoice_issued"
+
+
+@pytest.mark.parametrize("query", ["limit=0", "limit=51", "limit=x", "before_id=0"])
+def test_bad_page_params_are_422(portal_client, query):
+    response = portal_client.get(f"{API}/notifications?{query}")
+    assert response.status_code == 422 and response.json() == {"detail": "VALIDATION_ERROR"}
+
+
+def test_unread_counter_read_by_ids_and_read_all(portal_client, client_company, client_contact):
+    rows = [_notify(client_company, dedup=f"r-{n}", object_id=n + 1)[0] for n in range(3)]
+    assert portal_client.get(f"{API}/me").json()["notifications_unread"] == 3
+    response = portal_client.post(f"{API}/notifications/read", {"ids": [rows[0].pk]}, format="json")
+    assert response.status_code == 200 and response.json() == {"unread": 2}
+    assert portal_client.get(f"{API}/me").json()["notifications_unread"] == 2
+    assert portal_client.post(f"{API}/notifications/read", {"all": True}, format="json").json() == {"unread": 0}
+    assert PortalNotice.objects.filter(contact=client_contact, read_at__isnull=True).count() == 0
+
+
+@pytest.mark.parametrize("body", [{}, {"ids": [1], "all": True}, {"all": False}, {"ids": []}, {"ids": [1], "x": 1}])
+def test_read_mark_needs_exactly_one_of_ids_or_all(portal_client, body):
+    response = portal_client.post(f"{API}/notifications/read", body, format="json")
+    assert response.status_code == 422 and response.json() == {"detail": "VALIDATION_ERROR"}
+
+
+def test_readonly_contact_can_mark_read(readonly_portal_client, client_company, readonly_contact):
+    """Прочтение — не действие за компанию: `can_act` не нужен."""
+    row = _notify(client_company, dedup="ro")
+    mine = next(r for r in row if r.contact_id == readonly_contact.pk)
+    response = readonly_portal_client.post(f"{API}/notifications/read", {"ids": [mine.pk]}, format="json")
+    assert response.status_code == 200 and response.json() == {"unread": 0}
+
+
+def test_other_company_notices_are_neither_listed_nor_marked(
+    portal_client, client_company, client_contact, other_company, other_contact
+):
+    theirs = _notify(other_company, dedup="theirs")[0]
+    mine = _notify(client_company, dedup="mine")
+    listed = {item["id"] for item in portal_client.get(f"{API}/notifications").json()["items"]}
+    assert theirs.pk not in listed and {r.pk for r in mine if r.contact_id == client_contact.pk} == listed
+    portal_client.post(f"{API}/notifications/read", {"ids": [theirs.pk]}, format="json")
+    portal_client.post(f"{API}/notifications/read", {"all": True}, format="json")
+    theirs.refresh_from_db()
+    assert theirs.read_at is None, "чужое уведомление не помечается ни по id, ни «прочитать все»"
+
+
+def test_colleague_notices_are_private(portal_client, client_company, client_contact, readonly_contact):
+    """Строка — на контакт: коллега видит и читает своё, прочтение одного не гасит другому."""
+    rows = _by_contact(_notify(client_company, dedup="colleague"))
+    colleague = rows[readonly_contact.pk]
+    listed = {item["id"] for item in portal_client.get(f"{API}/notifications").json()["items"]}
+    assert colleague.pk not in listed
+    assert portal_client.post(f"{API}/notifications/read", {"ids": [colleague.pk]}, format="json").json() == {
+        "unread": 1
+    }
+    colleague.refresh_from_db()
+    assert colleague.read_at is None
+    portal_client.post(f"{API}/notifications/read", {"all": True}, format="json")
+    colleague.refresh_from_db()
+    assert colleague.read_at is None
+
+
+def test_contact_moved_to_another_company_does_not_see_old_notices(client_company, client_contact, other_company):
+    _notify(client_company, dedup="moved")
+    session = make_portal_session(client_contact, client_company, "telegram")
+    Contact.objects.filter(pk=client_contact.pk).update(company=other_company)
+    assert client_for(session).get(f"{API}/notifications").status_code == 401
+
+
+def test_feed_and_counter_follow_session_modules(supplier_partner):
+    """Партнёру без модуля счетов уведомления о счёте не видны и не считаются; карточка партнёра — видна."""
+    company, contact, client = supplier_partner
+    PortalNotice.objects.create(
+        company=company,
+        contact=contact,
+        kind="invoice_issued",
+        group="money",
+        object_type="invoice",
+        object_id=1,
+        action="issued",
+        text_key="invoice_issued",
+        link="/invoices",
+        dedup_key="x:1",
+    )
+    card = PortalNotice.objects.create(
+        company=company,
+        contact=contact,
+        kind="partner_card_returned",
+        group="partner_products",
+        object_type="partner_product",
+        object_id=9,
+        object_number="Болт М12",
+        action="returned",
+        text_key="partner_card_returned",
+        link="/my-products?card=9",
+        dedup_key="x:2",
+    )
+    body = client.get(f"{API}/notifications").json()
+    assert [item["id"] for item in body["items"]] == [card.pk]
+    assert client.get(f"{API}/me").json()["notifications_unread"] == 1
+    assert client.post(f"{API}/notifications/read", {"all": True}, format="json").json() == {"unread": 0}
+    assert (
+        PortalNotice.objects.get(kind="invoice_issued").read_at is None
+    ), "невидимое модулям «прочитать все» не трогает"
+
+
+@pytest.fixture
+def supplier_partner(db):
+    from parties.models import Company, CompanyRelationship, CompanyType, RelationshipRole, RelationshipStatus
+
+    company = Company.objects.create(name="OOO Partner Bell", inn="300000777")
+    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик"})[0])
+    CompanyRelationship.objects.create(
+        company=company, role=RelationshipRole.PARTNER, status=RelationshipStatus.ACTIVE, modules=["my_products"]
+    )
+    contact = Contact.objects.create(company=company, name="Partner", email="p@partner.example", can_act=True)
+    return company, contact, client_for(make_portal_session(contact, company, "magic_link"))
+
+
+# ── 4. Письмо по уведомлению ─────────────────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def locmem(settings):
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
+    settings.CABINET_URL = "https://cabinet.example.test"
+    mail.outbox.clear()
+    return mail.outbox
+
+
+@pytest.mark.parametrize("language", ["ru", "uz", "en"])
+@pytest.mark.parametrize(
+    "kind", ["invoice_issued", "payment_overdue", "act_issued", "quote_sent", "delivery_eta_changed"]
+)
+def test_email_is_in_the_contact_language_with_settings_footer(locmem, client_company, no_tg_contact, kind, language):
+    no_tg_contact.language = language
+    no_tg_contact.name = "Nodira"
+    no_tg_contact.save(update_fields=["language", "name"])
+    client_company.name = "Acme Trading"
+    client_company.save(update_fields=["name"])
+    params = {
+        "number": "INV-7",
+        "amount": "1200.00",
+        "currency": "UZS",
+        "due_date": "2026-11-20",
+        "deal": "D-5",
+        "eta": "2026-12-01",
+        "previous_eta": "2026-11-25",
+    }
+    row = notices.notify(
+        kind,
+        company=client_company,
+        object_id=7,
+        object_number="INV-7",
+        params=params,
+        link="/invoices?focus=7",
+        dedup="mail",
+        bot_reaches=True,
+    )
+    row = next(r for r in row if r.contact_id == no_tg_contact.pk)
+    assert notices.deliver_email(row.pk) == "sent"
+    assert len(locmem) == 1
+    message = locmem[0]
+    assert message.to == ["nodira@client.example"]
+    html = message.alternatives[0][0]
+    for body in (message.body, html):
+        assert "https://cabinet.example.test/invoices?focus=7" in body
+        assert "https://cabinet.example.test/profile#notifications" in body, "подвал «Настроить уведомления»"
+    if language != "ru":
+        assert not CYRILLIC.search(message.subject), message.subject
+        assert not CYRILLIC.search(message.body), message.body
+    row.refresh_from_db()
+    assert row.email_state == NoticeEmailState.SENT and row.email_sent_at is not None
+
+
+def test_repeated_task_does_not_send_twice(locmem, client_company, no_tg_contact):
+    """Повтор задачи (ретрай Celery, сборщик и задача после коммита одновременно) второго письма не шлёт.
+
+    Мутационная проверка (PR): без отбора `email_state=PENDING` под блокировкой строки в `deliver_email` тест краснеет —
+    уходят два письма.
+    """
+    row = next(r for r in _notify(client_company, dedup="twice") if r.contact_id == no_tg_contact.pk)
+    assert notices.deliver_email(row.pk) == "sent"
+    assert notices.deliver_email(row.pk) == "skipped"
+    assert notices.send_due_emails() == {"sent": 0, "cancelled": 0, "skipped": 0, "not_due": 0}
+    assert len(locmem) == 1
+
+
+def _delayed(company, contact):
+    rows = notices.notify("manager_replied", company=company, object_id=1, link="/messages", dedup="reply-1")
+    return next(r for r in rows if r.contact_id == contact.pk)
+
+
+def test_delayed_email_waits_then_goes_if_unread(locmem, client_company, no_tg_contact):
+    row = _delayed(client_company, no_tg_contact)
+    assert row.channel == NoticeChannel.EMAIL_DELAYED
+    assert row.email_due_at - row.created_at >= timedelta(minutes=10) - timedelta(seconds=1)
+    assert notices.deliver_email(row.pk) == "not_due"
+    assert notices.send_due_emails()["sent"] == 0
+    PortalNotice.objects.filter(pk=row.pk).update(email_due_at=timezone.now() - timedelta(seconds=1))
+    assert notices.send_due_emails()["sent"] == 1
+    assert notices.send_due_emails()["sent"] == 0, "повтор сборщика второго письма не шлёт"
+    assert len(locmem) == 1
+
+
+def test_reading_in_the_bell_cancels_the_delayed_email(locmem, client_company, no_tg_contact):
+    row = _delayed(client_company, no_tg_contact)
+    notices.mark_read(no_tg_contact, client_company, ["profile", "messages"], ids=[row.pk])
+    PortalNotice.objects.filter(pk=row.pk).update(email_due_at=timezone.now() - timedelta(seconds=1))
+    assert notices.send_due_emails()["sent"] == 0
+    row.refresh_from_db()
+    assert row.email_state == NoticeEmailState.CANCELLED
+    assert locmem == []
+
+
+def test_presence_cancels_the_delayed_email(locmem, client_company, no_tg_contact):
+    """Контакт заходил в кабинет после ответа — письмо не нужно (ADR-0023: «контакт в кабинете — только кабинет»)."""
+    row = _delayed(client_company, no_tg_contact)
+    Contact.objects.filter(pk=no_tg_contact.pk).update(last_login_at=timezone.now() + timedelta(seconds=1))
+    PortalNotice.objects.filter(pk=row.pk).update(email_due_at=timezone.now() - timedelta(seconds=1))
+    assert notices.deliver_email(row.pk) == "cancelled"
+    assert locmem == []
+
+
+def test_due_sweeper_task_is_scheduled():
+    from core.celery import app
+
+    assert app.conf.beat_schedule["portal.send_due_notice_emails"]["schedule"] == 60.0
+
+
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
+def test_archived_contact_email_is_cancelled(client_company, no_tg_contact):
+    row = next(r for r in _notify(client_company, dedup="arch") if r.contact_id == no_tg_contact.pk)
+    Contact.objects.filter(pk=no_tg_contact.pk).update(archived_at=timezone.now())
+    assert notices.deliver_email(row.pk) == "cancelled"
+
+
+def test_act_reminder_is_a_new_bell_item_and_email(
+    contract_world, no_tg_contact, enqueued, django_capture_on_commit_callbacks
+):
+    """«Напомнить» исполнителя: новая строка ленты и письмо; бот о напоминании не пишет — событие шины не публикуется."""
+    act = contract_world["acts"]["issued"]
+    act.reminder_sent_at = timezone.now()
+    act.save(update_fields=["reminder_sent_at"])
+    with django_capture_on_commit_callbacks(execute=True):
+        notice_sources.act_issued(act, reminder=True)
+        notice_sources.act_issued(act, reminder=True)
+    reminder = PortalNotice.objects.get(
+        kind="act_issued", object_id=act.pk, contact=no_tg_contact
+    )  # повтор — без второй
+    assert reminder.params["reminder"] == "1" and reminder.channel == NoticeChannel.EMAIL
+    reminders = PortalNotice.objects.filter(kind="act_issued", object_id=act.pk, params__reminder="1")
+    assert sorted(enqueued) == sorted(reminders.values_list("pk", flat=True)), "по письму на контакт, и с Telegram тоже"
+    issued = PortalNotice.objects.filter(kind="act_issued", object_id=act.pk, params__reminder="")
+    assert issued.exists(), "напоминание — отдельная строка рядом с выставлением, а не замена"
