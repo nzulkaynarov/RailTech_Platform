@@ -61,6 +61,14 @@ def test_disabled_trigger_is_skipped() -> None:
     assert evaluate(TriggerSignals(score=95), cfg) == []
 
 
+def test_cabinet_message_cannot_be_disabled() -> None:
+    """CHAT-1: бот сообщение кабинета не обрабатывает — выключенная передача оставила бы его вне
+    очереди, поэтому `cabinet_message` настройкой не выключается."""
+    cfg = TriggerSettings(disabled=frozenset({T.CABINET_MESSAGE, T.HIGH_SCORE}))
+    hits = evaluate(TriggerSignals(cabinet_message=True, score=95), cfg)
+    assert [h.code for h in hits] == [T.CABINET_MESSAGE]
+
+
 def test_thresholds_are_configurable() -> None:
     cfg = TriggerSettings(high_score_threshold=50, no_progress_turns=2, kb_gap_streak=3)
     codes = {

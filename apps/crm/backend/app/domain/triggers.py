@@ -38,6 +38,10 @@ class TriggerCode(StrEnum):
     CABINET_MESSAGE = "cabinet_message"
 
 
+#: Не выключаются настройкой `escalation.disabled_triggers`: сообщение из кабинета бот не
+#: обрабатывает, без передачи оно не попало бы ни в одну группу очереди (CHAT-1).
+ALWAYS_ON: Final = frozenset({TriggerCode.CABINET_MESSAGE})
+
 PRIORITY: Final[dict[TriggerCode, Priority]] = {
     TriggerCode.HUMAN_REQUESTED: Priority.HOT,
     TriggerCode.CALLBACK_REQUESTED: Priority.HOT,
@@ -101,7 +105,11 @@ class TriggerHit:
 def evaluate(signals: TriggerSignals, settings: TriggerSettings) -> list[TriggerHit]:
     """Сработавшие триггеры в порядке убывания приоритета (стабильно по таблице)."""
     fired = [code for code in TriggerCode if _fires(code, signals, settings)]
-    hits = [TriggerHit(code, PRIORITY[code]) for code in fired if code not in settings.disabled]
+    hits = [
+        TriggerHit(code, PRIORITY[code])
+        for code in fired
+        if code not in settings.disabled or code in ALWAYS_ON
+    ]
     return sorted(hits, key=lambda h: -PRIORITY_ORDER[h.priority])
 
 

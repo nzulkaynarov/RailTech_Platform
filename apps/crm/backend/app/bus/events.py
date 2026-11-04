@@ -189,11 +189,12 @@ async def lead_stage_changed(
 
 
 async def lead_erased(
-    session: AsyncSession, lead: Lead, actor: Actor, *, cabinet_erp_company_id: int | None = None
+    session: AsyncSession, lead: Lead, actor: Actor, *, cabinet: dict[str, Any] | None = None
 ) -> None:
     """Лид обезличен по запросу: только идентификаторы и время; подписчики стирают свои копии.
 
-    `cabinet_erp_company_id` — лид вёл беседу кабинета этой компании (CHAT-1): ERP стирает ленту."""
+    `cabinet` — чьи сообщения ленты кабинета стереть (CHAT-1): `erp_company_id`, `scope`
+    (`authors` — только этих авторов, `company` — вся лента), `erp_contact_ids`."""
     _require_transaction(session)
     if _internal(lead):
         return
@@ -203,8 +204,8 @@ async def lead_erased(
         "erased_at": snapshots.utc(await snapshots.db_now(session)),
         "actor": snapshots.actor_of(actor),
     }
-    if cabinet_erp_company_id is not None:
-        data["cabinet_erp_company_id"] = cabinet_erp_company_id
+    if cabinet is not None:
+        data["cabinet"] = cabinet
     await _publish(session, LEAD_ERASED, data, f"lead/{lead.id}")
 
 

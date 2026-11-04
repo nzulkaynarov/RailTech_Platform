@@ -53,6 +53,10 @@ CABINET_SOURCE: Final = repo.CABINET
 EscalationHook = Callable[[int, bool], Awaitable[object]]
 
 
+class CabinetCompanyMismatchError(Exception):
+    """Беседа кабинета клиента — другой компании ERP, чем событие (сопоставление разошлось)."""
+
+
 class CabinetChatService:
     def __init__(self, settings: SettingsService, on_escalation: EscalationHook | None) -> None:
         self._settings = settings
@@ -71,6 +75,13 @@ class CabinetChatService:
         conversation = await repo.cabinet_conversation(
             session, client.id if client is not None else None, company
         )
+        if conversation is not None and conversation.erp_company_id not in (None, company):
+            # Клиент CRM уже ведёт беседу с другой компанией ERP: в чужую ленту не пишем — событие в
+            # failed (журнал шины), разбирается сопоставление клиента и компании.
+            raise CabinetCompanyMismatchError(
+                f"cabinet conversation {conversation.id} belongs to erp company "
+                f"{conversation.erp_company_id}, event is for {company}"
+            )
         key = payload.client_message_id
         if conversation is not None and await repo.inbound_by_key(session, conversation.id, key):
             logger.info("cabinet_message_duplicate", erp_company_id=company)
@@ -249,3 +260,28 @@ async def send_reply(
         )
         lead.last_human_msg_at = datetime.now(UTC)
         return message.id, True
+
+
+async def erase_for_lead(session: AsyncSession, lead: Lead) -> dict[str, Any] | None:
+    """Обезличивание лида (/delete): в кабинете стираются только сообщения этого человека (его
+    контакты клиента). Беседа кабинета живёт на клиенте: якорь переходит на другой лид клиента или
+    новый лид по правилу якоря. Возвращает `cabinet` для `lead.erased` (или None — стирать нечего).
+    Вызывать в транзакции обезличивания до `erase_lead` (иначе беседа ушла бы вместе с лидом)."""
+    conversations = await repo.cabinet_conversations_of(session, lead)
+    contacts = await repo.person_contacts(session, lead.id)
+    erp_contacts = await repo.erase_authors(session, [c.id for c in conversations], contacts)
+    for conversation in conversations:
+        if conversation.lead_id != lead.id:
+            continue
+        client = (
+            await session.get(Client, conversation.client_id) if conversation.client_id else None
+        )
+        anchor = await repo.anchor_lead(session, client.id, exclude=lead.id) if client else None
+        if anchor is None:
+            anchor = await _new_lead(session, client, lead.company_name or "")
+        conversation.lead_id = anchor.id
+    await session.flush()
+    companies = {c.erp_company_id for c in conversations if c.erp_company_id is not None}
+    if not erp_contacts or len(companies) != 1:
+        return None
+    return {"erp_company_id": companies.pop(), "scope": "authors", "erp_contact_ids": erp_contacts}

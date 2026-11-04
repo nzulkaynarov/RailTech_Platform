@@ -10,8 +10,9 @@ from typing import Final
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.clients import Client
-from app.models.leads import Conversation, Lead, Message
+from app.models.clients import Client, ClientContact
+from app.models.leads import Conversation, Lead, Message, TelegramIdentity
+from app.repositories.leads import ERASED_TEXT
 
 CABINET: Final = "cabinet"
 TELEGRAM: Final = "telegram"
@@ -49,23 +50,66 @@ async def cabinet_conversation(
     return by_company
 
 
-async def lead_cabinet_company(session: AsyncSession, lead_id: int) -> int | None:
-    """Компания ERP беседы кабинета, которую ведёт лид (для `lead.erased`); нет — None."""
-    stmt = select(Conversation.erp_company_id).where(
-        Conversation.lead_id == lead_id,
-        Conversation.channel == CABINET,
-        Conversation.erp_company_id.is_not(None),
+async def cabinet_conversations_of(session: AsyncSession, lead: Lead) -> list[Conversation]:
+    """Беседы кабинета, которых касается обезличивание лида: где он якорь и беседа его клиента."""
+    match = Conversation.lead_id == lead.id
+    if lead.client_id is not None:
+        match = match | (Conversation.client_id == lead.client_id)
+    stmt = select(Conversation).where(Conversation.channel == CABINET, match).with_for_update()
+    return list((await session.scalars(stmt)).all())
+
+
+async def person_contacts(session: AsyncSession, lead_id: int) -> list[int]:
+    """Контакты клиента, которые и есть человек лида (его Telegram-идентичность)."""
+    identities = select(TelegramIdentity.id).where(TelegramIdentity.lead_id == lead_id)
+    stmt = select(ClientContact.id).where(ClientContact.telegram_identity_id.in_(identities))
+    return list((await session.scalars(stmt)).all())
+
+
+async def erase_authors(
+    session: AsyncSession, conversation_ids: Sequence[int], crm_contact_ids: Sequence[int]
+) -> list[int]:
+    """Сообщения кабинета этих контактов CRM: текст стёрт, автора нет («Удалённый пользователь»).
+    Возвращает контакты ERP — авторов стёртых сообщений (для ERP)."""
+    if not conversation_ids or not crm_contact_ids:
+        return []
+    stmt = select(Message).where(
+        Message.conversation_id.in_(conversation_ids),
+        Message.role == "lead",
+        Message.meta["crm_contact_id"].astext.in_([str(c) for c in crm_contact_ids]),
     )
-    value: int | None = (await session.scalars(stmt.limit(1))).first()
-    return value
+    erp_contacts: set[int] = set()
+    for message in (await session.scalars(stmt)).all():
+        meta = dict(message.meta or {})
+        if isinstance(meta.get("erp_contact_id"), int):
+            erp_contacts.add(meta["erp_contact_id"])
+        message.text = ERASED_TEXT
+        message.attachments = []
+        message.meta = {
+            "channel": CABINET,
+            "erased": True,
+            **(
+                {"client_message_id": meta["client_message_id"]}
+                if "client_message_id" in meta
+                else {}
+            ),
+        }
+    return sorted(erp_contacts)
 
 
-async def anchor_lead(session: AsyncSession, client_id: int) -> Lead | None:
+async def anchor_lead(
+    session: AsyncSession, client_id: int, *, exclude: int | None = None
+) -> Lead | None:
     """Лид клиента с последней активностью (не обезличенный): последнее сообщение клиента, иначе
     последнее изменение лида. Песочница не в счёт."""
     stmt = (
         select(Lead)
-        .where(Lead.client_id == client_id, Lead.erased_at.is_(None), Lead.source != "sandbox")
+        .where(
+            Lead.client_id == client_id,
+            Lead.erased_at.is_(None),
+            Lead.source != "sandbox",
+            Lead.id != (exclude or 0),
+        )
         .order_by(
             Lead.last_lead_msg_at.desc().nulls_last(),
             Lead.updated_at.desc(),

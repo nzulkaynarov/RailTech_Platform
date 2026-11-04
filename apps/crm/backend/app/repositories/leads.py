@@ -108,7 +108,12 @@ async def add_message(
     return message
 
 
-async def recent_messages(session: AsyncSession, lead_id: int, limit: int) -> Sequence[Message]:
+async def recent_messages(
+    session: AsyncSession, lead_id: int, limit: int, *, channel: str | None = "telegram"
+) -> Sequence[Message]:
+    """Последние сообщения лида по возрастанию. По умолчанию — только чат Telegram: история бота,
+    квалификатора и MCP (переписка коллег контакта в кабинете в контекст модели в Telegram не
+    попадает, CHAT-1); `channel=None` — все беседы («Подсказать ответ» менеджеру)."""
     stmt = (
         select(Message)
         .join(Conversation, Conversation.id == Message.conversation_id)
@@ -116,6 +121,8 @@ async def recent_messages(session: AsyncSession, lead_id: int, limit: int) -> Se
         .order_by(Message.id.desc())
         .limit(limit)
     )
+    if channel is not None:
+        stmt = stmt.where(Conversation.channel == channel)
     return list(reversed((await session.scalars(stmt)).all()))
 
 

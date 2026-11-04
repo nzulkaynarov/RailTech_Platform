@@ -10,7 +10,7 @@ import uuid
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from sqlalchemy import func, select, text
@@ -20,15 +20,16 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.bus import runtime
 from app.bus.runtime import build_bus
-from app.models.clients import Client
+from app.domain.language import Language
+from app.models.clients import Client, ClientContact
 from app.models.leads import Conversation, Lead, Message
 from app.models.qualification import Escalation
 from app.repositories import cabinet_chat as cabinet_repo
 from app.repositories import leads as leads_repo
-from app.security.audit import Actor
 from app.security.principal import Principal
 from app.services import cabinet_chat
-from app.services.cabinet_chat import CabinetChatService
+from app.services.cabinet_chat import CabinetChatService, CabinetCompanyMismatchError
+from app.services.conversation_erasure import ErasureMixin
 from app.services.lead_messenger import LeadMessenger
 from app.services.leads import LeadService
 from app.services.settings import SettingsService
@@ -197,6 +198,16 @@ async def test_without_a_lead_the_client_gets_a_cabinet_lead_of_its_owner(
     assert lead.client_id == client_id
     assert lead.assigned_user_id == owner.id
     assert await outbox_count(sessions, bus_events.LEAD_CREATED) == 1
+    async with sessions() as session:
+        envelope = await session.scalar(
+            text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"),
+            {"t": bus_events.LEAD_CREATED},
+        )
+    # в перечне LeadSource v1 нет «cabinet»: веб-канал и точный источник отдельным полем
+    assert (envelope["data"]["lead"]["source"], envelope["data"]["lead"]["source_detail"]) == (
+        "web",
+        "cabinet",
+    )
 
 
 async def test_unknown_company_keeps_the_message_and_is_adopted_by_the_client_later(
@@ -381,35 +392,183 @@ async def test_a_failed_reply_publishes_nothing_and_keeps_no_message(
     assert managers == 0
 
 
-async def test_erasing_the_anchor_lead_tells_erp_and_the_next_message_gets_a_new_anchor(
+class Eraser(ErasureMixin):
+    """Боевой путь /delete (`ErasureMixin.erase`) без бота: агент и уведомления — заглушки."""
+
+    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+        self._sessions = sessions
+        self._settings = SettingsService(sessions)
+        self._agent = cast(Any, SimpleNamespace(forget=self._forget_agent))
+        self._erase_attachments = None
+
+    async def _forget_agent(self, lead_id: int) -> None:
+        return None
+
+    async def language_of(self, tg_user_id: int) -> Language:
+        return "ru"
+
+    async def _fire(
+        self, lead_id: int | None, escalation_id: int | None, escalated_lead: int | None = None
+    ) -> None:
+        return None
+
+
+async def person_with_colleague(
+    sessions: async_sessionmaker[AsyncSession], tg: int
+) -> tuple[int, int, int, int]:
+    """Клиент с лидом-человеком из Telegram (он же контакт А) и коллегой (контакт Б); в кабинете
+    пишут оба, менеджер отвечает. Возвращает (клиент, лид, контакт А, контакт Б)."""
+    lead_id = await escalated_lead(sessions, tg_user_id=tg)
+    client_id = await make_client(sessions, owner=None, erp_company_id=COMPANY)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.client_id = client_id
+        identity = await leads_repo.get_identity(session, tg)
+        assert identity is not None
+        person = ClientContact(
+            client_id=client_id, full_name="Азиз", telegram_identity_id=identity.id
+        )
+        colleague = ClientContact(client_id=client_id, full_name="Дилноза")
+        session.add_all([person, colleague])
+        await session.flush()
+        ids = (person.id, colleague.id)
+    service = service_of(sessions)
+    for key, crm_contact, erp_contact, name in (
+        ("key-person-01", ids[0], 310, "Азиз"),
+        ("key-colleague", ids[1], 311, "Дилноза"),
+    ):
+        event = posted(key, crm_client_id=client_id, text_=f"Пишет {name}")
+        event.data["payload"]["author"] = {
+            "erp_contact_id": erp_contact,
+            "crm_contact_id": crm_contact,
+            "name": name,
+        }
+        await accept(sessions, service, event)
+    return client_id, lead_id, ids[0], ids[1]
+
+
+async def cabinet_texts(sessions: async_sessionmaker[AsyncSession]) -> dict[str, str]:
+    async with sessions() as session:
+        rows = await session.execute(
+            select(Message.meta["client_message_id"].astext, Message.text)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .where(Conversation.channel == "cabinet", Message.role == "lead")
+        )
+        return {row[0]: row[1] for row in rows.all()}
+
+
+async def test_delete_erases_only_the_persons_cabinet_messages_and_keeps_the_conversation(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
-    client_id = await make_client(sessions, owner=None, erp_company_id=COMPANY)
-    service = service_of(sessions)
-    await accept(sessions, service, posted("key-0000001", crm_client_id=client_id))
+    """Боевой путь /delete: стирается только сообщение человека (контакт А); коллега (Б), ответ
+    менеджера и беседа клиента остаются, якорь — новый лид клиента; ERP получает, чьё стереть."""
+    sender = Sender()
+    client_id, lead_id, _, _ = await person_with_colleague(sessions, 7301)
+    account, _ = await make_user(sessions, "chat-erase@railtech.example", ["manager"])
+    who = Principal(user_id=account.id, full_name="Илья Смирнов", roles=("manager",))
+    leads = LeadService(sessions, SettingsService(sessions), LeadMessenger(sessions, sender))
+    await leads.take(who, lead_id)
+    await leads.reply(who, lead_id, "Ответ менеджера", client_message_id="reply-erase-1")
+
+    await Eraser(sessions).erase(7301)
+
+    texts = await cabinet_texts(sessions)
+    assert texts["key-person-01"] == leads_repo.ERASED_TEXT
+    assert texts["key-colleague"] == "Пишет Дилноза"
     (conversation,) = await cabinet_conversations(sessions)
-    async with sessions() as session, session.begin():
-        lead = await session.get(Lead, conversation.lead_id)
-        assert lead is not None
-        company = await cabinet_repo.lead_cabinet_company(session, lead.id)
-        await leads_repo.erase_lead(session, lead, datetime.now(UTC))
-        await bus_events.lead_erased(
-            session, lead, Actor(None, "bot"), cabinet_erp_company_id=company
+    assert conversation.is_open
+    assert conversation.client_id == client_id
+    assert conversation.lead_id != lead_id
+    async with sessions() as session:
+        anchor = await session.get(Lead, conversation.lead_id)
+        manager = await session.scalar(
+            select(Message.text).where(
+                Message.conversation_id == conversation.id, Message.role == "manager"
+            )
         )
-        erased_id = lead.id
+        erased_meta = await session.scalar(
+            select(Message.meta).where(Message.meta["client_message_id"].astext == "key-person-01")
+        )
+        envelope = await session.scalar(
+            text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"),
+            {"t": bus_events.LEAD_ERASED},
+        )
+    assert anchor is not None
+    assert (anchor.erased_at, anchor.client_id, anchor.source) == (None, client_id, "cabinet")
+    assert manager == "Ответ менеджера"
+    assert erased_meta is not None
+    assert erased_meta["erased"] is True
+    assert "author_name" not in erased_meta
+    assert envelope["data"]["cabinet"] == {
+        "erp_company_id": COMPANY,
+        "scope": "authors",
+        "erp_contact_ids": [310],
+    }
+
+
+async def test_delete_moves_the_anchor_to_another_lead_of_the_client(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    client_id, _, _, _ = await person_with_colleague(sessions, 7302)
+    async with sessions() as session, session.begin():
+        other = Lead(display_name="Другой лид клиента", client_id=client_id, stage="customer")
+        session.add(other)
+        await session.flush()
+        other_id = other.id
+
+    await Eraser(sessions).erase(7302)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id == other_id
+
+
+async def test_delete_of_a_lead_without_cabinet_messages_tells_erp_nothing_to_erase(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    await escalated_lead(sessions, tg_user_id=7303)
+    await Eraser(sessions).erase(7303)
     async with sessions() as session:
         envelope = await session.scalar(
             text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"),
             {"t": bus_events.LEAD_ERASED},
         )
-    assert envelope["data"]["cabinet_erp_company_id"] == COMPANY
+    assert "cabinet" not in envelope["data"]
 
-    await accept(sessions, service, posted("key-0000002", crm_client_id=client_id))
 
-    (after,) = await cabinet_conversations(sessions)
-    assert after.id == conversation.id
-    assert after.lead_id != erased_id
-    assert after.is_open
+async def test_a_client_conversation_of_another_erp_company_is_refused(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Сопоставление разошлось: беседа клиента — компании 118, событие — о 999. В чужую ленту не
+    пишем: обработка падает (событие уходит в failed журнала шины)."""
+    client_id = await make_client(sessions, owner=None, erp_company_id=COMPANY)
+    await accept(sessions, service_of(sessions), posted("key-0000001", crm_client_id=client_id))
+    with pytest.raises(CabinetCompanyMismatchError):
+        await accept(
+            sessions,
+            service_of(sessions),
+            posted("key-0000002", crm_client_id=client_id, company=999),
+        )
+    assert sorted(await cabinet_texts(sessions)) == ["key-0000001"]
+
+
+async def test_bot_history_is_telegram_only_and_assist_sees_both(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Сообщения коллег контакта в кабинете не попадают в контекст модели в Telegram (бот,
+    квалификатор, MCP); «Подсказать ответ» менеджеру видит обе беседы."""
+    sender = Sender()
+    _, _, lead_id, client_id = await taken(sessions, sender, 7304)
+    await accept(
+        sessions,
+        service_of(sessions),
+        posted("key-0000001", crm_client_id=client_id, text_="Из кабинета"),
+    )
+    async with sessions() as session:
+        telegram = await leads_repo.recent_messages(session, lead_id, 20)
+        both = await leads_repo.recent_messages(session, lead_id, 20, channel=None)
+    assert "Из кабинета" not in [m.text for m in telegram]
+    assert "Из кабинета" in [m.text for m in both]
 
 
 async def cabinet_repo_channel(sessions: async_sessionmaker[AsyncSession], lead_id: int) -> Any:
