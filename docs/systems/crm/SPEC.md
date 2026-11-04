@@ -249,6 +249,9 @@ deals(                                              -- сделки клиент
 telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
   phone_e164 NULL, verified_by_user_id NULL, verified_at NULL, is_blocked BOOL
+)                                                   -- verified_at без verified_by_user_id — подтвердил сам контакт (NOTIFY-1)
+telegram_link_nonces(                               -- погашенные ссылки привязки Telegram контактом (NOTIFY-1)
+  nonce VARCHAR(18) PK, crm_contact_id, tg_user_id, expires_at, used_at
 )
 client_contacts(                                    -- контактные лица клиента (Q-011)
   id, client_id → clients ON DELETE CASCADE, full_name, position NULL,
@@ -261,6 +264,11 @@ client_contacts(                                    -- контактные ли
 ```
 
 Правило: доступ к данным клиента из бота возможен только если `telegram_identities.client_id IS NOT NULL AND verified_at IS NOT NULL`.
+
+Привязка самим контактом (NOTIFY-1, ADR-0023 п. 3): `/start tg_…` по одноразовой ссылке из кабинета (ERP выпускает из сессии
+контакта, подпись секретом пары `erp → crm`, 15 минут) ставит `client_id`, `verified_at` и `client_contacts.telegram_identity_id`
+без менеджера; nonce гасится в `telegram_link_nonces` (повтор и параллельный повтор — одна привязка). Отключение — событие
+`erp.contact.telegram_unlink_requested`. Подробно — `docs/runbooks/crm-bot.md`.
 
 Контакты клиента: «Добавить из Telegram» предлагает подтверждённые идентичности клиента с `phone_e164`,
 которых ещё нет среди контактов (по `telegram_identity_id` или номеру); связать контакт можно только с

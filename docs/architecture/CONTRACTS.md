@@ -130,6 +130,7 @@ inline и до БД не доходит (§9.2).
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |
 | `invite.sent` | `channels[]` | лента |
 | `invite.requested` | `channel: telegram, erp_contact_id, crm_contact_id, language?` | бот присылает контакту приглашение с кнопкой «Открыть кабинет» (Mini App; ссылок и токенов нет); итог доставки — в карточке клиента (D1-9, Q-FIX23-1). Inline-обработчик, как у кода акцепта |
+| `contact.telegram_unlink_requested` (NOTIFY-1) | `erp_contact_id, crm_contact_id` (`actor.type=client`, без имени) | контакт отключил Telegram в кабинете: поле принадлежит CRM (ADR-0015), поэтому ERP просит — CRM отвязывает Telegram от контакта и клиента (как отвязка менеджером) и публикует `crm.contact.updated` без `telegram_user_id`; повтор и уже отвязанный контакт — без действий. Свой обработчик в очереди, не лента сделки (ADR-0023 п. 3) |
 | `mail.requested` (W18A-P1) | не по форме этой таблицы: `request_key`, `purpose`, `to`, `subject`, `content` (шифртекст), `attachments?`, `ref?`, `notify?` — §9.9 | почтовый сервис CRM отправляет письмо ERP (журнал доставки, повторы); итог — `crm.mail.sent|failed` (§9.9) |
 
 ## 4. Portal API (Cabinet → ERP)
@@ -151,6 +152,7 @@ inline и до БД не доходит (§9.2).
 | `GET /documents`, `GET /documents/{id}/file` | документы (поток, аудит) |
 | `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь) |
 | `GET /company`, `PUT /company`, `GET /team`, `POST /team/invite` | профиль и команда клиента |
+| `GET /me/telegram`, `DELETE /me/telegram`, `POST /me/telegram-link` | Telegram контакта (NOTIFY-1, ADR-0023 п. 3): статус по проекции CRM (`linked`, `available`); отключение — 202 и событие `erp.contact.telegram_unlink_requested` (поле меняет CRM); одноразовая ссылка `https://t.me/<бот>?start=tg_…` на 15 минут — токен 51 символ (`tg_` + base64url от версии, языка, `crm_contact_id`, срока, nonce и 120 бит HMAC-SHA256 ключом `HMAC(секрет пары erp → crm, "rt-telegram-link/v1")`), одноразовость держит бот CRM (nonce в базе). Право «действовать» не нужно; без сопоставления с CRM — 422 `CONTACT_NOT_IN_CRM`, без бота или сопряжения — 503 `TELEGRAM_LINK_UNAVAILABLE`. Токен в письма не кладётся: письма ведут на Профиль → «Уведомления» |
 
 Все ответы отфильтрованы по компании сессии; тест на каждый эндпоинт «чужая компания → 404».
 
@@ -374,7 +376,7 @@ enum, отсутствующее обязательное поле, наруше
 
 | Тип | Издатель → подписчики v1 | `data` |
 |---|---|---|
-| `uz.railtech.erp.<событие>.v1` — 22 события §3 | `rt://erp` → crm | прежнее тело §3 без `version`, `event`, `occurred_at`: `erp_company_id`, `crm_client_id`, `deal?`, `actor`, `payload` (определения — `erp/_defs.v1.json`) |
+| `uz.railtech.erp.<событие>.v1` — 22 события §3 и `contact.telegram_unlink_requested` (NOTIFY-1) | `rt://erp` → crm | прежнее тело §3 без `version`, `event`, `occurred_at`: `erp_company_id`, `crm_client_id`, `deal?`, `actor`, `payload` (определения — `erp/_defs.v1.json`) |
 | `uz.railtech.crm.client.created.v1` / `client.updated.v1` | `rt://crm` → erp (`updated`) | снимок `client`: `crm_client_id`, `erp_company_id?`, `name`, `inn`, `segment`, `is_active`, `owner{crm_user_id, full_name}`, `updated_at`; `changed_fields?`; `actor` |
 | `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
 | `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
