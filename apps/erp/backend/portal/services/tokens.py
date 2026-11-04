@@ -7,6 +7,7 @@ from django.conf import settings
 from django.utils import timezone
 from parties.models import Contact
 from portal.models import PortalSession
+from portal.services.access import activate_on_first_login
 
 
 def generate_token(nbytes: int = 32) -> str:
@@ -40,4 +41,5 @@ def issue_portal_session(
     )
     contact.last_login_at = timezone.now()
     contact.save(update_fields=["last_login_at"])
+    activate_on_first_login(contact.company_id)  # приглашённый поставщик: первый вход делает отношение активным
     return session, raw_token

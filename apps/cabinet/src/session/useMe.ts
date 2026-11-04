@@ -15,9 +15,14 @@ export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
   });
 }
 
-/** `can_act` из `/me`: `false` — только просмотр, кнопки действий скрыты (API всё равно ответит 403). */
+/** `can_act` из `/me`: `false` — только просмотр, кнопки действий скрыты (API всё равно ответит 403). Одинаково у клиента и партнёра. */
 export function useCanAct(): boolean {
   return useMe().data?.can_act ?? false;
+}
+
+/** Есть ли у сессии модуль кабинета (`/me.modules`). */
+export function useHasModule(module: string): boolean {
+  return (useMe().data?.modules as readonly string[] | undefined)?.includes(module) ?? false;
 }
 
 /** Записать сессию, полученную входом (`/auth/telegram`, `POST /auth/magic`). */

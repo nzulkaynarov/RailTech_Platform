@@ -46,6 +46,12 @@ exports[`карты статусов > снимок карты: изменени
     "paused": "red",
     "removed": "default",
   },
+  "cabinetAccess": {
+    "active": "green",
+    "invited": "gold",
+    "none": "default",
+    "suspended": "red",
+  },
   "categoryRequest": {
     "approved": "green",
     "pending": "gold",

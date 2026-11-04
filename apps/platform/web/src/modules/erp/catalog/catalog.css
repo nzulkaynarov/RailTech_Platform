@@ -291,3 +291,57 @@
   border-radius: 6px;
   overflow-wrap: anywhere;
 }
+
+/* Блок «Доступ в кабинет» карточки поставщика (PART-1) */
+.pf-cat-rights {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0 0;
+  padding: 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  min-width: 0;
+}
+.pf-cat-rights legend {
+  padding: 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pf-cat-switch {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.pf-cat-switch > div {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.pf-cat-contacts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-cat-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-cat-contact-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.pf-cat-contact-right {
+  flex-basis: 100%;
+  align-items: center;
+  font-size: 13px;
+}

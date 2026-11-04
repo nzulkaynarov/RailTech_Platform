@@ -17,7 +17,7 @@ from parties.models import Contact, active_contact_q
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
 from portal.models import PortalUpload
-from portal.permissions import CanAct, IsPortalAuthenticated
+from portal.permissions import ANY_MODULE, CanAct, HasPortalModule, IsPortalAuthenticated
 from portal.projections import (
     annotate_request_sources,
     client_acts_q,
@@ -60,6 +60,7 @@ from portal.serializers import (
 from portal.services import catalog_documents
 from portal.services import documents as portal_documents
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
+from portal.services.access import company_access
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
 from portal.services.client_feedback import add_quote_comment, submit_payment_proof
 from portal.services.invitation import invite_team_member
@@ -133,11 +134,27 @@ def _parse_reason(data) -> str:
     return serializer.validated_data["reason"].strip()
 
 
+def _me_data(session, auth_method: str | None = None, access: tuple[list[str], list[str]] | None = None) -> dict:
+    """Тело `Me`: контакт, компания, права, роли и модули кабинета (общее для входа и `GET /me`)."""
+    roles, modules = company_access(session.company_id) if access is None else access
+    return {
+        "contact": TeamMemberSerializer(session.contact).data,
+        "company": CompanySerializer(session.company).data,
+        "can_act": session.contact.can_act,
+        "auth_method": auth_method or session.auth_method,
+        "roles": roles,
+        "modules": modules,
+    }
+
+
 class BasePortalView(APIView):
     """Базовый класс для портальных эндпоинтов с аутентификацией."""
 
     authentication_classes = [PortalAuthentication]
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    #: Модуль, которому открыт эндпоинт (ADR-0022): каждая вьюха называет свой (`required_module`), без него — закрыта;
+    #: сессия без модуля — 403 `MODULE_REQUIRED`. Порядок важен: модуль проверяется раньше права действовать, чтобы
+    #: сессия без модуля не узнавала про `FORBIDDEN`.
+    permission_classes = [IsPortalAuthenticated, HasPortalModule, CanAct]
     # Лимит по сессии вместо общего анонимного 20/мин по IP (FIX-15, P-14).
     throttle_classes = [PortalSessionRateThrottle]
 
@@ -178,13 +195,7 @@ class TelegramAuthView(APIView):
             user_agent=ua,
         )
 
-        me_data = {
-            "contact": TeamMemberSerializer(session.contact).data,
-            "company": CompanySerializer(session.company).data,
-            "can_act": session.contact.can_act,
-            "auth_method": "telegram",
-        }
-        res = Response(MeSerializer(me_data).data, status=status.HTTP_200_OK)
+        res = Response(MeSerializer(_me_data(session, "telegram")).data, status=status.HTTP_200_OK)
         return _set_portal_cookie(res, token)
 
 
@@ -220,13 +231,7 @@ def _exchange_magic_token(request, token: str) -> Response:
 
 def _session_response(session, session_token: str) -> Response:
     """Ответ входа по письму (ссылка или код): `Me` и cookie сессии."""
-    me_data = {
-        "contact": TeamMemberSerializer(session.contact).data,
-        "company": CompanySerializer(session.company).data,
-        "can_act": session.contact.can_act,
-        "auth_method": "magic_link",
-    }
-    res = Response(MeSerializer(me_data).data, status=status.HTTP_200_OK)
+    res = Response(MeSerializer(_me_data(session, "magic_link")).data, status=status.HTTP_200_OK)
     return _set_portal_cookie(res, session_token)
 
 
@@ -299,20 +304,14 @@ class LogoutView(APIView):
 
 
 class MeView(BasePortalView):
-    """GET /me — Текущий профиль сессии (контакт, компания, права)."""
+    """GET /me — Текущий профиль сессии (контакт, компания, права, роли и модули кабинета)."""
+
+    required_module = ANY_MODULE  # профиль нужен любой сессии: по ролям и модулям Cabinet строит меню
 
     def get(self, request):
-        contact = request.portal_contact
-        company = request.portal_company
-        session = request.portal_session
-
-        me_data = {
-            "contact": TeamMemberSerializer(contact).data,
-            "company": CompanySerializer(company).data,
-            "can_act": contact.can_act,
-            "auth_method": session.auth_method,
-        }
-        return Response(MeSerializer(me_data).data)
+        return Response(
+            MeSerializer(_me_data(request.portal_session, access=(request.portal_roles, request.portal_modules))).data
+        )
 
 
 # ── 3. Requests ─────────────────────────────────────────────────────────────
@@ -329,6 +328,8 @@ def _requests_queryset(company):
 
 class RequestListView(BasePortalView):
     """GET/POST /requests — Запросы клиента."""
+
+    required_module = "catalog_requests"
 
     def get(self, request):
         deals = list(_requests_queryset(request.portal_company).order_by("-created_at"))
@@ -353,6 +354,8 @@ class RequestListView(BasePortalView):
 
 class RequestDetailView(BasePortalView):
     """GET /requests/{id} — Детали запроса клиента (Q-16)."""
+
+    required_module = "catalog_requests"
 
     def get(self, request, pk):
         deal = _requests_queryset(request.portal_company).filter(pk=pk).first()
@@ -400,6 +403,8 @@ def _quote_response(request, pk) -> Response:
 class QuoteListView(BasePortalView):
     """GET /quotes — Список КП для клиента."""
 
+    required_module = "quotes"
+
     def get(self, request):
         quotes = _client_quotes(request.portal_company).order_by("-created_at")
         return Response(QuoteListItemSerializer(quotes, many=True).data)
@@ -407,6 +412,8 @@ class QuoteListView(BasePortalView):
 
 class QuoteDetailView(BasePortalView):
     """GET /quotes/{id} — Детали КП с позициями."""
+
+    required_module = "quotes"
 
     def get(self, request, pk):
         quote = _quote_or_404(request, pk)
@@ -422,7 +429,8 @@ class QuoteDetailView(BasePortalView):
 class QuoteRequestCodeView(BasePortalView):
     """POST /quotes/{id}/request-code — Код акцепта контакту сессии (Telegram или e-mail)."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "quotes"
+
     # Общий потолок `portal_accept` на запрос кода и на акцепт (контракт): перебор и рассылка бьют в одно ведро.
     throttle_classes = [PortalSessionRateThrottle, PortalAcceptRateThrottle]
 
@@ -441,7 +449,8 @@ class QuoteRequestCodeView(BasePortalView):
 class QuoteAcceptView(BasePortalView):
     """POST /quotes/{id}/accept — Акцепт КП по коду из `request-code`."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "quotes"
+
     # Жёсткий потолок попыток кода поверх общего лимита сессии (FIX-15).
     throttle_classes = [PortalSessionRateThrottle, PortalAcceptRateThrottle]
 
@@ -469,7 +478,7 @@ class QuoteAcceptView(BasePortalView):
 class QuoteRejectView(BasePortalView):
     """POST /quotes/{id}/reject — Отклонение КП с причиной."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "quotes"
 
     def post(self, request, pk):
         reason = _parse_reason(request.data)
@@ -500,7 +509,7 @@ class QuoteRejectView(BasePortalView):
 class QuoteCommentView(BasePortalView):
     """POST /quotes/{id}/comments — Комментарий клиента к КП, пока оно ждёт решения (B-CABFIX-1)."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "quotes"
 
     def post(self, request, pk):
         serializer = QuoteCommentCreateSerializer(data=request.data)
@@ -526,6 +535,8 @@ def _client_contracts(company):
 class ContractListView(BasePortalView):
     """GET /contracts — Договоры клиента."""
 
+    required_module = "contracts"
+
     def get(self, request):
         contracts = _client_contracts(request.portal_company).order_by("-created_at")
         return Response(ContractSerializer(contracts, many=True).data)
@@ -534,7 +545,7 @@ class ContractListView(BasePortalView):
 class ContractSignView(BasePortalView):
     """POST /contracts/{id}/sign — Подписание договора клиентом (`sign_contract_by_client`)."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "contracts"
 
     def post(self, request, pk):
         contract = _client_contracts(request.portal_company).filter(pk=pk).first()
@@ -562,6 +573,8 @@ def _client_invoices(company):
 class InvoiceListView(BasePortalView):
     """GET /invoices — Счета клиента (выставленные и со сроком оплаты: контракт требует `due_date`)."""
 
+    required_module = "invoices"
+
     def get(self, request):
         invoices = _client_invoices(request.portal_company).prefetch_related("confirmations").order_by("-created_at")
         return Response(InvoiceSerializer(invoices, many=True).data)
@@ -574,7 +587,7 @@ class InvoiceProofView(BasePortalView):
     в «Счетах и оплатах». Чужой или невидимый клиенту счёт — 404, оплаченный или отменённый — 409 `INVOICE_NOT_OPEN`.
     """
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "invoices"
 
     def post(self, request, pk):
         serializer = PaymentProofCreateSerializer(data=request.data)
@@ -614,6 +627,8 @@ def _act_response(request, pk) -> Response:
 class ActListView(BasePortalView):
     """GET /acts — Акты выполненных работ."""
 
+    required_module = "acts"
+
     def get(self, request):
         acts = list(_client_acts(request.portal_company).order_by("-created_at"))
         annotate_scan_documents(acts)
@@ -636,7 +651,7 @@ def _raise_act_error(error: str) -> None:
 class ActAcceptView(BasePortalView):
     """POST /acts/{id}/accept — Приёмка акта заказчиком (`sign_act`), со сканом из `/uploads` или без."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "acts"
 
     def post(self, request, pk):
         serializer = ActAcceptSerializer(data=request.data or {})
@@ -661,7 +676,7 @@ class ActAcceptView(BasePortalView):
 class ActReturnView(BasePortalView):
     """POST /acts/{id}/return — Возврат акта с замечанием (`reject_act`): ERP хранит возвращённый акт черновиком с причиной."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "acts"
 
     def post(self, request, pk):
         reason = _parse_reason(request.data)
@@ -684,6 +699,8 @@ def _client_delivery_lines(company):
 
 class DeliveryListView(BasePortalView):
     """GET /deliveries — Строки поставки по сделкам клиента (проекция клиента: без поставщика и цен)."""
+
+    required_module = "deliveries"
 
     def get(self, request):
         sync_company_delivery_lines(request.portal_company)
@@ -715,7 +732,7 @@ def _raise_delivery_error(error: str) -> None:
 class DeliveryAcceptView(BasePortalView):
     """POST /deliveries/{id}/accept — Клиент принимает строку: `delivered` → `accepted`."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "deliveries"
 
     def post(self, request, pk):
         line = _delivery_line_or_404(request, pk)
@@ -728,7 +745,7 @@ class DeliveryAcceptView(BasePortalView):
 class DeliveryDisputeView(BasePortalView):
     """POST /deliveries/{id}/dispute — Замечание по строке: `delivered` → `disputed`, менеджеру сделки — задача."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "deliveries"
 
     def post(self, request, pk):
         reason = _parse_reason(request.data)
@@ -755,6 +772,8 @@ def _contact_language(request) -> str:
 class DocumentListView(BasePortalView):
     """GET /documents — Выпущенные документы компании клиента (FIX-23); `kind` и `deal_id` — фильтры."""
 
+    required_module = "documents"
+
     def get(self, request):
         kind = request.query_params.get("kind")
         if kind is not None and kind not in portal_documents.DOCUMENT_KINDS:
@@ -772,6 +791,8 @@ class DocumentListView(BasePortalView):
 
 class DocumentFileView(BasePortalView):
     """GET /documents/{id}/file — PDF выпущенного документа: поток (и запись аудита) либо 202 + `Retry-After`."""
+
+    required_module = "documents"
 
     def get(self, request, pk):
         document = portal_documents.find_client_document(request.portal_company, pk)
@@ -801,6 +822,8 @@ class DocumentFileView(BasePortalView):
 
 class UploadView(BasePortalView):
     """POST /uploads — Загрузка файлов клиентом (Q-14, multipart, <= 10MB)."""
+
+    required_module = "catalog_requests"
 
     parser_classes = [MultiPartParser, FormParser]
 
@@ -840,6 +863,8 @@ class UploadView(BasePortalView):
 class CatalogCategoriesView(BasePortalView):
     """GET /catalog/categories — Справочник категорий с количеством (Q-15)."""
 
+    required_module = "catalog_requests"
+
     def get(self, request):
         from django.db.models import Count, Q
 
@@ -857,6 +882,8 @@ class CatalogCategoriesView(BasePortalView):
 
 class CatalogListView(BasePortalView):
     """GET /catalog — Опубликованный каталог товаров и услуг."""
+
+    required_module = "catalog_requests"
 
     def get(self, request):
         qs = published_products()
@@ -896,6 +923,8 @@ class CatalogListView(BasePortalView):
 class CatalogDetailView(BasePortalView):
     """GET /catalog/{id} — Карточка товара/услуги в опубликованном слое."""
 
+    required_module = "catalog_requests"
+
     def get(self, request, pk):
         product = published_products().filter(pk=pk).first()
         if not product:
@@ -926,6 +955,8 @@ class CatalogDocumentFileView(BasePortalView):
 
 class CompanyView(BasePortalView):
     """GET/PUT /company — Профиль компании клиента."""
+
+    required_module = "company"
 
     def get(self, request):
         return Response(CompanySerializer(request.portal_company).data)
@@ -966,6 +997,8 @@ class CompanyView(BasePortalView):
 class TeamListView(BasePortalView):
     """GET /team — Список участников команды клиента."""
 
+    required_module = "team"
+
     def get(self, request):
         contacts = Contact.objects.filter(active_contact_q(), company=request.portal_company).order_by(
             "-is_primary", "name"
@@ -976,7 +1009,7 @@ class TeamListView(BasePortalView):
 class TeamInviteView(BasePortalView):
     """POST /team/invite — Приглашение коллеги в кабинет (доставляется письмом; `telegram` — 422 `INVALID_CHANNEL`)."""
 
-    permission_classes = [IsPortalAuthenticated, CanAct]
+    required_module = "team"
 
     def post(self, request):
         serializer = TeamInviteSerializer(data=request.data)

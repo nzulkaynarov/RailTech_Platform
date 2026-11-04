@@ -62,6 +62,12 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "already_pending",
         "Запрос на такую категорию уже на рассмотрении.",
     ),
+    # PART-1: доступ партнёра в кабинет
+    "CONTACT_EXISTS": ("contact_exists", "Контакт с таким адресом у компании уже есть."),
+    "CONTACT_EMAIL_AMBIGUOUS": (
+        "contact_email_ambiguous",
+        "Этот адрес уже указан у контакта другой компании кабинета. Укажите другой адрес.",
+    ),
 }
 # Код ERP -> поле контракта (`details.fields`), когда отказ относится к одному полю.
 _FIELD_OF: dict[str, str] = {
@@ -121,6 +127,10 @@ _FIELD_OF: dict[str, str] = {
     "TECH_DOC_KIND_INVALID": "kind",
     "PRODUCT_NOT_FOUND": "product_id",
     "DEAL_NOT_FOUND": "deal_id",
+    # PART-1
+    "CONTACT_NAME_REQUIRED": "name",
+    "CONTACT_EMAIL_REQUIRED": "email",
+    "MODULE_NOT_ALLOWED": "modules",
     # CAT-CARD-1: фото, документы товара, страна и гарантия
     "IMAGE_LIMIT_REACHED": "image",
     "IMAGE_MAIN_REQUIRED": "is_main",

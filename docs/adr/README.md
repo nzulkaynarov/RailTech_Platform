@@ -13,7 +13,7 @@
 | [0001](0001-three-systems.md) | три системы CRM, ERP, Cabinet — по одному главному пользователю | accepted 2026-10-13 | ADR-0011 (у CRM и ERP нет своих фронтендов сотрудников), ADR-0015 (EDS — четвёртый домен) |
 | [0002](0002-no-shared-tables-api-and-events.md) | общих таблиц нет, связь через API и события | accepted 2026-10-13 | усилено ADR-0014: интеграции — только через шину |
 | [0003](0003-identity-crm-idp-and-sso-tokens.md) | CRM — источник истины по сотрудникам, переход по SSO-токену | accepted 2026-10-13 | дополнено ADR-0010; свой сервис идентичности — этап F стратегии |
-| [0004](0004-cabinet-without-backend.md) | Cabinet без своего бэкенда, над портальным API ERP | accepted 2026-10-13 | ADR-0022: в Cabinet входят и партнёры по отношению «поставщик» |
+| [0004](0004-cabinet-without-backend.md) | Cabinet без своего бэкенда, над портальным API ERP | accepted 2026-10-13 | ADR-0022: в Cabinet входят и партнёры по отношению «партнёр» |
 | [0005](0005-ai-through-shared-gateway.md) | ИИ через общий шлюз LiteLLM, трейсы в Langfuse | accepted 2026-10-13 | — |
 | [0006](0006-erp-fresh-migrations.md) | история миграций ERP заново | accepted 2026-10-13 | перенос данных старого прода отменён: прод на чистых базах (стратегия §7, DECISIONS 2026-10-23) |
 | [0007](0007-supply-inside-erp.md) | снабжение — контур внутри ERP | accepted 2026-10-13 | — |
@@ -31,4 +31,4 @@
 | [0019](0019-product-readiness-tenant.md) | «одна компания — одна установка» | accepted 2026-10-23 | — |
 | [0020](0020-documents-letterhead-body-rendering.md) | документы: бланк, единый формат тела, рендеринг | accepted 2026-10-28 | — |
 | [0021](0021-item-traceability-classes.md) | прослеживаемость товара: классы S/L/N как данные категории | accepted 2026-11-03 | меняет BUSINESS §12; минимум — L0-3, полная модель — MVP-T1 |
-| [0022](0022-counterparty-cabinet-supplier-relationship.md) | кабинет контрагента: отношение компании и роль «поставщик» | accepted 2026-11-04 | уточняет ADR-0001 и ADR-0004 (главный пользователь Cabinet — внешние компании) |
+| [0022](0022-counterparty-cabinet-supplier-relationship.md) | кабинет контрагента: отношение компании и роль «партнёр» | accepted 2026-11-04 | уточняет ADR-0001 и ADR-0004 (главный пользователь Cabinet — внешние компании) |

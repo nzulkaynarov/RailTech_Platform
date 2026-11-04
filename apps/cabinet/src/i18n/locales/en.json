@@ -72,6 +72,10 @@
     }
   },
   "access": {
+    "noSections": {
+      "title": "Access is open",
+      "text": "The sections for your company are still being set up — please contact your manager."
+    },
     "canAct": "Authorized to approve",
     "viewOnly": "View only"
   },

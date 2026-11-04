@@ -18,6 +18,7 @@ import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { edsProjectsHandlers } from "./edsProjects";
 import { erpCatalogHandlers } from "./erpCatalog";
+import { erpSupplierAccessHandlers } from "./erpSupplierAccess";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsInstructionsHandlers } from "./edsInstructions";
@@ -183,6 +184,7 @@ export const handlers = [
   ...letterIntakeHandlers,
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,
+  ...erpSupplierAccessHandlers,
   ...erpCalcHandlers,
   ...erpStockHandlers,
   ...edsProjectsHandlers,

@@ -118,6 +118,12 @@
       "rows_token_invalid": "Tekshiruv eskirgan. «Tekshirish»ni yana bosing.",
       "offer_source_invalid": "Narx manbaini tanlang.",
       "role_not_permitted": "Katalog va ta’minot huquqlari kerak.",
+      "contact_exists": "Kompaniyada bunday manzilli kontakt allaqachon bor.",
+      "contact_email_ambiguous": "Bu manzil kabinetdagi boshqa kompaniya kontaktida ko'rsatilgan. Boshqa manzil kiriting.",
+      "email_delivery_failed": "Xat yuborilmadi. Pochta xizmatini tekshirib, qayta urinib ko'ring — kirish o'zgarmadi.",
+      "module_not_allowed": "Bu bo'limni hamkor uchun yoqib bo'lmaydi.",
+      "contact_name_required": "Kontaktning F.I.Sh. ni kiriting.",
+      "contact_email_required": "Kontaktning e-pochtasini kiriting.",
       "image_limit_reached": "Chegaraga yetildi: pozitsiyaga 10 ta surat.",
       "image_main_required": "Asosiy suratni boshqa suratni tanlab o‘zgartiring.",
       "image_order_invalid": "Ro‘yxatda bunday o‘rin yo‘q.",
@@ -612,6 +618,97 @@
     "email": "Pochta",
     "phone": "Telefon",
     "maker": "Tovarni o‘zi chiqaradi (ishlab chiqaruvchi)"
+  },
+  "cabinetAccess": {
+    "title": "Kabinetga kirish",
+    "status": {
+      "none": "Ochilmagan",
+      "invited": "Taklif qilingan",
+      "active": "Faol",
+      "suspended": "To'xtatilgan"
+    },
+    "roles": {
+      "client": "Mijoz",
+      "partner": "Hamkor"
+    },
+    "rolesLine": "Kabinetda: {{roles}}",
+    "closed": "Kabinet yopiq: hamkor kira olmaydi.",
+    "notOpened": "Bu yetkazib beruvchi uchun kabinet hali ochilmagan. Kontakt qo'shing va taklif qiling: e-pochtaga kirish kodi keladi.",
+    "invitedBy": "Taklif qildi",
+    "firstLogin": "Birinchi kirish",
+    "noLogin": "hali kirmagan",
+    "suspendedAt": "To'xtatilgan",
+    "rights": "Hamkorga nima ochiladi",
+    "modules": {
+      "my_products": {
+        "label": "Mening mahsulotlarim",
+        "hint": "Hamkor o'z mahsulotlari kartochkalari va narxlarini to'ldiradi; tekshirgandan so'ng biz e'lon qilamiz."
+      },
+      "catalog_requests": {
+        "label": "Katalog va so'rovlar",
+        "hint": "Katalog mijozlardagi kabi: e'lon qilingan mahsulotlar va narxlar, yetkazib beruvchilarsiz."
+      }
+    },
+    "kind": {
+      "label": "Hamkor turi",
+      "hint": "Ro'yxat va hisobotlar uchun belgi, huquqlarga ta'sir qilmaydi.",
+      "none": "Ko'rsatilmagan",
+      "manufacturer": "Ishlab chiqaruvchi",
+      "supplier": "Yetkazib beruvchi",
+      "principal": "Printsipal",
+      "other": "Boshqa"
+    },
+    "contacts": "Kompaniya kontaktlari",
+    "contactsTable": "Yetkazib beruvchi kontaktlari",
+    "noContacts": "Kontaktlar yo'q. Taklif keladigan odamni qo'shing: kabinetga faqat e-pochta orqali kiriladi.",
+    "contact": {
+      "name": "F.I.Sh.",
+      "email": "E-pochta",
+      "phone": "Telefon",
+      "language": "Xat tili",
+      "lastLogin": "So'nggi kirish",
+      "invitedAt": "taklif qilingan {{date}}",
+      "edit": "O'zgartirish",
+      "editNamed": "{{name}} kontaktini o'zgartirish",
+      "lastLoginAt": "kirgan {{date}}",
+      "notInvited": "taklif qilinmagan",
+      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin",
+      "canActNamed": "So'rovlar yaratishi va fayllar yuklashi mumkin: {{name}}"
+    },
+    "languages": {
+      "ru": "Русский",
+      "uz": "Oʻzbekcha",
+      "en": "English"
+    },
+    "addContact": "Kontakt qo'shish",
+    "invite": "Taklif qilish",
+    "inviteAgain": "Yana taklif qilish",
+    "inviteNamed": "{{action}}: {{name}}",
+    "inviteSent": "Kirish kodi bilan xat yuborildi.",
+    "suspend": "Kirishni to'xtatish",
+    "readOnly": "Taklif qilish va huquqlarni o'zgartirishni yetkazib beruvchilarni yuritish huquqi bor xodimlar qiladi.",
+    "contactForm": {
+      "addTitle": "Yetkazib beruvchining yangi kontakti",
+      "editTitle": "Yetkazib beruvchi kontakti",
+      "add": "Qo'shish",
+      "emailHint": "Kirish kodi shu manzilga keladi.",
+      "languageHint": "Taklif xati shu tilda yuboriladi.",
+      "steps": [
+        "Kontakt yetkazib beruvchi kartochkasida paydo bo'ladi",
+        "Taklif alohida «Taklif qilish» tugmasi bilan yuboriladi"
+      ],
+      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin"
+    },
+    "suspendForm": {
+      "title": "Kabinetga kirishni to'xtatish",
+      "ok": "To'xtatish",
+      "text": "Siz uni qayta taklif qilmaguningizcha hamkor kabinetga kira olmaydi.",
+      "steps": [
+        "Kompaniyaning barcha kontaktlari uchun kirish yopiladi",
+        "Hamkorning ochiq sessiyalari keyingi harakatda yopiladi",
+        "Kirishni «Taklif qilish» tugmasi bilan qaytarish mumkin"
+      ]
+    }
   },
   "offerCreate": {
     "open": "Narx qo‘shish",

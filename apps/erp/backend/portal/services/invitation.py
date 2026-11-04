@@ -24,7 +24,7 @@ from django.utils import timezone
 from parties.models import Contact
 from portal.exceptions import PortalDeliveryFailed, PortalValidationError
 from portal.models import MagicLinkToken
-from portal.services.access import company_has_cabinet_access, company_in_circulation
+from portal.services.access import company_has_cabinet_access, company_in_circulation, company_roles
 from portal.services.login_code import INVITE_LINK_TTL, issue_login, reset_address_failures
 from portal.services.magic_link import build_login_url
 from portal.services.mail_context import responsible_manager_email
@@ -104,6 +104,8 @@ def _send_email(
                 "invite_url": login_url,
                 "login_code": issued.code,
                 "telegram_url": telegram_url,
+                # Текст письма по роли: партнёр получает не клиентские разделы, а «Мои товары» (ADR-0022).
+                "portal_role": "client" if "client" in company_roles(contact.company_id) else "partner",
             },
             to=[clean_email],
             channel="transactional",
@@ -143,7 +145,7 @@ def invite_contact(
     Каналы: `email`, `telegram`, `both`; по умолчанию — `contact.preferred_channel`. `both` пробует оба: приглашение
     считается ушедшим, если ушло хотя бы по одному (причина второго — в `errors`). Не ушло никуда — `error` с кодом
     причины: `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`
-    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (K0: в кабинет входят только компании с типом CLIENT), `CONTACT_ARCHIVED`.
+    (`both` без обоих адресов), `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `COMPANY_NOT_CLIENT` (в кабинет входят клиенты и поставщики с отношением, `portal/services/access.py`; имя кода прежнее), `CONTACT_ARCHIVED`.
     """
 
     def failed(code: str) -> InviteOutcome:
@@ -154,7 +156,7 @@ def invite_contact(
     if not company_in_circulation(contact.company_id):
         return failed("COMPANY_ARCHIVED")
     if not company_has_cabinet_access(contact.company_id):
-        return failed("COMPANY_NOT_CLIENT")  # K0: поставщика приглашать некуда — войти он всё равно не сможет
+        return failed("COMPANY_NOT_CLIENT")  # кабинет закрыт: не клиент и нет действующего отношения — войти не сможет
     if contact.is_archived:
         return failed("CONTACT_ARCHIVED")  # контакт удалён в CRM: в Cabinet не приглашается
 

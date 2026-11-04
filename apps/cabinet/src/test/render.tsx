@@ -4,7 +4,7 @@ import { createMemoryRouter } from 'react-router-dom';
 import { App } from '@/app/App';
 import { createQueryClient } from '@/app/queryClient';
 import { routes } from '@/app/routes';
-import { setMockSession } from '@/mocks/handlers';
+import { setMockSession, type MockAccess } from '@/mocks/handlers';
 import { initialPath } from '@/telegram/start-param';
 import { getStartParam, isMiniApp, type TelegramWebApp } from '@/telegram/webapp';
 
@@ -19,8 +19,12 @@ export function renderApp(path = '/') {
 }
 
 /** Сессия портала «уже есть» (cookie) — как после входа по magic-link. */
-export function signedIn(role: 'actor' | 'viewer' = 'actor', dataset: 'demo' | 'empty' = 'demo') {
-  setMockSession({ role, auth_method: 'magic_link', dataset });
+export function signedIn(
+  role: 'actor' | 'viewer' = 'actor',
+  dataset: 'demo' | 'empty' = 'demo',
+  access?: MockAccess,
+) {
+  setMockSession({ role, auth_method: 'magic_link', dataset, access });
 }
 
 /** Открыть как Mini App: SDK Telegram с подписанным `initData`. */

@@ -8,6 +8,8 @@ import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
 import { useAppMode } from '@/session/mode';
 import { useMe } from '@/session/useMe';
+import { useNav } from '@/session/useNav';
+import { navItemFor } from './nav';
 import { getTelegramWebApp } from '@/telegram/webapp';
 
 /**
@@ -21,9 +23,7 @@ export function RequireSession() {
   const session = useMe();
 
   if (session.isPending) {
-    return (
-      <StatusScreen title={mode === 'miniapp' ? t('auth.telegram.signingIn') : t('app.loading')} loading />
-    );
+    return <StatusScreen title={mode === 'miniapp' ? t('auth.telegram.signingIn') : t('app.loading')} loading />;
   }
   if (mode === 'miniapp' && !session.data) {
     return <TelegramSignInFailed error={session.error} onRetry={() => void session.refetch()} />;
@@ -48,7 +48,10 @@ function TelegramSignInFailed({ error, onRetry }: { error: unknown; onRetry: () 
     else if (bot) window.open(bot, '_blank', 'noopener');
   };
   return (
-    <StatusScreen title={t('auth.telegram.failedTitle')} text={`${isPortalApiError(error, 403) ? loginErrorText(error, t) : t(apiErrorKey(error))} ${t('auth.telegram.failedText')}`}>
+    <StatusScreen
+      title={t('auth.telegram.failedTitle')}
+      text={`${isPortalApiError(error, 403) ? loginErrorText(error, t) : t(apiErrorKey(error))} ${t('auth.telegram.failedText')}`}
+    >
       <Button onClick={onRetry}>{t('auth.telegram.retry')}</Button>
       {bot ? (
         <Button variant="outline" onClick={openBot}>
@@ -64,7 +67,24 @@ export function WebOnly() {
   return useAppMode() === 'miniapp' ? <Navigate to="/" replace /> : <Outlet />;
 }
 
-/** Корень `/` → «Запросы» (deep-link Mini App разрешается раньше — `initialPath`). */
+/** Корень `/` → первый раздел сессии (у клиента «Запросы»; deep-link Mini App разрешается раньше — `initialPath`). */
 export function HomeRedirect() {
-  return <Navigate to="/requests" replace />;
+  const { work } = useNav();
+  // Нет рабочих разделов — остаёмся на «/»: оболочка показывает «Доступ открыт» и «Профиль» в меню
+  if (work.length === 0) return null;
+  return <Navigate to={work[0]?.to ?? '/requests'} replace />;
+}
+
+/**
+ * Раздел вне модулей сессии (ADR-0022) — не страница с ошибкой 403, а возврат в первый доступный раздел.
+ * Адреса вне меню (`/deals/…`, `/requests/new` — внутри «Запросов») проходят по модулю своего раздела; незнакомые — на 404.
+ */
+export function RequireModule() {
+  const { pathname } = useLocation();
+  const { items, work } = useNav();
+  const section = navItemFor(pathname);
+  if (section && !items.some((item) => item.module === section.module)) {
+    return <Navigate to={work[0]?.to ?? '/'} replace />;
+  }
+  return <Outlet />;
 }

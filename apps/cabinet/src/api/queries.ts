@@ -24,15 +24,24 @@ export const keys = {
   team: ['team'] as const,
 };
 
+/** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
+interface ListOptions {
+  enabled?: boolean;
+}
+
 export const useRequests = () => useQuery({ queryKey: keys.requests, queryFn: portal.listRequests });
 export const useRequest = (id: number) =>
   useQuery({ queryKey: keys.request(id), queryFn: () => portal.getRequest(id), enabled: Number.isFinite(id) });
-export const useQuotes = () => useQuery({ queryKey: keys.quotes, queryFn: portal.listQuotes });
+export const useQuotes = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.quotes, queryFn: portal.listQuotes, enabled });
 export const useQuote = (id: number) =>
   useQuery({ queryKey: keys.quote(id), queryFn: () => portal.getQuote(id), enabled: Number.isFinite(id) });
-export const useContracts = () => useQuery({ queryKey: keys.contracts, queryFn: portal.listContracts });
-export const useInvoices = () => useQuery({ queryKey: keys.invoices, queryFn: portal.listInvoices });
-export const useActs = () => useQuery({ queryKey: keys.acts, queryFn: portal.listActs });
+export const useContracts = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.contracts, queryFn: portal.listContracts, enabled });
+export const useInvoices = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.invoices, queryFn: portal.listInvoices, enabled });
+export const useActs = ({ enabled = true }: ListOptions = {}) =>
+  useQuery({ queryKey: keys.acts, queryFn: portal.listActs, enabled });
 export const useDeliveries = () => useQuery({ queryKey: keys.deliveries, queryFn: portal.listDeliveries });
 export const useDocuments = (params: portal.DocumentsQuery = {}) =>
   useQuery({ queryKey: keys.documents(params), queryFn: () => portal.listDocuments(params) });
@@ -115,7 +124,10 @@ export const useSubmitPaymentProof = () =>
     [keys.invoices],
   );
 export const useReturnAct = () =>
-  useInvalidatingMutation(({ id, reason }: { id: number; reason: string }) => portal.returnAct(id, reason), [keys.acts]);
+  useInvalidatingMutation(
+    ({ id, reason }: { id: number; reason: string }) => portal.returnAct(id, reason),
+    [keys.acts],
+  );
 
 /** Поставка принята или оспорена клиентом — строка заменяется ответом ERP, список перечитывается. */
 function replaceDeliveryLine(line: portal.DeliveryLine, client: ReturnType<typeof useQueryClient>) {
@@ -123,7 +135,8 @@ function replaceDeliveryLine(line: portal.DeliveryLine, client: ReturnType<typeo
     lines?.map((item) => (item.id === line.id ? line : item)),
   );
 }
-export const useAcceptDelivery = () => useInvalidatingMutation(portal.acceptDelivery, [keys.deliveries], replaceDeliveryLine);
+export const useAcceptDelivery = () =>
+  useInvalidatingMutation(portal.acceptDelivery, [keys.deliveries], replaceDeliveryLine);
 export const useDisputeDelivery = () =>
   useInvalidatingMutation(
     ({ id, reason }: { id: number; reason: string }) => portal.disputeDelivery(id, reason),
@@ -132,5 +145,7 @@ export const useDisputeDelivery = () =>
   );
 
 export const useUpdateCompany = () =>
-  useInvalidatingMutation(portal.updateCompany, [['me']], (company, client) => client.setQueryData(keys.company, company));
+  useInvalidatingMutation(portal.updateCompany, [['me']], (company, client) =>
+    client.setQueryData(keys.company, company),
+  );
 export const useInviteTeamMember = () => useInvalidatingMutation(portal.inviteTeamMember, [keys.team]);

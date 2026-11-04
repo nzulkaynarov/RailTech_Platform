@@ -59,6 +59,13 @@ const REASONS = new Set([
   "rows_token_invalid",
   "offer_source_invalid",
   "role_not_permitted",
+  // PART-1: доступ партнёра в кабинет
+  "contact_exists",
+  "contact_email_ambiguous",
+  "email_delivery_failed",
+  "module_not_allowed",
+  "contact_name_required",
+  "contact_email_required",
   // CAT-CARD-1: фото, документы товара, гарантия
   "image_limit_reached",
   "image_main_required",

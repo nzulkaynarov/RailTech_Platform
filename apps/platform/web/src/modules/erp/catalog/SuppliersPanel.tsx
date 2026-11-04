@@ -43,6 +43,7 @@ import { queryLabels } from "./labels";
 import { HOME_CURRENCY, currencyLabel } from "../../../shared/lib/money";
 import { OFFER_SOURCES } from "./kinds";
 import { OfferCreateForm, OfferHistoryModal, SupplierForm } from "./supplierForms";
+import { SupplierCabinetAccess } from "./SupplierCabinetAccess";
 
 /** Расчёт · Поставщики: квоты, сроки действия цен и, с правом на цены поставщиков, сами цены (D2-3). */
 export function SuppliersPanel() {
@@ -272,6 +273,7 @@ function SupplierDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 ) : null}
               </div>
             ) : null}
+            <SupplierCabinetAccess supplierId={id} />
             <h3 className="pf-cat-section">{t("suppliers.offers")}</h3>
             {!card.prices_visible ? <p className="pf-cat-note">{t("offers.pricesNote")}</p> : null}
             {card.offers.length === 0 ? (
