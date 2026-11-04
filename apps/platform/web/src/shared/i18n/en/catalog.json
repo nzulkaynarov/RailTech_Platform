@@ -131,7 +131,11 @@
       "image_order_invalid": "There is no such place in the list.",
       "warranty_months_invalid": "Warranty is a number of months from 0 to 600.",
       "tech_doc_date_invalid": "The date is not valid.",
-      "tech_doc_validity_range_invalid": "“Valid until” cannot be earlier than “Issued”."
+      "tech_doc_validity_range_invalid": "“Valid until” cannot be earlier than “Issued”.",
+      "product_not_on_review": "The card is no longer on review. Refresh the page.",
+      "review_reason_required": "Give a reason: a general comment or a note on a field.",
+      "review_issues_invalid": "Check the notes: a field from the list and text up to 500 characters.",
+      "review_reason_too_long": "The comment is too long: 2000 characters at most."
     }
   },
   "items": {
@@ -897,5 +901,89 @@
     ],
     "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
     "saved": "Document saved."
+  },
+  "queue": {
+    "view": "List view",
+    "all": "All items",
+    "waiting": "Awaiting review",
+    "waitingCount": "Awaiting review · {{count}}",
+    "table": "Partner card review queue",
+    "columns": {
+      "partner": "Partner",
+      "sent": "Sent",
+      "due": "Reply by",
+      "completeness": "Completeness"
+    },
+    "kind": {
+      "card": "New card",
+      "changes": "Changes to a published card"
+    },
+    "overdue": "Overdue",
+    "inTime": "On time",
+    "open": "Open card: {{name}}",
+    "empty": {
+      "title": "The queue is empty",
+      "text": "Partner cards and changes appear here once they are sent for review."
+    }
+  },
+  "review": {
+    "title": "Card review",
+    "partner": "Partner",
+    "sent": "Sent",
+    "due": "Reply by",
+    "completeness": "Completeness",
+    "kind": "What was sent",
+    "changesNote": "The partner proposed changes to a published card: accept or reject each one.",
+    "cantPublish": "Cannot publish: fill in {{fields}}.",
+    "return": "Return to partner",
+    "published": "The card is published, the partner will get an email.",
+    "returned": "The card is returned, the partner will get an email with the reasons.",
+    "form": {
+      "title": "Return the card to the partner",
+      "ok": "Return",
+      "reason": "General comment",
+      "reasonHint": "At least one reason is needed: a comment or a note on a field.",
+      "issues": "Notes on fields",
+      "field": "Field",
+      "fieldPlaceholder": "Choose a field",
+      "comment": "Note",
+      "add": "Add a note",
+      "remove": "Remove note {{n}}",
+      "steps": [
+        "The card gets the status “Returned”",
+        "The partner sees the reasons in “My products” and gets an email",
+        "The partner fixes the card and sends it for review again"
+      ]
+    },
+    "issueFields": {
+      "name": "Name",
+      "description": "Description",
+      "brand": "Brand",
+      "manufacturer_part_number": "Manufacturer part number",
+      "gost_drawing": "GOST / drawing",
+      "category": "Category",
+      "uom": "Unit of measure",
+      "hs_code": "HS code",
+      "price": "Price",
+      "valid_until": "Price valid until",
+      "other": "Other"
+    }
+  },
+  "catalogPrice": {
+    "label": "Catalog price",
+    "onRequest": "on request",
+    "notSet": "showcase price is not set",
+    "source": {
+      "item": "set on the card",
+      "partner": "agreed with the partner",
+      "company": "catalog policy"
+    }
+  },
+  "partnerPrice": {
+    "label": "Product prices in the catalog",
+    "hint": "How clients see prices of this partner’s products",
+    "inherit": "Same as the company",
+    "cabinet": "Show",
+    "on_request": "On request"
   }
 }

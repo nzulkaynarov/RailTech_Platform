@@ -28,6 +28,13 @@ class DeskSupplierAccessRelationship(serializers.Serializer):
         child=serializers.CharField(),
         help_text="Включённые партнёру модули кабинета (`my_products`, `catalog_requests`).",
     )
+    catalog_price_visibility = serializers.ChoiceField(
+        choices=["", "cabinet", "on_request"],
+        help_text=(
+            "Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, "
+            "`on_request` — по запросу. Своя политика карточки сильнее."
+        ),
+    )
     status = serializers.ChoiceField(choices=["invited", "active", "suspended"])
     invited_at = serializers.DateTimeField(allow_null=True)
     activated_at = serializers.DateTimeField(allow_null=True)
@@ -90,3 +97,9 @@ class DeskSupplierAccessInviteIn(serializers.Serializer):
 class DeskSupplierAccessRelationshipPatch(serializers.Serializer):
     modules = serializers.ListField(required=False, child=serializers.CharField())
     kind = serializers.CharField(required=False, allow_blank=True, max_length=20)
+    catalog_price_visibility = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=16,
+        help_text="Пусто — как у компании; `cabinet` или `on_request`. Другое — 400 `VALIDATION_ERROR`.",
+    )

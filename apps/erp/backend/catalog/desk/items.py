@@ -85,7 +85,26 @@ def list_queryset(params):
     if params.get("proposals") == "pending":
         # CAT-1: позиции с изменениями от поставщиков, ждущими одобрения.
         queryset = queryset.filter(proposals_count__gt=0)
+    if params.get("review") == "waiting":
+        # PART-3: очередь проверки партнёров — старые отправки сверху (`catalog.review_queue`).
+        from catalog.review_queue import waiting_queryset
+
+        return waiting_queryset(queryset.select_related("source_supplier"))
     return queryset.order_by("name", "id")
+
+
+def queue_rows(products) -> dict[int, dict]:
+    """Поля строки очереди проверки на странице: срок, партнёр и полнота (контекст полноты — один на страницу)."""
+    from catalog.completeness import CompletenessContext, completeness
+    from catalog.review_queue import queue_info
+
+    products = list(products)
+    info = queue_info(products)
+    ctx = CompletenessContext(products)
+    return {
+        product.pk: {"review": info[product.pk], "completeness": completeness(product, ctx)["percent"]}
+        for product in products
+    }
 
 
 def item_kind(product, has_stock: bool) -> str:
@@ -262,7 +281,44 @@ def item_detail(product, user) -> dict:
         "publishable": bool(report["is_publishable"]),
         "missing": [item["code"] for item in report["missing"]],
     }
+    row["completeness"] = report["percent"]
+    row["catalog_price"] = catalog_price(product)
+    from catalog.review_queue import CODE_REVIEW, queue_info
+
+    waiting = getattr(product.status, "code", None) == CODE_REVIEW or bool(
+        pending and any(p.contact_id for p in pending)
+    )
+    if waiting:
+        product.waiting_since = _waiting_since(product, pending)
+        row["review"] = queue_info([product])[product.pk]
+    else:
+        row["review"] = None
     return row
+
+
+def _waiting_since(product, pending):
+    """С какого момента карточка ждёт решения: открытая проверка, иначе первое предложение партнёра."""
+    review = (
+        product.reviews.filter(decision="pending")
+        .order_by("submitted_at")
+        .values_list("submitted_at", flat=True)
+        .first()
+    )
+    if review is not None:
+        return review
+    return next((p.created_at for p in pending if p.contact_id), None) or product.updated_at
+
+
+def catalog_price(product) -> dict:
+    """Что покажет каталог клиенту: цена-витрина или «по запросу», и откуда взята видимость (карточка, партнёр, компания)."""
+    from catalog.constants import PriceVisibility
+    from catalog.policy import price_visibility_source
+
+    visibility, source = price_visibility_source(product)
+    shown = None
+    if visibility == PriceVisibility.CABINET and product.list_price is not None and product.list_price_currency_id:
+        shown = {"amount": f"{product.list_price:.2f}", "currency": product.list_price_currency.code}
+    return {"visibility": visibility, "source": source, "price": shown}
 
 
 # --- запись ------------------------------------------------------------------------------------------------------
@@ -429,6 +485,9 @@ def set_published(product: Product, publish: bool, actor) -> Product:
 
     Карточку без владельца (старая, ничья) публикует сотрудник своей компании — владельцем становится своя компания:
     иначе `can_manage` не пустил бы никого, кроме администратора.
+
+    Публикация карточки партнёра «на проверке» — решение очереди проверки (PART-3): проверка закрывается решением
+    «опубликована», запись попадает в журнал, контактам партнёра уходит письмо после фиксации.
     """
     from catalog.publishing import publish_product, unpublish_product
     from core.tenant import own_company_id
@@ -436,7 +495,56 @@ def set_published(product: Product, publish: bool, actor) -> Product:
     if product.owner_company_id is None and own_company_id():
         product.owner_company_id = own_company_id()
         product.save(update_fields=["owner_company", "updated_at"])
+    was_review = publish and getattr(product.status, "code", None) == "REVIEW"
     _, error = (publish_product if publish else unpublish_product)(product, actor)
     if error:
         raise ItemError(error.split(":", 1)[0])
+    if was_review:
+        _decided(product, actor, "published")
+    return product
+
+
+def _decided(product: Product, actor, decision: str, *, reason: str = "", issues=()) -> None:
+    """Решение очереди проверки: запись журнала и письмо партнёру (после фиксации транзакции)."""
+    from django.db import transaction
+
+    from catalog.desk.audit import record
+
+    record(
+        actor,
+        entity="product_review",
+        instance=product,
+        event=decision,
+        action="Карточка партнёра " + ("опубликована" if decision == "published" else "возвращена партнёру"),
+        before={"status": "REVIEW"},
+        after={
+            "status": "PUBLISHED" if decision == "published" else "RETURNED",
+            **({"reason": reason, "issues": len(issues)} if decision == "returned" else {}),
+        },
+        detail=product.name,
+    )
+    if product.source_supplier_id:
+        from portal.services.partner_decision_mail import notify_decision
+
+        transaction.on_commit(
+            lambda: notify_decision(product, decision, reason=reason, issues=list(issues), actor=actor)
+        )
+
+
+def return_item(product_id, data: dict, actor) -> Product:
+    """«Вернуть партнёру»: общий комментарий и замечания по полям; отказы — `ItemError` (409, 400, 403)."""
+    from catalog.review_queue import ReviewError, return_to_partner
+
+    try:
+        product = return_to_partner(product_id, actor, data.get("reason"), data.get("issues"))
+    except ReviewError as error:
+        raise ItemError(error.code) from None
+    decided = product.reviews.order_by("-decided_at", "-id").first()
+    _decided(
+        product,
+        actor,
+        "returned",
+        reason=decided.reason if decided else "",
+        issues=decided.field_issues if decided else (),
+    )
     return product

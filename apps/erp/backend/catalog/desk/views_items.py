@@ -21,6 +21,7 @@ from catalog.desk.serializers import (
     DeskOfferCreateIn,
     DeskOfferHistoryRow,
     DeskOfferIn,
+    DeskReturnIn,
     DeskSupplierDetail,
     DeskSupplierIn,
     DeskSupplierRow,
@@ -30,6 +31,15 @@ from catalog.models import Product, ProductFieldProposal, SupplierOffer
 
 _KIND = OpenApiParameter("kind", str, enum=list(items.ALL_KINDS), description="Тип позиции.")
 _CATEGORY = OpenApiParameter("category", int, description="Id категории.")
+_REVIEW = OpenApiParameter(
+    "review",
+    str,
+    enum=["waiting"],
+    description=(
+        "Очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые сверху; "
+        "в строке — `review` (срок) и `completeness`."
+    ),
+)
 _PROPOSALS = OpenApiParameter(
     "proposals", str, enum=["pending"], description="Только позиции с изменениями от поставщиков на одобрении."
 )
@@ -43,6 +53,7 @@ class ItemDeskViewSet(DeskViewSet):
         "partial_update": "catalog.manage",
         "publish": "catalog.publish",
         "unpublish": "catalog.publish",
+        "return_to_partner": "catalog.publish",
         "add_image": "catalog.manage",
         "image": "catalog.manage",
     }
@@ -77,14 +88,20 @@ class ItemDeskViewSet(DeskViewSet):
             "Позиции номенклатуры с типом, единицей, НДС и числом предложений. Цены поставщиков здесь нет вовсе — они в "
             "карточке и только с правом на `supplier_prices`."
         ),
-        parameters=[SEARCH, _KIND, _CATEGORY, _PROPOSALS, PAGE, PAGE_SIZE],
+        parameters=[SEARCH, _KIND, _CATEGORY, _PROPOSALS, _REVIEW, PAGE, PAGE_SIZE],
         responses={200: DeskItemRow},
         tags=["Catalog"],
     )
     def list(self, request):
         queryset = items.list_queryset(request.query_params)
         vat_default = items.company_vat_default()
-        return self.page_of(queryset, lambda rows: [items.item_row(p, vat_default) for p in rows])
+        waiting = request.query_params.get("review") == "waiting"
+
+        def build(rows):
+            extra = items.queue_rows(rows) if waiting else {}
+            return [{**items.item_row(p, vat_default), **extra.get(p.pk, {})} for p in rows]
+
+        return self.page_of(queryset, build)
 
     @extend_schema(
         operation_id="catalog_items_retrieve",
@@ -241,6 +258,30 @@ class ItemDeskViewSet(DeskViewSet):
     @action(detail=True, methods=["post"], url_path="unpublish")
     def unpublish(self, request, pk=None):
         return self._set_published(request, pk, False)
+
+    @extend_schema(
+        operation_id="catalog_items_return",
+        summary="Return a partner card with reasons",
+        description=(
+            "Needs `catalog.publish`. Карточка партнёра «на проверке» → «возвращена»: общий комментарий и замечания по полям "
+            "(`issues`: поле из перечня карточки и текст). Нужна хотя бы одна причина — 400 `REVIEW_REASON_REQUIRED`; поле не из "
+            "перечня или длинный текст — 400 `REVIEW_ISSUES_INVALID`. Карточка не на проверке (уже решена) — 409 "
+            "`PRODUCT_NOT_ON_REVIEW`. Проверка закрывается решением «возвращена», партнёру уходит письмо."
+        ),
+        request=DeskReturnIn,
+        responses={200: DeskItemDetail, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="return", url_name="return")
+    def return_to_partner(self, request, pk=None):
+        product = self._product(pk)
+        body = DeskReturnIn(data=request.data)
+        body.is_valid(raise_exception=True)
+        try:
+            items.return_item(product.pk, dict(body.validated_data), request.user)
+        except items.ItemError as error:
+            return refuse(error)
+        return Response(items.item_detail(self._product(product.pk), request.user))
 
 
 class ProposalDeskViewSet(DeskViewSet):

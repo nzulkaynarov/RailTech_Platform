@@ -1,0 +1,8 @@
+{% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
+
+{% blocktranslate with name=product_name %}Карточка «{{ name }}» проверена и опубликована в каталоге.{% endblocktranslate %}
+
+{% translate "Открыть в разделе «Мои товары»:" %}
+{{ card_url }}
+
+— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

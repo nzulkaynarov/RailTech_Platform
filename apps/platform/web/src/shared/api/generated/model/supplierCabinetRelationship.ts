@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 import type { SupplierCabinetPerson } from "./supplierCabinetPerson";
+import type { SupplierCabinetRelationshipCatalogPriceVisibility } from "./supplierCabinetRelationshipCatalogPriceVisibility";
 import type { SupplierCabinetRelationshipKind } from "./supplierCabinetRelationshipKind";
 import type { SupplierCabinetRelationshipModulesItem } from "./supplierCabinetRelationshipModulesItem";
 import type { SupplierCabinetRelationshipRole } from "./supplierCabinetRelationshipRole";
@@ -14,6 +15,8 @@ export interface SupplierCabinetRelationship {
   kind: SupplierCabinetRelationshipKind;
   /** Включённые партнёру модули кабинета */
   modules: SupplierCabinetRelationshipModulesItem[];
+  /** Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу; своя политика карточки сильнее */
+  catalog_price_visibility: SupplierCabinetRelationshipCatalogPriceVisibility;
   status: SupplierCabinetRelationshipStatus;
   /** @nullable */
   invited_at: string | null;

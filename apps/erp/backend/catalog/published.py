@@ -27,7 +27,7 @@ from django.db.models import Prefetch
 from django.utils import timezone
 
 from .constants import MODE_CLIENT, MODE_LEAD, PROJECTION_MODES, PriceVisibility
-from .policy import CatalogPolicy, effective_price_visibility, load_policies, policy_for
+from .policy import CatalogPolicy, effective_price_visibility, load_partner_price_visibility, load_policies, policy_for
 
 #: Наличие как статус (контракт портала `Availability`).
 IN_STOCK = "in_stock"
@@ -225,9 +225,9 @@ def client_documents(product) -> list[dict]:
     ]
 
 
-def _price(product, policy: CatalogPolicy) -> dict | None:
+def _price(product, policy: CatalogPolicy, partners: dict[int, str] | None = None) -> dict | None:
     """Цена-витрина клиенту или `None` — «по запросу» (контракт: `price: Money | null`)."""
-    if effective_price_visibility(product, policy) != PriceVisibility.CABINET:
+    if effective_price_visibility(product, policy, partners) != PriceVisibility.CABINET:
         return None
     if product.list_price is None or product.list_price_currency_id is None:
         return None
@@ -245,6 +245,7 @@ def project(
     request=None,
     with_documents: bool = False,
     warranty_default=_UNSET,
+    partners: dict[int, str] | None = None,
 ) -> dict:
     """Карточка в опубликованном слое — `CatalogItem` контракта портала.
 
@@ -277,7 +278,7 @@ def project(
     if mode == MODE_CLIENT:
         policy = policy if policy is not None else policy_for(product.owner_company_id)
         status, lead_time_days = availability(product)
-        item["price"] = _price(product, policy)
+        item["price"] = _price(product, policy, partners)
         item["availability"] = status
         item["lead_time_days"] = lead_time_days
     return item
@@ -287,6 +288,9 @@ def project_many(products, *, mode: str, request=None) -> list[dict]:
     """Проекция пачки: политики компаний — одним запросом (для списков портала и поиска)."""
     products = list(products)
     policies = load_policies(product.owner_company_id for product in products) if mode != MODE_LEAD else {}
+    partners = (
+        load_partner_price_visibility(product.source_supplier_id for product in products) if mode != MODE_LEAD else {}
+    )
     warranty_default = company_warranty_months()
     return [
         project(
@@ -295,6 +299,7 @@ def project_many(products, *, mode: str, request=None) -> list[dict]:
             policy=policies.get(product.owner_company_id, CatalogPolicy()),
             request=request,
             warranty_default=warranty_default,
+            partners=partners,
         )
         for product in products
     ]

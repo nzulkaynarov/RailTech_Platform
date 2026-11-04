@@ -48,6 +48,13 @@ import { KINDS } from "./kinds";
 import { ItemDocs } from "./ItemDocs";
 import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
+import {
+  CatalogPriceValue,
+  QueueSwitch,
+  ReturnButton,
+  ReviewBlock,
+  queueColumns,
+} from "./ReviewQueue";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
   const { t } = useTranslation("catalog");
@@ -73,11 +80,14 @@ export function ItemsPanel() {
   const lookups = useGetCatalogLookups();
   // CAT-1: «На одобрении» — позиции с изменениями от поставщиков; фильтр в адресе (на него ведёт отчёт загрузки).
   const pending = params.get("proposals") === "pending";
+  // PART-3: очередь проверки партнёров — «Ждут проверки» (старые отправки сверху, срок и полнота в строке)
+  const waiting = params.get("review") === "waiting";
   const query = useListCatalogItems({
     ...(q ? { q } : {}),
     ...(kind ? { kind } : {}),
     ...(category ? { category_id: category } : {}),
     ...(pending ? { proposals: "pending" as const } : {}),
+    ...(waiting ? { review: "waiting" as const } : {}),
     page,
     page_size: PAGE_SIZE,
   } satisfies ListCatalogItemsParams);
@@ -97,32 +107,37 @@ export function ItemsPanel() {
       { replace: true },
     );
   };
+  const nameColumn: Column<CatalogItem> = {
+    key: "name",
+    title: t("items.columns.name"),
+    render: (row) => (
+      <>
+        <Button
+          type="link"
+          className="pf-cat-linkbtn"
+          aria-label={t("items.open", { name: row.name })}
+          aria-current={selected === row.id ? "true" : undefined}
+          onClick={() => {
+            open(row.id);
+          }}
+        >
+          {row.name}
+        </Button>
+        <span className="pf-cat-sub">{row.sku}</span>
+        {waiting && row.review ? (
+          <StatusTag kind="validity" status="expiring">
+            {t(`queue.kind.${row.review.kind}`)}
+          </StatusTag>
+        ) : row.proposals_count > 0 ? (
+          <StatusTag kind="validity" status="expiring">
+            {t("proposals.count", { count: row.proposals_count })}
+          </StatusTag>
+        ) : null}
+      </>
+    ),
+  };
   const columns: Column<CatalogItem>[] = [
-    {
-      key: "name",
-      title: t("items.columns.name"),
-      render: (row) => (
-        <>
-          <Button
-            type="link"
-            className="pf-cat-linkbtn"
-            aria-label={t("items.open", { name: row.name })}
-            aria-current={selected === row.id ? "true" : undefined}
-            onClick={() => {
-              open(row.id);
-            }}
-          >
-            {row.name}
-          </Button>
-          <span className="pf-cat-sub">{row.sku}</span>
-          {row.proposals_count > 0 ? (
-            <StatusTag kind="validity" status="expiring">
-              {t("proposals.count", { count: row.proposals_count })}
-            </StatusTag>
-          ) : null}
-        </>
-      ),
-    },
+    nameColumn,
     { key: "kind", title: t("items.columns.kind"), render: (row) => <KindTag kind={row.kind} /> },
     { key: "unit", title: t("items.columns.unit"), render: (row) => row.unit?.name ?? "—" },
     {
@@ -173,9 +188,25 @@ export function ItemsPanel() {
         ),
     },
   ];
+  const shownColumns = waiting ? [nameColumn, ...queueColumns(t, date)] : columns;
+  const setWaiting = (on: boolean) => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (on) next.set("review", "waiting");
+        else next.delete("review");
+        return next;
+      },
+      { replace: true },
+    );
+    setPage(1);
+  };
   return (
     <div className="pf-cat">
       <div className="pf-cat-controls">
+        <div className="pf-cat-control">
+          <QueueSwitch waiting={waiting} onChange={setWaiting} />
+        </div>
         <div className="pf-cat-control">
           <label htmlFor={searchId}>{t("items.search")}</label>
           <Input
@@ -190,58 +221,65 @@ export function ItemsPanel() {
             }}
           />
         </div>
-        <div className="pf-cat-control">
-          <label htmlFor={kindId}>{t("items.filterKind")}</label>
-          <Select
-            id={kindId}
-            allowClear
-            placeholder={t("items.anyKind")}
-            style={{ width: 200 }}
-            value={kind}
-            onChange={(value: CatalogItemKind | undefined) => {
-              setKind(value);
-              setPage(1);
-            }}
-            options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) }))}
-          />
-        </div>
-        <div className="pf-cat-control">
-          <label htmlFor={categoryId}>{t("items.filterCategory")}</label>
-          <Select
-            id={categoryId}
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            placeholder={t("items.anyCategory")}
-            style={{ width: 220 }}
-            value={category}
-            onChange={(value: string | undefined) => {
-              setCategory(value);
-              setPage(1);
-            }}
-            options={(lookups.data?.categories ?? []).map((c) => ({ value: c.id, label: c.name }))}
-          />
-        </div>
-        <div className="pf-cat-control pf-cat-control-check">
-          <Checkbox
-            id={pendingId}
-            checked={pending}
-            onChange={(event) => {
-              setParams(
-                (prev) => {
-                  const next = new URLSearchParams(prev);
-                  if (event.target.checked) next.set("proposals", "pending");
-                  else next.delete("proposals");
-                  return next;
-                },
-                { replace: true },
-              );
-              setPage(1);
-            }}
-          >
-            {t("proposals.filter")}
-          </Checkbox>
-        </div>
+        {waiting ? null : (
+          <>
+            <div className="pf-cat-control">
+              <label htmlFor={kindId}>{t("items.filterKind")}</label>
+              <Select
+                id={kindId}
+                allowClear
+                placeholder={t("items.anyKind")}
+                style={{ width: 200 }}
+                value={kind}
+                onChange={(value: CatalogItemKind | undefined) => {
+                  setKind(value);
+                  setPage(1);
+                }}
+                options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) }))}
+              />
+            </div>
+            <div className="pf-cat-control">
+              <label htmlFor={categoryId}>{t("items.filterCategory")}</label>
+              <Select
+                id={categoryId}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder={t("items.anyCategory")}
+                style={{ width: 220 }}
+                value={category}
+                onChange={(value: string | undefined) => {
+                  setCategory(value);
+                  setPage(1);
+                }}
+                options={(lookups.data?.categories ?? []).map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+              />
+            </div>
+            <div className="pf-cat-control pf-cat-control-check">
+              <Checkbox
+                id={pendingId}
+                checked={pending}
+                onChange={(event) => {
+                  setParams(
+                    (prev) => {
+                      const next = new URLSearchParams(prev);
+                      if (event.target.checked) next.set("proposals", "pending");
+                      else next.delete("proposals");
+                      return next;
+                    },
+                    { replace: true },
+                  );
+                  setPage(1);
+                }}
+              >
+                {t("proposals.filter")}
+              </Checkbox>
+            </div>
+          </>
+        )}
         <span className="pf-cat-spacer" />
         {canEdit(me, "erp.stock") ? (
           <Button
@@ -258,17 +296,23 @@ export function ItemsPanel() {
         {(data) =>
           data.items.length === 0 ? (
             <EmptyState
-              title={t("items.empty.title")}
+              title={waiting ? t("queue.empty.title") : t("items.empty.title")}
               text={
-                q || kind || category || pending ? t("items.empty.filtered") : t("items.empty.text")
+                waiting
+                  ? q
+                    ? t("items.empty.filtered")
+                    : t("queue.empty.text")
+                  : q || kind || category || pending
+                    ? t("items.empty.filtered")
+                    : t("items.empty.text")
               }
             />
           ) : (
             <>
               <DataList
-                label={t("items.table")}
+                label={waiting ? t("queue.table") : t("items.table")}
                 rows={data.items}
-                columns={columns}
+                columns={shownColumns}
                 rowKey={(row) => row.id}
                 selectedKey={selected}
               />
@@ -346,6 +390,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 { label: t("items.fields.gost"), value: card.gost_drawing },
                 { label: t("items.fields.hs"), value: card.hs_code },
                 { label: t("items.fields.source"), value: card.source_supplier?.name },
+                { label: t("catalogPrice.label"), value: <CatalogPriceValue card={card} /> },
                 {
                   label: t("items.fields.origin"),
                   value: card.origin.effective
@@ -364,6 +409,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   : []),
               ]}
             />
+            <ReviewBlock card={card} />
             {canEdit(me, "erp.stock") ? (
               <div className="pf-cat-actions">
                 <Button
@@ -374,6 +420,7 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   {t("items.edit")}
                 </Button>
                 <PublishButton card={card} />
+                <ReturnButton card={card} />
               </div>
             ) : null}
             {card.status !== "PUBLISHED" && card.publish.missing.length > 0 ? (
@@ -427,7 +474,15 @@ function PublishButton({ card }: { card: CatalogItemDetail }) {
   const fail = (error: unknown) => {
     void message.error(catalogErrorText(t, error));
   };
-  const publish = usePublishCatalogItem({ mutation: { onSuccess: done, onError: fail } });
+  const publish = usePublishCatalogItem({
+    mutation: {
+      onSuccess: (saved) => {
+        done(saved);
+        if (card.review?.kind === "card") void message.success(t("review.published"));
+      },
+      onError: fail,
+    },
+  });
   const unpublish = useUnpublishCatalogItem({ mutation: { onSuccess: done, onError: fail } });
   if (card.status === "PUBLISHED") {
     return (

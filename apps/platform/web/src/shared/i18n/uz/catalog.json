@@ -131,7 +131,11 @@
       "image_order_invalid": "Ro‘yxatda bunday o‘rin yo‘q.",
       "warranty_months_invalid": "Kafolat — 0 dan 600 gacha oy soni.",
       "tech_doc_date_invalid": "Sana noto‘g‘ri ko‘rsatilgan.",
-      "tech_doc_validity_range_invalid": "«Amal qilish muddati» «Berilgan sana»dan oldin bo‘lishi mumkin emas."
+      "tech_doc_validity_range_invalid": "«Amal qilish muddati» «Berilgan sana»dan oldin bo‘lishi mumkin emas.",
+      "product_not_on_review": "Kartochka endi tekshiruvda emas. Sahifani yangilang.",
+      "review_reason_required": "Sababni kiriting: umumiy izoh yoki maydon bo'yicha eslatma.",
+      "review_issues_invalid": "Eslatmalarni tekshiring: ro'yxatdagi maydon va 500 belgigacha matn.",
+      "review_reason_too_long": "Izoh juda uzun: 2000 belgidan oshmasin."
     }
   },
   "items": {
@@ -897,5 +901,89 @@
     ],
     "editSteps": ["O‘zgarishlar hujjatda saqlanadi.", "Faylning o‘zi o‘zgarmaydi."],
     "saved": "Hujjat saqlandi."
+  },
+  "queue": {
+    "view": "Ro'yxat ko'rinishi",
+    "all": "Barcha pozitsiyalar",
+    "waiting": "Tekshiruv kutmoqda",
+    "waitingCount": "Tekshiruv kutmoqda · {{count}}",
+    "table": "Hamkorlar kartochkalarini tekshirish navbati",
+    "columns": {
+      "partner": "Hamkor",
+      "sent": "Yuborilgan",
+      "due": "Javob muddati",
+      "completeness": "To'liqlik"
+    },
+    "kind": {
+      "card": "Yangi kartochka",
+      "changes": "E'lon qilinganga tuzatishlar"
+    },
+    "overdue": "Muddati o'tgan",
+    "inTime": "Muddatida",
+    "open": "Kartochkani ochish: {{name}}",
+    "empty": {
+      "title": "Navbat bo'sh",
+      "text": "Hamkorlarning kartochkalari va tuzatishlari tekshiruvga yuborilganda shu yerda paydo bo'ladi."
+    }
+  },
+  "review": {
+    "title": "Kartochkani tekshirish",
+    "partner": "Hamkor",
+    "sent": "Yuborilgan",
+    "due": "Javob muddati",
+    "completeness": "To'liqlik",
+    "kind": "Nima yuborilgan",
+    "changesNote": "Hamkor e'lon qilingan kartochkaga tuzatishlar taklif qildi: har birini qabul qiling yoki rad eting.",
+    "cantPublish": "E'lon qilib bo'lmaydi: {{fields}} to'ldiring.",
+    "return": "Hamkorga qaytarish",
+    "published": "Kartochka e'lon qilindi, hamkor xat oladi.",
+    "returned": "Kartochka qaytarildi, hamkor sabablar bilan xat oladi.",
+    "form": {
+      "title": "Kartochkani hamkorga qaytarish",
+      "ok": "Qaytarish",
+      "reason": "Umumiy izoh",
+      "reasonHint": "Kamida bitta sabab kerak: izoh yoki maydon bo'yicha eslatma.",
+      "issues": "Maydonlar bo'yicha eslatmalar",
+      "field": "Maydon",
+      "fieldPlaceholder": "Maydonni tanlang",
+      "comment": "Eslatma",
+      "add": "Eslatma qo'shish",
+      "remove": "{{n}}-eslatmani olib tashlash",
+      "steps": [
+        "Kartochka «Qaytarilgan» holatini oladi",
+        "Hamkor sabablarni «Mening mahsulotlarim»da ko'radi va xat oladi",
+        "Tuzatilgan kartochkani qayta tekshiruvga yuboradi"
+      ]
+    },
+    "issueFields": {
+      "name": "Nomi",
+      "description": "Tavsif",
+      "brand": "Brend",
+      "manufacturer_part_number": "Ishlab chiqaruvchi artikuli",
+      "gost_drawing": "GOST / chizma",
+      "category": "Kategoriya",
+      "uom": "O'lchov birligi",
+      "hs_code": "TIF TN kodi",
+      "price": "Narx",
+      "valid_until": "Narx amal qilish muddati",
+      "other": "Boshqa"
+    }
+  },
+  "catalogPrice": {
+    "label": "Katalogdagi narx",
+    "onRequest": "so'rov bo'yicha",
+    "notSet": "vitrina narxi belgilanmagan",
+    "source": {
+      "item": "kartochka sozlamasi bo'yicha",
+      "partner": "hamkor bilan kelishuv bo'yicha",
+      "company": "katalog siyosati bo'yicha"
+    }
+  },
+  "partnerPrice": {
+    "label": "Katalogdagi mahsulot narxlari",
+    "hint": "Mijozlar bu hamkor mahsulotlari narxini qanday ko'radi",
+    "inherit": "Kompaniya kabi",
+    "cabinet": "Ko'rsatish",
+    "on_request": "So'rov bo'yicha"
   }
 }

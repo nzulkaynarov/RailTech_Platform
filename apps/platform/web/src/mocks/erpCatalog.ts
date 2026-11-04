@@ -10,6 +10,9 @@ import type {
   CatalogItemKind,
   CatalogItemUpdate,
   CatalogOffer,
+  CatalogPrice,
+  CatalogReviewInfo,
+  CatalogReturnIssue,
   CategoryProposalIn,
   CategoryRequest,
   HsCode,
@@ -54,6 +57,7 @@ import {
   validityOf,
 } from "./fixtures/erpCatalog";
 import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
+import { partnerPriceVisibility } from "./erpSupplierAccess";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -139,6 +143,26 @@ function categoryOf(id: string | null) {
   return found ? { id: found.id, name: found.name } : null;
 }
 
+const HOUR_MS = 3_600_000;
+
+/** Что ждёт решения (PART-3): карточка на проверке или предложения партнёра; срок — сутки от отправки (выходные в моке не считаются). */
+function reviewOf(item: MockItem): CatalogReviewInfo | null {
+  const partnerProposals = item.proposals.filter((p) => p.partner);
+  const open = item.status === "REVIEW" ? item.review : null;
+  if (!open && partnerProposals.length === 0) return null;
+  const submitted = open?.submitted_at ?? partnerProposals[0]?.created_at ?? MOCK_TODAY;
+  const supplierId = open ? item.sourceSupplierId : (partnerProposals[0]?.supplierId ?? null);
+  return {
+    kind: open ? "card" : "changes",
+    partner: supplierName(supplierId),
+    submitted_at: submitted,
+    due_at: new Date(Date.parse(submitted) + 24 * HOUR_MS).toISOString(),
+    overdue: open ? open.overdue : submitted.slice(0, 10) < "2026-10-28",
+  };
+}
+
+const completenessOf = (item: MockItem) => 100 - missingOf(item).length * 25;
+
 function rowOf(item: MockItem): CatalogItem {
   const { offers } = readErpCatalog();
   const own = offers.filter((o) => o.itemId === item.id && o.is_active);
@@ -159,6 +183,8 @@ function rowOf(item: MockItem): CatalogItem {
     nearest_valid_until: dates.sort()[0] ?? null,
     docs_count: readErpCatalog().docs.filter((d) => d.doc.product?.id === item.id).length,
     proposals_count: item.proposals.length,
+    review: reviewOf(item),
+    completeness: completenessOf(item),
   };
 }
 
@@ -203,6 +229,20 @@ function supplierName(id: string | null): { id: string; name: string } | null {
   return supplier ? { id: supplier.id, name: supplier.name } : null;
 }
 
+/** Что покажет каталог клиенту: видимость — карточка → договорённость с партнёром → компания («по запросу»). */
+function catalogPriceOf(item: MockItem): CatalogPrice {
+  const partner = item.sourceSupplierId ? partnerPriceVisibility(item.sourceSupplierId) : "";
+  const visibility = partner === "" ? "on_request" : partner;
+  return {
+    visibility,
+    source: partner === "" ? "company" : "partner",
+    price:
+      visibility === "cabinet" && item.list_price
+        ? { amount: item.list_price, currency: "UZS" }
+        : null,
+  };
+}
+
 function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
   const state = readErpCatalog();
   return {
@@ -229,6 +269,7 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
       created_at: p.created_at,
     })),
     publish: { publishable: missingOf(item).length === 0, missing: missingOf(item) },
+    catalog_price: catalogPriceOf(item),
   };
 }
 
@@ -494,6 +535,8 @@ function runImport(
           vat_rate: null,
           categoryId: null,
           status: "DRAFT",
+          review: null,
+          list_price: null,
           description: "",
           gost_drawing: "",
           hs_code: "",
@@ -657,15 +700,22 @@ export const erpCatalogHandlers = [
     const kind = params.get("kind");
     const category = params.get("category_id");
     const pending = params.get("proposals") === "pending";
-    const rows = readErpCatalog()
-      .items.filter(
-        (i) =>
-          (contains(i.name, q) || contains(i.sku, q) || contains(i.gost_drawing, q)) &&
-          (!kind || i.kind === kind) &&
-          (!category || i.categoryId === category) &&
-          (!pending || i.proposals.length > 0),
-      )
-      .map(rowOf);
+    const waiting = params.get("review") === "waiting";
+    if (params.get("review") !== null && !waiting) return invalid("review", "review_invalid");
+    const found = readErpCatalog().items.filter(
+      (i) =>
+        (contains(i.name, q) || contains(i.sku, q) || contains(i.gost_drawing, q)) &&
+        (!kind || i.kind === kind) &&
+        (!category || i.categoryId === category) &&
+        (!pending || i.proposals.length > 0) &&
+        (!waiting || reviewOf(i) !== null),
+    );
+    // Очередь проверки: старые отправки сверху
+    if (waiting)
+      found.sort((a, b) =>
+        (reviewOf(a)?.submitted_at ?? "").localeCompare(reviewOf(b)?.submitted_at ?? ""),
+      );
+    const rows = found.map(rowOf);
     return HttpResponse.json(pageOf(rows, params));
   }),
   http.get("*/erp/catalog/items/:id", ({ params }) => {
@@ -693,6 +743,8 @@ export const erpCatalogHandlers = [
       vat_rate: data.vat_rate ?? null,
       categoryId: data.category_id ?? null,
       status: "DRAFT",
+      review: null,
+      list_price: null,
       description: data.description ?? "",
       gost_drawing: "",
       hs_code: "",
@@ -818,6 +870,22 @@ export const erpCatalogHandlers = [
       headers: { "Content-Type": image.type, "X-Content-Type-Options": "nosniff" },
     });
   }),
+  http.post("*/erp/catalog/items/:id/return", async ({ params, request }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    if (!item) return notFound();
+    const data = await body<{ reason?: string | null; issues?: CatalogReturnIssue[] | null }>(
+      request,
+    );
+    if (!(data.reason ?? "").trim() && !(data.issues ?? []).length)
+      return invalid("reason", "review_reason_required");
+    if (item.status !== "REVIEW")
+      return conflict("product_not_on_review", "Карточка уже не на проверке. Обновите страницу.");
+    item.status = "RETURNED";
+    item.review = null;
+    return HttpResponse.json(detailOf(item, who));
+  }),
   http.post("*/erp/catalog/items/:id/:action", ({ params }) => {
     const who = guard("full");
     if (isResponse(who)) return who;
@@ -827,6 +895,7 @@ export const erpCatalogHandlers = [
       if (missingOf(item).length > 0)
         return conflict("product_incomplete", "Заполните недостающие поля, затем опубликуйте.");
       item.status = "PUBLISHED";
+      item.review = null;
     } else if (params["action"] === "unpublish") {
       item.status = "DRAFT";
     } else return notFound();

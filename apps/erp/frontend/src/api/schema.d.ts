@@ -3803,6 +3803,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/items/{id}/return/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Return a partner card with reasons
+         * @description Needs `catalog.publish`. Карточка партнёра «на проверке» → «возвращена»: общий комментарий и замечания по полям (`issues`: поле из перечня карточки и текст). Нужна хотя бы одна причина — 400 `REVIEW_REASON_REQUIRED`; поле не из перечня или длинный текст — 400 `REVIEW_ISSUES_INVALID`. Карточка не на проверке (уже решена) — 409 `PRODUCT_NOT_ON_REVIEW`. Проверка закрывается решением «возвращена», партнёру уходит письмо.
+         */
+        post: operations["catalog_items_return"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/items/{id}/unpublish/": {
         parameters: {
             query?: never;
@@ -10266,6 +10286,13 @@ export interface components {
              */
             description?: string;
         };
+        /**
+         * @description * `item` - item
+         *     * `partner` - partner
+         *     * `company` - company
+         * @enum {string}
+         */
+        CatalogPriceSourceEnum: "item" | "partner" | "company";
         CatalogUnitOfMeasure: {
             readonly id: number;
             /**
@@ -12055,6 +12082,26 @@ export interface components {
             note?: string;
             is_active?: boolean;
         };
+        /** @description Что покажет каталог клиенту (PART-3): уровень видимости и цена-витрина. */
+        DeskCatalogPrice: {
+            /**
+             * @description `cabinet` — цену видно; `on_request` — «по запросу».
+             *
+             *     * `cabinet` - Показывать цену в кабинете
+             *     * `on_request` - Цена по запросу
+             */
+            visibility: components["schemas"]["PriceVisibilityEnum"];
+            /**
+             * @description Откуда взята видимость: карточка → договорённость с партнёром → компания.
+             *
+             *     * `item` - item
+             *     * `partner` - partner
+             *     * `company` - company
+             */
+            source: components["schemas"]["CatalogPriceSourceEnum"];
+            /** @description Цена-витрина клиенту; null — «по запросу» или цена не задана. */
+            price: components["schemas"]["Money"] | null;
+        };
         DeskCrewRate: {
             amount: string;
             currency: string | null;
@@ -12155,6 +12202,10 @@ export interface components {
             docs_count: number;
             /** @description Изменений от поставщиков на одобрении (CAT-1). */
             proposals_count: number;
+            /** @description Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3). */
+            review?: components["schemas"]["DeskReviewInfo"] | null;
+            /** @description Полнота карточки, % — в списке `review=waiting` и в карточке. */
+            completeness?: number;
             description: string;
             gost_drawing: string;
             hs_code: string;
@@ -12175,6 +12226,8 @@ export interface components {
             /** @description Изменения от поставщиков на одобрении. */
             proposals: components["schemas"]["DeskProposal"][];
             publish: components["schemas"]["DeskPublishState"];
+            /** @description Что покажет каталог клиенту. */
+            catalog_price: components["schemas"]["DeskCatalogPrice"];
         };
         /** @description Создание и правка позиции. При правке приходят только изменяемые поля. */
         DeskItemInRequest: {
@@ -12235,6 +12288,10 @@ export interface components {
             docs_count: number;
             /** @description Изменений от поставщиков на одобрении (CAT-1). */
             proposals_count: number;
+            /** @description Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3). */
+            review?: components["schemas"]["DeskReviewInfo"] | null;
+            /** @description Полнота карточки, % — в списке `review=waiting` и в карточке. */
+            completeness?: number;
         };
         DeskMoneyInRequest: {
             amount: string;
@@ -12359,6 +12416,70 @@ export interface components {
             id: number;
             name: string;
         };
+        /** @description Возврат карточки партнёру: нужна хотя бы одна причина — общий комментарий или замечание по полю. */
+        DeskReturnInRequest: {
+            /** @description Общий комментарий. */
+            reason?: string;
+            issues?: components["schemas"]["DeskReturnIssueRequest"][] | null;
+        };
+        /**
+         * @description * `name` - name
+         *     * `description` - description
+         *     * `brand` - brand
+         *     * `manufacturer_part_number` - manufacturer_part_number
+         *     * `gost_drawing` - gost_drawing
+         *     * `category` - category
+         *     * `uom` - uom
+         *     * `hs_code` - hs_code
+         *     * `price` - price
+         *     * `valid_until` - valid_until
+         *     * `other` - other
+         * @enum {string}
+         */
+        DeskReturnIssueFieldEnum: "name" | "description" | "brand" | "manufacturer_part_number" | "gost_drawing" | "category" | "uom" | "hs_code" | "price" | "valid_until" | "other";
+        DeskReturnIssueRequest: {
+            /**
+             * @description Поле карточки, к которому замечание.
+             *
+             *     * `name` - name
+             *     * `description` - description
+             *     * `brand` - brand
+             *     * `manufacturer_part_number` - manufacturer_part_number
+             *     * `gost_drawing` - gost_drawing
+             *     * `category` - category
+             *     * `uom` - uom
+             *     * `hs_code` - hs_code
+             *     * `price` - price
+             *     * `valid_until` - valid_until
+             *     * `other` - other
+             */
+            field: components["schemas"]["DeskReturnIssueFieldEnum"];
+            comment: string;
+        };
+        /** @description Ожидание решения по карточке партнёра (PART-3): кто прислал, когда и до какого срока ответить. */
+        DeskReviewInfo: {
+            /**
+             * @description `card` — карточка на проверке; `changes` — предложения партнёра к опубликованной.
+             *
+             *     * `card` - card
+             *     * `changes` - changes
+             */
+            kind: components["schemas"]["ReviewKindEnum"];
+            /** @description Партнёр: источник данных карточки или приславший предложение. */
+            partner: components["schemas"]["DeskRef"] | null;
+            /**
+             * Format: date-time
+             * @description Когда отправлено (старые сверху).
+             */
+            submitted_at: string;
+            /**
+             * Format: date-time
+             * @description Срок ответа: 24 часа без учёта субботы и воскресенья.
+             */
+            due_at: string;
+            /** @description Срок прошёл. */
+            overdue: boolean;
+        };
         DeskSupplierAccess: {
             company_id: number;
             company_name: string;
@@ -12415,6 +12536,14 @@ export interface components {
             kind: string;
             /** @description Включённые партнёру модули кабинета (`my_products`, `catalog_requests`). */
             modules: string[];
+            /**
+             * @description Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу. Своя политика карточки сильнее.
+             *
+             *     * `` -
+             *     * `cabinet` - cabinet
+             *     * `on_request` - on_request
+             */
+            catalog_price_visibility: components["schemas"]["PartnerPriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
             status: components["schemas"]["DeskSupplierAccessRelationshipStatusEnum"];
             /** Format: date-time */
             invited_at: string | null;
@@ -14381,6 +14510,13 @@ export interface components {
         ParseRequestTextRequestRequest: {
             quote_id: number;
         };
+        /**
+         * @description * `` -
+         *     * `cabinet` - cabinet
+         *     * `on_request` - on_request
+         * @enum {string}
+         */
+        PartnerPriceVisibilityEnum: "cabinet" | "on_request";
         PatchedAttachmentRequest: {
             /**
              * Файл
@@ -15080,6 +15216,8 @@ export interface components {
         PatchedDeskSupplierAccessRelationshipPatchRequest: {
             modules?: string[];
             kind?: string;
+            /** @description Пусто — как у компании; `cabinet` или `on_request`. Другое — 400 `VALIDATION_ERROR`. */
+            catalog_price_visibility?: string;
         };
         /** @description Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно. */
         PatchedDeskSupplierInRequest: {
@@ -16146,7 +16284,7 @@ export interface components {
              *     * `on_request` - Цена по запросу
              */
             price_visibility?: components["schemas"]["PriceVisibilityEnum"] | components["schemas"]["BlankEnum"];
-            /** @description Видимость цены с учётом политики компании — то, что реально увидит клиент. */
+            /** @description Видимость цены с учётом политики компании и партнёра — то, что реально увидит клиент. */
             readonly price_visibility_effective: string;
             /** @description Политика каталога компании — подпись варианта «как в политике каталога» в форме. */
             readonly price_visibility_default: string;
@@ -17738,6 +17876,12 @@ export interface components {
          * @enum {string}
          */
         ResetPeriodEnum: "never" | "yearly" | "monthly";
+        /**
+         * @description * `card` - card
+         *     * `changes` - changes
+         * @enum {string}
+         */
+        ReviewKindEnum: "card" | "changes";
         SearchDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -25012,6 +25156,8 @@ export interface operations {
                 proposals?: "pending";
                 /** @description Поиск по названию и коду. */
                 q?: string;
+                /** @description Очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые сверху; в строке — `review` (срок) и `completeness`. */
+                review?: "waiting";
             };
             header?: never;
             path?: never;
@@ -25326,6 +25472,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_return: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeskReturnInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskReturnInRequest"];
+                "multipart/form-data": components["schemas"]["DeskReturnInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];

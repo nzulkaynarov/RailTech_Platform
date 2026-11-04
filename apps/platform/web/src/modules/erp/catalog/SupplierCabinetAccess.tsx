@@ -7,6 +7,7 @@ import type {
   SupplierCabinetAccess as AccessData,
   SupplierCabinetContact,
   SupplierCabinetContactCreateLanguage,
+  SupplierCabinetRelationshipCatalogPriceVisibility,
   SupplierCabinetRelationshipKind,
   SupplierCabinetRelationshipModulesItem,
 } from "../../../shared/api/generated/model";
@@ -156,6 +157,15 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
           />
         ))}
         <KindSelect value={kind} disabled={!editable || rights.isPending} onChange={changeKind} />
+        {relationship ? (
+          <PriceVisibilitySelect
+            value={relationship.catalog_price_visibility}
+            disabled={!editable || rights.isPending}
+            onChange={(value) => {
+              rights.mutate({ id: supplierId, data: { catalog_price_visibility: value } });
+            }}
+          />
+        ) : null}
         <ErrorNote message={rights.error ? catalogErrorText(t, rights.error) : null} />
       </fieldset>
 
@@ -330,6 +340,36 @@ function KindSelect({
           onChange(next ?? "");
         }}
         options={KINDS.map((kind) => ({ value: kind, label: t(`cabinetAccess.kind.${kind}`) }))}
+      />
+    </FormField>
+  );
+}
+
+/** «Цены товаров в каталоге» (PART-3): как клиенты видят цены товаров партнёра; своя политика карточки сильнее. */
+function PriceVisibilitySelect({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: SupplierCabinetRelationshipCatalogPriceVisibility;
+  disabled: boolean;
+  onChange: (value: SupplierCabinetRelationshipCatalogPriceVisibility) => void;
+}) {
+  const { t } = useTranslation("catalog");
+  const id = useId();
+  return (
+    <FormField id={id} label={t("partnerPrice.label")} hint={t("partnerPrice.hint")}>
+      <Select
+        id={id}
+        disabled={disabled}
+        value={value}
+        aria-describedby={`${id}-hint`}
+        onChange={onChange}
+        options={[
+          { value: "", label: t("partnerPrice.inherit") },
+          { value: "cabinet", label: t("partnerPrice.cabinet") },
+          { value: "on_request", label: t("partnerPrice.on_request") },
+        ]}
       />
     </FormField>
   );

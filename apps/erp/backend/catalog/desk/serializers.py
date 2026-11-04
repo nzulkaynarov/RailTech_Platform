@@ -7,8 +7,10 @@
 from drf_spectacular.utils import extend_schema_serializer
 from rest_framework import serializers
 
+from catalog.constants import PriceVisibility
 from catalog.desk.items import ALL_KINDS
 from catalog.models import Brigade, ProductFieldProposal, SupplierOffer
+from catalog.models.reviews import ISSUE_FIELDS, MAX_ISSUE_COMMENT, MAX_ISSUES
 
 
 class Money(serializers.Serializer):
@@ -25,6 +27,19 @@ class DeskUnit(serializers.Serializer):
 class DeskRef(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
+
+
+class DeskReviewInfo(serializers.Serializer):
+    """Ожидание решения по карточке партнёра (PART-3): кто прислал, когда и до какого срока ответить."""
+
+    kind = serializers.ChoiceField(
+        choices=["card", "changes"],
+        help_text="`card` — карточка на проверке; `changes` — предложения партнёра к опубликованной.",
+    )
+    partner = DeskRef(allow_null=True, help_text="Партнёр: источник данных карточки или приславший предложение.")
+    submitted_at = serializers.DateTimeField(help_text="Когда отправлено (старые сверху).")
+    due_at = serializers.DateTimeField(help_text="Срок ответа: 24 часа без учёта субботы и воскресенья.")
+    overdue = serializers.BooleanField(help_text="Срок прошёл.")
 
 
 class DeskItemRow(serializers.Serializer):
@@ -47,6 +62,14 @@ class DeskItemRow(serializers.Serializer):
     nearest_valid_until = serializers.DateField(allow_null=True)
     docs_count = serializers.IntegerField()
     proposals_count = serializers.IntegerField(help_text="Изменений от поставщиков на одобрении (CAT-1).")
+    review = DeskReviewInfo(
+        required=False,
+        allow_null=True,
+        help_text="Ожидание решения: в списке `review=waiting` и в карточке; null — карточка не ждёт проверки (PART-3).",
+    )
+    completeness = serializers.IntegerField(
+        required=False, help_text="Полнота карточки, % — в списке `review=waiting` и в карточке."
+    )
 
 
 class DeskOfferSupplier(serializers.Serializer):
@@ -163,6 +186,31 @@ class DeskDocumentKind(serializers.Serializer):
     sort_order = serializers.IntegerField()
 
 
+class DeskCatalogPrice(serializers.Serializer):
+    """Что покажет каталог клиенту (PART-3): уровень видимости и цена-витрина."""
+
+    visibility = serializers.ChoiceField(
+        choices=PriceVisibility.choices, help_text="`cabinet` — цену видно; `on_request` — «по запросу»."
+    )
+    source = serializers.ChoiceField(
+        choices=["item", "partner", "company"],
+        help_text="Откуда взята видимость: карточка → договорённость с партнёром → компания.",
+    )
+    price = Money(allow_null=True, help_text="Цена-витрина клиенту; null — «по запросу» или цена не задана.")
+
+
+class DeskReturnIssue(serializers.Serializer):
+    field = serializers.ChoiceField(choices=list(ISSUE_FIELDS), help_text="Поле карточки, к которому замечание.")
+    comment = serializers.CharField(max_length=MAX_ISSUE_COMMENT)
+
+
+class DeskReturnIn(serializers.Serializer):
+    """Возврат карточки партнёру: нужна хотя бы одна причина — общий комментарий или замечание по полю."""
+
+    reason = serializers.CharField(required=False, allow_blank=True, max_length=2000, help_text="Общий комментарий.")
+    issues = DeskReturnIssue(many=True, required=False, allow_null=True, max_length=MAX_ISSUES)
+
+
 class DeskItemDetail(DeskItemRow):
     description = serializers.CharField()
     gost_drawing = serializers.CharField()
@@ -179,6 +227,7 @@ class DeskItemDetail(DeskItemRow):
     warranty = DeskWarranty()
     proposals = DeskProposal(many=True, help_text="Изменения от поставщиков на одобрении.")
     publish = DeskPublishState()
+    catalog_price = DeskCatalogPrice(help_text="Что покажет каталог клиенту.")
 
 
 class DeskItemIn(serializers.Serializer):

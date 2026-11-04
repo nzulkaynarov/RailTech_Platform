@@ -13,9 +13,9 @@
 
 import re
 from collections.abc import Mapping
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.feeds.numbers import deal_number
 from app.schemas_company import Body, Patch, dec, ident, opt_ident, text
@@ -35,6 +35,23 @@ ProposalField = Literal[
     "name", "description", "category", "hs_code", "uom", "domain_type", "gost_drawing"
 ]
 ImportMode = Literal["xlsx", "ai"]
+# PART-3: очередь проверки партнёров; поля замечаний — перечень ERP (`catalog.models.reviews`)
+ReviewKind = Literal["card", "changes"]
+IssueField = Literal[
+    "name",
+    "description",
+    "brand",
+    "manufacturer_part_number",
+    "gost_drawing",
+    "category",
+    "uom",
+    "hs_code",
+    "price",
+    "valid_until",
+    "other",
+]
+PriceVisibility = Literal["cabinet", "on_request"]
+PriceSource = Literal["item", "partner", "company"]
 _SOURCES = {"price_list", "rfq_reply", "manual"}
 _PROPOSAL_FIELDS = {
     "name",
@@ -178,6 +195,24 @@ def to_offer(raw: Mapping[str, Any], *, show_prices: bool) -> Offer:
     )
 
 
+class ReviewInfo(Out):
+    """Карточка ждёт решения (PART-3): кто прислал, когда и до какого срока ответить."""
+
+    kind: ReviewKind
+    partner: NamedRef | None
+    submitted_at: str
+    due_at: str
+    overdue: bool
+
+
+class CatalogPrice(Out):
+    """Что покажет каталог клиенту: видимость цены, откуда она взята и цена-витрина."""
+
+    visibility: PriceVisibility
+    source: PriceSource
+    price: Money | None
+
+
 class Item(Out):
     id: str
     sku: str
@@ -192,6 +227,8 @@ class Item(Out):
     nearest_valid_until: str | None
     docs_count: int
     proposals_count: int
+    review: ReviewInfo | None = None
+    completeness: int | None = None
 
 
 class TechDocFields(Out):
@@ -268,6 +305,7 @@ class ItemDetail(Item):
     warranty: ItemWarranty
     proposals: list[Proposal]
     publish: PublishState
+    catalog_price: CatalogPrice
 
 
 def to_proposal(raw: Mapping[str, Any]) -> Proposal | None:
@@ -298,6 +336,33 @@ def _unit(raw: Any) -> Unit | None:
     return Unit(id=ident(raw["id"]), code=text(raw.get("code")), name=text(raw.get("name")))
 
 
+def _review(raw: Any) -> ReviewInfo | None:
+    if not isinstance(raw, Mapping) or raw.get("kind") not in ("card", "changes"):
+        return None
+    return ReviewInfo(
+        kind=raw["kind"],
+        partner=_named(raw.get("partner")),
+        submitted_at=text(raw.get("submitted_at")),
+        due_at=text(raw.get("due_at")),
+        overdue=bool(raw.get("overdue")),
+    )
+
+
+def _completeness(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _catalog_price(raw: Any) -> CatalogPrice:
+    raw = _mapping(raw)
+    visibility = raw.get("visibility")
+    source = raw.get("source")
+    return CatalogPrice(
+        visibility="cabinet" if visibility == "cabinet" else "on_request",
+        source=source if source in ("item", "partner") else "company",
+        price=_money(raw.get("price")),
+    )
+
+
 def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "id": ident(raw.get("id")),
@@ -313,6 +378,8 @@ def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
         "nearest_valid_until": raw.get("nearest_valid_until"),
         "docs_count": int(raw.get("docs_count") or 0),
         "proposals_count": int(raw.get("proposals_count") or 0),
+        "review": _review(raw.get("review")),
+        "completeness": _completeness(raw.get("completeness")),
     }
 
 
@@ -367,6 +434,7 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
             publishable=bool((raw.get("publish") or {}).get("publishable")),
             missing=[str(m) for m in (raw.get("publish") or {}).get("missing") or []],
         ),
+        catalog_price=_catalog_price(raw.get("catalog_price")),
     )
 
 
@@ -430,6 +498,24 @@ class ItemUpdate(Patch):
     country_of_origin_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
     warranty_months: int | None = Field(default=None, ge=0, le=600)
     warranty_terms: str | None = Field(default=None, max_length=5000)
+
+
+class ReturnIssue(Body):
+    field: IssueField
+    comment: str = Field(min_length=1, max_length=500)
+
+
+class ItemReturn(Body):
+    """Возврат карточки партнёру: нужна причина — общий комментарий или замечание по полю."""
+
+    reason: str | None = Field(default=None, max_length=2000)
+    issues: list[ReturnIssue] | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def _has_reason(self) -> Self:
+        if not (self.reason or "").strip() and not self.issues:
+            raise ValueError("укажите причину возврата")
+        return self
 
 
 class ItemImageUpdate(Patch):

@@ -74,6 +74,7 @@ import type {
   CatalogItemCreate,
   CatalogItemDetail,
   CatalogItemPage,
+  CatalogItemReturn,
   CatalogItemUpdate,
   CatalogLookups,
   CatalogOffer,
@@ -44803,6 +44804,138 @@ export const useUnpublishCatalogItem = <
   TContext
 > => {
   return useMutation(getUnpublishCatalogItemMutationOptions(options), queryClient);
+};
+
+export const getReturnCatalogItemUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}/return`;
+};
+
+/**
+ * ERP `POST catalog/items/{id}/return/` — право `catalog.publish`. Карточка партнёра «на проверке» становится «возвращена»: общий комментарий и замечания по полям (поле из перечня карточки и текст); нужна хотя бы одна причина — иначе 422. Проверка закрывается решением «возвращена», контактам партнёра уходит письмо со ссылкой на карточку в «Мои товары». Карточка уже не на проверке (решена или не отправлялась) — 409 `CONFLICT` с `details.reason = product_not_on_review`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: вернуть карточку партнёру
+ */
+export const returnCatalogItem = async (
+  id: string,
+  catalogItemReturn: CatalogItemReturn,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogItemDetail>(getReturnCatalogItemUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogItemReturn),
+  });
+};
+
+export const getReturnCatalogItemMutationKey = () => ["returnCatalogItem"] as const;
+
+export const getReturnCatalogItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnCatalogItem>>,
+    TError,
+    ReturnCatalogItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnCatalogItem>>,
+  TError,
+  ReturnCatalogItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnCatalogItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnCatalogItem>>,
+    ReturnCatalogItemMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return returnCatalogItem(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnCatalogItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof returnCatalogItem>>
+>;
+export type ReturnCatalogItemMutationBody = CatalogItemReturn;
+export type ReturnCatalogItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReturnCatalogItemMutationVariables = { id: string; data: CatalogItemReturn };
+
+/**
+ * @summary Расчёт · Номенклатура: вернуть карточку партнёру
+ */
+export const useReturnCatalogItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnCatalogItem>>,
+      TError,
+      ReturnCatalogItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnCatalogItem>>,
+  TError,
+  ReturnCatalogItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnCatalogItemMutationOptions(options), queryClient);
 };
 
 export const getAcceptCatalogProposalUrl = (id: string) => {

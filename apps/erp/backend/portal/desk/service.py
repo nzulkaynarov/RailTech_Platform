@@ -25,6 +25,7 @@ from portal.services.access import cabinet_company_q, company_access
 from portal.services.invitation import invite_contact
 from portal.services.roles import PARTNER, PARTNER_DEFAULT_TOGGLEABLE, PARTNER_TOGGLEABLE, ROLE_MODULES, partner_toggled
 
+from catalog.constants import PriceVisibility
 from catalog.desk.audit import record
 
 LANGUAGES = ("ru", "uz", "en")
@@ -80,6 +81,15 @@ def clean_modules(modules) -> list[str]:
     return partner_toggled(modules)  # «Профиль» обязателен и в список переключателей не входит
 
 
+def clean_price_visibility(value) -> str:
+    """Цены товаров партнёра в каталоге: пусто — как у компании, иначе `cabinet` (показывать) или `on_request` (по запросу)."""
+    if value in (None, ""):
+        return ""
+    if value not in PriceVisibility.values:
+        raise AccessError("VALIDATION_ERROR")
+    return value
+
+
 def clean_kind(kind) -> str:
     if kind in (None, ""):
         return ""
@@ -102,6 +112,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
                 "role": relationship.role,
                 "kind": relationship.kind,
                 "modules": partner_toggled(relationship.modules),
+                "catalog_price_visibility": relationship.catalog_price_visibility,
                 "status": relationship.status,
                 "invited_at": relationship.invited_at,
                 "activated_at": relationship.activated_at,
@@ -279,13 +290,17 @@ def _snapshot(relationship: CompanyRelationship) -> dict:
         "status": relationship.status,
         "kind": relationship.kind,
         "modules": partner_toggled(relationship.modules),
+        "catalog_price_visibility": relationship.catalog_price_visibility,
     }
 
 
 def update_relationship(company: Company, data: dict, user) -> dict:
-    """Права и метка партнёра: включить/выключить модули, указать вид. Действует сразу — без перевхода партнёра."""
+    """Права и метка партнёра: модули, вид и цены его товаров в каталоге (PART-3). Действует сразу — без перевхода партнёра."""
     modules = clean_modules(data["modules"]) if "modules" in data else None
     kind = clean_kind(data["kind"]) if "kind" in data else None
+    visibility = (
+        clean_price_visibility(data["catalog_price_visibility"]) if "catalog_price_visibility" in data else None
+    )
     with transaction.atomic(), pghistory.context(user=getattr(user, "pk", None), source="supplier_access"):
         relationship = CompanyRelationship.objects.select_for_update().filter(company=company, role=ROLE).first()
         if relationship is None:
@@ -295,6 +310,8 @@ def update_relationship(company: Company, data: dict, user) -> dict:
             relationship.modules = modules
         if kind is not None:
             relationship.kind = kind
+        if visibility is not None:
+            relationship.catalog_price_visibility = visibility
         relationship.save()
         record(
             user,

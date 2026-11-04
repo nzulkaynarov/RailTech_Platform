@@ -6244,6 +6244,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/items/{id}/return": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: вернуть карточку партнёру
+     * @description ERP `POST catalog/items/{id}/return/` — право `catalog.publish`. Карточка партнёра «на проверке» становится «возвращена»: общий комментарий и замечания по полям (поле из перечня карточки и текст); нужна хотя бы одна причина — иначе 422. Проверка закрывается решением «возвращена», контактам партнёра уходит письмо со ссылкой на карточку в «Мои товары». Карточка уже не на проверке (решена или не отправлялась) — 409 `CONFLICT` с `details.reason = product_not_on_review`. Раздел `erp.stock` — полный.
+     */
+    post: operations["returnCatalogItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/proposals/{id}/accept": {
     parameters: {
       query?: never;
@@ -13476,7 +13496,7 @@ export interface components {
       /** @description Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана */
       vat_effective: components["schemas"]["DecimalString"] | null;
       category: components["schemas"]["CatalogNamedRef"] | null;
-      /** @description Код статуса карточки: DRAFT, PUBLISHED */
+      /** @description Код статуса карточки: DRAFT, REVIEW, RETURNED, PUBLISHED */
       status: string | null;
       offers_count: number;
       /** Format: date */
@@ -13484,6 +13504,10 @@ export interface components {
       docs_count: number;
       /** @description Изменений от поставщиков на одобрении */
       proposals_count: number;
+      /** @description Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки */
+      review?: components["schemas"]["CatalogReviewInfo"] | null;
+      /** @description Полнота карточки, % — в списке `review=waiting` и в карточке */
+      completeness?: number | null;
     };
     CatalogItemPage: {
       items: components["schemas"]["CatalogItem"][];
@@ -13625,7 +13649,7 @@ export interface components {
       /** @description Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана */
       vat_effective: components["schemas"]["DecimalString"] | null;
       category: components["schemas"]["CatalogNamedRef"] | null;
-      /** @description Код статуса карточки: DRAFT, PUBLISHED */
+      /** @description Код статуса карточки: DRAFT, REVIEW, RETURNED, PUBLISHED */
       status: string | null;
       offers_count: number;
       /** Format: date */
@@ -13652,6 +13676,74 @@ export interface components {
       /** @description Изменения от поставщиков на одобрении */
       proposals: components["schemas"]["CatalogProposal"][];
       publish: components["schemas"]["CatalogPublishState"];
+      /** @description Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки */
+      review?: components["schemas"]["CatalogReviewInfo"] | null;
+      /** @description Полнота карточки, % — в списке `review=waiting` и в карточке */
+      completeness?: number | null;
+      catalog_price: components["schemas"]["CatalogPrice"];
+    };
+    /** @description Карточка ждёт решения (PART-3): кто прислал, когда и до какого срока ответить */
+    CatalogReviewInfo: {
+      /**
+       * @description `card` — карточка на проверке; `changes` — предложения партнёра к опубликованной
+       * @enum {string}
+       */
+      kind: "card" | "changes";
+      /** @description Партнёр: источник данных карточки или приславший предложение */
+      partner: components["schemas"]["CatalogNamedRef"] | null;
+      /**
+       * Format: date-time
+       * @description Когда отправлено
+       */
+      submitted_at: string;
+      /**
+       * Format: date-time
+       * @description Срок ответа: 24 часа без субботы и воскресенья
+       */
+      due_at: string;
+      /** @description Срок прошёл */
+      overdue: boolean;
+    };
+    /** @description Что покажет каталог клиенту: видимость цены (карточка → договорённость с партнёром → компания) и цена-витрина */
+    CatalogPrice: {
+      /**
+       * @description `cabinet` — цену видно, `on_request` — «по запросу»
+       * @enum {string}
+       */
+      visibility: "cabinet" | "on_request";
+      /**
+       * @description Откуда взята видимость
+       * @enum {string}
+       */
+      source: "item" | "partner" | "company";
+      /** @description Цена-витрина; `null` — по запросу или цена не задана */
+      price: components["schemas"]["CatalogMoney"] | null;
+    };
+    /**
+     * @description Поле карточки, к которому замечание (`other` — не к одному полю)
+     * @enum {string}
+     */
+    CatalogIssueField:
+      | "name"
+      | "description"
+      | "brand"
+      | "manufacturer_part_number"
+      | "gost_drawing"
+      | "category"
+      | "uom"
+      | "hs_code"
+      | "price"
+      | "valid_until"
+      | "other";
+    CatalogReturnIssue: {
+      field: components["schemas"]["CatalogIssueField"];
+      comment: string;
+    };
+    /** @description Возврат карточки партнёру: хотя бы одна причина — общий комментарий или замечание по полю */
+    CatalogItemReturn: {
+      /** @description Общий комментарий */
+      reason?: string | null;
+      issues?: components["schemas"]["CatalogReturnIssue"][] | null;
     };
     /**
      * @description Откуда цена: прайс, ответ на запрос цены, введена вручную
@@ -13854,6 +13946,11 @@ export interface components {
       kind: "" | "manufacturer" | "supplier" | "principal" | "other";
       /** @description Включённые партнёру модули кабинета */
       modules: ("my_products" | "catalog_requests")[];
+      /**
+       * @description Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу; своя политика карточки сильнее
+       * @enum {string}
+       */
+      catalog_price_visibility: "" | "cabinet" | "on_request";
       /** @enum {string} */
       status: "invited" | "active" | "suspended";
       /** Format: date-time */
@@ -13908,6 +14005,11 @@ export interface components {
       modules?: ("my_products" | "catalog_requests")[];
       /** @enum {string} */
       kind?: "" | "manufacturer" | "supplier" | "principal" | "other";
+      /**
+       * @description Цены товаров партнёра в каталоге: пусто — как у компании
+       * @enum {string}
+       */
+      catalog_price_visibility?: "" | "cabinet" | "on_request";
     };
     SupplierCabinetInvite: {
       contact_id: components["schemas"]["CompanyItemRef"];
@@ -25466,6 +25568,8 @@ export interface operations {
         category_id?: components["schemas"]["CompanyItemRef"];
         /** @description `pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1) */
         proposals?: "pending";
+        /** @description `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness` */
+        review?: "waiting";
       };
       header?: never;
       path?: never;
@@ -25780,6 +25884,42 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  returnCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogItemReturn"];
+      };
+    };
+    responses: {
+      /** @description Возвращена партнёру */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
       422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };

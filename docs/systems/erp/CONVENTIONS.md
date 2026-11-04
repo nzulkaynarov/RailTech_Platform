@@ -177,6 +177,14 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   100 %), читает `catalog/policy.py` без создания строки настроек. Полнота требует цену-витрину только при
   видимости `cabinet`; публикация — полнота ≥ порога и есть имя. Наличие — статус и срок из действующих
   предложений (`in_stock` / `expected` / `on_order`), количество наружу не уходит.
+- **Видимость цены — три уровня** (PART-3): `Product.price_visibility` → договорённость с партнёром
+  (`parties.CompanyRelationship.catalog_price_visibility` источника данных `Product.source_supplier`; пусто = как у компании) →
+  политика компании. Всё — через `catalog.policy.effective_price_visibility(product, policy, partners)`; пачки передают карту
+  `load_partner_price_visibility` (запрос на пачку, не на строку).
+- **Очередь проверки партнёров** (PART-3): `catalog/review_queue.py` — фильтр `items/?review=waiting` (карточки «на проверке» и с
+  предложениями полей из кабинета, старые сверху), срок 24 часа без выходных, «Вернуть партнёру» (`POST items/{id}/return/`,
+  право `catalog.publish`, 409 `PRODUCT_NOT_ON_REVIEW`); «Опубликовать» — прежний `publish_product`. Письмо партнёру —
+  `portal/services/partner_decision_mail.py` после фиксации решения.
 - **Сторож**: `catalog/tests/test_published_layer.py` обходит все GET-маршруты анонимом и клиентом с сессией
   портала (покупательских аккаунтов в ERP нет — FIX-13) и ищет метки внутреннего слоя; ответ 5xx на любом
   маршруте роняет тест, а не пропускается — новый эндпоинт с утечкой или падением роняет его. API отдаёт только JSON
