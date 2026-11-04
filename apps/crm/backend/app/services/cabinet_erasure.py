@@ -3,9 +3,9 @@
 `/delete` (`ErasureMixin.erase`) стирает в кабинете только сообщения этого человека (его контакты
 клиента): автор — «Удалённый пользователь», текст удалён. Беседа кабинета живёт на клиенте: якорь
 переходит на другой лид клиента или новый по правилу якоря. Неотвеченное сообщение кабинета не
-пропадает из «Требуют внимания»: открытая передача с причиной `cabinet_message` переносится на новый
-якорь с исходным временем и сроком SLA (перенос, а не «закрыть и забыть»). Вызывать в транзакции
-обезличивания до `close_escalations` и `erase_lead`.
+пропадает: якорь ведёт менеджер — лид «ждёт ответа» в «Мои» у ответственного; иначе передача
+`cabinet_message` переходит на новый якорь открытой, с исходным временем и сроком SLA (перенос, а
+не «закрыть и забыть»). Вызывать в транзакции обезличивания до `close_escalations` и `erase_lead`.
 """
 
 from dataclasses import dataclass, field
@@ -53,7 +53,9 @@ async def erase_for_lead(session: AsyncSession, lead: Lead) -> CabinetErasure:
             continue
         anchor = await _reanchor(session, conversation, lead)
         if pending is not None:
-            result.moved_escalations.append((await _move(session, pending, anchor), anchor.id))
+            moved = await _carry(session, pending, anchor, conversation)
+            if moved is not None:
+                result.moved_escalations.append((moved, anchor.id))
             pending = None  # одна передача — на одну беседу
     await session.flush()
     companies = {c.erp_company_id for c in conversations if c.erp_company_id is not None}
@@ -103,11 +105,29 @@ async def _cabinet_escalation(session: AsyncSession, lead_id: int) -> Escalation
     return found
 
 
-async def _move(session: AsyncSession, source: Escalation, anchor: Lead) -> int:
-    """Передача `cabinet_message` — на новый якорь: исходное время, срок SLA, состояние. Причины
-    Telegram стёртого лида и тексты записки (могут нести его ПД) не переносятся; исходная
-    закрывается вместе с лидом (`close_escalations`). У якоря уже есть открытая передача — причина
-    дописывается к ней, а срок — более ранний из двух."""
+async def _carry(
+    session: AsyncSession, source: Escalation, anchor: Lead, conversation: Conversation
+) -> int | None:
+    """Неотвеченное сообщение кабинета — новому якорю, по тому же правилу, что и входящее
+    (`CabinetChatService._escalate`):
+
+    * якорь ведёт менеджер (`human` с ответственным) — передачу не заводим и не переназначаем:
+      лид «ждёт ответа» в «Мои» у ответственного (`last_lead_msg_at` — время последнего входящего
+      беседы кабинета). Иначе была бы открытая передача, которую держатель не закроет, или вторая
+      «забранная»;
+    * иначе — открытая передача с исходным временем и сроком SLA; у якоря уже есть ждущая — причина
+      дописывается к ней, срок — более ранний. Причины Telegram стёртого лида и тексты записки
+      (могут нести его ПД) не переносятся; исходная закрывается вместе с лидом.
+
+    Возвращает передачу для поста в канале команды (None — передачи нет)."""
+    if anchor.owner_mode == OwnerMode.HUMAN.value and anchor.assigned_user_id is not None:
+        last_in = await repo.last_inbound_at(session, conversation.id)
+        if last_in is not None and (
+            anchor.last_lead_msg_at is None or last_in > anchor.last_lead_msg_at
+        ):
+            anchor.last_lead_msg_at = last_in
+        logger.info("cabinet_message_to_mine", from_lead=source.lead_id, to_lead=anchor.id)
+        return None
     current = await _active(session, anchor.id)
     if current is not None:
         if CABINET_REASON not in current.reason_codes:
@@ -122,18 +142,13 @@ async def _move(session: AsyncSession, source: Escalation, anchor: Lead) -> int:
             lead_id=anchor.id,
             reason_codes=[CABINET_REASON],
             priority=PRIORITY[TriggerCode.CABINET_MESSAGE].value,
-            status=source.status,
-            taken_by_user_id=source.taken_by_user_id,
-            taken_at=source.taken_at,
+            status="open",
             sla_due_at=source.sla_due_at,
             sla_notified_at=source.sla_notified_at,
-            snoozed_until=source.snoozed_until,
         )
         moved.created_at = source.created_at
         session.add(moved)
-    if source.status == "taken" and source.taken_by_user_id is not None:
-        anchor.owner_mode, anchor.assigned_user_id = OwnerMode.HUMAN.value, source.taken_by_user_id
-    elif anchor.owner_mode == OwnerMode.BOT.value:
+    if anchor.owner_mode == OwnerMode.BOT.value:
         anchor.owner_mode = OwnerMode.PAUSED.value  # ждёт человека, как при передаче
     await session.flush()
     logger.info(
@@ -145,8 +160,7 @@ async def _move(session: AsyncSession, source: Escalation, anchor: Lead) -> int:
 async def _active(session: AsyncSession, lead_id: int) -> Escalation | None:
     stmt = (
         select(Escalation)
-        # Дописываем только к ждущей передаче (как `escalation.apply`): к забранной — нельзя,
-        # «Требуют внимания» её не показывает и сообщение пропало бы; тогда — новая открытая.
+        # Дописываем только к ждущей передаче (как `escalation.apply`).
         .where(Escalation.lead_id == lead_id, Escalation.status.in_(OPEN_STATUSES))
         .order_by(Escalation.id)
         .limit(1)

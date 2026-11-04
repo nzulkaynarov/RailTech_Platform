@@ -25,10 +25,16 @@ from app.models.leads import Conversation, Lead, Message
 from app.models.qualification import Escalation
 from app.repositories import crm as crm_repo
 from app.repositories import leads as leads_repo
+from app.security.principal import Principal
 from app.services.cabinet_erasure import SKIPPED_METRIC as SKIPPED
+from app.services.lead_messenger import LeadMessenger
+from app.services.leads import LeadService
+from app.services.settings import SettingsService
+from tests.integration.crm_helpers import escalated_lead, make_user
 from tests.integration.test_cabinet_chat import (
     COMPANY,
     Eraser,
+    Sender,
     accept,
     bus,
     cabinet_conversations,
@@ -120,10 +126,10 @@ async def test_an_unanswered_cabinet_message_moves_with_the_conversation_on_dele
 async def other_lead_with(
     sessions: async_sessionmaker[AsyncSession], client_id: int, status: str, sla_in: timedelta
 ) -> int:
-    """Другой лид клиента (станет якорем после /delete) со своей передачей в состоянии `status`."""
+    """Другой лид клиента (станет якорем после /delete) со своей ждущей передачей `status`."""
     async with sessions() as session, session.begin():
         other = Lead(display_name="Другой лид клиента", client_id=client_id, stage="customer")
-        other.owner_mode = "human" if status == "taken" else "paused"
+        other.owner_mode = "paused"  # передача от бота ждёт менеджера
         session.add(other)
         await session.flush()
         session.add(
@@ -177,25 +183,118 @@ async def test_a_waiting_handoff_of_the_new_anchor_gets_the_cabinet_reason_and_t
     assert row.sla_due_at < datetime.now(UTC) + timedelta(minutes=11)
 
 
-async def test_a_taken_handoff_of_the_new_anchor_does_not_hide_the_cabinet_message(
+async def manager_takes(
+    sessions: async_sessionmaker[AsyncSession], lead_id: int, email: str
+) -> Principal:
+    """Лида забирает настоящий менеджер («Забрать»): `human`, ответственный, передача `taken`."""
+    account, _ = await make_user(sessions, email, ["manager"])
+    who = Principal(user_id=account.id, full_name="Менеджер", roles=("manager",))
+    service = LeadService(sessions, SettingsService(sessions), LeadMessenger(sessions, Sender()))
+    await service.take(who, lead_id)
+    return who
+
+
+async def client_lead_in_telegram(
+    sessions: async_sessionmaker[AsyncSession], client_id: int, tg: int
+) -> int:
+    """Ещё один лид клиента из Telegram с открытой передачей (станет якорем после /delete)."""
+    other_id = await escalated_lead(sessions, tg_user_id=tg)
+    async with sessions() as session, session.begin():
+        other = await session.get(Lead, other_id)
+        assert other is not None
+        other.client_id = client_id
+    return other_id
+
+
+async def colleague_writes_again(
+    sessions: async_sessionmaker[AsyncSession], client_id: int
+) -> None:
+    event = posted("key-colleague-2", crm_client_id=client_id, text_="Пишет Дилноза ещё раз")
+    event.data["payload"]["author"] = {"erp_contact_id": 311, "crm_contact_id": None, "name": "Д"}
+    await accept(sessions, service_of(sessions), event)
+
+
+async def anchor_state(
+    sessions: async_sessionmaker[AsyncSession], anchor_id: int, manager: Principal
+) -> tuple[Lead, list[Escalation], list[int], list[int]]:
+    async with sessions() as session:
+        anchor = await session.get(Lead, anchor_id)
+        assert anchor is not None
+        rows = list(
+            (await session.scalars(select(Escalation).where(Escalation.lead_id == anchor_id))).all()
+        )
+        escalated, mine, _ = await crm_repo.inbox(session, me=manager.user_id)
+    return anchor, rows, [lead.id for lead in escalated], [lead.id for lead in mine]
+
+
+async def test_an_anchor_held_by_a_manager_gets_the_message_in_mine_without_a_handoff(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
-    """У нового якоря передача уже у менеджера (taken): к ней не дописываем — «Требуют внимания»
-    её не показывает; сообщение кабинета ждёт ответа отдельной открытой передачей."""
+    """Новый якорь уже ведёт менеджер Б: передачу не заводим и не переназначаем — у Б лид «ждёт
+    ответа» в «Мои» (как у входящего сообщения кабинета, когда беседа у человека). Иначе была бы
+    открытая передача, которую Б не может закрыть («Забрать» своё — ничего не делает)."""
     client_id, _, _, _ = await person_with_colleague(sessions, 7406)
-    other_id = await other_lead_with(sessions, client_id, "taken", timedelta(hours=2))
+    other_id = await client_lead_in_telegram(sessions, client_id, 7416)
+    manager_b = await manager_takes(sessions, other_id, "chat1b-b@railtech.example")
+    await colleague_writes_again(sessions, client_id)
 
     await FiringEraser(sessions).erase(7406)
 
     (conversation,) = await cabinet_conversations(sessions)
     assert conversation.lead_id == other_id
+    anchor, rows, escalated, mine = await anchor_state(sessions, other_id, manager_b)
+    assert (anchor.owner_mode, anchor.assigned_user_id) == ("human", manager_b.user_id)
+    assert [r.status for r in rows if r.status in ("open", "snoozed")] == []
+    assert [r.status for r in rows].count("taken") == 1
+    assert other_id not in escalated
+    assert other_id in mine
+    assert anchor.last_lead_msg_at is not None
+    assert anchor.last_human_msg_at is None or anchor.last_lead_msg_at > anchor.last_human_msg_at
+
+
+async def test_both_handoffs_taken_leave_one_taken_and_keep_the_anchors_manager(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Передачу стираемого лида забрал А, якорь ведёт Б: второй «забранной» нет, якорь у Б."""
+    client_id, lead_id, _, _ = await person_with_colleague(sessions, 7407)
+    await manager_takes(sessions, lead_id, "chat1b-a@railtech.example")
+    other_id = await client_lead_in_telegram(sessions, client_id, 7417)
+    manager_b = await manager_takes(sessions, other_id, "chat1b-b2@railtech.example")
+    await colleague_writes_again(sessions, client_id)
+
+    await FiringEraser(sessions).erase(7407)
+
+    anchor, rows, _, mine = await anchor_state(sessions, other_id, manager_b)
+    assert anchor.assigned_user_id == manager_b.user_id
+    assert [r.status for r in rows].count("taken") == 1
+    assert [r for r in rows if r.status in ("open", "snoozed")] == []
+    assert other_id in mine
+
+
+async def test_an_anchor_with_the_bot_gets_one_open_handoff(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Якорь у бота: открытая передача кабинета, одна запись в «Требуют внимания»."""
+    client_id, _, _, _ = await person_with_colleague(sessions, 7408)
+    async with sessions() as session, session.begin():
+        other = Lead(display_name="Лид клиента у бота", client_id=client_id, stage="customer")
+        session.add(other)
+        await session.flush()
+        other_id = other.id
+
+    await FiringEraser(sessions).erase(7408)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id == other_id
     async with sessions() as session:
         escalated, _, _ = await crm_repo.inbox(session, me=0)
-    assert other_id in {lead.id for lead in escalated}
+        anchor = await session.get(Lead, other_id)
+    assert [lead.id for lead in escalated].count(other_id) == 1
+    assert anchor is not None
+    assert anchor.owner_mode == "paused"
     moved = await cabinet_escalation(sessions, other_id)
     assert moved is not None
-    assert moved.status == "open"
-    assert moved.reason_codes == ["cabinet_message"]
+    assert (moved.status, moved.reason_codes) == ("open", ["cabinet_message"])
 
 
 async def test_an_answered_conversation_moves_without_a_handoff(
