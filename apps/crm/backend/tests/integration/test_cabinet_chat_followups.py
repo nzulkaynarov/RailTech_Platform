@@ -82,7 +82,9 @@ async def test_an_unanswered_cabinet_message_moves_with_the_conversation_on_dele
         await session.execute(
             text(
                 "UPDATE escalations SET created_at = now() - interval '1 hour', "
-                "sla_due_at = now() + interval '30 minutes' WHERE lead_id = :id"
+                "sla_due_at = now() + interval '30 minutes', "
+                "reason_text = 'Азиз просит скидку', recommendation = 'Позвонить Азизу' "
+                "WHERE lead_id = :id"
             ),
             {"id": lead_id},
         )
@@ -98,9 +100,9 @@ async def test_an_unanswered_cabinet_message_moves_with_the_conversation_on_dele
     assert conversation.lead_id != lead_id
     moved = await cabinet_escalation(sessions, conversation.lead_id)
     assert moved is not None
-    assert moved.reason_codes == [
-        "cabinet_message"
-    ]  # причины Telegram стёртого лида — не переносятся
+    # причины Telegram стёртого лида и тексты записки (могут нести его ПД) — не переносятся
+    assert moved.reason_codes == ["cabinet_message"]
+    assert (moved.reason_text, moved.recommendation) == (None, None)
     assert moved.created_at == created_at
     assert moved.sla_due_at == sla_due_at
     async with sessions() as session:
@@ -113,6 +115,87 @@ async def test_an_unanswered_cabinet_message_moves_with_the_conversation_on_dele
     assert source is not None
     assert source.status == "closed"
     assert (None, moved.id, conversation.lead_id) in eraser.fired
+
+
+async def other_lead_with(
+    sessions: async_sessionmaker[AsyncSession], client_id: int, status: str, sla_in: timedelta
+) -> int:
+    """Другой лид клиента (станет якорем после /delete) со своей передачей в состоянии `status`."""
+    async with sessions() as session, session.begin():
+        other = Lead(display_name="Другой лид клиента", client_id=client_id, stage="customer")
+        other.owner_mode = "human" if status == "taken" else "paused"
+        session.add(other)
+        await session.flush()
+        session.add(
+            Escalation(
+                lead_id=other.id,
+                reason_codes=["human_requested"],
+                priority="hot",
+                status=status,
+                sla_due_at=datetime.now(UTC) + sla_in,
+            )
+        )
+        return other.id
+
+
+async def set_sla(
+    sessions: async_sessionmaker[AsyncSession], lead_id: int, sla_in: timedelta
+) -> None:
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE escalations SET sla_due_at = :due WHERE lead_id = :id"),
+            {"due": datetime.now(UTC) + sla_in, "id": lead_id},
+        )
+
+
+async def test_a_waiting_handoff_of_the_new_anchor_gets_the_cabinet_reason_and_the_earlier_sla(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """У нового якоря своя ждущая передача: одна запись в «Требуют внимания» — с причиной кабинета
+    и более ранним сроком из двух."""
+    client_id, lead_id, _, _ = await person_with_colleague(sessions, 7405)
+    await set_sla(sessions, lead_id, timedelta(minutes=10))
+    other_id = await other_lead_with(sessions, client_id, "open", timedelta(hours=2))
+
+    await FiringEraser(sessions).erase(7405)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id == other_id
+    async with sessions() as session:
+        escalated, _, _ = await crm_repo.inbox(session, me=0)
+        rows = (
+            await session.scalars(
+                select(Escalation).where(
+                    Escalation.lead_id == other_id, Escalation.status.in_(("open", "snoozed"))
+                )
+            )
+        ).all()
+    assert [lead.id for lead in escalated].count(other_id) == 1
+    (row,) = rows
+    assert row.reason_codes == ["human_requested", "cabinet_message"]
+    assert row.sla_due_at is not None
+    assert row.sla_due_at < datetime.now(UTC) + timedelta(minutes=11)
+
+
+async def test_a_taken_handoff_of_the_new_anchor_does_not_hide_the_cabinet_message(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """У нового якоря передача уже у менеджера (taken): к ней не дописываем — «Требуют внимания»
+    её не показывает; сообщение кабинета ждёт ответа отдельной открытой передачей."""
+    client_id, _, _, _ = await person_with_colleague(sessions, 7406)
+    other_id = await other_lead_with(sessions, client_id, "taken", timedelta(hours=2))
+
+    await FiringEraser(sessions).erase(7406)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id == other_id
+    async with sessions() as session:
+        escalated, _, _ = await crm_repo.inbox(session, me=0)
+    assert other_id in {lead.id for lead in escalated}
+    moved = await cabinet_escalation(sessions, other_id)
+    assert moved is not None
+    assert moved.status == "open"
+    assert moved.reason_codes == ["cabinet_message"]
 
 
 async def test_an_answered_conversation_moves_without_a_handoff(

@@ -435,16 +435,20 @@ def test_polling_reports_messages_erased_after_they_were_shown(
 ):
     """CHAT-1b: опрос с `after_id` приносит только новые сообщения — стёртое по запросу автора уже показанное
     сообщение Cabinet узнаёт из `erased_ids` (своей компании и не новее `after_id`)."""
+    # чужое стёртое сообщение — раньше своих (id меньше after_id): отсечь его может только фильтр компании
+    foreign = send(other_portal_client, text="Чужая компания", key="cm_poll_o_001").json()
     first = send(portal_client, text="Пишет А", key="cm_poll_a_001").json()
     reply(client_company, 501, "Ответ")
-    send(other_portal_client, text="Чужая компания", key="cm_poll_o_001")
     erased(client_company, "authors", [client_contact.pk])
     erased(other_company, "authors", [other_contact.pk])
     last = PortalMessage.objects.filter(company=client_company).order_by("-id").first().pk
+    assert foreign["id"] < last
 
     polled = portal_client.get(f"{API}/messages", {"after_id": last}).json()
     assert polled["items"] == []
     assert polled["erased_ids"] == [first["id"]]
+    assert foreign["id"] not in polled["erased_ids"]
+    assert other_portal_client.get(f"{API}/messages", {"after_id": last}).json()["erased_ids"] == [foreign["id"]]
     assert check_response(polled, response_schema("/messages", "get")) == []
     earlier = portal_client.get(f"{API}/messages", {"after_id": first["id"] - 1}).json()
     assert earlier["erased_ids"] == []  # новее after_id — придёт в items с erased: true

@@ -55,7 +55,12 @@ async def cabinet_conversations_of(session: AsyncSession, lead: Lead) -> list[Co
     match = Conversation.lead_id == lead.id
     if lead.client_id is not None:
         match = match | (Conversation.client_id == lead.client_id)
-    stmt = select(Conversation).where(Conversation.channel == CABINET, match).with_for_update()
+    stmt = (
+        select(Conversation)
+        .where(Conversation.channel == CABINET, match)
+        .order_by(Conversation.id)
+        .with_for_update()
+    )
     return list((await session.scalars(stmt)).all())
 
 

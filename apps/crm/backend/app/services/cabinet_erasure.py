@@ -22,10 +22,12 @@ from app.models.leads import Conversation, Lead
 from app.models.qualification import Escalation
 from app.repositories import cabinet_chat as repo
 from app.services.cabinet_chat import new_lead
+from app.services.escalation import OPEN_STATUSES
 
 logger = structlog.get_logger(__name__)
 
 CABINET_REASON: Final = TriggerCode.CABINET_MESSAGE.value
+#: Передача стёртого лида, которую переносим: и ждущая, и уже забранная менеджером.
 _ACTIVE: Final = ("open", "snoozed", "taken")
 #: Лог-метрика (как `rt_bus_metrics`): стирание в ERP пропущено — разбирается по журналу.
 SKIPPED_METRIC: Final = "cabinet_erasure_skipped"
@@ -143,7 +145,10 @@ async def _move(session: AsyncSession, source: Escalation, anchor: Lead) -> int:
 async def _active(session: AsyncSession, lead_id: int) -> Escalation | None:
     stmt = (
         select(Escalation)
-        .where(Escalation.lead_id == lead_id, Escalation.status.in_(_ACTIVE))
+        # Дописываем только к ждущей передаче (как `escalation.apply`): к забранной — нельзя,
+        # «Требуют внимания» её не показывает и сообщение пропало бы; тогда — новая открытая.
+        .where(Escalation.lead_id == lead_id, Escalation.status.in_(OPEN_STATUSES))
+        .order_by(Escalation.id)
         .limit(1)
         .with_for_update()
     )
