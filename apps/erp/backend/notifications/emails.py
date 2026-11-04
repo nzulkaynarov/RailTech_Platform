@@ -224,7 +224,11 @@ def send_templated_email(
         "brand_name": platform_name,
         "support_email": support_email,
         "frontend_url": getattr(settings, "FRONTEND_URL", ""),
-        **({"telegram_notifications_url": telegram_notifications_url()} if template_name in CLIENT_MAIL_TEMPLATES else {}),
+        **(
+            {"telegram_notifications_url": telegram_notifications_url()}
+            if template_name in CLIENT_MAIL_TEMPLATES
+            else {}
+        ),
         **context,
     }
 
