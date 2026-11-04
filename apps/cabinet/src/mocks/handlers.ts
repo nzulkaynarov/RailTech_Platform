@@ -25,6 +25,10 @@ import * as fixtures from './fixtures';
  * `INVOICE_NOT_OPEN`; комментарий к КП — только пока КП ждёт решения (иначе 409), пустой текст → 422 `TEXT_REQUIRED`;
  * КП с истёкшим сроком → 409 `QUOTE_EXPIRED`; повторное действие над закрытым объектом → 409 `*_FINALIZED`;
  * PDF документа `DOC_PREPARING_ONCE` первый раз отвечает 202 + `Retry-After`, `DOC_ALWAYS_PREPARING` — всегда 202.
+ *
+ * Telegram контакта (NOTIFY-1): по умолчанию не привязан и доступен; `POST /me/telegram-link` выдаёт ссылку на 15 минут;
+ * в dev бот «привязывает» через три опроса `GET /me/telegram` после выпуска, в тестах — только `setMockTelegram`;
+ * `DELETE /me/telegram` отвечает 202 с прежним `linked`, следующий опрос — уже `linked=false` (проекция пришла).
  */
 const API = '*/api/portal/v1';
 const SESSION_KEY = 'cabinet.mock.session';
@@ -86,6 +90,7 @@ function createDb(dataset: Dataset = 'demo') {
     quoteCodes: new Map<number, string>(),
     /** Загруженные файлы (`/uploads`): upload_id → имя; приёмка акта проверяет, что скан загружен. */
     uploads: new Map<string, string>(),
+    telegram: fixtures.telegramMock(),
   };
 }
 
@@ -97,6 +102,11 @@ export function resetMockPortal(): void {
   setMockSession(null);
   dbs = { demo: createDb('demo'), empty: createDb('empty') };
   resetMockCrmForm();
+}
+
+/** Для тестов: состояние Telegram контакта в данных демо-компании (статус, доступность, авто-привязка). */
+export function setMockTelegram(patch: Partial<fixtures.TelegramMock>): void {
+  Object.assign(dbs.demo.telegram, patch);
 }
 
 function contactFor(role: Role): Schemas['TeamMember'] {
@@ -248,6 +258,38 @@ export const handlers = [
     }),
   ),
   http.get(`${API}/me`, withSession(({ session }) => json(me(session)))),
+  http.get(
+    `${API}/me/telegram`,
+    withSession(({ db }) => {
+      const tg = db.telegram;
+      if (tg.unlinkPending) {
+        tg.linked = false;
+        tg.unlinkPending = false;
+      } else if (tg.pollsUntilLinked !== null && --tg.pollsUntilLinked <= 0) {
+        tg.linked = true;
+        tg.pollsUntilLinked = null;
+      }
+      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus']);
+    }),
+  ),
+  // Право «действовать» не нужно: привязка Telegram — настройка самого контакта.
+  http.post(
+    `${API}/me/telegram-link`,
+    withSession(({ db }) => {
+      const tg = db.telegram;
+      if (tg.linkError) return error(tg.linkError === 'CONTACT_NOT_IN_CRM' ? 422 : 503, tg.linkError);
+      tg.pollsUntilLinked = tg.autoLinkAfterPolls;
+      return json(fixtures.telegramLink(new Date()), 201);
+    }),
+  ),
+  http.delete(
+    `${API}/me/telegram`,
+    withSession(({ db }) => {
+      const tg = db.telegram;
+      if (tg.linked) tg.unlinkPending = true;
+      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus'], 202);
+    }),
+  ),
 
   // --- запросы ------------------------------------------------------------------------------
   http.get(`${API}/requests`, withSession(({ db }) => json(db.requests))),

@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LogOut } from 'lucide-react';
 import { toast } from '@/lib/toast';
@@ -6,14 +7,17 @@ import { toast } from '@/lib/toast';
 import { apiErrorKey } from '@/api/errors';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PageHeader } from '@/components/PageHeader';
+import type { ConnectTelegramState } from '@/components/TelegramBanner';
+import { TelegramNotifications } from '@/components/TelegramNotifications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAppMode } from '@/session/mode';
 import { useLogout, useMe } from '@/session/useMe';
 
 /**
- * Профиль: контакт и компания из `GET /me`, права, язык, выход. В Mini App выхода нет —
- * сессия привязана к Telegram и при следующем открытии вернётся сама (вход без страницы входа).
+ * Профиль: контакт и компания из `GET /me`, права, язык, выход, «Уведомления» (Telegram, ADR-0023 п. 3). В Mini App
+ * выхода нет — сессия привязана к Telegram и при следующем открытии вернётся сама (вход без страницы входа).
+ * `/profile#notifications` (ссылка из писем и плашки) прокручивает к «Уведомлениям».
  */
 export function ProfilePage() {
   const { t } = useTranslation();
@@ -21,6 +25,13 @@ export function ProfilePage() {
   const me = useMe().data;
   const logout = useLogout();
   const navigate = useNavigate();
+  const location = useLocation();
+  const autoStart = (location.state as Partial<ConnectTelegramState> | null)?.connectTelegram === true;
+
+  useEffect(() => {
+    if (location.hash !== '#notifications') return;
+    document.getElementById('notifications')?.scrollIntoView?.({ block: 'start' });
+  }, [location.hash, me]);
 
   if (!me) return null;
   const { contact, company } = me;
@@ -93,6 +104,7 @@ export function ProfilePage() {
             ) : null}
           </CardContent>
         </Card>
+        <TelegramNotifications autoStart={autoStart} />
       </div>
     </>
   );

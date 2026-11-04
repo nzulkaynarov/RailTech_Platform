@@ -709,3 +709,37 @@ export function meFor(
     modules: access.modules as Schemas['Me']['modules'],
   };
 }
+
+// --- Telegram контакта (NOTIFY-1, ADR-0023 п. 3) -------------------------------------------------
+
+export interface TelegramMock {
+  linked: boolean;
+  available: boolean;
+  /** Сколько опросов `GET /me/telegram` после выпуска ссылки до «бот привязал»; `null` — сам не привяжет. */
+  autoLinkAfterPolls: number | null;
+  pollsUntilLinked: number | null;
+  unlinkPending: boolean;
+  /** Ошибка выпуска ссылки: 422 `CONTACT_NOT_IN_CRM` или 503 `TELEGRAM_LINK_UNAVAILABLE`. */
+  linkError: 'CONTACT_NOT_IN_CRM' | 'TELEGRAM_LINK_UNAVAILABLE' | null;
+}
+
+export function telegramMock(): TelegramMock {
+  return {
+    linked: false,
+    available: true,
+    autoLinkAfterPolls: import.meta.env.MODE === 'test' ? null : 3,
+    pollsUntilLinked: null,
+    unlinkPending: false,
+    linkError: null,
+  };
+}
+
+/** Токен — формат контракта (`tg_` + 48 символов base64url), но не настоящий: бот `example_bot` вымышленный. */
+export const TELEGRAM_LINK_TTL_MS = 15 * 60 * 1000;
+export const MOCK_TELEGRAM_START = `tg_${'example-not-a-real-token'.padEnd(48, '_')}`;
+export function telegramLink(now: Date): Schemas['TelegramLink'] {
+  return {
+    url: `https://t.me/example_bot?start=${MOCK_TELEGRAM_START}`,
+    expires_at: new Date(now.getTime() + TELEGRAM_LINK_TTL_MS).toISOString(),
+  };
+}
