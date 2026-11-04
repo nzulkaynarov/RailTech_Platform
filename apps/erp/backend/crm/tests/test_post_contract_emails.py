@@ -330,10 +330,17 @@ def test_no_email_escapes_a_rolled_back_transaction(world):
 
 @pytest.fixture
 def contacts(world):
+    from django.utils import timezone as tz
     from parties.models import Contact
 
+    # Приглашённые в кабинет: письмо-уведомление получают контакт документа и приглашённые (решение лида по #402)
     plain = Contact.objects.create(
-        company=world["buyer_co"], name="Plain Contact", email="plain@buyer-g3.example", can_act=True, language="en"
+        company=world["buyer_co"],
+        name="Plain Contact",
+        email="plain@buyer-g3.example",
+        can_act=True,
+        language="en",
+        invited_at=tz.now(),
     )
     telegram = Contact.objects.create(
         company=world["buyer_co"],
@@ -341,7 +348,10 @@ def contacts(world):
         email="tg@buyer-g3.example",
         telegram_user_id=4242,
         can_act=True,
+        invited_at=tz.now(),
     )
+    # Не приглашён и не контакт документа: только колокольчик, первым письмом ему придёт приглашение
+    Contact.objects.create(company=world["buyer_co"], name="Stranger", email="stranger@buyer-g3.example")
     # Компания сопоставлена клиенту CRM: события доходят до бота, контакт с Telegram получает сообщение бота
     from integration.models import CrmClientMapping
 
@@ -394,3 +404,32 @@ def test_payment_reminder_reaches_every_contact(world, contacts, django_capture_
             send_payment_reminders()
 
     assert _contact_mail(contact_mail) == ["plain@buyer-g3.example", "tg@buyer-g3.example"]
+
+
+def test_contact_with_the_buyer_user_address_gets_one_invoice_email(
+    world, contacts, django_capture_on_commit_callbacks
+):
+    """Пользователю ERP покупателя письмо о счёте шлёт `deal_emails`; контакт с тем же адресом второго не получает."""
+    from parties.models import Contact
+    from portal.models import NoticeChannel, PortalNotice
+
+    from crm.services.invoice_lifecycle import issue_invoice
+
+    same = Contact.objects.create(
+        company=world["buyer_co"],
+        name="Same Person",
+        email=world["buyer_user"].email.upper(),
+        invited_at=timezone.now(),
+    )
+    invoice = _invoice(world, "DRAFT")
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            issue_invoice(invoice, world["seller_user"])
+
+    assert _sent(users_mail)[0][1] == [world["buyer_user"].email]
+    assert PortalNotice.objects.get(contact=same, kind="invoice_issued").channel == NoticeChannel.SOURCE
+    assert world["buyer_user"].email not in _contact_mail(contact_mail)
+    assert same.email not in _contact_mail(contact_mail)

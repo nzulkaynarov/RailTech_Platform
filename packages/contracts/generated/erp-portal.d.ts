@@ -1233,7 +1233,10 @@ export interface components {
       | "eta_changed"
       | "replied"
       | "returned";
-    /** @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата) */
+    /**
+     * @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
+     *     id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).
+     */
     NotificationObject: {
       type: components["schemas"]["NotificationObjectType"];
       /** Format: int64 */

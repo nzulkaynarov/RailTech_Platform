@@ -25,6 +25,8 @@ from decimal import Decimal
 from typing import Iterable, Optional
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 from django.db import transaction
 from django.utils import timezone
 from parties.models import Contact, active_contact_q
@@ -36,6 +38,9 @@ logger = logging.getLogger(__name__)
 
 #: Ответ менеджера в чате: письмо, только если за это время уведомление не прочитали (Intercom, Slack).
 MANAGER_REPLY_EMAIL_DELAY = timedelta(minutes=10)
+#: Паузы перед повтором письма после сбоя передачи; попыток — на одну больше, потом строка `failed` с причиной.
+EMAIL_RETRY_DELAYS = (timedelta(minutes=5), timedelta(minutes=30))
+MAX_EMAIL_ATTEMPTS = len(EMAIL_RETRY_DELAYS) + 1
 
 
 @dataclass(frozen=True)
@@ -85,18 +90,51 @@ def _normalized(email: str | None) -> str:
     return (email or "").strip().lower()
 
 
-def choose_channel(kind: NoticeKind, contact: Contact, *, bot_reaches: bool, already_emailed: set[str]) -> str:
-    """Внешний канал уведомления для контакта — один на событие (ADR-0023 п. 2)."""
-    if not kind.important:
-        return NoticeChannel.CABINET
-    if kind.bot_sends and bot_reaches and contact.telegram_user_id:
-        return NoticeChannel.TELEGRAM
-    email = _normalized(contact.email)
+#: Почему контакту не пишем письмо (поле `PortalNotice.email_reason`).
+REASON_NOT_INVITED = "not_invited"
+REASON_INVALID_EMAIL = "invalid_email"
+REASON_NO_EMAIL = "no_email"
+
+
+def email_allowed(contact: Contact, document_contact_ids: Iterable[int] = ()) -> Optional[str]:
+    """Можно ли писать контакту письмо-уведомление; `None` — можно, иначе причина.
+
+    Решение лида по ревью #402 (Odoo portal — письмо подписчикам документа, HubSpot — контактам с доступом к порталу):
+    письмо получает контакт документа (контакт сделки, получатель КП) и контакт, которого пригласили в кабинет или который
+    уже входил. Неприглашённому первым письмом должно прийти приглашение (ADR-0023 п. 3) — до него только колокольчик.
+    Неверный адрес отсекается здесь, а не на передаче почте.
+    """
+    email = (contact.email or "").strip()
     if not email:
-        return NoticeChannel.CABINET
-    if email in already_emailed:
-        return NoticeChannel.SOURCE
-    return NoticeChannel.EMAIL_DELAYED if kind.email_delay else NoticeChannel.EMAIL
+        return REASON_NO_EMAIL
+    try:
+        validate_email(email)
+    except ValidationError:
+        return REASON_INVALID_EMAIL
+    if contact.pk in set(document_contact_ids) or contact.invited_at or contact.last_login_at:
+        return None
+    return REASON_NOT_INVITED
+
+
+def choose_channel(
+    kind: NoticeKind,
+    contact: Contact,
+    *,
+    bot_reaches: bool,
+    already_emailed: set[str],
+    document_contact_ids: Iterable[int] = (),
+) -> tuple[str, str]:
+    """Внешний канал уведомления для контакта — один на событие (ADR-0023 п. 2) — и причина, если письма нет."""
+    if not kind.important:
+        return NoticeChannel.CABINET, ""
+    if kind.bot_sends and bot_reaches and contact.telegram_user_id:
+        return NoticeChannel.TELEGRAM, ""
+    if _normalized(contact.email) in already_emailed:
+        return NoticeChannel.SOURCE, ""
+    reason = email_allowed(contact, document_contact_ids)
+    if reason:
+        return NoticeChannel.CABINET, reason
+    return (NoticeChannel.EMAIL_DELAYED if kind.email_delay else NoticeChannel.EMAIL), ""
 
 
 def crm_bot_reaches(company_id: int) -> bool:
@@ -117,6 +155,7 @@ def notify(
     dedup: str,
     bot_reaches: Optional[bool] = None,
     already_emailed: Iterable[str] = (),
+    document_contact_ids: Iterable[int] = (),
 ) -> list[PortalNotice]:
     """Записать событие в ленту каждого действующего контакта компании и выбрать каждому внешний канал.
 
@@ -129,12 +168,16 @@ def notify(
     if bot_reaches is None:
         bot_reaches = crm_bot_reaches(company.pk)
     emailed = {_normalized(email) for email in already_emailed if email}
+    emailed.discard("")
+    document_contacts = {pk for pk in document_contact_ids if pk}
     text_params = {key: "" if value is None else str(value) for key, value in (params or {}).items()}
     now = timezone.now()
     created: list[PortalNotice] = []
     contacts = Contact.objects.filter(active_contact_q(), company_id=company.pk).order_by("pk")
     for contact in contacts:
-        channel = choose_channel(kind, contact, bot_reaches=bot_reaches, already_emailed=emailed)
+        channel, reason = choose_channel(
+            kind, contact, bot_reaches=bot_reaches, already_emailed=emailed, document_contact_ids=document_contacts
+        )
         wants_email = channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED)
         notice, was_created = PortalNotice.objects.get_or_create(
             contact=contact,
@@ -153,6 +196,7 @@ def notify(
                 "channel": channel,
                 "email_state": NoticeEmailState.PENDING if wants_email else NoticeEmailState.NONE,
                 "email_due_at": (now + (kind.email_delay or timedelta(0))) if wants_email else None,
+                "email_reason": reason,
             },
         )
         if was_created:
@@ -206,7 +250,9 @@ def mark_read(contact, company, modules: Iterable[str], *, ids: Optional[list[in
         rows = rows.filter(pk__in=list(ids or []))
     now = timezone.now()
     with transaction.atomic():
-        rows.filter(email_state=NoticeEmailState.PENDING).update(email_state=NoticeEmailState.CANCELLED)
+        rows.filter(email_state=NoticeEmailState.PENDING).update(
+            email_state=NoticeEmailState.CANCELLED, email_reason="read"
+        )
         rows.update(read_at=now)
     return unread_count(contact, company, modules)
 
@@ -235,10 +281,12 @@ def contact_was_present(notice: PortalNotice) -> bool:
 def deliver_email(notice_id: int) -> str:
     """Отправить письмо по уведомлению, если оно ещё нужно. Идемпотентно: строка блокируется, отправленное не повторяется.
 
-    Итог: `sent`, `cancelled` (прочитано, контакт заходил, адреса нет, кабинет закрыт), `not_due` (рано), `skipped` (нечего
-    отправлять — уже отправлено или отменено).
+    Итог: `sent`; `cancelled` (прочитано, контакт заходил, адреса нет, кабинет закрыт); `retry` (почта не приняла письмо —
+    повтор после паузы `EMAIL_RETRY_DELAYS`); `failed` (попытки исчерпаны — строка больше не берётся, причина в
+    `email_reason`); `not_due` (рано); `skipped` (нечего отправлять — уже отправлено, отменено или не отправлено).
     """
     from notifications.emails import send_templated_email
+    from notifications.models import EmailLog
 
     now = timezone.now()
     with transaction.atomic():
@@ -258,26 +306,65 @@ def deliver_email(notice_id: int) -> str:
             reason = "read"
         elif KINDS[notice.kind].email_delay and contact_was_present(notice):
             reason = "present"
-        elif contact.archived_at is not None or contact.company_id != notice.company_id or not contact.email:
+        elif contact.archived_at is not None or contact.company_id != notice.company_id:
             reason = "no_recipient"
         elif not company_has_cabinet_access(notice.company_id):
             reason = "no_cabinet"
+        else:
+            reason = email_allowed(contact, (contact.pk,))  # адрес мог смениться после уведомления
         if reason:
             notice.email_state = NoticeEmailState.CANCELLED
-            notice.save(update_fields=["email_state"])
+            notice.email_reason = reason
+            notice.save(update_fields=["email_state", "email_reason"])
             logger.info("portal notice #%s: письмо отменено (%s)", notice.pk, reason)
             return "cancelled"
-        send_templated_email(
+        log = send_templated_email(
             "portal_notice",
             email_context(notice),
             to=[contact.email],
             language=contact.language,
             purpose=f"portal_notice.{notice.kind}",
+            fail_silently=True,  # сбой передачи — попытка строки, а не исключение: сборщик идёт дальше
         )
+        if log is not None and log.status == EmailLog.STATUS_FAILED:
+            return _attempt_failed(notice, log.error or "send_failed", now)
         notice.email_state = NoticeEmailState.SENT
         notice.email_sent_at = now
-        notice.save(update_fields=["email_state", "email_sent_at"])
+        notice.email_attempts += 1
+        notice.email_reason = ""
+        notice.save(update_fields=["email_state", "email_sent_at", "email_attempts", "email_reason"])
     return "sent"
+
+
+def _attempt_failed(notice: PortalNotice, error: str, now) -> str:
+    """Неудачная попытка: пауза перед повтором или, когда попытки исчерпаны, конечное `failed` с причиной."""
+    notice.email_attempts += 1
+    notice.email_reason = str(error)[:255]
+    if notice.email_attempts >= MAX_EMAIL_ATTEMPTS:
+        notice.email_state = NoticeEmailState.FAILED
+        logger.warning(
+            "portal notice #%s: письмо не отправлено, попытки исчерпаны (%s)", notice.pk, notice.email_reason
+        )
+        result = "failed"
+    else:
+        notice.email_due_at = now + EMAIL_RETRY_DELAYS[notice.email_attempts - 1]
+        logger.warning("portal notice #%s: письмо не принято, повтор в %s", notice.pk, notice.email_due_at)
+        result = "retry"
+    notice.save(update_fields=["email_attempts", "email_reason", "email_state", "email_due_at"])
+    return result
+
+
+def _record_crash(notice_id: int, error: Exception) -> str:
+    """Непредвиденный сбой строки (база, шаблон): попытка засчитывается отдельной транзакцией, сборщик не встаёт."""
+    with transaction.atomic():
+        notice = (
+            PortalNotice.objects.select_for_update(of=("self",))
+            .filter(pk=notice_id, email_state=NoticeEmailState.PENDING)
+            .first()
+        )
+        if notice is None:
+            return "skipped"
+        return _attempt_failed(notice, f"{error.__class__.__name__}: {error}", timezone.now())
 
 
 def _email_money(amount: Optional[str], currency: Optional[str]) -> str:
@@ -331,13 +418,21 @@ def email_context(notice: PortalNotice) -> dict:
 
 
 def send_due_emails(limit: int = 200) -> dict:
-    """Сборщик: письма, чей срок наступил (отложенные и не поставленные в очередь после коммита)."""
+    """Сборщик: письма, чей срок наступил (отложенные, повторы после сбоя и не поставленные в очередь после коммита).
+
+    Сбой одной строки не останавливает остальные: попытка засчитывается строке (пауза, затем `failed`), цикл идёт дальше.
+    """
     due = list(
         PortalNotice.objects.filter(email_state=NoticeEmailState.PENDING, email_due_at__lte=timezone.now())
         .order_by("email_due_at", "pk")
         .values_list("pk", flat=True)[:limit]
     )
-    result = {"sent": 0, "cancelled": 0, "skipped": 0, "not_due": 0}
+    result = {"sent": 0, "cancelled": 0, "skipped": 0, "not_due": 0, "retry": 0, "failed": 0}
     for notice_id in due:
-        result[deliver_email(notice_id)] += 1
+        try:
+            outcome = deliver_email(notice_id)
+        except Exception as error:  # noqa: BLE001 — сбой строки не должен вечно держать очередь писем всех компаний
+            logger.exception("portal notice #%s: сбой отправки письма", notice_id)
+            outcome = _record_crash(notice_id, error)
+        result[outcome] += 1
     return result

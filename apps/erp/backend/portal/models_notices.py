@@ -27,6 +27,8 @@ class NoticeEmailState(models.TextChoices):
     PENDING = "pending", _("Ждёт отправки")
     SENT = "sent", _("Отправлено")
     CANCELLED = "cancelled", _("Отменено")
+    #: Попытки исчерпаны (адрес отвергнут почтой, сбой передачи) — причина в `email_reason`, сборщик строку больше не берёт.
+    FAILED = "failed", _("Не отправлено")
 
 
 class PortalNotice(models.Model):
@@ -55,6 +57,14 @@ class PortalNotice(models.Model):
     )
     email_due_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name=_("Письмо — не раньше"))
     email_sent_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Письмо передано почте"))
+    email_attempts = models.PositiveSmallIntegerField(default=0, verbose_name=_("Попыток отправки"))
+    email_reason = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Почему письма нет"),
+        help_text=_("Причина без письма: не приглашён, неверный адрес, прочитано, заходил, ошибка передачи"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

@@ -19,6 +19,12 @@ def _deal_ref(deal) -> str:
     return projections.deal_number(deal) if deal is not None else ""
 
 
+def _document_contacts(deal) -> tuple[int, ...]:
+    """Контакт документа — контакт сделки: ему письмо-уведомление и без приглашения в кабинет (решение лида по #402)."""
+    contact_id = getattr(deal, "contact_id", None) if deal is not None else None
+    return (contact_id,) if isinstance(contact_id, int) else ()
+
+
 def _legacy_buyer_emails(deal) -> set[str]:
     """Адреса пользователей ERP компании-покупателя, которым письмо о счёте, акте и просрочке уже шлёт `deal_emails`
     (членство B2B; у клиентов портала его нет) — контакту с тем же адресом второе письмо не нужно."""
@@ -52,6 +58,7 @@ def quote_sent(quote, channels: Optional[list[str]] = None, bot_reaches: Optiona
         dedup=f"{quote.pk}:v{quote.version}",
         bot_reaches=bot_reaches,
         already_emailed=emailed,
+        document_contact_ids=_document_contacts(deal),
     )
 
 
@@ -78,6 +85,7 @@ def invoice_issued(invoice, bot_reaches: Optional[bool] = None) -> None:
         dedup=f"{invoice.pk}",
         bot_reaches=bot_reaches,
         already_emailed=_legacy_buyer_emails(deal),
+        document_contact_ids=_document_contacts(deal),
     )
 
 
@@ -98,6 +106,7 @@ def payment_overdue(invoice, bot_reaches: Optional[bool] = None) -> None:
         dedup=f"{invoice.pk}:{invoice.due_date.isoformat() if invoice.due_date else ''}",
         bot_reaches=bot_reaches,
         already_emailed=_legacy_buyer_emails(deal),
+        document_contact_ids=_document_contacts(deal),
     )
 
 
@@ -121,6 +130,7 @@ def act_issued(act, bot_reaches: Optional[bool] = None, *, reminder: bool = Fals
         dedup=f"{act.pk}:{stamp}",
         bot_reaches=bot_reaches,
         already_emailed=_legacy_buyer_emails(deal),
+        document_contact_ids=_document_contacts(deal),
     )
 
 
@@ -128,7 +138,17 @@ def act_issued(act, bot_reaches: Optional[bool] = None, *, reminder: bool = Fals
 CLIENT_DECISION_STATUSES = ("ACCEPTED", "DISPUTED")
 
 
+def _change_stamp(fulfillment) -> str:
+    """Порядок изменения поставки: время сохранения строки исполнения в транзакции события. Повтор того же события — тот же
+    ключ; возврат на прежние статус или дату — новое изменение и новое уведомление (не от значения, а от изменения)."""
+    stamp = getattr(fulfillment, "updated_at", None)
+    return stamp.isoformat() if hasattr(stamp, "isoformat") else ""
+
+
 def delivery_status_changed(fulfillment, status: str, bot_reaches: Optional[bool] = None) -> None:
+    """Статус поставки (только колокольчик). Объект — поставка сделки: она одна на сделку (`Fulfillment.deal` — один к
+    одному) и в кабинете открывается внутри проекта, поэтому `object.id` — id сделки, как в `start_param=delivery_<id>`.
+    """
     code = fulfillment.status.code if getattr(fulfillment, "status_id", None) else ""
     if code in CLIENT_DECISION_STATUSES:
         return
@@ -136,26 +156,29 @@ def delivery_status_changed(fulfillment, status: str, bot_reaches: Optional[bool
     notify(
         "delivery_status_changed",
         company=deal.company,
-        object_id=fulfillment.pk,
+        object_id=deal.pk,
         object_number=_deal_ref(deal),
         params={"deal": _deal_ref(deal), "status": status},
         link=f"/deals/{deal.pk}",
-        dedup=f"{fulfillment.pk}:{status}",
+        dedup=f"{fulfillment.pk}:{status}:{_change_stamp(fulfillment)}",
         bot_reaches=bot_reaches,
+        document_contact_ids=_document_contacts(deal),
     )
 
 
 def delivery_eta_changed(fulfillment, previous_eta, bot_reaches: Optional[bool] = None) -> None:
+    """Сдвиг срока поставки — важное. Ключ — от изменения, а не от даты: возврат на прежнюю дату тоже сообщается."""
     deal = fulfillment.deal
     eta = fulfillment.expected_delivery_date.isoformat() if fulfillment.expected_delivery_date else ""
     previous = previous_eta.isoformat() if hasattr(previous_eta, "isoformat") else str(previous_eta or "")
     notify(
         "delivery_eta_changed",
         company=deal.company,
-        object_id=fulfillment.pk,
+        object_id=deal.pk,
         object_number=_deal_ref(deal),
         params={"deal": _deal_ref(deal), "eta": eta, "previous_eta": previous},
         link=f"/deals/{deal.pk}",
-        dedup=f"{fulfillment.pk}:{eta}",
+        dedup=f"{fulfillment.pk}:{previous}>{eta}:{_change_stamp(fulfillment)}",
         bot_reaches=bot_reaches,
+        document_contact_ids=_document_contacts(deal),
     )

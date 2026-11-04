@@ -7,6 +7,7 @@ import { notificationText, safeNotificationLink } from '@/lib/notifications';
 import { notifications } from '@/mocks/fixtures';
 import { portalServer } from '@/mocks/server';
 import { renderApp, signedIn } from '@/test/render';
+import { routeForStartParam } from '@/telegram/start-param';
 
 /** Колокольчик кабинета (NOTIFY-2): бейдж из `/me`, лента в шторке, «Прочитать все», переход в объект. */
 
@@ -143,5 +144,16 @@ describe('текст уведомления', () => {
     expect(safeNotificationLink('/quotes/1')).toBe('/quotes/1');
     expect(safeNotificationLink('//evil.example/x')).toBe('/profile');
     expect(safeNotificationLink('https://evil.example')).toBe('/profile');
+  });
+});
+
+describe('объект уведомления и параметр запуска Mini App', () => {
+  it('start_param `<тип>_<object.id>` ведёт туда же, куда ссылка уведомления (поставка — id сделки)', () => {
+    const START: Record<string, string> = { quote: 'quote', invoice: 'invoice', act: 'act', delivery: 'delivery' };
+    const checked = notifications.filter((item) => START[item.object.type]);
+    expect(checked.some((item) => item.object.type === 'delivery')).toBe(true);
+    for (const item of checked) {
+      expect(routeForStartParam(`${START[item.object.type]}_${item.object.id}`), item.kind).toBe(item.link);
+    }
   });
 });

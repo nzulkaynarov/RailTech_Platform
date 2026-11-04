@@ -36,9 +36,14 @@ CYRILLIC = re.compile("[А-Яа-яЁё]")
 
 @pytest.fixture
 def no_tg_contact(client_company):
-    """Контакт без Telegram: внешний канал у него — письмо."""
+    """Контакт без Telegram, приглашённый в кабинет: внешний канал у него — письмо."""
     return Contact.objects.create(
-        company=client_company, name="Nodira Accountant", email="nodira@client.example", can_act=True, language="uz"
+        company=client_company,
+        name="Nodira Accountant",
+        email="nodira@client.example",
+        can_act=True,
+        language="uz",
+        invited_at=timezone.now(),
     )
 
 
@@ -104,11 +109,49 @@ def test_kinds_groups_objects_and_actions_match_the_contract():
     ],
 )
 def test_router_picks_one_channel(kind, telegram, email, bot_reaches, emailed, expected):
-    contact = Contact(name="X", email=email, telegram_user_id=telegram)
-    assert (
-        notices.choose_channel(notices.KINDS[kind], contact, bot_reaches=bot_reaches, already_emailed=emailed)
-        == expected
+    contact = Contact(name="X", email=email, telegram_user_id=telegram, invited_at=timezone.now())
+    channel, _reason = notices.choose_channel(
+        notices.KINDS[kind], contact, bot_reaches=bot_reaches, already_emailed=emailed
     )
+    assert channel == expected
+
+
+@pytest.mark.parametrize(
+    ("email", "invited", "logged_in", "document", "expected"),
+    [
+        ("a@x.example", True, False, False, (NoticeChannel.EMAIL, "")),  # приглашён
+        ("a@x.example", False, True, False, (NoticeChannel.EMAIL, "")),  # уже входил
+        ("a@x.example", False, False, True, (NoticeChannel.EMAIL, "")),  # контакт документа (сделки, получатель КП)
+        ("a@x.example", False, False, False, (NoticeChannel.CABINET, "not_invited")),  # сначала — приглашение
+        ("not-an-address", True, False, True, (NoticeChannel.CABINET, "invalid_email")),  # неверный адрес — сразу
+        ("", True, False, True, (NoticeChannel.CABINET, "no_email")),
+    ],
+)
+def test_email_goes_only_to_document_or_invited_contacts(email, invited, logged_in, document, expected):
+    """Решение лида по #402 (Odoo portal — подписчики документа, HubSpot — контакты с доступом): колокольчик — всем,
+    письмо — контакту документа и приглашённым или входившим; неприглашённому первым письмом придёт приглашение."""
+    contact = Contact(
+        pk=501,
+        name="X",
+        email=email,
+        invited_at=timezone.now() if invited else None,
+        last_login_at=timezone.now() if logged_in else None,
+    )
+    got = notices.choose_channel(
+        notices.KINDS["invoice_issued"],
+        contact,
+        bot_reaches=True,
+        already_emailed=set(),
+        document_contact_ids=(501,) if document else (),
+    )
+    assert got == expected
+
+
+def test_not_invited_colleague_gets_the_bell_but_no_email(client_company, client_contact, enqueued):
+    stranger = Contact.objects.create(company=client_company, name="Not Invited", email="nobody@client.example")
+    rows = _by_contact(_notify(client_company, dedup="stranger"))
+    assert rows[stranger.pk].channel == NoticeChannel.CABINET
+    assert rows[stranger.pk].email_reason == "not_invited"
 
 
 # ── 2. Источники: событие → строка ленты на контакт, идемпотентно ────────────────────────────────────────────────────
@@ -187,12 +230,15 @@ def test_quote_sent_does_not_repeat_the_quote_email(contract_world, client_conta
 def test_delivery_status_is_bell_only_and_client_decisions_are_not_echoed(contract_world, client_contact, enqueued):
     shipped = contract_world["deliveries"]["in_transit"]
     notice_sources.delivery_status_changed(shipped, "in_transit")
-    row = PortalNotice.objects.get(kind="delivery_status_changed", object_id=shipped.pk, contact=client_contact)
+    row = PortalNotice.objects.get(kind="delivery_status_changed", object_id=shipped.deal_id, contact=client_contact)
+    assert (
+        row.object_type == "delivery" and row.object_number == f"D-{shipped.deal_id}"
+    )  # id — сделки, как в start_param
     assert row.channel == NoticeChannel.CABINET and row.email_state == ""
     assert row.link == f"/deals/{shipped.deal_id}"
     accepted = contract_world["deliveries"]["accepted"]
     notice_sources.delivery_status_changed(accepted, "delivered")
-    assert not PortalNotice.objects.filter(object_id=accepted.pk, kind="delivery_status_changed").exists()
+    assert not PortalNotice.objects.filter(object_id=accepted.deal_id, kind="delivery_status_changed").exists()
 
 
 def test_eta_shift_is_important(
@@ -201,14 +247,30 @@ def test_eta_shift_is_important(
     fulfillment = contract_world["deliveries"]["shipped"]
     previous = fulfillment.expected_delivery_date
     fulfillment.expected_delivery_date = previous + timedelta(days=5)
-    fulfillment.save(update_fields=["expected_delivery_date"])
+    fulfillment.save(update_fields=["expected_delivery_date", "updated_at"])
     with django_capture_on_commit_callbacks(execute=True):
         notice_sources.delivery_eta_changed(fulfillment, previous)
-        notice_sources.delivery_eta_changed(fulfillment, previous)
-    row = PortalNotice.objects.get(kind="delivery_eta_changed", contact=no_tg_contact, object_id=fulfillment.pk)
+        notice_sources.delivery_eta_changed(fulfillment, previous)  # повтор того же события
+    row = PortalNotice.objects.get(kind="delivery_eta_changed", contact=no_tg_contact, object_id=fulfillment.deal_id)
     assert row.channel == NoticeChannel.EMAIL
     assert row.params["previous_eta"] == previous.isoformat()
     assert enqueued.count(row.pk) == 1
+
+
+def test_eta_back_to_an_earlier_date_is_a_new_notice(contract_world, no_tg_contact, enqueued):
+    """Ключ — от изменения, а не от даты: A → B → A даёт три уведомления, а не два."""
+    fulfillment = contract_world["deliveries"]["in_transit"]
+    first = fulfillment.expected_delivery_date
+    second = first + timedelta(days=7)
+    for previous, new in ((first, second), (second, first)):
+        fulfillment.expected_delivery_date = new
+        fulfillment.updated_at = timezone.now()
+        fulfillment.save(update_fields=["expected_delivery_date", "updated_at"])
+        notice_sources.delivery_eta_changed(fulfillment, previous)
+    rows = PortalNotice.objects.filter(
+        kind="delivery_eta_changed", contact=no_tg_contact, object_id=fulfillment.deal_id
+    )
+    assert sorted(row.params["eta"] for row in rows) == sorted([second.isoformat(), first.isoformat()])
 
 
 def test_archived_contacts_and_closed_companies_get_nothing(client_company, client_contact, no_tg_contact):
@@ -427,7 +489,7 @@ def test_repeated_task_does_not_send_twice(locmem, client_company, no_tg_contact
     row = next(r for r in _notify(client_company, dedup="twice") if r.contact_id == no_tg_contact.pk)
     assert notices.deliver_email(row.pk) == "sent"
     assert notices.deliver_email(row.pk) == "skipped"
-    assert notices.send_due_emails() == {"sent": 0, "cancelled": 0, "skipped": 0, "not_due": 0}
+    assert sum(notices.send_due_emails().values()) == 0
     assert len(locmem) == 1
 
 
@@ -495,6 +557,107 @@ def test_act_reminder_is_a_new_bell_item_and_email(
     )  # повтор — без второй
     assert reminder.params["reminder"] == "1" and reminder.channel == NoticeChannel.EMAIL
     reminders = PortalNotice.objects.filter(kind="act_issued", object_id=act.pk, params__reminder="1")
-    assert sorted(enqueued) == sorted(reminders.values_list("pk", flat=True)), "по письму на контакт, и с Telegram тоже"
+    by = _by_contact(reminders)
+    deal_contact = act.deal.contact_id
+    assert (
+        by[deal_contact].channel == NoticeChannel.EMAIL
+    ), "контакту сделки с Telegram — тоже письмо: бот не напоминает"
+    emailed = [row.pk for row in reminders if row.channel == NoticeChannel.EMAIL]
+    assert sorted(enqueued) == sorted(emailed)
     issued = PortalNotice.objects.filter(kind="act_issued", object_id=act.pk, params__reminder="")
     assert issued.exists(), "напоминание — отдельная строка рядом с выставлением, а не замена"
+
+
+# ── 5. Каждая защита письма — отдельно (мутационная проверка в PR) ────────────────────────────────────────────────────
+
+
+def test_mark_read_cancels_the_pending_email_at_once(client_company, no_tg_contact):
+    """Защита 1: прочтение сразу переводит письмо в `cancelled` (сборщик строку больше не берёт)."""
+    row = _delayed(client_company, no_tg_contact)
+    notices.mark_read(no_tg_contact, client_company, ["profile", "messages"], ids=[row.pk])
+    row.refresh_from_db()
+    assert row.email_state == NoticeEmailState.CANCELLED and row.email_reason == "read"
+
+
+def test_delivery_rechecks_read_at_under_the_lock(locmem, client_company, no_tg_contact):
+    """Защита 2: прочтение, записанное мимо `mark_read` (гонка с задачей), всё равно гасит письмо при отправке."""
+    row = _delayed(client_company, no_tg_contact)
+    PortalNotice.objects.filter(pk=row.pk).update(
+        read_at=timezone.now(), email_due_at=timezone.now() - timedelta(seconds=1)
+    )
+    assert notices.deliver_email(row.pk) == "cancelled"
+    assert locmem == []
+
+
+# ── 6. Сбой одной строки не держит очередь ───────────────────────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def flaky_mail(monkeypatch, locmem):
+    """Почта не принимает письма на `bounce@…` (как `EmailDeliveryError` передачи) и падает на `crash@…`."""
+    import notifications.emails as emails
+    from notifications.models import EmailLog
+
+    real = emails.send_templated_email
+
+    def fake(template, context, to, **kwargs):
+        if to[0].startswith("bounce@"):
+            return EmailLog.objects.create(
+                template=template, to_emails=to, status=EmailLog.STATUS_FAILED, error="ValidationError: to[0]"
+            )
+        if to[0].startswith("crash@"):
+            raise RuntimeError("шаблон сломан")
+        return real(template, context, to, **kwargs)
+
+    monkeypatch.setattr(emails, "send_templated_email", fake)
+    return locmem
+
+
+def _due_now(*rows):
+    PortalNotice.objects.filter(pk__in=[row.pk for row in rows]).update(
+        email_due_at=timezone.now() - timedelta(minutes=1)
+    )
+
+
+def test_a_failing_row_does_not_block_the_others_and_ends_failed(flaky_mail, client_company):
+    bounce = Contact.objects.create(
+        company=client_company, name="Bounce", email="bounce@client.example", invited_at=timezone.now()
+    )
+    crash = Contact.objects.create(
+        company=client_company, name="Crash", email="crash@client.example", invited_at=timezone.now()
+    )
+    good = Contact.objects.create(
+        company=client_company, name="Good", email="good@client.example", invited_at=timezone.now()
+    )
+    rows = _by_contact(_notify(client_company, dedup="flaky"))
+    # сбойные строки — раньше исправной: прежде они навсегда занимали голову очереди
+    PortalNotice.objects.filter(pk__in=[rows[bounce.pk].pk, rows[crash.pk].pk]).update(
+        email_due_at=timezone.now() - timedelta(hours=1)
+    )
+    _due_now(rows[good.pk])
+
+    first = notices.send_due_emails()
+    assert first["sent"] >= 1 and first["retry"] == 2
+    assert [message.to for message in flaky_mail] == [["good@client.example"]], "исправная ушла, несмотря на сбойные"
+
+    for _ in range(notices.MAX_EMAIL_ATTEMPTS - 1):
+        _due_now(rows[bounce.pk], rows[crash.pk])
+        notices.send_due_emails()
+    for contact in (bounce, crash):
+        row = PortalNotice.objects.get(pk=rows[contact.pk].pk)
+        assert row.email_state == NoticeEmailState.FAILED and row.email_attempts == notices.MAX_EMAIL_ATTEMPTS
+        assert row.email_reason, "причина записана"
+    _due_now(rows[bounce.pk], rows[crash.pk])
+    assert notices.send_due_emails()["sent"] + notices.send_due_emails()["retry"] == 0, "конечное состояние не крутится"
+    assert len(flaky_mail) == 1
+
+
+def test_retry_waits_for_the_pause(flaky_mail, client_company):
+    bounce = Contact.objects.create(
+        company=client_company, name="Bounce", email="bounce@client.example", invited_at=timezone.now()
+    )
+    row = _by_contact(_notify(client_company, dedup="pause"))[bounce.pk]
+    assert notices.deliver_email(row.pk) == "retry"
+    row.refresh_from_db()
+    assert row.email_due_at > timezone.now() + notices.EMAIL_RETRY_DELAYS[0] - timedelta(minutes=1)
+    assert notices.deliver_email(row.pk) == "not_due"
