@@ -1215,6 +1215,242 @@
                 }
             }
         },
+        "/api/portal/v1/partner/offers/confirm": {
+            "post": {
+                "operationId": "api_portal_v1_partner_offers_confirm_create",
+                "description": "POST /partner/offers/confirm — «подтвердить актуальность» цен компании, без модерации.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/offers/confirm/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_offers_confirm_create_2",
+                "description": "POST /partner/offers/confirm — «подтвердить актуальность» цен компании, без модерации.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-list": {
+            "post": {
+                "operationId": "api_portal_v1_partner_price_list_create",
+                "description": "POST /partner/price-list — загрузка прайса (multipart); `dry_run` — предпросмотр без записи.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-list/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_price_list_create_2",
+                "description": "POST /partner/price-list — загрузка прайса (multipart); `dry_run` — предпросмотр без записи.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-list/{task_id}": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_list_retrieve",
+                "description": "GET /partner/price-list/{task_id} — состояние и отчёт; задача другой компании — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-list/{task_id}/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_list_retrieve_2",
+                "description": "GET /partner/price-list/{task_id} — состояние и отчёт; задача другой компании — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "task_id",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-template": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_template_retrieve",
+                "description": "GET /partner/price-template — тот же шаблон прайса, что у сотрудника.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/price-template/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_price_template_retrieve_2",
+                "description": "GET /partner/price-template — тот же шаблон прайса, что у сотрудника.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_retrieve",
+                "description": "GET /partner/products — свои карточки со своей ценой, вкладки по статусам.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_retrieve_2",
+                "description": "GET /partner/products — свои карточки со своей ценой, вкладки по статусам.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_retrieve_3",
+                "description": "GET /partner/products/{id} — своя карточка с историей проверок; чужая — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/{id}/": {
+            "get": {
+                "operationId": "api_portal_v1_partner_products_retrieve_4",
+                "description": "GET /partner/products/{id} — своя карточка с историей проверок; чужая — 404.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/submit": {
+            "post": {
+                "operationId": "api_portal_v1_partner_products_submit_create",
+                "description": "POST /partner/products/submit — свои черновики и возвращённые карточки → «на проверке», сотрудникам уведомление.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/partner/products/submit/": {
+            "post": {
+                "operationId": "api_portal_v1_partner_products_submit_create_2",
+                "description": "POST /partner/products/submit — свои черновики и возвращённые карточки → «на проверке», сотрудникам уведомление.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/quotes": {
             "get": {
                 "operationId": "api_portal_v1_quotes_retrieve",

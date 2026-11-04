@@ -9,8 +9,8 @@
    preflight, а CORS пускает лишь origin Cabinet;
 2. его тело — `application/json` (то же самое по типу содержимого: форма JSON отправить не может).
 
-Исключение по типу — `POST /uploads`: файл не уложить в JSON (Q-14), остаётся `multipart/form-data`;
-от межсайтовой формы его защищает пункт 1.
+Исключение по типу — `POST /uploads` и `POST /partner/price-list`: файл не уложить в JSON (Q-14), остаётся
+`multipart/form-data`; от межсайтовой формы его защищает пункт 1.
 
 Ошибки: 400 `IDEMPOTENCY_KEY_REQUIRED`, 415 `UNSUPPORTED_MEDIA_TYPE` — формат `{"detail": "<CODE>"}`.
 """
@@ -21,7 +21,14 @@ PORTAL_PREFIX = "/api/portal/"
 # PUT и DELETE — «непростые» методы: браузер и так шлёт для них preflight, а CORS пускает только origin Cabinet.
 # Опасны POST (форма умеет его слать без preflight) и PATCH (по CONTRACTS §0 — как POST).
 GUARDED_METHODS = frozenset({"POST", "PATCH"})
-UPLOADS_PATHS = frozenset({"/api/portal/v1/uploads", "/api/portal/v1/uploads/"})
+UPLOADS_PATHS = frozenset(
+    {
+        "/api/portal/v1/uploads",
+        "/api/portal/v1/uploads/",
+        "/api/portal/v1/partner/price-list",  # PART-2: прайс партнёра (.xlsx)
+        "/api/portal/v1/partner/price-list/",
+    }
+)
 
 
 class PortalRequestGuardMiddleware:

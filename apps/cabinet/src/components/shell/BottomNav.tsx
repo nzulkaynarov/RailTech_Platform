@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, X } from 'lucide-react';
 
-import { isWithin } from '@/app/nav';
+import { isWithin, type NavItem } from '@/app/nav';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useNav } from '@/session/useNav';
@@ -19,7 +19,7 @@ export function BottomNav() {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const [moreOpen, setMoreOpen] = useState(false);
-  const { primary: primary, secondary: secondary } = useNav();
+  const { primary, secondary, groups } = useNav();
   const moreActive = secondary.some((item) => isWithin(pathname, item.to));
   if (primary.length + secondary.length === 0) return null; // разделы ещё не настроены: вместо меню — экран в AppShell
 
@@ -75,30 +75,54 @@ export function BottomNav() {
                     <X className="size-4" aria-hidden="true" />
                   </SheetClose>
                 </SheetHeader>
-                <ul className="grid grid-cols-2 gap-2 px-4 pb-4">
-                  {secondary.map((item) => (
-                    <li key={item.to}>
-                      <NavLink
-                        to={item.to}
-                        onClick={() => setMoreOpen(false)}
-                        className={({ isActive }) =>
-                          cn(
-                            'flex min-h-12 items-center gap-2 rounded-md border px-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
-                            isActive && 'border-primary font-medium text-primary',
-                          )
-                        }
-                      >
-                        <item.icon className="size-4" aria-hidden="true" />
-                        {t(item.labelKey)}
-                      </NavLink>
-                    </li>
-                  ))}
-                </ul>
+                {groups ? (
+                  // Обе роли: «Ещё» тоже по разделам «Покупаю / Поставляю / Компания»
+                  groups
+                    .map((group) => ({ ...group, items: group.items.filter((item) => secondary.includes(item)) }))
+                    .filter((group) => group.items.length > 0)
+                    .map((group) => (
+                      <section key={group.key} aria-labelledby={`more-group-${group.key}`} className="px-4 pb-3">
+                        <h3 id={`more-group-${group.key}`} className="pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                          {t(group.labelKey)}
+                        </h3>
+                        <MoreLinks items={group.items} onNavigate={() => setMoreOpen(false)} />
+                      </section>
+                    ))
+                ) : (
+                  <div className="px-4 pb-4">
+                    <MoreLinks items={secondary} onNavigate={() => setMoreOpen(false)} />
+                  </div>
+                )}
               </SheetContent>
             </Sheet>
           </li>
         )}
       </ul>
     </nav>
+  );
+}
+
+function MoreLinks({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <ul className="grid grid-cols-2 gap-2">
+      {items.map((item) => (
+        <li key={item.to}>
+          <NavLink
+            to={item.to}
+            onClick={onNavigate}
+            className={({ isActive }) =>
+              cn(
+                'flex min-h-12 items-center gap-2 rounded-md border px-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
+                isActive && 'border-primary font-medium text-primary',
+              )
+            }
+          >
+            <item.icon className="size-4" aria-hidden="true" />
+            {t(item.labelKey)}
+          </NavLink>
+        </li>
+      ))}
+    </ul>
   );
 }

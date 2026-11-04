@@ -40,6 +40,15 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
+from portal.views_partner import (
+    PartnerConfirmView,
+    PartnerPriceListTaskView,
+    PartnerPriceListView,
+    PartnerPriceTemplateView,
+    PartnerProductDetailView,
+    PartnerProductListView,
+    PartnerSubmitView,
+)
 
 urlpatterns = [
     # Auth
@@ -113,6 +122,23 @@ urlpatterns = [
     path("catalog/", CatalogListView.as_view(), name="portal-catalog-slash"),
     path("catalog/<int:pk>", CatalogDetailView.as_view(), name="portal-catalog-detail"),
     path("catalog/<int:pk>/", CatalogDetailView.as_view(), name="portal-catalog-detail-slash"),
+    # «Мои товары» партнёра (PART-2): модуль `my_products`
+    path("partner/products", PartnerProductListView.as_view(), name="portal-partner-products"),
+    path("partner/products/", PartnerProductListView.as_view(), name="portal-partner-products-slash"),
+    path("partner/products/submit", PartnerSubmitView.as_view(), name="portal-partner-submit"),
+    path("partner/products/submit/", PartnerSubmitView.as_view(), name="portal-partner-submit-slash"),
+    path("partner/products/<int:pk>", PartnerProductDetailView.as_view(), name="portal-partner-product"),
+    path("partner/products/<int:pk>/", PartnerProductDetailView.as_view(), name="portal-partner-product-slash"),
+    path("partner/offers/confirm", PartnerConfirmView.as_view(), name="portal-partner-confirm"),
+    path("partner/offers/confirm/", PartnerConfirmView.as_view(), name="portal-partner-confirm-slash"),
+    path("partner/price-template", PartnerPriceTemplateView.as_view(), name="portal-partner-template"),
+    path("partner/price-template/", PartnerPriceTemplateView.as_view(), name="portal-partner-template-slash"),
+    path("partner/price-list", PartnerPriceListView.as_view(), name="portal-partner-price-list"),
+    path("partner/price-list/", PartnerPriceListView.as_view(), name="portal-partner-price-list-slash"),
+    path("partner/price-list/<str:task_id>", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task"),
+    path(
+        "partner/price-list/<str:task_id>/", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task-slash"
+    ),
     path(
         "catalog/<int:pk>/documents/<int:doc_id>/file",
         CatalogDocumentFileView.as_view(),

@@ -6,6 +6,7 @@ import {
   FolderOpen,
   Inbox,
   Package,
+  PackageOpen,
   Receipt,
   Truck,
   UserRound,
@@ -18,8 +19,9 @@ import {
  * остальные — в «Ещё». На десктопе боковая навигация показывает всё.
  * `labelKey` — ключ i18n `nav.*`; полнота ключей проверяется тестом оболочки.
  * `module` — код модуля из `GET /me` (`modules`, ADR-0022): пункт рисуется, только если модуль есть у сессии;
- * «Запросы» и «Каталог» — один модуль `catalog_requests`. Модуль, которого нет в этом списке (например `my_products`,
- * пока у него нет раздела), меню не рисует.
+ * «Запросы» и «Каталог» — один модуль `catalog_requests`. Модуль, которого нет в этом списке, меню не рисует.
+ * `group` — раздел меню при двух ролях сразу (клиент и партнёр): «Покупаю» / «Поставляю» / «Компания» (PART-2);
+ * с одной ролью меню плоское и прежнее.
  */
 export interface NavItem {
   to: string;
@@ -27,14 +29,27 @@ export interface NavItem {
   icon: LucideIcon;
   module: string;
   primary?: boolean;
+  group: NavGroupKey;
 }
 
+export type NavGroupKey = 'buy' | 'supply' | 'account';
+
 export const NAV_ITEMS: NavItem[] = [
+  {
+    // «Мои товары» партнёра (PART-2): первым — главное рабочее место партнёра; у клиента модуля нет, его меню не меняется
+    to: '/my-products',
+    labelKey: 'nav.myProducts',
+    icon: PackageOpen,
+    module: 'my_products',
+    group: 'supply',
+    primary: true,
+  },
   {
     to: '/requests',
     labelKey: 'nav.requests',
     icon: Inbox,
     module: 'catalog_requests',
+    group: 'buy',
     primary: true,
   },
   {
@@ -42,6 +57,7 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.quotes',
     icon: FileText,
     module: 'quotes',
+    group: 'buy',
     primary: true,
   },
   {
@@ -49,6 +65,7 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.catalog',
     icon: Package,
     module: 'catalog_requests',
+    group: 'buy',
     primary: true,
   },
   {
@@ -56,6 +73,7 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.documents',
     icon: FolderOpen,
     module: 'documents',
+    group: 'buy',
     primary: true,
   },
   {
@@ -63,37 +81,50 @@ export const NAV_ITEMS: NavItem[] = [
     labelKey: 'nav.contracts',
     icon: FileSignature,
     module: 'contracts',
+    group: 'buy',
   },
   {
     to: '/invoices',
     labelKey: 'nav.invoices',
     icon: Receipt,
     module: 'invoices',
+    group: 'buy',
   },
-  { to: '/acts', labelKey: 'nav.acts', icon: ClipboardCheck, module: 'acts' },
+  { to: '/acts', labelKey: 'nav.acts', icon: ClipboardCheck, module: 'acts', group: 'buy' },
   {
     to: '/deliveries',
     labelKey: 'nav.deliveries',
     icon: Truck,
     module: 'deliveries',
+    group: 'buy',
   },
   {
     to: '/company',
     labelKey: 'nav.company',
     icon: Building2,
     module: 'company',
+    group: 'account',
   },
-  { to: '/team', labelKey: 'nav.team', icon: Users, module: 'team' },
+  { to: '/team', labelKey: 'nav.team', icon: Users, module: 'team', group: 'account' },
   {
     to: '/profile',
     labelKey: 'nav.profile',
     icon: UserRound,
     module: 'profile',
+    group: 'account',
   },
 ];
 
 /** Модуль, который есть у любой сессии (выход и язык): сам по себе разделов не открывает (ADR-0022). */
 export const PROFILE_MODULE = 'profile';
+
+/** Раздел меню при двух ролях: «Покупаю» (клиентские разделы), «Поставляю» («Мои товары»), «Компания» (компания, команда, профиль). */
+export interface NavGroup {
+  key: NavGroupKey;
+  /** Ключ i18n заголовка раздела (`nav.groups.*`). */
+  labelKey: string;
+  items: NavItem[];
+}
 
 export interface Nav {
   /** Пункты, доступные сессии, в порядке меню. */
@@ -102,17 +133,42 @@ export interface Nav {
   work: NavItem[];
   primary: NavItem[];
   secondary: NavItem[];
+  /**
+   * Разделы «Покупаю / Поставляю / Компания» — только у компании с обеими ролями (клиент и партнёр) и разделами в обеих
+   * группах; иначе `null`, и меню плоское, как у клиента без партнёрской роли (у него ничего не изменилось).
+   */
+  groups: NavGroup[] | null;
 }
 
-/** Меню сессии из `/me.modules`: известные Cabinet модули в порядке `NAV_ITEMS`, незнакомые пропускаются. */
-export function navFor(modules: readonly string[] | undefined): Nav {
+const GROUP_ORDER: ReadonlyArray<{ key: NavGroupKey; labelKey: string }> = [
+  { key: 'buy', labelKey: 'nav.groups.buy' },
+  { key: 'supply', labelKey: 'nav.groups.supply' },
+  { key: 'account', labelKey: 'nav.groups.account' },
+];
+
+/** Нижняя навигация телефона при двух ролях: по одному главному разделу «Покупаю» и «Поставляю» плюс запросы и КП. */
+const GROUPED_PRIMARY = new Set(['/requests', '/quotes', '/catalog', '/my-products']);
+
+/**
+ * Меню сессии из `/me.modules`: известные Cabinet модули в порядке `NAV_ITEMS`, незнакомые пропускаются.
+ * `roles` (`/me.roles`) нужны для одного: при обеих ролях меню делится на «Покупаю» и «Поставляю».
+ */
+export function navFor(modules: readonly string[] | undefined, roles: readonly string[] | undefined = []): Nav {
   const allowed = new Set(modules ?? []);
   const items = NAV_ITEMS.filter((item) => allowed.has(item.module));
+  const dual = roles.includes('client') && roles.includes('partner');
+  const groups = dual
+    ? GROUP_ORDER.map(({ key, labelKey }) => ({ key, labelKey, items: items.filter((item) => item.group === key) }))
+    : null;
+  const grouped = groups !== null && ['buy', 'supply'].every((key) => groups.some((group) => group.key === key && group.items.length > 0));
+  const ordered = grouped ? groups.flatMap((group) => group.items) : items;
+  const primary = (item: NavItem) => (grouped ? GROUPED_PRIMARY.has(item.to) : Boolean(item.primary));
   return {
-    items,
-    work: items.filter((item) => item.module !== PROFILE_MODULE),
-    primary: items.filter((item) => item.primary),
-    secondary: items.filter((item) => !item.primary),
+    items: ordered,
+    work: ordered.filter((item) => item.module !== PROFILE_MODULE),
+    primary: ordered.filter(primary),
+    secondary: ordered.filter((item) => !primary(item)),
+    groups: grouped ? groups.filter((group) => group.items.length > 0) : null,
   };
 }
 

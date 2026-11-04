@@ -40,6 +40,12 @@ ERROR_CODES = (
     "INVOICE_NOT_OPEN",
     "TEXT_REQUIRED",
     "CONFLICT",
+    "XLSX_REQUIRED",
+    "VALID_DATE_INVALID",
+    "OFFER_VALIDITY_RANGE_INVALID",
+    "PRODUCT_NOT_SUBMITTABLE",
+    "OFFER_EXPIRED",
+    "IMPORT_FAILED",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

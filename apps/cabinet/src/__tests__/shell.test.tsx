@@ -20,7 +20,7 @@ describe('оболочка кабинета', () => {
       expect(within(bottom).getByText(name)).toBeInTheDocument();
     }
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
-    expect(within(side).getAllByRole('link')).toHaveLength(NAV_ITEMS.length);
+    expect(within(side).getAllByRole('link')).toHaveLength(NAV_ITEMS.filter((item) => item.group !== 'supply').length); // «Мои товары» — только у партнёра
     expect(within(side).getByRole('link', { name: 'Запросы' })).toHaveAttribute('aria-current', 'page');
     // Веб: компания в шапке, ссылка на профиль с подписью.
     expect(within(screen.getByRole('banner')).getByRole('link', { name: 'Профиль' })).toHaveAttribute('href', '/profile');

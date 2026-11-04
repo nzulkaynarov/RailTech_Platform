@@ -593,6 +593,146 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/partner/products": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мои товары — свои карточки и свои цены (модуль `my_products`)
+     * @description Карточки, где компания сессии — источник данных, или у неё есть цена. Цена — только этой компании. Чужие цены,
+     *     другие поставщики и наши цены продажи и закупки не отдаются. Чужая неопубликованная карточка — `matched`: только присланное
+     *     партнёром (название строки, бренд, артикул, цена). `page` вне 1…10000 и `page_size` вне 1…100 — 422 `VALIDATION_ERROR`.
+     */
+    get: operations["listPartnerProducts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/products/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Моя карточка с историей проверок */
+    get: operations["getPartnerProduct"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/products/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить карточки на проверку
+     * @description Черновики и возвращённые карточки компании → `review`; сотрудникам уходит уведомление. Ответ 200 всегда
+     *     построчный: по каждому id либо отправлено, либо ошибка (`NOT_FOUND` — чужая или несуществующая карточка,
+     *     `PRODUCT_NOT_SUBMITTABLE` — своя, но уже на проверке или опубликована).
+     */
+    post: operations["submitPartnerProducts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/offers/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подтвердить актуальность цен
+     * @description Без модерации. `ids` — id карточек, цены компании по которым подтверждаются, или `all: true` — все цены компании.
+     *     Цена с истёкшим сроком не подтверждается (`OFFER_EXPIRED` — нужен новый прайс); карточка без цены компании — `NOT_FOUND`.
+     */
+    post: operations["confirmPartnerOffers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-template": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Шаблон прайса (.xlsx) — тот же, что у сотрудника */
+    get: operations["getPartnerPriceTemplate"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-list": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Загрузить прайс по шаблону
+     * @description `multipart/form-data` (как `/uploads`): файл `.xlsx` до 20 МБ. Поставщик — компания сессии, выбрать другого нельзя.
+     *     `dry_run=true` — предпросмотр: те же проверки и отчёт, ничего не записывается. Срок действия цен на весь файл —
+     *     `valid_from` / `valid_until` (колонки «Действует с / до» строки главнее). Загруженные цены считаются подтверждёнными.
+     *     Новые карточки — черновики; карточки, которыми владеем мы или которые опубликованы, прайс не переписывает —
+     *     расхождения уходят в предложения по полям. Обработка асинхронная: 202 и `task_id`.
+     */
+    post: operations["uploadPartnerPriceList"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-list/{task_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Состояние и отчёт загрузки прайса */
+    get: operations["getPartnerPriceListTask"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/company": {
     parameters: {
       query?: never;
@@ -694,7 +834,256 @@ export interface components {
       | "DELIVERY_FAILED"
       | "INVOICE_NOT_OPEN"
       | "TEXT_REQUIRED"
-      | "CONFLICT";
+      | "CONFLICT"
+      | "XLSX_REQUIRED"
+      | "VALID_DATE_INVALID"
+      | "OFFER_VALIDITY_RANGE_INVALID"
+      | "PRODUCT_NOT_SUBMITTABLE"
+      | "OFFER_EXPIRED"
+      | "IMPORT_FAILED";
+    /**
+     * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
+     *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
+     *     неопубликованной карточке, и ему показано только присланное им самим (его название строки, бренд, артикул
+     *     изготовителя, цена) — ни названия, ни категории, ни полноты, ни хода и истории чужой карточки.
+     * @enum {string}
+     */
+    PartnerCardStatus: "draft" | "review" | "returned" | "published" | "matched";
+    /**
+     * @description Свежесть цены: `expired` — срок действия истёк (подтвердить нельзя, нужен новый прайс); `stale` — не подтверждена
+     *     дольше N дней (настройка компании, по умолчанию 30); `expiring` — срок кончается в ближайшие 7 дней; иначе `fresh`.
+     * @enum {string}
+     */
+    OfferFreshness: "fresh" | "expiring" | "stale" | "expired";
+    /** @description Цена этой компании по карточке. Цен других поставщиков в ответах нет. */
+    PartnerOffer: {
+      price: components["schemas"]["Money"] | null;
+      /** Format: date */
+      valid_from: string | null;
+      /** Format: date */
+      valid_until: string | null;
+      /** @description Код Incoterms (FCA, DAP, EXW…) */
+      delivery_basis: string | null;
+      min_order_qty: number;
+      /** Format: date-time */
+      confirmed_at: string | null;
+      freshness: components["schemas"]["OfferFreshness"];
+    };
+    /**
+     * @description Поле карточки, к которому сотрудник привязал замечание при возврате; `other` — замечание не к одному полю
+     * @enum {string}
+     */
+    PartnerIssueField:
+      | "name"
+      | "description"
+      | "brand"
+      | "manufacturer_part_number"
+      | "gost_drawing"
+      | "category"
+      | "uom"
+      | "hs_code"
+      | "price"
+      | "valid_until"
+      | "other";
+    PartnerIssue: {
+      field: components["schemas"]["PartnerIssueField"];
+      comment: string;
+    };
+    PartnerMissingField: {
+      /** @description Поле, которого не хватает для публикации (name, uom, category, hs_code, identity) */
+      code: string;
+      label: string;
+    };
+    PartnerProduct: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      brand: string | null;
+      manufacturer_part_number: string;
+      category: string | null;
+      status: components["schemas"]["PartnerCardStatus"];
+      /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
+      return_reason: string | null;
+      /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
+      return_issues: components["schemas"]["PartnerIssue"][];
+      /** @description Полнота по полям, которые партнёр заполняет прайсом */
+      completeness: number;
+      offer: components["schemas"]["PartnerOffer"] | null;
+      /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
+      has_pending_change: boolean;
+      /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
+      is_own: boolean;
+      /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
+      can_submit: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    PartnerStatusCounts: {
+      all: number;
+      draft: number;
+      review: number;
+      returned: number;
+      published: number;
+      matched: number;
+    };
+    /** @description Сколько цен компании требуют внимания (по всем ценам, а не по странице); для плашки «подтвердите актуальность» */
+    PartnerAttention: {
+      expired: number;
+      stale: number;
+      expiring: number;
+    };
+    PartnerProductPage: {
+      items: components["schemas"]["PartnerProduct"][];
+      page: number;
+      page_size: number;
+      total: number;
+      counts: components["schemas"]["PartnerStatusCounts"];
+      attention: components["schemas"]["PartnerAttention"];
+    };
+    PartnerReviewEntry: {
+      /** Format: date-time */
+      submitted_at: string;
+      /**
+       * @description `cancelled` — проверка закрыта без решения (карточку сняли с публикации, архивировали или отправили заново)
+       * @enum {string}
+       */
+      decision: "pending" | "published" | "returned" | "cancelled";
+      /** @description Общий комментарий возврата */
+      reason: string;
+      issues: components["schemas"]["PartnerIssue"][];
+      /** Format: date-time */
+      decided_at: string | null;
+    };
+    /** @description Карточка списка (`PartnerProduct`) и подробности; поля списка повторены, чтобы схема была закрытой */
+    PartnerProductDetail: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      brand: string | null;
+      manufacturer_part_number: string;
+      category: string | null;
+      status: components["schemas"]["PartnerCardStatus"];
+      /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
+      return_reason: string | null;
+      /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
+      return_issues: components["schemas"]["PartnerIssue"][];
+      /** @description Полнота по полям, которые партнёр заполняет прайсом */
+      completeness: number;
+      offer: components["schemas"]["PartnerOffer"] | null;
+      /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
+      has_pending_change: boolean;
+      /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
+      is_own: boolean;
+      /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
+      can_submit: boolean;
+      /** Format: date-time */
+      updated_at: string;
+      description: string;
+      hs_code: string;
+      uom: string | null;
+      missing: components["schemas"]["PartnerMissingField"][];
+      /** @description Отправки на проверку и решения, новые сверху; только у своей карточки */
+      history: components["schemas"]["PartnerReviewEntry"][];
+    };
+    PartnerSubmitRequest: {
+      ids: number[];
+    };
+    PartnerItemError: {
+      /** Format: int64 */
+      id: number;
+      code: components["schemas"]["ErrorCode"];
+    };
+    PartnerSubmitResult: {
+      submitted: number[];
+      errors: components["schemas"]["PartnerItemError"][];
+    };
+    /** @description Либо `ids`, либо `all: true` */
+    PartnerConfirmRequest: {
+      ids?: number[];
+      all?: boolean;
+    };
+    PartnerConfirmResult: {
+      confirmed: number;
+      /** @description Сколько цен не подтверждено из-за истёкшего срока (по `ids` те же цены перечислены в `errors`) */
+      expired: number;
+      errors: components["schemas"]["PartnerItemError"][];
+    };
+    PriceListAccepted: {
+      task_id: string;
+    };
+    /**
+     * @description Колонка шаблона, в которой проблема строки
+     * @enum {string}
+     */
+    PriceListField:
+      | "name"
+      | "brand"
+      | "manufacturer_part_number"
+      | "gost_drawing"
+      | "supplier_sku"
+      | "description"
+      | "category"
+      | "hs_code"
+      | "domain_type"
+      | "uom"
+      | "price"
+      | "currency"
+      | "stock"
+      | "lead"
+      | "moq"
+      | "valid_from"
+      | "valid_until";
+    /** @description Что исправить в строке файла. Cabinet показывает текст по `code` и `field`, незнакомый код — общим «строка не загружена» */
+    PriceListRowIssue: {
+      /** @description Номер строки файла (с учётом строки заголовков) */
+      row: number;
+      field: components["schemas"]["PriceListField"] | null;
+      /** @description Код проблемы: `PRICE_NOT_A_NUMBER`, `PRICE_NOT_POSITIVE`, `UNKNOWN_CATEGORY`, `UNKNOWN_DOMAIN`, `UNKNOWN_CURRENCY`, `UNKNOWN_STOCK_STATUS`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`, `HS_CODE_TOO_LONG`, `HS_CODE_NOT_IN_CLASSIFIER`, `HS_CODE_RETIRED`, `ROW_FAILED` */
+      code: string;
+      /** @description Значение из файла, которое не подошло (категория, валюта, код ТН ВЭД…) */
+      value: string | null;
+    };
+    PriceListProposal: {
+      row: number;
+      /** @description Поле карточки, по которому отправлено предложение изменения */
+      field: string;
+    };
+    PriceListMissing: {
+      code: string;
+      label: string;
+      count: number;
+    };
+    PriceListReport: {
+      dry_run: boolean;
+      /** @description Новых карточек */
+      created: number;
+      /** @description Строк по уже известным карточкам */
+      updated: number;
+      offers_created: number;
+      offers_updated: number;
+      /** @description Предложений изменить поля чужой, опубликованной или находящейся на проверке карточки */
+      proposal_count: number;
+      proposals: components["schemas"]["PriceListProposal"][];
+      /** @description Строк с ошибкой — они не загружены */
+      error_count: number;
+      /** @description Первые 200 строк с ошибкой */
+      errors: components["schemas"]["PriceListRowIssue"][];
+      warning_count: number;
+      warnings: components["schemas"]["PriceListRowIssue"][];
+      /** @description Сколько строк файла не прочитано из-за предела размера */
+      rows_truncated: number;
+      /** @description Сколько карточек файла не наберут полноты для публикации */
+      unpublishable: number;
+      missing_breakdown: components["schemas"]["PriceListMissing"][];
+    };
+    PriceListTask: {
+      task_id: string;
+      /** @enum {string} */
+      status: "pending" | "running" | "completed" | "failed";
+      /** @description Код ошибки уровня файла при `failed` (`NAME_COLUMN_NOT_FOUND` — нет колонки наименования) */
+      error: string | null;
+      report: components["schemas"]["PriceListReport"] | null;
+    };
     Reason: {
       reason: string;
     };
@@ -2431,6 +2820,255 @@ export interface operations {
         };
       };
       401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listPartnerProducts: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["PartnerCardStatus"];
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница карточек и количество по статусам (для вкладок) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerProductPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getPartnerProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка; чужая или несуществующая — 404 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerProductDetail"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  submitPartnerProducts: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerSubmitRequest"];
+      };
+    };
+    responses: {
+      /** @description Итог по каждой карточке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerSubmitResult"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  confirmPartnerOffers: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerConfirmRequest"];
+      };
+    };
+    responses: {
+      /** @description Сколько цен подтверждено и что не подтверждено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerConfirmResult"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getPartnerPriceTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл шаблона со справочниками допустимых значений */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  uploadPartnerPriceList: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+          /** @default false */
+          dry_run?: boolean;
+          /** Format: date */
+          valid_from?: string;
+          /** Format: date */
+          valid_until?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Загрузка принята */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceListAccepted"];
+        };
+      };
+      /** @description Нет заголовка `Idempotency-Key`, файл не передан (`FILE_REQUIRED`) или это не `.xlsx` (`XLSX_REQUIRED`) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Файл больше 20 МБ (`FILE_TOO_LARGE`), дата не `ГГГГ-ММ-ДД` (`VALID_DATE_INVALID`) или «до» раньше «с» (`OFFER_VALIDITY_RANGE_INVALID`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+      /** @description Очередь обработки недоступна (`IMPORT_FAILED`) */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  getPartnerPriceListTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        task_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние; отчёт — когда `status` = `completed`. Задача другой компании или несуществующая — 404 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceListTask"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       429: components["responses"]["TooManyRequests"];
     };

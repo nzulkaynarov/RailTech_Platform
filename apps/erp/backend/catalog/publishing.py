@@ -14,6 +14,8 @@ from __future__ import annotations
 from django.db import transaction
 
 from .completeness import completeness
+from .models import ProductReview
+from .review_flow import close_pending_review
 
 #: Максимум карточек за один пакетный вызов — та же граница, что у платформенного bulk_publish.
 MAX_BATCH = 500
@@ -55,6 +57,8 @@ def publish_product(product, actor) -> tuple[object | None, str | None]:
         return None, "PRODUCT_STATUS_MISSING"
     product.status = published
     product.save(update_fields=["status", "updated_at"])
+    # Карточка партнёра на проверке: публикация закрывает проверку решением «опубликована» (PART-2)
+    close_pending_review(product, ProductReview.Decision.PUBLISHED, actor)
     return product, None
 
 
@@ -80,6 +84,7 @@ def unpublish_product(product, actor) -> tuple[object | None, str | None]:
         return None, "PRODUCT_STATUS_MISSING"
     product.status = draft
     product.save(update_fields=["status", "updated_at"])
+    close_pending_review(product, ProductReview.Decision.CANCELLED, actor)  # снятая карточка не ждёт проверки (PART-2)
     return product, None
 
 
@@ -102,6 +107,7 @@ def archive_product(product, actor) -> tuple[object | None, str | None]:
         return None, "PRODUCT_STATUS_MISSING"
     product.status = archived
     product.save(update_fields=["status", "updated_at"])
+    close_pending_review(product, ProductReview.Decision.CANCELLED, actor)
     return product, None
 
 

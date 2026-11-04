@@ -18,6 +18,9 @@ from portal.services.tokens import hash_token
 
 # Мир сущностей клиента во всех статусах — для сторожа контракта и тестов сериализаторов (FIX-21)
 from portal.tests.contract_world import contract_world  # noqa: E402,F401
+
+# Мир «Мои товары» партнёра (PART-2): два партнёра, карточки во всех статусах, чужие цены
+from portal.tests.partner_world import broker, partner_world  # noqa: E402,F401
 from rest_framework.test import APIClient
 
 from core.tenant import own_company
