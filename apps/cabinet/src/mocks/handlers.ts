@@ -30,6 +30,7 @@ import * as partner from './partnerMock';
  * Telegram контакта (NOTIFY-1): по умолчанию не привязан и доступен; `POST /me/telegram-link` выдаёт ссылку на 15 минут;
  * в dev бот «привязывает» через три опроса `GET /me/telegram` после выпуска, в тестах — только `setMockTelegram`;
  * `DELETE /me/telegram` отвечает 202 с прежним `linked`, следующий опрос — уже `linked=false` (проекция пришла);
+ * привязанному `POST /me/telegram-link` — 409 `TELEGRAM_ALREADY_LINKED`; `account` — имя привязанного аккаунта;
  * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
  */
 const API = '*/api/portal/v1';
@@ -284,7 +285,7 @@ export const handlers = [
         tg.linked = true;
         tg.pollsUntilLinked = null;
       }
-      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus']);
+      return json(fixtures.telegramStatus(tg));
     }),
   ),
   // Право «действовать» не нужно: привязка Telegram — настройка самого контакта.
@@ -292,6 +293,7 @@ export const handlers = [
     `${API}/me/telegram-link`,
     withSession(({ db }) => {
       const tg = db.telegram;
+      if (tg.linked) return error(409, 'TELEGRAM_ALREADY_LINKED');
       if (tg.linkError) return error(tg.linkError === 'CONTACT_NOT_IN_CRM' ? 422 : 503, tg.linkError);
       tg.pollsUntilLinked = tg.autoLinkAfterPolls;
       return json(fixtures.telegramLink(new Date()), 201);
@@ -312,7 +314,7 @@ export const handlers = [
       }
       tg.lastTestAt = now;
       tg.testsSent += 1;
-      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus'], 202);
+      return json(fixtures.telegramStatus(tg), 202);
     }),
   ),
   http.delete(
@@ -320,7 +322,7 @@ export const handlers = [
     withSession(({ db }) => {
       const tg = db.telegram;
       if (tg.linked) tg.unlinkPending = true;
-      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus'], 202);
+      return json(fixtures.telegramStatus(tg), 202);
     }),
   ),
 

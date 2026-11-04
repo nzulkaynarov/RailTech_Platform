@@ -34,10 +34,12 @@ describe('плашка «Подключите Telegram»', () => {
   it('видна в вебе, пока Telegram не привязан; «Подключить» ведёт в Профиль и сразу выпускает ссылку', async () => {
     signedIn();
     const user = userEvent.setup();
-    const { container, router } = renderApp('/requests');
+    const { router } = renderApp('/requests');
     const banner = await screen.findByRole('region', { name: BANNER });
     expect(within(banner).getByText('Подключите Telegram — уведомления мгновенно')).toBeInTheDocument();
-    expect((await axe(container)).violations).toEqual([]);
+    // axe — только плашки: проверка всей страницы «Запросы» (таблица, карточки, меню) занимала ~3,5 с и под нагрузкой
+    // выводила этот первый тест файла за тестовый таймаут; саму страницу проверяют её тесты.
+    expect((await axe(banner)).violations).toEqual([]);
 
     await user.click(within(banner).getByRole('button', { name: 'Подключить' }));
     expect(router.state.location.pathname).toBe('/profile');
@@ -201,6 +203,20 @@ describe('Профиль → «Уведомления»', () => {
     expect(await screen.findByText('Подключение Telegram сейчас недоступно. Попробуйте позже.')).toBeInTheDocument();
     expect(within(card).queryByRole('img', { name: 'QR-код ссылки на бот' })).not.toBeInTheDocument();
   });
+
+  it('409 TELEGRAM_ALREADY_LINKED — уже привязан (другая вкладка): текст и актуальный статус', async () => {
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/profile');
+    const card = await notificationsCard();
+    const connect = await within(card).findByRole('button', { name: 'Подключить Telegram' });
+    setMockTelegram({ linked: true }); // привязали в другой вкладке — проекция уже пришла
+    await user.click(connect);
+    expect(
+      await screen.findByText('Этот Telegram уже подключён. Чтобы подключить другой, сначала отвяжите этот.'),
+    ).toBeInTheDocument();
+    expect(await within(card).findByText('Telegram привязан: @azamat_example')).toBeInTheDocument();
+  });
 });
 
 describe('проверочное сообщение в Telegram', () => {
@@ -211,11 +227,20 @@ describe('проверочное сообщение в Telegram', () => {
     const calls = recordTelegramCalls();
     const { container } = renderApp('/profile');
     const card = await notificationsCard();
-    expect(await within(card).findByText('Telegram привязан')).toBeInTheDocument();
+    // Какой аккаунт привязан — защита от пересланной ссылки.
+    expect(await within(card).findByText('Telegram привязан: @azamat_example')).toBeInTheDocument();
     await user.click(within(card).getByRole('button', { name: 'Отправить проверочное сообщение' }));
     expect(await screen.findByText('Сообщение отправлено — проверьте Telegram')).toBeInTheDocument();
     expect(calls).toContain('POST /me/telegram/test');
     expect((await axe(container)).violations).toEqual([]);
+  });
+
+  it('без имени аккаунта — строка «Telegram привязан» без имени', async () => {
+    setMockTelegram({ linked: true, account: null });
+    signedIn();
+    renderApp('/profile');
+    const card = await notificationsCard();
+    expect(await within(card).findByText('Telegram привязан')).toBeInTheDocument();
   });
 
   it('не привязан — кнопки нет', async () => {

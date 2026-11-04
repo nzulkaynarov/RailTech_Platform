@@ -25,7 +25,7 @@ const EXPIRY_TICK_MS = 1000;
  *
  * «Подключить» выпускает одноразовую ссылку на бот (15 минут): на вебе — QR и кнопка, в Mini App — только кнопка.
  * Пока ссылка жива и экран открыт, статус опрашивается — привязку делает бот CRM, проекция приходит в ERP за секунды.
- * Привязан: строка «Telegram привязан · Отвязать» и «Отправить проверочное сообщение» (бот CRM пишет контакту; не чаще
+ * Привязан: строка «Telegram привязан: @аккаунт · Отвязать» и «Отправить проверочное сообщение» (бот CRM пишет контакту; не чаще
  * раза в минуту — на 429 кнопка ждёт `Retry-After`). «Отвязать» — подтверждение по месту с «Что произойдёт»; статус
  * меняется, когда CRM отвяжет Telegram (тоже опрос).
  * `autoStart` — пришли с плашки «Подключить»: ссылка выпускается сразу.
@@ -47,7 +47,11 @@ export function TelegramNotifications({ autoStart = false }: { autoStart?: boole
   const issue = () =>
     create.mutate(undefined, {
       onSuccess: (issued) => setLink(issued),
-      onError: (error) => toast.error(t(apiErrorKey(error))),
+      onError: (error) => {
+        // 409 `TELEGRAM_ALREADY_LINKED`: Telegram уже привязан (например, в другой вкладке) — показать актуальный статус.
+        if (isPortalApiError(error, 409)) void status.refetch();
+        toast.error(t(apiErrorKey(error)));
+      },
     });
 
   // Привязка или отключение пришли проекцией — ссылка больше не нужна, опрос останавливается.
@@ -124,7 +128,11 @@ export function TelegramNotifications({ autoStart = false }: { autoStart?: boole
                   </div>
                 </section>
               ) : (
-                <LinkedActions onUnbind={() => setConfirming(true)} onNotLinked={() => void status.refetch()} />
+                <LinkedActions
+                  account={status.data?.account ?? null}
+                  onUnbind={() => setConfirming(true)}
+                  onNotLinked={() => void status.refetch()}
+                />
               )
             ) : !status.data?.available ? (
               <p className="text-sm text-muted-foreground">{t('profile.notifications.unavailable')}</p>
@@ -214,8 +222,19 @@ function LinkPanel({ link, showQr }: { link: TelegramLink; showQr: boolean }) {
 /** Раз в секунду, пока идёт отсчёт «можно повторить через N с». */
 const RETRY_TICK_MS = 1000;
 
-/** Привязанный Telegram: «Telegram привязан · Отвязать» и проверочное сообщение с отсчётом после 429. */
-function LinkedActions({ onUnbind, onNotLinked }: { onUnbind: () => void; onNotLinked: () => void }) {
+/**
+ * Привязанный Telegram: «Telegram привязан: @аккаунт · Отвязать» и проверочное сообщение с отсчётом после 429.
+ * Имя аккаунта — защита от пересланной ссылки: человек видит, чей Telegram получает коды акцепта и входит в кабинет.
+ */
+function LinkedActions({
+  account,
+  onUnbind,
+  onNotLinked,
+}: {
+  account: string | null;
+  onUnbind: () => void;
+  onNotLinked: () => void;
+}) {
   const { t } = useTranslation();
   const send = useSendTelegramTest();
   const [retryUntil, setRetryUntil] = useState<number | null>(null);
@@ -245,7 +264,9 @@ function LinkedActions({ onUnbind, onNotLinked }: { onUnbind: () => void; onNotL
   return (
     <div className="flex flex-col gap-3">
       <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
-        <span>{t('profile.notifications.boundLine')}</span>
+        <span className="break-all">
+          {account ? t('profile.notifications.boundAccount', { account }) : t('profile.notifications.boundLine')}
+        </span>
         <span aria-hidden="true">·</span>
         <Button variant="link" className="h-auto p-0" onClick={onUnbind}>
           {t('profile.notifications.unbind')}

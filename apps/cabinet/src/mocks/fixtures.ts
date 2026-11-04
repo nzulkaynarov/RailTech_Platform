@@ -754,6 +754,8 @@ export function meFor(
 export interface TelegramMock {
   linked: boolean;
   available: boolean;
+  /** Какой аккаунт привязан (`@username` или имя профиля); `null` — CRM не прислала имени. */
+  account: string | null;
   /** Сколько опросов `GET /me/telegram` после выпуска ссылки до «бот привязал»; `null` — сам не привяжет. */
   autoLinkAfterPolls: number | null;
   pollsUntilLinked: number | null;
@@ -770,6 +772,7 @@ export function telegramMock(): TelegramMock {
   return {
     linked: false,
     available: true,
+    account: '@azamat_example',
     autoLinkAfterPolls: import.meta.env.MODE === 'test' ? null : 3,
     pollsUntilLinked: null,
     unlinkPending: false,
@@ -784,6 +787,11 @@ export const TELEGRAM_LINK_TTL_MS = 15 * 60 * 1000;
 /** Прореживание проверочного сообщения, как в ERP: не чаще раза в минуту на контакт. */
 export const TELEGRAM_TEST_INTERVAL_S = 60;
 export const MOCK_TELEGRAM_START = `tg_${'example-not-a-real-token'.padEnd(48, '_')}`;
+/** Ответ `TelegramStatus` из состояния мока: имя аккаунта — только у привязанного. */
+export function telegramStatus(tg: TelegramMock): Schemas['TelegramStatus'] {
+  return { linked: tg.linked, available: tg.available, account: tg.linked ? tg.account : null };
+}
+
 export function telegramLink(now: Date): Schemas['TelegramLink'] {
   return {
     url: `https://t.me/example_bot?start=${MOCK_TELEGRAM_START}`,
