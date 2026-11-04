@@ -31,7 +31,7 @@ from datetime import UTC, datetime
 import structlog
 from rt_bus import Event
 from rt_contracts.events.erp import ContactTelegramUnlinkRequestedV1
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -138,11 +138,12 @@ class ContactTelegramService:
         if previous_id is not None and previous_id != identity.id:
             # Повторная привязка другим аккаунтом: прежний Telegram контакта больше не аккаунт
             # клиента — иначе он получал бы уведомления, а из кабинета его не отключить.
-            after |= await _release_previous(session, previous_id, contact)
+            after |= await _release_previous(session, previous_id, contact, moment)
         if identity.client_id != contact.client_id or identity.verified_at is None:
             identity.verified_at, identity.verified_by_user_id = moment, None
         # Уже подтверждённый менеджером Telegram этого клиента сохраняет `verified_by_user_id`.
         identity.client_id = contact.client_id
+        identity.notifications_off_at = None  # подключил снова — рассылки клиента снова идут сюда
         contact.telegram_identity_id = identity.id
         if identity.lead_id is not None:
             lead = await session.get(Lead, identity.lead_id, with_for_update=True)
@@ -200,7 +201,7 @@ class ContactTelegramService:
             and identity.client_id == contact.client_id
             and not await _other_contact(session, identity.id, contact.id)
         ):
-            after |= _release_telegram(identity)
+            after |= _release_telegram(identity, datetime.now(UTC))
         await audit.record(
             session,
             actor,
@@ -222,7 +223,7 @@ async def _other_contact(session: AsyncSession, identity_id: int, contact_id: in
     return found is not None
 
 
-def _release_telegram(identity: TelegramIdentity) -> dict[str, object]:
+def _release_telegram(identity: TelegramIdentity, moment: datetime) -> dict[str, object]:
     """Отключение Telegram самим контактом: аккаунт больше не Telegram клиента (снимаются клиент и
     подтверждение — бот не шлёт ему уведомления клиента, Mini App не входит). Лид этого Telegram,
     его `client_id` и стадия **не меняются**: отключение уведомлений — не потеря клиента, и
@@ -233,11 +234,14 @@ def _release_telegram(identity: TelegramIdentity) -> dict[str, object]:
         "verified_by_user_id_before": identity.verified_by_user_id,
     }
     identity.client_id, identity.verified_at, identity.verified_by_user_id = None, None, None
+    # Лид остаётся клиентом, поэтому рассылки «через лида клиента» (отслеживание запроса D1-9,
+    # приглашение) взяли бы этот аккаунт — отметка их выключает до повторного подключения.
+    identity.notifications_off_at = moment
     return released
 
 
 async def _release_previous(
-    session: AsyncSession, identity_id: int, contact: ClientContact
+    session: AsyncSession, identity_id: int, contact: ClientContact, moment: datetime
 ) -> dict[str, object]:
     previous = await session.get(TelegramIdentity, identity_id, with_for_update=True)
     if (
@@ -246,4 +250,26 @@ async def _release_previous(
         or await _other_contact(session, previous.id, contact.id)
     ):
         return {}
-    return {"released": _release_telegram(previous)}
+    return {"released": _release_telegram(previous, moment)}
+
+
+async def republish_contacts_of(
+    session: AsyncSession, identity_ids: Sequence[int], actor: audit.Actor
+) -> None:
+    """Telegram контакта изменился у CRM (обезличен по `/delete`, сменил имя или ник) — контакты,
+    к которым он привязан, снова уходят `crm.contact.updated`: ERP заменит или сотрёт имя аккаунта в
+    проекции (NOTIFY-1). `updated_at` контакта сдвигается, иначе ERP примет снимок за повтор."""
+    if not identity_ids:
+        return
+    ids = (
+        await session.scalars(
+            update(ClientContact)
+            .where(ClientContact.telegram_identity_id.in_(list(identity_ids)))
+            .values(updated_at=func.now())
+            .returning(ClientContact.id)
+        )
+    ).all()
+    for contact_id in ids:
+        contact = await session.get(ClientContact, contact_id, populate_existing=True)
+        if contact is not None:
+            await bus_events.contact_updated(session, contact, actor)

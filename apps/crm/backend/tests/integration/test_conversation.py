@@ -16,6 +16,7 @@ from app.config import Settings
 from app.container import Container
 from app.mcp import crm_server, kb_server
 from app.mcp.common import build_app
+from app.models.clients import Client, ClientContact
 from app.models.kb import KbGap
 from app.models.leads import Lead, Message, TelegramIdentity
 from app.models.qualification import Escalation, StageTransition
@@ -236,6 +237,37 @@ async def test_delete_asks_for_confirmation_first(stack: Stack) -> None:
     out = await stack.service.erase_prompt(USER)
     assert [o.keyboard for o in out] == ["erase_confirm"]
     assert (await lead_row(stack.sessions)).erased_at is None
+
+
+async def test_delete_erases_the_telegram_name_in_the_contact_projection_too(stack: Stack) -> None:
+    """NOTIFY-1: имя Telegram контакта уходит в ERP снимком `contact.updated` — `/delete` стирает
+    его и там: контакт, к которому привязан обезличенный Telegram, публикуется заново без имени."""
+    await consented(stack)
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        client = Client(name="ООО Альфа", erp_company_id=118)
+        session.add(client)
+        await session.flush()
+        session.add(
+            ClientContact(client_id=client.id, full_name="Азиз", telegram_identity_id=identity.id)
+        )
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+
+    await stack.service.erase(USER)
+
+    async with stack.sessions() as session:
+        snapshots = (
+            await session.scalars(
+                text(
+                    "SELECT envelope->'data'->'contact' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.contact.updated.v1'"
+                )
+            )
+        ).all()
+    assert len(snapshots) == 1
+    assert snapshots[0]["telegram_user_id"] == USER, "привязка остаётся, стираются только имена"
+    assert "telegram_name" not in snapshots[0]
+    assert "telegram_username" not in snapshots[0]
 
 
 async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:

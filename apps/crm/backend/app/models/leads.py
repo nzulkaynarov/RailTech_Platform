@@ -107,6 +107,9 @@ class TelegramIdentity(TimestampMixin, Base):
     )
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_blocked: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    # Контакт отключил Telegram в кабинете (NOTIFY-1): клиентские рассылки (уведомления,
+    # отслеживание запроса, приглашения) этот аккаунт не берут, пока контакт не подключит его снова.
+    notifications_off_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lead: Mapped[Lead | None] = relationship(back_populates="identities")
 

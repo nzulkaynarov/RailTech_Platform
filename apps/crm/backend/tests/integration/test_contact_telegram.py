@@ -12,7 +12,7 @@ from rt_bus import Event
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus import runtime
+from app.bus import notice_mail, runtime
 from app.bus.runtime import build_bus
 from app.domain import client_texts
 from app.models.auth import AuditLog
@@ -354,6 +354,28 @@ async def test_unlink_request_for_a_contact_of_another_client_is_ignored(
 
     assert (await contact_row(sessions, contact_id)).telegram_identity_id is not None
     assert len(await published(sessions, CONTACT_UPDATED)) == 1
+
+
+async def test_unlinked_telegram_leaves_every_client_mailing_until_linked_again(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    """Лид остаётся клиентом (воронка не меняется), но рассылки «через лида клиента» —
+    отслеживание запроса D1-9, «заявка принята» — отключённый Telegram больше не берут."""
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+    async with sessions() as session:
+        assert await notice_mail.client_chats(session, client_id, with_leads=True) == [USER]
+
+    async with sessions() as session, session.begin():
+        await service.unlink_requested(session, unlink_event(client_id, contact_id))
+    async with sessions() as session:
+        assert await notice_mail.client_chats(session, client_id, with_leads=True) == []
+        assert await notice_mail.client_chats(session, client_id, with_leads=False) == []
+
+    await service.bind(USER, token(contact=contact_id, nonce=b"\x03" * 9), BEFORE)
+    async with sessions() as session:
+        assert await notice_mail.client_chats(session, client_id, with_leads=True) == [USER]
 
 
 # ── проверочное сообщение ────────────────────────────────────────────────────────────────────────
