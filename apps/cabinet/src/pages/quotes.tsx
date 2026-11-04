@@ -120,7 +120,10 @@ function QuoteCard({ quote }: { quote: Quote }) {
             {quote.pdf_document_id ? (
               <DocumentButton documentId={quote.pdf_document_id} fileName={`${quote.number}.pdf`} label={quote.number} />
             ) : null}
-            <ManagerButton dealId={quote.deal.id} label={t('manager.aboutQuote', { number: quote.number })} />
+            <ManagerButton
+              context={{ kind: 'quote', id: quote.id, number: quote.number }}
+              label={t('manager.aboutQuote', { number: quote.number })}
+            />
           </>
         }
       />

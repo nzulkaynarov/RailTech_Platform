@@ -34,7 +34,13 @@ class TriggerCode(StrEnum):
     # Сбои, о которых лиду сказали «коллеги увидят», — команда должна увидеть (аудит P-11, P-12).
     AGENT_UNAVAILABLE = "agent_unavailable"
     DELIVERY_FAILED = "delivery_failed"
+    # Клиент написал в чат кабинета (CHAT-1, ADR-0023): бот-ИИ там не отвечает — только менеджер.
+    CABINET_MESSAGE = "cabinet_message"
 
+
+#: Не выключаются настройкой `escalation.disabled_triggers`: сообщение из кабинета бот не
+#: обрабатывает, без передачи оно не попало бы ни в одну группу очереди (CHAT-1).
+ALWAYS_ON: Final = frozenset({TriggerCode.CABINET_MESSAGE})
 
 PRIORITY: Final[dict[TriggerCode, Priority]] = {
     TriggerCode.HUMAN_REQUESTED: Priority.HOT,
@@ -52,6 +58,7 @@ PRIORITY: Final[dict[TriggerCode, Priority]] = {
     TriggerCode.ATTACHMENT_RECEIVED: Priority.INFO,
     TriggerCode.AGENT_UNAVAILABLE: Priority.INFO,
     TriggerCode.DELIVERY_FAILED: Priority.INFO,
+    TriggerCode.CABINET_MESSAGE: Priority.WARM,
 }
 
 
@@ -86,6 +93,7 @@ class TriggerSignals:
     attachment_received: bool = False
     agent_unavailable: bool = False
     delivery_failed: bool = False
+    cabinet_message: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -97,7 +105,11 @@ class TriggerHit:
 def evaluate(signals: TriggerSignals, settings: TriggerSettings) -> list[TriggerHit]:
     """Сработавшие триггеры в порядке убывания приоритета (стабильно по таблице)."""
     fired = [code for code in TriggerCode if _fires(code, signals, settings)]
-    hits = [TriggerHit(code, PRIORITY[code]) for code in fired if code not in settings.disabled]
+    hits = [
+        TriggerHit(code, PRIORITY[code])
+        for code in fired
+        if code not in settings.disabled or code in ALWAYS_ON
+    ]
     return sorted(hits, key=lambda h: -PRIORITY_ORDER[h.priority])
 
 
@@ -139,3 +151,5 @@ def _fires(code: TriggerCode, s: TriggerSignals, cfg: TriggerSettings) -> bool:
             return s.agent_unavailable
         case TriggerCode.DELIVERY_FAILED:
             return s.delivery_failed
+        case TriggerCode.CABINET_MESSAGE:
+            return s.cabinet_message

@@ -24,6 +24,8 @@ export const keys = {
   team: ['team'] as const,
   // Не под ['me']: выход стирает всё, кроме ['me'], — статус Telegram прошлого контакта не должен пережить выход.
   telegram: ['telegram'] as const,
+  /** Лента чата кабинета: первая страница, дальше опрос дописывает в тот же кэш (`hooks/useMessagesFeed.ts`). */
+  messages: ['messages'] as const,
   partnerProducts: ['partner', 'products'] as const,
   partnerProductList: (params: portal.PartnerProductsQuery) => ['partner', 'products', 'list', params] as const,
   partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,

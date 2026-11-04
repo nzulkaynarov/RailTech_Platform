@@ -332,6 +332,14 @@
         "updated_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "source_detail": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z_]{0,15}$",
+          "description": "Точный источник лида в CRM, если его нет в перечне LeadSource v1 (CHAT-1: cabinet — лид-якорь беседы чата кабинета; в source тогда web — веб-канал). Перечень source расширяется только в lead.*.v2 (ADR-0016)"
         }
       },
       "additionalProperties": false

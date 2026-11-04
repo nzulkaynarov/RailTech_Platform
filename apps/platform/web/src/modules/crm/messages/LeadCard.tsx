@@ -41,7 +41,10 @@ export function LeadCard({ card }: { card: ConversationCard }) {
       label: t("card.consent"),
       value: card.consent_given_at
         ? t("card.consentGiven", { date: fmt.date(card.consent_given_at) })
-        : t("card.consentMissing"),
+        : // Ответ в кабинет согласия не требует: компания написала сама, по договору (CHAT-1).
+          t(
+            card.reply_channel === "cabinet" ? "card.consentMissingCabinet" : "card.consentMissing",
+          ),
     },
     {
       label: t("card.client"),

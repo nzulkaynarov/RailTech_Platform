@@ -264,6 +264,12 @@ channels:
     messages:
       uz.railtech.erp.letterhead.updated.v1:
         $ref: '#/components/messages/uz.railtech.erp.letterhead.updated.v1'
+  uz.railtech.erp.cabinet.message_posted.v1:
+    address: uz.railtech.erp.cabinet.message_posted.v1
+    title: Контакт написал в чат кабинета
+    messages:
+      uz.railtech.erp.cabinet.message_posted.v1:
+        $ref: '#/components/messages/uz.railtech.erp.cabinet.message_posted.v1'
   uz.railtech.erp.invite.requested.v1:
     address: uz.railtech.erp.invite.requested.v1
     title: Запрошено приглашение в Cabinet через Telegram
@@ -360,6 +366,12 @@ channels:
     messages:
       uz.railtech.crm.mail.sent.v1:
         $ref: '#/components/messages/uz.railtech.crm.mail.sent.v1'
+  uz.railtech.crm.cabinet.message_sent.v1:
+    address: uz.railtech.crm.cabinet.message_sent.v1
+    title: Менеджер ответил в чат кабинета
+    messages:
+      uz.railtech.crm.cabinet.message_sent.v1:
+        $ref: '#/components/messages/uz.railtech.crm.cabinet.message_sent.v1'
   uz.railtech.crm.mail.failed.v1:
     address: uz.railtech.crm.mail.failed.v1
     title: Письмо не отправлено
@@ -709,6 +721,15 @@ operations:
       - $ref: '#/channels/uz.railtech.erp.letterhead.updated.v1/messages/uz.railtech.erp.letterhead.updated.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.cabinet.message_posted.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.cabinet.message_posted.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.cabinet.message_posted.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.cabinet.message_posted.v1/messages/uz.railtech.erp.cabinet.message_posted.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.invite.requested.v1:
     action: send
     summary: rt://erp публикует uz.railtech.erp.invite.requested.v1
@@ -851,6 +872,15 @@ operations:
       $ref: '#/channels/uz.railtech.crm.mail.sent.v1'
     messages:
       - $ref: '#/channels/uz.railtech.crm.mail.sent.v1/messages/uz.railtech.crm.mail.sent.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.cabinet.message_sent.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.cabinet.message_sent.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.cabinet.message_sent.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.cabinet.message_sent.v1/messages/uz.railtech.crm.cabinet.message_sent.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.crm.mail.failed.v1:
@@ -1836,6 +1866,31 @@ components:
                   const: rt://contracts/events/erp/letterhead.updated/v1
                 data:
                   $ref: './erp/letterhead.updated.v1.json'
+    uz.railtech.erp.cabinet.message_posted.v1:
+      name: uz.railtech.erp.cabinet.message_posted.v1
+      title: Контакт написал в чат кабинета
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.cabinet.message_posted.v1
+                dataschema:
+                  const: rt://contracts/events/erp/cabinet.message_posted/v1
+                data:
+                  $ref: './erp/cabinet.message_posted.v1.json'
     uz.railtech.erp.invite.requested.v1:
       name: uz.railtech.erp.invite.requested.v1
       title: Запрошено приглашение в Cabinet через Telegram
@@ -2236,6 +2291,31 @@ components:
                   const: rt://contracts/events/crm/mail.sent/v1
                 data:
                   $ref: './crm/mail.sent.v1.json'
+    uz.railtech.crm.cabinet.message_sent.v1:
+      name: uz.railtech.crm.cabinet.message_sent.v1
+      title: Менеджер ответил в чат кабинета
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.cabinet.message_sent.v1
+                dataschema:
+                  const: rt://contracts/events/crm/cabinet.message_sent/v1
+                data:
+                  $ref: './crm/cabinet.message_sent.v1.json'
     uz.railtech.crm.mail.failed.v1:
       name: uz.railtech.crm.mail.failed.v1
       title: Письмо не отправлено

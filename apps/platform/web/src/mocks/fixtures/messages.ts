@@ -81,6 +81,8 @@ function thread(base: number, lead: string, lines: [ThreadMessage["author"], str
     created_at: ago(base, lines.length - index + 10),
     attachments: [],
     delivery: null,
+    channel: "telegram",
+    context: null,
   }));
 }
 
@@ -128,6 +130,7 @@ function initial(): MessagesMock {
       name: "Азиз Демо",
       language: "ru",
       channel: "telegram",
+      reply_channel: "telegram",
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: ago(base, 60),
@@ -209,6 +212,7 @@ function initial(): MessagesMock {
       name: "Нигора Пример",
       language: "uz",
       channel: "telegram",
+      reply_channel: "telegram",
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: ago(base, 90),
@@ -265,6 +269,7 @@ function initial(): MessagesMock {
       name: "Тимур Образцов",
       language: "ru",
       channel: "telegram",
+      reply_channel: "telegram",
       owner_mode: "manager",
       assigned: MANAGER,
       consent_given_at: ago(base, 300),
@@ -333,6 +338,7 @@ function initial(): MessagesMock {
       name: "Лид без имени",
       language: "en",
       channel: "telegram",
+      reply_channel: "telegram",
       owner_mode: "waiting",
       assigned: null,
       consent_given_at: null,
@@ -362,11 +368,99 @@ function initial(): MessagesMock {
     created_at: ago(base, 4),
     attachments: [],
     delivery: "unconfirmed",
+    channel: "telegram",
+    context: null,
   });
+  // CHAT-1: клиент написал из кабинета со страницы КП — канал «Кабинет», ответ уйдёт туда же.
+  const cabinet = cabinetLead(base);
   return {
-    leads: [rails, overdue, mine, free],
+    leads: [rails, overdue, mine, cabinet, free],
     nextId: 900_000,
     sent: { "draft-demo-unconfirmed": 2_050_900 },
+  };
+}
+
+/** Беседа кабинета (CHAT-1): компания пишет менеджеру из кабинета, у сообщения — метка КП. Данные выдуманы. */
+function cabinetLead(base: number): LeadMock {
+  const company = "ООО «Пример-Снаб»";
+  const message = (
+    id: number,
+    author: ThreadMessage["author"],
+    text: string,
+    minutes: number,
+    over: Partial<ThreadMessage> = {},
+  ): ThreadMessage => ({
+    id,
+    author,
+    author_name: author === "manager" ? MANAGER.name : null,
+    text,
+    created_at: ago(base, minutes),
+    attachments: [],
+    delivery: null,
+    channel: "cabinet",
+    context: null,
+    ...over,
+  });
+  return {
+    item: {
+      lead: "L-2070",
+      name: company,
+      group: "mine",
+      language: "ru",
+      channel: "cabinet",
+      unread: true,
+      last_message_at: ago(base, 3),
+      assigned: MANAGER,
+      handoff: null,
+      note: {
+        request: null,
+        facts: {
+          interest: [],
+          timeline: null,
+          decision_role: null,
+          budget_hint: null,
+          company,
+          company_size: null,
+          region: null,
+        },
+        last_message: "Можно ли поставку разбить на две партии?",
+      },
+    },
+    card: {
+      lead: "L-2070",
+      name: company,
+      language: "ru",
+      channel: "cabinet",
+      reply_channel: "cabinet",
+      owner_mode: "manager",
+      assigned: MANAGER,
+      consent_given_at: null,
+      contacts: { telegram: null, phone: null, email: "snab@example.org", company },
+      facts: {
+        interest: [],
+        timeline: null,
+        decision_role: null,
+        budget_hint: null,
+        company,
+        company_size: null,
+        region: null,
+      },
+      request: null,
+      handoff: null,
+      client_in_erp: true,
+    },
+    messages: [
+      message(2_070_001, "lead", "Добрый день! Посмотрели КП, есть вопрос по срокам.", 30, {
+        author_name: "Анна Примерова",
+        context: { kind: "quote", number: "KP-2026-0042" },
+      }),
+      message(2_070_002, "manager", "Здравствуйте! Слушаю вас.", 20),
+      message(2_070_003, "lead", "Можно ли поставку разбить на две партии?", 3, {
+        author_name: "Анна Примерова",
+        context: { kind: "quote", number: "KP-2026-0042" },
+      }),
+    ],
+    notes: [],
   };
 }
 

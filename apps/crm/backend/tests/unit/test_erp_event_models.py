@@ -33,6 +33,7 @@ from app.bus.erp_event import (
     parse_erp_event,
     plain,
 )
+from app.services.cabinet_chat import POSTED_TYPE
 from tests.bus_events import event_types, example_envelope, example_types
 
 #: События ERP о сделке и клиенте, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`, и
@@ -58,11 +59,21 @@ def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> 
     own = {"uz.railtech.erp.mail.requested.v1": on_mail_requested}
     # NOTIFY-1: отключение Telegram контактом — свой обработчик в очереди, не лента сделки.
     own["uz.railtech.erp.contact.telegram_unlink_requested.v1"] = on_contact_telegram_unlink
-    assert set(own) == OWN_HANDLER
+    assert set(own) == OWN_HANDLER - {POSTED_TYPE}
     for event_type, func in {**own, "uz.railtech.eds.mail.requested.v1": on_mail_requested}.items():
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
         assert handler.func is func
+
+
+def test_cabinet_message_goes_to_the_cabinet_chat_not_to_the_deal_feed() -> None:
+    """CHAT-1: сообщение кабинета — беседа `cabinet` в очереди, не лента сделки."""
+    from app.bus.handlers import on_cabinet_message
+
+    assert POSTED_TYPE in OWN_HANDLER
+    (handler,) = default_registry.match(POSTED_TYPE)
+    assert handler.inline is False
+    assert handler.func is on_cabinet_message
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:

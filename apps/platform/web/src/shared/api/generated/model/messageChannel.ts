@@ -4,7 +4,7 @@
  */
 
 /**
- * Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана
+ * Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; у лида без переписки — источник `web`, `email`, `phone`, `referral`); подпись — у экрана
  * @pattern ^[a-z][a-z_]{0,15}$
  */
 export type MessageChannel = string;

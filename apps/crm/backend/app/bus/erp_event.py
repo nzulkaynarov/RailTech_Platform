@@ -43,6 +43,8 @@ OWN_HANDLER: Final = frozenset(
         "uz.railtech.erp.mail.requested.v1",
         # NOTIFY-1: контакт отключил Telegram в кабинете — `app/services/contact_telegram.py`.
         "uz.railtech.erp.contact.telegram_unlink_requested.v1",
+        # CHAT-1: сообщение в чат кабинета — беседа `cabinet` (`app/services/cabinet_chat.py`).
+        "uz.railtech.erp.cabinet.message_posted.v1",
     }
 )
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")

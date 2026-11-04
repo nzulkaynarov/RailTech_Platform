@@ -9,7 +9,7 @@
 Откат: колонка и таблица удаляются (погашенные ссылки к тому времени просрочены — срок 15 минут).
 
 Revision ID: 5d5089811bac
-Revises: 97bc02846729
+Revises: aafce74f2f2d
 Create Date: 2026-11-04 10:05:12.023684+00:00
 """
 
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "5d5089811bac"
-down_revision: str | Sequence[str] | None = "97bc02846729"
+down_revision: str | Sequence[str] | None = "aafce74f2f2d"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

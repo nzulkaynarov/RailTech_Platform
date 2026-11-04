@@ -121,10 +121,45 @@ class Attachment(BaseModel):
     """
 
 
+class Author(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    crm_contact_id: int | None
+    """
+    Контакт CRM по сопоставлению ERP; null — сопоставления нет
+    """
+    name: Annotated[str, Field(max_length=255)]
+    """
+    Имя контакта для подписи сообщения
+    """
+
+
 class By(StrEnum):
     client = "client"
     company = "company"
     both = "both"
+
+
+class CabinetMessagePostedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.cabinet.message_posted.v1, источник rt://erp (CHAT-1, ADR-0023). Поле data конверта (envelope.v1.json). Контакт компании-контрагента отправил сообщение в чат кабинета (POST /messages портала): ERP пишет строку ленты кабинета и это событие одной транзакцией. Подписчик — CRM: сообщение ложится в беседу канала cabinet клиента (одна беседа на компанию) и в очередь «Сообщения» Платформы; бот-ИИ на него не отвечает. Текст на шине — по ADR-0023; стирание ПД клиента чистит и проекцию ERP (crm.lead.erased.v1, cabinet_erp_company_id). Компания без сопоставления с клиентом CRM тоже публикует событие (crm_client_id: null) — сообщение не теряется. Повтор с тем же client_message_id в пределах компании — тот же эффект (идемпотентность приёмника).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания-контрагент в ERP (компания сессии кабинета)
+    """
+    crm_client_id: int | None
+    """
+    Клиент CRM по сопоставлению ERP; null — сопоставления ещё нет (CRM ищет клиента по erp_company_id)
+    """
+    actor: ClientActor
+    payload: Payload
 
 
 class CalcZone(StrEnum):
@@ -267,6 +302,19 @@ class ContentType(StrEnum):
     image_png = "image/png"
     image_jpeg = "image/jpeg"
     image_webp = "image/webp"
+
+
+class Context(BaseModel):
+    """
+    Метка документа, со страницы которого написали («Написать менеджеру»); нет — общее сообщение
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Kind1
+    erp_id: int
+    number: Annotated[str, Field(max_length=64)]
 
 
 class ContractSigned(BaseModel):
@@ -763,6 +811,13 @@ class Kind(StrEnum):
     other = "other"
 
 
+class Kind1(StrEnum):
+    deal = "deal"
+    quote = "quote"
+    invoice = "invoice"
+    act = "act"
+
+
 class Language(StrEnum):
     """
     Язык контакта в ERP; бот CRM берёт язык лида, если он известен
@@ -913,6 +968,34 @@ class MailRequestedV1(BaseModel):
     content: Content
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
+    """
+
+
+class Payload(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_message_id: int
+    """
+    Строка ленты кабинета в ERP
+    """
+    client_message_id: Annotated[str, Field(pattern="^[A-Za-z0-9_-]{8,64}$")]
+    """
+    Ключ повтора, выданный Cabinet; уникален в пределах компании
+    """
+    author: Author
+    company_name: Annotated[str, Field(max_length=255)]
+    """
+    Название компании — подпись беседы, если клиента в CRM ещё нет
+    """
+    text: Annotated[str, Field(max_length=4000, min_length=1)]
+    context: Context | None = None
+    """
+    Метка документа, со страницы которого написали («Написать менеджеру»); нет — общее сообщение
+    """
+    posted_at: AwareDatetime
+    """
+    Время записи строки ленты в ERP
     """
 
 

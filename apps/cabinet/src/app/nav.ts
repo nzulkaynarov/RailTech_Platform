@@ -5,6 +5,7 @@ import {
   FileText,
   FolderOpen,
   Inbox,
+  MessagesSquare,
   Package,
   PackageOpen,
   Receipt,
@@ -98,6 +99,15 @@ export const NAV_ITEMS: NavItem[] = [
     module: 'deliveries',
     group: 'buy',
   },
+  // Чат кабинета (CHAT-1, ADR-0023): модуль `messages` есть у клиента и партнёра и не выключается; бейдж — `/me.unread`
+  {
+    to: '/messages',
+    labelKey: 'nav.messages',
+    icon: MessagesSquare,
+    module: 'messages',
+    // при двух ролях — в «Компании»: беседа компании с нами одна и о покупках, и о поставках (карта пути контрагента)
+    group: 'account',
+  },
   {
     to: '/company',
     labelKey: 'nav.company',
@@ -117,6 +127,8 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** Модуль, который есть у любой сессии (выход и язык): сам по себе разделов не открывает (ADR-0022). */
 export const PROFILE_MODULE = 'profile';
+/** Чат кабинета (CHAT-1): пункт меню с бейджем непрочитанного, «Написать менеджеру» ведёт сюда. */
+export const MESSAGES_MODULE = 'messages';
 
 /** Раздел меню при двух ролях: «Покупаю» (клиентские разделы), «Поставляю» («Мои товары»), «Компания» (компания, команда, профиль). */
 export interface NavGroup {

@@ -44,6 +44,7 @@ export interface LeadDetail {
   platform_status?: LeadDetailPlatformStatus;
   product_interest: string[];
   qualification: LeadDetailQualification;
+  reply_channel?: string | null;
   score: number;
   snoozed_until: string | null;
   source?: string;

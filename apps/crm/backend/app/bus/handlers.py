@@ -16,6 +16,9 @@
 * `uz.railtech.erp.contact.telegram_unlink_requested.v1` — в очереди, в транзакции inbox: контакт
   отключил
   Telegram в кабинете — CRM отвязывает и публикует `contact.updated` (NOTIFY-1);
+* `uz.railtech.erp.cabinet.message_posted.v1` — в очереди, в транзакции inbox: сообщение контакта в
+  чат кабинета — беседа канала `cabinet` и очередь «Сообщения» (CHAT-1); пост передачи в канале
+  команды — после коммита;
 * `uz.railtech.eds.letter.registered.v1` — в очереди, в транзакции inbox: ВХ, зарегистрированный из
   очереди «Входящая почта» (`source.crm_inbound_mail_id`), — письмо уходит из очереди с номером ВХ
   (W18A-P2); прочие регистрации CRM пропускает.
@@ -29,6 +32,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, TEST_TYPE, erp_types
 from app.bus.runtime import current_container
+from app.services.cabinet_chat import POSTED_TYPE
 from app.services.contact_telegram import UNLINK_REQUESTED
 from app.services.eds_notices import NOTICE_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED
@@ -79,3 +83,8 @@ async def on_letter_registered(event: Event, session: AsyncSession) -> None:
 @subscribe(UNLINK_REQUESTED)
 async def on_contact_telegram_unlink(event: Event, session: AsyncSession) -> None:
     await current_container().contact_telegram.unlink_requested(session, event)
+
+
+@subscribe(POSTED_TYPE)
+async def on_cabinet_message(event: Event, session: AsyncSession) -> None:
+    await current_container().cabinet_chat.accept(session, event)

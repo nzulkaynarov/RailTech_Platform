@@ -66,6 +66,7 @@ from portal.services.client_feedback import add_quote_comment, submit_payment_pr
 from portal.services.invitation import invite_team_member
 from portal.services.login_code import exchange_login_code
 from portal.services.magic_link import exchange_magic_link, request_magic_link
+from portal.services.messages import unread_count
 from portal.services.requests import create_client_request
 from portal.services.telegram_auth import authenticate_telegram_user
 from portal.throttles import PortalAcceptRateThrottle, PortalLoginRateThrottle, PortalSessionRateThrottle
@@ -144,6 +145,8 @@ def _me_data(session, auth_method: str | None = None, access: tuple[list[str], l
         "auth_method": auth_method or session.auth_method,
         "roles": roles,
         "modules": modules,
+        # Непрочитанные ответы менеджера в чате кабинета (CHAT-1): бейдж «Сообщения»; без модуля — 0.
+        "unread": unread_count(session.company_id, session.contact_id) if "messages" in modules else 0,
     }
 
 

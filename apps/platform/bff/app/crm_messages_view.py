@@ -26,6 +26,7 @@ from app.schemas_crm_messages import (
     InboxGroup,
     Language,
     LeadRequestType,
+    MessageContext,
     MessageInboxItem,
     OwnerMode,
     Priority,
@@ -149,7 +150,7 @@ def inbox_items(inbox: crm.InboxResponse, names: Names) -> list[MessageInboxItem
                     name=lead.display_name or lead_number(lead.id),
                     group=group,
                     language=language(lead.language),
-                    channel=channel(lead.source),
+                    channel=channel(lead.reply_channel or lead.source),
                     unread=bool(lead.unread),
                     last_message_at=lead.last_lead_msg_at,
                     assigned=person(lead.assigned_user_id, names, lead.assigned_user_name),
@@ -167,6 +168,7 @@ def card(lead: crm.LeadDetail, names: Names, products: Mapping[str, str]) -> Con
         name=lead.display_name or lead_number(lead.id),
         language=language(lead.language),
         channel=channel(lead.source),
+        reply_channel=channel(lead.reply_channel) if lead.reply_channel else None,
         owner_mode=owner_mode(lead.owner_mode),
         assigned=person(lead.assigned_user_id, names, lead.assigned_user_name),
         consent_given_at=lead.consent_given_at,
@@ -216,14 +218,22 @@ def thread_message(
     if state == "sending" and now - message.created_at > STALE_SENDING:
         state = "unconfirmed"  # тот же срок, что у CRM: дольше — итог неизвестен (B-013)
     delivery = state if state in ("sending", "unconfirmed") else None
+    if author == "lead":
+        name = message.author_name  # контакт клиента, написавший в кабинете (CHAT-1)
     return ThreadMessage(
         id=message.id,
         author=author,
-        author_name=name if author == "manager" else None,
+        author_name=name if author in ("manager", "lead") else None,
         text=message.text,
         created_at=message.created_at,
         attachments=attachments(number, message.id, list(message.attachments)),
         delivery=delivery,
+        channel=channel(message.channel),
+        context=(
+            MessageContext(kind=message.context.kind.value, number=message.context.number)
+            if message.context is not None
+            else None
+        ),
     )
 
 

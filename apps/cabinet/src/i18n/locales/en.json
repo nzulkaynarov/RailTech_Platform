@@ -15,6 +15,7 @@
     "invoices": "Invoices",
     "acts": "Acts",
     "deliveries": "Deliveries",
+    "messages": "Messages",
     "documents": "Documents",
     "catalog": "Catalog",
     "company": "Company",
@@ -22,12 +23,13 @@
     "profile": "Profile",
     "more": "More",
     "moreTitle": "More sections",
-    "moreDescription": "Contracts, invoices, acts, deliveries, company and profile",
+    "moreDescription": "Contracts, invoices, acts, deliveries, messages, company and profile",
     "billingTabs": "Financial sections",
     "expandSidebar": "Expand menu",
     "collapseSidebar": "Collapse menu",
     "sectionMain": "Main",
     "sectionDocumentsAndTeam": "Documents and company",
+    "unread": "Unread messages: {{count}}",
     "myProducts": "My products",
     "groups": {
       "buy": "I buy",
@@ -787,6 +789,43 @@
           "current": "current stage"
         }
       }
+    },
+    "messages": {
+      "title": "Messages",
+      "subtitle": "Your company’s conversation with the manager",
+      "telegram": "Write in Telegram",
+      "feed": "Conversation with the manager",
+      "emptyTitle": "Your conversation with the manager will be here",
+      "emptyText": "Ask a question — the manager will reply here. From a quote, invoice or act page the question goes with the document number.",
+      "you": "You",
+      "manager": "Manager",
+      "managerNamed": "{{name}}, manager",
+      "colleague": "Colleague",
+      "sending": "Sending…",
+      "failed": "Not sent",
+      "context": {
+        "deal": "Project {{number}}",
+        "quote": "Quote {{number}}",
+        "invoice": "Invoice {{number}}",
+        "act": "Act {{number}}"
+      },
+      "aboutLabel": "Document the question is about",
+      "about": "About: {{what}}",
+      "removeAbout": "Remove the document label",
+      "field": "Message to the manager",
+      "placeholder": "Your question or clarification",
+      "hintWeb": "Enter to send, Shift+Enter for a new line",
+      "hint": "The manager will reply here",
+      "viewOnly": "Only a contact who can confirm may write to the manager — you can only view",
+      "send": "Send",
+      "infoLabel": "About this conversation",
+      "responder": "{{name}}, your manager, replies here",
+      "responderTeam": "The RailTech team replies here",
+      "visibleToCompany": "Everyone from your company in the cabinet can see this conversation",
+      "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
+      "attachLink": "Go to requests",
+      "deletedUser": "Deleted user",
+      "deletedText": "Message deleted at the author’s request"
     }
   },
   "apiErrors": {

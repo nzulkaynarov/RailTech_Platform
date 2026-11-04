@@ -130,14 +130,36 @@ class TelegramLinkNonce(Base):
 
 
 class Conversation(TimestampMixin, Base):
+    """Беседа лида в канале: `telegram` (чат бота) или `cabinet` (чат кабинета, CHAT-1, ADR-0023).
+
+    Беседа кабинета — одна на клиента и на компанию ERP (частичные уникальные индексы); лид беседы —
+    якорь очереди «Сообщения» (`services/cabinet_chat.py`), чата Telegram у неё нет."""
+
     __tablename__ = "conversations"
-    __table_args__ = (Index("ix_conversations_lead_id", "lead_id"),)
+    __table_args__ = (
+        Index("ix_conversations_lead_id", "lead_id"),
+        CheckConstraint("channel <> 'telegram' OR tg_chat_id IS NOT NULL", name="telegram_chat"),
+        Index(
+            "uq_conversations_cabinet_client",
+            "client_id",
+            unique=True,
+            postgresql_where=sql("channel = 'cabinet' AND client_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_conversations_cabinet_company",
+            "erp_company_id",
+            unique=True,
+            postgresql_where=sql("channel = 'cabinet' AND erp_company_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     lead_id: Mapped[int] = mapped_column(ForeignKey("leads.id", ondelete="CASCADE"))
     channel: Mapped[str] = mapped_column(String(16), server_default=sql("'telegram'"))
-    tg_chat_id: Mapped[int] = mapped_column(BigInteger)
+    tg_chat_id: Mapped[int | None] = mapped_column(BigInteger)
     is_open: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    client_id: Mapped[int | None] = mapped_column(ForeignKey("clients.id", ondelete="SET NULL"))
+    erp_company_id: Mapped[int | None] = mapped_column(BigInteger)
 
 
 class Message(TimestampMixin, Base):

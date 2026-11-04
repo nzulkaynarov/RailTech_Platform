@@ -607,6 +607,8 @@ export * from "./menuCounter";
 export * from "./menuCounters";
 export * from "./meResources";
 export * from "./messageChannel";
+export * from "./messageContext";
+export * from "./messageContextKind";
 export * from "./messageInbox";
 export * from "./messageInboxItem";
 export * from "./messageInboxItemGroup";

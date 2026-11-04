@@ -568,6 +568,7 @@ def test_me_form(client_contact, client_company):
             "auth_method": "telegram",
             "roles": ["client", "partner"],
             "modules": ["catalog_requests", "my_products"],
+            "unread": 0,
         }
     ).data
     assert set(data) == set(component("Me")["properties"])

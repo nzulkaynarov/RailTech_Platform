@@ -13,6 +13,7 @@ from app.domain.triggers import TriggerSignals
 from app.models.leads import TelegramIdentity
 from app.repositories import leads as repo
 from app.security.audit import Actor
+from app.services import cabinet_chat
 from app.services.contact_telegram import republish_contacts_of
 from app.services.conversation_support import current_lead, lang_of, report_failure
 from app.services.conversation_types import AttachmentsEraser, Outgoing
@@ -71,11 +72,14 @@ class ErasureMixin:
                         )
                     ).all()
                 )
+                # Кабинет (CHAT-1): только сообщения этого человека; беседа остаётся клиенту.
+                cabinet = await cabinet_chat.erase_for_lead(session, lead)
                 count = await repo.erase_lead(session, lead, now)
                 # Имя и ник Telegram стёрты — ERP стирает их и в проекции контакта (NOTIFY-1).
                 await republish_contacts_of(session, identity_ids, Actor(None, "bot"))
-                # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id.
-                await bus_events.lead_erased(session, lead, Actor(None, "bot"))
+                # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id
+                # и — для ленты кабинета — чьи сообщения стереть.
+                await bus_events.lead_erased(session, lead, Actor(None, "bot"), cabinet=cabinet)
                 logger.info("lead_erased", lead_id=lead.id, messages=count, files=len(keys))
         if lead_id is not None:
             await self._forget(lead_id, keys, closed)
