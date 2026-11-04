@@ -171,6 +171,44 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class ContactTelegramUnlinkRequested(BaseModel):
+    """
+    Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): чей Telegram отвязать
+    """
+
+
+class ContactTelegramUnlinkRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_unlink_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») отключил Telegram. Привязка Telegram принадлежит CRM (ADR-0015, один владелец у поля; ADR-0023 п. 3), поэтому ERP поле не меняет, а просит: CRM отвязывает Telegram от контакта и клиента и публикует uz.railtech.crm.contact.updated.v1 без telegram_user_id — по нему ERP обновляет проекцию, и вход в Mini App закрывается. Повтор и запрос для уже отвязанного контакта — без действий. Секретов и персональных данных в событии нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramUnlinkRequested
+
+
 class Content(BaseModel):
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий

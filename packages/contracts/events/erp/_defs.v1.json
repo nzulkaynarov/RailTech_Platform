@@ -700,6 +700,25 @@
       },
       "additionalProperties": false
     },
+    "ContactTelegramUnlinkRequested": {
+      "type": "object",
+      "required": [
+        "erp_contact_id",
+        "crm_contact_id"
+      ],
+      "properties": {
+        "erp_contact_id": {
+          "type": "integer",
+          "description": "Контакт в ERP"
+        },
+        "crm_contact_id": {
+          "type": "integer",
+          "description": "Контакт в CRM (CrmContactMapping): чей Telegram отвязать"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)"
+    },
     "CalcZone": {
       "type": "string",
       "enum": [

@@ -123,6 +123,62 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/telegram": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Привязан ли Telegram контакта (уведомления и вход в Mini App)
+     * @description Статус — по проекции контакта в ERP (`telegram_user_id`), поле принадлежит CRM (ADR-0015, ADR-0023 п. 3): после
+     *     привязки ботом или отключения статус меняется, когда CRM опубликует `crm.contact.updated` (обычно за секунды).
+     *     Cabinet опрашивает этот путь, пока открыт экран с выпущенной ссылкой, до привязки или истечения её срока.
+     */
+    get: operations["getTelegramStatus"];
+    put?: never;
+    post?: never;
+    /**
+     * Отключить Telegram контакта
+     * @description Привязка принадлежит CRM, поэтому ERP публикует запрос `uz.railtech.erp.contact.telegram_unlink_requested.v1`, а
+     *     CRM отвязывает Telegram и публикует `crm.contact.updated` без `telegram_user_id`. Ответ 202 — запрос принят;
+     *     `linked` станет `false`, когда придёт проекция (Cabinet опрашивает `GET /me/telegram`). Telegram не привязан — 202
+     *     без события (повтор безопасен). Право «действовать» не нужно: это настройка самого контакта.
+     */
+    delete: operations["unlinkTelegram"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Выпустить одноразовую ссылку привязки Telegram (бот, параметр start)
+     * @description ADR-0023 п. 3. Ссылка `https://t.me/<бот>?start=<токен>` открывает бот CRM; бот проверяет подпись и срок,
+     *     гасит токен (одноразовый) и привязывает Telegram этого человека к контакту сессии без подтверждения менеджера.
+     *     Токен — `tg_` + base64url (без `=`) от 21 байта данных и 15 байт усечённого HMAC-SHA256: версия, язык контакта,
+     *     `crm_contact_id`, срок (15 минут), случайный nonce; ключ — производный от секрета пары шины `erp → crm` с отдельной
+     *     меткой (`rt-telegram-link/v1`), не ключ почты. 51 символ из алфавита `[A-Za-z0-9_-]` — укладывается в лимит
+     *     параметра `start` Telegram (64). QR рисует Cabinet из `url` сам, без внешних сервисов. Право «действовать» не
+     *     нужно. Повтор с тем же `Idempotency-Key` возвращает ту же ссылку; новый ключ — новый токен (прежний действует
+     *     до своего срока).
+     */
+    post: operations["createTelegramLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/requests": {
     parameters: {
       query?: never;
@@ -670,7 +726,9 @@ export interface components {
       | "DELIVERY_FAILED"
       | "INVOICE_NOT_OPEN"
       | "TEXT_REQUIRED"
-      | "CONFLICT";
+      | "CONFLICT"
+      | "CONTACT_NOT_IN_CRM"
+      | "TELEGRAM_LINK_UNAVAILABLE";
     Reason: {
       reason: string;
     };
@@ -714,6 +772,24 @@ export interface components {
       roles: components["schemas"]["PortalRole"][];
       /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
       modules: components["schemas"]["ModuleCode"][];
+    };
+    TelegramStatus: {
+      /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
+      linked: boolean;
+      /** @description Можно ли выпустить ссылку привязки: бот настроен и контакт сопоставлен с CRM. `false` — Cabinet не предлагает «Подключить» (плашку не показывает, в Профиле — подсказка написать менеджеру) */
+      available: boolean;
+    };
+    TelegramLink: {
+      /**
+       * Format: uri
+       * @description `https://t.me/<бот>?start=<токен>`; её же Cabinet кодирует в QR
+       */
+      url: string;
+      /**
+       * Format: date-time
+       * @description Когда ссылка перестанет действовать (15 минут от выпуска)
+       */
+      expires_at: string;
     };
     /** @enum {string} */
     PortalRole: "client" | "partner";
@@ -1400,6 +1476,108 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getTelegramStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Статус привязки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramStatus"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  unlinkTelegram: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Запрос отключения принят (или Telegram уже не привязан) */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramStatus"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) — отключить может менеджер */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  createTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылка выпущена */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramLink"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Контакт ещё не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`): привязать Telegram сейчас нельзя, поможет менеджер */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+      /** @description Бот не настроен или нет сопряжения с CRM (`TELEGRAM_LINK_UNAVAILABLE`): подключить Telegram сейчас нельзя */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   listRequests: {
