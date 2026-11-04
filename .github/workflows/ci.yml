@@ -83,7 +83,8 @@ jobs:
             # CRM: свой код; rt-bus и токены (вшиты в образ / интерфейс); контракты — только те, что читают код и тесты CRM:
             # crm.yaml (экспорт OpenAPI и orval), erp-integration.yaml (клиент ERP), eds.yaml и platform-bff.yaml (тесты-сторожа
             # прав и ролей), platform-rbac* (генератор ролей; тесты читают и схему platform-rbac.schema.json), mcp-tools.json (инструменты агента), события, подписки,
-            # пример pairing (examples/pairing-bootstrap.json), модели rt_contracts (generated/python — path-зависимость pyproject).
+            # пример pairing (examples/pairing-bootstrap.json), модели rt_contracts (generated/python — path-зависимость pyproject);
+            # реестр маршрутов и настроек Платформы читает test_platform_links (modules/*/module.ts, modules/*/settingsRegistry.ts).
             crm:
               - 'apps/crm/**'
               - 'packages/rt-bus/**'
@@ -98,6 +99,8 @@ jobs:
               - 'packages/contracts/bus/**'
               - 'packages/contracts/examples/pairing-bootstrap.json'
               - 'packages/contracts/generated/python/**'
+              - 'apps/platform/web/src/modules/*/module.ts'
+              - 'apps/platform/web/src/modules/*/settingsRegistry.ts'
               # справка формата базы знаний — источник правды docs/kb, её читают тесты CRM (бэкенд и фронтенд)
               - 'docs/kb/**'
             # ERP: свой код; rt-bus вшит в образ (B3, L14); сторож портала и интеграции читают erp-portal/-integration,

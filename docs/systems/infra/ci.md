@@ -47,6 +47,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `apps/erp/**` | ERP: lint & vitest, миграции и схема, pytest\* |
 | `apps/cabinet/**` | Cabinet |
 | `apps/platform/**` | Platform check, e2e\* (3 шарда) |
+| `apps/platform/web/src/modules/*/module.ts`, `…/modules/*/settingsRegistry.ts` | + CRM (реестр маршрутов и настроек Платформы читает `test_platform_links`) |
 | `apps/eds/**` | EDS |
 | `packages/rt-bus/**` | rt-bus, contracts, CRM, ERP, EDS, Platform (библиотека вшита в образы) |
 | `packages/rt-docs/**` | rt-docs\*, contracts (пакет пока не вшит в образы; EDS и ERP подключат его в D-DOC2, D-DOC3 — тогда их фильтры получат путь) |

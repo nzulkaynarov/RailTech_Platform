@@ -5,7 +5,7 @@ description: Добавить инструмент в MCP-сервер (kb-mcp, 
 
 # Инструмент MCP
 
-Инварианты: `SPEC §1.5`, `§7.1`, ADR-0008, ADR-0011. Инструмент **никогда** не принимает `lead_id`/`client_id` аргументом — только из проверенного заголовка `X-Agent-Context` (`app/security/agent_context.py`: `base64url(json).base64url(hmac_sha256)`, TTL 60 с).
+Инварианты: `SPEC §1.5`, `§7.1`, ADR CRM-0008, ADR CRM-0011. Инструмент **никогда** не принимает `lead_id`/`client_id` аргументом — только из проверенного заголовка `X-Agent-Context` (`app/security/agent_context.py`: `base64url(json).base64url(hmac_sha256)`, TTL 60 с).
 
 ## Шаги
 

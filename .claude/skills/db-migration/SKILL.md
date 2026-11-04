@@ -9,6 +9,10 @@ description: Миграция схемы базы в любом домене Rai
 или конфликт листьев ловит CI и разрешает ветка, пришедшая второй. Своя база у каждого домена — чужие таблицы не трогать
 (§3 п. 2 и 16).
 
+**После каждого `git merge origin/main`** проверь голову до push — это самая частая красная миграция (#382: две головы EDS):
+`cd apps/eds && uv run alembic heads` (CRM — `cd apps/crm/backend && uv run alembic heads`) печатает одну строку; ERP —
+`--migration-check` ниже. Две — перенеси `down_revision` своей ревизии на новую голову или `alembic merge heads`.
+
 ## CRM (Alembic)
 
 Подробно — скилл `apps/crm/.claude/skills/migration` (autogenerate через стенд, ручные объекты, Procrastinate, SPEC §5).
@@ -21,7 +25,8 @@ description: Миграция схемы базы в любом домене Rai
    и операции вручную.
 3. Прочитай файл целиком, допиши `downgrade()`.
 4. Проверка — `make -C apps/eds test` (одноразовый `postgres:17`: миграции вверх и вниз).
-5. Две головы после merge `origin/main` — `uv run alembic merge heads -m "merge"` или свой `down_revision` на новую голову.
+5. Две головы после merge `origin/main` — свой `down_revision` на новую голову (или `uv run alembic merge heads -m "merge"`);
+   после — `make -C apps/eds test` (`test_single_head`, `test_models_match_migrations`).
 
 ## ERP (Django)
 

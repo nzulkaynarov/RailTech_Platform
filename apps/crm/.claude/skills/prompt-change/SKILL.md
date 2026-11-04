@@ -5,7 +5,7 @@ description: Изменить промпт агента (backend/prompts/*.md) �
 
 # Изменение промпта
 
-Промпты только в `backend/prompts/` (`dialog_prospect.md`, `dialog_customer.md`, `qualifier.md`, `judge_faithfulness.md`); загрузка и подстановка — `app/agents/prompts.py` (`string.Template`, все плейсхолдеры обязательны; пользовательский текст и фрагменты KB — `xml_escape`/`xml_items` в отдельных XML-блоках). Решения (стадия, эскалация, цена, доступ) в промпт не переносятся: модель извлекает факты, код решает (`SPEC §1.3`, ADR-0016). Тексты, которые видит клиент (приветствие, fallback «нет в материалах», согласие), — не в промпте, а в `settings.texts` (скилл `settings-key`).
+Промпты только в `backend/prompts/` (`ls backend/prompts/`: диалоги, `qualifier.md`, `judge_faithfulness.md`, помощники `assist_*.md` и `mail_assist.md`); загрузка и подстановка — `app/agents/prompts.py` (`string.Template`, все плейсхолдеры обязательны; пользовательский текст и фрагменты KB — `xml_escape`/`xml_items` в отдельных XML-блоках). Решения (стадия, эскалация, цена, доступ) в промпт не переносятся: модель извлекает факты, код решает (`SPEC §1.3`, ADR CRM-0001 и CRM-0016). Тексты, которые видит клиент (приветствие, fallback «нет в материалах», согласие), — не в промпте, а в `settings.texts` (скилл `settings-key`).
 
 ## Шаги
 
