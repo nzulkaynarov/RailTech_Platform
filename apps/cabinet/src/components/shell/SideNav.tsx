@@ -29,7 +29,7 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
   const { t } = useTranslation();
   const me = useMe().data;
   const canAct = useCanAct();
-  const { primary, secondary } = useNav();
+  const { primary, secondary, groups } = useNav();
 
   return (
     <aside
@@ -94,29 +94,48 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
       </div>
 
       <nav aria-label={t('app.sideNav')} className="flex-1 overflow-y-auto px-2 py-3">
-        {primary.length > 0 && (
+        {groups ? (
+          // Обе роли (клиент и партнёр): «Покупаю» / «Поставляю» / «Компания» — не одним рядом из двенадцати пунктов
+          groups.map((group, index) => (
+            <section key={group.key} aria-labelledby={`nav-group-${group.key}`} className={cn(index > 0 && (collapsed ? 'mt-2 border-t border-border/60 pt-2' : 'mt-4'))}>
+              {!collapsed && (
+                <h2
+                  id={`nav-group-${group.key}`}
+                  className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase"
+                >
+                  {t(group.labelKey)}
+                </h2>
+              )}
+              <NavList items={group.items} collapsed={collapsed} />
+            </section>
+          ))
+        ) : (
           <>
-            {!collapsed && (
-              <p className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                {t('nav.sectionMain')}
-              </p>
+            {primary.length > 0 && (
+              <>
+                {!collapsed && (
+                  <p className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    {t('nav.sectionMain')}
+                  </p>
+                )}
+                <NavList items={primary} collapsed={collapsed} />
+              </>
             )}
-            <NavList items={primary} collapsed={collapsed} />
-          </>
-        )}
 
-        {secondary.length > 0 && (
-          <>
-            {!collapsed && (
-              <p className="mt-4 px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-                {t('nav.sectionDocumentsAndTeam')}
-              </p>
+            {secondary.length > 0 && (
+              <>
+                {!collapsed && (
+                  <p className="mt-4 px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                    {t('nav.sectionDocumentsAndTeam')}
+                  </p>
+                )}
+                <NavList
+                  items={secondary}
+                  collapsed={collapsed}
+                  className={cn(collapsed && 'mt-2 border-t border-border/60 pt-2')}
+                />
+              </>
             )}
-            <NavList
-              items={secondary}
-              collapsed={collapsed}
-              className={cn(collapsed && 'mt-2 border-t border-border/60 pt-2')}
-            />
           </>
         )}
       </nav>

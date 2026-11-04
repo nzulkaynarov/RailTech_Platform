@@ -1,0 +1,146 @@
+[
+  {
+    "screen": "my-products-list",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-list",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-submit-dialog",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 32,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-submit-dialog",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 35,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-submitted",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-submitted",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-card-returned",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 45,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-card-returned",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-file",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-file",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-preview",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-preview",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-done",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 41,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-wizard-done",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 38,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-empty",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "my-products-empty",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "menu-client-and-partner",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 44,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "menu-client-and-partner",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

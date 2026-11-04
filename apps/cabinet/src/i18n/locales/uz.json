@@ -29,7 +29,13 @@
     "collapseSidebar": "Menyuni yigʻish",
     "sectionMain": "Asosiy",
     "sectionDocumentsAndTeam": "Hujjatlar va kompaniya",
-    "unread": "O‘qilmagan xabarlar: {{count}}"
+    "unread": "O‘qilmagan xabarlar: {{count}}",
+    "myProducts": "Mening tovarlarim",
+    "groups": {
+      "buy": "Xarid qilaman",
+      "supply": "Yetkazib beraman",
+      "account": "Kompaniya"
+    }
   },
   "crumbs": {
     "request": "Soʻrov",
@@ -132,6 +138,19 @@
       "pending": "Tekshirilmoqda",
       "confirmed": "Toʻlov tasdiqlandi",
       "rejected": "Rad etildi"
+    },
+    "partner": {
+      "draft": "Qoralama",
+      "review": "Tekshiruvda",
+      "returned": "Qaytarilgan",
+      "published": "Eʼlon qilingan",
+      "matched": "Katalog kartochkasiga moslashtirilgan"
+    },
+    "freshness": {
+      "fresh": "Narx dolzarb",
+      "expiring": "Muddati tugayapti",
+      "stale": "Narx eskirgan",
+      "expired": "Narx muddati tugagan"
     }
   },
   "documents": {
@@ -812,7 +831,13 @@
     "INVOICE_NOT_OPEN": "Hisob-faktura allaqachon toʻlangan yoki bekor qilingan — toʻlov topshiriqnomasi kerak emas. Sahifani yangilang.",
     "TEXT_REQUIRED": "Izoh matnini yozing.",
     "LOGIN_CODE_INVALID": "Kod notoʻgʻri yoki eskirgan. Xatni tekshiring yoki yangi kod yuboring.",
-    "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing."
+    "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing.",
+    "XLSX_REQUIRED": "Excel fayli (.xlsx) kerak. Shablonni yuklab oling va toʻldiring.",
+    "VALID_DATE_INVALID": "Sana notoʻgʻri koʻrsatilgan — KK.OO.YYYY koʻrinishida kiriting.",
+    "OFFER_VALIDITY_RANGE_INVALID": "“Gacha” muddati “dan” muddatidan oldin boʻlishi mumkin emas.",
+    "PRODUCT_NOT_SUBMITTABLE": "Bu kartochkani yuborib boʻlmaydi: u allaqachon tekshiruvda yoki eʼlon qilingan.",
+    "OFFER_EXPIRED": "Narx muddati tugagan — uni tasdiqlab boʻlmaydi. Yangi prays-list yuklang.",
+    "IMPORT_FAILED": "Faylni qabul qilib boʻlmadi. Birozdan soʻng qayta urinib koʻring."
   },
   "widgets": {
     "actionRequired": {
@@ -845,5 +870,240 @@
     "text": "Formadagi oʻzgarishlar saqlanmagan va yoʻqoladi.",
     "leave": "Saqlamasdan chiqish",
     "stay": "Qolish"
+  },
+  "partner": {
+    "title": "Mening tovarlarim",
+    "tabsLabel": "Kartochka holatlari",
+    "tabs": {
+      "all": "Barchasi",
+      "draft": "Qoralamalar",
+      "review": "Tekshiruvda",
+      "returned": "Qaytarilgan",
+      "published": "Eʼlon qilingan",
+      "matched": "Moslashtirilgan"
+    },
+    "search": "Nomi, brendi yoki artikuli boʻyicha qidirish",
+    "searchLabel": "Qidiruv",
+    "uploadPrice": "Prays-list yuklash",
+    "downloadTemplate": "Shablonni yuklab olish",
+    "templateFailed": "Shablonni yuklab boʻlmadi. Qayta urinib koʻring.",
+    "submit": "Tekshiruvga yuborish",
+    "submitSelected": "Tekshiruvga yuborish ({{count}})",
+    "submitAllDrafts": "Barcha qoralamalarni yuborish ({{count}})",
+    "confirm": "Dolzarbligini tasdiqlash",
+    "confirmSelected": "Tanlangan narxlarni tasdiqlash ({{count}})",
+    "confirmAll": "Barcha narxlarni tasdiqlash",
+    "selectRow": "{{name}} kartochkasini tanlash",
+    "selectAll": "Sahifadagi barcha kartochkalarni tanlash",
+    "selected_one": "{{count}} ta kartochka tanlandi",
+    "selected_other": "{{count}} ta kartochka tanlandi",
+    "clearSelection": "Tanlovni bekor qilish",
+    "list": "Mening kartochkalarim",
+    "columns": {
+      "product": "Tovar",
+      "article": "Artikul",
+      "category": "Turkum",
+      "status": "Holat",
+      "price": "Mening narxim",
+      "completeness": "Toʻldirilgan",
+      "actions": "Amallar"
+    },
+    "noPrice": "Narx yoʻq",
+    "priceNotConfirmed": "Tasdiqlanmagan",
+    "priceConfirmed": "{{date}} tasdiqlangan",
+    "validUntil": "{{date}} gacha amal qiladi",
+    "moq": "{{count}} dona dan",
+    "completenessValue": "{{percent}} %",
+    "pendingChange": "Oʻzgarish tekshiruvda",
+    "returnedReason": "Qaytarish sababi: {{reason}}",
+    "returnedFixHint": "Maydonlarni tuzating, prays-listni qayta yuklang, soʻng kartochkani tekshiruvga yuboring.",
+    "openCard": "{{name}} kartochkasini ochish",
+    "page": "{{page}}-sahifa, jami {{pages}}",
+    "pagination": "Roʻyxat sahifalari",
+    "prev": "Orqaga",
+    "next": "Oldinga",
+    "found_one": "{{count}} ta kartochka topildi",
+    "found_other": "{{count}} ta kartochka topildi",
+    "emptyTab": "Bu boʻlimda hozircha hech narsa yoʻq.",
+    "notFoundTitle": "Hech narsa topilmadi",
+    "notFoundText": "Qidiruvni oʻzgartiring yoki boshqa boʻlimni tanlang.",
+    "reset": "Qidiruvni tozalash",
+    "attention": {
+      "title": "Narxlarga eʼtibor kerak",
+      "text": "Eskirgan: {{stale}}. Muddati tugagan: {{expired}}. Tez orada tugaydi: {{expiring}}. Narxlar amalda ekanini tasdiqlang — bu bir bosish.",
+      "expiredHint": "Muddati tugagan narxlarni tasdiqlab boʻlmaydi — yangi prays-list yuklang."
+    },
+    "empty": {
+      "title": "Prays-listni shablon boʻyicha yuklang — kartochkalar shu yerda paydo boʻladi",
+      "text": "Uchta oddiy qadam. Kartochkalar avval qoralama boʻladi, tekshiruvdan soʻng biz ularni katalogda eʼlon qilamiz.",
+      "stepsLabel": "Prays-listni qanday yuklash kerak",
+      "step1Title": "Shablonni yuklab oling",
+      "step1Text": "Tayyor ustunlar va ruxsat etilgan qiymatlar boʻyicha maslahatlar bilan Excel fayli.",
+      "step2Title": "Toʻldiring",
+      "step2Text": "Tovarlar va narxlarni kiriting: bir qator — bir tovar. Faqat nomi va narxi majburiy.",
+      "step3Title": "Yuklang",
+      "step3Text": "Hech narsa yozilmasdan oldin faylni tekshirib, xatolarni qatorlar boʻyicha koʻrsatamiz."
+    },
+    "submitDialog": {
+      "title": "Tekshiruvga yuborilsinmi?",
+      "description_one": "{{count}} ta kartochka yuboriladi.",
+      "description_other": "{{count}} ta kartochka yuboriladi.",
+      "consequence": "Kartochkalar “Tekshiruvda” holatiga oʻtadi va katalog xodimiga boradi. Tekshiruv davomida prays-list ularni oʻzgartirmaydi: farqlar “tekshiruvdagi oʻzgarishlar”ga tushadi.",
+      "confirm": "Yuborish",
+      "loadingAll": "Qoralamalar yigʻilmoqda…",
+      "nothing": "Yuboriladigan kartochka yoʻq: faqat qoralamalar va qaytarilgan kartochkalarni yuborish mumkin."
+    },
+    "submitted": {
+      "title_one": "{{count}} ta kartochka yuborildi",
+      "title_other": "{{count}} ta kartochka yuborildi",
+      "sla": "Tekshiruv odatda 1 ish kunini oladi. Natija shu boʻlimda paydo boʻladi: “Eʼlon qilingan” yoki sabab bilan “Qaytarilgan”.",
+      "failed": "Yuborilmadi: {{count}}",
+      "code": {
+        "NOT_FOUND": "kartochka topilmadi",
+        "PRODUCT_NOT_SUBMITTABLE": "allaqachon tekshiruvda yoki eʼlon qilingan"
+      }
+    },
+    "confirmed": {
+      "title_one": "{{count}} ta narx tasdiqlandi",
+      "title_other": "{{count}} ta narx tasdiqlandi",
+      "expired": "Muddati tugagani uchun tasdiqlanmadi: {{count}}. Yangi prays-list yuklang.",
+      "failed": "Tasdiqlanmadi: {{count}}",
+      "code": {
+        "NOT_FOUND": "bu kartochka boʻyicha narxingiz yoʻq",
+        "OFFER_EXPIRED": "narx muddati tugagan"
+      },
+      "none": "Tasdiqlanadigan narx yoʻq."
+    },
+    "sheet": {
+      "close": "Yopish",
+      "description": "Roʻyxatingizdagi tovar kartochkasi",
+      "loadFailed": "Kartochkani ochib boʻlmadi.",
+      "fields": "Kartochka maʼlumotlari",
+      "fix": "Tuzatish kerak",
+      "completeness": "{{percent}} % toʻldirilgan",
+      "missing": "Eʼlon qilish uchun yetishmaydi",
+      "myPrice": "Mening narxim",
+      "history": "Tekshiruvlar tarixi",
+      "historyEmpty": "Kartochka hali tekshiruvga yuborilmagan.",
+      "decision": {
+        "pending": "Qaror kutilmoqda",
+        "published": "Eʼlon qilingan",
+        "returned": "Qaytarilgan",
+        "cancelled": "Tekshiruvdan olingan"
+      },
+      "submittedAt": "{{date}} yuborilgan",
+      "decidedAt": "Qaror: {{date}}",
+      "issuesTitle": "Nimani tuzatish kerak",
+      "generalComment": "Umumiy izoh",
+      "foreignNote": "Narxingiz katalog kartochkasiga moslashtirildi. Bu kartochka maʼlumotlari sizga koʻrsatilmaydi: quyida prays-listda yuborganingiz."
+    },
+    "fields": {
+      "name": "Nomi",
+      "description": "Tavsif",
+      "brand": "Brend",
+      "manufacturer_part_number": "Ishlab chiqaruvchi artikuli",
+      "gost_drawing": "GOST / chizma",
+      "category": "Turkum",
+      "uom": "Oʻlchov birligi",
+      "hs_code": "TN VED kodi",
+      "price": "Narx",
+      "valid_until": "Narx amal qilish muddati",
+      "other": "Boshqa",
+      "supplier_sku": "Yetkazib beruvchi artikuli",
+      "domain_type": "Yoʻnalish",
+      "currency": "Valyuta",
+      "stock": "Mavjudligi",
+      "lead": "Yetkazib berish muddati",
+      "moq": "Minimal buyurtma",
+      "valid_from": "Amal qiladi (dan)",
+      "identity": "Ishlab chiqaruvchi artikuli yoki GOST"
+    },
+    "wizard": {
+      "title": "Prays-list yuklash",
+      "description": "Shablonni yuklab oling, toʻldiring va faylni yuklang. Avval hammasini tekshiramiz — “Yuklash” tugmasini bosmaguningizcha hech narsa yozilmaydi.",
+      "steps": {
+        "file": "Fayl",
+        "check": "Tekshiruv",
+        "done": "Tayyor"
+      },
+      "stepsLabel": "Yuklash qadamlari",
+      "stepOf": "{{current}}-qadam, jami {{total}}",
+      "template": "1. Shablonni yuklab oling",
+      "templateText": "Xodimlarimiz foydalanadigan ustunlar: nomi, brend, artikul, narx, valyuta, muddat…",
+      "chooseFile": "2. Toʻldirilgan faylni tanlang",
+      "fileHint": "Excel (.xlsx), 20 MB gacha.",
+      "fileLabel": "Prays-list fayli",
+      "validity": "3. Narxlar amal qilish muddati",
+      "validityText": "Majburiy emas. Muddat koʻrsatilmasa, “Amal qiladi dan / gacha” ustunlari olinadi yoki narx muddatsiz amal qiladi.",
+      "validFrom": "Narxlar amal qiladi (dan)",
+      "validUntil": "Narxlar amal qiladi (gacha)",
+      "dateInvalid": "Sanani toʻliq kiriting: KK.OO.YYYY.",
+      "rangeInvalid": "“Gacha” muddati “dan” muddatidan oldin boʻlishi mumkin emas.",
+      "badType": "Excel fayli (.xlsx) kerak.",
+      "tooLarge": "Fayl 20 MB dan katta.",
+      "check": "Faylni tekshirish",
+      "checking": "Fayl tekshirilmoqda…",
+      "checkingText": "Hech narsa yozilmaydi. Bir necha soniya oladi.",
+      "previewTitle": "Tekshiruv yakunlandi",
+      "previewReady": "Xato yoʻq — yuklash mumkin.",
+      "previewWithErrors_one": "{{count}} ta qatorda xato bor. Uni oʻtkazib yuboramiz, qolganini yuklaymiz.",
+      "previewWithErrors_other": "{{count}} ta qatorda xato bor. Ularni oʻtkazib yuboramiz, qolganini yuklaymiz.",
+      "nothingToLoad": "Yuklaydigan narsa yoʻq: birorta qator tekshiruvdan oʻtmadi. Faylni tuzating va qayta tekshiring.",
+      "load": "Yuklash",
+      "loadWithSkipped": "Xatoli qatorlarsiz yuklash",
+      "loading": "Yuklanmoqda…",
+      "loadingText": "Kartochkalar va narxlar yozilmoqda.",
+      "chooseAnother": "Boshqa faylni tanlash",
+      "doneTitle": "Prays-list yuklandi",
+      "doneText": "Kartochkalar “Qoralamalar”da paydo boʻldi. Ularni tekshiring va tekshiruvga yuboring.",
+      "goDrafts": "Qoralamalarga oʻtish",
+      "closeBtn": "Yopish",
+      "failedTitle": "Fayl qabul qilinmadi",
+      "failedText": "Faylni qayta ishlab boʻlmadi.",
+      "failedCode": {
+        "NAME_COLUMN_NOT_FOUND": "Faylda “Nomi” ustuni yoʻq. Shablonni yuklab oling va maʼlumotlarni unga koʻchiring.",
+        "IMPORT_FAILED": "Faylni qayta ishlab boʻlmadi. Bu Excel shabloni ekaniga ishonch hosil qilib, qayta urinib koʻring."
+      },
+      "retry": "Qayta urinish",
+      "summary": {
+        "created": "Yangi kartochkalar",
+        "updated": "Maʼlum tovarlar",
+        "offers": "Yozilgan narxlar",
+        "proposals": "Tekshiruvga oʻzgarishlar",
+        "errors": "Xatoli qatorlar",
+        "warnings": "Izohlar"
+      },
+      "summaryLabel": "Tekshiruv natijasi",
+      "rowsTitle": "Nimani tuzatish kerak",
+      "rowsCaption": "Fayldagi xatoli qatorlar",
+      "rowsShown": "{{total}} tadan dastlabki {{shown}} tasi koʻrsatilgan.",
+      "rowHeader": "Qator",
+      "fieldHeader": "Maydon",
+      "fixHeader": "Nimani tuzatish kerak",
+      "warningsTitle": "Izohlar (qatorlar yuklandi)",
+      "proposalsTitle": "Kartochka maydonlaridagi oʻzgarishlar",
+      "proposalsText": "Bu tovarlar katalogda allaqachon bor. Narxlaringiz yozildi, maydonlardagi tuzatishlar esa kartochkalarni oʻzgartirmasdan tekshiruvga yuborildi.",
+      "truncated": "Fayl chegaradan uzun — oʻqilmagan qatorlar: {{count}}.",
+      "unpublishable_one": "{{count}} ta kartochkani qoʻshimchalarsiz eʼlon qilib boʻlmaydi.",
+      "unpublishable_other": "{{count}} ta kartochkani qoʻshimchalarsiz eʼlon qilib boʻlmaydi.",
+      "unpublishableHint": "Yetishmaydi: {{list}}. Fayldagi bu ustunlarni toʻldiring va uni qayta yuklang."
+    },
+    "issues": {
+      "UNKNOWN": "Qator yuklanmadi. Shu qatordagi qiymatlarni tekshiring.",
+      "PRICE_NOT_A_NUMBER": "Narx son boʻlishi kerak, masalan 150.50.",
+      "PRICE_NOT_POSITIVE": "Narx noldan katta boʻlishi kerak.",
+      "UNKNOWN_CATEGORY": "“{{value}}” turkumi roʻyxatda yoʻq. Shablonning ikkinchi varagʻidan tanlang.",
+      "UNKNOWN_DOMAIN": "“{{value}}” yoʻnalishi roʻyxatda yoʻq. shablonning ikkinchi varagʻidan tanlang.",
+      "UNKNOWN_CURRENCY": "“{{value}}” valyutasi roʻyxatda yoʻq. USD yoki UZS kabi kod kiriting.",
+      "UNKNOWN_STOCK_STATUS": "“{{value}}” mavjudligi roʻyxatda yoʻq. shablonning ikkinchi varagʻidan kodni tanlang.",
+      "VALID_DATE_INVALID": "Sana notoʻgʻri. KK.OO.YYYY koʻrinishida kiriting.",
+      "OFFER_VALIDITY_RANGE_INVALID": "“Gacha” muddati “dan” muddatidan oldin. Sanalarni almashtiring.",
+      "HS_CODE_TOO_LONG": "“{{value}}” TN VED kodi juda uzun — yozilmadi. Kodni tekshiring.",
+      "HS_CODE_NOT_IN_CLASSIFIER": "“{{value}}” TN VED kodi klassifikatorda yoʻq. Qator yuklandi — kodni tekshiring.",
+      "HS_CODE_RETIRED": "“{{value}}” TN VED kodi endi amal qilmaydi. Qator yuklandi — kodni aniqlashtiring.",
+      "ROW_FAILED": "Qatorni qayta ishlab boʻlmadi. Qiymatlarini tekshiring.",
+      "NAME": "Nomi koʻrsatilmagan."
+    },
+    "cardNumber": "{{id}}-raqamli kartochka"
   }
 }

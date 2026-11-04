@@ -152,7 +152,10 @@ inline и до БД не доходит (§9.2).
 | `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь); карточка — изготовитель, артикул изготовителя, страна происхождения, гарантия, фото (главное первым), в `/catalog/{id}` — ещё действующие документы «видно клиенту» (CAT-CARD-2) |
 | `GET /catalog/{id}/documents/{doc_id}/file` | файл документа карточки (поток, аудит); скрытый, просроченный, чужой — 404 |
 | `GET /company`, `PUT /company`, `GET /team`, `POST /team/invite` | профиль и команда клиента |
-| `GET /messages?after_id=&limit=`, `POST /messages {text, client_message_id, context?}`, `POST /messages/read {last_id}` | чат кабинета (CHAT-1, ADR-0023, 0.5.0): одна лента на компанию, по возрастанию `id`; опрос ленты отмечает присутствие контакта (`last_seen`, не чаще 30 с). Сообщение и `erp.cabinet.message_posted` — одна транзакция, повтор `client_message_id` в пределах компании — прежнее сообщение (200); метка `context {kind: deal\|quote\|invoice\|act, id}` — только документ своей компании, видимый клиенту (номер подставляет ERP), иначе 404; отправка — `can_act`, отметка «прочитано» — нет. `Me.unread` — непрочитанные контактом ответы менеджера. Модуль `messages` — в шаблонах обеих ролей, не выключается |
+| `GET /partner/products`, `GET /partner/products/{id}` | «Мои товары» партнёра (модуль `my_products`, 0.5.0, PART-2): свои карточки (источник данных — компания, либо у неё есть цена) со статусом `draft` / `review` / `returned` (+ причина и замечания по полям) / `published`, полнотой, **только своей** ценой (срок, Incoterms, MOQ, «подтверждена», свежесть `fresh` / `expiring` / `stale` / `expired`) и признаком «есть изменение на проверке»; вкладки — `counts`, плашка — `attention`; чужие цены, другие поставщики и наши цены продажи и закупки не отдаются |
+| `GET /partner/price-template`, `POST /partner/price-list` (`multipart/form-data`, `dry_run`), `GET /partner/price-list/{task_id}` | шаблон прайса (тот же, что у сотрудника), загрузка (предпросмотр без записи, затем запись; поставщик — компания сессии) и отчёт по строкам: колонка, код проблемы, значение |
+| `POST /partner/products/submit {ids}`, `POST /partner/offers/confirm {ids \| all}` | отправка своих черновиков и возвращённых карточек на проверку (ответ построчный; сотрудникам — уведомление) и «подтвердить актуальность» цен без модерации (цена с истёкшим сроком не подтверждается) |
+| `GET /messages?after_id=&limit=`, `POST /messages {text, client_message_id, context?}`, `POST /messages/read {last_id}` | чат кабинета (CHAT-1, ADR-0023, 0.6.0): одна лента на компанию, по возрастанию `id`; опрос ленты отмечает присутствие контакта (`last_seen`, не чаще 30 с). Сообщение и `erp.cabinet.message_posted` — одна транзакция, повтор `client_message_id` в пределах компании — прежнее сообщение (200); метка `context {kind: deal\|quote\|invoice\|act, id}` — только документ своей компании, видимый клиенту (номер подставляет ERP), иначе 404; отправка — `can_act`, отметка «прочитано» — нет. `Me.unread` — непрочитанные контактом ответы менеджера. Модуль `messages` — в шаблонах обеих ролей, не выключается |
 
 Все ответы отфильтрованы по компании сессии; тест на каждый эндпоинт «чужая компания → 404».
 
@@ -169,7 +172,7 @@ inline и до БД не доходит (§9.2).
 
 Защита сессии в cookie (FIX-15): каждый `POST` и `PATCH` обязан нести `Idempotency-Key`
 (иначе 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json` (иначе 415 `UNSUPPORTED_MEDIA_TYPE`; исключение —
-`multipart/form-data` на `/uploads`). Cookie — `HttpOnly`, `SameSite=Lax` (веб) или `SameSite=None; Secure` (Telegram
+`multipart/form-data` на `/uploads` и `/partner/price-list`). Cookie — `HttpOnly`, `SameSite=Lax` (веб) или `SameSite=None; Secure` (Telegram
 Mini App, настройка `PORTAL_COOKIE_SAMESITE`); CORS разрешает только origin Cabinet. Лимиты частоты — 429
 `TOO_MANY_REQUESTS` + `Retry-After`: 120/мин на сессию, 10/мин на IP на вход без сессии, 10/мин на сессию на акцепт КП,
 5 в час на e-mail для ссылки входа. Сессия архивной компании или контакта, ушедшего в другую компанию, — 401.

@@ -30,6 +30,81 @@ const PARTNER_DEFAULT = {
   modules: ['my_products', 'catalog_requests', 'messages', 'profile'],
 };
 const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products', 'profile'] };
+/** Партнёр, у которого сотрудник выключил оба раздела: остался только «Профиль». */
+const PARTNER_NOTHING = { roles: ['partner' as const], modules: ['profile'] };
+
+/** Клиент, у которого сотрудник завёл ещё и партнёрское отношение: обе роли, клиентские модули и «Мои товары». */
+const DUAL = { roles: ['client' as const, 'partner' as const], modules: [...CLIENT_ACCESS.modules, 'my_products'] };
+
+describe('меню при двух ролях: «Покупаю» и «Поставляю»', () => {
+  it('боковое меню разбито на три раздела, а не двенадцать пунктов подряд', async () => {
+    signedIn('actor', 'demo', DUAL);
+    const { router } = renderApp('/');
+    await screen.findByRole('heading', { level: 1, name: 'Запросы' }); // корень — первый раздел «Покупаю»
+    expect(router.state.location.pathname).toBe('/requests');
+    const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
+    expect(within(side).getAllByRole('heading').map((h) => h.textContent)).toEqual(['Покупаю', 'Поставляю', 'Компания']);
+    const groups = within(side).getAllByRole('region');
+    expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.trim()))).toEqual([
+      ['Запросы', 'КП', 'Каталог', 'Документы', 'Договоры', 'Счета', 'Акты', 'Поставки'],
+      ['Мои товары'],
+      ['Компания', 'Команда', 'Профиль'],
+    ]);
+    expect((await axe(side)).violations).toEqual([]);
+  });
+
+  it('телефон: внизу запросы, КП, каталог и «Мои товары»; «Ещё» — по тем же разделам', async () => {
+    signedIn('actor', 'demo', DUAL);
+    const user = userEvent.setup();
+    renderApp('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
+    expect(
+      within(bottom)
+        .getAllByRole('link')
+        .map((link) => link.textContent?.trim()),
+    ).toEqual(['Запросы', 'КП', 'Каталог', 'Мои товары']);
+    await user.click(within(bottom).getByRole('button', { name: 'Ещё' }));
+    const sheet = await screen.findByRole('dialog');
+    expect(within(sheet).getAllByRole('heading', { level: 3 }).map((h) => h.textContent)).toEqual(['Покупаю', 'Компания']);
+    expect(within(sheet).getByRole('link', { name: 'Договоры' })).toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: 'Профиль' })).toBeInTheDocument();
+  });
+
+  it('«Мои товары» открывается из меню, адрес и заголовок раздела', async () => {
+    signedIn('actor', 'demo', DUAL);
+    const user = userEvent.setup();
+    const { router } = renderApp('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await user.click(within(screen.getByRole('navigation', { name: 'Разделы кабинета' })).getByRole('link', { name: 'Мои товары' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Мои товары' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/my-products');
+  });
+
+  it('клиент без партнёрской роли: меню без разделов и без «Мои товары»', async () => {
+    signedIn();
+    renderApp('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
+    expect(within(side).queryByRole('heading', { name: 'Покупаю' })).not.toBeInTheDocument();
+    expect(within(side).queryByRole('link', { name: 'Мои товары' })).not.toBeInTheDocument();
+    expect(within(side).queryAllByRole('region')).toHaveLength(0);
+  });
+
+  it('обе роли, но «Мои товары» выключены: меню плоское, как у клиента', () => {
+    const nav = navFor(CLIENT_ACCESS.modules, ['client', 'partner']);
+    expect(nav.groups).toBeNull();
+    expect(nav.items.map((item) => item.to)).toEqual(navFor(CLIENT_ACCESS.modules, ['client']).items.map((item) => item.to));
+  });
+
+  it('все ключи разделов есть в трёх словарях', () => {
+    for (const language of ['ru', 'uz', 'en']) {
+      for (const key of ['nav.groups.buy', 'nav.groups.supply', 'nav.groups.account', 'nav.myProducts']) {
+        expect(i18n.exists(key, { lng: language }), `${language}: ${key}`).toBe(true);
+      }
+    }
+  });
+});
 
 describe('меню из /me.modules', () => {
   it('клиент: меню — 12 пунктов в том же порядке (+ «Сообщения», CHAT-1), нижняя навигация с «Ещё»', async () => {
@@ -59,12 +134,16 @@ describe('меню из /me.modules', () => {
     const contract = parse(fs.readFileSync('../../packages/contracts/openapi/erp-portal.yaml', 'utf8'));
     const template = contract.components.schemas.Me['x-role-modules'];
     expect(CLIENT_ACCESS.modules).toEqual(template.client);
-    expect(new Set(NAV_ITEMS.map((item) => item.module))).toEqual(new Set(template.client));
+    // «Мои товары» — модуль партнёра, не клиента: в шаблоне клиента его нет, и клиентского пункта меню он не добавляет
+    expect(new Set(NAV_ITEMS.filter((item) => item.group !== 'supply').map((item) => item.module))).toEqual(
+      new Set(template.client),
+    );
+    expect(NAV_ITEMS.filter((item) => item.group === 'supply').map((item) => item.module)).toEqual(['my_products']);
     expect(contract.components.schemas.Me['x-role-default-modules'].partner).toEqual(PARTNER_DEFAULT.modules);
   });
 
   it('навигация: неизвестные модули не рисуются, пустой список — пустое меню', () => {
-    expect(navFor(['my_products', 'something_new']).items).toEqual([]);
+    expect(navFor(['something_new']).items).toEqual([]);
     expect(navFor([]).items).toEqual([]);
     expect(navFor(undefined).items).toEqual([]);
     expect(navFor(['catalog_requests', 'something_new']).items.map((item) => item.to)).toEqual([
@@ -72,22 +151,32 @@ describe('меню из /me.modules', () => {
       '/catalog',
     ]);
     // «Профиль» есть у любой сессии, но рабочим разделом не считается
-    expect(navFor(['my_products', 'profile']).items.map((item) => item.to)).toEqual(['/profile']);
-    expect(navFor(['my_products', 'profile']).work).toEqual([]);
+    expect(navFor(['profile']).items.map((item) => item.to)).toEqual(['/profile']);
+    expect(navFor(['profile']).work).toEqual([]);
+    // «Мои товары» — первым пунктом партнёра; групп при одной роли нет
+    expect(navFor(['my_products', 'catalog_requests', 'profile'], ['partner']).items.map((item) => item.to)).toEqual([
+      '/my-products',
+      '/requests',
+      '/catalog',
+      '/profile',
+    ]);
+    expect(navFor(['my_products', 'catalog_requests', 'profile'], ['partner']).groups).toBeNull();
   });
 
-  it('партнёр с «Каталог и заявки»: «Запросы», «Каталог» и «Профиль»; корень ведёт в «Запросы»', async () => {
+  it('партнёр с обоими модулями: «Мои товары», «Запросы», «Каталог» и «Профиль»; корень ведёт в «Мои товары»', async () => {
     signedIn('actor', 'demo', PARTNER_DEFAULT);
     const { router } = renderApp('/');
-    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
-    expect(router.state.location.pathname).toBe('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Мои товары' });
+    expect(router.state.location.pathname).toBe('/my-products');
 
     const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
     expect(
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.trim()),
-    ).toEqual(['Запросы', 'Каталог', 'Сообщения1', 'Профиль']);
+    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Сообщения1', 'Профиль']);
+    // одна роль — меню плоское, без разделов «Покупаю» / «Поставляю»
+    expect(within(side).queryByRole('heading', { name: 'Покупаю' })).not.toBeInTheDocument();
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
     expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument(); // в «Ещё» — «Сообщения», «Профиль»
   });
@@ -132,6 +221,10 @@ describe('меню из /me.modules', () => {
     signedIn('actor', 'demo', PARTNER_DEFAULT);
     const { router } = renderApp('/requests');
     await screen.findByRole('heading', { level: 1, name: 'Запросы' });
+    await router.navigate('/quotes');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/my-products')); // первый раздел партнёра
+    await router.navigate('/requests');
+    await screen.findByRole('heading', { level: 1, name: 'Запросы' });
 
     for (const path of [
       '/quotes',
@@ -144,13 +237,28 @@ describe('меню из /me.modules', () => {
       '/quotes/301',
     ]) {
       await router.navigate(path);
-      await waitFor(() => expect(router.state.location.pathname, path).toBe('/requests'));
-      expect(await screen.findByRole('heading', { level: 1, name: 'Запросы' }), path).toBeInTheDocument();
+      await waitFor(() => expect(router.state.location.pathname, path).toBe('/my-products'));
+      expect(await screen.findByRole('heading', { level: 1, name: 'Мои товары' }), path).toBeInTheDocument();
     }
   });
 
-  it('партнёр без известных разделов: «Доступ открыт…», в меню только «Профиль»', async () => {
+  it('партнёр только с «Мои товары»: два пункта, корень ведёт в «Мои товары», клиентские разделы закрыты', async () => {
     signedIn('actor', 'demo', PARTNER_PRODUCTS_ONLY);
+    const { router } = renderApp('/');
+    await screen.findByRole('heading', { level: 1, name: 'Мои товары' });
+    expect(router.state.location.pathname).toBe('/my-products');
+    const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
+    expect(
+      within(side)
+        .getAllByRole('link')
+        .map((link) => link.textContent?.trim()),
+    ).toEqual(['Мои товары', 'Профиль']);
+    await router.navigate('/requests');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/my-products'));
+  });
+
+  it('партнёр без разделов (оба модуля выключены): «Доступ открыт…», в меню только «Профиль»', async () => {
+    signedIn('actor', 'demo', PARTNER_NOTHING);
     renderApp('/');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' })).toBeInTheDocument();
@@ -174,7 +282,7 @@ describe('меню из /me.modules', () => {
 
   it.each([
     ['по умолчанию', PARTNER_DEFAULT, '/requests'],
-    ['только «Мои товары» (экран «Доступ открыт»)', PARTNER_PRODUCTS_ONLY, '/'],
+    ['без разделов (экран «Доступ открыт»)', PARTNER_NOTHING, '/'],
   ])('профиль партнёра %s: меню «Профиль», смена языка и выход', async (_name, access, start) => {
     signedIn('actor', 'demo', access);
     const user = userEvent.setup();
@@ -195,7 +303,7 @@ describe('меню из /me.modules', () => {
   });
 
   it('axe: экран «Доступ открыт» и меню партнёра без нарушений', async () => {
-    signedIn('actor', 'demo', PARTNER_PRODUCTS_ONLY);
+    signedIn('actor', 'demo', PARTNER_NOTHING);
     const empty = renderApp('/');
     await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' });
     expect((await axe(empty.container)).violations).toEqual([]);

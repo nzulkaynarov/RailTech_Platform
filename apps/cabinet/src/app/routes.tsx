@@ -9,6 +9,7 @@ import { CompanyPage, TeamPage } from '@/pages/company';
 import { DealPage } from '@/pages/deal';
 import { DeliveriesPage, DocumentsPage } from '@/pages/deliveries';
 import { MessagesPage } from '@/pages/messages';
+import { MyProductsPage } from '@/pages/myProducts';
 import { QuoteDetailPage, QuotesPage } from '@/pages/quotes';
 import { RequestDetailPage, RequestNewPage, RequestsPage } from '@/pages/requests';
 import { LoginPage } from '@/pages/auth/LoginPage';
@@ -50,6 +51,7 @@ export const routes: RouteObject[] = [
                 // Разделы за модулями сессии (`/me.modules`, ADR-0022)
                 element: <RequireModule />,
                 children: [
+                  { path: '/my-products', element: <MyProductsPage /> },
                   { path: '/requests', element: <RequestsPage /> },
                   { path: '/requests/new', element: <RequestNewPage /> },
                   { path: '/requests/:id', element: <RequestDetailPage /> },

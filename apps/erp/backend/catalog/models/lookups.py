@@ -32,7 +32,7 @@ class DomainType(AbstractLookup):
 class ProductStatus(AbstractLookup):
     """
     Жизненный цикл товара.
-    Seed: DRAFT, PUBLISHED, ARCHIVED
+    Seed: DRAFT, REVIEW, RETURNED, PUBLISHED, ARCHIVED (REVIEW и RETURNED — PART-2: карточка партнёра на проверке и возвращённая)
     """
 
     class Meta(AbstractLookup.Meta):

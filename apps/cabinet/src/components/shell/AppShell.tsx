@@ -74,7 +74,9 @@ export function AppShell() {
     const path = location.pathname;
     const segments: Array<{ label: string; href?: string }> = [];
 
-    if (path.startsWith('/requests/new')) {
+    if (path.startsWith('/my-products')) {
+      segments.push({ label: t('nav.myProducts') });
+    } else if (path.startsWith('/requests/new')) {
       segments.push({ label: t('nav.requests'), href: '/requests' });
       segments.push({ label: t('pages.requests.new') });
     } else if (path.startsWith('/requests/')) {

@@ -25,8 +25,20 @@ class ImportTask(models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="import_tasks",
+        null=True,
+        blank=True,
         verbose_name=_("Инициатор"),
-        help_text=_("Пользователь, запустивший импорт"),
+        help_text=_("Пользователь, запустивший импорт; у загрузки из кабинета партнёра пуст — там контакт"),
+    )
+    # PART-2: загрузку прайса из кабинета запускает контакт компании-партнёра, а не пользователь ERP. Ровно одно из двух.
+    contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="import_tasks",
+        verbose_name=_("Контакт кабинета"),
+        help_text=_("Контакт компании-партнёра, загрузивший прайс из кабинета"),
     )
     deal = models.ForeignKey(
         "sales.Deal",
@@ -52,6 +64,13 @@ class ImportTask(models.Model):
         verbose_name = _("Задача импорта")
         verbose_name_plural = _("Задачи импорта")
         ordering = ["-created_at"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(models.Q(owner__isnull=False) & models.Q(contact__isnull=True))
+                | (models.Q(owner__isnull=True) & models.Q(contact__isnull=False)),
+                name="importtask_exactly_one_author",
+            )
+        ]
 
     def __str__(self):
         return f"{self.task_type}: {self.celery_task_id}"

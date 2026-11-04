@@ -395,12 +395,20 @@ def offer_history(offer: SupplierOffer, user) -> list[dict]:
                 "delivery_basis": event.delivery_basis.code if event.delivery_basis_id else None,
                 "source": event.source,
                 "user_id": metadata.get("user"),
+                "contact_id": metadata.get("contact"),  # PART-2: цена загружена из кабинета партнёра
             }
         )
+    from parties.models import Contact
+
     people = {u.pk: u for u in CustomUser.objects.filter(pk__in={r["user_id"] for r in rows if r["user_id"]})}
+    contacts = {c.pk: c for c in Contact.objects.filter(pk__in={r["contact_id"] for r in rows if r["contact_id"]})}
     for row in rows:
         person = people.get(row.pop("user_id"))
-        row["by"] = (person.get_full_name() or person.email) if person else None
+        contact = contacts.get(row.pop("contact_id"))
+        if person:
+            row["by"] = person.get_full_name() or person.email
+        else:
+            row["by"] = contact.name if contact else None
     return list(reversed(rows))
 
 
