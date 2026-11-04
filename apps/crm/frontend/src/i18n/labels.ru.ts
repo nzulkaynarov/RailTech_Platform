@@ -145,6 +145,8 @@ export const labelsRu = {
     "client.partner_conflict": "Клиент партнёра: конфликт сопоставления с ERP",
     "client.partner_pending": "Партнёр ERP совпал с клиентом: ждёт подтверждения менеджера",
     "client.partner_released": "Снята привязка клиента к компании ERP партнёра",
+    "client.partner_request_closed":
+      "Закрыта заявка партнёра ERP: компания уже сопоставлена с клиентом",
     "client.unlink_telegram": "Отвязал Telegram",
     "client.close_request": "Закрыл сервисный запрос",
     "client.contact_create": "Добавил контакт",

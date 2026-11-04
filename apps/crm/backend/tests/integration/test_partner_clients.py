@@ -22,11 +22,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.bus import runtime
 from app.domain.errors import ConflictError, NotFoundError
+from app.integrations.erp import HandoffResult
 from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact, PartnerClientRequest
 from app.models.staff_tickets import StaffNotification
 from app.security.principal import Principal
 from app.services import partner_clients
+from app.services.erp_handoff import ErpHandoffService
 from app.services.partner_clients import REJECTED_TYPE, REQUESTED_TYPE, PartnerClientService
 from tests.bus_events import envelope_for, example_data
 from tests.integration.bus_harness import FakeContainer, Harness
@@ -396,6 +398,133 @@ async def test_confirm_is_refused_when_the_client_got_linked_to_another_company(
     assert (await stand.clients())[0].erp_company_id == 999
 
 
+async def _handed_off(stand: "Stand", client_id: int, erp_company_id: int) -> None:
+    """Передача клиента в ERP закончилась: ERP сопоставила клиента с компанией (по ИНН)."""
+    service = ErpHandoffService(stand.h.sessions, cast(Any, None))
+    result = HandoffResult(
+        erp_company_id=erp_company_id,
+        erp_request_id=None,
+        invite_sent_via=[],
+        cabinet_url="https://cabinet.example",
+    )
+    await service._complete(client_id, 0, False, result)
+
+
+async def test_pending_request_is_closed_when_the_company_gets_the_client_by_a_handoff(
+    stand: Stand,
+) -> None:
+    """Заявка ждёт на X; передача X в ERP сопоставила компанию C с X — решать нечего."""
+    manager = await manager_of(stand)
+    victim = await make_client(stand.h.sessions, inn="301234567")
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    assert pending.status == "pending"
+
+    await _handed_off(stand, victim, ERP_COMPANY)
+
+    [closed] = await stand.requests()
+    assert closed.status == "closed"
+    assert closed.close_note == f"закрыта: компания уже сопоставлена с клиентом #{victim}"
+    assert len(await stand.audit("client.partner_request_closed")) == 1
+    async with stand.h.sessions() as session:
+        assert await PartnerClientService.pending_of(session, victim) == []
+    service = PartnerClientService(stand.h.sessions)
+    with pytest.raises(NotFoundError):
+        await service.confirm(manager, victim, pending.id)
+    with pytest.raises(NotFoundError):
+        await service.decline(manager, victim, pending.id)
+    # повторное приглашение: клиент найден по erp_company_id, новой заявки нет
+    await stand.request(request_data())
+    assert [r.status for r in await stand.requests()] == ["closed"]
+    assert (await stand.answers())[-1]["status"] == "linked"
+
+
+async def test_a_repeat_request_for_a_company_that_got_a_client_closes_the_stale_one(
+    stand: Stand,
+) -> None:
+    victim = await make_client(stand.h.sessions, inn="301234567")
+    await stand.request(request_data())
+    async with stand.h.sessions() as session, session.begin():  # клиент сопоставлен другим путём
+        await session.execute(
+            text("UPDATE clients SET erp_company_id = :e WHERE id = :id"),
+            {"e": ERP_COMPANY, "id": victim},
+        )
+
+    await stand.request(request_data())
+
+    assert [r.status for r in await stand.requests()] == ["closed"]
+    assert (await stand.answers())[-1]["status"] == "linked"
+
+
+async def test_confirm_of_a_request_whose_company_got_a_client_closes_it_without_a_conflict(
+    stand: Stand,
+) -> None:
+    """Клиента компании завели в обход хуков: открытая заявка закрывается, а не отвечает 409."""
+    manager = await manager_of(stand)
+    victim = await make_client(stand.h.sessions, inn="301234567")
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    other = await make_client(stand.h.sessions, name="Другой", inn="300000222")
+    async with (
+        stand.h.sessions() as session,
+        session.begin(),
+    ):  # клиента компании завели в обход всех хуков
+        await session.execute(
+            text("UPDATE clients SET erp_company_id = :e WHERE id = :id"),
+            {"e": ERP_COMPANY, "id": other},
+        )
+
+    with pytest.raises(NotFoundError):
+        await PartnerClientService(stand.h.sessions).confirm(manager, victim, pending.id)
+
+    [closed] = await stand.requests()
+    assert closed.status == "closed"
+    assert closed.close_note is not None
+    assert (await stand.clients())[0].erp_company_id is None
+
+
+async def test_confirm_races_with_a_repeat_request_without_a_deadlock(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Подтверждение и повторный запрос ERP по одной компании берут блокировки в одном порядке.
+
+    Подтверждающий «задумывается» перед первой рекомендательной блокировкой; повторный запрос
+    за это время доходит до строки заявки. Если подтверждающий уже держит строку (порядок
+    «строка, компания»), он ждёт компанию, а запрос — строку: взаимная блокировка, Postgres
+    обрывает одного. Порядок «компания, строка» — оба проходят: заявка подтверждена, ошибок нет.
+    """
+    manager = await manager_of(stand)
+    victim = await make_client(stand.h.sessions, inn="301234567")
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    real_lock = partner_clients._lock
+    calls = {"n": 0}
+
+    async def slow_lock(session: AsyncSession, erp_company_id: int) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            await asyncio.sleep(0.6)  # первое обращение к блокировке — у подтверждающего
+        await real_lock(session, erp_company_id)
+
+    monkeypatch.setattr(partner_clients, "_lock", slow_lock)
+    again = await stand.h.receive(REQUESTED_TYPE, request_data())
+
+    async def repeat() -> str | None:
+        await asyncio.sleep(0.15)
+        return await stand.h.process(again)
+
+    service = PartnerClientService(stand.h.sessions)
+    results = await asyncio.gather(
+        service.confirm(manager, victim, pending.id), repeat(), return_exceptions=True
+    )
+
+    assert [r for r in results if isinstance(r, BaseException)] == []
+    assert results[1] == "processed", "повторный запрос не оборван взаимной блокировкой"
+    [done] = await stand.requests()
+    assert done.status == "confirmed"
+    assert (await stand.clients())[0].erp_company_id == ERP_COMPANY
+
+
 async def test_foreign_company_by_the_pair_goes_to_confirmation_too(stand: Stand) -> None:
     same = await make_client(stand.h.sessions, country="CN", registration_number="abc-1")
     other_country = await make_client(stand.h.sessions, country="KZ", registration_number="ABC-1")
@@ -639,6 +768,31 @@ async def test_erp_rejection_releases_the_link_and_tells_the_owner(stand: Stand)
     assert len(await stand.audit("client.partner_released")) == 1
     [note] = await stand.bell()
     assert (note.user_id, note.kind) == (owner.id, "partner_client_released")
+
+
+async def test_erp_rejection_keeps_a_real_handoff_state(stand: Stand) -> None:
+    """`failed` и `pending` — состояние настоящей передачи клиента в ERP: отказ его не обнуляет."""
+    client_id = await make_client(
+        stand.h.sessions,
+        inn="301234567",
+        erp_company_id=ERP_COMPANY,
+        erp_handoff_status="failed",
+        erp_handoff_error="erp_unreachable",
+    )
+    data = {
+        "erp_company_id": ERP_COMPANY,
+        "crm_client_id": client_id,
+        "reason": "client_mapped_to_other_company",
+        "other_erp_company_id": 301,
+        "actor": {"type": "system"},
+    }
+
+    event_id = await stand.h.receive(REJECTED_TYPE, data)
+    assert await stand.h.process(event_id) == "processed"
+
+    [client] = await stand.clients()
+    assert client.erp_company_id is None
+    assert (client.erp_handoff_status, client.erp_handoff_error) == ("failed", "erp_unreachable")
 
 
 async def test_erp_rejection_of_a_link_the_client_does_not_hold_changes_nothing(

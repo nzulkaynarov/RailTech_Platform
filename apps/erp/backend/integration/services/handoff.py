@@ -37,7 +37,7 @@ from portal.services.invitation import invite_contact
 from crm.models import ActivityLog, Deal
 
 from ..exceptions import IntegrationConflict
-from ..models import CrmClientMapping, CrmContactMapping, PartnerCrmLink
+from ..models import CrmClientMapping, CrmContactMapping
 from . import events, stages
 
 logger = logging.getLogger(__name__)
@@ -278,9 +278,9 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
     # Сопоставление — ДО сделки и приглашения: события строятся по нему.
     mapping = CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
     _consent(company, data["consent"])
-    # Заявки партнёра, ждавшие сопоставления, уходят тем же путём, что после ответа CRM (PART-CRM).
-    partner_client.release_deferred_requests(company, crm_client_id)
-    PartnerCrmLink.objects.filter(company=company).delete()
+    # Партнёр, чью компанию нашли по ИНН: заявки партнёра этому клиенту НЕ выпускаются, пока сотрудник не проверит, что это та
+    # же компания (иначе ИНН чужого клиента отдал бы ему заявки партнёра). Отпускает повторное приглашение (PART-CRM).
+    partner_client.hold_for_verification(company, crm_client_id)
 
     _contacts, primary = _create_contacts(company, data, can_act=not linked_by_inn)
 

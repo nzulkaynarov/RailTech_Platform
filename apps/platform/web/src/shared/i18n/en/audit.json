@@ -236,6 +236,7 @@
       "partner_conflict": "Partner client: ERP mapping conflict",
       "partner_pending": "ERP partner matches a client: waiting for a manager's confirmation",
       "partner_released": "Client's link to the partner's ERP company removed",
+      "partner_request_closed": "Partner request closed: the ERP company is already linked to a client",
       "close_request": "Closed a service request",
       "contact_create": "Added a client contact",
       "contact_update": "Updated a client contact",

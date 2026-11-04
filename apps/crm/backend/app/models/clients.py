@@ -73,7 +73,7 @@ class PartnerClientRequest(TimestampMixin, Base):
 
     __tablename__ = "partner_client_requests"
     __table_args__ = (
-        CheckConstraint("status IN ('pending', 'confirmed', 'declined')", name="status"),
+        CheckConstraint("status IN ('pending', 'confirmed', 'declined', 'closed')", name="status"),
         Index("ix_partner_client_requests_client_id", "client_id"),
         # Одна ждущая заявка на компанию ERP: повторный запрос обновляет её, а не плодит новые.
         Index(
@@ -94,6 +94,8 @@ class PartnerClientRequest(TimestampMixin, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # `closed`: компания ERP получила клиента другим путём, решать нечего (причина словами)
+    close_note: Mapped[str | None] = mapped_column(String(200))
 
 
 class Document(TimestampMixin, Base):

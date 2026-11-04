@@ -32,6 +32,7 @@ def upgrade() -> None:
         sa.Column("payload", postgresql.JSONB(astext_type=sa.Text()), nullable=False),
         sa.Column("decided_by_user_id", sa.BigInteger(), nullable=True),
         sa.Column("decided_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("close_note", sa.String(length=200), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),
@@ -45,7 +46,7 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.CheckConstraint(
-            "status IN ('pending', 'confirmed', 'declined')",
+            "status IN ('pending', 'confirmed', 'declined', 'closed')",
             name=op.f("ck_partner_client_requests_status"),
         ),
         sa.ForeignKeyConstraint(

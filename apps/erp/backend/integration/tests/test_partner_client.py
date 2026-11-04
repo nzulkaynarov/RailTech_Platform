@@ -426,28 +426,67 @@ class TestDeferredRequests:
         assert not DeferredRequestEvent.objects.exists()
         assert bus_support.published("request.created") == []
 
-    def test_a_handoff_from_crm_releases_the_deferred_requests_of_a_partner(
-        self, partner_api, supplier, contact, settings
+    def test_a_handoff_of_a_foreign_client_with_the_partners_inn_does_not_leak_the_partners_requests(
+        self, partner_api, supplier, contact, settings, world
     ):
-        """Сопоставление пришло не ответом CRM, а передачей клиента (`POST /clients/handoff`): заявки тоже уходят."""
+        """Партнёр указал ИНН чужого клиента CRM, и передача этого клиента сопоставила компанию с ним по ИНН.
+
+        Заявки партнёра у чужого клиента не появляются: состояние «ждёт подтверждения менеджера», уведомление. Сотрудник
+        сверяет ИНН и жмёт «Пригласить ещё раз» — это подтверждение: запрос уходит в CRM, ответ `linked` выпускает заявки.
+        """
         from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
         from rest_framework.test import APIClient
 
-        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        from notifications.models import Notification
 
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        relationship = CompanyRelationship.objects.get(company=supplier)
+        staff = world["users"]["supply"]
+        relationship.responsible = staff
+        relationship.save(update_fields=["responsible"])
         self.create_request(partner_api)
         assert DeferredRequestEvent.objects.get().published_at is None
         api = APIClient()
         api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
 
         response = handoff(
-            api, payload(crm_client_id=4001, inn=supplier.inn, create_request=False, email="x@s.example.uz")
+            api, payload(crm_client_id=4001, inn=supplier.inn, create_request=False, email="x@other.example.uz")
         )
 
         assert response.status_code == 201, response.content
-        created = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
-        assert len(created) == 1 and created[0]["data"]["crm_client_id"] == 4001
-        assert DeferredRequestEvent.objects.get().published_at is not None
+        assert CrmClientMapping.objects.get(company=supplier).crm_client_id == 4001
+        cabinet = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+        assert cabinet == [], "заявки партнёра не выпущены чужому клиенту"
+        assert DeferredRequestEvent.objects.get().published_at is None
+        assert partner_client.crm_client_state(supplier) == {"status": "pending_confirmation", "crm_client_id": 4001}
+        assert Notification.objects.filter(user=staff, event_code="partner.crm_unverified").count() == 1
+
+        # сотрудник проверил ИНН и приглашает ещё раз: запрос уходит в CRM
+        assert invite(world, contact).status_code == 200
+        assert bus_support.only("partner.client_requested")["data"]["erp_company_id"] == supplier.pk
+        assert partner_client.crm_client_state(supplier)["status"] == "requested"
+        assert bus_support.published("request.created") == [] or all(
+            e["data"]["payload"]["source"] != "cabinet" for e in bus_support.published("request.created")
+        )
+
+        # CRM нашла клиента по erp_company_id и отвечает linked: теперь заявки уходят
+        partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=4001))
+        released = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+        assert len(released) == 1 and released[0]["data"]["crm_client_id"] == 4001
+        assert partner_client.crm_client_state(supplier) == {"status": "linked", "crm_client_id": 4001}
+
+    def test_a_handoff_of_a_company_without_the_partner_relationship_holds_nothing(self, supplier, settings):
+        from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+
+        assert handoff(api, payload(crm_client_id=4002, inn=supplier.inn, create_request=False)).status_code == 201
+
+        assert not PartnerCrmLink.objects.exists()
+        assert partner_client.crm_client_state(supplier) == {"status": "linked", "crm_client_id": 4002}
 
 
 # ── Роли сессии ───────────────────────────────────────────────────────────────────────────────────────────────────────

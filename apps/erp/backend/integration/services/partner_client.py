@@ -121,10 +121,48 @@ def lock_company(company_id: int) -> None:
     _advisory_lock(_LOCK_KIND, company_id)
 
 
+def is_partner(company: Company) -> bool:
+    return CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER).exists()
+
+
 def lock_if_partner(company: Company) -> None:
     """`lock_company` для компании с отношением `partner` (клиентов без отношения блокировка не касается)."""
-    if CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER).exists():
+    if is_partner(company):
         lock_company(company.pk)
+
+
+def hold_for_verification(company: Company, crm_client_id: int) -> None:
+    """Компанию партнёра сопоставила передача клиента из CRM (по ИНН): заявки партнёра остаются отложенными.
+
+    Состояние — «ждёт подтверждения менеджера», ответственному уходит уведомление. Сотрудник сверяет ИНН и нажимает
+    «Пригласить ещё раз»: это и есть подтверждение — запрос уходит в CRM, ответ `linked` выпускает заявки
+    (`request_client_in_crm`, `apply_client_resolved`). Вызывать под `lock_company`.
+    """
+    if not is_partner(company):
+        return  # у клиента без отношения partner отложенных заявок нет
+    PartnerCrmLink.objects.update_or_create(
+        company=company,
+        defaults={
+            "status": PartnerCrmStatus.PENDING_CONFIRMATION,
+            "crm_client_id": crm_client_id,
+            "conflict_company_id": None,
+            "resolved_at": timezone.now(),
+        },
+    )
+    _log(
+        company,
+        "partner.crm_pending",
+        "Клиент партнёра в CRM: ждёт подтверждения менеджера",
+        f"Передача клиента из CRM сопоставила компанию с клиентом #{crm_client_id} по ИНН; заявки партнёра не выпускаются.",
+        "WARNING",
+        crm_client_id=crm_client_id,
+    )
+    _notify_unverified(company, crm_client_id)
+
+
+def _awaits_verification(company: Company) -> bool:
+    """Сопоставление сделала передача из CRM, и сотрудник ещё не подтвердил его повторным приглашением."""
+    return PartnerCrmLink.objects.filter(company=company, status=PartnerCrmStatus.PENDING_CONFIRMATION).exists()
 
 
 def build_request_data(company: Company, user: Any = None) -> Optional[Dict[str, Any]]:
@@ -155,10 +193,11 @@ def build_request_data(company: Company, user: Any = None) -> Optional[Dict[str,
 def request_client_in_crm(company: Company, user: Any = None) -> Optional[Event]:
     """Попросить CRM завести (или найти) клиента для компании партнёра. Вызывать внутри `transaction.atomic()` приглашения.
 
-    `None` — просить не нужно: компания уже сопоставлена клиенту CRM, либо у неё нет контакта с e-mail. Ошибка публикации
+    `None` — просить не нужно: компания уже сопоставлена клиенту CRM (кроме удержанной передачей по ИНН — там повторное
+    приглашение и есть подтверждение, `hold_for_verification`), либо у неё нет контакта с e-mail. Ошибка публикации
     (`data` не по схеме) идёт наружу и откатывает приглашение.
     """
-    if CrmClientMapping.objects.filter(company=company).exists():
+    if CrmClientMapping.objects.filter(company=company).exists() and not _awaits_verification(company):
         return None
     data = build_request_data(company, user)
     if data is None:
@@ -166,7 +205,12 @@ def request_client_in_crm(company: Company, user: Any = None) -> Optional[Event]
     with transaction.atomic():  # внутри приглашения это та же транзакция; отдельно — своя
         PartnerCrmLink.objects.update_or_create(
             company=company,
-            defaults={"status": PartnerCrmStatus.REQUESTED, "requested_at": timezone.now(), "resolved_at": None},
+            defaults={
+                "status": PartnerCrmStatus.REQUESTED,
+                "crm_client_id": None,
+                "requested_at": timezone.now(),
+                "resolved_at": None,
+            },
         )
         return get_bus().publish(event_type_name("partner.client_requested"), data, subject=f"company/{company.pk}")
 
@@ -205,6 +249,36 @@ def _notify_conflict(company: Company, crm_client_id: int, other_company_id: Opt
     )
     params = {"company": company.name, "crm_client_id": crm_client_id}
     code = "partner.crm_conflict"
+    if relationship is not None and relationship.responsible_id:
+        notify_user(
+            user=relationship.responsible,
+            title=title,
+            message=message,
+            type_code="WARNING",
+            event_code=code,
+            event_params=params,
+        )
+    else:
+        notify_platform_admins(title=title, message=message, type_code="WARNING", event_code=code, event_params=params)
+
+
+def _notify_unverified(company: Company, crm_client_id: int) -> None:
+    """Ответственному за партнёра (иначе администраторам): компанию связали с клиентом CRM по ИНН, заявки удержаны."""
+    from notifications.services import notify_platform_admins, notify_user
+
+    relationship = (
+        CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER)
+        .select_related("responsible")
+        .first()
+    )
+    title = f"Партнёр «{company.name}»: связан с клиентом CRM по ИНН, заявки удержаны"
+    message = (
+        f"Передача клиента из CRM сопоставила компанию партнёра с клиентом #{crm_client_id} по ИНН. Заявки партнёра не "
+        "уйдут этому клиенту, пока вы не проверите, что это та же компания: сверьте ИНН в карточке поставщика и у клиента "
+        "в CRM, затем нажмите «Пригласить ещё раз» — это подтверждение."
+    )
+    params = {"company": company.name, "crm_client_id": crm_client_id}
+    code = "partner.crm_unverified"
     if relationship is not None and relationship.responsible_id:
         notify_user(
             user=relationship.responsible,
@@ -396,11 +470,15 @@ def crm_client_state(company: Company) -> Dict[str, Any]:
     """Что показать сотруднику: `linked` (сопоставление есть), `requested` (ждём CRM), `pending_confirmation` (ждём менеджера
     CRM), `conflict`, `none` (не просили)."""
     mapping = CrmClientMapping.objects.filter(company=company).first()
-    if mapping is not None:
-        return {"status": LINKED, "crm_client_id": mapping.crm_client_id}
     link = PartnerCrmLink.objects.filter(company=company).first()
+    if mapping is not None and link is None:
+        return {"status": LINKED, "crm_client_id": mapping.crm_client_id}
     if link is None:
         return {"status": NONE, "crm_client_id": None}
+    if mapping is not None:  # сопоставление есть, но заявки удержаны до подтверждения сотрудником
+        if link.status == PartnerCrmStatus.PENDING_CONFIRMATION:
+            return {"status": PENDING_CONFIRMATION, "crm_client_id": mapping.crm_client_id}
+        return {"status": REQUESTED, "crm_client_id": mapping.crm_client_id}
     if link.status == PartnerCrmStatus.PENDING_CONFIRMATION:
         return {"status": PENDING_CONFIRMATION, "crm_client_id": link.crm_client_id}
     if link.status == PartnerCrmStatus.CONFLICT:

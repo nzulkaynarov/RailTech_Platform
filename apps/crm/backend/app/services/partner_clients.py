@@ -114,6 +114,48 @@ async def _lock(session: AsyncSession, erp_company_id: int) -> None:
     await session.execute(select(func.pg_advisory_xact_lock(key)))
 
 
+async def lock_company(session: AsyncSession, erp_company_id: int) -> None:
+    """Общий порядок блокировок: СНАЧАЛА рекомендательная по компании, ПОТОМ строки.
+
+    Решение менеджера, повторный запрос ERP и завершение передачи клиента в ERP берут блокировки
+    в одном порядке (компания, затем заявка и клиент), иначе два потока ждали бы друг друга.
+    """
+    await _lock(session, erp_company_id)
+
+
+async def close_pending(session: AsyncSession, erp_company_id: int, client_id: int) -> int:
+    """Закрыть ждущие заявки компании ERP: она уже получила клиента другим путём.
+
+    Другие пути: передача клиента из CRM, повторный запрос ERP. Решать нечего: заявка не
+    показывается в карточке, `confirm` и `decline` по ней отвечают «не найдена». Каждая закрытая
+    пишется в журнал аудита. Вызывать под `lock_company`.
+    """
+    rows = await session.scalars(
+        select(PartnerClientRequest)
+        .where(
+            PartnerClientRequest.erp_company_id == erp_company_id,
+            PartnerClientRequest.status == "pending",
+        )
+        .order_by(PartnerClientRequest.id)
+        .with_for_update()
+    )
+    closed = 0
+    for row in rows:
+        row.status = "closed"
+        row.decided_at = datetime.now(UTC)
+        row.close_note = f"закрыта: компания уже сопоставлена с клиентом #{client_id}"
+        await audit.record(
+            session,
+            audit.Actor.system(),
+            "client.partner_request_closed",
+            "client",
+            row.client_id,
+            after={"erp_company_id": erp_company_id, "mapped_client_id": client_id},
+        )
+        closed += 1
+    return closed
+
+
 async def _find(
     session: AsyncSession,
     erp_company_id: int,
@@ -192,6 +234,7 @@ class PartnerClientService:
             await self._create(session, data, event.id)
             return LINKED
         if found.matched_by == "erp_company_id":
+            await close_pending(session, erp_company_id, found.client.id)
             await self._link(
                 session, found.client, data, found.matched_by, event.id, announce=False
             )
@@ -211,7 +254,10 @@ class PartnerClientService:
         if client is None or client.erp_company_id != erp_company_id:
             return False
         client.erp_company_id = None
-        client.erp_handoff_status = None
+        if (
+            client.erp_handoff_status == DONE
+        ):  # `failed`/`pending` — состояние настоящей передачи, не наше
+            client.erp_handoff_status = None
         logger.warning(
             "partner_client_released",
             client_id=client.id,
@@ -268,41 +314,68 @@ class PartnerClientService:
 
     async def confirm(self, who: Principal, client_id: int, request_id: int) -> None:
         """«Это та же компания»: клиент сопоставляется компании ERP, контакты добавляются."""
+        obsolete = False
         async with self._sessions() as session, session.begin():
-            row, data = await self._decidable(session, client_id, request_id)
-            client = await session.get(Client, client_id, with_for_update=True)
-            if client is None:
-                raise NotFoundError("client not found")
-            if client.erp_company_id not in (None, row.erp_company_id):
-                raise ConflictError("client is already linked to another erp company")
-            row.status = "confirmed"
-            row.decided_by_user_id = who.user_id
-            row.decided_at = datetime.now(UTC)
-            await self._link(
-                session, client, data, row.matched_by, None, announce=True, who=who.actor
-            )
+            decided = await self._decidable(session, client_id, request_id)
+            if decided is None:
+                obsolete = (
+                    True  # закрыта внутри: транзакция фиксируется, ответ «не найдена» — после неё
+                )
+            else:
+                row, data = decided
+                client = await session.get(Client, client_id, with_for_update=True)
+                if client is None:
+                    raise NotFoundError("client not found")
+                if client.erp_company_id not in (None, row.erp_company_id):
+                    raise ConflictError("client is already linked to another erp company")
+                row.status = "confirmed"
+                row.decided_by_user_id = who.user_id
+                row.decided_at = datetime.now(UTC)
+                await self._link(
+                    session, client, data, row.matched_by, None, announce=True, who=who.actor
+                )
+        if obsolete:
+            raise NotFoundError("partner request not found")
 
     async def decline(self, who: Principal, client_id: int, request_id: int) -> int:
         """«Нет — завести нового клиента»: найденный не тронут. Возвращает id нового клиента."""
         async with self._sessions() as session, session.begin():
-            row, data = await self._decidable(session, client_id, request_id)
-            row.status = "declined"
-            row.decided_by_user_id = who.user_id
-            row.decided_at = datetime.now(UTC)
-            return await self._create(session, data, None, who=who.actor)
+            decided = await self._decidable(session, client_id, request_id)
+            if decided is not None:
+                row, data = decided
+                row.status = "declined"
+                row.decided_by_user_id = who.user_id
+                row.decided_at = datetime.now(UTC)
+                return await self._create(session, data, None, who=who.actor)
+        raise NotFoundError("partner request not found")
 
     @staticmethod
     async def _decidable(
         session: AsyncSession, client_id: int, request_id: int
-    ) -> tuple[PartnerClientRequest, PartnerClientRequestedV1]:
-        row = await session.get(PartnerClientRequest, request_id, with_for_update=True)
-        if row is None or row.client_id != client_id or row.status != "pending":
+    ) -> tuple[PartnerClientRequest, PartnerClientRequestedV1] | None:
+        """Заявка, которую можно решить. Порядок блокировок общий: компания, затем строка.
+
+        Строку читаем без блокировки, берём рекомендательную по компании и перечитываем под
+        `FOR UPDATE`: к этому моменту заявку могли решить или закрыть. Компания уже получила
+        клиента другим путём — заявку закрываем и возвращаем `None` (вызывающий отвечает «не
+        найдена» после коммита закрытия).
+        """
+        peek = await session.get(PartnerClientRequest, request_id)
+        if peek is None or peek.client_id != client_id:
             raise NotFoundError("partner request not found")
-        await _lock(session, row.erp_company_id)
-        if await session.scalar(
-            select(Client.id).where(Client.erp_company_id == row.erp_company_id).limit(1)
-        ):
-            raise ConflictError("the erp company already has a client")
+        erp_company_id = peek.erp_company_id
+        await _lock(session, erp_company_id)
+        row = await session.get(
+            PartnerClientRequest, request_id, with_for_update=True, populate_existing=True
+        )
+        if row is None or row.status != "pending":
+            raise NotFoundError("partner request not found")
+        holder = await session.scalar(
+            select(Client.id).where(Client.erp_company_id == erp_company_id).limit(1)
+        )
+        if holder is not None:
+            await close_pending(session, erp_company_id, holder)
+            return None
         return row, PartnerClientRequestedV1.model_validate(row.payload)
 
     # --- исходы --------------------------------------------------------------------------------
