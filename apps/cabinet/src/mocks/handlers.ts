@@ -28,7 +28,8 @@ import * as fixtures from './fixtures';
  *
  * Telegram контакта (NOTIFY-1): по умолчанию не привязан и доступен; `POST /me/telegram-link` выдаёт ссылку на 15 минут;
  * в dev бот «привязывает» через три опроса `GET /me/telegram` после выпуска, в тестах — только `setMockTelegram`;
- * `DELETE /me/telegram` отвечает 202 с прежним `linked`, следующий опрос — уже `linked=false` (проекция пришла).
+ * `DELETE /me/telegram` отвечает 202 с прежним `linked`, следующий опрос — уже `linked=false` (проекция пришла);
+ * `POST /me/telegram/test` — 202, чаще раза в минуту — 429 с `Retry-After`, без привязки — 409 `TELEGRAM_NOT_LINKED`.
  */
 const API = '*/api/portal/v1';
 const SESSION_KEY = 'cabinet.mock.session';
@@ -287,6 +288,24 @@ export const handlers = [
       if (tg.linkError) return error(tg.linkError === 'CONTACT_NOT_IN_CRM' ? 422 : 503, tg.linkError);
       tg.pollsUntilLinked = tg.autoLinkAfterPolls;
       return json(fixtures.telegramLink(new Date()), 201);
+    }),
+  ),
+  http.post(
+    `${API}/me/telegram/test`,
+    withSession(({ db }) => {
+      const tg = db.telegram;
+      if (!tg.linked) return error(409, 'TELEGRAM_NOT_LINKED');
+      const now = Date.now();
+      const waitMs = tg.lastTestAt === null ? 0 : tg.lastTestAt + fixtures.TELEGRAM_TEST_INTERVAL_S * 1000 - now;
+      if (waitMs > 0) {
+        return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' } satisfies Schemas['Error'], {
+          status: 429,
+          headers: { 'Retry-After': String(Math.ceil(waitMs / 1000)) },
+        });
+      }
+      tg.lastTestAt = now;
+      tg.testsSent += 1;
+      return json({ linked: tg.linked, available: tg.available } satisfies Schemas['TelegramStatus'], 202);
     }),
   ),
   http.delete(

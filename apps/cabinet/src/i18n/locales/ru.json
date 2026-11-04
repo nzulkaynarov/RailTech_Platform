@@ -305,12 +305,17 @@
       "newLink": "Выпустить новую ссылку",
       "done": "Готово, Telegram подключён",
       "unavailable": "Подключить Telegram можно после того, как менеджер добавит вас в систему, — напишите ему.",
-      "disconnect": "Отключить",
       "confirmTitle": "Отключить Telegram?",
       "consequence": "Уведомления перестанут приходить в Telegram — останутся письма и кабинет. Вход в кабинет из Telegram закроется. Подключить снова можно здесь же.",
       "confirm": "Отключить Telegram",
       "disconnecting": "Отключаем…",
-      "disconnected": "Telegram отключён"
+      "disconnected": "Telegram отключён",
+      "boundLine": "Telegram привязан",
+      "unbind": "Отвязать",
+      "sendTest": "Отправить проверочное сообщение",
+      "sendingTest": "Отправляем…",
+      "testSent": "Сообщение отправлено — проверьте Telegram",
+      "testRetry": "Можно повторить через {{seconds}} с"
     }
   },
   "pages": {
@@ -815,7 +820,8 @@
     "LOGIN_CODE_INVALID": "Код неверный или устарел. Проверьте письмо или отправьте новый код.",
     "LOGIN_CODE_LOCKED": "Пять неверных кодов подряд — этот код больше не действует. Нажмите «Отправить ещё раз», чтобы получить новый.",
     "CONTACT_NOT_IN_CRM": "Подключить Telegram пока нельзя: менеджер ещё не добавил вас в систему. Напишите ему.",
-    "TELEGRAM_LINK_UNAVAILABLE": "Подключение Telegram сейчас недоступно. Попробуйте позже."
+    "TELEGRAM_LINK_UNAVAILABLE": "Подключение Telegram сейчас недоступно. Попробуйте позже.",
+    "TELEGRAM_NOT_LINKED": "Telegram не привязан. Подключите его ещё раз."
   },
   "widgets": {
     "actionRequired": {

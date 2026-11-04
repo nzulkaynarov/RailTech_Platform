@@ -28,6 +28,13 @@
     "overflowPx": 0
   },
   {
+    "screen": "profile-test-sent",
+    "width": 1440,
+    "rulesPassed": 25,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
     "screen": "profile-unlink-confirm",
     "width": 1440,
     "rulesPassed": 25,
@@ -57,6 +64,13 @@
   },
   {
     "screen": "profile-linked",
+    "width": 390,
+    "rulesPassed": 25,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-test-sent",
     "width": 390,
     "rulesPassed": 25,
     "violations": [],

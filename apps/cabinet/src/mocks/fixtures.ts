@@ -760,6 +760,10 @@ export interface TelegramMock {
   unlinkPending: boolean;
   /** Ошибка выпуска ссылки: 422 `CONTACT_NOT_IN_CRM` или 503 `TELEGRAM_LINK_UNAVAILABLE`. */
   linkError: 'CONTACT_NOT_IN_CRM' | 'TELEGRAM_LINK_UNAVAILABLE' | null;
+  /** Когда последний раз просили проверочное сообщение (мс): чаще раза в минуту — 429 с `Retry-After`. */
+  lastTestAt: number | null;
+  /** Сколько проверочных сообщений «отправлено» (для тестов). */
+  testsSent: number;
 }
 
 export function telegramMock(): TelegramMock {
@@ -770,11 +774,15 @@ export function telegramMock(): TelegramMock {
     pollsUntilLinked: null,
     unlinkPending: false,
     linkError: null,
+    lastTestAt: null,
+    testsSent: 0,
   };
 }
 
 /** Токен — формат контракта (`tg_` + 48 символов base64url), но не настоящий: бот `example_bot` вымышленный. */
 export const TELEGRAM_LINK_TTL_MS = 15 * 60 * 1000;
+/** Прореживание проверочного сообщения, как в ERP: не чаще раза в минуту на контакт. */
+export const TELEGRAM_TEST_INTERVAL_S = 60;
 export const MOCK_TELEGRAM_START = `tg_${'example-not-a-real-token'.padEnd(48, '_')}`;
 export function telegramLink(now: Date): Schemas['TelegramLink'] {
   return {

@@ -161,6 +161,12 @@ export const getTelegramStatus = () => portalRequest<TelegramStatus>('/me/telegr
 export const createTelegramLink = () => portalRequest<TelegramLink>('/me/telegram-link', { method: 'POST', body: {} });
 /** Отключить Telegram: ERP просит CRM отвязать (202); `linked` станет `false`, когда придёт проекция. */
 export const unlinkTelegram = () => portalRequest<TelegramStatus>('/me/telegram', { method: 'DELETE' });
+/**
+ * Проверочное сообщение в привязанный Telegram: ERP просит бот CRM написать контакту (202). Не чаще раза в минуту —
+ * иначе 429 с `Retry-After` (`PortalApiError.retryAfter`); не привязан — 409 `TELEGRAM_NOT_LINKED`.
+ */
+export const sendTelegramTest = () =>
+  portalRequest<TelegramStatus>('/me/telegram/test', { method: 'POST', body: {} });
 
 // --- разделы кабинета (M2-CAB-02) ----------------------------------------------------------
 

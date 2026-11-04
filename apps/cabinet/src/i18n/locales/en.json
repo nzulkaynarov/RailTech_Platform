@@ -305,12 +305,17 @@
       "newLink": "Get a new link",
       "done": "Done, Telegram is connected",
       "unavailable": "You can connect Telegram once your manager adds you to the system — please write to them.",
-      "disconnect": "Disconnect",
       "confirmTitle": "Disconnect Telegram?",
       "consequence": "Notifications will stop arriving in Telegram — email and the account remain. Signing in to the account from Telegram will be closed. You can connect again right here.",
       "confirm": "Disconnect Telegram",
       "disconnecting": "Disconnecting…",
-      "disconnected": "Telegram disconnected"
+      "disconnected": "Telegram disconnected",
+      "boundLine": "Telegram is linked",
+      "unbind": "Unlink",
+      "sendTest": "Send a test message",
+      "sendingTest": "Sending…",
+      "testSent": "Message sent — check Telegram",
+      "testRetry": "You can retry in {{seconds}} s"
     }
   },
   "pages": {
@@ -800,7 +805,8 @@
     "LOGIN_CODE_INVALID": "The code is wrong or expired. Check the email or send a new code.",
     "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one.",
     "CONTACT_NOT_IN_CRM": "Telegram cannot be connected yet: your manager has not added you to the system. Please write to them.",
-    "TELEGRAM_LINK_UNAVAILABLE": "Connecting Telegram is not available right now. Please try again later."
+    "TELEGRAM_LINK_UNAVAILABLE": "Connecting Telegram is not available right now. Please try again later.",
+    "TELEGRAM_NOT_LINKED": "Telegram is not linked. Please connect it again."
   },
   "widgets": {
     "actionRequired": {

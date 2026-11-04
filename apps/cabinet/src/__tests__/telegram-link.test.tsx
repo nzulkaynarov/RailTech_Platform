@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { axe } from 'vitest-axe';
 
-import { TELEGRAM_BANNER_SNOOZE_KEY, TELEGRAM_BANNER_SNOOZE_MS } from '@/lib/telegramBanner';
+import { TELEGRAM_BANNER_SNOOZE_KEY, TELEGRAM_BANNER_SNOOZE_MS, telegramStepState } from '@/onboarding/telegramStep';
 import { MOCK_TELEGRAM_START, TELEGRAM_LINK_TTL_MS } from '@/mocks/fixtures';
 import { setMockTelegram } from '@/mocks/handlers';
 import { portalServer } from '@/mocks/server';
@@ -116,7 +116,7 @@ describe('Профиль → «Уведомления»', () => {
     setMockTelegram({ linked: true }); // бот привязал Telegram, проекция пришла в ERP
     expect(await within(card).findByText('Telegram подключён')).toBeInTheDocument();
     expect(within(card).queryByRole('img', { name: 'QR-код ссылки на бот' })).not.toBeInTheDocument();
-    expect(within(card).getByRole('button', { name: 'Отключить' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Отвязать' })).toBeInTheDocument();
   });
 
   it('ссылка истекла — «Выпустить новую ссылку»', async () => {
@@ -145,14 +145,14 @@ describe('Профиль → «Уведомления»', () => {
     expect(webApp.openTelegramLink).toHaveBeenCalledWith(`https://t.me/example_bot?start=${MOCK_TELEGRAM_START}`);
   });
 
-  it('«Отключить» — подтверждение по месту с «Что произойдёт», затем DELETE и опрос до «не подключён»', async () => {
+  it('«Отвязать» — подтверждение по месту с «Что произойдёт», затем DELETE и опрос до «не подключён»', async () => {
     setMockTelegram({ linked: true });
     signedIn();
     const user = userEvent.setup();
     const calls = recordTelegramCalls();
     const { container } = renderApp('/profile');
     const card = await notificationsCard();
-    await user.click(await within(card).findByRole('button', { name: 'Отключить' }));
+    await user.click(await within(card).findByRole('button', { name: 'Отвязать' }));
 
     const confirm = within(card).getByRole('region', { name: 'Отключить Telegram?' });
     expect(within(confirm).getByRole('note')).toHaveTextContent('Вход в кабинет из Telegram закроется');
@@ -172,9 +172,9 @@ describe('Профиль → «Уведомления»', () => {
     const calls = recordTelegramCalls();
     renderApp('/profile');
     const card = await notificationsCard();
-    await user.click(await within(card).findByRole('button', { name: 'Отключить' }));
+    await user.click(await within(card).findByRole('button', { name: 'Отвязать' }));
     await user.click(within(card).getByRole('button', { name: 'Отмена' }));
-    expect(within(card).getByRole('button', { name: 'Отключить' })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Отвязать' })).toBeInTheDocument();
     expect(calls).not.toContain('DELETE /me/telegram');
   });
 
@@ -200,6 +200,76 @@ describe('Профиль → «Уведомления»', () => {
     await user.click(await within(card).findByRole('button', { name: 'Подключить Telegram' }));
     expect(await screen.findByText('Подключение Telegram сейчас недоступно. Попробуйте позже.')).toBeInTheDocument();
     expect(within(card).queryByRole('img', { name: 'QR-код ссылки на бот' })).not.toBeInTheDocument();
+  });
+});
+
+describe('проверочное сообщение в Telegram', () => {
+  it('только при привязанном Telegram; POST уходит, ответ — «проверьте Telegram»', async () => {
+    setMockTelegram({ linked: true });
+    signedIn();
+    const user = userEvent.setup();
+    const calls = recordTelegramCalls();
+    const { container } = renderApp('/profile');
+    const card = await notificationsCard();
+    expect(await within(card).findByText('Telegram привязан')).toBeInTheDocument();
+    await user.click(within(card).getByRole('button', { name: 'Отправить проверочное сообщение' }));
+    expect(await screen.findByText('Сообщение отправлено — проверьте Telegram')).toBeInTheDocument();
+    expect(calls).toContain('POST /me/telegram/test');
+    expect((await axe(container)).violations).toEqual([]);
+  });
+
+  it('не привязан — кнопки нет', async () => {
+    signedIn();
+    renderApp('/profile');
+    const card = await notificationsCard();
+    await within(card).findByText('Telegram не подключён');
+    expect(within(card).queryByRole('button', { name: 'Отправить проверочное сообщение' })).not.toBeInTheDocument();
+  });
+
+  it('чаще раза в минуту — «через N с», кнопка недоступна до истечения', async () => {
+    setMockTelegram({ linked: true, lastTestAt: Date.now() - 20_000 });
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/profile');
+    const card = await notificationsCard();
+    const button = await within(card).findByRole('button', { name: 'Отправить проверочное сообщение' });
+    await user.click(button);
+    expect(await within(card).findByText('Можно повторить через 40 с')).toBeInTheDocument();
+    expect(button).toBeDisabled();
+
+    vi.setSystemTime(Date.now() + 41_000);
+    await vi.waitFor(() => expect(button).toBeEnabled(), { timeout: 3000 });
+    expect(within(card).queryByText(/Можно повторить через/)).not.toBeInTheDocument();
+  });
+
+  it('409 TELEGRAM_NOT_LINKED — статус перечитывается', async () => {
+    setMockTelegram({ linked: true });
+    signedIn();
+    const user = userEvent.setup();
+    renderApp('/profile');
+    const card = await notificationsCard();
+    const button = await within(card).findByRole('button', { name: 'Отправить проверочное сообщение' });
+    setMockTelegram({ linked: false }); // Telegram отвязали в другом окне — проекция уже пришла
+    await user.click(button);
+    expect(await screen.findByText('Telegram не привязан. Подключите его ещё раз.')).toBeInTheDocument();
+    expect(await within(card).findByText('Telegram не подключён')).toBeInTheDocument();
+  });
+});
+
+describe('шаг «Подключить Telegram» (логика без вида)', () => {
+  const status = (linked: boolean, available = true) => ({ linked, available });
+
+  it.each([
+    ['web', false, status(false), 'todo'],
+    ['web', false, status(true), 'done'],
+    ['web', true, status(true), 'done'],
+    ['web', true, status(false), 'snoozed'],
+    ['web', true, undefined, 'snoozed'],
+    ['web', false, undefined, 'loading'],
+    ['web', false, status(false, false), 'hidden'],
+    ['miniapp', false, status(false), 'hidden'],
+  ] as const)('%s, «позже»=%s, статус %j → %s', (mode, snoozed, st, expected) => {
+    expect(telegramStepState({ mode, snoozed, status: st })).toBe(expected);
   });
 });
 

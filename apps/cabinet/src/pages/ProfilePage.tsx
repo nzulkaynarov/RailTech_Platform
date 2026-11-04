@@ -7,7 +7,7 @@ import { toast } from '@/lib/toast';
 import { apiErrorKey } from '@/api/errors';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { PageHeader } from '@/components/PageHeader';
-import type { ConnectTelegramState } from '@/components/TelegramBanner';
+import type { ConnectTelegramState } from '@/onboarding/telegramStep';
 import { TelegramNotifications } from '@/components/TelegramNotifications';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

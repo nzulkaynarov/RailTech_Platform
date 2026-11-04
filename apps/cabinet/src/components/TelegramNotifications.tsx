@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { BellRing, Check, Send } from 'lucide-react';
+import { BellRing, Check, MessageSquareText, Send } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
 import { apiErrorKey } from '@/api/errors';
+import { isPortalApiError } from '@/api/portal';
 import type { TelegramLink } from '@/api/portal';
-import { useCreateTelegramLink, useTelegramStatus, useUnlinkTelegram } from '@/api/queries';
+import { useCreateTelegramLink, useSendTelegramTest, useTelegramStatus, useUnlinkTelegram } from '@/api/queries';
 import { ConsequenceCallout } from '@/components/ConsequenceCallout';
 import { TelegramLinkButton } from '@/components/TelegramLinkButton';
 import { Button } from '@/components/ui/button';
@@ -24,7 +25,9 @@ const EXPIRY_TICK_MS = 1000;
  *
  * «Подключить» выпускает одноразовую ссылку на бот (15 минут): на вебе — QR и кнопка, в Mini App — только кнопка.
  * Пока ссылка жива и экран открыт, статус опрашивается — привязку делает бот CRM, проекция приходит в ERP за секунды.
- * «Отключить» — подтверждение по месту с «Что произойдёт»; статус меняется, когда CRM отвяжет Telegram (тоже опрос).
+ * Привязан: строка «Telegram привязан · Отвязать» и «Отправить проверочное сообщение» (бот CRM пишет контакту; не чаще
+ * раза в минуту — на 429 кнопка ждёт `Retry-After`). «Отвязать» — подтверждение по месту с «Что произойдёт»; статус
+ * меняется, когда CRM отвяжет Telegram (тоже опрос).
  * `autoStart` — пришли с плашки «Подключить»: ссылка выпускается сразу.
  */
 export function TelegramNotifications({ autoStart = false }: { autoStart?: boolean }) {
@@ -121,9 +124,7 @@ export function TelegramNotifications({ autoStart = false }: { autoStart?: boole
                   </div>
                 </section>
               ) : (
-                <Button variant="outline" className="self-start" onClick={() => setConfirming(true)}>
-                  {t('profile.notifications.disconnect')}
-                </Button>
+                <LinkedActions onUnbind={() => setConfirming(true)} onNotLinked={() => void status.refetch()} />
               )
             ) : !status.data?.available ? (
               <p className="text-sm text-muted-foreground">{t('profile.notifications.unavailable')}</p>
@@ -205,6 +206,61 @@ function LinkPanel({ link, showQr }: { link: TelegramLink; showQr: boolean }) {
         <p className="text-xs text-muted-foreground" aria-live="polite">
           {t('profile.notifications.waiting')}
         </p>
+      </div>
+    </div>
+  );
+}
+
+/** Раз в секунду, пока идёт отсчёт «можно повторить через N с». */
+const RETRY_TICK_MS = 1000;
+
+/** Привязанный Telegram: «Telegram привязан · Отвязать» и проверочное сообщение с отсчётом после 429. */
+function LinkedActions({ onUnbind, onNotLinked }: { onUnbind: () => void; onNotLinked: () => void }) {
+  const { t } = useTranslation();
+  const send = useSendTelegramTest();
+  const [retryUntil, setRetryUntil] = useState<number | null>(null);
+  const now = useNow(retryUntil !== null ? RETRY_TICK_MS : 0);
+  const waitSeconds = retryUntil !== null ? Math.ceil((retryUntil - now) / 1000) : 0;
+  const waiting = waitSeconds > 0;
+  // Отсчёт кончился — секундный таймер больше не нужен (сброс по таймауту, а не эффектом).
+  const resetTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  const onSend = () =>
+    send.mutate(undefined, {
+      onSuccess: () => toast.success(t('profile.notifications.testSent')),
+      onError: (error) => {
+        if (isPortalApiError(error, 429)) {
+          const waitMs = (error.retryAfter ?? 60) * 1000;
+          setRetryUntil(Date.now() + waitMs);
+          window.clearTimeout(resetTimer.current);
+          resetTimer.current = window.setTimeout(() => setRetryUntil(null), waitMs);
+          return;
+        }
+        if (isPortalApiError(error, 409)) onNotLinked();
+        toast.error(t(apiErrorKey(error)));
+      },
+    });
+
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="flex flex-wrap items-center gap-x-1.5 text-sm">
+        <span>{t('profile.notifications.boundLine')}</span>
+        <span aria-hidden="true">·</span>
+        <Button variant="link" className="h-auto p-0" onClick={onUnbind}>
+          {t('profile.notifications.unbind')}
+        </Button>
+      </p>
+      <div className="flex flex-col gap-1.5">
+        <Button variant="outline" className="self-start" onClick={onSend} disabled={send.isPending || waiting}>
+          <MessageSquareText aria-hidden="true" />
+          {send.isPending ? t('profile.notifications.sendingTest') : t('profile.notifications.sendTest')}
+        </Button>
+        {waiting ? (
+          <p className="text-xs text-muted-foreground" aria-live="polite">
+            {t('profile.notifications.testRetry', { seconds: waitSeconds })}
+          </p>
+        ) : null}
       </div>
     </div>
   );

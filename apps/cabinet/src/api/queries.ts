@@ -76,6 +76,8 @@ export const useTelegramStatus = ({ enabled = true, poll = false }: { enabled?: 
     refetchInterval: poll ? TELEGRAM_POLL_MS : false,
   });
 export const useCreateTelegramLink = () => useMutation({ mutationFn: portal.createTelegramLink });
+/** Проверочное сообщение в Telegram; 409 `TELEGRAM_NOT_LINKED` — статус перечитывается (вызывающий решает по ошибке). */
+export const useSendTelegramTest = () => useMutation({ mutationFn: portal.sendTelegramTest });
 export const useUnlinkTelegram = () =>
   useInvalidatingMutation(portal.unlinkTelegram, [], (status, client) => client.setQueryData(keys.telegram, status));
 
