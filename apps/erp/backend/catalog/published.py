@@ -184,22 +184,31 @@ def _warranty(product, company_default: int | None) -> dict | None:
     return {"months": months, "terms": product.warranty_terms or ""}
 
 
-def client_documents(product) -> list[dict]:
-    """Документы карточки для клиента: «видно клиенту» и действующие (пусто в «действует до» — бессрочно).
+def client_visible_documents():
+    """Документы, которые видит клиент: «видно клиенту» и действующие (пусто в «действует до» — бессрочно).
 
-    Как в 1С:УТ «Сертификаты номенклатуры»: на печать идут действующие. Порядок — как в справочнике видов, затем по id.
-    В ответе нет файла, имени загруженного файла и размера: имя при скачивании строится из названия документа.
+    Единственное правило видимости: им пользуются и список `documents` карточки (`client_documents`), и выдача файла
+    (`portal.services.catalog_documents`). «Сегодня» — по `TIME_ZONE` (Asia/Tashkent): документ со сроком «до 4 ноября»
+    действует весь день 4 ноября по Ташкенту, а не по UTC.
     """
     from django.db.models import Q
 
-    from .models import DocumentKind, TechDocument
+    from .models import TechDocument
 
-    today = timezone.localdate()
-    documents = list(
-        TechDocument.objects.filter(product_id=product.pk, client_visible=True)
-        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-        .order_by("id")
+    return TechDocument.objects.filter(client_visible=True).filter(
+        Q(valid_until__isnull=True) | Q(valid_until__gte=timezone.localdate())
     )
+
+
+def client_documents(product) -> list[dict]:
+    """Документы карточки для клиента (`client_visible_documents` этой карточки): без файла, имени загруженного файла и размера.
+
+    Как в 1С:УТ «Сертификаты номенклатуры»: на печать идут действующие. Порядок — как в справочнике видов, затем по id.
+    Имя при скачивании строится из названия документа.
+    """
+    from .models import DocumentKind
+
+    documents = list(client_visible_documents().filter(product_id=product.pk).order_by("id"))
     kinds = {kind.code: kind for kind in DocumentKind.objects.filter(code__in={doc.kind for doc in documents})}
     documents.sort(key=lambda doc: (kinds[doc.kind].sort_order if doc.kind in kinds else 10**6, doc.pk))
     return [

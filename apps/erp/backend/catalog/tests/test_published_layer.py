@@ -494,6 +494,10 @@ def test_no_route_leaks_internal_layer_to_anonymous_or_client(client_world, who,
     monkeypatch.setattr(APIView, "check_throttles", lambda self, request: None)
     client = request.getfixturevalue("portal_client") if who == "portal" else APIClient()
     client.raise_request_exception = False
+    if who == "portal":
+        # Сессия портала действительна: иначе каждый маршрут ответил бы 401 и обход ничего бы не проверял.
+        for path in ("/me", "/catalog", f"/catalog/{values['pk']}", "/quotes", "/documents"):
+            assert client.get(f"/api/portal/v1{path}").status_code == 200, f"сессия портала не работает: {path}"
 
     checked = 0
     server_errors = []

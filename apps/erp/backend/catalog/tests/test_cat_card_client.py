@@ -34,8 +34,12 @@ pytestmark = pytest.mark.django_db
 
 API = "/api/portal/v1"
 PDF = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
-TODAY = timezone.localdate()
 DAY = datetime.timedelta(days=1)
+
+
+def today():
+    """«Сегодня» по `TIME_ZONE` (Asia/Tashkent) — как правило видимости документов; не в момент импорта модуля."""
+    return timezone.localdate()
 
 
 # Мир опубликованного слоя и сессия портала — фикстуры `test_published_layer` и `portal/tests/conftest`; здесь они под своими
@@ -66,15 +70,25 @@ def country(code, name):
     return Country.objects.get_or_create(code=code, defaults={"name": name, "alpha2": code})[0]
 
 
-def document(product, *, title="Сертификат соответствия", kind="certificate", visible=True, valid_until=None, **fields):
+def document(
+    product,
+    *,
+    title="Сертификат соответствия",
+    kind="certificate",
+    visible=True,
+    valid_until=None,
+    stored_name="scan.pdf",
+    content=PDF,
+    **fields,
+):
     DocumentKind.objects.get_or_create(code=kind, defaults={"name": f"Вид {kind}", "has_validity": True})
     fields.setdefault("original_name", "scan.pdf")
     fields.setdefault("content_type", "application/pdf")
     doc = TechDocument(
         kind=kind, title=title, client_visible=visible, valid_until=valid_until, product=product, **fields
     )
-    doc.file.save("scan.pdf", ContentFile(PDF), save=False)
-    doc.size_bytes = len(PDF)
+    doc.file.save(stored_name, ContentFile(content), save=False)
+    doc.size_bytes = len(content)
     doc.save()
     return doc
 
@@ -180,13 +194,13 @@ def test_project_many_does_not_query_per_card(card_world, django_assert_max_num_
 
 def test_detail_shows_only_visible_and_valid_documents(certified, portal):
     shown = document(certified, title="Сертификат ТР", number="РОСС RU.0001", issued_by="Орган по сертификации")
-    shown.issued_at = TODAY - 30 * DAY
-    shown.valid_until = TODAY + 30 * DAY
+    shown.issued_at = today() - 30 * DAY
+    shown.valid_until = today() + 30 * DAY
     shown.save()
     forever = document(certified, title="Паспорт изделия", kind="passport", number="", valid_until=None)
-    last_day = document(certified, title="Декларация (последний день)", kind="declaration", valid_until=TODAY)
+    last_day = document(certified, title="Декларация (последний день)", kind="declaration", valid_until=today())
     document(certified, title="Скрытый", visible=False)
-    document(certified, title="Просроченный", valid_until=TODAY - DAY)
+    document(certified, title="Просроченный", valid_until=today() - DAY)
 
     body = detail(portal, certified).json()
 
@@ -198,8 +212,8 @@ def test_detail_shows_only_visible_and_valid_documents(certified, portal):
         "title": "Сертификат ТР",
         "number": "РОСС RU.0001",
         "issued_by": "Орган по сертификации",
-        "issued_at": (TODAY - 30 * DAY).isoformat(),
-        "valid_until": (TODAY + 30 * DAY).isoformat(),
+        "issued_at": (today() - 30 * DAY).isoformat(),
+        "valid_until": (today() + 30 * DAY).isoformat(),
     }
     assert next(d for d in body["documents"] if d["id"] == forever.pk)["valid_until"] is None
 
@@ -319,8 +333,8 @@ def test_hidden_document_is_404(certified, portal):
 
 
 def test_expired_document_is_404_and_last_valid_day_is_not(certified, portal):
-    _not_found(portal, file_url(certified, document(certified, valid_until=TODAY - DAY)))
-    assert portal.get(file_url(certified, document(certified, valid_until=TODAY))).status_code == 200
+    _not_found(portal, file_url(certified, document(certified, valid_until=today() - DAY)))
+    assert portal.get(file_url(certified, document(certified, valid_until=today()))).status_code == 200
 
 
 def test_document_of_another_card_is_404(certified, card_world, portal):
@@ -361,7 +375,7 @@ def test_negative_requests_leave_no_audit_trail(certified, portal):
     from crm.models import ActivityLog
 
     portal.get(file_url(certified, document(certified, visible=False)))
-    portal.get(file_url(certified, document(certified, valid_until=TODAY - DAY)))
+    portal.get(file_url(certified, document(certified, valid_until=today() - DAY)))
     assert not ActivityLog.objects.filter(event_code="document.downloaded_by_client").exists()
 
 
@@ -391,3 +405,59 @@ def readonly_portal_client(card_world, request):
     client.cookies[settings.PORTAL_SESSION_COOKIE_NAME] = session.raw_token
     client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
     return client
+
+
+# ── 4. Граница срока по часовому поясу и враждебные заголовки ───────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("moment", "valid"),
+    [
+        ("2026-11-04T18:30:00Z", True),  # 23:30 4 ноября по Ташкенту: «до 4 ноября» ещё действует
+        ("2026-11-04T19:30:00Z", False),  # 00:30 5 ноября по Ташкенту: срок вышел (по UTC всё ещё 4-е)
+    ],
+)
+def test_validity_ends_at_midnight_of_the_business_time_zone(certified, portal, monkeypatch, moment, valid):
+    doc = document(certified, valid_until=datetime.date(2026, 11, 4))
+    # freezegun в образе тестов нет: `timezone.localdate()` берёт момент из `django.utils.timezone.now`, его и подменяем.
+    frozen = datetime.datetime.fromisoformat(moment.replace("Z", "+00:00"))
+    monkeypatch.setattr("django.utils.timezone.now", lambda: frozen)
+    listed = [d["id"] for d in detail(portal, certified).json()["documents"]]
+    status = portal.get(file_url(certified, doc)).status_code
+    assert (doc.pk in listed) is valid
+    assert status == (200 if valid else 404)
+
+
+def test_content_disposition_survives_a_hostile_title(certified, portal):
+    title = 'Серт "A"; filename=evil.exe\r\nX-Injected: 1\r\nSet-Cookie: a=b'
+    doc = document(certified, title=title)
+
+    response = portal.get(file_url(certified, doc))
+
+    assert response.status_code == 200
+    disposition = response["Content-Disposition"]
+    assert disposition.startswith("attachment;") and disposition.count("attachment") == 1
+    assert "\r" not in disposition and "\n" not in disposition
+    assert "; filename=evil" not in disposition, "кавычки и «;» названия не открывают второй параметр заголовка"
+    assert "X-Injected" not in response and "Set-Cookie" not in response
+    assert all("\r" not in value and "\n" not in value for _name, value in response.items())
+
+
+@pytest.mark.parametrize(
+    ("stored_name", "content", "content_type"),
+    [
+        ("x.svg", b'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>', "image/svg+xml"),
+        ("x.html", b"<html><script>alert(1)</script></html>", "text/html"),
+    ],
+)
+def test_active_content_is_an_attachment_in_a_sandbox(certified, portal, stored_name, content, content_type):
+    """Файл вносит сотрудник: SVG или HTML не должен исполняться на домене кабинета, даже по прямой ссылке."""
+    doc = document(certified, stored_name=stored_name, content=content, content_type=content_type)
+
+    response = portal.get(file_url(certified, doc))
+
+    assert response.status_code == 200
+    assert response["Content-Disposition"].startswith("attachment;")
+    assert response["X-Content-Type-Options"] == "nosniff"
+    assert "sandbox" in response["Content-Security-Policy"]
+    assert "default-src 'none'" in response["Content-Security-Policy"]

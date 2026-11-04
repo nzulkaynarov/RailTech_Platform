@@ -14,11 +14,8 @@ import mimetypes
 import os
 import re
 
-from django.db.models import Q
-from django.utils import timezone
-
 from catalog.models import TechDocument
-from catalog.published import published_products
+from catalog.published import client_visible_documents, published_products
 from core.file_streaming import storage_file_response
 
 _UNSAFE_FILENAME = re.compile(r"[^\w\-.]+", flags=re.UNICODE)
@@ -29,12 +26,7 @@ def find_client_document(product_id: int, document_id: int) -> TechDocument | No
     """Документ опубликованной карточки, видимый клиенту и действующий; иначе `None`."""
     if not published_products().filter(pk=product_id).exists():
         return None
-    today = timezone.localdate()
-    return (
-        TechDocument.objects.filter(pk=document_id, product_id=product_id, client_visible=True)
-        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
-        .first()
-    )
+    return client_visible_documents().filter(pk=document_id, product_id=product_id).first()
 
 
 def download_name(document: TechDocument) -> str:
@@ -64,6 +56,9 @@ def file_response(document: TechDocument):
         return None
     response["Cache-Control"] = "private, no-store"
     response["X-Content-Type-Options"] = "nosniff"
+    # Файл пишет сотрудник: SVG или HTML из хранилища не должен выполнять скрипт на домене кабинета, даже если его откроют
+    # по прямой ссылке (как `serve_public_media`).
+    response["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; sandbox"
     return response
 
 
