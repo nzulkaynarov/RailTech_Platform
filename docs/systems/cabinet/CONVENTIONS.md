@@ -49,7 +49,7 @@ Telegram Web App SDK (initData, themeParams, start_param, MainButton/BackButton 
 - Версии — как в `apps/erp/frontend` (`package.json`): React 18.3, Vite 7, Tailwind 4.3, React Query 5, i18next 25, TypeScript 5.6, Vitest 4; плюс react-router-dom 7, MSW 2, vitest-axe. shadcn-примитивы `src/components/ui/` скопированы из ERP; правки — только удалённые классы `tw-animate-css` (`animate-in`, `fade-*`, `slide-*`, `zoom-*`: плагин не подключён, классы ничего не делали) и пульс скелетона под `motion-safe:` (CAB-FIX-3).
 - Токены дизайна — копия `packages/ui-tokens/dist/cabinet.css` (тема `shadcnThemes.cabinet`, светлая и `.dark`) в `src/styles/tokens.generated.css` (`make tokens` из корня пишет её сама; `make check` сверяет); цвета правятся только в `tokens.json`, в `src/index.css` их нет (CAB-FIX-2). В Mini App цвета `themeParams` Telegram ложатся на те же переменные (`src/telegram/theme.ts`), не на компоненты, и только если с ними все пары проходят AA (текст ≥ 4.5:1, значки и кольцо фокуса ≥ 3:1; иначе остаётся наш токен — CAB-FIX-3).
 - Глобальное состояние минимально: сессия (`GET /me`: контакт, компания, `can_act`), язык, тема. Данные — только React Query над портальным API.
-- Маршрутизатор — react-router 7 (`src/app/routes.tsx`). Deep-link Mini App: `start_param=deal_<id>` → `/deals/<id>`, `quote_<id>` → `/quotes/<id>` (`src/telegram/start-param.ts`), разрешается до создания маршрутизатора; на вложенных экранах — системная «Назад» Telegram.
+- Маршрутизатор — react-router 7 (`src/app/routes.tsx`). Deep-link Mini App: `start_param=deal_<id>` и `delivery_<id>` (id сделки) → `/deals/<id>`, `quote_<id>` → `/quotes/<id>`, `invoice_<id>` → `/invoices?focus=<id>`, `act_<id>` → `/acts?focus=<id>`, `product_<id>` → `/my-products?card=<id>`, `products` → `/my-products`, `chat` → `/messages` (`src/telegram/start-param.ts`, NOTIFY-2; те же адреса, что ссылки уведомлений), разрешается до создания маршрутизатора; `?focus=<id>` выделяет и прокручивает строку списка (`ResponsiveList`); на вложенных экранах — системная «Назад» Telegram.
 - Деплой: сервис `cabinet-web` (Vite → nginx, `/health`) за Caddy на `cabinet.localhost` / `cabinet.railtech.uz`; `/api/portal/*` Caddy ведёт с того же домена на ERP (cookie same-origin, CORS не нужен).
 
 ## 4. Экраны (ARCHITECTURE §5, M2-CAB-02) и их происхождение из B2B (тег `b2b-final`, `legacy/b2b/frontend/src`; история, не рабочий источник)
@@ -110,7 +110,7 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 - Входа для своей компании и для поставщика без отношения: в Cabinet входят компании с типом CLIENT (K0, решение владельца 2026-11-01) и партнёры с действующим отношением «партнёр» (ADR-0022); проверяет ERP — `docs/systems/erp/CONVENTIONS.md`, «Защита портала». Cabinet это не проверяет и ничего для этого не умеет: 401 на `/me` — «войдите заново».
 - Страниц бэк-офиса и администратора: `Dashboard`, `DealsPage`, `DealQuotePage`, `QuoteBuilder`, `Admin*`, `PlatformAdminShell`, `PaymentsPage` как регистр, `CounterpartiesPage`, `CatalogImportPage`, `HSDirectoryPage`, `MyProductsPage`.
 - Чата и поддержки (`ChatDrawer`, `SupportButton`, `Message`) — их заменяет бот CRM.
-- Уведомлений в приложении как системы (`NotificationCenter` B2B) — сообщает бот и письма ERP; в Cabinet — только статусы на экранах (решение об ином — ADR).
+- `NotificationCenter` B2B в прежнем виде. Колокольчик кабинета — по ADR-0023 (раздел «Колокольчик» ниже): ленту, прочитанность и канал ведёт ERP, Cabinet только показывает.
 - Zustand-сторов B2B `userStore`/`authStore`/`cartStore`/`currencyStore` в прежнем виде: сессия портала — cookie и `GET /me`, валюта — из API.
 
 ## 8. Self-check перед PR
@@ -146,3 +146,13 @@ Mini App локально: эмуляция через `#tgWebAppData=…` ил�
 (`dry_run`) → «Загрузить» → отчёт; ошибки строк — `partner.issues.<КОД>` с полем и значением. Меню строит `navFor(modules, roles)`:
 при обеих ролях — разделы «Покупаю / Поставляю / Компания» (`NavItem.group`), при одной роли меню плоское, как раньше. Партнёр без
 клиентской роли попадает в «Мои товары» первым разделом. Снимки — `npm run test:e2e:my-products` (мок MSW, 1440 и 390, axe).
+
+## Колокольчик (NOTIFY-2, ADR-0023 п. 2)
+
+Кнопка с бейджем в шапке веба (`components/shell/NotificationBell.tsx`): число — `/me.notifications_unread`; лента — шторка
+справа (`Sheet`), страница не меняется. Лента грузится при открытии (`GET /notifications`, страницы `before_id`), счётчик
+опрашивается через `/me` раз в минуту и только при видимой вкладке (`hooks/useNotifications.ts`, `refetchIntervalInBackground:
+false`); ленту отдельно не опрашиваем. Клик — `POST /notifications/read {ids}` и переход по `link` (только путь кабинета,
+`lib/notifications.ts:safeNotificationLink`); «Прочитать все» — `{all: true}`; ответ ERP — новый счётчик в кэш `/me`. Текст —
+`notifications.text.<text_key>` с параметрами (суммы и даты — `lib/format.ts`), незнакомый вид — общий текст. В Mini App шапки нет,
+поэтому колокольчика тоже нет: там уведомления приносит бот. Снимки — `npm run test:e2e:notify-2` (мок MSW, 1440 и 390, axe).

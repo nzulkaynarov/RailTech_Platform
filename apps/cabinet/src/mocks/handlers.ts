@@ -87,6 +87,8 @@ function createDb(dataset: Dataset = 'demo') {
     quoteCodes: new Map<number, string>(),
     /** Загруженные файлы (`/uploads`): upload_id → имя; приёмка акта проверяет, что скан загружен. */
     uploads: new Map<string, string>(),
+    /** Колокольчик (NOTIFY-2): лента контакта; у пустой компании — пусто (пустое состояние шторки). */
+    notifications: empty ? [] : structuredClone(fixtures.notifications),
     /** «Мои товары» партнёра (PART-2): карточки с ценой компании и задачи загрузки прайса. */
     partnerProducts: empty ? [] : partner.partnerProducts(),
     priceTasks: new Map<string, ReturnType<typeof partner.newTask>>(),
@@ -121,6 +123,7 @@ function me(session: MockSession): Schemas['Me'] {
   return {
     ...fixtures.meFor(contactFor(session.role), session.auth_method, session.access),
     company: dbOf(session).company,
+    notifications_unread: dbOf(session).notifications.filter((item) => item.read_at === null).length,
   };
 }
 
@@ -262,6 +265,34 @@ export const handlers = [
     }),
   ),
   http.get(`${API}/me`, withSession(({ session }) => json(me(session)))),
+
+  // --- колокольчик (NOTIFY-2): по убыванию id, `before_id` + `limit`; «прочитано» — свои id или все ------------
+  http.get(
+    `${API}/notifications`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const limit = Number(url.searchParams.get('limit') ?? 20);
+      const before = Number(url.searchParams.get('before_id') ?? 0);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 50) return error(422, 'VALIDATION_ERROR');
+      const rest = db.notifications.filter((item) => !before || item.id < before).sort((a, b) => b.id - a.id);
+      return json({ items: rest.slice(0, limit), has_more: rest.length > limit } satisfies Schemas['NotificationPage']);
+    }),
+  ),
+  http.post(
+    `${API}/notifications/read`,
+    withSession(async ({ db, request }) => {
+      const body = await readJson<Schemas['NotificationReadMark']>(request);
+      const all = body.all === true;
+      if (all === Array.isArray(body.ids)) return error(422, 'VALIDATION_ERROR');
+      const ids = new Set(body.ids ?? []);
+      const now = new Date().toISOString();
+      for (const item of db.notifications) {
+        if (item.read_at === null && (all || ids.has(item.id))) item.read_at = now;
+      }
+      const unread = db.notifications.filter((item) => item.read_at === null).length;
+      return json({ unread } satisfies Schemas['NotificationUnread']);
+    }),
+  ),
 
   // --- запросы ------------------------------------------------------------------------------
   http.get(`${API}/requests`, withSession(({ db }) => json(db.requests))),

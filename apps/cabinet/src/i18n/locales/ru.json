@@ -1095,5 +1095,31 @@
       "NAME": "Не указано наименование."
     },
     "cardNumber": "Карточка № {{id}}"
+  },
+  "notifications": {
+    "title": "Уведомления",
+    "description": "Документы, оплаты, поставки и ответы менеджера",
+    "markAll": "Прочитать все",
+    "more": "Показать ещё",
+    "listLabel": "Список уведомлений",
+    "unread": "Не прочитано",
+    "unreadNote_one": "{{count}} непрочитанное уведомление",
+    "unreadNote_few": "{{count}} непрочитанных уведомления",
+    "unreadNote_many": "{{count}} непрочитанных уведомлений",
+    "unreadNote_other": "{{count}} непрочитанного уведомления",
+    "emptyTitle": "Новых уведомлений нет",
+    "emptyText": "Здесь появятся новые КП, счета, акты, изменения поставок и ответы менеджера.",
+    "text": {
+      "quote_sent": "Новое КП {{number}} ждёт вашего решения",
+      "invoice_issued": "Выставлен счёт {{number}} на {{amount}}",
+      "payment_overdue": "Срок оплаты счёта {{number}} прошёл, к оплате {{amount}}",
+      "act_issued": "Акт {{number}} ждёт приёмки",
+      "act_issued_reminder": "Напоминание: акт {{number}} ждёт приёмки",
+      "delivery_status_changed": "Поставка по проекту {{deal}}: {{status}}",
+      "delivery_eta_changed": "Изменился срок поставки по проекту {{deal}}: теперь {{eta}}",
+      "manager_replied": "Менеджер ответил вам в чате",
+      "partner_card_returned": "Карточка «{{number}}» возвращена на доработку",
+      "fallback": "Новое уведомление {{number}}"
+    }
   }
 }

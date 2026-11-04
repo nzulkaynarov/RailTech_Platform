@@ -384,3 +384,19 @@ export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/c
 export const listTeam = () => portalRequest<TeamMember[]>('/team');
 export const inviteTeamMember = (body: TeamInvite) =>
   portalRequest<TeamMember>('/team/invite', { method: 'POST', body });
+
+// --- колокольчик кабинета (NOTIFY-2, ADR-0023 п. 2) ---------------------------------------------
+
+export type PortalNotification = Schemas['PortalNotification'];
+export type NotificationPage = Schemas['NotificationPage'];
+export type NotificationKind = Schemas['NotificationKind'];
+export type NotificationGroup = Schemas['NotificationGroup'];
+export type NotificationsQuery = QueryOf<paths['/notifications']['get']>;
+
+export const listNotifications = (params: NotificationsQuery = {}) =>
+  portalRequest<NotificationPage>(`/notifications${toQuery(params)}`);
+
+/** «Прочитано»: свои `ids` или все (`all: true`); ответ — число непрочитанных для бейджа. */
+export function markNotificationsRead(body: JsonBody<paths['/notifications/read']['post']>) {
+  return portalRequest<Schemas['NotificationUnread']>('/notifications/read', { method: 'POST', body });
+}

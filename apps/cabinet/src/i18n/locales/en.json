@@ -1066,5 +1066,29 @@
       "NAME": "The name is missing."
     },
     "cardNumber": "Card no. {{id}}"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "description": "Documents, payments, deliveries and manager replies",
+    "markAll": "Mark all as read",
+    "more": "Show more",
+    "listLabel": "Notification list",
+    "unread": "Unread",
+    "unreadNote_one": "{{count}} unread notification",
+    "unreadNote_other": "{{count}} unread notifications",
+    "emptyTitle": "No new notifications",
+    "emptyText": "New offers, invoices, acts, delivery updates and manager replies will appear here.",
+    "text": {
+      "quote_sent": "New offer {{number}} is awaiting your decision",
+      "invoice_issued": "Invoice {{number}} issued for {{amount}}",
+      "payment_overdue": "Invoice {{number}} is overdue, {{amount}} to pay",
+      "act_issued": "Act {{number}} is awaiting acceptance",
+      "act_issued_reminder": "Reminder: act {{number}} is awaiting acceptance",
+      "delivery_status_changed": "Delivery for project {{deal}}: {{status}}",
+      "delivery_eta_changed": "Delivery date for project {{deal}} changed: now {{eta}}",
+      "manager_replied": "Your manager replied in the chat",
+      "partner_card_returned": "Product card «{{number}}» was returned for revision",
+      "fallback": "New notification {{number}}"
+    }
   }
 }

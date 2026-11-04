@@ -1,5 +1,5 @@
-import type { MouseEvent, ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { DESKTOP_QUERY, useMediaQuery } from '@/hooks/useMediaQuery';
@@ -50,6 +50,27 @@ function fromControl(event: MouseEvent): boolean {
   return Boolean(control && control !== event.currentTarget);
 }
 
+/** Классы выделенной строки (`?focus=<id>` — ссылка уведомления колокольчика и `start_param` Mini App, NOTIFY-2). */
+const FOCUSED_ROW = 'ring-2 ring-primary ring-inset bg-accent/60';
+
+/**
+ * Строка из `?focus=<id>`: выделена и прокручена в видимую область один раз, когда список отрисован. Нет такой строки
+ * (объект скрыт, ещё не выставлен) — просто список.
+ */
+function useFocusedRow(): string | null {
+  const [params] = useSearchParams();
+  const focus = params.get('focus');
+  const scrolled = useRef<string | null>(null);
+  useEffect(() => {
+    if (!focus || scrolled.current === focus) return;
+    const row = document.querySelector<HTMLElement>('[data-focused-row="true"]');
+    if (!row) return;
+    scrolled.current = focus;
+    row.scrollIntoView?.({ block: 'center' });
+  });
+  return focus;
+}
+
 export function ResponsiveList<T>(props: ResponsiveListProps<T>) {
   const desktop = useMediaQuery(DESKTOP_QUERY);
   return desktop ? <DesktopTable {...props} /> : <MobileCards {...props} />;
@@ -72,6 +93,7 @@ function TitleLink({ href, children, stretched }: { href?: string; children: Rea
 
 function DesktopTable<T>({ label, rows, getRowId, title, rowHref, columns, actions, rowClassName }: ResponsiveListProps<T>) {
   const navigate = useNavigate();
+  const focus = useFocusedRow();
   return (
     <div className="rounded-lg border bg-card">
       <Table aria-label={label}>
@@ -92,7 +114,9 @@ function DesktopTable<T>({ label, rows, getRowId, title, rowHref, columns, actio
             return (
               <TableRow
                 key={getRowId(row)}
-                className={cn(href && 'cursor-pointer', rowClassName?.(row))}
+                data-focused-row={focus === String(getRowId(row)) ? 'true' : undefined}
+                aria-current={focus === String(getRowId(row)) ? 'true' : undefined}
+                className={cn(href && 'cursor-pointer', rowClassName?.(row), focus === String(getRowId(row)) && FOCUSED_ROW)}
                 onClick={href ? (event) => !fromControl(event) && navigate(href) : undefined}
               >
                 <TableCell className={cn('min-w-48 whitespace-normal', title.className)}>
@@ -118,6 +142,7 @@ function DesktopTable<T>({ label, rows, getRowId, title, rowHref, columns, actio
 }
 
 function MobileCards<T>({ label, rows, getRowId, title, rowHref, columns, actions, rowClassName }: ResponsiveListProps<T>) {
+  const focus = useFocusedRow();
   return (
     <ul aria-label={label} className="flex flex-col gap-3">
       {rows.map((row) => {
@@ -126,7 +151,13 @@ function MobileCards<T>({ label, rows, getRowId, title, rowHref, columns, action
         return (
           <li
             key={getRowId(row)}
-            className={cn('relative flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4', rowClassName?.(row))}
+            data-focused-row={focus === String(getRowId(row)) ? 'true' : undefined}
+            aria-current={focus === String(getRowId(row)) ? 'true' : undefined}
+            className={cn(
+              'relative flex min-w-0 flex-col gap-2 rounded-lg border bg-card p-4',
+              rowClassName?.(row),
+              focus === String(getRowId(row)) && FOCUSED_ROW,
+            )}
           >
             <div className="min-w-0 text-sm break-words">
               <TitleLink href={href} stretched>

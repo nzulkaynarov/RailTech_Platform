@@ -14,6 +14,7 @@ import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
 import { BottomNav } from './BottomNav';
 import { BrandMark } from './BrandMark';
+import { NotificationBell } from './NotificationBell';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
 import { SideNav } from './SideNav';
 import { useTelegramBackButton } from './useTelegramBackButton';
@@ -215,8 +216,9 @@ export function AppShell() {
                   </div>
                 </div>
 
-                {/* Правая часть: ссылка на профиль */}
+                {/* Правая часть: колокольчик (NOTIFY-2) и ссылка на профиль */}
                 <div className="flex items-center gap-2">
+                  <NotificationBell />
                   <Link
                     to="/profile"
                     className="rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"
