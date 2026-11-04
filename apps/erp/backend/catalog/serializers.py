@@ -186,6 +186,16 @@ class _AttributeSerializer(serializers.Serializer):
     value = serializers.CharField()
 
 
+class _ManufacturerSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    country = serializers.CharField(allow_null=True)
+
+
+class _WarrantySerializer(serializers.Serializer):
+    months = serializers.IntegerField()
+    terms = serializers.CharField(allow_blank=True)
+
+
 class PublishedCatalogItemSerializer(serializers.Serializer):
     """Схема OpenAPI проекции `catalog.published.project` (контракт портала `CatalogItem`).
 
@@ -203,6 +213,10 @@ class PublishedCatalogItemSerializer(serializers.Serializer):
     lead_time_days = serializers.IntegerField(allow_null=True, required=False)
     images = serializers.ListField(child=serializers.CharField())
     attributes = _AttributeSerializer(many=True)
+    manufacturer = _ManufacturerSerializer(allow_null=True)
+    manufacturer_part_number = serializers.CharField(allow_null=True)
+    country_of_origin = serializers.CharField(allow_null=True)
+    warranty = _WarrantySerializer(allow_null=True)
 
 
 # --- Main Product Serializer (PIM) ---

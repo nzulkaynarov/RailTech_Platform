@@ -30,7 +30,7 @@ from accounts.models import Company, CompanyMember, CompanyType, CustomUser, Wor
 from catalog.completeness import completeness
 from catalog.constants import MODE_CLIENT, MODE_LEAD, FulfillmentPolicy, PriceVisibility
 from catalog.models import Category, DomainType, Product, ProductImage, ProductStatus, StockStatus, SupplierOffer
-from catalog.published import CATALOG_ITEM_KEYS, CLIENT_ONLY_KEYS, availability, project, project_many
+from catalog.published import CATALOG_ITEM_KEYS, CLIENT_ONLY_KEYS, DETAIL_ONLY_KEYS, availability, project, project_many
 from master_data.models import Currency, UnitOfMeasure
 
 pytestmark = pytest.mark.django_db
@@ -144,7 +144,7 @@ def test_client_projection_is_whitelisted_and_carries_no_internal_layer(world):
 
     item = project(product, mode=MODE_CLIENT)
 
-    assert set(item) == CATALOG_ITEM_KEYS
+    assert set(item) == CATALOG_ITEM_KEYS - DETAIL_ONLY_KEYS
     assert item["kind"] == "goods"
     assert item["unit"] == "шт"
     assert item["category"] == "Подшипники M107"
@@ -161,7 +161,7 @@ def test_lead_projection_has_no_price_availability_or_lead_time(world):
 
     item = project(product, mode=MODE_LEAD)
 
-    assert set(item) == CATALOG_ITEM_KEYS - CLIENT_ONLY_KEYS
+    assert set(item) == CATALOG_ITEM_KEYS - CLIENT_ONLY_KEYS - DETAIL_ONLY_KEYS
     assert_no_internal_layer(item, "project(lead)")
 
 
@@ -359,8 +359,12 @@ def test_staff_sets_published_layer_and_currency_is_required(world):
 
 
 @pytest.fixture
-def client_company(world):
-    """Компания клиента для фикстур сессии портала (`portal/tests/conftest.py`) — компания из `world`."""
+def client_company(world, request):
+    """Компания клиента для фикстур сессии портала (`portal/tests/conftest.py`) — компания из `world`.
+
+    Тип CLIENT обязателен: без него компания не допущена в кабинет (`cabinet_company_q`) и каждый запрос портала — 401,
+    то есть обход маршрутов от имени клиента ничего бы не проверял."""
+    world["client_company"].types.add(request.getfixturevalue("client_type"))
     return world["client_company"]
 
 

@@ -57,6 +57,7 @@ from portal.serializers import (
     TeamMemberSerializer,
     TelegramAuthSerializer,
 )
+from portal.services import catalog_documents
 from portal.services import documents as portal_documents
 from portal.services.acceptance import ContactChannelRequired, request_acceptance_code
 from portal.services.act_scan import annotate_scan_documents, attach_scan_document, load_scan
@@ -900,8 +901,24 @@ class CatalogDetailView(BasePortalView):
         if not product:
             raise Http404
 
-        item_data = project(product, mode="client", request=request)
+        item_data = project(product, mode="client", request=request, with_documents=True)
         return Response(CatalogItemSerializer(item_data).data)
+
+
+class CatalogDocumentFileView(BasePortalView):
+    """GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2)."""
+
+    def get(self, request, pk, doc_id):
+        document = catalog_documents.find_client_document(pk, doc_id)
+        if document is None:
+            raise Http404
+        response = catalog_documents.file_response(document)
+        if response is None:
+            raise Http404  # файл потерян в хранилище: клиенту — то же 404, причины не различаются
+        catalog_documents.record_issue(
+            document, contact=request.portal_contact, session=request.portal_session, ip=_client_ip(request)
+        )
+        return response
 
 
 # ── 12. Company & Team ──────────────────────────────────────────────────────

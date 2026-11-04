@@ -12,6 +12,10 @@
 
 Форма ответа — `CatalogItem` из `packages/contracts/openapi/erp-portal.yaml`; в режиме `lead`
 (контракт MCP `prospect`) без `price`, `availability` и `lead_time_days`.
+
+Карточка товара (CAT-CARD-2): изготовитель, артикул изготовителя, страна происхождения и гарантия идут в каждой проекции;
+документы (`documents`) — только по запросу `with_documents=True` (детальная карточка портала): «видно клиенту» и действующие,
+без файла, имени загруженного файла и размера. Файл отдаёт отдельное представление портала.
 """
 
 from __future__ import annotations
@@ -46,8 +50,15 @@ CATALOG_ITEM_KEYS = frozenset(
         "lead_time_days",
         "images",
         "attributes",
+        "manufacturer",
+        "manufacturer_part_number",
+        "country_of_origin",
+        "warranty",
+        "documents",
     }
 )
+#: Ключи, которых нет в проекции без `with_documents=True` (список каталога, интеграция, MCP, превью сотрудника).
+DETAIL_ONLY_KEYS = frozenset({"documents"})
 CLIENT_ONLY_KEYS = frozenset({"price", "availability", "lead_time_days"})
 
 
@@ -57,7 +68,7 @@ def published_products():
 
     return (
         Product.objects.filter(status__code="PUBLISHED")
-        .select_related("domain_type", "category", "uom", "list_price_currency")
+        .select_related("domain_type", "category", "uom", "list_price_currency", "brand__country", "country_of_origin")
         .prefetch_related(
             "images",
             Prefetch(
@@ -143,6 +154,68 @@ def _attributes(product) -> list[dict]:
     ]
 
 
+def _manufacturer(product) -> dict | None:
+    brand = product.brand if product.brand_id else None
+    if brand is None:
+        return None
+    return {"name": brand.name, "country": brand.country.name if brand.country_id else None}
+
+
+def _country_of_origin(product) -> str | None:
+    """Страна происхождения: своя у карточки, иначе страна изготовителя (как в карточке бэк-офиса)."""
+    if product.country_of_origin_id:
+        return product.country_of_origin.name
+    brand = product.brand if product.brand_id else None
+    return brand.country.name if brand is not None and brand.country_id else None
+
+
+def company_warranty_months() -> int | None:
+    """Гарантия компании по умолчанию, мес. (та же, что в карточке бэк-офиса)."""
+    from catalog.desk.items import company_warranty_default
+
+    return company_warranty_default()
+
+
+def _warranty(product, company_default: int | None) -> dict | None:
+    """Гарантия клиенту: своя у карточки, иначе срок компании; `None` — нигде не задана или 0 («без гарантии»)."""
+    months = product.warranty_months if product.warranty_months is not None else company_default
+    if not months:
+        return None
+    return {"months": months, "terms": product.warranty_terms or ""}
+
+
+def client_documents(product) -> list[dict]:
+    """Документы карточки для клиента: «видно клиенту» и действующие (пусто в «действует до» — бессрочно).
+
+    Как в 1С:УТ «Сертификаты номенклатуры»: на печать идут действующие. Порядок — как в справочнике видов, затем по id.
+    В ответе нет файла, имени загруженного файла и размера: имя при скачивании строится из названия документа.
+    """
+    from django.db.models import Q
+
+    from .models import DocumentKind, TechDocument
+
+    today = timezone.localdate()
+    documents = list(
+        TechDocument.objects.filter(product_id=product.pk, client_visible=True)
+        .filter(Q(valid_until__isnull=True) | Q(valid_until__gte=today))
+        .order_by("id")
+    )
+    kinds = {kind.code: kind for kind in DocumentKind.objects.filter(code__in={doc.kind for doc in documents})}
+    documents.sort(key=lambda doc: (kinds[doc.kind].sort_order if doc.kind in kinds else 10**6, doc.pk))
+    return [
+        {
+            "id": doc.pk,
+            "kind_name": kinds[doc.kind].name if doc.kind in kinds else doc.kind,
+            "title": doc.title,
+            "number": doc.number,
+            "issued_by": doc.issued_by,
+            "issued_at": doc.issued_at.isoformat() if doc.issued_at else None,
+            "valid_until": doc.valid_until.isoformat() if doc.valid_until else None,
+        }
+        for doc in documents
+    ]
+
+
 def _price(product, policy: CatalogPolicy) -> dict | None:
     """Цена-витрина клиенту или `None` — «по запросу» (контракт: `price: Money | null`)."""
     if effective_price_visibility(product, policy) != PriceVisibility.CABINET:
@@ -152,12 +225,26 @@ def _price(product, policy: CatalogPolicy) -> dict | None:
     return {"amount": f"{product.list_price:.2f}", "currency": product.list_price_currency.code}
 
 
-def project(product, *, mode: str, policy: CatalogPolicy | None = None, request=None) -> dict:
+_UNSET = object()
+
+
+def project(
+    product,
+    *,
+    mode: str,
+    policy: CatalogPolicy | None = None,
+    request=None,
+    with_documents: bool = False,
+    warranty_default=_UNSET,
+) -> dict:
     """Карточка в опубликованном слое — `CatalogItem` контракта портала.
 
     `mode="client"` — клиент в кабинете и бот в сервисном режиме: + цена (только при политике
     `cabinet`, иначе `null` — «по запросу»), наличие как статус, срок. `mode="lead"` — лид и бот
     вне кабинета: перечень без цены, наличия и срока (решение владельца 2026-10-13).
+
+    `with_documents=True` добавляет `documents` — только детальная карточка портала. `warranty_default` — срок компании,
+    уже прочитанный вызывающим (пачка читает его один раз); не задан — читается здесь.
     """
     if mode not in PROJECTION_MODES:
         raise ValueError(f"unknown projection mode: {mode!r}")
@@ -171,7 +258,13 @@ def project(product, *, mode: str, policy: CatalogPolicy | None = None, request=
         "category_id": product.category_id,
         "images": _image_urls(product, request),
         "attributes": _attributes(product),
+        "manufacturer": _manufacturer(product),
+        "manufacturer_part_number": product.manufacturer_part_number or None,
+        "country_of_origin": _country_of_origin(product),
+        "warranty": _warranty(product, company_warranty_months() if warranty_default is _UNSET else warranty_default),
     }
+    if with_documents:
+        item["documents"] = client_documents(product)
     if mode == MODE_CLIENT:
         policy = policy if policy is not None else policy_for(product.owner_company_id)
         status, lead_time_days = availability(product)
@@ -185,7 +278,14 @@ def project_many(products, *, mode: str, request=None) -> list[dict]:
     """Проекция пачки: политики компаний — одним запросом (для списков портала и поиска)."""
     products = list(products)
     policies = load_policies(product.owner_company_id for product in products) if mode != MODE_LEAD else {}
+    warranty_default = company_warranty_months()
     return [
-        project(product, mode=mode, policy=policies.get(product.owner_company_id, CatalogPolicy()), request=request)
+        project(
+            product,
+            mode=mode,
+            policy=policies.get(product.owner_company_id, CatalogPolicy()),
+            request=request,
+            warranty_default=warranty_default,
+        )
         for product in products
     ]
