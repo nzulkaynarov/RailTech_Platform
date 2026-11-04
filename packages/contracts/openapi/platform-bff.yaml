@@ -20983,8 +20983,23 @@ components:
 
     MessageChannel:
       type: string
-      description: Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана
+      description: >-
+        Канал (`telegram`, `cabinet` — чат кабинета, CHAT-1; у лида без переписки — источник `web`, `email`, `phone`,
+        `referral`); подпись — у экрана
       pattern: '^[a-z][a-z_]{0,15}$'
+
+    MessageContext:
+      type: object
+      additionalProperties: false
+      description: >-
+        Метка документа у сообщения из кабинета (CHAT-1): клиент написал со страницы сделки, КП, счёта или акта;
+        экран показывает плашку «КП KP-2026-0042»
+      required: [kind, number]
+      properties:
+        kind:
+          type: string
+          enum: [deal, quote, invoice, act]
+        number: {type: string}
 
     HandoffFacts:
       type: object
@@ -21125,6 +21140,7 @@ components:
           $ref: '#/components/schemas/Language'
         channel:
           $ref: '#/components/schemas/MessageChannel'
+          description: Канал последнего сообщения клиента (туда уйдёт ответ), без переписки — источник лида
         unread:
           type: boolean
           description: Клиент написал после последнего ответа сотрудника
@@ -21212,12 +21228,19 @@ components:
     ConversationCard:
       type: object
       additionalProperties: false
-      required: [lead, name, language, channel, owner_mode, assigned, consent_given_at, contacts, facts, request, handoff, client_in_erp]
+      required: [lead, name, language, channel, reply_channel, owner_mode, assigned, consent_given_at, contacts, facts, request, handoff, client_in_erp]
       properties:
         lead: {type: string, pattern: '^L-\d{4,}$'}
         name: {type: string}
         language: {$ref: '#/components/schemas/Language'}
         channel: {$ref: '#/components/schemas/MessageChannel'}
+        reply_channel:
+          description: >-
+            Куда уйдёт ответ менеджера — канал последнего сообщения клиента (`telegram` или `cabinet`, CHAT-1);
+            `null` — клиент ещё не писал
+          oneOf:
+            - $ref: '#/components/schemas/MessageChannel'
+            - type: 'null'
         owner_mode: {$ref: '#/components/schemas/LeadOwnerMode'}
         assigned:
           oneOf:
@@ -21254,7 +21277,7 @@ components:
     ThreadMessage:
       type: object
       additionalProperties: false
-      required: [id, author, author_name, text, created_at, attachments, delivery]
+      required: [id, author, author_name, text, created_at, attachments, delivery, channel, context]
       properties:
         id: {type: integer}
         author:
@@ -21262,8 +21285,16 @@ components:
           enum: [lead, bot, manager, system]
         author_name:
           type: [string, 'null']
-          description: Имя сотрудника у ответа менеджера
+          description: Имя сотрудника у ответа менеджера; у сообщения из кабинета — имя контакта клиента
         text: {type: string}
+        channel:
+          $ref: '#/components/schemas/MessageChannel'
+          description: Канал сообщения — `telegram` или `cabinet` (CHAT-1)
+        context:
+          description: Метка документа у сообщения из кабинета; `null` — без метки
+          oneOf:
+            - $ref: '#/components/schemas/MessageContext'
+            - type: 'null'
         created_at: {type: string, format: date-time}
         attachments:
           type: array

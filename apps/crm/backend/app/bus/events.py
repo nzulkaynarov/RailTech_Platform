@@ -11,7 +11,8 @@
 `uz.railtech.crm.mail.{sent,failed}.v1` — итог письма, запрошенного ERP или EDS (W18A-P1),
 `uz.railtech.crm.ai_policy.changed.v1` — политика защиты данных для ИИ (PD-BIZ, проекция EDS).
 Сообщение переписки (`lead.message_added`, D1-1) — сигнал без текста: подписчик (BFF
-Платформы) перезапрашивает переписку API CRM.
+Платформы) перезапрашивает переписку API CRM. Ответ менеджера в чат кабинета
+(`cabinet.message_sent`, CHAT-1, ADR-0023) — с текстом: ERP показывает его в ленте кабинета.
 """
 
 import re
@@ -48,6 +49,7 @@ USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
+CABINET_MESSAGE_SENT = "uz.railtech.crm.cabinet.message_sent.v1"
 
 
 def _require_transaction(session: AsyncSession) -> None:
@@ -186,17 +188,24 @@ async def lead_stage_changed(
     await _publish(session, LEAD_STAGE_CHANGED, data, f"lead/{lead.id}")
 
 
-async def lead_erased(session: AsyncSession, lead: Lead, actor: Actor) -> None:
-    """Лид обезличен по запросу: только идентификаторы и время; подписчики стирают свои копии."""
+async def lead_erased(
+    session: AsyncSession, lead: Lead, actor: Actor, *, cabinet: dict[str, Any] | None = None
+) -> None:
+    """Лид обезличен по запросу: только идентификаторы и время; подписчики стирают свои копии.
+
+    `cabinet` — чьи сообщения ленты кабинета стереть (CHAT-1): `erp_company_id`, `scope`
+    (`authors` — только этих авторов, `company` — вся лента), `erp_contact_ids`."""
     _require_transaction(session)
     if _internal(lead):
         return
-    data = {
+    data: dict[str, Any] = {
         "crm_lead_id": lead.id,
         "crm_client_id": lead.client_id,
         "erased_at": snapshots.utc(await snapshots.db_now(session)),
         "actor": snapshots.actor_of(actor),
     }
+    if cabinet is not None:
+        data["cabinet"] = cabinet
     await _publish(session, LEAD_ERASED, data, f"lead/{lead.id}")
 
 
@@ -243,6 +252,33 @@ async def lead_message_added(
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, LEAD_MESSAGE_ADDED, data, f"lead/{lead.id}")
+
+
+async def cabinet_message_sent(
+    session: AsyncSession,
+    lead: Lead,
+    message: Message,
+    *,
+    erp_company_id: int,
+    crm_client_id: int | None,
+    manager_name: str | None,
+    actor: Actor,
+) -> None:
+    """Ответ менеджера в чат кабинета (CHAT-1): ERP кладёт его в ленту компании; та же
+    транзакция, что и строка сообщения."""
+    _require_transaction(session)
+    await session.refresh(message, attribute_names=["created_at"])
+    data = {
+        "message_id": message.id,
+        "crm_lead_id": lead.id,
+        "crm_client_id": crm_client_id,
+        "erp_company_id": erp_company_id,
+        "text": message.text,
+        "manager_name": (manager_name or "").strip()[:255] or None,
+        "sent_at": snapshots.utc(message.created_at),
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, CABINET_MESSAGE_SENT, data, f"lead/{lead.id}")
 
 
 async def user_created(session: AsyncSession, user: User, actor: Actor) -> None:

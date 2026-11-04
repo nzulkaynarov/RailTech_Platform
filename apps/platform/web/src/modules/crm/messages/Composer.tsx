@@ -18,7 +18,8 @@ import { newMessageKey } from "./sla";
 export type ComposerMode = "self" | "note";
 
 /**
- * Поле ответа: «От себя» (уходит клиенту в Telegram) или «Заметка команде» (клиенту не уходит), шаблоны и «Подсказать
+ * Поле ответа: «От себя» (уходит клиенту в канал его последнего сообщения — Telegram или кабинет, CHAT-1; подпись под
+ * полем говорит куда) или «Заметка команде» (клиенту не уходит), шаблоны и «Подсказать
  * ответ» (ИИ через CRM; текст вставляется в поле, отправляет человек). Ключ повтора создаётся на черновик и меняется вместе
  * с текстом: «Повторить» после «Telegram не ответил» шлёт тот же ключ — CRM не продублирует сообщение, а текст остаётся
  * в поле до успешной отправки.
@@ -181,7 +182,11 @@ export function Composer({ card }: { card: ConversationCard }) {
           {blocked
             ? t("composer.takeFirst")
             : mode === "self"
-              ? t("composer.selfHint")
+              ? t(
+                  card.reply_channel === "cabinet"
+                    ? "composer.selfHintCabinet"
+                    : "composer.selfHint",
+                )
               : t("composer.noteHint")}
         </span>
         <Button type="primary" htmlType="submit" loading={busy} disabled={blocked || !text.trim()}>

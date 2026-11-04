@@ -19,12 +19,16 @@ const CLIENT_LINKS = [
   'Счета',
   'Акты',
   'Поставки',
+  'Сообщения1', // чат кабинета (CHAT-1) с бейджем: в моке один непрочитанный ответ менеджера
   'Компания',
   'Команда',
   'Профиль',
 ];
 
-const PARTNER_DEFAULT = { roles: ['partner' as const], modules: ['my_products', 'catalog_requests', 'profile'] };
+const PARTNER_DEFAULT = {
+  roles: ['partner' as const],
+  modules: ['my_products', 'catalog_requests', 'messages', 'profile'],
+};
 const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products', 'profile'] };
 /** Партнёр, у которого сотрудник выключил оба раздела: остался только «Профиль». */
 const PARTNER_NOTHING = { roles: ['partner' as const], modules: ['profile'] };
@@ -44,7 +48,8 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
     expect(groups.map((group) => within(group).getAllByRole('link').map((link) => link.textContent?.trim()))).toEqual([
       ['Запросы', 'КП', 'Каталог', 'Документы', 'Договоры', 'Счета', 'Акты', 'Поставки'],
       ['Мои товары'],
-      ['Компания', 'Команда', 'Профиль'],
+      // «Сообщения» (CHAT-1) — в «Компании»: беседа компании с нами одна и о покупках, и о поставках
+      ['Сообщения1', 'Компания', 'Команда', 'Профиль'],
     ]);
     expect((await axe(side)).violations).toEqual([]);
   });
@@ -103,7 +108,7 @@ describe('меню при двух ролях: «Покупаю» и «Пост�
 });
 
 describe('меню из /me.modules', () => {
-  it('клиент: меню прежнее — те же 11 пунктов в том же порядке, нижняя навигация с «Ещё»', async () => {
+  it('клиент: меню — 12 пунктов в том же порядке (+ «Сообщения», CHAT-1), нижняя навигация с «Ещё»', async () => {
     signedIn();
     renderApp('/');
     await screen.findByRole('heading', { level: 1, name: 'Запросы' });
@@ -170,11 +175,11 @@ describe('меню из /me.modules', () => {
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.trim()),
-    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Профиль']);
+    ).toEqual(['Мои товары', 'Запросы', 'Каталог', 'Сообщения1', 'Профиль']);
     // одна роль — меню плоское, без разделов «Покупаю» / «Поставляю»
     expect(within(side).queryByRole('heading', { name: 'Покупаю' })).not.toBeInTheDocument();
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument(); // в «Ещё» — «Профиль»
+    expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument(); // в «Ещё» — «Сообщения», «Профиль»
   });
 
   it('партнёр: «Запросы» без виджета решений (КП, счетов, актов у него нет); «Новый запрос» — по can_act, как у клиента', async () => {

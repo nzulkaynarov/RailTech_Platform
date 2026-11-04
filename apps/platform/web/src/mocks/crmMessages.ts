@@ -85,6 +85,8 @@ export function mockClientWrites(lead: string, text: string): void {
     created_at: now,
     attachments: [],
     delivery: null,
+    channel: row.card.reply_channel ?? "telegram",
+    context: null,
   });
   row.item.unread = true;
   row.item.last_message_at = now;
@@ -201,6 +203,8 @@ export const crmMessagesHandlers = [
         created_at: new Date().toISOString(),
         attachments: [],
         delivery: "sending",
+        channel: row.card.reply_channel ?? "telegram",
+        context: null,
       });
       state.sent[body.client_message_id] = state.nextId;
       writeMessages(state);
@@ -223,6 +227,8 @@ export const crmMessagesHandlers = [
       text: body.text,
       created_at: new Date().toISOString(),
       attachments: [],
+      channel: row.card.reply_channel ?? "telegram",
+      context: null,
       delivery: null,
     });
     row.item.unread = false;

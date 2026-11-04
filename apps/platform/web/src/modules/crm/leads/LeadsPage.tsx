@@ -47,7 +47,7 @@ const TABS = [
   "client",
 ] as const satisfies readonly ListCrmLeadsTab[];
 const SCOPES = ["all", "mine", "overdue"] as const satisfies readonly ListCrmLeadsScope[];
-const CHANNELS = ["telegram", "web", "email", "phone", "referral"] as const;
+const CHANNELS = ["telegram", "cabinet", "web", "email", "phone", "referral"] as const;
 /** Ширины колонок: имя, статус, что нужно, ответственный, последнее, действие (UX-1c, S9) */
 const COLS = [null, 150, null, 170, 130, 170] as const;
 

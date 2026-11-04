@@ -4,7 +4,8 @@
 `rt_bus.process_inbox` в одной транзакции со статусом записи inbox. Исключение — автоповтор шины (30 с, 2 мин, 10 мин), затем
 `failed` с возможностью «повторить» (`manage.py bus_retry --inbox <id>`). Логика — `services/crm_projections.py` (CRM) и
 `services/eds_inbound.py` (EDS, волна 12: резолюция → задание расчёта, отказ → LOST, решение по КП — EDS-03), итог
-доставки письма почтовым сервисом CRM — `notifications/mail_bus.py` (W18A-P1: журнал писем ERP, итог письма с КП).
+доставки письма почтовым сервисом CRM — `notifications/mail_bus.py` (W18A-P1: журнал писем ERP, итог письма с КП), чат
+кабинета — `portal/services/messages.py` (CHAT-1: ответ менеджера в ленту, стирание ленты по обезличиванию лида).
 """
 
 from __future__ import annotations
@@ -49,6 +50,20 @@ def on_mail_failed(event: Event) -> None:
     from notifications.mail_bus import apply_mail_result
 
     apply_mail_result(event.type, event.data)
+
+
+@subscribe("uz.railtech.crm.cabinet.message_sent.v1")
+def on_cabinet_message_sent(event: Event) -> None:
+    from portal.services.messages import apply_manager_reply
+
+    apply_manager_reply(event.data)
+
+
+@subscribe("uz.railtech.crm.lead.erased.v1")
+def on_lead_erased(event: Event) -> None:
+    from portal.services.messages import apply_lead_erased
+
+    apply_lead_erased(event.data)
 
 
 @subscribe("uz.railtech.eds.letter.resolved.v1")

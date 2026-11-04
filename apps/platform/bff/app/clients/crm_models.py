@@ -1313,6 +1313,13 @@ class Kind(StrEnum):
 
 
 class Kind1(StrEnum):
+    deal = "deal"
+    quote = "quote"
+    invoice = "invoice"
+    act = "act"
+
+
+class Kind2(StrEnum):
     vendor = "vendor"
     langfuse = "langfuse"
     mail = "mail"
@@ -1366,6 +1373,7 @@ class LeadDetail(BaseModel):
     ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     qualification: Annotated[dict[str, Any], Field(title="Qualification")]
+    reply_channel: Annotated[str | None, Field(title="Reply Channel")] = None
     score: Annotated[int, Field(title="Score")]
     snoozed_until: Annotated[AwareDatetime | None, Field(title="Snoozed Until")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
@@ -1391,6 +1399,7 @@ class LeadOut(BaseModel):
         PlatformStatus | None, Field(title="Platform Status")
     ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
+    reply_channel: Annotated[str | None, Field(title="Reply Channel")] = None
     score: Annotated[int, Field(title="Score")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
     stage: Annotated[str, Field(title="Stage")]
@@ -1459,8 +1468,21 @@ class MailSenderRuleOut(BaseModel):
     type_code: Annotated[str, Field(title="Type Code")]
 
 
+class MessageContextOut(BaseModel):
+    """
+    Метка документа у сообщения кабинета (CHAT-1): вид, id в ERP и номер.
+    """
+
+    erp_id: Annotated[int, Field(title="Erp Id")]
+    kind: Annotated[Kind1, Field(title="Kind")]
+    number: Annotated[str, Field(title="Number")]
+
+
 class MessageOut(BaseModel):
     attachments: Annotated[list[dict[str, Any]], Field(title="Attachments")]
+    author_name: Annotated[str | None, Field(title="Author Name")] = None
+    channel: Annotated[str | None, Field(title="Channel")] = "telegram"
+    context: MessageContextOut | None = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     id: Annotated[int, Field(title="Id")]
     meta: Annotated[dict[str, Any], Field(title="Meta")]
@@ -1833,7 +1855,7 @@ class ServiceSwitchOut(BaseModel):
     changed_by: Annotated[str | None, Field(title="Changed By")]
     disabled: Annotated[bool, Field(title="Disabled")]
     effect: Annotated[str, Field(title="Effect")]
-    kind: Annotated[Kind1, Field(title="Kind")]
+    kind: Annotated[Kind2, Field(title="Kind")]
     problem: Annotated[str | None, Field(title="Problem")]
     reason: Annotated[str | None, Field(title="Reason")]
 

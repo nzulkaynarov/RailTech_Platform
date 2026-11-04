@@ -21,6 +21,7 @@ export interface LeadOut {
   owner_mode: string;
   platform_status?: LeadOutPlatformStatus;
   product_interest: string[];
+  reply_channel?: string | null;
   score: number;
   source?: string;
   stage: string;

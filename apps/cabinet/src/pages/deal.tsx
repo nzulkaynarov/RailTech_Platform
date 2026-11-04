@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
  * Сделка — цель deep-link бота (`start_param=deal_<id>`): всё по сделке на одном экране, собрано из
  * списков портала по `deal.id` (отдельного `GET /deals/{id}` в контракте нет); клиенту сделка — её номер
  * и название (`deal.number`, `deal.title`), внутренний id только в адресе. «Написать менеджеру»
- * — бот CRM с контекстом сделки `start=deal_<id>` (M2-CAB-03).
+ * — чат кабинета с меткой проекта (CHAT-1, ADR-0023), бот — вторым каналом на экране чата.
  */
 export function DealPage() {
   const { t } = useTranslation();
@@ -101,7 +101,12 @@ export function DealPage() {
         crumb={dealRef?.number}
         subtitle={subtitle}
         icon={Briefcase}
-        actions={<ManagerButton dealId={dealId} />}
+        actions={
+          <ManagerButton
+            context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
+            label={dealRef ? t('manager.aboutDeal', { number: dealRef.number }) : undefined}
+          />
+        }
       />
 
       <DealStages progress={progress} />

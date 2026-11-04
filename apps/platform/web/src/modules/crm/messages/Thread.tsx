@@ -7,6 +7,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { getCrmThread, useGetCrmThread } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DeliveryMark } from "./DeliveryMark";
+import { contextLabel } from "./labels";
 import { type Entry, PAGE_SIZE, mergeThread } from "./logic";
 
 function Attachment({ file }: { file: ThreadAttachment }) {
@@ -72,12 +73,25 @@ function Bubble({ entry, lead, canCreate }: { entry: Entry; lead: string; canCre
   }
   const { message } = entry;
   const author = message.author_name ?? t(`thread.authors.${message.author}`);
+  const context = message.context ? contextLabel(t, message.context) : null;
   return (
     <li className={`pf-msg-item pf-msg-item--${message.author}`}>
       <div className="pf-msg-item-head">
         <span className="pf-msg-author">{author}</span>
+        {message.channel === "cabinet" ? (
+          <span className="pf-msg-tag-channel">{t("thread.channelCabinet")}</span>
+        ) : null}
         <time dateTime={message.created_at}>{fmt.activity(message.created_at)}</time>
       </div>
+      {context ? (
+        <span
+          className="pf-msg-context"
+          aria-label={t("thread.contextLabel", { label: context })}
+          title={t("thread.contextLabel", { label: context })}
+        >
+          {context}
+        </span>
+      ) : null}
       {message.text ? <div className="pf-msg-bubble">{message.text}</div> : null}
       <DeliveryMark message={message} />
       {message.attachments.length ? (
