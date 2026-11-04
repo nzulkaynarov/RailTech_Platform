@@ -6140,6 +6140,70 @@ export interface paths {
     patch: operations["updateCatalogItem"];
     trace?: never;
   };
+  "/erp/catalog/items/{id}/images": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: загрузить фото позиции
+     * @description ERP `POST catalog/items/{id}/images/` (multipart) — право `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на позицию; первое фото главное само, `is_main=true` ставит главным и не первое. Отказы (`details.fields`): `image` — файл не подошёл (`FILE_TOO_LARGE`, `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, `NO_FILE_PROVIDED`) или лимит (`IMAGE_LIMIT_REACHED`). Раздел `erp.stock` — полный.
+     */
+    post: operations["uploadCatalogItemImage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/items/{id}/images/{image_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Расчёт · Номенклатура: удалить фото
+     * @description ERP `DELETE catalog/items/{id}/images/{image_id}/` — право `catalog.manage`; файл удаляется, если было главное — главным становится следующее. Раздел `erp.stock` — полный.
+     */
+    delete: operations["deleteCatalogItemImage"];
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Номенклатура: главное фото, порядок, подпись
+     * @description ERP `PATCH catalog/items/{id}/images/{image_id}/` — право `catalog.manage`. `is_main: true` — сделать главным; `sort_order` — новая позиция с нуля (остальные сдвигаются без пропусков); `alt_text` — подпись. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateCatalogItemImage"];
+    trace?: never;
+  };
+  "/erp/catalog/items/{id}/images/{image_id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Номенклатура: файл фото
+     * @description BFF берёт файл в ERP по адресу из карточки позиции (только путь `/media/products/{id}/images/…` этой позиции) и отдаёт с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет фото, чужой путь или не изображение — 404 `NOT_FOUND`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getCatalogItemImageContent"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/items/{id}/publish": {
     parameters: {
       query?: never;
@@ -6625,7 +6689,11 @@ export interface paths {
     delete: operations["deleteTechDoc"];
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Расчёт · Документы: изменить паспорт документа
+     * @description ERP `PATCH catalog/tech-docs/{id}/` — право `catalog.manage`. Вид, название, номер, кем выдан, выдан, действует до, «видно клиенту»; сам файл не меняется. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateTechDoc"];
     trace?: never;
   };
   "/erp/docs/files/{id}/content": {
@@ -13347,6 +13415,84 @@ export interface components {
       id: components["schemas"]["CompanyItemRef"];
       title: string;
       kind: components["schemas"]["TechDocKind"];
+      /** @description Название вида из справочника */
+      kind_name: string;
+      /** @description Номер документа; пусто, если не задан */
+      number: string;
+      /** @description Кем выдан */
+      issued_by: string;
+      /** Format: date */
+      issued_at: string | null;
+      /**
+       * Format: date
+       * @description Действует до; `null` — бессрочно
+       */
+      valid_until: string | null;
+      /** @description Срок «действует до» прошёл — пометка для сотрудника */
+      is_expired: boolean;
+      /** @description Клиент видит документ в кабинете */
+      client_visible: boolean;
+      original_name: string;
+      size_bytes: number;
+      previewable: boolean;
+    };
+    /** @description Фото позиции; файл — `GET /erp/catalog/items/{id}/images/{image_id}/content` */
+    CatalogImage: {
+      id: components["schemas"]["CompanyItemRef"];
+      /** @description Главное фото; среди фото позиции ровно одно */
+      is_main: boolean;
+      /** @description Позиция в галерее с нуля, без пропусков */
+      sort_order: number;
+      /** @description Подпись фото */
+      alt: string;
+    };
+    CatalogImageUpload: {
+      /**
+       * Format: binary
+       * @description JPEG, PNG или WebP до 5 МБ; SVG и GIF не принимаются
+       */
+      image: string;
+      alt_text?: string;
+      /** @description Сделать главным; первое фото позиции главное само */
+      is_main?: boolean;
+    };
+    CatalogImageUpdate: {
+      /**
+       * @description Назначить главным; снять флаг нельзя — главное меняется назначением другого
+       * @enum {boolean}
+       */
+      is_main?: true;
+      /** @description Новая позиция с нуля */
+      sort_order?: number;
+      alt_text?: string;
+    };
+    CatalogOrigin: {
+      /** @description Страна бренда карточки — подсказка к пустому полю */
+      brand: components["schemas"]["CatalogNamedRef"] | null;
+      /** @description Страна, заданная в карточке */
+      own: components["schemas"]["CatalogNamedRef"] | null;
+      /** @description Показываемая страна — своя, иначе страна бренда */
+      effective: components["schemas"]["CatalogNamedRef"] | null;
+      /**
+       * @description Откуда показываемая страна: карточка, бренд, нигде не задана
+       * @enum {string}
+       */
+      source: "item" | "brand" | "none";
+    };
+    CatalogWarranty: {
+      /** @description Срок компании по умолчанию — подсказка к пустому полю */
+      company_months: number | null;
+      /** @description Срок, заданный в карточке */
+      months: number | null;
+      /** @description Условия гарантии */
+      terms: string;
+      /** @description Показываемый срок — свой, иначе срок компании */
+      effective_months: number | null;
+      /**
+       * @description Откуда показываемый срок: карточка, компания, нигде не задан
+       * @enum {string}
+       */
+      source: "item" | "company" | "none";
     };
     CatalogItemDetail: {
       id: components["schemas"]["CompanyItemRef"];
@@ -13379,6 +13525,10 @@ export interface components {
       /** @description Видит ли сотрудник цены поставщиков */
       prices_visible: boolean;
       tech_docs: components["schemas"]["CatalogTechDocRef"][];
+      /** @description Фото по порядку; ровно одно главное, если фото есть */
+      images: components["schemas"]["CatalogImage"][];
+      origin: components["schemas"]["CatalogOrigin"];
+      warranty: components["schemas"]["CatalogWarranty"];
       /** @description Изменения от поставщиков на одобрении */
       proposals: components["schemas"]["CatalogProposal"][];
       publish: components["schemas"]["CatalogPublishState"];
@@ -13423,6 +13573,12 @@ export interface components {
       category_id?: components["schemas"]["CompanyItemRef"] | null;
       /** @description Процент 0..100; `null` — по умолчанию компании */
       vat_rate?: components["schemas"]["DecimalString"] | null;
+      /** @description Страна происхождения; `null` — страна бренда */
+      country_of_origin_id?: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Гарантия, мес.; `null` — срок компании по умолчанию */
+      warranty_months?: number | null;
+      /** @description Условия гарантии */
+      warranty_terms?: string;
     };
     CatalogItemUpdate: {
       name?: string;
@@ -13437,9 +13593,17 @@ export interface components {
       manufacturer_part_number?: string;
       /** @description Код ТН ВЭД: 2–10 цифр; пусто — снять */
       hs_code?: string;
+      /** @description Страна происхождения; `null` — страна бренда */
+      country_of_origin_id?: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Гарантия, мес.; `null` — срок компании по умолчанию */
+      warranty_months?: number | null;
+      /** @description Условия гарантии */
+      warranty_terms?: string;
     };
     CatalogLookups: {
       units: components["schemas"]["CatalogUnit"][];
+      /** @description Виды документов товара (справочник); по порядку */
+      document_kinds: components["schemas"]["CatalogDocumentKind"][];
       /** @description Базисы поставки Incoterms */
       delivery_bases: {
         code: string;
@@ -13805,11 +13969,16 @@ export interface components {
       is_active?: boolean;
       company_id?: components["schemas"]["CompanyItemRef"] | null;
     };
-    /**
-     * @description ТЗ, чертёж, сертификат, регламент ПНР, другое
-     * @enum {string}
-     */
-    TechDocKind: "tz" | "drawing" | "certificate" | "pnr" | "other";
+    /** @description Код вида документа из справочника видов (`CatalogLookups.document_kinds`): `certificate`, `passport`, `tz`… */
+    TechDocKind: string;
+    CatalogDocumentKind: {
+      code: components["schemas"]["TechDocKind"];
+      name: string;
+      /** @description У документа этого вида есть срок действия */
+      has_validity: boolean;
+      /** @description Новый документ этого вида по умолчанию виден клиенту */
+      client_visible_default: boolean;
+    };
     TechDocDeal: {
       id: components["schemas"]["CompanyItemRef"];
       /** @description Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09 */
@@ -13820,7 +13989,24 @@ export interface components {
     TechDoc: {
       id: components["schemas"]["CompanyItemRef"];
       kind: components["schemas"]["TechDocKind"];
+      /** @description Название вида из справочника */
+      kind_name: string;
       title: string;
+      /** @description Номер документа; пусто, если не задан */
+      number: string;
+      /** @description Кем выдан */
+      issued_by: string;
+      /** Format: date */
+      issued_at: string | null;
+      /**
+       * Format: date
+       * @description Действует до; `null` — бессрочно
+       */
+      valid_until: string | null;
+      /** @description Срок «действует до» прошёл — пометка для сотрудника */
+      is_expired: boolean;
+      /** @description Клиент видит документ в кабинете */
+      client_visible: boolean;
       original_name: string;
       content_type: string;
       size_bytes: number;
@@ -13846,8 +14032,33 @@ export interface components {
       file: string;
       kind?: components["schemas"]["TechDocKind"];
       title?: string;
+      number?: string;
+      issued_by?: string;
+      /** Format: date */
+      issued_at?: string;
+      /**
+       * Format: date
+       * @description Пусто — бессрочно
+       */
+      valid_until?: string;
+      /** @description Пусто — по умолчанию вида */
+      client_visible?: boolean;
       product_id?: components["schemas"]["CompanyItemRef"];
       deal_id?: components["schemas"]["CompanyItemRef"];
+    };
+    TechDocUpdate: {
+      kind?: components["schemas"]["TechDocKind"];
+      title?: string;
+      number?: string;
+      issued_by?: string;
+      /** Format: date */
+      issued_at?: string | null;
+      /**
+       * Format: date
+       * @description `null` — бессрочно
+       */
+      valid_until?: string | null;
+      client_visible?: boolean;
     };
   };
   responses: {
@@ -14127,6 +14338,8 @@ export interface components {
     ReplyTemplateId: number;
     /** @description Id объекта ERP (строкой) */
     CompanyItemId: components["schemas"]["CompanyItemRef"];
+    /** @description Id фото позиции (строкой) */
+    CatalogImageId: components["schemas"]["CompanyItemRef"];
     /** @description Вид справочника (`letter-kinds`, `receipt-methods`, `mail-types`) */
     DictionaryKindPath: string;
     DictionaryCodePath: string;
@@ -25156,6 +25369,146 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  uploadCatalogItemImage: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["CatalogImageUpload"];
+      };
+    };
+    responses: {
+      /** @description Загружено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogImage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 5 МБ (`details.max_bytes`) */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteCatalogItemImage: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+        /** @description Id фото позиции (строкой) */
+        image_id: components["parameters"]["CatalogImageId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCatalogItemImage: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+        /** @description Id фото позиции (строкой) */
+        image_id: components["parameters"]["CatalogImageId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogImageUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogImage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCatalogItemImageContent: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+        /** @description Id фото позиции (строкой) */
+        image_id: components["parameters"]["CatalogImageId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   publishCatalogItem: {
     parameters: {
       query?: never;
@@ -26155,6 +26508,41 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateTechDoc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TechDocUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TechDoc"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -11,8 +11,9 @@
 своим правам, BFF вырезает ещё раз по каталогу ролей (администратор в ERP видит всё, а роль
 «Администратор» этих полей не видит)."""
 
+import re
 from collections.abc import Mapping
-from typing import Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -21,7 +22,12 @@ from app.schemas_company import Body, Patch, dec, ident, opt_ident, text
 
 ItemKind = Literal["stock", "on_order", "service_fixed", "service_milestones", "service_time"]
 BrigadeKindName = Literal["brigade", "person", "subcontractor"]
-TechDocKindName = Literal["tz", "drawing", "certificate", "pnr", "other"]
+# Код вида документа из справочника видов ERP (`DocumentKind.code`): виды — данные, не
+# перечисление в коде.
+KIND_CODE = r"^[a-z0-9_-]{1,32}$"
+TechDocKindName = Annotated[str, Field(pattern=KIND_CODE)]
+_KIND_CODE = re.compile(KIND_CODE)
+DATE_PATTERN = r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
 Validity = Literal["ok", "expiring", "expired"]
 RateUnit = Literal["day", "hour"]
 OfferSource = Literal["price_list", "rfq_reply", "manual"]
@@ -188,10 +194,48 @@ class Item(Out):
     proposals_count: int
 
 
-class TechDocRef(Out):
+class TechDocFields(Out):
+    """Паспорт документа товара: вид, номер, орган, сроки, видимость клиенту (CAT-CARD-1)."""
+
     id: str
     title: str
     kind: TechDocKindName
+    kind_name: str
+    number: str
+    issued_by: str
+    issued_at: str | None
+    valid_until: str | None
+    is_expired: bool
+    client_visible: bool
+    original_name: str
+    size_bytes: int
+    previewable: bool
+
+
+class TechDocRef(TechDocFields):
+    pass
+
+
+class ItemImage(Out):
+    id: str
+    is_main: bool
+    sort_order: int
+    alt: str
+
+
+class ItemOrigin(Out):
+    own: NamedRef | None
+    effective: NamedRef | None
+    brand: NamedRef | None
+    source: Literal["item", "brand", "none"]
+
+
+class ItemWarranty(Out):
+    months: int | None
+    terms: str
+    effective_months: int | None
+    company_months: int | None
+    source: Literal["item", "company", "none"]
 
 
 class Proposal(Out):
@@ -219,6 +263,9 @@ class ItemDetail(Item):
     offers: list[Offer]
     prices_visible: bool
     tech_docs: list[TechDocRef]
+    images: list[ItemImage]
+    origin: ItemOrigin
+    warranty: ItemWarranty
     proposals: list[Proposal]
     publish: PublishState
 
@@ -271,12 +318,12 @@ def to_item(raw: Mapping[str, Any]) -> dict[str, Any]:
 
 def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
     docs = [
-        TechDocRef(
-            id=ident(d.get("id")), title=text(d.get("title")), kind=_tech_kind(d.get("kind"))
-        )
+        TechDocRef(**tech_doc_fields(d))
         for d in raw.get("tech_docs") or []
         if isinstance(d, Mapping)
     ]
+    origin = _mapping(raw.get("origin"))
+    warranty = _mapping(raw.get("warranty"))
     return ItemDetail(
         **to_item(raw),
         description=text(raw.get("description")),
@@ -293,6 +340,24 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
         ],
         prices_visible=show_prices and bool(raw.get("prices_visible")),
         tech_docs=docs,
+        images=[
+            to_image(i) for i in raw.get("images") or [] if isinstance(i, Mapping) and i.get("id")
+        ],
+        origin=ItemOrigin(
+            own=_named(origin.get("own")),
+            effective=_named(origin.get("effective")),
+            brand=_named(origin.get("brand")),
+            source=origin.get("source") if origin.get("source") in ("item", "brand") else "none",
+        ),
+        warranty=ItemWarranty(
+            months=_months(warranty.get("months")),
+            terms=text(warranty.get("terms")),
+            effective_months=_months(warranty.get("effective_months")),
+            company_months=_months(warranty.get("company_months")),
+            source=warranty.get("source")
+            if warranty.get("source") in ("item", "company")
+            else "none",
+        ),
         proposals=[
             p
             for p in (to_proposal(r) for r in raw.get("proposals") or [] if isinstance(r, Mapping))
@@ -303,6 +368,23 @@ def to_item_detail(raw: Mapping[str, Any], *, show_prices: bool) -> ItemDetail:
             missing=[str(m) for m in (raw.get("publish") or {}).get("missing") or []],
         ),
     )
+
+
+def _mapping(value: Any) -> Mapping[str, Any]:
+    return value if isinstance(value, Mapping) else {}
+
+
+def to_image(raw: Mapping[str, Any]) -> ItemImage:
+    return ItemImage(
+        id=ident(raw.get("id")),
+        is_main=bool(raw.get("is_main")),
+        sort_order=int(raw.get("sort_order") or 0),
+        alt=text(raw.get("alt")),
+    )
+
+
+def _months(value: Any) -> int | None:
+    return int(value) if isinstance(value, int) and not isinstance(value, bool) else None
 
 
 def to_item_page(data: Any, page: int, page_size: int) -> ItemPage:
@@ -318,11 +400,21 @@ class ItemCreate(Body):
     unit_id: str | None = None
     category_id: str | None = None
     vat_rate: str | None = None
+    country_of_origin_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    warranty_months: int | None = Field(default=None, ge=0, le=600)
+    warranty_terms: str | None = Field(default=None, max_length=5000)
 
 
 class ItemUpdate(Patch):
     nullable: ClassVar[frozenset[str]] = frozenset(
-        {"unit_id", "category_id", "vat_rate", "brand_id"}
+        {
+            "unit_id",
+            "category_id",
+            "vat_rate",
+            "brand_id",
+            "country_of_origin_id",
+            "warranty_months",
+        }
     )
     name: str | None = None
     kind: ItemKind | None = None
@@ -335,11 +427,20 @@ class ItemUpdate(Patch):
     hs_code: str | None = Field(
         default=None, pattern=r"^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$"
     )
+    country_of_origin_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    warranty_months: int | None = Field(default=None, ge=0, le=600)
+    warranty_terms: str | None = Field(default=None, max_length=5000)
+
+
+class ItemImageUpdate(Patch):
+    is_main: Literal[True] | None = None
+    sort_order: int | None = Field(default=None, ge=0)
+    alt_text: str | None = Field(default=None, max_length=255)
 
 
 def item_to_erp(sent: dict[str, Any]) -> dict[str, Any]:
     out = dict(sent)
-    for key in ("unit_id", "category_id", "brand_id"):
+    for key in ("unit_id", "category_id", "brand_id", "country_of_origin_id"):
         if key in out and out[key] is not None:
             out[key] = int(out[key])
     return out
@@ -914,12 +1015,20 @@ class DeliveryBasisRef(Out):
     name: str
 
 
+class DocumentKindRef(Out):
+    code: TechDocKindName
+    name: str
+    has_validity: bool
+    client_visible_default: bool
+
+
 class Lookups(Out):
     units: list[Unit]
     categories: list[LookupCategory]
     currencies: list[LookupCurrency]
     countries: list[NamedRef]
     delivery_bases: list[DeliveryBasisRef]
+    document_kinds: list[DocumentKindRef]
 
 
 # --- техдокументация ---------------------------------------------------------------------------
@@ -932,39 +1041,58 @@ class TechDocDeal(Out):
     client: str
 
 
-class TechDoc(Out):
-    id: str
-    kind: TechDocKindName
-    title: str
-    original_name: str
+class TechDoc(TechDocFields):
     content_type: str
-    size_bytes: int
-    previewable: bool
     product: ProductRef | None
     deal: TechDocDeal | None
     uploaded_by: str | None
     created_at: str
 
 
+class TechDocUpdate(Patch):
+    nullable: ClassVar[frozenset[str]] = frozenset({"issued_at", "valid_until"})
+    kind: TechDocKindName | None = None
+    title: str | None = Field(default=None, max_length=255)
+    number: str | None = Field(default=None, max_length=100)
+    issued_by: str | None = Field(default=None, max_length=255)
+    issued_at: str | None = Field(default=None, pattern=DATE_PATTERN)
+    valid_until: str | None = Field(default=None, pattern=DATE_PATTERN)
+    client_visible: bool | None = None
+
+
 class TechDocPage(PageOut):
     items: list[TechDoc]
 
 
-def _tech_kind(value: Any) -> TechDocKindName:
-    return value if value in ("tz", "drawing", "certificate", "pnr", "other") else "other"
+def _tech_kind(value: Any) -> str:
+    return value if isinstance(value, str) and _KIND_CODE.match(value) else "other"
+
+
+def tech_doc_fields(raw: Mapping[str, Any]) -> dict[str, Any]:
+    kind = _tech_kind(raw.get("kind"))
+    return {
+        "id": ident(raw.get("id")),
+        "title": text(raw.get("title")),
+        "kind": kind,
+        "kind_name": text(raw.get("kind_name")) or kind,
+        "number": text(raw.get("number")),
+        "issued_by": text(raw.get("issued_by")),
+        "issued_at": raw.get("issued_at"),
+        "valid_until": raw.get("valid_until"),
+        "is_expired": bool(raw.get("is_expired")),
+        "client_visible": bool(raw.get("client_visible")),
+        "original_name": text(raw.get("original_name")),
+        "size_bytes": int(raw.get("size_bytes") or 0),
+        "previewable": bool(raw.get("previewable")),
+    }
 
 
 def to_tech_doc(raw: Mapping[str, Any]) -> TechDoc:
     product = raw.get("product")
     deal = raw.get("deal")
     return TechDoc(
-        id=ident(raw.get("id")),
-        kind=_tech_kind(raw.get("kind")),
-        title=text(raw.get("title")),
-        original_name=text(raw.get("original_name")),
+        **tech_doc_fields(raw),
         content_type=text(raw.get("content_type")),
-        size_bytes=int(raw.get("size_bytes") or 0),
-        previewable=bool(raw.get("previewable")),
         product=(
             ProductRef(
                 id=ident(product.get("id")),

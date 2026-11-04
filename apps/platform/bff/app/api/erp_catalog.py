@@ -33,6 +33,7 @@ from app.schemas_erp_catalog import (
     BrigadeUpdate,
     CategoryProposalIn,
     DeliveryBasisRef,
+    DocumentKindRef,
     ExchangeRatePage,
     HsCode,
     HsCodeCreate,
@@ -118,12 +119,13 @@ def _params(**values: Any) -> dict[str, Any]:
 @router.get("/erp/catalog/lookups", response_model=Lookups, operation_id="getCatalogLookups")
 async def get_lookups(authed: Reader) -> Lookups:
     erp = _erp(authed)
-    units, categories, currencies, countries, bases = await asyncio.gather(
+    units, categories, currencies, countries, bases, kinds = await asyncio.gather(
         erp.pages("master-data/units/"),
         erp.pages("catalog/categories/"),
         erp.pages("master-data/currencies/"),
         erp.pages("master-data/countries/"),
         erp.pages("master-data/delivery-basis/"),
+        erp.pages("catalog/document-kinds/"),
     )
     return Lookups(
         units=[
@@ -147,6 +149,16 @@ async def get_lookups(authed: Reader) -> Lookups:
             DeliveryBasisRef(code=text(b.get("code")), name=text(b.get("name")))
             for b in bases
             if b.get("code")
+        ],
+        document_kinds=[
+            DocumentKindRef(
+                code=text(k.get("code")),
+                name=text(k.get("name")),
+                has_validity=bool(k.get("has_validity")),
+                client_visible_default=bool(k.get("client_visible_default")),
+            )
+            for k in kinds
+            if k.get("code")
         ],
     )
 

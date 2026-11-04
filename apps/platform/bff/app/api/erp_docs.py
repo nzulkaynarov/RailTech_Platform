@@ -1,5 +1,5 @@
 """Расчёт · Техдокументация (контракт: тег `erp-catalog`, 0.26.0; D2-3, B-019 часть «ERP ·
-Документация»).
+Документация»; CAT-CARD-1: вид из справочника, номер, сроки, «видно клиенту», правка паспорта).
 
 BFF проксирует к ERP `catalog/tech-docs/` с токеном сотрудника и проверяет раздел `erp.stock`
 (чтение — `read`, загрузка и удаление — `full`; право `catalog.manage` решает ERP). Загрузка: тело
@@ -21,7 +21,14 @@ from app.clients.erp_company import erp_error
 from app.deps import Authed, require
 from app.errors import PlatformError
 from app.schemas_eds_documents import EdsDealOptions
-from app.schemas_erp_catalog import TechDoc, TechDocPage, to_tech_doc, to_tech_page
+from app.schemas_erp_catalog import (
+    KIND_CODE,
+    TechDoc,
+    TechDocPage,
+    TechDocUpdate,
+    to_tech_doc,
+    to_tech_page,
+)
 
 router = APIRouter(tags=["erp-catalog"])
 
@@ -59,7 +66,7 @@ async def _read_limited(request: Request) -> bytes:
 async def list_files(
     authed: Reader,
     q: Search = None,
-    kind: Annotated[str | None, Query(pattern=r"^(tz|drawing|certificate|pnr|other)$")] = None,
+    kind: Annotated[str | None, Query(pattern=KIND_CODE)] = None,
     product_id: Annotated[str | None, ID_QUERY] = None,
     deal_id: Annotated[str | None, ID_QUERY] = None,
     page: Page = 1,
@@ -95,6 +102,12 @@ async def upload_file(request: Request, authed: Writer) -> TechDoc:
         "POST", "catalog/tech-docs/", content=body, content_type=content_type
     )
     return to_tech_doc(response.json())
+
+
+@router.patch("/erp/docs/files/{id}", response_model=TechDoc, operation_id="updateTechDoc")
+async def update_file(id: DocId, body: TechDocUpdate, authed: Writer) -> TechDoc:
+    data = await _erp(authed).data("PATCH", f"catalog/tech-docs/{id}/", json=body.sent())
+    return to_tech_doc(data)
 
 
 @router.delete(
