@@ -15,6 +15,12 @@ The supplier is the company the VIEW resolved: the uploader's own seller company
 (self-service path) or a supplier chosen explicitly by a back-office employee with the
 catalog and supply rights (CAT-1, `supplier_company_id`) — never a column in the file.
 
+PART-2 — загрузку из кабинета партнёра запускает контакт компании (`contact_id`), а не пользователь ERP: он же автор
+предложений по полям (`ProductFieldProposal.contact`) и «подтвердил актуальность» на записанных ценах. Поставщик — компания
+сессии кабинета, выбрать другого нельзя; новые карточки — нашего каталога (владелец — своя компания), поставщик — источник
+данных. Свою карточку партнёр правит прайсом, пока она «черновик» или «возвращена»; на проверке и опубликованная — только
+предложения по полям.
+
 CAT-1 — чужие карточки не перезаписываются. Совпадение по бренду+MPN (или ГОСТ/чертежу) с
 карточкой, которую завёл ДРУГОЙ поставщик или которая уже не черновик, обновляет только
 предложение поставщика; расхождения полей уходят в `catalog.ProductFieldProposal` на одобрение
@@ -259,6 +265,8 @@ class _Ctx:
     #: CAT-1: предложения по полям чужих карточек, кто загрузил, срок цены на весь файл.
     Proposal: object = None
     actor: object = None
+    #: PART-2: контакт кабинета партнёра, загрузивший файл (вместо пользователя ERP).
+    contact: object = None
     valid_from: object = None
     valid_until: object = None
     #: Владелец новых карточек: своя компания на пути сотрудника, иначе сам поставщик (путь продавца).
@@ -374,8 +382,26 @@ def _find_by_own_offer(ctx: _Ctx, fields: dict, supplier_sku: str):
     offers = ctx.SupplierOffer.objects.filter(supplier=ctx.supplier).select_related("product__domain_type")
     match = offers.filter(supplier_sku__iexact=supplier_sku).first() if supplier_sku else None
     if match is None:
-        match = offers.filter(product__name__iexact=fields["name"]).order_by("id").first()
+        by_card_name = offers.filter(product__name__iexact=fields["name"]).order_by("id")
+        if ctx.contact is not None:
+            # Загрузка из кабинета (PART-2): название чужой неопубликованной карточки угадывать нельзя — совпадение по нему
+            # было бы подсказкой «такая карточка есть» (счётчики, цена не дописывается). По названию карточки ищем только
+            # свои и опубликованные; скрытую — лишь по тому, что партнёр прислал сам (`supplier_item_name`).
+            from django.db.models import Q
+
+            own_or_published = Q(product__source_supplier_id=ctx.supplier.pk) | Q(product__status__code="PUBLISHED")
+            by_card_name = by_card_name.filter(own_or_published)
+            match = (
+                by_card_name.first() or offers.filter(supplier_item_name__iexact=fields["name"]).order_by("id").first()
+            )
+        else:
+            match = by_card_name.first()
     return match.product if match else None
+
+
+#: Статусы карточки, поля которой прайс своего поставщика меняет: черновик и возвращённая с причиной (PART-2: партнёр
+#: исправляет её тем же прайсом). «На проверке», опубликованная и архивная — только предложения по полям.
+EDITABLE_STATUS_CODES = ("DRAFT", "RETURNED")
 
 
 def _is_foreign_card(ctx: _Ctx, product) -> bool:
@@ -385,13 +411,26 @@ def _is_foreign_card(ctx: _Ctx, product) -> bool:
     владельцу, как до CAT-1 (путь продавца: своя компания загружает свой каталог).
     """
     status_code = getattr(product.status, "code", None)
-    if status_code and status_code != "DRAFT":
+    if status_code and status_code not in EDITABLE_STATUS_CODES:
         return True
     supplier_id = getattr(ctx.supplier, "pk", None)
     if product.source_supplier_id is not None:
         return product.source_supplier_id != supplier_id
     owner_id = product.owner_company_id
     return owner_id is not None and owner_id != supplier_id
+
+
+def _hidden_from_contact(ctx: _Ctx, product) -> bool:
+    """Загрузка из кабинета партнёра совпала с карточкой, которой он не источник и которая не опубликована (PART-2).
+
+    Такую карточку партнёр не должен ни видеть, ни угадывать по отчёту (предложения по полям, полнота): цена
+    привязывается к ней молча, а по отчёту это просто «сопоставлено». Опубликованный слой публичен — для него отчёт прежний.
+    """
+    if ctx.contact is None:
+        return False
+    supplier_id = getattr(ctx.supplier, "pk", None)
+    status_code = getattr(product.status, "code", None)
+    return status_code != "PUBLISHED" and product.source_supplier_id != supplier_id
 
 
 def _display(value) -> str:
@@ -430,7 +469,12 @@ def _propose(ctx: _Ctx, product, field_name: str, current: str, proposed: str, r
     pending = Proposal.objects.filter(**scope, status=Proposal.Status.PENDING).first()
     if pending is None:
         Proposal.objects.create(
-            **scope, current_value=current, proposed_value=proposed, proposed_ref=ref, created_by=ctx.actor
+            **scope,
+            current_value=current,
+            proposed_value=proposed,
+            proposed_ref=ref,
+            created_by=ctx.actor,
+            contact=ctx.contact,
         )
     elif (pending.proposed_value, pending.proposed_ref, pending.current_value) != (proposed, ref, current):
         pending.proposed_value, pending.proposed_ref, pending.current_value = proposed, ref, current
@@ -464,6 +508,8 @@ def _apply_product(ctx: _Ctx, fields: dict, supplier_sku: str = ""):
 
     if existing:
         if _is_foreign_card(ctx, existing):
+            if _hidden_from_contact(ctx, existing):
+                return existing, False, []  # чужая неопубликованная карточка: партнёру о ней ничего не сообщаем
             return existing, False, _propose_differences(ctx, existing, fields, uom)
         _update_product(ctx, existing, fields, brand, uom)
         return existing, False, []
@@ -481,6 +527,10 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
         "currency": offer["currency"],
         "stock_status": offer["stock"],
         "supplier_sku": offer["supplier_sku"],
+        # Что поставщик прислал сам (PART-2): по этому кабинет показывает ему сопоставленную чужую карточку
+        "supplier_item_name": (offer.get("item_name") or "")[:255],
+        "supplier_brand": (offer.get("brand") or "")[:255],
+        "supplier_mpn": (offer.get("mpn") or "")[:100],
         "delivery_lead_time": offer["lead"],
         "min_order_qty": offer["moq"],
         "is_active": True,
@@ -489,6 +539,21 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
     for key in ("valid_from", "valid_until"):
         if offer.get(key) is not None:
             defaults[key] = offer[key]
+    if ctx.contact is not None:
+        # Свежий прайс из кабинета сам подтверждает актуальность загруженных цен (PART-2) — кроме цены, срок которой уже
+        # прошёл (по дню Ташкента): подтвердить истёкшую цену нельзя ни кнопкой, ни загрузкой.
+        from django.utils import timezone
+
+        until = defaults.get("valid_until")
+        if until is None:  # срок не задан файлом — остаётся прежний срок предложения, если оно уже есть
+            until = (
+                ctx.SupplierOffer.objects.filter(product=product, supplier=ctx.supplier)
+                .values_list("valid_until", flat=True)
+                .first()
+            )
+        if until is None or until >= timezone.localdate():
+            defaults["confirmed_at"] = timezone.now()
+            defaults["confirmed_by_contact"] = ctx.contact
     _, created = ctx.SupplierOffer.objects.update_or_create(product=product, supplier=ctx.supplier, defaults=defaults)
     return created
 
@@ -602,6 +667,9 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
                 "moq": _parse_int(_cell(row, columns["moq"]), 1),
                 "valid_from": valid_from,
                 "valid_until": valid_until,
+                "item_name": name,
+                "brand": _cell(row, columns["brand"]),
+                "mpn": _cell(row, columns["mpn"]),
             },
         )
 
@@ -697,7 +765,9 @@ def _iterate_rows(ctx: _Ctx, data_frame, columns: dict, result: ImportResult, pr
         # Предупреждения записываются ТОЛЬКО после успеха строки: у откатанной строки их нет.
         for message in outcome["warnings"]:
             result.add_warning(row_number, message)
-        ctx.touched_products[outcome["product"].pk] = outcome["product"]
+        if not _hidden_from_contact(ctx, outcome["product"]):
+            # Полноту чужой неопубликованной карточки в отчёт партнёра не считаем (PART-2)
+            ctx.touched_products[outcome["product"].pk] = outcome["product"]
 
         processed = result.created + result.updated + result.skipped
         if progress_callback and processed % 500 == 0:
@@ -778,6 +848,7 @@ def run_catalog_import_frame(
     progress_callback=None,
     *,
     actor_id=None,
+    contact_id=None,
     valid_from=None,
     valid_until=None,
     owner_company_id=None,
@@ -810,6 +881,7 @@ def run_catalog_import_frame(
         dry_run,
         hs_status=_prescan_hs_codes(data_frame, columns),
         actor=_actor(actor_id),
+        contact=_contact(contact_id),
         owner=Company.objects.filter(id=owner_company_id).first() if owner_company_id else supplier,
         valid_from=_as_date(valid_from),
         valid_until=_as_date(valid_until),
@@ -824,7 +896,9 @@ def run_catalog_import_frame(
             transaction.set_rollback(True)
     else:
         # История цены (pghistory, CAT-1): кто загрузил и откуда цена — в контексте каждого снимка предложения.
-        with pghistory.context(user=actor_id, source="price_list"):
+        # PART-2: загрузка из кабинета — автор контакт (`contact`), пользователя ERP нет.
+        extra = {"contact": contact_id} if contact_id else {}
+        with pghistory.context(user=actor_id, source="price_list", **extra):
             _iterate_rows(ctx, data_frame, columns, result, progress_callback)
         _summarize_publishability(ctx, result)
 
@@ -837,6 +911,14 @@ def _actor(actor_id):
     from accounts.models import CustomUser
 
     return CustomUser.objects.filter(pk=actor_id).first()
+
+
+def _contact(contact_id):
+    if not contact_id:
+        return None
+    from parties.models import Contact
+
+    return Contact.objects.filter(pk=contact_id).first()
 
 
 def _as_date(value):

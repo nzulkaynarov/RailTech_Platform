@@ -146,6 +146,46 @@ class SupplierOffer(models.Model):
         help_text=_("Неактивные офферы не отображаются при выборе"),
     )
 
+    # PART-2: то, что партнёр сам прислал строкой прайса (его название, бренд, артикул изготовителя). Если цена привязалась к
+    # карточке, которую завели не из его данных и которая не опубликована, кабинет показывает ему только это — ни названия,
+    # ни полей, ни хода чужой карточки (`portal/services/partner_products.py`).
+    supplier_item_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Название у поставщика"),
+        help_text=_("Как поставщик назвал товар в своём прайсе"),
+    )
+    supplier_brand = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Бренд у поставщика"),
+        help_text=_("Бренд из строки прайса поставщика"),
+    )
+    supplier_mpn = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name=_("Артикул изготовителя у поставщика"),
+        help_text=_("Артикул изготовителя из строки прайса поставщика"),
+    )
+
+    # PART-2: «подтвердить актуальность» — партнёр в кабинете (или загрузка прайса из кабинета) подтверждает, что цена
+    # действует. Без модерации; признак «устарела» считается от этой даты (`catalog/offer_freshness.py`).
+    confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Актуальность подтверждена"),
+        help_text=_("Когда поставщик в последний раз подтвердил, что цена действует"),
+    )
+    confirmed_by_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто подтвердил"),
+        help_text=_("Контакт кабинета партнёра, подтвердивший актуальность"),
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата создания"),

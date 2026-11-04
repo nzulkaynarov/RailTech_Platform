@@ -43,6 +43,12 @@ ERROR_CODES = (
     "CONTACT_NOT_IN_CRM",
     "TELEGRAM_LINK_UNAVAILABLE",
     "TELEGRAM_NOT_LINKED",
+    "XLSX_REQUIRED",
+    "VALID_DATE_INVALID",
+    "OFFER_VALIDITY_RANGE_INVALID",
+    "PRODUCT_NOT_SUBMITTABLE",
+    "OFFER_EXPIRED",
+    "IMPORT_FAILED",
 )
 
 #: Код по HTTP-статусу для ошибок, у которых своего кода нет (чужие исключения DRF и Django).

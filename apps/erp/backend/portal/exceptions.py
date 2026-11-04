@@ -56,13 +56,13 @@ class PortalDeliveryFailed(APIException):
 
 
 class PortalUnavailable(APIException):
-    """Сервис временно недоступен по настройке ансамбля (бот не задан, нет сопряжения с CRM): 503 с кодом (NOTIFY-1)."""
+    """Служба недоступна (очередь обработки): 503 с кодом из `ErrorCode` (PART-2: `IMPORT_FAILED`)."""
 
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_detail = "TELEGRAM_LINK_UNAVAILABLE"
+    default_detail = "IMPORT_FAILED"
     default_code = "unavailable"
 
-    def __init__(self, detail="TELEGRAM_LINK_UNAVAILABLE"):
+    def __init__(self, detail="IMPORT_FAILED"):
         super().__init__(detail=detail, code=detail)
 
 

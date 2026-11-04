@@ -9,13 +9,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .constants import DEFAULT_PUBLISH_THRESHOLD, PriceVisibility
+from .constants import DEFAULT_OFFER_CONFIRM_DAYS, DEFAULT_PUBLISH_THRESHOLD, PriceVisibility
 
 
 @dataclass(frozen=True)
 class CatalogPolicy:
     price_visibility: str = PriceVisibility.ON_REQUEST
     publish_threshold: int = DEFAULT_PUBLISH_THRESHOLD
+    #: PART-2: через сколько дней без подтверждения цена поставщика «устарела» (`catalog/offer_freshness.py`).
+    offer_confirm_days: int = DEFAULT_OFFER_CONFIRM_DAYS
 
 
 DEFAULT_POLICY = CatalogPolicy()
@@ -29,11 +31,13 @@ def load_policies(company_ids) -> dict[int, CatalogPolicy]:
     from parties.models import CompanySettings
 
     rows = CompanySettings.objects.filter(company_id__in=ids).values_list(
-        "company_id", "catalog_price_visibility", "catalog_publish_threshold"
+        "company_id", "catalog_price_visibility", "catalog_publish_threshold", "offer_confirm_days"
     )
     return {
-        company_id: CatalogPolicy(price_visibility=visibility, publish_threshold=threshold)
-        for company_id, visibility, threshold in rows
+        company_id: CatalogPolicy(
+            price_visibility=visibility, publish_threshold=threshold, offer_confirm_days=confirm_days
+        )
+        for company_id, visibility, threshold, confirm_days in rows
     }
 
 

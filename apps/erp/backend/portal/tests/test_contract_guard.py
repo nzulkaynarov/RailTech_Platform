@@ -121,12 +121,22 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.4.0"
+    assert load_contract()["info"]["version"] == "0.5.0"
+
+
+#: GET раздела «Мои товары» партнёра (PART-2): сессия клиента сюда не допущена (403 `MODULE_REQUIRED`), поэтому их
+#: опрашивает `test_partner_contract.py` на мире партнёра, а не этот сторож.
+PARTNER_GET_PATHS = {
+    "/partner/products",
+    "/partner/products/{id}",
+    "/partner/price-template",
+    "/partner/price-list/{task_id}",
+}
 
 
 def test_every_contract_get_is_covered_by_the_guard():
-    missing = contract_get_paths() - set(GET_CASES)
-    stale = set(GET_CASES) - contract_get_paths()
+    missing = contract_get_paths() - set(GET_CASES) - PARTNER_GET_PATHS
+    stale = (set(GET_CASES) | PARTNER_GET_PATHS) - contract_get_paths()
     assert not missing, f"GET-эндпоинты контракта без фикстур сторожа: {sorted(missing)}"
     assert not stale, f"строки сторожа без GET в контракте: {sorted(stale)}"
 
@@ -153,6 +163,7 @@ def _portal_get_routes() -> set[str]:
             path.replace("<int:pk>", "{id}")
             .replace("<int:doc_id>", "{doc_id}")
             .replace("<str:token>", "{token}")
+            .replace("<str:task_id>", "{task_id}")
             .rstrip("/")
             or "/"
         )

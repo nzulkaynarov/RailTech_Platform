@@ -285,6 +285,17 @@ CATALOG_REQUESTS_PATHS = {
     "/uploads",
 }
 
+#: Эндпоинты модуля «Мои товары» (`my_products`, PART-2): раздел партнёра; клиентскому набору модулей они не открыты.
+MY_PRODUCTS_PATHS = {
+    "/partner/products",
+    "/partner/products/{id}",
+    "/partner/products/submit",
+    "/partner/offers/confirm",
+    "/partner/price-template",
+    "/partner/price-list",
+    "/partner/price-list/{task_id}",
+}
+
 
 def _client_operations(only=None, exclude=None):
     operations = OpenApiContract("erp-portal.yaml").operations()
@@ -313,27 +324,40 @@ class TestEndpointsFollowModules:
         for expected in ("/uploads", "/catalog", "/catalog/categories", "/company", "/team", "/team/invite"):
             assert expected in paths
         assert CATALOG_REQUESTS_PATHS <= paths
+        assert MY_PRODUCTS_PATHS <= paths
 
-    @pytest.mark.parametrize(("method", "path"), _client_operations())
+    @pytest.mark.parametrize(("method", "path"), _client_operations(exclude=MY_PRODUCTS_PATHS))
     def test_partner_without_modules_gets_403_on_every_operation(self, partner_client, supplier_company, method, path):
         _only_my_products(supplier_company)
         response = getattr(partner_client, method.lower())(_concrete(path), {}, format="json")
         assert response.status_code == status.HTTP_403_FORBIDDEN, (method, path, response.content)
         assert response.json() == {"detail": "MODULE_REQUIRED"}
 
-    @pytest.mark.parametrize(("method", "path"), _client_operations())
+    @pytest.mark.parametrize(("method", "path"), _client_operations(exclude=MY_PRODUCTS_PATHS))
     def test_403_does_not_depend_on_the_object_existing(self, partner_client, supplier_company, method, path):
         """Модуль проверяется до поиска объекта: ответ не зависит от того, есть ли объект."""
         _only_my_products(supplier_company)
         response = getattr(partner_client, method.lower())(_concrete(path).replace("/1", "/999999"), {}, format="json")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    @pytest.mark.parametrize(("method", "path"), _client_operations(exclude=CATALOG_REQUESTS_PATHS))
+    @pytest.mark.parametrize(("method", "path"), _client_operations(exclude=CATALOG_REQUESTS_PATHS | MY_PRODUCTS_PATHS))
     def test_default_partner_never_reaches_client_documents(self, partner_client, method, path):
         """Партнёр с модулями по умолчанию: КП, договоры, счета, акты, поставки, документы, команда — только клиенту."""
         response = getattr(partner_client, method.lower())(_concrete(path), {}, format="json")
         assert response.status_code == status.HTTP_403_FORBIDDEN, (method, path)
         assert response.json() == {"detail": "MODULE_REQUIRED"}
+
+    @pytest.mark.parametrize(("method", "path"), _client_operations(only=MY_PRODUCTS_PATHS))
+    def test_my_products_endpoints_need_exactly_that_module(self, partner_client, supplier_company, method, path):
+        """Партнёр с одним `catalog_requests` в «Мои товары» не попадает: 403 до поиска объекта; клиентские модули не открывают их."""
+        CompanyRelationship.objects.filter(company=supplier_company).update(modules=["catalog_requests"])
+        response = getattr(partner_client, method.lower())(_concrete(path), {}, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN and response.json() == {"detail": "MODULE_REQUIRED"}
+
+    @pytest.mark.parametrize(("method", "path"), _client_operations(only=MY_PRODUCTS_PATHS))
+    def test_client_company_never_reaches_my_products(self, portal_client, method, path):
+        response = getattr(portal_client, method.lower())(_concrete(path), {}, format="json")
+        assert response.status_code == status.HTTP_403_FORBIDDEN and response.json() == {"detail": "MODULE_REQUIRED"}
 
     def test_default_partner_reads_catalog_and_requests(self, partner_client):
         for url in ("/catalog", "/catalog/categories", "/requests"):
