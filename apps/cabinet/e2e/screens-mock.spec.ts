@@ -167,6 +167,19 @@ test('CHAT-1: «Сообщения» — бейдж в меню, лента, п�
   await snap(page, 'cabinet-messages');
 });
 
+test('CHAT-1: клиент и партнёр — «Сообщения» в разделе «Компания» меню «Покупаю / Поставляю»', async ({ page }) => {
+  await page.route('https://telegram.org/**', (route) => route.fulfill({ contentType: 'text/javascript', body: '' }));
+  const modules = ['catalog_requests', 'quotes', 'documents', 'contracts', 'invoices', 'acts', 'deliveries', 'messages', 'company', 'team', 'profile', 'my_products'];
+  await page.addInitScript((session) => {
+    window.sessionStorage.setItem('cabinet.mock.session', session);
+    window.localStorage.setItem('cabinet.language', 'ru');
+    window.localStorage.setItem('rt-cab-sidebar-collapsed-v1', 'false');
+  }, JSON.stringify({ role: 'actor', auth_method: 'magic_link', dataset: 'demo', access: { roles: ['client', 'partner'], modules } }));
+  await page.goto('/messages');
+  await heading(page, 'Сообщения');
+  await snap(page, 'cabinet-messages-dual-role');
+});
+
 test('сайдбар свёрнут: пункты с именем, марка RailTech', async ({ page }) => {
   await signIn(page, 'actor', { collapsed: true });
   await page.goto('/deals/48');

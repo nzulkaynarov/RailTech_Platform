@@ -32,6 +32,22 @@
     "violations": []
   },
   {
+    "screen": "cabinet-messages-dual-role",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-messages-dual-role",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 40,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
     "screen": "cabinet-sidebar-collapsed",
     "width": 1440,
     "axe": true,
