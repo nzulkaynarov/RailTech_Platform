@@ -13,6 +13,7 @@ import { useAppMode } from '@/session/mode';
 import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
 import { BottomNav } from './BottomNav';
+import { MessagesLink } from './MessagesLink';
 import { BrandMark } from './BrandMark';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
 import { SideNav } from './SideNav';
@@ -101,6 +102,8 @@ export function AppShell() {
       segments.push({ label: crumb ?? t('crumbs.catalogItem') });
     } else if (path.startsWith('/catalog')) {
       segments.push({ label: t('nav.catalog') });
+    } else if (path.startsWith('/messages')) {
+      segments.push({ label: t('nav.messages') });
     } else if (path.startsWith('/company')) {
       segments.push({ label: t('nav.company') });
     } else if (path.startsWith('/team')) {
@@ -213,8 +216,9 @@ export function AppShell() {
                   </div>
                 </div>
 
-                {/* Правая часть: ссылка на профиль */}
+                {/* Правая часть: сообщения (бейдж непрочитанного, CHAT-1) и профиль */}
                 <div className="flex items-center gap-2">
+                  <MessagesLink />
                   <Link
                     to="/profile"
                     className="rounded-xl p-2 text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-primary focus-visible:ring-2 focus-visible:ring-ring"

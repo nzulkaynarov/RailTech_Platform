@@ -1,0 +1,50 @@
+[
+  {
+    "screen": "cabinet-badge-requests",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-badge-requests",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 36,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-messages",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-messages",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-sidebar-collapsed",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "cabinet-sidebar-collapsed",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 37,
+    "overflowPx": 0,
+    "violations": []
+  }
+]

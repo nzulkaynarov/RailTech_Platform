@@ -22,6 +22,8 @@ export const keys = {
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
   company: ['company'] as const,
   team: ['team'] as const,
+  /** Лента чата кабинета: первая страница, дальше опрос дописывает в тот же кэш (`hooks/useMessagesFeed.ts`). */
+  messages: ['messages'] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */

@@ -1,13 +1,16 @@
+import { useId } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
-import { type NavItem } from '@/app/nav';
+import { MESSAGES_MODULE, type NavItem } from '@/app/nav';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useCanAct, useMe } from '@/session/useMe';
 import { useNav } from '@/session/useNav';
 import { BrandMark } from './BrandMark';
+import { useUnread, useUnreadText } from '@/hooks/useUnread';
+import { UnreadBadge, UnreadNote } from './MessagesLink';
 
 export interface SideNavProps {
   companyName?: string;
@@ -123,15 +126,22 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
 
 function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed: boolean; className?: string }) {
   const { t } = useTranslation();
+  const unread = useUnread();
+  const unreadText = useUnreadText(unread);
+  const noteId = useId();
   return (
     <ul className={cn('flex flex-col gap-1', className)}>
       {items.map((item) => {
         const label = t(item.labelKey);
+        // «Сообщения» с непрочитанными: число — бейджем и в подписи для диктора (CHAT-1)
+        const badge = item.module === MESSAGES_MODULE ? unread : 0;
         return (
           <li key={item.to}>
             <NavLink
               to={item.to}
-              aria-label={collapsed ? label : undefined}
+              // свёрнутый с бейджем: имя — скрытым текстом, а не aria-label (видимое «2» не входит в aria-label, axe)
+              aria-label={collapsed && badge === 0 ? label : undefined}
+              aria-describedby={badge > 0 && unreadText ? noteId : undefined}
               title={collapsed ? label : undefined}
               className={({ isActive }) =>
                 cn(
@@ -142,8 +152,11 @@ function NavList({ items, collapsed, className }: { items: NavItem[]; collapsed:
               }
             >
               <item.icon className="size-4 shrink-0" aria-hidden="true" />
-              {!collapsed && <span className="truncate">{label}</span>}
+              {!collapsed ? <span className="truncate">{label}</span> : null}
+              {collapsed && badge > 0 ? <span className="sr-only">{label}</span> : null}
+              <UnreadBadge count={badge} className={collapsed ? 'absolute top-0.5 right-0.5' : 'ml-auto'} />
             </NavLink>
+            {badge > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
           </li>
         );
       })}

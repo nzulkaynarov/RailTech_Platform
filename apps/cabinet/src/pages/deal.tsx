@@ -101,7 +101,12 @@ export function DealPage() {
         crumb={dealRef?.number}
         subtitle={subtitle}
         icon={Briefcase}
-        actions={<ManagerButton dealId={dealId} />}
+        actions={
+          <ManagerButton
+            context={dealRef ? { kind: 'deal', id: dealRef.id, number: dealRef.number } : null}
+            label={dealRef ? t('manager.aboutDeal', { number: dealRef.number }) : undefined}
+          />
+        }
       />
 
       <DealStages progress={progress} />
