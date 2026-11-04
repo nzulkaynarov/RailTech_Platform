@@ -237,7 +237,8 @@ class ItemDeskViewSet(DeskViewSet):
         summary="Publish a catalog item",
         description=(
             "Needs `catalog.publish`. Порог полноты (`catalog/publishing.py`): не хватает полей — 409 "
-            "`PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки."
+            "`PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки. Публикация карточки партнёра «на проверке» — решение "
+            "очереди проверки: карточку уже вернули или опубликовали параллельно — 409 `PRODUCT_NOT_ON_REVIEW`."
         ),
         request=None,
         responses={200: DeskItemDetail, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
@@ -265,7 +266,7 @@ class ItemDeskViewSet(DeskViewSet):
         description=(
             "Needs `catalog.publish`. Карточка партнёра «на проверке» → «возвращена»: общий комментарий и замечания по полям "
             "(`issues`: поле из перечня карточки и текст). Нужна хотя бы одна причина — 400 `REVIEW_REASON_REQUIRED`; поле не из "
-            "перечня или длинный текст — 400 `REVIEW_ISSUES_INVALID`. Карточка не на проверке (уже решена) — 409 "
+            "перечня, пустой или длиннее 500 знаков текст замечания — 400 `REVIEW_ISSUES_INVALID`, комментарий длиннее 2000 знаков — 400 `REVIEW_REASON_TOO_LONG`. Карточка не на проверке (уже решена) — 409 "
             "`PRODUCT_NOT_ON_REVIEW`. Проверка закрывается решением «возвращена», партнёру уходит письмо."
         ),
         request=DeskReturnIn,
@@ -275,10 +276,10 @@ class ItemDeskViewSet(DeskViewSet):
     @action(detail=True, methods=["post"], url_path="return", url_name="return")
     def return_to_partner(self, request, pk=None):
         product = self._product(pk)
-        body = DeskReturnIn(data=request.data)
-        body.is_valid(raise_exception=True)
+        # Тело проверяет `clean_return` и отвечает кодом `REVIEW_*`, а не ошибками полей сериализатора (контракт: 400 `detail`)
+        data = request.data if isinstance(request.data, dict) else {}
         try:
-            items.return_item(product.pk, dict(body.validated_data), request.user)
+            items.return_item(product.pk, {"reason": data.get("reason"), "issues": data.get("issues")}, request.user)
         except items.ItemError as error:
             return refuse(error)
         return Response(items.item_detail(self._product(product.pk), request.user))

@@ -6831,3 +6831,6 @@ msgstr "Price"
 
 msgid "Цена действует до"
 msgstr "Price valid until"
+
+msgid "Исправьте поля, отмеченные в карточке."
+msgstr "Fix the fields marked in the card."

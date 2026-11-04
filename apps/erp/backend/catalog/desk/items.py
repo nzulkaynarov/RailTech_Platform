@@ -486,22 +486,44 @@ def set_published(product: Product, publish: bool, actor) -> Product:
     Карточку без владельца (старая, ничья) публикует сотрудник своей компании — владельцем становится своя компания:
     иначе `can_manage` не пустил бы никого, кроме администратора.
 
-    Публикация карточки партнёра «на проверке» — решение очереди проверки (PART-3): проверка закрывается решением
-    «опубликована», запись попадает в журнал, контактам партнёра уходит письмо после фиксации.
+    Публикация карточки партнёра «на проверке» — решение очереди проверки (PART-3): строка карточки блокируется
+    (`select_for_update`), статус читается под блокировкой; если пока сотрудник смотрел карточку её вернули или опубликовали
+    параллельно — 409 `PRODUCT_NOT_ON_REVIEW`, чужое решение не перезаписывается. Журнал и письмо партнёру — только если
+    публикация действительно закрыла открытую проверку (и после фиксации транзакции).
     """
+    from django.db import transaction
+
+    from catalog.models import ProductReview
     from catalog.publishing import publish_product, unpublish_product
+    from catalog.review_queue import CODE_REVIEW
     from core.tenant import own_company_id
 
-    if product.owner_company_id is None and own_company_id():
-        product.owner_company_id = own_company_id()
-        product.save(update_fields=["owner_company", "updated_at"])
-    was_review = publish and getattr(product.status, "code", None) == "REVIEW"
-    _, error = (publish_product if publish else unpublish_product)(product, actor)
-    if error:
-        raise ItemError(error.split(":", 1)[0])
-    if was_review:
-        _decided(product, actor, "published")
-    return product
+    seen_review = getattr(product.status, "code", None) == CODE_REVIEW
+    with transaction.atomic():
+        locked = (
+            Product.objects.select_for_update(of=("self",))
+            .select_related("status", "source_supplier")
+            .filter(pk=product.pk)
+            .first()
+        )
+        if locked is None:
+            raise ItemError("ITEM_NOT_FOUND")
+        if publish and seen_review and getattr(locked.status, "code", None) != CODE_REVIEW:
+            raise ItemError("PRODUCT_NOT_ON_REVIEW")
+        if locked.owner_company_id is None and own_company_id():
+            locked.owner_company_id = own_company_id()
+            locked.save(update_fields=["owner_company", "updated_at"])
+        had_open_review = (
+            publish
+            and getattr(locked.status, "code", None) == CODE_REVIEW
+            and ProductReview.objects.filter(product=locked, decision=ProductReview.Decision.PENDING).exists()
+        )
+        _, error = (publish_product if publish else unpublish_product)(locked, actor)
+        if error:
+            raise ItemError(error.split(":", 1)[0])
+        if had_open_review:
+            _decided(locked, actor, "published")
+    return locked
 
 
 def _decided(product: Product, actor, decision: str, *, reason: str = "", issues=()) -> None:

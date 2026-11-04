@@ -17,6 +17,7 @@ from portal.services.access import company_access
 from portal.services.mail_context import responsible_manager_email
 
 from catalog.models.reviews import ISSUE_FIELDS
+from catalog.review_queue import reason_text
 from notifications.emails import send_templated_email
 
 logger = logging.getLogger(__name__)
@@ -72,7 +73,7 @@ def notify_decision(product, decision: str, *, reason: str = "", issues=(), acto
             "card_url": card_url(product.pk),
         }
         if decision == "returned":
-            context["reason"] = reason
+            context["reason"] = reason_text(reason, contact.language)
             context["issues"] = [{"label": ISSUE_LABELS[item["field"]], "comment": item["comment"]} for item in issues]
         try:
             send_templated_email(

@@ -151,3 +151,12 @@ class TestPublishNeedsAPriceWhenItWillBeShown:
         assert "list_price" not in [m["code"] for m in completeness(card)["missing"]]
         world["deal"](CABINET)
         assert "list_price" in [m["code"] for m in completeness(card)["missing"]]
+
+
+class TestSuspendedRelationship:
+    def test_agreement_keeps_working_while_the_cabinet_access_is_suspended(self, world):
+        """Договорённость о ценах товаров партнёра не исчезает от приостановки его входа в кабинет."""
+        world["deal"](CABINET)
+        world["relation"].status = RelationshipStatus.SUSPENDED
+        world["relation"].save()
+        assert price_visibility_source(world["card"]()) == (CABINET, "partner")

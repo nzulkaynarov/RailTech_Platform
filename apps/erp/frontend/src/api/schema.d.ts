@@ -3794,7 +3794,7 @@ export interface paths {
         put?: never;
         /**
          * Publish a catalog item
-         * @description Needs `catalog.publish`. Порог полноты (`catalog/publishing.py`): не хватает полей — 409 `PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки.
+         * @description Needs `catalog.publish`. Порог полноты (`catalog/publishing.py`): не хватает полей — 409 `PRODUCT_INCOMPLETE`, список — в `publish.missing` карточки. Публикация карточки партнёра «на проверке» — решение очереди проверки: карточку уже вернули или опубликовали параллельно — 409 `PRODUCT_NOT_ON_REVIEW`.
          */
         post: operations["catalog_items_publish"];
         delete?: never;
@@ -3814,7 +3814,7 @@ export interface paths {
         put?: never;
         /**
          * Return a partner card with reasons
-         * @description Needs `catalog.publish`. Карточка партнёра «на проверке» → «возвращена»: общий комментарий и замечания по полям (`issues`: поле из перечня карточки и текст). Нужна хотя бы одна причина — 400 `REVIEW_REASON_REQUIRED`; поле не из перечня или длинный текст — 400 `REVIEW_ISSUES_INVALID`. Карточка не на проверке (уже решена) — 409 `PRODUCT_NOT_ON_REVIEW`. Проверка закрывается решением «возвращена», партнёру уходит письмо.
+         * @description Needs `catalog.publish`. Карточка партнёра «на проверке» → «возвращена»: общий комментарий и замечания по полям (`issues`: поле из перечня карточки и текст). Нужна хотя бы одна причина — 400 `REVIEW_REASON_REQUIRED`; поле не из перечня, пустой или длиннее 500 знаков текст замечания — 400 `REVIEW_ISSUES_INVALID`, комментарий длиннее 2000 знаков — 400 `REVIEW_REASON_TOO_LONG`. Карточка не на проверке (уже решена) — 409 `PRODUCT_NOT_ON_REVIEW`. Проверка закрывается решением «возвращена», партнёру уходит письмо.
          */
         post: operations["catalog_items_return"];
         delete?: never;

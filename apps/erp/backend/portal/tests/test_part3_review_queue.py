@@ -13,7 +13,7 @@ from django.utils import timezone
 from parties.models import Contact
 from portal.tests.conftest import LOCMEM_BACKEND
 
-from catalog.models import ProductFieldProposal, ProductReview, ProductStatus
+from catalog.models import Product, ProductFieldProposal, ProductReview, ProductStatus
 from catalog.review_queue import due_at, is_overdue
 from catalog.tests.desk_world import client_for as staff_client
 from catalog.tests.desk_world import make_staff
@@ -249,7 +249,9 @@ class TestReturn:
         response = self.send(desk, card, {"issues": [{"field": "name", "comment": "Опечатка в названии"}]})
         assert response.status_code == 200, response.content
         review = ProductReview.objects.get(product=card, decision="returned")
-        assert review.reason and review.field_issues == [{"field": "name", "comment": "Опечатка в названии"}]
+        # хранится код, а не текст: слово подставляется при показе на языке получателя
+        assert review.reason == "REVIEW_ISSUES_ONLY"
+        assert review.field_issues == [{"field": "name", "comment": "Опечатка в названии"}]
 
     def test_reason_alone_is_enough(self, desk):
         response = self.send(desk, desk["cards"]["review"], {"reason": "Нет фото"})
@@ -272,15 +274,22 @@ class TestReturn:
             [{"field": "price", "comment": "я" * 501}],
             [{"comment": "без поля"}],
             "не список",
+            [["не", "словарь"]],
+            [{"field": ["price"], "comment": "x"}],
         ],
     )
     def test_field_outside_the_card_list_or_bad_comment_is_refused(self, desk, issues):
         card = desk["cards"]["review"]
         response = self.send(desk, card, {"reason": "Есть причина", "issues": issues})
         assert response.status_code == 400, response.content
+        assert response.json() == {"detail": "REVIEW_ISSUES_INVALID"}
         card.refresh_from_db()
         assert card.status.code == "REVIEW"
         assert not ProductReview.objects.filter(product=card, decision="returned").exists()
+
+    def test_too_long_reason_has_its_own_code(self, desk):
+        response = self.send(desk, desk["cards"]["review"], {"reason": "я" * 2001})
+        assert response.status_code == 400 and response.json() == {"detail": "REVIEW_REASON_TOO_LONG"}
 
     @pytest.mark.parametrize("key", ["draft", "returned", "published"])
     def test_card_not_on_review_is_409_and_nothing_is_written(self, desk, key):
@@ -511,3 +520,88 @@ class TestPartnerLetter:
         recipients = {address for m in mail.outbox for address in m.to}
         assert recipients == {desk["a_contact"].email}
         assert desk["b_contact"].email not in recipients
+
+
+class TestStalePublish:
+    """Сотрудник A открыл карточку «на проверке» и жмёт «Опубликовать», а B успел её вернуть: решение B не перезаписывается."""
+
+    def test_publish_after_a_parallel_return_is_409_and_changes_nothing(self, desk, django_capture_on_commit_callbacks):
+        from catalog.desk import items
+
+        card = publishable(desk["cards"]["review"])
+        stale = Product.objects.select_related("status", "source_supplier").get(pk=card.pk)  # чтение A до решения B
+        with django_capture_on_commit_callbacks(execute=True):
+            assert (
+                desk["supply_api"].post(f"{ITEMS}{card.pk}/return/", {"reason": "B"}, format="json").status_code == 200
+            )
+        letters = len(mail.outbox)
+        with django_capture_on_commit_callbacks(execute=True):
+            with pytest.raises(items.ItemError) as refused:
+                items.set_published(stale, True, desk["supply"])
+        assert refused.value.code == "PRODUCT_NOT_ON_REVIEW"
+        card.refresh_from_db()
+        assert card.status.code == "RETURNED"
+        assert list(ProductReview.objects.filter(product=card).values_list("decision", flat=True)) == ["returned"]
+        assert len(mail.outbox) == letters
+        assert not ActivityLog.objects.filter(event_code="admin.product_review.published", entity_id=card.pk).exists()
+
+    def test_publish_after_a_parallel_publish_does_not_write_a_second_decision(
+        self, desk, django_capture_on_commit_callbacks
+    ):
+        card = publishable(desk["cards"]["review"])
+        with django_capture_on_commit_callbacks(execute=True):
+            assert desk["supply_api"].post(f"{ITEMS}{card.pk}/publish/").status_code == 200
+        stale = Product.objects.select_related("status", "source_supplier").get(pk=card.pk)
+        stale.status = ProductStatus.objects.get(code="REVIEW")  # так карточку видел второй сотрудник
+        from catalog.desk import items
+
+        with pytest.raises(items.ItemError) as refused:
+            items.set_published(stale, True, desk["supply"])
+        assert refused.value.code == "PRODUCT_NOT_ON_REVIEW"
+        assert ActivityLog.objects.filter(event_code="admin.product_review.published", entity_id=card.pk).count() == 1
+
+    def test_no_journal_and_no_letter_when_there_was_no_open_review(self, desk, django_capture_on_commit_callbacks):
+        """Статус «на проверке» поставили мимо кабинета, открытой проверки нет: публикация идёт, решения проверки не пишутся."""
+        card = publishable(desk["cards"]["review"])
+        ProductReview.objects.filter(product=card).delete()
+        with django_capture_on_commit_callbacks(execute=True):
+            assert desk["supply_api"].post(f"{ITEMS}{card.pk}/publish/").status_code == 200
+        assert mail.outbox == []
+        assert not ActivityLog.objects.filter(event_code="admin.product_review.published", entity_id=card.pk).exists()
+
+
+class TestLetterIsEscapedAndTranslated:
+    EVIL = '<script>alert(1)</script><img src=x onerror=alert(2)><a href="http://evil.example">клик</a>'
+
+    def test_html_in_reason_issue_and_card_name_is_escaped_in_the_html_letter(
+        self, desk, django_capture_on_commit_callbacks
+    ):
+        card = desk["cards"]["review"]
+        Product.objects.filter(pk=card.pk).update(name='Болт <script>alert(3)</script> "A&B"')
+        with django_capture_on_commit_callbacks(execute=True):
+            response = desk["supply_api"].post(
+                f"{ITEMS}{card.pk}/return/",
+                {"reason": self.EVIL, "issues": [{"field": "name", "comment": self.EVIL}]},
+                format="json",
+            )
+        assert response.status_code == 200, response.content
+        html = mail.outbox[0].alternatives[0][0]
+        assert "<script>" not in html and "<img" not in html and '<a href="http://evil.example"' not in html
+        assert "&lt;script&gt;alert(1)&lt;/script&gt;" in html
+        assert "&lt;script&gt;alert(3)&lt;/script&gt;" in html
+        assert html.count("&lt;img src=x onerror=alert(2)&gt;") >= 2  # причина и замечание
+
+    def test_issues_only_reason_is_shown_in_the_language_of_the_contact(self, desk, django_capture_on_commit_callbacks):
+        Contact.objects.filter(pk=desk["a_contact"].pk).update(language="uz")
+        card = desk["cards"]["review"]
+        with django_capture_on_commit_callbacks(execute=True):
+            desk["supply_api"].post(
+                f"{ITEMS}{card.pk}/return/", {"issues": [{"field": "name", "comment": "Опечатка"}]}, format="json"
+            )
+        assert ProductReview.objects.get(product=card, decision="returned").reason == "REVIEW_ISSUES_ONLY"
+        assert "REVIEW_ISSUES_ONLY" not in mail.outbox[0].body
+        assert "tuzating" in mail.outbox[0].body
+        # кабинет: тот же код словами на языке контакта
+        mine = desk["client_a"].get("/api/portal/v1/partner/products", {"status": "returned"}).json()
+        row = next(item for item in mine["items"] if item["id"] == card.pk)
+        assert row["return_reason"] != "REVIEW_ISSUES_ONLY" and "tuzating" in row["return_reason"]

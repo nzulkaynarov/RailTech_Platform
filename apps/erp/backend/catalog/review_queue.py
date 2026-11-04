@@ -31,7 +31,8 @@ CODE_REVIEW = "REVIEW"
 CODE_RETURNED = "RETURNED"
 MAX_REASON = 2000
 #: Общий комментарий, когда сотрудник указал только замечания по полям (причина возврата обязательна — ограничение базы).
-ISSUES_ONLY_REASON = "Исправьте поля, отмеченные в карточке."
+#: Хранится код, а не текст: слово подставляется при показе на языке получателя (`reason_text`).
+REASON_ISSUES_ONLY = "REVIEW_ISSUES_ONLY"
 
 
 class ReviewError(Exception):
@@ -127,7 +128,19 @@ def clean_return(reason, issues) -> tuple[str, list[dict]]:
         raise ReviewError("REVIEW_ISSUES_INVALID") from None
     if not text and not cleaned:
         raise ReviewError("REVIEW_REASON_REQUIRED")
-    return text or ISSUES_ONLY_REASON, cleaned
+    return text or REASON_ISSUES_ONLY, cleaned
+
+
+def reason_text(reason: str | None, language: str | None = None) -> str:
+    """Причина возврата для показа: код «только замечания по полям» — словами на языке получателя, свой текст — как есть."""
+    if reason != REASON_ISSUES_ONLY:
+        return reason or ""
+    from django.conf import settings
+    from django.utils import translation
+    from django.utils.translation import gettext
+
+    with translation.override(language or settings.LANGUAGE_CODE):
+        return gettext("Исправьте поля, отмеченные в карточке.")
 
 
 @transaction.atomic
@@ -173,11 +186,13 @@ def return_to_partner(product_id: int, actor, reason, issues) -> Product:
 
 __all__ = [
     "ISSUE_FIELDS",
+    "REASON_ISSUES_ONLY",
     "ReviewError",
     "clean_return",
     "due_at",
     "is_overdue",
     "queue_info",
+    "reason_text",
     "return_to_partner",
     "waiting_queryset",
 ]

@@ -24,6 +24,7 @@ from catalog.models import Product, ProductFieldProposal, ProductReview, Product
 from catalog.offer_freshness import EXPIRING_DAYS, freshness
 from catalog.policy import policy_for
 from catalog.review_flow import close_pending_review
+from catalog.review_queue import reason_text
 from core.tenant import own_company_id
 
 DRAFT = "draft"
@@ -180,7 +181,7 @@ def _issues(review) -> list[dict]:
     return list(review.field_issues or []) if review is not None else []
 
 
-def project_cards(company, products: list) -> list[dict]:
+def project_cards(company, products: list, language: str | None = None) -> list[dict]:
     """Карточки страницы → элементы `PartnerProduct`. Запросы — на страницу, не на строку."""
     if not products:
         return []
@@ -246,7 +247,7 @@ def project_cards(company, products: list) -> list[dict]:
                 "category": product.category.name if product.category_id else None,
                 "status": status,
                 "return_reason": (
-                    (returns[product.pk].reason or None)
+                    (reason_text(returns[product.pk].reason, language) or None)
                     if own and status == RETURNED and product.pk in returns
                     else None
                 ),
@@ -262,13 +263,13 @@ def project_cards(company, products: list) -> list[dict]:
     return items
 
 
-def project_detail(company, product) -> dict:
+def project_detail(company, product, language: str | None = None) -> dict:
     """Одна карточка с описанием, недостающими полями и историей проверок (только своя).
 
     Сопоставленная чужая неопубликованная карточка — только присланное партнёром: описания, ТН ВЭД, единицы, недостающих
     полей и истории нет.
     """
-    [item] = project_cards(company, [product])
+    [item] = project_cards(company, [product], language)
     if item["status"] == MATCHED:
         return {**item, "description": "", "hs_code": "", "uom": None, "missing": [], "history": []}
     ctx = CompletenessContext([product])
@@ -279,7 +280,7 @@ def project_detail(company, product) -> dict:
             {
                 "submitted_at": review.submitted_at,
                 "decision": review.decision,
-                "reason": review.reason,
+                "reason": reason_text(review.reason, language),
                 "issues": list(review.field_issues or []),
                 "decided_at": review.decided_at,
             }

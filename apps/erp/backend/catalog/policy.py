@@ -52,7 +52,10 @@ def policy_for(company_id) -> CatalogPolicy:
 
 
 def load_partner_price_visibility(supplier_ids) -> dict[int, str]:
-    """Договорённости о цене с партнёрами пачки одним запросом: `{компания: «cabinet»|«on_request»}`; «как у компании» не входит."""
+    """Договорённости о цене с партнёрами пачки одним запросом: `{компания: «cabinet»|«on_request»}`; «как у компании» не входит.
+
+    Статус отношения не смотрится: договорённость о ценах товаров партнёра не исчезает от приостановки его входа в кабинет.
+    """
     ids = {supplier_id for supplier_id in supplier_ids if supplier_id}
     if not ids:
         return {}

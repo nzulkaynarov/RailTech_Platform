@@ -64,7 +64,7 @@ class PartnerProductListView(BasePortalView):
         start = (page - 1) * page_size
         page_items = list(products.ordered(queryset, company)[start : start + page_size])
         body = {
-            "items": products.project_cards(company, page_items),
+            "items": products.project_cards(company, page_items, request.portal_contact.language),
             "page": page,
             "page_size": page_size,
             "total": total,
@@ -84,7 +84,11 @@ class PartnerProductDetailView(BasePortalView):
         product = products.partner_cards(company).filter(pk=pk).first()
         if product is None:
             raise Http404
-        return Response(PartnerProductDetailSerializer(products.project_detail(company, product)).data)
+        return Response(
+            PartnerProductDetailSerializer(
+                products.project_detail(company, product, request.portal_contact.language)
+            ).data
+        )
 
 
 class PartnerSubmitView(BasePortalView):

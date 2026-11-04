@@ -198,3 +198,6 @@ msgstr "Narx amal qilish muddati"
 
 msgid "Другое"
 msgstr "Boshqa"
+
+msgid "Исправьте поля, отмеченные в карточке."
+msgstr "Kartochkada belgilangan maydonlarni tuzating."
