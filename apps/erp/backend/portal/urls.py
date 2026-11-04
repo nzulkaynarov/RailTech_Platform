@@ -40,7 +40,6 @@ from portal.views import (
     TelegramAuthView,
     UploadView,
 )
-from portal.views_telegram import TelegramLinkView, TelegramStatusView, TelegramTestView
 from portal.views_partner import (
     PartnerConfirmView,
     PartnerPriceListTaskView,
@@ -50,6 +49,7 @@ from portal.views_partner import (
     PartnerProductListView,
     PartnerSubmitView,
 )
+from portal.views_telegram import TelegramLinkView, TelegramStatusView, TelegramTestView
 
 urlpatterns = [
     # Auth
