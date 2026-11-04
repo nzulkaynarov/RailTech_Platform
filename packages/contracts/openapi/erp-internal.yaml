@@ -6588,7 +6588,7 @@ paths:
     post:
       operationId: catalog_supplier_access_invite
       description: Needs `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту
-        письмо с кодом входа на его языке. Письмо не ушло — 503 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий
+        письмо с кодом входа на его языке. Письмо не ушло — 400 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий
         с контактом другой компании кабинета — 409 `CONTACT_EMAIL_AMBIGUOUS`.
       summary: Invite a supplier contact to the cabinet
       parameters:

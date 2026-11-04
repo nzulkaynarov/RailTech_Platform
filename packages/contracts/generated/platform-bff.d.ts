@@ -6308,6 +6308,126 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/suppliers/{id}/cabinet-access": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Поставщик: доступ в кабинет
+     * @description ERP `catalog/supplier-access/{id}/`: отношение «партнёр» (статус, вид, включённые модули), контакты компании, роли и разделы кабинета, которые откроются партнёру сейчас. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getSupplierCabinetAccess"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/contacts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: добавить контакт
+     * @description ERP `POST catalog/supplier-access/{id}/contacts/` — право `supply.manage`. ФИО и e-mail обязательны (в кабинет входят по e-mail), язык писем — ru, uz или en. Такой адрес у компании уже есть — 409 (`CONTACT_EXISTS`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createSupplierCabinetContact"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/contacts/{contact_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Поставщик: изменить контакт
+     * @description ERP `PATCH catalog/supplier-access/{id}/contacts/{contact_id}/` — право `supply.manage`. Приходят только изменённые поля. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateSupplierCabinetContact"];
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/relationship": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Поставщик: права партнёра в кабинете
+     * @description ERP `PATCH catalog/supplier-access/{id}/relationship/` — право `supply.manage`. Включённые модули (`my_products`, `catalog_requests`) и вид партнёра; действует на следующем запросе партнёра, без перевхода. Модуль не из шаблона роли — 422 (`details.reason = module_not_allowed`); отношения ещё нет — 404. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateSupplierCabinetRights"];
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: пригласить в кабинет
+     * @description ERP `POST catalog/supplier-access/{id}/invite/` — право `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке; ссылки и кода в ответе нет. Письмо не ушло — 422 (`details.reason = email_delivery_failed`), отношение не меняется; адрес общий с контактом другой компании кабинета — 409. Раздел `erp.stock` — полный.
+     */
+    post: operations["inviteSupplierToCabinet"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/suspend": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: приостановить доступ в кабинет
+     * @description ERP `POST catalog/supplier-access/{id}/suspend/` — право `supply.manage`. Вход закрыт, живые сессии партнёра гаснут на следующем запросе; вернуть доступ — «Пригласить». Раздел `erp.stock` — полный.
+     */
+    post: operations["suspendSupplierCabinetAccess"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers/{id}/offers/{offer_id}": {
     parameters: {
       query?: never;
@@ -13538,6 +13658,95 @@ export interface components {
       email?: string;
       website?: string;
       is_manufacturer?: boolean;
+    };
+    SupplierCabinetPerson: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+    };
+    SupplierCabinetContact: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      email: string;
+      phone: string;
+      /**
+       * @description Язык писем контакту
+       * @enum {string}
+       */
+      language: "ru" | "uz" | "en";
+      /** Format: date-time */
+      invited_at: string | null;
+      /** Format: date-time */
+      last_login_at: string | null;
+    };
+    SupplierCabinetRelationship: {
+      /** @enum {string} */
+      role: "partner";
+      /**
+       * @description Вид партнёра — метка, на права не влияет
+       * @enum {string}
+       */
+      kind: "" | "manufacturer" | "supplier" | "principal" | "other";
+      /** @description Включённые партнёру модули кабинета */
+      modules: ("my_products" | "catalog_requests")[];
+      /** @enum {string} */
+      status: "invited" | "active" | "suspended";
+      /** Format: date-time */
+      invited_at: string | null;
+      /**
+       * Format: date-time
+       * @description Первый вход
+       */
+      activated_at: string | null;
+      /** Format: date-time */
+      suspended_at: string | null;
+      responsible: components["schemas"]["SupplierCabinetPerson"] | null;
+      invited_by: components["schemas"]["SupplierCabinetPerson"] | null;
+    };
+    SupplierCabinetModules: {
+      /** @description Что шаблон роли разрешает включить */
+      allowed: ("my_products" | "catalog_requests")[];
+      /** @description Что получает новое отношение */
+      default: ("my_products" | "catalog_requests")[];
+    };
+    SupplierCabinetAccess: {
+      company_id: components["schemas"]["CompanyItemRef"];
+      company_name: string;
+      /** @description `null` — кабинет поставщику ещё не открывали */
+      relationship: components["schemas"]["SupplierCabinetRelationship"] | null;
+      contacts: components["schemas"]["SupplierCabinetContact"][];
+      partner_modules: components["schemas"]["SupplierCabinetModules"];
+      /** @description Роли компании в кабинете сейчас: клиент (тип CLIENT) и/или партнёр (действующее отношение); роли складываются */
+      cabinet_roles: ("client" | "partner")[];
+      /** @description Разделы, которые откроются сессии компании */
+      cabinet_modules: string[];
+      /** @description У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка */
+      can_manage: boolean;
+    };
+    SupplierCabinetContactCreate: {
+      name: string;
+      email: string;
+      phone?: string;
+      /** @enum {string} */
+      language?: "ru" | "uz" | "en";
+    };
+    SupplierCabinetContactUpdate: {
+      name?: string;
+      email?: string;
+      phone?: string;
+      /** @enum {string} */
+      language?: "ru" | "uz" | "en";
+    };
+    SupplierCabinetRightsUpdate: {
+      modules?: ("my_products" | "catalog_requests")[];
+      /** @enum {string} */
+      kind?: "" | "manufacturer" | "supplier" | "principal" | "other";
+    };
+    SupplierCabinetInvite: {
+      contact_id: components["schemas"]["CompanyItemRef"];
+      /** @description Включённые модули; не указаны — у нового отношения значения по умолчанию */
+      modules?: ("my_products" | "catalog_requests")[];
+      /** @enum {string} */
+      kind?: "" | "manufacturer" | "supplier" | "principal" | "other";
     };
     SupplierOfferCreate: {
       product_id: components["schemas"]["CompanyItemRef"];
@@ -25467,6 +25676,210 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSupplierCabinetAccess: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createSupplierCabinetContact: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierCabinetContactCreate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetContact"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateSupplierCabinetContact: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+        /** @description Id контакта компании */
+        contact_id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierCabinetContactUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetContact"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateSupplierCabinetRights: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierCabinetRightsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  inviteSupplierToCabinet: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierCabinetInvite"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CatalogConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  suspendSupplierCabinetAccess: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

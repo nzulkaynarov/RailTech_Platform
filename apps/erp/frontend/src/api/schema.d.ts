@@ -4303,7 +4303,7 @@ export interface paths {
         put?: never;
         /**
          * Invite a supplier contact to the cabinet
-         * @description Needs `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке. Письмо не ушло — 503 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий с контактом другой компании кабинета — 409 `CONTACT_EMAIL_AMBIGUOUS`.
+         * @description Needs `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке. Письмо не ушло — 400 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий с контактом другой компании кабинета — 409 `CONTACT_EMAIL_AMBIGUOUS`.
          */
         post: operations["catalog_supplier_access_invite"];
         delete?: never;
