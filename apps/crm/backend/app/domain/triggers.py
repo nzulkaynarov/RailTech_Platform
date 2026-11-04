@@ -34,6 +34,8 @@ class TriggerCode(StrEnum):
     # Сбои, о которых лиду сказали «коллеги увидят», — команда должна увидеть (аудит P-11, P-12).
     AGENT_UNAVAILABLE = "agent_unavailable"
     DELIVERY_FAILED = "delivery_failed"
+    # Клиент написал в чат кабинета (CHAT-1, ADR-0023): бот-ИИ там не отвечает — только менеджер.
+    CABINET_MESSAGE = "cabinet_message"
 
 
 PRIORITY: Final[dict[TriggerCode, Priority]] = {
@@ -52,6 +54,7 @@ PRIORITY: Final[dict[TriggerCode, Priority]] = {
     TriggerCode.ATTACHMENT_RECEIVED: Priority.INFO,
     TriggerCode.AGENT_UNAVAILABLE: Priority.INFO,
     TriggerCode.DELIVERY_FAILED: Priority.INFO,
+    TriggerCode.CABINET_MESSAGE: Priority.WARM,
 }
 
 
@@ -86,6 +89,7 @@ class TriggerSignals:
     attachment_received: bool = False
     agent_unavailable: bool = False
     delivery_failed: bool = False
+    cabinet_message: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,3 +143,5 @@ def _fires(code: TriggerCode, s: TriggerSignals, cfg: TriggerSettings) -> bool:
             return s.agent_unavailable
         case TriggerCode.DELIVERY_FAILED:
             return s.delivery_failed
+        case TriggerCode.CABINET_MESSAGE:
+            return s.cabinet_message

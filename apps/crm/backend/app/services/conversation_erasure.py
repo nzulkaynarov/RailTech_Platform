@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.language import Language
 from app.domain.triggers import TriggerSignals
+from app.repositories import cabinet_chat as cabinet_repo
 from app.repositories import leads as repo
 from app.security.audit import Actor
 from app.services.conversation_support import current_lead, lang_of, report_failure
@@ -61,9 +62,13 @@ class ErasureMixin:
                 now = datetime.now(UTC)
                 keys = await repo.attachment_keys(session, lead.id)
                 closed = await repo.close_escalations(session, lead.id, now)
+                cabinet = await cabinet_repo.lead_cabinet_company(session, lead.id)
                 count = await repo.erase_lead(session, lead, now)
-                # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id.
-                await bus_events.lead_erased(session, lead, Actor(None, "bot"))
+                # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id;
+                # лид вёл беседу кабинета — ERP стирает и ленту кабинета компании (CHAT-1).
+                await bus_events.lead_erased(
+                    session, lead, Actor(None, "bot"), cabinet_erp_company_id=cabinet
+                )
                 logger.info("lead_erased", lead_id=lead.id, messages=count, files=len(keys))
         if lead_id is not None:
             await self._forget(lead_id, keys, closed)

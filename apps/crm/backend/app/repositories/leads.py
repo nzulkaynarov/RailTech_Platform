@@ -66,10 +66,17 @@ async def create_lead_with_identity(
     return lead, identity, conversation
 
 
-async def open_conversation(session: AsyncSession, lead_id: int) -> Conversation | None:
+async def open_conversation(
+    session: AsyncSession, lead_id: int, channel: str = "telegram"
+) -> Conversation | None:
+    """Открытая беседа лида в канале; по умолчанию — чат Telegram (у беседы кабинета чата нет)."""
     stmt = (
         select(Conversation)
-        .where(Conversation.lead_id == lead_id, Conversation.is_open)
+        .where(
+            Conversation.lead_id == lead_id,
+            Conversation.is_open,
+            Conversation.channel == channel,
+        )
         .order_by(Conversation.id.desc())
     )
     return (await session.scalars(stmt)).first()

@@ -54,7 +54,7 @@ class LeadMessenger:
         """Отправить в открытый чат лида и сохранить в истории. None — не отправлено."""
         async with self._sessions() as session:
             conversation = await repo.open_conversation(session, lead_id)
-        if conversation is None or self._sender is None:
+        if conversation is None or conversation.tg_chat_id is None or self._sender is None:
             logger.warning("lead_message_skipped", lead_id=lead_id, has_sender=bool(self._sender))
             return None
         try:
@@ -168,7 +168,7 @@ class ReplyOnce:
                 unconfirmed = True
             else:
                 conversation = await repo.open_conversation(session, lead_id)
-                if conversation is None or self._sender is None:
+                if conversation is None or conversation.tg_chat_id is None or self._sender is None:
                     logger.warning(
                         "lead_message_skipped", lead_id=lead_id, has_sender=bool(self._sender)
                     )

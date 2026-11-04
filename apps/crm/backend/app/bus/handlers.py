@@ -11,6 +11,9 @@
   EDS просят отправить, — строка журнала доставки; отправка — задачей после коммита (W18A-P1);
 * `uz.railtech.eds.notice.requested.v1` — в очереди, в транзакции inbox: уведомление сотрудникам по
   поручениям входящих (P8b) — строка колокольчика и сообщение Telegram после коммита;
+* `uz.railtech.erp.cabinet.message_posted.v1` — в очереди, в транзакции inbox: сообщение контакта в
+  чат кабинета — беседа канала `cabinet` и очередь «Сообщения» (CHAT-1); пост передачи в канале
+  команды — после коммита;
 * `uz.railtech.eds.letter.registered.v1` — в очереди, в транзакции inbox: ВХ, зарегистрированный из
   очереди «Входящая почта» (`source.crm_inbound_mail_id`), — письмо уходит из очереди с номером ВХ
   (W18A-P2); прочие регистрации CRM пропускает.
@@ -24,6 +27,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, erp_types
 from app.bus.runtime import current_container
+from app.services.cabinet_chat import POSTED_TYPE
 from app.services.eds_notices import NOTICE_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED
 from app.services.mail_requests import MAIL_REQUEST_TYPES
@@ -63,3 +67,8 @@ async def on_eds_notice(event: Event, session: AsyncSession) -> None:
 @subscribe(LETTER_REGISTERED)
 async def on_letter_registered(event: Event, session: AsyncSession) -> None:
     await current_container().inbound_mail.accept_registered(session, event)
+
+
+@subscribe(POSTED_TYPE)
+async def on_cabinet_message(event: Event, session: AsyncSession) -> None:
+    await current_container().cabinet_chat.accept(session, event)

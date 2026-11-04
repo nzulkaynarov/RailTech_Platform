@@ -39,6 +39,7 @@ CFG = TriggerSettings()
         (TriggerSignals(intent="service", customer_mode=True), [T.SERVICE_REQUEST]),
         (TriggerSignals(attachment_received=True), [T.ATTACHMENT_RECEIVED]),
         (TriggerSignals(agent_unavailable=True), [T.AGENT_UNAVAILABLE]),
+        (TriggerSignals(cabinet_message=True), [T.CABINET_MESSAGE]),
         (TriggerSignals(delivery_failed=True), [T.DELIVERY_FAILED]),
     ],
 )
