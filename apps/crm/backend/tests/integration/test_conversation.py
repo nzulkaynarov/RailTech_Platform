@@ -270,6 +270,43 @@ async def test_delete_erases_the_telegram_name_in_the_contact_projection_too(sta
     assert "telegram_username" not in snapshots[0]
 
 
+async def test_changed_telegram_name_republishes_the_linked_contact_once(stack: Stack) -> None:
+    """NOTIFY-1: кабинет показывает `@аккаунт` — смена ника или имени у привязанного Telegram даёт
+    новый снимок контакта, а сообщение с прежними именами — нет."""
+    await consented(stack)
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        client = Client(name="ООО Альфа", erp_company_id=118)
+        session.add(client)
+        await session.flush()
+        session.add(
+            ClientContact(client_id=client.id, full_name="Азиз", telegram_identity_id=identity.id)
+        )
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+
+    await stack.service.start(msg("/start"))  # те же имена — снимка нет
+    renamed = Incoming(
+        tg_user_id=USER, chat_id=USER, text="/start", first_name="Азиз Н.", username="aziz_new"
+    )
+    await stack.service.start(renamed)
+    await stack.service.start(renamed)  # повтор — снова без снимка
+
+    async with stack.sessions() as session:
+        snapshots = (
+            await session.scalars(
+                text(
+                    "SELECT envelope->'data'->'contact' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.contact.updated.v1'"
+                )
+            )
+        ).all()
+    assert len(snapshots) == 1
+    assert (snapshots[0]["telegram_username"], snapshots[0]["telegram_name"]) == (
+        "aziz_new",
+        "Азиз Н.",
+    )
+
+
 async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:
     await consented(stack)
     await stack.service.handle_message(

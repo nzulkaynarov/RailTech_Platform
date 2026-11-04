@@ -28,7 +28,7 @@ from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.audit import Actor
 from app.services import escalation, message_log, stages
-from app.services.contact_telegram import republish_contacts_of
+from app.services.contact_telegram import sync_telegram_names
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_records import RecordsMixin
 from app.services.conversation_support import (
@@ -279,13 +279,16 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
         )
         conversation = await repo.open_conversation(session, lead.id) if lead else None
         if lead is not None and conversation is not None and lead.erased_at is None:
+            if identity is not None and inc.first_name is not None:
+                await sync_telegram_names(session, identity, inc.username, inc.first_name)
             return lead, conversation, False
         language = (
             inc.language_code
             if inc.language_code in ("ru", "uz", "en")
             else detect_language(inc.text)
         )
-        names_before = (identity.tg_username, identity.tg_first_name) if identity else None
+        if identity is not None and inc.first_name is not None:
+            await sync_telegram_names(session, identity, inc.username, inc.first_name)
         lead, _, conversation = await repo.create_lead_with_identity(
             session,
             tg_user_id=inc.tg_user_id,
@@ -296,9 +299,6 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             identity=identity,
         )
         await bus_events.lead_created(session, lead, Actor(None, "bot"))
-        if identity is not None and names_before != (inc.username, inc.first_name):
-            # Ник или имя Telegram сменились — кабинет контакта покажет новые (NOTIFY-1).
-            await republish_contacts_of(session, [identity.id], Actor(None, "bot"))
         logger.info("lead_created", lead_id=lead.id)
         return lead, conversation, True
 

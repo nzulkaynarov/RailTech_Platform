@@ -369,3 +369,24 @@ def test_company_b_test_message_goes_only_to_its_own_contact(linkable, fresh_cac
     envelope = bus_support.only("contact.telegram_test_requested")
     assert envelope["data"]["payload"]["crm_contact_id"] == 59
     assert envelope["data"]["crm_client_id"] == 43
+
+
+def test_erased_telegram_names_are_erased_in_the_projection_too(linkable, client_contact):
+    """`/delete` в CRM: новый снимок с тем же `telegram_user_id`, но без имени и ника — ERP стирает их."""
+    base = {
+        "crm_contact_id": 58,
+        "crm_client_id": 42,
+        "full_name": client_contact.name,
+        "telegram_user_id": 123456789,
+        "is_primary": False,
+    }
+    named = {**base, "telegram_username": "azamat_new", "telegram_name": "Азамат", "updated_at": "2026-11-04T08:00:00Z"}
+    assert projections.apply_contact_snapshot({"contact": named}).applied
+    client_contact.refresh_from_db()
+    assert (client_contact.telegram_username, client_contact.telegram_name) == ("azamat_new", "Азамат")
+
+    assert projections.apply_contact_snapshot({"contact": {**base, "updated_at": "2026-11-04T08:05:00Z"}}).applied
+
+    client_contact.refresh_from_db()
+    assert client_contact.telegram_user_id == 123456789
+    assert (client_contact.telegram_username, client_contact.telegram_name) == ("", "")

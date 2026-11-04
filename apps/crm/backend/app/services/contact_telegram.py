@@ -273,3 +273,15 @@ async def republish_contacts_of(
         contact = await session.get(ClientContact, contact_id, populate_existing=True)
         if contact is not None:
             await bus_events.contact_updated(session, contact, actor)
+
+
+async def sync_telegram_names(
+    session: AsyncSession, identity: TelegramIdentity, username: str | None, first_name: str
+) -> None:
+    """Ник или имя Telegram сменились (NOTIFY-1): кабинет показывает контакту `@аккаунт`, поэтому
+    имена обновляются и контакт, к которому привязан этот Telegram, публикуется заново. Только при
+    реальной смене; вызывающий передаёт полный профиль отправителя (`first_name` есть всегда)."""
+    if (identity.tg_username, identity.tg_first_name) == (username, first_name):
+        return
+    identity.tg_username, identity.tg_first_name = username, first_name
+    await republish_contacts_of(session, [identity.id], audit.Actor(None, "bot"))
