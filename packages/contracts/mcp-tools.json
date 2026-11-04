@@ -90,7 +90,7 @@
         },
         "additionalProperties": false
       },
-      "output": "массив CatalogItem из erp-portal.yaml — только ключи опубликованного слоя (проекция catalog.published); в режиме prospect без price/availability/lead_time_days; sku, артикулы поставщиков и остатки не отдаются"
+      "output": "массив CatalogItem из erp-portal.yaml — только ключи опубликованного слоя (проекция catalog.published); в режиме prospect без price/availability/lead_time_days; sku, артикулы поставщиков и остатки не отдаются; изготовитель, артикул изготовителя, страна происхождения и гарантия — да (CAT-CARD-2), документов карточки в ответе нет (они только в портале)"
     },
     {
       "name": "create_request",

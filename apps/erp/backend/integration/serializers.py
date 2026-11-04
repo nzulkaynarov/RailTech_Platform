@@ -234,6 +234,11 @@ class DocumentLinkSerializer(serializers.Serializer):
     size_bytes = serializers.IntegerField(min_value=0, required=False)
 
 
+class CatalogManufacturerSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    country = serializers.CharField(allow_null=True)
+
+
 class CatalogItemSerializer(serializers.Serializer):
     erp_product_id = serializers.IntegerField()
     kind = serializers.ChoiceField(choices=["goods", "service"])
@@ -245,6 +250,9 @@ class CatalogItemSerializer(serializers.Serializer):
         choices=["in_stock", "on_order", "expected"], allow_null=True, required=False
     )
     lead_time_days = serializers.IntegerField(allow_null=True, required=False)
+    manufacturer = CatalogManufacturerSerializer(allow_null=True, required=False)
+    manufacturer_part_number = serializers.CharField(allow_null=True, required=False)
+    country_of_origin = serializers.CharField(allow_null=True, required=False)
 
 
 class ProvisionUserRequestSerializer(serializers.Serializer):

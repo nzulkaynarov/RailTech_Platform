@@ -161,6 +161,13 @@ function byId<T extends { id: number }>(items: T[], id: string): T | undefined {
   return items.find((item) => String(item.id) === id);
 }
 
+/** Карточка в списке каталога — без документов (они только в детальной карточке). */
+function listItem(item: Schemas['CatalogItem']): Schemas['CatalogItem'] {
+  const copy = { ...item };
+  delete copy.documents;
+  return copy;
+}
+
 /** Элемент списка КП — карточка без строк и служебных полей (`deal` остаётся как есть). */
 function quoteListItem(quote: Schemas['Quote']): Schemas['QuoteListItem'] {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -605,7 +612,8 @@ export const handlers = [
           (item.category ?? '').toLowerCase().includes(q),
       );
       const body: Schemas['CatalogPage'] = {
-        items: found.slice((page - 1) * pageSize, page * pageSize),
+        // Как ERP: документы карточки — только в детальной карточке, в списке их нет.
+        items: found.slice((page - 1) * pageSize, page * pageSize).map(listItem),
         page,
         page_size: pageSize,
         total: found.length,
@@ -618,6 +626,22 @@ export const handlers = [
     withSession<IdParams>(({ db, params }) => {
       const item = byId(db.catalog, params.id);
       return item ? json(item) : error(404, 'NOT_FOUND');
+    }),
+  ),
+  http.get<IdParams & { docId: string }>(
+    `${API}/catalog/:id/documents/:docId/file`,
+    withSession<IdParams & { docId: string }>(({ db, params }) => {
+      const item = byId(db.catalog, params.id);
+      const doc = item?.documents?.find((d) => d.id === Number(params.docId));
+      if (!doc) return error(404, 'NOT_FOUND');
+      // Как ERP: имя файла — из названия документа, не из загруженного файла.
+      const fileName = `${doc.title.replace(/[^\p{L}\p{N}._-]+/gu, '_')}.pdf`;
+      return new HttpResponse('%PDF-1.4\n% mock\n', {
+        headers: {
+          'Content-Type': 'application/pdf',
+          'Content-Disposition': `attachment; filename="document.pdf"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+        },
+      });
     }),
   ),
 

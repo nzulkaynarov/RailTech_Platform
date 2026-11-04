@@ -6,12 +6,15 @@ import { defineConfig, devices } from '@playwright/test';
  * (E2E_SCREENS_DIR), сводка — axe-summary.json там же. Без стенда. Запуск из apps/cabinet:
  *
  *   npm run test:e2e:screens
+ *
+ * Другой спек на том же конфиге — переменной E2E_SCREENS_SPEC (например, cat-card-2, CAT-CARD-2: `npm run test:e2e:cat-card`).
  */
 const PORT = Number(process.env.E2E_SCREENS_PORT ?? 5191);
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: /screens-mock\.spec\.ts$/,
+  // Спек выбирает E2E_SCREENS_SPEC (по умолчанию screens-mock): CAT-CARD-2 — `npm run test:e2e:cat-card`.
+  testMatch: new RegExp(`${process.env.E2E_SCREENS_SPEC ?? 'screens-mock'}\\.spec\\.ts$`),
   workers: 1,
   timeout: 240_000,
   expect: { timeout: 10_000 },
