@@ -1,7 +1,7 @@
 """clients: страна и рег. номер иностранной компании, заявки партнёров на подтверждение (PART-CRM)
 
 Revision ID: fefcc20f861d
-Revises: 97bc02846729
+Revises: aafce74f2f2d
 Create Date: 2026-11-04 09:35:59.381452+00:00
 """
 
@@ -12,7 +12,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "fefcc20f861d"
-down_revision: str | Sequence[str] | None = "97bc02846729"
+down_revision: str | Sequence[str] | None = "aafce74f2f2d"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
