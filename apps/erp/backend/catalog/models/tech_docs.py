@@ -7,10 +7,15 @@
 `0011_cat_card_data` перенесены сюда. Вид документа — справочник `DocumentKind` (данные, правит администратор), а не список в коде.
 """
 
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.storage import get_private_storage, tech_document_path
+
+#: Код вида: строчные латинские буквы, цифры, «_» и «-», до 32 знаков. Тот же шаблон держит BFF Платформы
+#: (`schemas_erp_catalog.KIND_CODE`): код с заглавными в справочник не попадает.
+KIND_CODE_PATTERN = r"^[a-z0-9_-]{1,32}$"
 
 
 class DocumentKind(models.Model):
@@ -20,7 +25,17 @@ class DocumentKind(models.Model):
     «имеет срок действия» нужен, когда документ подтверждает соответствие: срок — часть его смысла. «Видно клиенту по
     умолчанию» подставляется в новый документ; решает сотрудник на каждом документе."""
 
-    code = models.SlugField(max_length=32, unique=True, verbose_name=_("Код"))
+    code = models.CharField(
+        max_length=32,
+        unique=True,
+        validators=[
+            RegexValidator(
+                KIND_CODE_PATTERN,
+                message=_("Код — строчные латинские буквы, цифры, «_» и «-», до 32 знаков."),
+            )
+        ],
+        verbose_name=_("Код"),
+    )
     name = models.CharField(max_length=120, verbose_name=_("Название"))
     has_validity = models.BooleanField(
         default=False, verbose_name=_("Имеет срок действия"), help_text=_("Сертификат, декларация: срок «действует до»")

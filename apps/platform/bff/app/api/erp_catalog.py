@@ -9,8 +9,10 @@ requests`, `master-data/hs-codes`, `catalog/manufacturers`, `exchange-rates`) и
 отдаёт `null`, BFF вырезает ещё раз (администратор ERP видит всё, а роль «Администратор» — нет)."""
 
 import asyncio
+import re
 from typing import Annotated, Any
 
+import structlog
 from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.clients.erp_company import ErpCompany
@@ -27,6 +29,7 @@ from app.schemas_company import (
     to_category_request,
 )
 from app.schemas_erp_catalog import (
+    KIND_CODE,
     Brigade,
     BrigadeCreate,
     BrigadePage,
@@ -82,6 +85,8 @@ from app.schemas_erp_catalog import (
 )
 
 router = APIRouter(tags=["erp-catalog"])
+log = structlog.get_logger()
+_KIND_CODE = re.compile(KIND_CODE)
 
 Reader = Annotated[Authed, Depends(require("erp.stock", "read"))]
 Writer = Annotated[Authed, Depends(require("erp.stock", "full"))]
@@ -114,6 +119,14 @@ def _params(**values: Any) -> dict[str, Any]:
 
 
 # --- справочники для форм ---------------------------------------------------------------------
+
+
+def _kind_code_ok(code: Any) -> bool:
+    """Вид с кодом вне шаблона контракта в справочник форм не попадает, остальные списки целы."""
+    if isinstance(code, str) and _KIND_CODE.match(code):
+        return True
+    log.warning("document_kind_skipped", code=code)
+    return False
 
 
 @router.get("/erp/catalog/lookups", response_model=Lookups, operation_id="getCatalogLookups")
@@ -158,7 +171,7 @@ async def get_lookups(authed: Reader) -> Lookups:
                 client_visible_default=bool(k.get("client_visible_default")),
             )
             for k in kinds
-            if k.get("code")
+            if _kind_code_ok(k.get("code"))
         ],
     )
 

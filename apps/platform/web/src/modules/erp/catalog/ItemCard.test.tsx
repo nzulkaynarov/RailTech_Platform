@@ -2,7 +2,8 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { http } from "msw";
 import { describe, expect, it } from "vitest";
 
-import { chooseOption, fillDate } from "../../../test/fields";
+import { chooseOption, fillDate, selectedLabel } from "../../../test/fields";
+import { readErpCatalog } from "../../../mocks/fixtures/erpCatalog";
 import { server } from "../../../test/server";
 import {
   findModal,
@@ -220,6 +221,56 @@ describe("Карточка товара: документы", () => {
       expect(within(old).queryByText("Истёк")).toBeNull();
     });
     expect(within(old).getByText(/до 01\.01\.2030/)).toBeVisible();
+  });
+});
+
+describe("Карточка товара: документ выключенного вида", () => {
+  it("в форме «Изменить» вид показан названием, а не кодом; номер и срок правятся", async () => {
+    let sent: unknown = null;
+    server.use(
+      http.patch("*/erp/docs/files/:id", async ({ request }) => {
+        sent = await request.clone().json();
+        return Response.json({}, { status: 500 });
+      }),
+    );
+    // вид, которого уже нет в справочнике активных (его выключили): документ остаётся
+    readErpCatalog().docs.push({
+      bytes: new Uint8Array(),
+      doc: {
+        id: "77",
+        title: "Старый регламент",
+        kind: "legacy",
+        kind_name: "Старый вид документа",
+        number: "Л-1",
+        issued_by: "",
+        issued_at: null,
+        valid_until: null,
+        is_expired: false,
+        client_visible: false,
+        original_name: "old.pdf",
+        content_type: "application/pdf",
+        size_bytes: 10,
+        previewable: true,
+        product: { id: "1", name: "Кабель силовой ВВГнг 3×2,5", sku: "RT-0001" },
+        dealId: null,
+        uploaded_by: "Снабженец",
+        created_at: "2026-10-01T09:00:00Z",
+      },
+    });
+    const drawer = await openCable("supply@demo.example");
+    fireEvent.click(
+      await within(drawer).findByRole("button", { name: "Изменить документ «Старый регламент»" }),
+    );
+
+    const form = await findModal("Изменить документ");
+    const kind = within(form).getByRole("combobox", { name: "Вид" });
+    expect(selectedLabel(kind)).toBe("Старый вид документа");
+    expect(within(form).queryByText("legacy")).toBeNull();
+    fireEvent.change(within(form).getByLabelText("Номер"), { target: { value: "Л-2" } });
+    fireEvent.click(within(form).getByRole("button", { name: "Сохранить" }));
+    await waitFor(() => {
+      expect(sent).toMatchObject({ kind: "legacy", number: "Л-2" });
+    });
   });
 });
 

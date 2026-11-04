@@ -7,6 +7,7 @@
 from datetime import timedelta
 
 import pytest
+from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from parties.models import CompanySettings
@@ -538,3 +539,53 @@ def test_publish_is_blocked_until_the_document_exists(world):
     assert "conformity_doc" in card(world)["publish"]["missing"]
     doc(world, kind="certificate", number="OK-1")
     assert "conformity_doc" not in missing(Product.objects.get(pk=product.pk))
+
+
+def test_a_document_of_a_switched_off_kind_stays_editable_but_cannot_move_to_another_off_kind(world):
+    created = doc(world, kind="pnr").json()
+    DocumentKind.objects.filter(code__in=["pnr", "tz"]).update(is_active=False)
+    client = world["clients"]["supply"]
+    url = f"/api/v1/catalog/tech-docs/{created['id']}/"
+    edited = client.patch(url, {"kind": "pnr", "number": "ПНР-5", "valid_until": "2030-01-01"}, format="json")
+    assert edited.status_code == 200
+    body = edited.json()
+    assert (body["kind"], body["kind_name"], body["number"], body["valid_until"]) == (
+        "pnr",
+        "Регламент ПНР",
+        "ПНР-5",
+        "2030-01-01",
+    )
+    assert client.patch(url, {"number": "ПНР-6"}, format="json").status_code == 200
+    refused = client.patch(url, {"kind": "tz"}, format="json")
+    assert refused.status_code == 400 and refused.json() == {"detail": "TECH_DOC_KIND_INVALID"}
+    moved = client.patch(url, {"kind": "manual"}, format="json")
+    assert moved.status_code == 200 and moved.json()["kind"] == "manual"
+    # Назад на выключенный вид уже нельзя.
+    assert client.patch(url, {"kind": "pnr"}, format="json").json() == {"detail": "TECH_DOC_KIND_INVALID"}
+
+
+@pytest.mark.parametrize("code", ["ISO9001", "Cert", "кириллица", "with space", "a" * 33, ""])
+def test_document_kind_code_must_match_the_contract_pattern(code):
+    kind = DocumentKind(code=code, name="Вид")
+    with pytest.raises(ValidationError) as error:
+        kind.full_clean()
+    assert "code" in error.value.message_dict
+
+
+@pytest.mark.parametrize("code", ["iso-9001", "a", "warranty_card_2", "x" * 32])
+def test_document_kind_code_accepts_lowercase_digits_dash_and_underscore(code):
+    DocumentKind(code=code, name="Вид").full_clean()
+
+
+def test_the_admin_form_refuses_an_uppercase_kind_code(rf):
+    from django.contrib import admin as django_admin
+
+    from accounts.models import CustomUser
+
+    request = rf.get("/")
+    request.user = CustomUser.objects.create_superuser(email="root@cat-card.test", username="root", password="pw")
+    form_class = django_admin.site._registry[DocumentKind].get_form(request)
+    bad = form_class(data={"code": "ISO9001", "name": "Сертификат ISO", "sort_order": 100, "is_active": "on"})
+    assert not bad.is_valid() and "code" in bad.errors
+    good = form_class(data={"code": "iso9001", "name": "Сертификат ISO", "sort_order": 100, "is_active": "on"})
+    assert good.is_valid(), good.errors

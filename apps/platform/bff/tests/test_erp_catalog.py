@@ -848,3 +848,38 @@ async def test_erp_outage_is_service_unavailable(web: Web, be: Any) -> None:
     mock(be).get(f"{API}/catalog/items/").mock(side_effect=httpx.ConnectError("down"))
     response = await web.client.get("/api/v1/erp/catalog/items")
     assert response.status_code == 503
+
+
+async def test_lookups_skip_a_document_kind_with_a_code_outside_the_contract_pattern(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """Вид с кодом `ISO9001` не валит справочники форм: он пропущен, в логе — предупреждение."""
+    await web.login(["ENGINEER"])
+    router = mock(be)
+    for path in (
+        "master-data/units/",
+        "catalog/categories/",
+        "master-data/currencies/",
+        "master-data/countries/",
+        "master-data/delivery-basis/",
+    ):
+        router.get(f"{API}/{path}").mock(return_value=httpx.Response(200, json=[]))
+    kind = {"has_validity": False, "client_visible_default": False, "sort_order": 1}
+    router.get(f"{API}/catalog/document-kinds/").mock(
+        return_value=httpx.Response(
+            200,
+            json=page(
+                [
+                    {"id": 1, "code": "ISO9001", "name": "Сертификат ISO", **kind},
+                    {"id": 2, "code": "iso-9001", "name": "Сертификат ISO, строчный", **kind},
+                    {"id": 3, "code": "x" * 40, "name": "Слишком длинный", **kind},
+                ]
+            ),
+        )
+    )
+
+    response = await web.client.get("/api/v1/erp/catalog/lookups")
+
+    assert response.status_code == 200
+    check(response, "/erp/catalog/lookups", "get")
+    assert [k["code"] for k in response.json()["document_kinds"]] == ["iso-9001"]

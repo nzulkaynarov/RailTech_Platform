@@ -13,11 +13,14 @@ export function DocPassportFields({
   onChange,
   kinds,
   invalid = [],
+  currentKind,
 }: {
   value: DocPassport;
   onChange: (next: DocPassport) => void;
   kinds: readonly CatalogDocumentKind[];
   invalid?: readonly string[];
+  /** Вид правимого документа: если его выключили, он виден названием, но выбрать его заново нельзя. */
+  currentKind?: { code: string; name: string };
 }) {
   const { t } = useTranslation("catalog");
   const ids = { kind: useId(), number: useId(), by: useId(), from: useId(), until: useId() };
@@ -43,7 +46,12 @@ export function DocPassportFields({
                   : { clientVisible: kind.client_visible_default }),
               });
             }}
-            options={kinds.map((k) => ({ value: k.code, label: k.name }))}
+            options={[
+              ...kinds.map((k) => ({ value: k.code, label: k.name })),
+              ...(currentKind && !kinds.some((k) => k.code === currentKind.code)
+                ? [{ value: currentKind.code, label: currentKind.name, disabled: true }]
+                : []),
+            ]}
           />
         </FormField>
         <FormField id={ids.number} label={t("docs.form.number")}>

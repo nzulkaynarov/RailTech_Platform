@@ -281,7 +281,13 @@ function EditDocForm({
           }}
         />
       </FormField>
-      <DocPassportFields value={passport} onChange={setPassport} kinds={kinds} invalid={fields} />
+      <DocPassportFields
+        value={passport}
+        onChange={setPassport}
+        kinds={kinds}
+        invalid={fields}
+        currentKind={{ code: doc.kind, name: doc.kind_name }}
+      />
     </FormModal>
   );
 }

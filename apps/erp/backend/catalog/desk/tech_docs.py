@@ -200,7 +200,8 @@ def create_doc(file, data: dict, actor) -> TechDocument:
 
 def update_doc(doc: TechDocument, data: dict) -> TechDocument:
     """Правка паспорта документа: вид, название, номер, орган, даты, «видно клиенту». Файл не меняется."""
-    if "kind" in data:
+    # Активность вида проверяется только при смене: документ выключенного вида остаётся правимым (номер, срок, видимость).
+    if "kind" in data and data["kind"] != doc.kind:
         doc.kind = _kind(data["kind"]).code
     if "title" in data:
         title = (data["title"] or "").strip()
