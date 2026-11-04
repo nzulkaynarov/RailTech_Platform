@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
-import { MessagesSquare, Send, Tag, X } from 'lucide-react';
+import { Eye, MessagesSquare, Paperclip, Send, Tag, UserRound, X } from 'lucide-react';
 
 import type { MessageContext, PortalMessage } from '@/api/portal';
 import { botLink } from '@/app/links';
@@ -14,10 +14,17 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useMessagesFeed } from '@/hooks/useMessagesFeed';
 import { formatDateTime } from '@/lib/format';
-import { MESSAGE_MAX_LENGTH, contextFromSearch, contextHref, type PendingMessage } from '@/lib/messages';
+import {
+  MESSAGE_MAX_LENGTH,
+  contextFromSearch,
+  contextHref,
+  contextModule,
+  responderName,
+  type PendingMessage,
+} from '@/lib/messages';
 import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
-import { useCanAct, useMe } from '@/session/useMe';
+import { useCanAct, useHasModule, useMe } from '@/session/useMe';
 
 /**
  * «Сообщения» (CHAT-1, ADR-0023): одна лента на компанию — её видят все контакты компании, менеджер отвечает из очереди
@@ -46,6 +53,7 @@ export function MessagesPage() {
         }
       />
       <div className="flex flex-col gap-4">
+        <ChatInfo responder={responderName(messages)} />
         {feed.isPending ? (
           <ListSkeleton rows={3} />
         ) : feed.isError ? (
@@ -56,6 +64,29 @@ export function MessagesPage() {
         <Composer onSend={submit} />
       </div>
     </>
+  );
+}
+
+/**
+ * Шапка чата: кто отвечает (имя менеджера из последнего ответа, иначе — команда) и кто видит переписку. Срок ответа не
+ * обещаем: рабочего времени CRM у портала нет (хвост PR).
+ */
+function ChatInfo({ responder }: { responder: string | null }) {
+  const { t } = useTranslation();
+  return (
+    <section
+      aria-label={t('pages.messages.infoLabel')}
+      className="flex flex-col gap-1.5 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm"
+    >
+      <p className="flex items-center gap-2">
+        <UserRound className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        {responder ? t('pages.messages.responder', { name: responder }) : t('pages.messages.responderTeam')}
+      </p>
+      <p className="flex items-center gap-2 text-muted-foreground">
+        <Eye className="size-4 shrink-0" aria-hidden="true" />
+        {t('pages.messages.visibleToCompany')}
+      </p>
+    </section>
   );
 }
 
@@ -142,7 +173,7 @@ function Bubble({
   context: MessageContext | null;
   children?: ReactNode;
 }) {
-  const { t, i18n } = useTranslation();
+  const { i18n } = useTranslation();
   return (
     <li className={cn('flex max-w-[85%] flex-col gap-1', mine ? 'items-end self-end' : 'items-start self-start')}>
       <p className="text-xs text-muted-foreground">
@@ -154,15 +185,7 @@ function Bubble({
           </>
         ) : null}
       </p>
-      {context ? (
-        <Link
-          to={contextHref(context)}
-          className="inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-xs text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <Tag className="size-3" aria-hidden="true" />
-          {t(`pages.messages.context.${context.kind}`, { number: context.number })}
-        </Link>
-      ) : null}
+      {context ? <ContextLabel context={context} /> : null}
       <p
         className={cn(
           'rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap',
@@ -173,6 +196,53 @@ function Bubble({
       </p>
       {children}
     </li>
+  );
+}
+
+/** Метка документа: ссылка на документ в кабинете, если его раздел открыт сессии; иначе — просто подпись. */
+function ContextLabel({ context }: { context: MessageContext }) {
+  const { t } = useTranslation();
+  const open = useHasModule(contextModule(context.kind));
+  const label = t(`pages.messages.context.${context.kind}`, { number: context.number });
+  const base = 'inline-flex items-center gap-1 rounded-md border border-border bg-background px-2 py-0.5 text-xs';
+  if (!open) {
+    return (
+      <span className={cn(base, 'text-muted-foreground')}>
+        <Tag className="size-3" aria-hidden="true" />
+        {label}
+      </span>
+    );
+  }
+  return (
+    <Link
+      to={contextHref(context)}
+      className={cn(base, 'text-primary outline-none hover:underline focus-visible:ring-2 focus-visible:ring-ring')}
+    >
+      <Tag className="size-3" aria-hidden="true" />
+      {label}
+    </Link>
+  );
+}
+
+/** Вложений в чате пока нет: подсказка, что файл прикладывают к запросу (ссылка — если раздел запросов открыт). */
+function AttachHint() {
+  const { t } = useTranslation();
+  const requests = useHasModule('catalog_requests');
+  return (
+    <p className="flex items-start gap-2 text-xs text-muted-foreground">
+      <Paperclip className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+      <span>
+        {t('pages.messages.attachHint')}
+        {requests ? (
+          <>
+            {' '}
+            <Link to="/requests" className="text-primary underline underline-offset-2">
+              {t('pages.messages.attachLink')}
+            </Link>
+          </>
+        ) : null}
+      </span>
+    </p>
   );
 }
 
@@ -257,6 +327,7 @@ function Composer({ onSend }: { onSend: (text: string, context: MessageContext |
         placeholder={t('pages.messages.placeholder')}
         aria-describedby={hintId}
       />
+      <AttachHint />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p id={hintId} className="text-xs text-muted-foreground">
           {canAct ? t(mode === 'web' ? 'pages.messages.hintWeb' : 'pages.messages.hint') : t('pages.messages.viewOnly')}

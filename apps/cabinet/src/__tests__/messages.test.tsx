@@ -197,6 +197,52 @@ describe('«Сообщения»', () => {
     expect(within(page()).getByText(/sizda faqat ko‘rish/)).toBeInTheDocument();
   });
 
+  it('шапка: отвечает менеджер из последнего ответа, переписку видит вся компания, файл — к запросу', async () => {
+    signedIn();
+    renderApp('/messages');
+    await heading('Сообщения');
+    await within(page()).findByRole('list', { name: 'Переписка с менеджером' });
+    const info = within(page()).getByRole('region', { name: 'О переписке' });
+    expect(info).toHaveTextContent('Отвечает Илья Смирнов, ваш менеджер');
+    expect(info).toHaveTextContent('Переписку видят все сотрудники вашей компании в кабинете');
+    expect(info).not.toHaveTextContent(/в течение|до \d|час/); // срок ответа не обещаем
+    expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
+    expect(within(page()).getByRole('link', { name: 'Перейти к запросам' })).toHaveAttribute('href', '/requests');
+    await expectNoAxeViolations();
+  });
+
+  it('пустая лента — отвечает команда; без раздела запросов подсказка о файле без ссылки', async () => {
+    signedIn('actor', 'empty', { roles: ['partner'], modules: ['my_products', 'messages', 'profile'] });
+    renderApp('/messages');
+    await heading('Сообщения');
+    const info = await within(page()).findByRole('region', { name: 'О переписке' });
+    expect(info).toHaveTextContent('Отвечает команда RailTech');
+    expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
+    expect(within(page()).queryByRole('link', { name: 'Перейти к запросам' })).toBeNull();
+  });
+
+  it('метка документа открывает документ, только если его раздел открыт сессии', async () => {
+    signedIn('actor', 'demo', { roles: ['partner'], modules: ['catalog_requests', 'messages', 'profile'] });
+    renderApp('/messages');
+    await heading('Сообщения');
+    const list = await within(page()).findByRole('list', { name: 'Переписка с менеджером' });
+    // у партнёра нет «КП» и «Счетов»: метки — подписи без ссылок
+    expect(within(list).getByText('КП KP-2026-0042')).toBeInTheDocument();
+    expect(within(list).queryByRole('link', { name: 'КП KP-2026-0042' })).toBeNull();
+    expect(within(list).queryByRole('link', { name: 'Счёт S-2026-0124' })).toBeNull();
+    await userEvent.click(within(list).getByText('КП KP-2026-0042'));
+    expect(await screen.findByRole('heading', { name: 'Сообщения', level: 1 })).toBeInTheDocument();
+  });
+
+  it('метка документа кликабельна у клиента: КП открывает карточку КП', async () => {
+    signedIn();
+    renderApp('/messages');
+    await heading('Сообщения');
+    const list = await within(page()).findByRole('list', { name: 'Переписка с менеджером' });
+    await userEvent.click(within(list).getByRole('link', { name: 'КП KP-2026-0042' }));
+    await heading(/KP-2026-0042/);
+  });
+
   it('пустая лента — подсказка, что писать сюда', async () => {
     signedIn('actor', 'empty');
     renderApp('/messages');

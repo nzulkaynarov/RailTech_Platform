@@ -36,6 +36,28 @@ export function contextFromSearch(search: URLSearchParams): MessageContext | nul
   return { kind: kind as MessageContextKind, id, number: number.slice(0, 64) };
 }
 
+/** Модуль кабинета, который открывает документ метки: проект и КП — «КП», счёт — «Счета», акт — «Акты». */
+export function contextModule(kind: MessageContextKind): string {
+  switch (kind) {
+    case 'deal':
+    case 'quote':
+      return 'quotes';
+    case 'invoice':
+      return 'invoices';
+    case 'act':
+      return 'acts';
+  }
+}
+
+/** Кто отвечает в чате: имя менеджера из последнего его ответа в ленте; нет — `null` (отвечает команда). */
+export function responderName(messages: readonly PortalMessage[]): string | null {
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index];
+    if (message.direction === 'manager' && message.author_name) return message.author_name;
+  }
+  return null;
+}
+
 /** Куда ведёт метка документа в ленте: сделка и КП — карточка, счёт и акт — их список. */
 export function contextHref(context: MessageContext): string {
   switch (context.kind) {

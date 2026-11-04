@@ -742,7 +742,7 @@
     },
     "messages": {
       "title": "Messages",
-      "subtitle": "Your company’s conversation with the manager — all your colleagues in the cabinet see it",
+      "subtitle": "Your company’s conversation with the manager",
       "telegram": "Write in Telegram",
       "feed": "Conversation with the manager",
       "emptyTitle": "Your conversation with the manager will be here",
@@ -767,7 +767,13 @@
       "hintWeb": "Enter to send, Shift+Enter for a new line",
       "hint": "The manager will reply here",
       "viewOnly": "Only a contact who can confirm may write to the manager — you can only view",
-      "send": "Send"
+      "send": "Send",
+      "infoLabel": "About this conversation",
+      "responder": "{{name}}, your manager, replies here",
+      "responderTeam": "The RailTech team replies here",
+      "visibleToCompany": "Everyone from your company in the cabinet can see this conversation",
+      "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
+      "attachLink": "Go to requests"
     }
   },
   "apiErrors": {

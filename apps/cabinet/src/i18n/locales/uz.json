@@ -742,7 +742,7 @@
     },
     "messages": {
       "title": "Xabarlar",
-      "subtitle": "Kompaniyangizning menejer bilan yozishmasi — uni kabinetdagi barcha hamkasblaringiz ko‘radi",
+      "subtitle": "Kompaniyangizning menejer bilan yozishmasi",
       "telegram": "Telegramda yozish",
       "feed": "Menejer bilan yozishma",
       "emptyTitle": "Bu yerda menejer bilan yozishma bo‘ladi",
@@ -767,7 +767,13 @@
       "hintWeb": "Enter — yuborish, Shift+Enter — yangi qator",
       "hint": "Menejer shu yerda javob beradi",
       "viewOnly": "Menejerga tasdiqlash huquqi bor kontakt yoza oladi — sizda faqat ko‘rish",
-      "send": "Yuborish"
+      "send": "Yuborish",
+      "infoLabel": "Yozishma haqida",
+      "responder": "{{name}}, menejeringiz javob beradi",
+      "responderTeam": "RailTech jamoasi javob beradi",
+      "visibleToCompany": "Yozishmani kompaniyangizning kabinetdagi barcha xodimlari ko‘radi",
+      "attachHint": "Hozircha chatga fayl biriktirilmaydi — uni so‘rovga biriktiring.",
+      "attachLink": "So‘rovlarga o‘tish"
     }
   },
   "apiErrors": {
