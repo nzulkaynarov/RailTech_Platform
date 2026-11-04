@@ -4,6 +4,7 @@
  */
 import type { Availability } from "./availability";
 import type { CatalogItemKind } from "./catalogItemKind";
+import type { CatalogItemManufacturer } from "./catalogItemManufacturer";
 import type { Money } from "./money";
 
 /**
@@ -23,4 +24,16 @@ export interface CatalogItem {
    * @nullable
    */
   lead_time_days?: number | null;
+  /** Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2). Присутствует в обоих режимах */
+  manufacturer?: CatalogItemManufacturer;
+  /**
+   * Артикул изготовителя (MPN); `null` — не указан. Артикул продавца и поставщика не отдаётся (CAT-CARD-2)
+   * @nullable
+   */
+  manufacturer_part_number?: string | null;
+  /**
+   * Название страны происхождения (своя у карточки, иначе страна изготовителя); `null` — не указана (CAT-CARD-2)
+   * @nullable
+   */
+  country_of_origin?: string | null;
 }

@@ -764,6 +764,16 @@ export interface components {
       price?: components["schemas"]["Money"] | null;
       availability?: components["schemas"]["Availability"] | null;
       lead_time_days?: number | null;
+      /** @description Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2). Присутствует в обоих режимах */
+      manufacturer?: {
+        name: string;
+        /** @description Название страны изготовителя */
+        country: string | null;
+      } | null;
+      /** @description Артикул изготовителя (MPN); `null` — не указан. Артикул продавца и поставщика не отдаётся (CAT-CARD-2) */
+      manufacturer_part_number?: string | null;
+      /** @description Название страны происхождения (своя у карточки, иначе страна изготовителя); `null` — не указана (CAT-CARD-2) */
+      country_of_origin?: string | null;
     };
     ProvisionUserRequest: {
       /** Format: int64 */

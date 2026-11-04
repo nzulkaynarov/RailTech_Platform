@@ -768,6 +768,7 @@ def test_search_catalog_returns_only_published_projection_keys(test_data):
         assert len(items) == 1
         assert "sku" not in items[0]
         assert "erp_product_id" not in items[0]
+        assert "documents" not in items[0], "документы карточки — только в портале (CAT-CARD-2)"
         assert set(items[0]) <= CATALOG_ITEM_KEYS
 
 
