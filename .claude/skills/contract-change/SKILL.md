@@ -19,7 +19,7 @@ description: Изменить контракт в packages/contracts (OpenAPI, �
    - ломающее до 1.0 (oasdiff ERR; новое значение enum в ответе — тоже ERR, #386) — ровно на минор выше минора `main`. `main`
      уходит вперёд, пока идёт работа: после каждого `git merge origin/main` сверь `grep -m1 '^  version:'
      packages/contracts/openapi/<файл>.yaml` с `git show origin/main:packages/contracts/openapi/<файл>.yaml | grep -m1
-     '^  version:'`; минор совпал с `main` — поднимай ещё раз, иначе oasdiff красный (#377, #382, #389);
+     '^  version:'`; минор не выше минора `main` — поднимай до ровно на один выше `main`, иначе oasdiff красный (#377, #382, #389);
    - событие — в пределах `vN` только новые необязательные поля; ломающее (в том числе новое значение enum) — новым файлом
      `v(N+1)` с двойной публикацией.
 3. `make contracts` из корня worktree: линт, генерация в `generated/`, `oasdiff` и сравнение событий с точкой ответвления от
