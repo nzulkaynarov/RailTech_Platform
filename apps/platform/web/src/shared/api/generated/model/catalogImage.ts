@@ -12,7 +12,7 @@ export interface CatalogImage {
   /** Главное фото; среди фото позиции ровно одно */
   is_main: boolean;
   /**
-   * Позиция в галерее с нуля
+   * Позиция в галерее с нуля, без пропусков
    * @minimum 0
    */
   sort_order: number;

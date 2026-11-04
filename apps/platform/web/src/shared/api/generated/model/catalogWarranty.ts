@@ -12,7 +12,7 @@ export interface CatalogWarranty {
    */
   company_months: number | null;
   /**
-   * Срок
+   * Срок, заданный в карточке
    * @minimum 0
    * @nullable
    */
