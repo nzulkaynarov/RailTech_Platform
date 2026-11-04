@@ -5,7 +5,6 @@ import type {
   HsCode,
   Manufacturer,
   TechDoc,
-  TechDocKind,
 } from "../../shared/api/generated/model";
 
 /**
@@ -60,6 +59,15 @@ export interface MockProposal {
   created_at: string;
 }
 
+/** Фото позиции в моке: байты хранятся как есть, порядок — порядок в массиве `images`. */
+export interface MockImage {
+  id: string;
+  alt: string;
+  is_main: boolean;
+  type: string;
+  bytes: Uint8Array;
+}
+
 export interface MockItem {
   id: string;
   sku: string;
@@ -77,6 +85,10 @@ export interface MockItem {
   mpn: string;
   sourceSupplierId: string | null;
   proposals: MockProposal[];
+  countryId: string | null;
+  warranty_months: number | null;
+  warranty_terms: string;
+  images: MockImage[];
 }
 
 export interface MockSupplier {
@@ -134,6 +146,38 @@ export const COUNTRIES = [
   { id: "2", name: "Россия" },
   { id: "3", name: "Германия" },
 ];
+/** Справочник видов документов товара: сид миграции ERP (CAT-CARD-1). */
+export const DOC_KINDS = [
+  {
+    code: "certificate",
+    name: "Сертификат соответствия",
+    has_validity: true,
+    client_visible_default: true,
+  },
+  {
+    code: "declaration",
+    name: "Декларация о соответствии",
+    has_validity: true,
+    client_visible_default: true,
+  },
+  { code: "passport", name: "Паспорт изделия", has_validity: false, client_visible_default: true },
+  { code: "manual", name: "Инструкция", has_validity: false, client_visible_default: true },
+  {
+    code: "warranty_card",
+    name: "Гарантийный талон",
+    has_validity: false,
+    client_visible_default: true,
+  },
+  { code: "tz", name: "Техническое задание", has_validity: false, client_visible_default: false },
+  { code: "drawing", name: "Чертёж", has_validity: false, client_visible_default: false },
+  { code: "pnr", name: "Регламент ПНР", has_validity: false, client_visible_default: false },
+  { code: "other", name: "Прочее", has_validity: false, client_visible_default: false },
+];
+
+export function kindName(code: string): string {
+  return DOC_KINDS.find((k) => k.code === code)?.name ?? code;
+}
+
 export const DEALS: MockDeal[] = [
   {
     id: 905,
@@ -220,6 +264,27 @@ function offer(
   };
 }
 
+/** Образцы фото: маленькие PNG-картинки-заглушки (не снимки реальных изделий). */
+const SAMPLE_PHOTOS = [
+  "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAAmUlEQVR42u3YMQ0AQAgEQdQh5zVhkh4HX5Mwm1Mw5UXrWyAABAgQIECAAAESIECAAAECBAiQAAECBAgQIECABAgQIECAAAECBEiAAAECBOgsUL5aNUCAAAECBAgQIECAAAECBAgQIEAOM0CAAAECBAiQAAECBAgQIECABAgQIECAAAECBEiAAAECBAgQIEACBAgQIECAAJ1oAPoDwL9WmgTlAAAAAElFTkSuQmCC",
+  "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAA/klEQVR42u3bwRUCIQxAwZRjdZZoV9ztwNUnCYGd/7aA7BwhxNDHAgEgQIAAAQIECJAAAQIECBAgQIAECBAgQIAAXfR6Pr7/7gX0E81aptjCZaFU7KhTaRQ70lQyxdY6BUaxu062URygk2oUZ+jkGcUxOklGcZJOhhGgWqDlOtON4jyduUaAADUBaqUz0QhQCVBDnVlGgAABAgQIECBAgAABAgQIEKB7AjkPAuRMGhCg9kBuVt3NAyoAGvaD2hpl/IgdxXVAw5ZrE6PU+W3aNwBKYqoZ22ufTkD/S9WP6sVhY6AtAgQIECBAgAABAiRAgAABAgQIECABAgQIUJPe+6urKP498sUAAAAASUVORK5CYII=",
+  "iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAIAAABt+uBvAAAAmElEQVR42u3QMQ0AQAjAQHSi6e2yo4BfScg1VXBR+hYIAAECBAgQIECABAgQIECAAAECJECAAAECBAjQUL5cGRAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAAAQIECBAgQIAACRAgQIAAAQIESIAAAQIECBAgQAIECBAgQIAAna4Btsg41savzSQAAAAASUVORK5CYII=",
+];
+
+function fromBase64(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (c) => c.charCodeAt(0));
+}
+
+function photo(id: string, alt: string, isMain: boolean, sample: number): MockImage {
+  return {
+    id,
+    alt,
+    is_main: isMain,
+    type: "image/png",
+    bytes: fromBase64(SAMPLE_PHOTOS[sample] ?? ""),
+  };
+}
+
 function seedItems(): MockItem[] {
   const base = {
     status: "PUBLISHED" as const,
@@ -231,6 +296,10 @@ function seedItems(): MockItem[] {
     mpn: "",
     sourceSupplierId: null,
     proposals: [] as MockProposal[],
+    countryId: null,
+    warranty_months: null,
+    warranty_terms: "",
+    images: [] as MockImage[],
   };
   return [
     {
@@ -248,6 +317,11 @@ function seedItems(): MockItem[] {
       brand: "Электрокабель-Тест",
       brandId: "1",
       mpn: "ВВГ-3-2.5",
+      images: [
+        photo("101", "Кабель, общий вид", true, 0),
+        photo("102", "Кабель, срез", false, 1),
+        photo("103", "Кабель, бухта", false, 2),
+      ],
     },
     {
       ...base,
@@ -273,6 +347,9 @@ function seedItems(): MockItem[] {
       hs_code: "7302",
       brand: "Рельс-Сталь",
       brandId: "2",
+      countryId: "2",
+      warranty_months: 36,
+      warranty_terms: "Замена при заводском браке в течение срока гарантии.",
     },
     {
       ...base,
@@ -491,13 +568,16 @@ function seedRates(): ExchangeRateRow[] {
 function seedDocs(items: readonly MockItem[]): MockDoc[] {
   const make = (
     id: number,
-    kind: TechDocKind,
+    kind: string,
     title: string,
     name: string,
     productId: string | null,
     dealId: string | null,
     by: string,
     at: string,
+    passport: Partial<
+      Pick<TechDoc, "number" | "issued_by" | "issued_at" | "valid_until" | "client_visible">
+    > = {},
   ): MockDoc => {
     const bytes = makePdf(`SAMPLE ${kind.toUpperCase()} (placeholder)`, [
       "Generated sample file. No real drawings or documents.",
@@ -508,7 +588,16 @@ function seedDocs(items: readonly MockItem[]): MockDoc[] {
       doc: {
         id: String(id),
         kind,
+        kind_name: kindName(kind),
         title,
+        number: passport.number ?? "",
+        issued_by: passport.issued_by ?? "",
+        issued_at: passport.issued_at ?? null,
+        valid_until: passport.valid_until ?? null,
+        is_expired: (passport.valid_until ?? "9999") < MOCK_TODAY,
+        client_visible:
+          passport.client_visible ??
+          DOC_KINDS.some((k) => k.code === kind && k.client_visible_default),
         original_name: name,
         content_type: "application/pdf",
         size_bytes: bytes.length,
@@ -550,6 +639,12 @@ function seedDocs(items: readonly MockItem[]): MockDoc[] {
       null,
       "Снабженец",
       "2026-10-24T11:30:00Z",
+      {
+        number: "RU-0042-2026",
+        issued_by: "Орган по сертификации (демо)",
+        issued_at: "2026-01-12",
+        valid_until: "2027-01-11",
+      },
     ),
     make(
       4,

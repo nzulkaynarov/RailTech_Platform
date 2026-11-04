@@ -45,6 +45,8 @@ import {
 import { catalogErrorText, errorFields } from "./errors";
 import { useDebounced } from "./useDebounced";
 import { KINDS } from "./kinds";
+import { ItemDocs } from "./ItemDocs";
+import { ItemPhotos } from "./ItemPhotos";
 import { queryLabels } from "./labels";
 
 export function KindTag({ kind }: { kind: CatalogItemKind }) {
@@ -344,6 +346,22 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 { label: t("items.fields.gost"), value: card.gost_drawing },
                 { label: t("items.fields.hs"), value: card.hs_code },
                 { label: t("items.fields.source"), value: card.source_supplier?.name },
+                {
+                  label: t("items.fields.origin"),
+                  value: card.origin.effective
+                    ? `${card.origin.effective.name}${card.origin.source === "brand" ? ` ${t("items.originBrand")}` : ""}`
+                    : t("items.originNone"),
+                },
+                {
+                  label: t("items.fields.warranty"),
+                  value:
+                    card.warranty.effective_months === null
+                      ? t("items.warrantyNone")
+                      : `${t("items.warrantyMonths", { months: card.warranty.effective_months })}${card.warranty.source === "company" ? ` ${t("items.warrantyCompany")}` : ""}`,
+                },
+                ...(card.warranty.terms
+                  ? [{ label: t("items.warrantyTerms"), value: card.warranty.terms }]
+                  : []),
               ]}
             />
             {canEdit(me, "erp.stock") ? (
@@ -367,6 +385,8 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                 })}
               </p>
             ) : null}
+            <ItemPhotos card={card} editable={canEdit(me, "erp.stock")} />
+            <ItemDocs card={card} editable={canEdit(me, "erp.stock")} />
             {card.proposals.length > 0 ? (
               <ProposalsList card={card} editable={canEdit(me, "erp.stock")} />
             ) : null}
@@ -376,21 +396,6 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
               <p className="pf-cat-note">{t("items.noOffers")}</p>
             ) : (
               <OffersTable card={card} date={date} onSupplier={openSupplier} />
-            )}
-            <h3 className="pf-cat-section">{t("items.techDocs")}</h3>
-            {card.tech_docs.length === 0 ? (
-              <p className="pf-cat-note">{t("items.noDocs")}</p>
-            ) : (
-              <ul>
-                {card.tech_docs.map((doc) => (
-                  <li key={doc.id}>
-                    <Link className="pf-focusable" to={`/erp/docs?doc=${doc.id}`}>
-                      {doc.title}
-                    </Link>{" "}
-                    <span className="pf-hint">{t(`docKinds.${doc.kind}`)}</span>
-                  </li>
-                ))}
-              </ul>
             )}
             {editing ? (
               <ItemForm
@@ -598,6 +603,11 @@ function ItemForm({
   const [brand, setBrand] = useState<string | null>(item?.brand_id ?? null);
   const [mpn, setMpn] = useState(item?.manufacturer_part_number ?? "");
   const [hs, setHs] = useState(item?.hs_code ?? "");
+  const [country, setCountry] = useState<string | null>(item?.origin.own?.id ?? null);
+  const [warrantyMonths, setWarrantyMonths] = useState(
+    item?.warranty.months === null || item === undefined ? "" : String(item.warranty.months),
+  );
+  const [warrantyTerms, setWarrantyTerms] = useState(item?.warranty.terms ?? "");
   const brands = useListManufacturers({ page: 1, page_size: 200 });
   const ids = {
     name: useId(),
@@ -609,7 +619,11 @@ function ItemForm({
     brand: useId(),
     mpn: useId(),
     hs: useId(),
+    country: useId(),
+    wm: useId(),
+    wt: useId(),
   };
+  const monthsValid = /^\d{0,3}$/.test(warrantyMonths.trim()) && Number(warrantyMonths || 0) <= 600;
   const hsValid = /^(\d{2}|\d{4}|\d{6}|\d{8}|\d{10})?$/.test(hs.trim());
   const done = (saved: CatalogItemDetail) => {
     void queryClient.invalidateQueries({ queryKey: getListCatalogItemsQueryKey() });
@@ -621,6 +635,7 @@ function ItemForm({
   const mutation = item ? update : create;
   const fields = errorFields(mutation.error);
   const vatValue = vat.trim() === "" ? null : vat.trim().replace(",", ".");
+  const monthsValue = warrantyMonths.trim() === "" ? null : Number(warrantyMonths.trim());
   const submit = () => {
     if (!item) {
       create.mutate({
@@ -647,6 +662,11 @@ function ItemForm({
         ? { manufacturer_part_number: mpn.trim() }
         : {}),
       ...(hs.trim() !== item.hs_code ? { hs_code: hs.trim() } : {}),
+      ...(country !== (item.origin.own?.id ?? null) ? { country_of_origin_id: country } : {}),
+      ...(monthsValue !== item.warranty.months ? { warranty_months: monthsValue } : {}),
+      ...(warrantyTerms.trim() !== item.warranty.terms
+        ? { warranty_terms: warrantyTerms.trim() }
+        : {}),
     };
     if (Object.keys(changed).length === 0) {
       onClose();
@@ -665,7 +685,7 @@ function ItemForm({
       }
       loading={mutation.isPending}
       error={mutation.error}
-      disabled={name.trim() === "" || !hsValid}
+      disabled={name.trim() === "" || !hsValid || !monthsValid}
       onOk={submit}
       onCancel={onClose}
     >
@@ -753,6 +773,64 @@ function ItemForm({
               />
             </FormField>
           </div>
+          <div className="pf-cat-form-row">
+            <FormField
+              id={ids.country}
+              label={t("items.form.country")}
+              hint={
+                item.origin.brand
+                  ? t("items.form.countryHintBrand", { country: item.origin.brand.name })
+                  : t("items.form.countryHintNone")
+              }
+            >
+              <Select
+                id={ids.country}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                value={country}
+                status={fields.includes("country_of_origin_id") ? "error" : undefined}
+                onChange={(value: string | null | undefined) => {
+                  setCountry(value ?? null);
+                }}
+                options={(lookups.data?.countries ?? []).map((c) => ({
+                  value: c.id,
+                  label: c.name,
+                }))}
+              />
+            </FormField>
+            <FormField
+              id={ids.wm}
+              label={t("items.form.warrantyMonths")}
+              hint={
+                item.warranty.company_months === null
+                  ? t("items.form.warrantyMonthsHintNone")
+                  : t("items.form.warrantyMonthsHint", { months: item.warranty.company_months })
+              }
+            >
+              <Input
+                id={ids.wm}
+                inputMode="numeric"
+                maxLength={3}
+                value={warrantyMonths}
+                status={!monthsValid || fields.includes("warranty_months") ? "error" : undefined}
+                onChange={(event) => {
+                  setWarrantyMonths(event.target.value);
+                }}
+              />
+            </FormField>
+          </div>
+          <FormField id={ids.wt} label={t("items.form.warrantyTerms")}>
+            <Input.TextArea
+              id={ids.wt}
+              rows={2}
+              value={warrantyTerms}
+              maxLength={5000}
+              onChange={(event) => {
+                setWarrantyTerms(event.target.value);
+              }}
+            />
+          </FormField>
           <FormField id={ids.hs} label={t("items.form.hs")} hint={t("items.form.hsHint")}>
             <Input
               id={ids.hs}

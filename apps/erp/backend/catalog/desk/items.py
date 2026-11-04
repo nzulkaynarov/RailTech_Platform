@@ -107,6 +107,49 @@ def company_vat_default():
     return CompanySettings.objects.filter(company_id=company_id).values_list("default_vat_rate", flat=True).first()
 
 
+def company_warranty_default():
+    """Гарантия компании по умолчанию, мес. (`CompanySettings.default_warranty_months`), или None."""
+    from parties.models import CompanySettings
+
+    from core.tenant import own_company_id
+
+    company_id = own_company_id()
+    if not company_id:
+        return None
+    return (
+        CompanySettings.objects.filter(company_id=company_id).values_list("default_warranty_months", flat=True).first()
+    )
+
+
+def effective_origin(product) -> dict:
+    """Страна происхождения: своя у карточки, иначе страна бренда (источник — `item` / `brand` / `none`)."""
+    own = product.country_of_origin if product.country_of_origin_id else None
+    brand_country = product.brand.country if product.brand_id and product.brand.country_id else None
+    effective, source = (own, "item") if own else (brand_country, "brand") if brand_country else (None, "none")
+
+    def ref(country):
+        return {"id": country.pk, "name": country.name} if country else None
+
+    return {"own": ref(own), "effective": ref(effective), "brand": ref(brand_country), "source": source}
+
+
+def effective_warranty(product, company_default) -> dict:
+    """Гарантия: своя у карточки, иначе срок компании (источник — `item` / `company` / `none`)."""
+    if product.warranty_months is not None:
+        months, source = product.warranty_months, "item"
+    elif company_default is not None:
+        months, source = company_default, "company"
+    else:
+        months, source = None, "none"
+    return {
+        "months": product.warranty_months,
+        "terms": product.warranty_terms,
+        "effective_months": months,
+        "company_months": company_default,
+        "source": source,
+    }
+
+
 def _rate(value):
     return None if value is None else f"{Decimal(value):.2f}"
 
@@ -181,6 +224,11 @@ def item_detail(product, user) -> dict:
     product.has_stock = stocked
     product.offers_count = sum(1 for o in offers if o.is_active)
     row = item_row(product, company_vat_default())
+    from catalog.desk import images as image_service
+    from catalog.desk.tech_docs import doc_fields, kind_names
+
+    names = kind_names()
+    docs = list(product.tech_documents.order_by("-created_at", "-id")[:20])
     row.update(
         {
             "description": product.description,
@@ -196,10 +244,10 @@ def item_detail(product, user) -> dict:
             ),
             "offers": [offer_row(o, show_price=show_price, today=today) for o in offers],
             "prices_visible": show_price,
-            "tech_docs": [
-                {"id": d.pk, "title": d.title, "kind": d.kind}
-                for d in product.tech_documents.order_by("-created_at", "-id")[:20]
-            ],
+            "tech_docs": [doc_fields(d, names, today) for d in docs],
+            "images": [image_service.image_row(i) for i in image_service.ordered(product)],
+            "origin": effective_origin(product),
+            "warranty": effective_warranty(product, company_warranty_default()),
         }
     )
     row["docs_count"] = product.tech_documents.count()  # полное число, как в списке (в карточке показаны последние 20)
@@ -285,6 +333,9 @@ def create_item(data: dict, actor) -> Product:
         category=_category(data.get("category_id")),
         vat_rate=parse_vat(data.get("vat_rate")),
         owner_company=own_company(),
+        country_of_origin=_country(data.get("country_of_origin_id")),
+        warranty_months=_warranty_months(data.get("warranty_months")),
+        warranty_terms=(data.get("warranty_terms") or "").strip(),
     )
     _apply_kind(product, kind)
     product.save()
@@ -300,6 +351,29 @@ def _brand(brand_id):
     if brand is None:
         raise ItemError("BRAND_NOT_FOUND", "brand_id")
     return brand
+
+
+def _country(country_id):
+    from core.models import Country
+
+    if country_id is None:
+        return None
+    country = Country.objects.filter(pk=country_id, is_active=True).first()
+    if country is None:
+        raise ItemError("COUNTRY_NOT_FOUND", "country_of_origin_id")
+    return country
+
+
+#: Потолок гарантии, мес.: 50 лет — защита от опечатки, а не бизнес-правило.
+WARRANTY_MONTHS_MAX = 600
+
+
+def _warranty_months(value):
+    if value in (None, ""):
+        return None
+    if isinstance(value, bool) or not str(value).strip().isdigit() or int(value) > WARRANTY_MONTHS_MAX:
+        raise ItemError("WARRANTY_MONTHS_INVALID", "warranty_months")
+    return int(value)
 
 
 def _hs_code(value) -> str:
@@ -332,6 +406,13 @@ def update_item(product: Product, data: dict, actor=None) -> Product:
         product.brand = _brand(data["brand_id"])
     if "manufacturer_part_number" in data:
         product.manufacturer_part_number = (data["manufacturer_part_number"] or "").strip()
+    # CAT-CARD-1: страна происхождения и гарантия (пусто — страна бренда / срок компании).
+    if "country_of_origin_id" in data:
+        product.country_of_origin = _country(data["country_of_origin_id"])
+    if "warranty_months" in data:
+        product.warranty_months = _warranty_months(data["warranty_months"])
+    if "warranty_terms" in data:
+        product.warranty_terms = (data["warranty_terms"] or "").strip()
     old_hs = product.hs_code or ""
     if "hs_code" in data:
         product.hs_code = _hs_code(data["hs_code"])

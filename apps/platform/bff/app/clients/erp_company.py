@@ -121,12 +121,23 @@ _FIELD_OF: dict[str, str] = {
     "TECH_DOC_KIND_INVALID": "kind",
     "PRODUCT_NOT_FOUND": "product_id",
     "DEAL_NOT_FOUND": "deal_id",
+    # CAT-CARD-1: фото, документы товара, страна и гарантия
+    "IMAGE_LIMIT_REACHED": "image",
+    "IMAGE_MAIN_REQUIRED": "is_main",
+    "IMAGE_ORDER_INVALID": "sort_order",
+    "WARRANTY_MONTHS_INVALID": "warranty_months",
+    "TECH_DOC_DATE_INVALID": "valid_until",
+    "TECH_DOC_VALIDITY_RANGE_INVALID": "valid_until",
 }
 _CODE = re.compile(r"^[A-Z][A-Z0-9_]*(:.*)?$")
 
 # Публичные логотипы компании и бланка в хранилище ERP (core/urls.py: `public-media`);
 # других путей BFF не запрашивает.
 _MEDIA_PATH = re.compile(r"^/media/companies/\d+/(?:logo|doc-profile/logo)/[^/]+$")
+# Фото товаров в публичном бакете ERP (core/urls.py: `public-media`, `products/<id>/images`) —
+# только они, и только растр.
+_PRODUCT_IMAGE_PATH = re.compile(r"^/media/products/(\d+)/images/[^/]+$")
+PRODUCT_IMAGE_TYPES = frozenset({"image/png", "image/jpeg", "image/webp"})
 LOGO_IMAGE_TYPES = frozenset(
     {"image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"}
 )
@@ -298,8 +309,15 @@ class ErpCompany:
         self._company_id = found
         return found
 
-    async def media(self, url: Any) -> httpx.Response | None:
-        """Файл логотипа по адресу из ответа ERP (только публичные пути логотипов) или `None`."""
+    async def media(self, url: Any, *, product_id: str | None = None) -> httpx.Response | None:
+        """Файл по адресу из ответа ERP или `None`.
+
+        Без `product_id` — только публичные пути логотипов своей компании. С `product_id`
+        (CAT-CARD-1) — только фото этого товара (`/media/products/<id>/images/…`, JPEG, PNG или
+        WebP до 5 МБ); других путей BFF не запрашивает.
+        """
+        if product_id is not None:
+            return await self._product_image(url, product_id)
         path = media_path(url)
         if path is None:
             return None
@@ -316,6 +334,17 @@ class ErpCompany:
         ):
             return None
         return response
+
+    async def _product_image(self, url: Any, product_id: str) -> httpx.Response | None:
+        path = urlparse(url).path if isinstance(url, str) and url else ""
+        found = _PRODUCT_IMAGE_PATH.match(path)
+        if found is None or found.group(1) != product_id:
+            return None
+        response = await self._call("erp", "GET", path)
+        if response.status_code != 200 or len(response.content) > MAX_LOGO_FILE_BYTES:
+            return None
+        mime = response.headers.get("content-type", "").split(";")[0].strip().lower()
+        return response if mime in PRODUCT_IMAGE_TYPES else None
 
     async def inline_logos(self, html: str) -> str:
         """Образец документа: логотипы ERP — данными в самом HTML (CSP чужих не пускает)."""

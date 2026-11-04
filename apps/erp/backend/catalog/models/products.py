@@ -158,6 +158,24 @@ class Product(models.Model):
         verbose_name=_("Код ТНВЭД"),
         help_text=_("Код товарной номенклатуры ВЭД (ТНВЭД/HS). Хранится в карточке, чтобы не искать заново."),
     )
+    # CAT-CARD-1: страна происхождения и гарантия карточки. Пусто — показывается страна бренда / срок компании
+    # (`catalog.desk.items.effective_origin`, `effective_warranty`); в КП гарантию по-прежнему берёт настройка компании.
+    country_of_origin = models.ForeignKey(
+        "core.Country",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="origin_products",
+        verbose_name=_("Страна происхождения"),
+        help_text=_("Пусто — страна бренда"),
+    )
+    warranty_months = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Гарантия (мес.)"),
+        help_text=_("Пусто — срок по умолчанию компании"),
+    )
+    warranty_terms = models.TextField(blank=True, default="", verbose_name=_("Условия гарантии"))
     specifications = models.JSONField(
         default=dict,
         blank=True,

@@ -39,3 +39,25 @@ exceptions:
     operation: POST
     reason: "D2-5: описание исправлено на фактический 201; код и потребители не менялись, ответ 200 этим эндпоинтом не отдавался никогда"
     until: 2026-12-31
+  # CAT-CARD-1: вид документа товара — запись справочника `DocumentKind` (данные), а не перечисление в коде: `kind` в
+  # `catalog/tech-docs/` стал открытой строкой-кодом (коды tz / drawing / certificate / pnr / other остались теми же и принимаются
+  # как раньше, к ним добавлены новые). Сужения нет, это расширение множества значений; oasdiff видит его как «enum снят».
+  # Потребитель один — BFF Платформы (переведён в том же PR); старый фронт ERP `catalog/tech-docs/` не вызывает. Удалить после слияния.
+  - file: erp-internal.yaml
+    id: request-parameter-enum-value-removed
+    path: /api/v1/catalog/tech-docs/
+    operation: GET
+    reason: "CAT-CARD-1: вид документа — код из справочника; прежние коды принимаются, множество расширено"
+    until: 2026-12-31
+  - file: erp-internal.yaml
+    id: request-property-enum-value-removed
+    path: /api/v1/catalog/tech-docs/
+    operation: POST
+    reason: "CAT-CARD-1: вид документа — код из справочника; прежние коды принимаются, множество расширено"
+    until: 2026-12-31
+  - file: erp-internal.yaml
+    id: request-property-min-length-set
+    path: /api/v1/catalog/tech-docs/
+    operation: POST
+    reason: "CAT-CARD-1: у `kind` схема стала строкой (minLength 1 — след DRF-описания); пустой вид и раньше, и сейчас принимается как `other`"
+    until: 2026-12-31

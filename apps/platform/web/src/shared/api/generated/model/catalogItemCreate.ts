@@ -19,4 +19,18 @@ export interface CatalogItemCreate {
   category_id?: CompanyItemRef | null;
   /** Процент 0..100; `null` — по умолчанию компании */
   vat_rate?: DecimalString | null;
+  /** Страна происхождения; `null` — страна бренда */
+  country_of_origin_id?: CompanyItemRef | null;
+  /**
+   * Гарантия, мес.; `null` — срок компании по умолчанию
+   * @minimum 0
+   * @maximum 600
+   * @nullable
+   */
+  warranty_months?: number | null;
+  /**
+   * Условия гарантии
+   * @maxLength 5000
+   */
+  warranty_terms?: string;
 }

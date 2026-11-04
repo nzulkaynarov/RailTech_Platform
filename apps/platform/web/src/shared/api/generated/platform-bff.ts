@@ -68,6 +68,9 @@ import type {
   CatalogCategoryList,
   CatalogCategoryUpdate,
   CatalogConflictResponse,
+  CatalogImage,
+  CatalogImageUpdate,
+  CatalogImageUpload,
   CatalogItemCreate,
   CatalogItemDetail,
   CatalogItemPage,
@@ -425,6 +428,7 @@ import type {
   TeamNoteIn,
   TechDoc,
   TechDocPage,
+  TechDocUpdate,
   TechDocUpload,
   TelegramChannelList,
   TelegramConnector,
@@ -44074,6 +44078,513 @@ export const useUpdateCatalogItem = <
   return useMutation(getUpdateCatalogItemMutationOptions(options), queryClient);
 };
 
+export const getUploadCatalogItemImageUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}/images`;
+};
+
+/**
+ * ERP `POST catalog/items/{id}/images/` (multipart) — право `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на позицию; первое фото главное само, `is_main=true` ставит главным и не первое. Отказы (`details.fields`): `image` — файл не подошёл (`FILE_TOO_LARGE`, `FILE_TYPE_NOT_ALLOWED`, `FILE_CONTENT_MISMATCH`, `NO_FILE_PROVIDED`) или лимит (`IMAGE_LIMIT_REACHED`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: загрузить фото позиции
+ */
+export const uploadCatalogItemImage = async (
+  id: string,
+  catalogImageUpload: CatalogImageUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogImage> => {
+  const formData = new FormData();
+  formData.append(`image`, catalogImageUpload.image);
+  if (catalogImageUpload.alt_text !== undefined) {
+    formData.append(`alt_text`, catalogImageUpload.alt_text);
+  }
+  if (catalogImageUpload.is_main !== undefined) {
+    formData.append(`is_main`, catalogImageUpload.is_main.toString());
+  }
+
+  return http<CatalogImage>(getUploadCatalogItemImageUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadCatalogItemImageMutationKey = () => ["uploadCatalogItemImage"] as const;
+
+export const getUploadCatalogItemImageMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadCatalogItemImage>>,
+    TError,
+    UploadCatalogItemImageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadCatalogItemImage>>,
+  TError,
+  UploadCatalogItemImageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadCatalogItemImageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadCatalogItemImage>>,
+    UploadCatalogItemImageMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadCatalogItemImage(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadCatalogItemImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadCatalogItemImage>>
+>;
+export type UploadCatalogItemImageMutationBody = CatalogImageUpload;
+export type UploadCatalogItemImageMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadCatalogItemImageMutationVariables = { id: string; data: CatalogImageUpload };
+
+/**
+ * @summary Расчёт · Номенклатура: загрузить фото позиции
+ */
+export const useUploadCatalogItemImage = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadCatalogItemImage>>,
+      TError,
+      UploadCatalogItemImageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadCatalogItemImage>>,
+  TError,
+  UploadCatalogItemImageMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadCatalogItemImageMutationOptions(options), queryClient);
+};
+
+export const getUpdateCatalogItemImageUrl = (id: string, imageId: string) => {
+  return `/api/v1/erp/catalog/items/${id}/images/${imageId}`;
+};
+
+/**
+ * ERP `PATCH catalog/items/{id}/images/{image_id}/` — право `catalog.manage`. `is_main: true` — сделать главным; `sort_order` — новая позиция с нуля (остальные сдвигаются без пропусков); `alt_text` — подпись. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: главное фото, порядок, подпись
+ */
+export const updateCatalogItemImage = async (
+  id: string,
+  imageId: string,
+  catalogImageUpdate: CatalogImageUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogImage> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogImage>(getUpdateCatalogItemImageUrl(id, imageId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogImageUpdate),
+  });
+};
+
+export const getUpdateCatalogItemImageMutationKey = () => ["updateCatalogItemImage"] as const;
+
+export const getUpdateCatalogItemImageMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCatalogItemImage>>,
+    TError,
+    UpdateCatalogItemImageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCatalogItemImage>>,
+  TError,
+  UpdateCatalogItemImageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCatalogItemImageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCatalogItemImage>>,
+    UpdateCatalogItemImageMutationVariables
+  > = (props) => {
+    const { id, imageId, data } = props ?? {};
+
+    return updateCatalogItemImage(id, imageId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCatalogItemImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCatalogItemImage>>
+>;
+export type UpdateCatalogItemImageMutationBody = CatalogImageUpdate;
+export type UpdateCatalogItemImageMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCatalogItemImageMutationVariables = {
+  id: string;
+  imageId: string;
+  data: CatalogImageUpdate;
+};
+
+/**
+ * @summary Расчёт · Номенклатура: главное фото, порядок, подпись
+ */
+export const useUpdateCatalogItemImage = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCatalogItemImage>>,
+      TError,
+      UpdateCatalogItemImageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCatalogItemImage>>,
+  TError,
+  UpdateCatalogItemImageMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCatalogItemImageMutationOptions(options), queryClient);
+};
+
+export const getDeleteCatalogItemImageUrl = (id: string, imageId: string) => {
+  return `/api/v1/erp/catalog/items/${id}/images/${imageId}`;
+};
+
+/**
+ * ERP `DELETE catalog/items/{id}/images/{image_id}/` — право `catalog.manage`; файл удаляется, если было главное — главным становится следующее. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: удалить фото
+ */
+export const deleteCatalogItemImage = async (
+  id: string,
+  imageId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteCatalogItemImageUrl(id, imageId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCatalogItemImageMutationKey = () => ["deleteCatalogItemImage"] as const;
+
+export const getDeleteCatalogItemImageMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCatalogItemImage>>,
+    TError,
+    DeleteCatalogItemImageMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCatalogItemImage>>,
+  TError,
+  DeleteCatalogItemImageMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCatalogItemImageMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCatalogItemImage>>,
+    DeleteCatalogItemImageMutationVariables
+  > = (props) => {
+    const { id, imageId } = props ?? {};
+
+    return deleteCatalogItemImage(id, imageId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCatalogItemImageMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCatalogItemImage>>
+>;
+
+export type DeleteCatalogItemImageMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteCatalogItemImageMutationVariables = { id: string; imageId: string };
+
+/**
+ * @summary Расчёт · Номенклатура: удалить фото
+ */
+export const useDeleteCatalogItemImage = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCatalogItemImage>>,
+      TError,
+      DeleteCatalogItemImageMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCatalogItemImage>>,
+  TError,
+  DeleteCatalogItemImageMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCatalogItemImageMutationOptions(options), queryClient);
+};
+
+export const getGetCatalogItemImageContentUrl = (id: string, imageId: string) => {
+  return `/api/v1/erp/catalog/items/${id}/images/${imageId}/content`;
+};
+
+/**
+ * BFF берёт файл в ERP по адресу из карточки позиции (только путь `/media/products/{id}/images/…` этой позиции) и отдаёт с защитными заголовками (`X-Content-Type-Options`, `Content-Security-Policy: sandbox`). Нет фото, чужой путь или не изображение — 404 `NOT_FOUND`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Номенклатура: файл фото
+ */
+export const getCatalogItemImageContent = async (
+  id: string,
+  imageId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetCatalogItemImageContentUrl(id, imageId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogItemImageContentQueryKey = (id: string, imageId: string) => {
+  return [`/api/v1/erp/catalog/items/${id}/images/${imageId}/content`] as const;
+};
+
+export const getGetCatalogItemImageContentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  imageId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogItemImageContentQueryKey(id, imageId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogItemImageContent>>> = ({
+    signal,
+  }) => getCatalogItemImageContent(id, imageId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined && imageId !== null && imageId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCatalogItemImageContentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCatalogItemImageContent>>
+>;
+export type GetCatalogItemImageContentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCatalogItemImageContent<
+  TData = Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  imageId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItemImageContent>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItemImageContent<
+  TData = Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  imageId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItemImageContent>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItemImageContent<
+  TData = Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  imageId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Номенклатура: файл фото
+ */
+
+export function useGetCatalogItemImageContent<
+  TData = Awaited<ReturnType<typeof getCatalogItemImageContent>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  imageId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogItemImageContent>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCatalogItemImageContentQueryOptions(id, imageId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getPublishCatalogItemUrl = (id: string) => {
   return `/api/v1/erp/catalog/items/${id}/publish`;
 };
@@ -47978,6 +48489,21 @@ export const uploadTechDoc = async (
   if (techDocUpload.title !== undefined) {
     formData.append(`title`, techDocUpload.title);
   }
+  if (techDocUpload.number !== undefined) {
+    formData.append(`number`, techDocUpload.number);
+  }
+  if (techDocUpload.issued_by !== undefined) {
+    formData.append(`issued_by`, techDocUpload.issued_by);
+  }
+  if (techDocUpload.issued_at !== undefined) {
+    formData.append(`issued_at`, techDocUpload.issued_at);
+  }
+  if (techDocUpload.valid_until !== undefined) {
+    formData.append(`valid_until`, techDocUpload.valid_until);
+  }
+  if (techDocUpload.client_visible !== undefined) {
+    formData.append(`client_visible`, techDocUpload.client_visible.toString());
+  }
   if (techDocUpload.product_id !== undefined) {
     formData.append(`product_id`, techDocUpload.product_id);
   }
@@ -48077,6 +48603,133 @@ export const useUploadTechDoc = <
   TContext
 > => {
   return useMutation(getUploadTechDocMutationOptions(options), queryClient);
+};
+
+export const getUpdateTechDocUrl = (id: string) => {
+  return `/api/v1/erp/docs/files/${id}`;
+};
+
+/**
+ * ERP `PATCH catalog/tech-docs/{id}/` — право `catalog.manage`. Вид, название, номер, кем выдан, выдан, действует до, «видно клиенту»; сам файл не меняется. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Документы: изменить паспорт документа
+ */
+export const updateTechDoc = async (
+  id: string,
+  techDocUpdate: TechDocUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<TechDoc> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<TechDoc>(getUpdateTechDocUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(techDocUpdate),
+  });
+};
+
+export const getUpdateTechDocMutationKey = () => ["updateTechDoc"] as const;
+
+export const getUpdateTechDocMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateTechDoc>>,
+    TError,
+    UpdateTechDocMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateTechDoc>>,
+  TError,
+  UpdateTechDocMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateTechDocMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateTechDoc>>,
+    UpdateTechDocMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateTechDoc(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateTechDocMutationResult = NonNullable<Awaited<ReturnType<typeof updateTechDoc>>>;
+export type UpdateTechDocMutationBody = TechDocUpdate;
+export type UpdateTechDocMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateTechDocMutationVariables = { id: string; data: TechDocUpdate };
+
+/**
+ * @summary Расчёт · Документы: изменить паспорт документа
+ */
+export const useUpdateTechDoc = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateTechDoc>>,
+      TError,
+      UpdateTechDocMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateTechDoc>>,
+  TError,
+  UpdateTechDocMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateTechDocMutationOptions(options), queryClient);
 };
 
 export const getDeleteTechDocUrl = (id: string) => {

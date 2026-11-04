@@ -214,3 +214,80 @@
   gap: 2px;
   font-size: 13px;
 }
+
+/* Карточка товара · Фото (CAT-CARD-1) */
+.pf-cat-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-cat-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+}
+.pf-cat-photo img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: #fafafa;
+}
+.pf-cat-photo-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 24px;
+}
+.pf-cat-photo-tools {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.pf-cat-photo-main {
+  color: #7a4d00;
+  font-size: 13px;
+  font-weight: 600;
+}
+.pf-cat-photo-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 8px;
+}
+.pf-cat-photo-confirm {
+  display: block;
+  max-width: 160px;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+/* Карточка товара · Документы (CAT-CARD-1) */
+.pf-cat-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0 0 8px;
+  list-style: none;
+}
+.pf-cat-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}

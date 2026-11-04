@@ -24,13 +24,6 @@
     "DRAFT": "Draft",
     "PUBLISHED": "Published"
   },
-  "docKinds": {
-    "tz": "Technical specification",
-    "drawing": "Drawing",
-    "certificate": "Certificate",
-    "pnr": "Commissioning procedure",
-    "other": "Other"
-  },
   "brigadeKinds": {
     "brigade": "Crew",
     "person": "Individual",
@@ -124,7 +117,13 @@
       "valid_date_invalid": "Date format is DD.MM.YYYY.",
       "rows_token_invalid": "The check is out of date. Press “Check” again.",
       "offer_source_invalid": "Choose the price source.",
-      "role_not_permitted": "Catalog and procurement rights are needed."
+      "role_not_permitted": "Catalog and procurement rights are needed.",
+      "image_limit_reached": "Limit reached: 10 photos per item.",
+      "image_main_required": "Change the main photo by choosing another photo.",
+      "image_order_invalid": "There is no such place in the list.",
+      "warranty_months_invalid": "Warranty is a number of months from 0 to 600.",
+      "tech_doc_date_invalid": "The date is not valid.",
+      "tech_doc_validity_range_invalid": "“Valid until” cannot be earlier than “Issued”."
     }
   },
   "items": {
@@ -170,12 +169,14 @@
       "gost": "Standard / drawing",
       "hs": "HS code",
       "mpn": "Manufacturer part no.",
-      "source": "Created from price list of"
+      "source": "Created from price list of",
+      "origin": "Country of origin",
+      "warranty": "Warranty"
     },
     "offers": "Supplier offers",
     "offersTable": "Supplier offers for the item",
-    "techDocs": "Technical files",
-    "noDocs": "No files. Upload them in “Technical files”.",
+    "techDocs": "Documents",
+    "noDocs": "No documents. Add a certificate, passport or manual.",
     "form": {
       "addTitle": "Add item",
       "editTitle": "Edit item",
@@ -201,8 +202,21 @@
       "brand": "Manufacturer (brand)",
       "mpn": "Manufacturer part no.",
       "hs": "HS code",
-      "hsHint": "2, 4, 6, 8 or 10 digits"
-    }
+      "hsHint": "2, 4, 6, 8 or 10 digits",
+      "country": "Country of origin",
+      "countryHintBrand": "Empty — manufacturer's country: {{country}}",
+      "countryHintNone": "Empty — manufacturer's country",
+      "warrantyMonths": "Warranty, months",
+      "warrantyMonthsHint": "Empty — {{months}} mo., the company default",
+      "warrantyMonthsHintNone": "Empty — no company default is set",
+      "warrantyTerms": "Warranty terms"
+    },
+    "originBrand": "(manufacturer's country)",
+    "originNone": "Not set",
+    "warrantyCompany": "(company default)",
+    "warrantyMonths": "{{months}} mo.",
+    "warrantyNone": "Not set",
+    "warrantyTerms": "Warranty terms"
   },
   "offers": {
     "supplier": "Supplier",
@@ -497,7 +511,7 @@
     }
   },
   "docs": {
-    "subtitle": "Specifications, drawings, certificates and commissioning procedures — linked to an item and to a request.",
+    "subtitle": "Documents of items and requests: certificates, passports, manuals, drawings.",
     "search": "Search by name, file and item",
     "filterKind": "Kind",
     "anyKind": "Any kind",
@@ -511,7 +525,9 @@
       "kind": "Kind",
       "link": "Linked to",
       "size": "Size",
-      "uploaded": "Uploaded by"
+      "uploaded": "Uploaded by",
+      "number": "Number",
+      "valid": "Valid until"
     },
     "empty": {
       "title": "No files",
@@ -523,7 +539,15 @@
       "file": "File",
       "product": "Item",
       "deal": "Request or project",
-      "uploaded": "Uploaded"
+      "uploaded": "Uploaded",
+      "number": "Number",
+      "issuedBy": "Issued by",
+      "issuedAt": "Issued",
+      "validUntil": "Valid until",
+      "clientVisible": "Visible to client",
+      "yes": "Yes",
+      "no": "No",
+      "forever": "No expiry"
     },
     "download": "Download",
     "downloadError": "Could not download the file.",
@@ -556,10 +580,17 @@
       "dealPlaceholder": "Find by number or name",
       "linkHint": "At least one link is needed: an item or a request.",
       "steps": [
-        "The file is saved in the protected ERP storage.",
-        "It appears for the item and the request it is linked to.",
-        "The file is not sent to the client."
-      ]
+        "The file is saved in the protected storage.",
+        "It appears on the item and the request it is linked to.",
+        "The “Visible to client” mark is saved; the client portal will show it later."
+      ],
+      "number": "Number",
+      "issuedBy": "Issued by",
+      "issuedAt": "Issued",
+      "validUntil": "Valid until",
+      "validUntilHint": "Empty — no expiry",
+      "clientVisible": "Visible to client",
+      "clientVisibleHint": "A mark for the client portal; showing it is enabled later."
     }
   },
   "supplierForm": {
@@ -640,7 +671,8 @@
       "uom": "unit",
       "category": "category",
       "hs_code": "HS code",
-      "list_price": "list price"
+      "list_price": "list price",
+      "conformity_doc": "a valid conformity document with a number"
     }
   },
   "import": {
@@ -714,5 +746,57 @@
       "ROWS_TOKEN_EXPIRED": "The check is out of date. Press “Check” again.",
       "AI_JOB_FAILED": "AI could not read the file. Try again later."
     }
+  },
+  "photos": {
+    "title": "Photos",
+    "count": "{{count}} of {{max}}",
+    "hint": "Best: a square from 900 px on a light background. JPEG, PNG or WebP, up to 5 MB.",
+    "empty": "No photos. Add the first one — it becomes the main photo.",
+    "add": "Add photo",
+    "limit": "Limit reached: {{max}} photos. Delete one first.",
+    "list": "Item photos",
+    "alt": "Photo {{n}} of {{total}}",
+    "main": "Main",
+    "makeMain": "Make main",
+    "makeMainNamed": "Make photo {{n}} the main one",
+    "up": "Earlier",
+    "upNamed": "Move photo {{n}} earlier",
+    "down": "Later",
+    "downNamed": "Move photo {{n}} later",
+    "remove": "Delete",
+    "removeNamed": "Delete photo {{n}}",
+    "deleteTitle": "Delete photo {{n}}?",
+    "deleteSteps": [
+      "The file is removed from storage.",
+      "If it is the main photo, the next one becomes main.",
+      "The photo can only be restored by uploading it again."
+    ],
+    "uploaded": "Photo added.",
+    "deleted": "Photo deleted.",
+    "fileLabel": "Photo"
+  },
+  "cardDocs": {
+    "title": "Documents",
+    "empty": "No documents. Add a certificate, passport or manual.",
+    "add": "Add document",
+    "edit": "Edit",
+    "editNamed": "Edit document “{{title}}”",
+    "open": "Open",
+    "expired": "Expired",
+    "validUntil": "until {{date}}",
+    "forever": "no expiry",
+    "visible": "Visible to client",
+    "hidden": "Not visible to client",
+    "numberless": "no number",
+    "list": "Item documents",
+    "addTitle": "Add document",
+    "editTitle": "Edit document",
+    "addSteps": [
+      "The file is saved in the protected storage.",
+      "It appears on the item card and in “Technical documents”.",
+      "The “Visible to client” mark is saved; the client portal will show it later."
+    ],
+    "editSteps": ["The changes are saved in the document.", "The file itself does not change."],
+    "saved": "Document saved."
   }
 }

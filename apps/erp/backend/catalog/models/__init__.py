@@ -10,7 +10,7 @@ from .products import Product, ProductDocument, ProductImage
 from .proposals import ProductFieldProposal
 from .requests import CategoryRequest
 from .taxonomy import Category, Manufacturer
-from .tech_docs import TechDocument
+from .tech_docs import CONFORMITY_KIND_CODES, DocumentKind, TechDocument
 
 from .brigades import Brigade  # isort:skip — после HSCode: master_data.models импортирует его отсюда
 
@@ -18,6 +18,8 @@ __all__ = [
     "Brigade",
     "Category",
     "CategoryRequest",
+    "CONFORMITY_KIND_CODES",
+    "DocumentKind",
     "DomainType",
     "HSCode",
     "Manufacturer",
