@@ -10216,6 +10216,8 @@ export interface components {
       default_offer_validity_days: number | null;
       /** @description Отсрочка платежа, дней */
       payment_terms_days: number | null;
+      /** @description Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04) */
+      remind_overdue_invoices: boolean;
       /** @description Условия оплаты текстом */
       default_payment_terms: string;
       /** @description Гарантия, месяцев */
@@ -10248,6 +10250,8 @@ export interface components {
       default_offer_validity_days?: number | null;
       /** @description Отсрочка платежа, дней */
       payment_terms_days?: number | null;
+      /** @description Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04) */
+      remind_overdue_invoices?: boolean;
       /** @description Условия оплаты текстом */
       default_payment_terms?: string;
       /** @description Гарантия, месяцев */

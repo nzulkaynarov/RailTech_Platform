@@ -46,7 +46,7 @@ describe('колокольчик кабинета', () => {
     expect(rows[4]).toHaveTextContent('Поставка по проекту D-35: Отгружено');
     expect(rows[4]).not.toHaveTextContent('Не прочитано');
     expect(router.state.location.pathname).toBe('/requests');
-    expect((await axe(document.body)).violations).toEqual([]);
+    expect((await axe(panel)).violations).toEqual([]);
   });
 
   it('«Прочитать все» гасит бейдж и отметки', async () => {

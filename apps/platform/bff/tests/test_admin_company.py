@@ -944,10 +944,11 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
 async def test_quote_defaults_overdue_reminders_switch(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
-    """Напоминания о просрочке (NOTIFY-2): выключено по умолчанию, включение уходит в ERP как есть."""
+    """Напоминания о просрочке (NOTIFY-2): выключено по умолчанию, включение уходит в ERP."""
     await web.login(["ADMIN"])
     erp.get(f"{COMPANY}/settings/").mock(return_value=httpx.Response(200, json=settings_json()))
-    assert (await web.client.get("/api/v1/admin/company/quote-defaults")).json()["remind_overdue_invoices"] is False
+    current = await web.client.get("/api/v1/admin/company/quote-defaults")
+    assert current.json()["remind_overdue_invoices"] is False
     route = erp.patch(f"{COMPANY}/settings/").mock(
         return_value=httpx.Response(200, json=settings_json(remind_overdue_invoices=True))
     )

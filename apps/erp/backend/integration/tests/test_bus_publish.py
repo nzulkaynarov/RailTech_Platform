@@ -260,7 +260,12 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     invoice, _ = crm_services.issue_invoice(invoice, manager)
     Invoice.objects.filter(pk=invoice.pk).update(due_date=timezone.localdate() - datetime.timedelta(days=30))
-    assert send_payment_reminders(grace_days=3) == {"reminded": 1}
+    from unittest.mock import patch
+
+    import crm.tasks
+
+    with patch.object(crm.tasks, "reminders_enabled", return_value=True):  # напоминания включает продавец (NOTIFY-2)
+        assert send_payment_reminders(grace_days=3) == {"reminded": 1}
     assert len(bus_support.published("invoice.overdue")) == 1
     invoice.refresh_from_db()
     _, error = crm_services.record_payment(
