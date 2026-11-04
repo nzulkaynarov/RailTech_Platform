@@ -10,6 +10,7 @@ from portal.views import (
     ActReturnView,
     CatalogCategoriesView,
     CatalogDetailView,
+    CatalogDocumentFileView,
     CatalogListView,
     CompanyView,
     ContractListView,
@@ -137,6 +138,16 @@ urlpatterns = [
     path("partner/price-list/<str:task_id>", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task"),
     path(
         "partner/price-list/<str:task_id>/", PartnerPriceListTaskView.as_view(), name="portal-partner-price-task-slash"
+    ),
+    path(
+        "catalog/<int:pk>/documents/<int:doc_id>/file",
+        CatalogDocumentFileView.as_view(),
+        name="portal-catalog-document-file",
+    ),
+    path(
+        "catalog/<int:pk>/documents/<int:doc_id>/file/",
+        CatalogDocumentFileView.as_view(),
+        name="portal-catalog-document-file-slash",
     ),
     # Company (Профиль компании)
     path("company", CompanyView.as_view(), name="portal-company"),

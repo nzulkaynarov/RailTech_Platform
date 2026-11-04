@@ -141,7 +141,8 @@
       "draft": "Qoralama",
       "review": "Tekshiruvda",
       "returned": "Qaytarilgan",
-      "published": "Eʼlon qilingan"
+      "published": "Eʼlon qilingan",
+      "matched": "Katalog kartochkasiga moslashtirilgan"
     },
     "freshness": {
       "fresh": "Narx dolzarb",
@@ -649,11 +650,27 @@
       "description": "Tavsif",
       "attributes": "Xususiyatlar",
       "photos": "Suratlar",
-      "photoAlt": "{{name}}, {{n}}-surat",
+      "photoAlt": "{{name}}, {{total}} tadan {{n}}-surat",
       "unit": "Birlik: {{unit}}",
       "priceOnRequestHint": "Soʻrov yuboring — menejer narx va muddat bilan taklif yuboradi.",
       "request": "Soʻrash",
-      "backToList": "Katalogga"
+      "backToList": "Katalogga",
+      "photoOf": "{{total}} tadan {{n}}-surat",
+      "photoPrev": "Oldingi surat",
+      "photoNext": "Keyingi surat",
+      "manufacturerTitle": "Ishlab chiqaruvchi",
+      "manufacturer": "Ishlab chiqaruvchi",
+      "manufacturerCountry": "Ishlab chiqaruvchi davlati",
+      "partNumber": "Ishlab chiqaruvchi artikuli",
+      "countryOfOrigin": "Kelib chiqish davlati",
+      "warrantyTitle": "Kafolat",
+      "warrantyMonths_one": "{{count}} oy",
+      "warrantyMonths_other": "{{count}} oy",
+      "documentsTitle": "Hujjatlar",
+      "documentNumber": "№ {{number}}",
+      "issuedBy": "Bergan: {{name}}",
+      "validUntil": "{{date}} gacha amal qiladi",
+      "noExpiry": "Muddatsiz"
     },
     "company": {
       "title": "Kompaniya",
@@ -823,7 +840,8 @@
       "draft": "Qoralamalar",
       "review": "Tekshiruvda",
       "returned": "Qaytarilgan",
-      "published": "Eʼlon qilingan"
+      "published": "Eʼlon qilingan",
+      "matched": "Moslashtirilgan"
     },
     "search": "Nomi, brendi yoki artikuli boʻyicha qidirish",
     "searchLabel": "Qidiruv",
@@ -858,7 +876,6 @@
     "moq": "{{count}} dona dan",
     "completenessValue": "{{percent}} %",
     "pendingChange": "Oʻzgarish tekshiruvda",
-    "foreignCard": "Katalogdagi kartochka",
     "returnedReason": "Qaytarish sababi: {{reason}}",
     "returnedFixHint": "Maydonlarni tuzating, prays-listni qayta yuklang, soʻng kartochkani tekshiruvga yuboring.",
     "openCard": "{{name}} kartochkasini ochish",
@@ -932,13 +949,14 @@
       "decision": {
         "pending": "Qaror kutilmoqda",
         "published": "Eʼlon qilingan",
-        "returned": "Qaytarilgan"
+        "returned": "Qaytarilgan",
+        "cancelled": "Tekshiruvdan olingan"
       },
       "submittedAt": "{{date}} yuborilgan",
       "decidedAt": "Qaror: {{date}}",
       "issuesTitle": "Nimani tuzatish kerak",
       "generalComment": "Umumiy izoh",
-      "foreignNote": "Bu kartochka boshqa manba tomonidan yaratilgan. Undagi narxingiz saqlangan; kartochka maydonlarini siz oʻzgartirmaysiz."
+      "foreignNote": "Narxingiz katalog kartochkasiga moslashtirildi. Bu kartochka maʼlumotlari sizga koʻrsatilmaydi: quyida prays-listda yuborganingiz."
     },
     "fields": {
       "name": "Nomi",

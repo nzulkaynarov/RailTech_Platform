@@ -1,4 +1,4 @@
-import { getDocumentFile } from '@/api/portal';
+import { getCatalogItemDocumentFile, getDocumentFile } from '@/api/portal';
 
 /**
  * Скачивание документа `GET /documents/{id}/file` (по образцу B2B `lib/download.ts`): 202 — PDF ещё
@@ -44,6 +44,12 @@ export async function downloadDocument(id: number, fallbackName: string, options
     await wait(Math.min(file.retryAfterSeconds, MAX_WAIT_SECONDS) * 1000);
   }
   throw new DocumentNotReadyError();
+}
+
+/** Скачивание документа карточки каталога: файл готов сразу (CAT-CARD-2), опроса нет. */
+export async function downloadCatalogDocument(itemId: number, documentId: number, fallbackName: string): Promise<void> {
+  const file = await getCatalogItemDocumentFile(itemId, documentId);
+  saveBlob(file.blob, file.fileName ?? fallbackName);
 }
 
 /** Сохранить файл в браузере (скрытая ссылка `download`). */

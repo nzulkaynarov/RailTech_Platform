@@ -14,7 +14,7 @@ from datetime import timedelta
 
 import pghistory
 from django.db import transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Case, Count, Exists, F, OuterRef, Q, Subquery, When
 from django.db.models.functions import Greatest
 from django.utils import timezone
 
@@ -23,13 +23,16 @@ from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS
 from catalog.models import Product, ProductFieldProposal, ProductReview, ProductStatus, SupplierOffer
 from catalog.offer_freshness import EXPIRING_DAYS, freshness
 from catalog.policy import policy_for
+from catalog.review_flow import close_pending_review
 from core.tenant import own_company_id
 
 DRAFT = "draft"
 REVIEW = "review"
 RETURNED = "returned"
 PUBLISHED = "published"
-CARD_STATUSES = (DRAFT, REVIEW, RETURNED, PUBLISHED)
+#: Цена партнёра привязалась к чужой неопубликованной карточке: ему видно только то, что он прислал сам.
+MATCHED = "matched"
+CARD_STATUSES = (DRAFT, REVIEW, RETURNED, PUBLISHED, MATCHED)
 
 #: Коды статуса карточки в справочнике ERP.
 CODE_DRAFT = "DRAFT"
@@ -50,16 +53,23 @@ def _own_q(company) -> Q:
     return Q(source_supplier_id=company.pk)
 
 
+def _visible_q(company) -> Q:
+    """Карточка, поля которой партнёру можно показывать: своя (он источник данных) или опубликованная (слой публичен)."""
+    return _own_q(company) | Q(status__code=CODE_PUBLISHED)
+
+
 def status_filter(company, status: str) -> Q:
-    """Фильтр вкладки. Чужая неопубликованная карточка — «на проверке»: внутренний ход чужой карточки партнёру не виден."""
+    """Фильтр вкладки. Чужая неопубликованная карточка — «сопоставлена»: её ход и поля партнёру не видны."""
     own = _own_q(company)
     published = Q(status__code=CODE_PUBLISHED)
     if status == PUBLISHED:
         return published
+    if status == MATCHED:
+        return ~_visible_q(company)
     if status == RETURNED:
         return own & Q(status__code=CODE_RETURNED)
     if status == REVIEW:
-        return ~published & ((own & Q(status__code=CODE_REVIEW)) | ~own)
+        return own & Q(status__code=CODE_REVIEW)
     if status == DRAFT:
         return own & (Q(status__isnull=True) | ~Q(status__code__in=(CODE_PUBLISHED, CODE_REVIEW, CODE_RETURNED)))
     raise ValueError(status)
@@ -81,7 +91,7 @@ def card_status(product, company_id: int) -> str:
     if code == CODE_PUBLISHED:
         return PUBLISHED
     if product.source_supplier_id != company_id:
-        return REVIEW
+        return MATCHED
     if code == CODE_REVIEW:
         return REVIEW
     if code == CODE_RETURNED:
@@ -95,13 +105,26 @@ def status_counts(company, queryset) -> dict:
     return {key: counts[key] for key in ("all", *CARD_STATUSES)}
 
 
-def search(queryset, text: str):
+def search(queryset, company, text: str):
+    """Поиск по названию, бренду и артикулу. Поля карточки ищутся только у своих и опубликованных; у чужой неопубликованной —
+    только то, что партнёр прислал сам (иначе поиск выдавал бы, что чужая карточка с таким названием есть)."""
     text = (text or "").strip()
     if not text:
         return queryset
-    return queryset.filter(
-        Q(name__icontains=text) | Q(manufacturer_part_number__icontains=text) | Q(brand__name__icontains=text)
+    mine = SupplierOffer.objects.filter(product=OuterRef("pk"), supplier=company).filter(
+        Q(supplier_item_name__icontains=text) | Q(supplier_brand__icontains=text) | Q(supplier_mpn__icontains=text)
     )
+    card_fields = Q(name__icontains=text) | Q(manufacturer_part_number__icontains=text) | Q(brand__name__icontains=text)
+    return queryset.annotate(_my_text_match=Exists(mine)).filter(
+        (_visible_q(company) & card_fields) | Q(_my_text_match=True)
+    )
+
+
+def ordered(queryset, company):
+    """Порядок списка: новые сверху; у чужой неопубликованной карточки — по дате СВОЕЙ цены, не по её изменениям."""
+    my_updated = SupplierOffer.objects.filter(product=OuterRef("pk"), supplier=company).values("updated_at")[:1]
+    sort = Case(When(_visible_q(company), then=F("updated_at")), default=Subquery(my_updated))
+    return queryset.annotate(_sort_at=sort).order_by("-_sort_at", "-id")
 
 
 def offers_attention(company) -> dict:
@@ -164,9 +187,9 @@ def project_cards(company, products: list) -> list[dict]:
     ids = [product.pk for product in products]
     today, now = timezone.localdate(), timezone.now()
     confirm_days = policy_for(own_company_id()).offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
-    offers = {
+    my_offers = {
         offer.product_id: offer
-        for offer in SupplierOffer.objects.filter(supplier=company, is_active=True, product_id__in=ids).select_related(
+        for offer in SupplierOffer.objects.filter(supplier=company, product_id__in=ids).select_related(
             "currency", "delivery_basis"
         )
     }
@@ -185,7 +208,31 @@ def project_cards(company, products: list) -> list[dict]:
     for product in products:
         own = product.source_supplier_id == company.pk
         status = card_status(product, company.pk)
-        offer = offers.get(product.pk)
+        my_offer = my_offers.get(product.pk)
+        offer = my_offer if my_offer is not None and my_offer.is_active else None
+        offer_view = _offer_view(offer, today=today, now=now, confirm_days=confirm_days) if offer else None
+        if status == MATCHED:
+            # Цена привязалась к чужой неопубликованной карточке: только то, что партнёр прислал сам. Ни названия, ни категории,
+            # ни полноты, ни статуса и даты правок чужой карточки (эталон — Amazon «matched to existing listing»).
+            items.append(
+                {
+                    "id": product.pk,
+                    "name": my_offer.supplier_item_name or my_offer.supplier_sku or "—",
+                    "brand": my_offer.supplier_brand or None,
+                    "manufacturer_part_number": my_offer.supplier_mpn,
+                    "category": None,
+                    "status": MATCHED,
+                    "return_reason": None,
+                    "return_issues": [],
+                    "completeness": 0,
+                    "offer": offer_view,
+                    "has_pending_change": False,
+                    "is_own": False,
+                    "can_submit": False,
+                    "updated_at": my_offer.updated_at,
+                }
+            )
+            continue
         items.append(
             {
                 "id": product.pk,
@@ -201,7 +248,7 @@ def project_cards(company, products: list) -> list[dict]:
                 ),
                 "return_issues": _issues(returns.get(product.pk)) if own and status == RETURNED else [],
                 "completeness": partner_completeness(product, ctx)["percent"],
-                "offer": _offer_view(offer, today=today, now=now, confirm_days=confirm_days) if offer else None,
+                "offer": offer_view,
                 "has_pending_change": product.pk in pending,
                 "is_own": own,
                 "can_submit": own and status in (DRAFT, RETURNED),
@@ -212,8 +259,14 @@ def project_cards(company, products: list) -> list[dict]:
 
 
 def project_detail(company, product) -> dict:
-    """Одна карточка с описанием, недостающими полями и историей проверок (только своя)."""
+    """Одна карточка с описанием, недостающими полями и историей проверок (только своя).
+
+    Сопоставленная чужая неопубликованная карточка — только присланное партнёром: описания, ТН ВЭД, единицы, недостающих
+    полей и истории нет.
+    """
     [item] = project_cards(company, [product])
+    if item["status"] == MATCHED:
+        return {**item, "description": "", "hs_code": "", "uom": None, "missing": [], "history": []}
     ctx = CompletenessContext([product])
     own = product.source_supplier_id == company.pk
     history = []
@@ -272,6 +325,8 @@ def submit_for_review(*, company, contact, ids) -> tuple[list[int], list[dict]]:
         if code not in (CODE_DRAFT, CODE_RETURNED) or review_status is None:
             errors.append({"id": product_id, "code": "PRODUCT_NOT_SUBMITTABLE"})
             continue
+        # Висящая открытая проверка (статус меняли мимо проверки) закрывается, а не ломает отправку ограничением базы
+        close_pending_review(product, ProductReview.Decision.CANCELLED)
         product.status = review_status
         product.save(update_fields=["status", "updated_at"])
         ProductReview.objects.create(product=product, submitted_by_contact=contact)

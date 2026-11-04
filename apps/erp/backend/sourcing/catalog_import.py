@@ -407,6 +407,19 @@ def _is_foreign_card(ctx: _Ctx, product) -> bool:
     return owner_id is not None and owner_id != supplier_id
 
 
+def _hidden_from_contact(ctx: _Ctx, product) -> bool:
+    """Загрузка из кабинета партнёра совпала с карточкой, которой он не источник и которая не опубликована (PART-2).
+
+    Такую карточку партнёр не должен ни видеть, ни угадывать по отчёту (предложения по полям, полнота): цена
+    привязывается к ней молча, а по отчёту это просто «сопоставлено». Опубликованный слой публичен — для него отчёт прежний.
+    """
+    if ctx.contact is None:
+        return False
+    supplier_id = getattr(ctx.supplier, "pk", None)
+    status_code = getattr(product.status, "code", None)
+    return status_code != "PUBLISHED" and product.source_supplier_id != supplier_id
+
+
 def _display(value) -> str:
     if value is None:
         return ""
@@ -482,6 +495,8 @@ def _apply_product(ctx: _Ctx, fields: dict, supplier_sku: str = ""):
 
     if existing:
         if _is_foreign_card(ctx, existing):
+            if _hidden_from_contact(ctx, existing):
+                return existing, False, []  # чужая неопубликованная карточка: партнёру о ней ничего не сообщаем
             return existing, False, _propose_differences(ctx, existing, fields, uom)
         _update_product(ctx, existing, fields, brand, uom)
         return existing, False, []
@@ -499,6 +514,10 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
         "currency": offer["currency"],
         "stock_status": offer["stock"],
         "supplier_sku": offer["supplier_sku"],
+        # Что поставщик прислал сам (PART-2): по этому кабинет показывает ему сопоставленную чужую карточку
+        "supplier_item_name": (offer.get("item_name") or "")[:255],
+        "supplier_brand": (offer.get("brand") or "")[:255],
+        "supplier_mpn": (offer.get("mpn") or "")[:100],
         "delivery_lead_time": offer["lead"],
         "min_order_qty": offer["moq"],
         "is_active": True,
@@ -508,11 +527,20 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
         if offer.get(key) is not None:
             defaults[key] = offer[key]
     if ctx.contact is not None:
-        # Свежий прайс из кабинета сам подтверждает актуальность загруженных цен (PART-2).
+        # Свежий прайс из кабинета сам подтверждает актуальность загруженных цен (PART-2) — кроме цены, срок которой уже
+        # прошёл (по дню Ташкента): подтвердить истёкшую цену нельзя ни кнопкой, ни загрузкой.
         from django.utils import timezone
 
-        defaults["confirmed_at"] = timezone.now()
-        defaults["confirmed_by_contact"] = ctx.contact
+        until = defaults.get("valid_until")
+        if until is None:  # срок не задан файлом — остаётся прежний срок предложения, если оно уже есть
+            until = (
+                ctx.SupplierOffer.objects.filter(product=product, supplier=ctx.supplier)
+                .values_list("valid_until", flat=True)
+                .first()
+            )
+        if until is None or until >= timezone.localdate():
+            defaults["confirmed_at"] = timezone.now()
+            defaults["confirmed_by_contact"] = ctx.contact
     _, created = ctx.SupplierOffer.objects.update_or_create(product=product, supplier=ctx.supplier, defaults=defaults)
     return created
 
@@ -626,6 +654,9 @@ def _process_one_row(ctx: _Ctx, row, columns: dict):
                 "moq": _parse_int(_cell(row, columns["moq"]), 1),
                 "valid_from": valid_from,
                 "valid_until": valid_until,
+                "item_name": name,
+                "brand": _cell(row, columns["brand"]),
+                "mpn": _cell(row, columns["mpn"]),
             },
         )
 
@@ -721,7 +752,9 @@ def _iterate_rows(ctx: _Ctx, data_frame, columns: dict, result: ImportResult, pr
         # Предупреждения записываются ТОЛЬКО после успеха строки: у откатанной строки их нет.
         for message in outcome["warnings"]:
             result.add_warning(row_number, message)
-        ctx.touched_products[outcome["product"].pk] = outcome["product"]
+        if not _hidden_from_contact(ctx, outcome["product"]):
+            # Полноту чужой неопубликованной карточки в отчёт партнёра не считаем (PART-2)
+            ctx.touched_products[outcome["product"].pk] = outcome["product"]
 
         processed = result.created + result.updated + result.skipped
         if progress_callback and processed % 500 == 0:

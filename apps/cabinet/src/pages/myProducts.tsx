@@ -218,7 +218,7 @@ export function MyProductsPage() {
           ) : null}
 
           <div role="group" aria-label={t('partner.tabsLabel')} className="mb-4 flex flex-wrap gap-2">
-            {PARTNER_TABS.map((name) => (
+            {PARTNER_TABS.filter((name) => name !== 'matched' || name === tab || (data?.counts.matched ?? 0) > 0).map((name) => (
               <Button
                 key={name}
                 type="button"
@@ -282,7 +282,7 @@ export function MyProductsPage() {
                   { id: 'category', header: t('partner.columns.category'), cell: (item) => item.category ?? '—', className: 'w-36 whitespace-normal' },
                   { id: 'status', header: t('partner.columns.status'), cell: (item) => <StatusCell item={item} />, className: 'w-56 whitespace-normal' },
                   { id: 'price', header: t('partner.columns.price'), cell: (item) => <OfferCell offer={item.offer} />, className: 'w-48 whitespace-normal' },
-                  { id: 'completeness', header: t('partner.columns.completeness'), cell: (item) => t('partner.completenessValue', { percent: item.completeness }), className: 'w-20 text-right' },
+                  { id: 'completeness', header: t('partner.columns.completeness'), cell: (item) => (item.status === 'matched' ? '—' : t('partner.completenessValue', { percent: item.completeness })), className: 'w-20 text-right' },
                 ]}
               />
               {pages > 1 ? (
@@ -362,7 +362,6 @@ function StatusCell({ item }: { item: PartnerProduct }) {
     <div className="flex min-w-0 flex-col items-start gap-1 text-left">
       <StatusBadge entity="partner" code={item.status} />
       {item.has_pending_change ? <span className="text-xs text-info">{t('partner.pendingChange')}</span> : null}
-      {!item.is_own ? <span className="text-xs text-muted-foreground">{t('partner.foreignCard')}</span> : null}
       {item.status === 'returned' ? (
         <div className="text-xs break-words text-warning">
           {item.return_reason ? <p>{t('partner.returnedReason', { reason: item.return_reason })}</p> : null}

@@ -141,7 +141,8 @@
       "draft": "Черновик",
       "review": "На проверке",
       "returned": "Возвращена",
-      "published": "Опубликована"
+      "published": "Опубликована",
+      "matched": "Сопоставлено с карточкой каталога"
     },
     "freshness": {
       "fresh": "Цена актуальна",
@@ -663,11 +664,28 @@
       "description": "Описание",
       "attributes": "Характеристики",
       "photos": "Фотографии",
-      "photoAlt": "{{name}}, фото {{n}}",
+      "photoAlt": "{{name}}, фото {{n}} из {{total}}",
       "unit": "Единица: {{unit}}",
       "priceOnRequestHint": "Отправьте запрос — менеджер пришлёт КП с ценой и сроком.",
       "request": "Запросить",
-      "backToList": "В каталог"
+      "backToList": "В каталог",
+      "photoOf": "Фото {{n}} из {{total}}",
+      "photoPrev": "Предыдущее фото",
+      "photoNext": "Следующее фото",
+      "manufacturerTitle": "Изготовитель",
+      "manufacturer": "Изготовитель",
+      "manufacturerCountry": "Страна изготовителя",
+      "partNumber": "Артикул изготовителя",
+      "countryOfOrigin": "Страна происхождения",
+      "warrantyTitle": "Гарантия",
+      "warrantyMonths_one": "{{count}} месяц",
+      "warrantyMonths_few": "{{count}} месяца",
+      "warrantyMonths_many": "{{count}} месяцев",
+      "documentsTitle": "Документы",
+      "documentNumber": "№ {{number}}",
+      "issuedBy": "Выдан: {{name}}",
+      "validUntil": "Действует до {{date}}",
+      "noExpiry": "Бессрочно"
     },
     "company": {
       "title": "Компания",
@@ -837,7 +855,8 @@
       "draft": "Черновики",
       "review": "На проверке",
       "returned": "Возвращены",
-      "published": "Опубликованы"
+      "published": "Опубликованы",
+      "matched": "Сопоставлены"
     },
     "search": "Поиск по названию, бренду или артикулу",
     "searchLabel": "Поиск",
@@ -874,7 +893,6 @@
     "moq": "от {{count}} шт.",
     "completenessValue": "{{percent}} %",
     "pendingChange": "Есть изменение на проверке",
-    "foreignCard": "Карточка в каталоге",
     "returnedReason": "Причина возврата: {{reason}}",
     "returnedFixHint": "Исправьте поля и загрузите прайс снова, затем отправьте карточку на проверку.",
     "openCard": "Открыть карточку {{name}}",
@@ -956,13 +974,14 @@
       "decision": {
         "pending": "Ждёт решения",
         "published": "Опубликована",
-        "returned": "Возвращена"
+        "returned": "Возвращена",
+        "cancelled": "Снята с проверки"
       },
       "submittedAt": "Отправлена {{date}}",
       "decidedAt": "Решение {{date}}",
       "issuesTitle": "Что исправить",
       "generalComment": "Общий комментарий",
-      "foreignNote": "Эту карточку завёл другой источник. Ваша цена по ней сохранена; сами поля карточки вы не меняете."
+      "foreignNote": "Ваша цена сопоставлена с карточкой каталога. Данные этой карточки вам не показываются: ниже — то, что вы прислали в прайсе."
     },
     "fields": {
       "name": "Наименование",

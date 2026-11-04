@@ -10,9 +10,8 @@ from types import SimpleNamespace
 
 import pytest
 from portal.tests.contract_support import check_response, component, contract_get_paths, response_schema
-from portal.tests.partner_world import PREFIX
+from portal.tests.partner_world import PREFIX, row, upload, xlsx
 from portal.tests.test_contract_guard import PARTNER_GET_PATHS
-from portal.tests.test_partner_price_list import row, upload, xlsx
 
 from sourcing.catalog_import import run_catalog_import
 

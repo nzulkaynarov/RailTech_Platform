@@ -4,76 +4,19 @@
 сразу, а её результат отдаётся вместо `AsyncResult` (как в `catalog/tests/test_cat1_supplier_prices.py`).
 """
 
-import base64
 import uuid
 from datetime import date
 from io import BytesIO
 from types import SimpleNamespace
 
-import pandas as pd
 import pytest
 from ai.models import ImportTask
-from django.core.files.uploadedfile import SimpleUploadedFile
-from portal.tests.partner_world import PREFIX
+from portal.tests.partner_world import PREFIX, URL, report, row, upload, xlsx
 
 from catalog.models import Category, Product, ProductFieldProposal, SupplierOffer
-from sourcing.catalog_import import run_catalog_import
 from sourcing.views_templates import CATALOG_TEMPLATE_HEADERS
 
 pytestmark = pytest.mark.django_db
-
-URL = f"{PREFIX}/price-list"
-
-
-def xlsx(records) -> bytes:
-    buffer = BytesIO()
-    pd.DataFrame(records).to_excel(buffer, index=False)
-    return buffer.getvalue()
-
-
-def row(**extra):
-    base = {
-        "Наименование": "Вентиль запорный ВЗ-50",
-        "Бренд": "Аквилон",
-        "Артикул производителя": "AQ-50",
-        "Цена": "120.00",
-        "Валюта": "USD",
-        "Мин. заказ": "10",
-        "Срок поставки": "30 дн.",
-    }
-    base.update(extra)
-    return base
-
-
-@pytest.fixture
-def broker(monkeypatch):
-    """Выполняет задачу импорта сразу; результат лежит под `task_id` и отдаётся вместо `AsyncResult`."""
-    results, calls = {}, []
-
-    def delay(b64, supplier_id, dry_run, **options):
-        task_id = uuid.uuid4().hex
-        calls.append({"supplier_id": supplier_id, "dry_run": dry_run, **options})
-        results[task_id] = run_catalog_import(base64.b64decode(b64), supplier_id, dry_run, **options)
-        return SimpleNamespace(id=task_id)
-
-    monkeypatch.setattr("portal.services.partner_price_list.process_catalog_import.delay", delay)
-    monkeypatch.setattr(
-        "portal.services.partner_price_list.async_result",
-        lambda task_id: SimpleNamespace(
-            state="SUCCESS" if task_id in results else "PENDING", result=results.get(task_id)
-        ),
-    )
-    return SimpleNamespace(results=results, calls=calls)
-
-
-def upload(client, content, **params):
-    return client.post(URL, {"file": SimpleUploadedFile("price.xlsx", content), **params}, format="multipart")
-
-
-def report(client, task_id):
-    response = client.get(f"{URL}/{task_id}")
-    assert response.status_code == 200, response.content
-    return response.json()
 
 
 class TestTemplate:

@@ -176,6 +176,7 @@ export type AttachmentRef = Schemas['AttachmentRef'];
 export type CatalogCategory = Schemas['CatalogCategory'];
 export type PortalUploadResponse = Schemas['PortalUploadResponse'];
 export type CatalogItem = Schemas['CatalogItem'];
+export type CatalogItemDocument = Schemas['CatalogItemDocument'];
 export type CatalogPage = Schemas['CatalogPage'];
 export type CatalogQuery = QueryOf<paths['/catalog']['get']>;
 export type DocumentsQuery = QueryOf<paths['/documents']['get']>;
@@ -337,6 +338,20 @@ export async function uploadPriceList({ file, dryRun, validFrom, validUntil }: P
 export const listCatalog = (params: CatalogQuery = {}) => portalRequest<CatalogPage>(`/catalog${toQuery(params)}`);
 export const listCatalogCategories = () => portalRequest<CatalogCategory[]>('/catalog/categories');
 export const getCatalogItem = (id: number) => portalRequest<CatalogItem>(`/catalog/${id}`);
+
+/**
+ * Файл документа карточки `GET /catalog/{id}/documents/{doc_id}/file` (CAT-CARD-2): отдаётся сразу, без рендера и 202.
+ * Имя файла сервер строит из названия документа; своего имени Cabinet не придумывает, кроме запасного.
+ */
+export async function getCatalogItemDocumentFile(
+  itemId: number,
+  documentId: number,
+): Promise<{ blob: Blob; fileName: string | null }> {
+  const response = await send(`/catalog/${itemId}/documents/${documentId}/file`, {
+    accept: 'application/pdf, image/png, image/jpeg, application/octet-stream',
+  });
+  return { blob: await response.blob(), fileName: fileNameFrom(response.headers.get('Content-Disposition')) };
+}
 
 /** `POST multipart/form-data` с ключом попытки; ошибка — `PortalApiError` с кодом из `{"detail": CODE}`. */
 async function postForm(path: string, formData: FormData): Promise<Response> {

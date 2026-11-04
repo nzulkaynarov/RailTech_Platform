@@ -43,11 +43,10 @@ info:
     `/invoices*` — `invoices`, `/acts*` — `acts`, `/deliveries*` — `deliveries`, `/documents*` — `documents`, `/company` —
     `company`, `/team*` — `team`; без модуля — 403 `MODULE_REQUIRED`. Включение и выключение модуля действует на следующем
     запросе, без перевхода. Приостановленное отношение закрывает вход, живая сессия партнёра гаснет на следующем запросе (401).
-
     0.5.0 (PART-2, ADR-0022 п. 4): раздел «Мои товары» партнёра — модуль `my_products`, пути `/partner/*`. Партнёр видит
     только свои карточки (где он источник данных или у него есть цена) и только свою цену по ним; чужие цены, другие
     поставщики и наши цены продажи и закупки не отдаются. Карточкой владеем мы: статусы `draft` → `review` → `published` |
-    `returned` (с причиной) → `review`; публикует сотрудник, из портала публикации нет. Правка опубликованной карточки —
+    `returned` (с причиной) → `review`; публикует сотрудник, из портала публикации нет. Цена, привязавшаяся к чужой неопубликованной карточке, показана как `matched`: партнёру видно только присланное им самим. Правка опубликованной карточки —
     предложение по полям (`has_pending_change`), клиент видит прежнюю версию. Прайс загружается по шаблону (`GET
     /partner/price-template`, `POST /partner/price-list` — `multipart/form-data`; `dry_run`
     — предпросмотр без записи), результат — по `task_id`. Цены не модерируются: «подтвердить актуальность»
@@ -1164,6 +1163,53 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /catalog/{id}/documents/{doc_id}/file:
+    get:
+      tags: [catalog]
+      operationId: getCatalogItemDocumentFile
+      summary: Файл документа карточки (поток, аудит выдачи)
+      description: |
+        Документ карточки из `CatalogItem.documents` (CAT-CARD-2): только опубликованная карточка, только документ этой
+        карточки, видимый клиенту и действующий (срок «действует до» не прошёл). Иначе — 404, одинаково для скрытого,
+        просроченного, чужого и несуществующего документа и для неопубликованной карточки (причины не различаются).
+        Имя файла в `Content-Disposition` — из названия документа (`title`) и расширения, имя загруженного файла не
+        отдаётся. Каждая выдача пишется в журнал ERP (кто, что, когда). Доступно при модуле `catalog_requests`.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+        - name: doc_id
+          in: path
+          required: true
+          description: '`CatalogItemDocument.id`'
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Файл (вложение)
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /partner/products:
     get:
       tags: [partner]
@@ -1171,8 +1217,8 @@ paths:
       summary: Мои товары — свои карточки и свои цены (модуль `my_products`)
       description: |
         Карточки, где компания сессии — источник данных, или у неё есть цена. Цена — только этой компании. Чужие цены,
-        другие поставщики и наши цены продажи и закупки не отдаются. Чужая карточка, которая ещё не опубликована, показана
-        как `review` (внутренний ход чужой карточки не раскрывается).
+        другие поставщики и наши цены продажи и закупки не отдаются. Чужая неопубликованная карточка — `matched`: только присланное
+        партнёром (название строки, бренд, артикул, цена). `page` вне 1…10000 и `page_size` вне 1…100 — 422 `VALIDATION_ERROR`.
       parameters:
         - name: status
           in: query
@@ -1191,6 +1237,7 @@ paths:
           schema:
             type: integer
             minimum: 1
+            maximum: 10000
             default: 1
         - name: page_size
           in: query
@@ -1211,6 +1258,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1679,8 +1728,10 @@ components:
       type: string
       description: |
         Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
-        `published` — опубликована. Чужая неопубликованная карточка — `review`.
-      enum: [draft, review, returned, published]
+        `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
+        неопубликованной карточке, и ему показано только присланное им самим (его название строки, бренд, артикул
+        изготовителя, цена) — ни названия, ни категории, ни полноты, ни хода и истории чужой карточки.
+      enum: [draft, review, returned, published, matched]
 
     OfferFreshness:
       type: string
@@ -1819,7 +1870,7 @@ components:
 
     PartnerStatusCounts:
       type: object
-      required: [all, draft, review, returned, published]
+      required: [all, draft, review, returned, published, matched]
       properties:
         all:
           type: integer
@@ -1834,6 +1885,9 @@ components:
           type: integer
           minimum: 0
         published:
+          type: integer
+          minimum: 0
+        matched:
           type: integer
           minimum: 0
       additionalProperties: false
@@ -1886,7 +1940,8 @@ components:
           format: date-time
         decision:
           type: string
-          enum: [pending, published, returned]
+          enum: [pending, published, returned, cancelled]
+          description: '`cancelled` — проверка закрыта без решения (карточку сняли с публикации, архивировали или отправили заново)'
         reason:
           type: string
           description: Общий комментарий возврата
@@ -2794,6 +2849,7 @@ components:
           minimum: 0
         images:
           type: array
+          description: Ссылки на фото; главное фото — первым (CAT-CARD-2)
           items:
             type: string
             format: uri
@@ -2808,6 +2864,80 @@ components:
               value:
                 type: string
             additionalProperties: false
+        manufacturer:
+          oneOf:
+            - $ref: '#/components/schemas/CatalogManufacturer'
+            - type: 'null'
+          description: Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2)
+        manufacturer_part_number:
+          type: [string, 'null']
+          description: Артикул изготовителя (MPN); `null` — не указан. Артикул продавца или поставщика сюда не попадает
+        country_of_origin:
+          type: [string, 'null']
+          description: Название страны происхождения — своя у карточки, иначе страна изготовителя; `null` — нигде не указана
+        warranty:
+          oneOf:
+            - $ref: '#/components/schemas/CatalogWarranty'
+            - type: 'null'
+          description: Гарантия — своя у карточки, иначе срок по умолчанию у компании; `null`, если нигде не задана или равна нулю
+        documents:
+          type: array
+          description: |
+            Только в карточке `GET /catalog/{id}`; в списке `GET /catalog`, в `erp-integration` и MCP документов нет. Только
+            документы, отмеченные «видно клиенту», и только действующие (срок «действует до» не прошёл; пусто — бессрочно).
+            Файл — `GET /catalog/{id}/documents/{doc_id}/file`.
+          items:
+            $ref: '#/components/schemas/CatalogItemDocument'
+
+    CatalogManufacturer:
+      type: object
+      required: [name, country]
+      properties:
+        name:
+          type: string
+        country:
+          type: [string, 'null']
+          description: Название страны изготовителя
+      additionalProperties: false
+
+    CatalogWarranty:
+      type: object
+      required: [months, terms]
+      properties:
+        months:
+          type: integer
+          minimum: 1
+        terms:
+          type: string
+          description: Условия гарантии; пустая строка — не заданы
+      additionalProperties: false
+
+    CatalogItemDocument:
+      type: object
+      required: [id, kind_name, title, number, issued_by, issued_at, valid_until]
+      properties:
+        id:
+          type: integer
+          format: int64
+        kind_name:
+          type: string
+          description: Название вида документа (справочник, ведёт администратор)
+        title:
+          type: string
+        number:
+          type: string
+          description: Пустая строка — номера нет
+        issued_by:
+          type: string
+          description: Кем выдан; пустая строка — не указано
+        issued_at:
+          type: [string, 'null']
+          format: date
+        valid_until:
+          type: [string, 'null']
+          format: date
+          description: Действует до; `null` — бессрочно
+      additionalProperties: false
 
     CatalogPage:
       type: object

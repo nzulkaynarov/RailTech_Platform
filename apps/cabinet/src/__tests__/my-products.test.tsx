@@ -24,7 +24,7 @@ describe('Мои товары: список', () => {
     await open();
     const tabs = await screen.findByRole('group', { name: 'Статусы карточек' });
     expect(within(tabs).getByRole('button', { name: 'Все 8' })).toHaveAttribute('aria-pressed', 'true');
-    for (const name of ['Черновики 3', 'На проверке 2', 'Возвращены 1', 'Опубликованы 2']) {
+    for (const name of ['Черновики 3', 'На проверке 1', 'Возвращены 1', 'Опубликованы 2', 'Сопоставлены 1']) {
       expect(within(tabs).getByRole('button', { name })).toBeInTheDocument();
     }
     const pads = await card('Тормозная колодка композитная');
@@ -60,6 +60,7 @@ describe('Мои товары: список', () => {
     await waitFor(() => expect(within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem')).toHaveLength(1));
     await user.click(screen.getByRole('button', { name: 'Все 8' }));
     await user.type(screen.getByRole('searchbox'), 'гайка{Enter}');
+    await waitFor(() => expect(decodeURIComponent(router.state.location.search)).toContain('q=гайка'));
     await waitFor(() => {
       // не просто «одна строка»: она могла остаться от вкладки «Возвращены», пока список «Все» ещё не перечитан
       const rows = within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem');
@@ -73,7 +74,8 @@ describe('Мои товары: список', () => {
     const user = userEvent.setup();
     await open();
     const foreign = await card('Уплотнитель дверной');
-    expect(within(foreign).getByText('Карточка в каталоге')).toBeInTheDocument();
+    expect(within(foreign).getByText('Сопоставлено с карточкой каталога')).toBeInTheDocument();
+    expect(within(foreign).getByText('Аквилон · SEAL-D1')).toBeInTheDocument(); // только присланное партнёром
     await user.click(within(foreign).getByRole('checkbox'));
     expect(await screen.findByRole('button', { name: 'Подтвердить выбранные цены (1)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Отправить на проверку/ })).not.toBeInTheDocument();
@@ -115,7 +117,11 @@ describe('Мои товары: карточка', () => {
     await open();
     await user.click(within(await card('Уплотнитель дверной')).getByRole('button', { name: /Открыть карточку/ }));
     const dialog = await screen.findByRole('dialog');
-    expect(await within(dialog).findByText(/Эту карточку завёл другой источник/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/Ваша цена сопоставлена с карточкой каталога/)).toBeInTheDocument();
+    // чужие поля не рисуются совсем: ни категории, ни описания, ни ТН ВЭД
+    for (const label of ['Категория', 'Описание', 'Код ТН ВЭД', 'Единица измерения']) {
+      expect(within(dialog).queryByText(label)).not.toBeInTheDocument();
+    }
     expect(within(dialog).queryByText('История проверок')).not.toBeInTheDocument();
   });
 
@@ -139,7 +145,7 @@ describe('Мои товары: отправка на проверку', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await screen.findByText('Отправлена 1 карточка')).toBeInTheDocument();
     expect(screen.getByText(/Проверка обычно занимает 1 рабочий день/)).toBeInTheDocument();
-    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Статусы карточек' })).getByRole('button', { name: 'На проверке 3' })).toBeInTheDocument());
+    await waitFor(() => expect(within(screen.getByRole('group', { name: 'Статусы карточек' })).getByRole('button', { name: 'На проверке 2' })).toBeInTheDocument());
     expect(log).toContain('POST /partner/products/submit');
     expect(within(await card('Тормозная колодка композитная')).getByText('На проверке')).toBeInTheDocument();
   });
@@ -152,7 +158,7 @@ describe('Мои товары: отправка на проверку', () => {
     expect(await within(dialog).findByText('Отправляем 3 карточки.')).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Отправить' }));
     expect(await screen.findByText('Отправлено 3 карточки')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('button', { name: 'На проверке 5' })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'На проверке 4' })).toBeInTheDocument());
     expect(screen.queryByRole('button', { name: /Отправить все черновики/ })).not.toBeInTheDocument();
   });
 

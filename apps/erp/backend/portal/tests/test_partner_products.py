@@ -41,6 +41,8 @@ class TestList:
         text = w["client_a"].get(f"{PREFIX}/products").content.decode()
         for forbidden in (
             "Секретная деталь",  # карточка Б без цены А
+            "Деталь Б-2 в работе",  # чужая неопубликованная карточка с ценой А: её название А не видит
+            "Секретное описание",
             '"555.55"',  # цена Б по своей карточке (сумма — строка JSON; голая подстрока совпала бы со временем)
             '"9.99"',  # цена Б по общей карточке
             "EUR",
@@ -82,10 +84,10 @@ class TestList:
         assert by_id[c["draft"].pk]["return_issues"] == [] and by_id[c["published"].pk]["return_issues"] == []
         assert by_id[c["published"].pk]["status"] == "published"
         assert by_id[c["published"].pk]["return_reason"] is None
-        # чужая неопубликованная карточка — «на проверке»: внутренний ход чужой карточки не раскрывается
+        # чужая неопубликованная карточка — «сопоставлена»: только присланное партнёром, ход чужой карточки не раскрывается
         foreign = by_id[c["b_draft_with_a_offer"].pk]
-        assert foreign["status"] == "review" and foreign["is_own"] is False and foreign["can_submit"] is False
-        assert body["counts"] == {"all": 6, "draft": 1, "review": 2, "returned": 1, "published": 2}
+        assert foreign["status"] == "matched" and foreign["is_own"] is False and foreign["can_submit"] is False
+        assert body["counts"] == {"all": 6, "draft": 1, "review": 1, "returned": 1, "published": 2, "matched": 1}
 
     def test_status_filter_search_and_pagination(self, partner_world):
         w = partner_world
@@ -109,7 +111,7 @@ class TestList:
         body = w["client_a"].get(f"{PREFIX}/products").content.decode()
         assert "Секрет причины Б" not in body
         item = next(i for i in w["client_a"].get(f"{PREFIX}/products").json()["items"] if i["id"] == foreign.pk)
-        assert item["status"] == "review" and item["return_reason"] is None and item["return_issues"] == []
+        assert item["status"] == "matched" and item["return_reason"] is None and item["return_issues"] == []
 
     def test_archived_cards_are_hidden(self, partner_world):
         w = partner_world

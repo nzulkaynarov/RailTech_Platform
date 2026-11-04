@@ -61,6 +61,8 @@ class ProductReview(models.Model):
         PENDING = "pending", _("Ждёт решения")
         PUBLISHED = "published", _("Опубликована")
         RETURNED = "returned", _("Возвращена")
+        #: Проверка закрыта без решения: карточку сняли с публикации, архивировали или отправили заново (висящая проверка).
+        CANCELLED = "cancelled", _("Снята с проверки")
 
     product = models.ForeignKey(
         "catalog.Product",

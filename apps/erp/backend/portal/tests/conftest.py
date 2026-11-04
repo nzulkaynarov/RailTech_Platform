@@ -20,7 +20,7 @@ from portal.services.tokens import hash_token
 from portal.tests.contract_world import contract_world  # noqa: E402,F401
 
 # Мир «Мои товары» партнёра (PART-2): два партнёра, карточки во всех статусах, чужие цены
-from portal.tests.partner_world import partner_world  # noqa: E402,F401
+from portal.tests.partner_world import broker, partner_world  # noqa: E402,F401
 from rest_framework.test import APIClient
 
 from core.tenant import own_company

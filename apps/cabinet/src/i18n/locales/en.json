@@ -141,7 +141,8 @@
       "draft": "Draft",
       "review": "In review",
       "returned": "Returned",
-      "published": "Published"
+      "published": "Published",
+      "matched": "Matched to a catalog card"
     },
     "freshness": {
       "fresh": "Price is current",
@@ -649,11 +650,27 @@
       "description": "Description",
       "attributes": "Specifications",
       "photos": "Photos",
-      "photoAlt": "{{name}}, photo {{n}}",
+      "photoAlt": "{{name}}, photo {{n}} of {{total}}",
       "unit": "Unit: {{unit}}",
       "priceOnRequestHint": "Send a request — the manager will reply with a quote with price and lead time.",
       "request": "Request",
-      "backToList": "Back to catalog"
+      "backToList": "Back to catalog",
+      "photoOf": "Photo {{n}} of {{total}}",
+      "photoPrev": "Previous photo",
+      "photoNext": "Next photo",
+      "manufacturerTitle": "Manufacturer",
+      "manufacturer": "Manufacturer",
+      "manufacturerCountry": "Manufacturer country",
+      "partNumber": "Manufacturer part number",
+      "countryOfOrigin": "Country of origin",
+      "warrantyTitle": "Warranty",
+      "warrantyMonths_one": "{{count}} month",
+      "warrantyMonths_other": "{{count}} months",
+      "documentsTitle": "Documents",
+      "documentNumber": "No. {{number}}",
+      "issuedBy": "Issued by: {{name}}",
+      "validUntil": "Valid until {{date}}",
+      "noExpiry": "No expiry date"
     },
     "company": {
       "title": "Company",
@@ -823,7 +840,8 @@
       "draft": "Drafts",
       "review": "In review",
       "returned": "Returned",
-      "published": "Published"
+      "published": "Published",
+      "matched": "Matched"
     },
     "search": "Search by name, brand or part number",
     "searchLabel": "Search",
@@ -858,7 +876,6 @@
     "moq": "from {{count}} pcs",
     "completenessValue": "{{percent}}%",
     "pendingChange": "Change under review",
-    "foreignCard": "Card in the catalog",
     "returnedReason": "Reason for return: {{reason}}",
     "returnedFixHint": "Fix the fields, upload the price list again, then submit the card for review.",
     "openCard": "Open card {{name}}",
@@ -932,13 +949,14 @@
       "decision": {
         "pending": "Awaiting decision",
         "published": "Published",
-        "returned": "Returned"
+        "returned": "Returned",
+        "cancelled": "Withdrawn from review"
       },
       "submittedAt": "Submitted {{date}}",
       "decidedAt": "Decision {{date}}",
       "issuesTitle": "What to fix",
       "generalComment": "General comment",
-      "foreignNote": "This card was created from another source. Your price on it is saved; you do not change the card fields."
+      "foreignNote": "Your price is matched to a catalog card. The card data is not shown to you: below is what you sent in your price list."
     },
     "fields": {
       "name": "Name",

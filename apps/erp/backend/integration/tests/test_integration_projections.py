@@ -365,11 +365,14 @@ def test_catalog_service_returns_only_contract_fields():
         list_price_currency=uzs,
         price_visibility="cabinet",
     )
+    # CAT-CARD-2: изготовитель, артикул изготовителя и страна происхождения; документов и гарантии здесь нет.
+    card_keys = {"manufacturer", "manufacturer_part_number", "country_of_origin"}
     for mode, allowed in (
-        ("lead", {"erp_product_id", "kind", "name", "description", "unit"}),
+        ("lead", {"erp_product_id", "kind", "name", "description", "unit"} | card_keys),
         (
             "client",
-            {"erp_product_id", "kind", "name", "description", "unit", "price", "availability", "lead_time_days"},
+            {"erp_product_id", "kind", "name", "description", "unit", "price", "availability", "lead_time_days"}
+            | card_keys,
         ),
     ):
         (item,) = search_published_catalog("Рельс Р65 каталог", mode)

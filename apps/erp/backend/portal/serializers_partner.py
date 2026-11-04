@@ -37,7 +37,7 @@ class PartnerProductSerializer(serializers.Serializer):
     brand = serializers.CharField(allow_null=True)
     manufacturer_part_number = serializers.CharField(allow_blank=True)
     category = serializers.CharField(allow_null=True)
-    status = serializers.ChoiceField(choices=["draft", "review", "returned", "published"])
+    status = serializers.ChoiceField(choices=["draft", "review", "returned", "published", "matched"])
     return_reason = serializers.CharField(allow_null=True)
     return_issues = PartnerIssueSerializer(many=True)
     completeness = serializers.IntegerField()
@@ -50,7 +50,7 @@ class PartnerProductSerializer(serializers.Serializer):
 
 class PartnerReviewEntrySerializer(serializers.Serializer):
     submitted_at = serializers.DateTimeField()
-    decision = serializers.ChoiceField(choices=["pending", "published", "returned"])
+    decision = serializers.ChoiceField(choices=["pending", "published", "returned", "cancelled"])
     reason = serializers.CharField(allow_blank=True)
     issues = PartnerIssueSerializer(many=True)
     decided_at = serializers.DateTimeField(allow_null=True)
@@ -70,6 +70,7 @@ class PartnerStatusCountsSerializer(serializers.Serializer):
     review = serializers.IntegerField()
     returned = serializers.IntegerField()
     published = serializers.IntegerField()
+    matched = serializers.IntegerField()
 
 
 class PartnerAttentionSerializer(serializers.Serializer):

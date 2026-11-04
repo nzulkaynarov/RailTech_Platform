@@ -273,7 +273,15 @@ class TestMe:
 ANY_ROLE_PATHS = {"/auth/telegram", "/auth/magic-link", "/auth/magic", "/auth/code", "/auth/logout", "/me"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
-CATALOG_REQUESTS_PATHS = {"/requests", "/requests/{id}", "/catalog", "/catalog/{id}", "/catalog/categories", "/uploads"}
+CATALOG_REQUESTS_PATHS = {
+    "/requests",
+    "/requests/{id}",
+    "/catalog",
+    "/catalog/{id}",
+    "/catalog/{id}/documents/{doc_id}/file",
+    "/catalog/categories",
+    "/uploads",
+}
 
 #: Эндпоинты модуля «Мои товары» (`my_products`, PART-2): раздел партнёра; клиентскому набору модулей они не открыты.
 MY_PRODUCTS_PATHS = {
@@ -360,6 +368,23 @@ class TestEndpointsFollowModules:
         text = response.content.decode().lower()
         for forbidden in ("supplier", "base_price", "margin", supplier_company.name.lower()):
             assert forbidden not in text
+
+    def test_catalog_document_file_follows_the_catalog_requests_module(self, partner_client, supplier_company):
+        """CAT-CARD-2: файл документа карточки — тот же модуль, что каталог: партнёр с модулем скачивает, без него — 403."""
+        from django.core.files.base import ContentFile
+
+        from catalog.models import Product, ProductStatus, TechDocument
+
+        product = Product.objects.create(
+            name="Карточка для партнёра", status=ProductStatus.objects.get_or_create(code="PUBLISHED")[0]
+        )
+        document = TechDocument(kind="passport", title="Паспорт", client_visible=True, product=product)
+        document.file.save("p.pdf", ContentFile(b"%PDF-1.4 fake"), save=True)
+        url = f"{PREFIX}/catalog/{product.pk}/documents/{document.pk}/file"
+        assert partner_client.get(url).status_code == 200
+        _only_my_products(supplier_company)
+        denied = partner_client.get(url)
+        assert denied.status_code == 403 and denied.json() == {"detail": "MODULE_REQUIRED"}
 
     def test_toggle_takes_effect_without_relogin(self, partner_client, supplier_company):
         assert partner_client.get(PREFIX + "/catalog").status_code == 200

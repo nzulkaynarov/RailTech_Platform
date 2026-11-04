@@ -4,7 +4,7 @@ import type { PartnerCardStatus, PartnerProduct, PriceListRowIssue } from '@/api
  * «Мои товары» (PART-2): вкладки по статусам, выбор карточек, тексты замечаний. Вся логика статусов, свежести цены и
  * полноты — в ERP; здесь только раскладка ответа по экрану.
  */
-export const PARTNER_TABS = ['all', 'draft', 'review', 'returned', 'published'] as const;
+export const PARTNER_TABS = ['all', 'draft', 'review', 'returned', 'published', 'matched'] as const;
 export type PartnerTab = (typeof PARTNER_TABS)[number];
 
 export const PARTNER_PAGE_SIZE = 20;

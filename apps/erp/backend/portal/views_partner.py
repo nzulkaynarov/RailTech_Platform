@@ -28,6 +28,23 @@ from sourcing.views_templates import build_template_response
 MODULE = "my_products"
 
 
+#: Верхняя граница страницы: дальше только пустой хвост, а огромное смещение не должно доходить до базы.
+MAX_PAGE = 10_000
+MAX_PAGE_SIZE = 100
+
+
+def _page_params(request) -> tuple[int, int]:
+    """`page` и `page_size` из запроса; вне границ контракта (page ≥ 1 и ≤ 10 000, page_size 1…100) — 422 `VALIDATION_ERROR`."""
+    try:
+        page = int(request.query_params.get("page", 1))
+        page_size = int(request.query_params.get("page_size", 20))
+    except ValueError:
+        raise PortalValidationError("VALIDATION_ERROR") from None
+    if not 1 <= page <= MAX_PAGE or not 1 <= page_size <= MAX_PAGE_SIZE:
+        raise PortalValidationError("VALIDATION_ERROR")
+    return page, page_size
+
+
 class PartnerProductListView(BasePortalView):
     """GET /partner/products — свои карточки со своей ценой, вкладки по статусам."""
 
@@ -35,21 +52,17 @@ class PartnerProductListView(BasePortalView):
 
     def get(self, request):
         company = request.portal_company
-        queryset = products.search(products.partner_cards(company), request.query_params.get("q", ""))
+        queryset = products.search(products.partner_cards(company), company, request.query_params.get("q", ""))
         counts = products.status_counts(company, queryset)
         wanted = request.query_params.get("status", "")
         if wanted:
             if wanted not in products.CARD_STATUSES:
                 raise PortalValidationError("VALIDATION_ERROR")
             queryset = queryset.filter(products.status_filter(company, wanted))
-        try:
-            page = max(1, int(request.query_params.get("page", 1)))
-            page_size = min(100, max(1, int(request.query_params.get("page_size", 20))))
-        except ValueError:
-            page, page_size = 1, 20
+        page, page_size = _page_params(request)
         total = queryset.count()
         start = (page - 1) * page_size
-        page_items = list(queryset.order_by("-updated_at", "-id")[start : start + page_size])
+        page_items = list(products.ordered(queryset, company)[start : start + page_size])
         body = {
             "items": products.project_cards(company, page_items),
             "page": page,

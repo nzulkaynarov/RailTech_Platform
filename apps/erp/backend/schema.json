@@ -691,6 +691,70 @@
                 }
             }
         },
+        "/api/portal/v1/catalog/{id}/documents/{doc_id}/file": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_documents_file_retrieve",
+                "description": "GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/catalog/{id}/documents/{doc_id}/file/": {
+            "get": {
+                "operationId": "api_portal_v1_catalog_documents_file_retrieve_2",
+                "description": "GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "doc_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/catalog/categories": {
             "get": {
                 "operationId": "api_portal_v1_catalog_categories_retrieve",
@@ -46531,17 +46595,45 @@
                         "items": {
                             "$ref": "#/components/schemas/_Attribute"
                         }
+                    },
+                    "manufacturer": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/_Manufacturer"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "manufacturer_part_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "country_of_origin": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "warranty": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/_Warranty"
+                            }
+                        ],
+                        "nullable": true
                     }
                 },
                 "required": [
                     "attributes",
                     "category",
+                    "country_of_origin",
                     "description",
                     "id",
                     "images",
                     "kind",
+                    "manufacturer",
+                    "manufacturer_part_number",
                     "name",
-                    "unit"
+                    "unit",
+                    "warranty"
                 ]
             },
             "PurchaseActualRequest": {
@@ -51154,6 +51246,22 @@
                     "value"
                 ]
             },
+            "_Manufacturer": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "country",
+                    "name"
+                ]
+            },
             "_Money": {
                 "type": "object",
                 "properties": {
@@ -51209,6 +51317,21 @@
                 "required": [
                     "message",
                     "reason"
+                ]
+            },
+            "_Warranty": {
+                "type": "object",
+                "properties": {
+                    "months": {
+                        "type": "integer"
+                    },
+                    "terms": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "months",
+                    "terms"
                 ]
             },
             "ErrorDetail": {

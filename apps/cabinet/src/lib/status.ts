@@ -51,7 +51,7 @@ const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
   },
   availability: { in_stock: 'success', on_order: 'warning', expected: 'info' },
   // Черновик — серый (ничего не ждём), на проверке — синий (ждём нас), возвращена — оранжевый (нужно исправить), опубликована — зелёный
-  partner: { draft: 'neutral', review: 'info', returned: 'warning', published: 'success' },
+  partner: { draft: 'neutral', review: 'info', returned: 'warning', published: 'success', matched: 'neutral' },
   freshness: { fresh: 'success', expiring: 'warning', stale: 'warning', expired: 'danger' },
 };
 

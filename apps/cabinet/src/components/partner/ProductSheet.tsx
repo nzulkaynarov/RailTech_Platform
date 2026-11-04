@@ -53,7 +53,9 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
       <div className="flex flex-wrap items-center gap-2">
         <StatusBadge entity="partner" code={product.status} />
         {product.has_pending_change ? <span className="text-xs text-muted-foreground">{t('partner.pendingChange')}</span> : null}
-        <span className="text-xs text-muted-foreground">{t('partner.sheet.completeness', { percent: product.completeness })}</span>
+        {product.status === 'matched' ? null : (
+          <span className="text-xs text-muted-foreground">{t('partner.sheet.completeness', { percent: product.completeness })}</span>
+        )}
       </div>
 
       {product.status === 'returned' ? (
@@ -89,10 +91,15 @@ function ProductBody({ product }: { product: PartnerProductDetail }) {
             { label: t(fieldLabelKey('name')), value: value('name', product.name) },
             { label: t(fieldLabelKey('brand')), value: value('brand', product.brand) },
             { label: t(fieldLabelKey('manufacturer_part_number')), value: value('manufacturer_part_number', product.manufacturer_part_number) },
-            { label: t(fieldLabelKey('category')), value: value('category', product.category) },
-            { label: t(fieldLabelKey('uom')), value: value('uom', product.uom) },
-            { label: t(fieldLabelKey('hs_code')), value: value('hs_code', product.hs_code) },
-            { label: t(fieldLabelKey('description')), value: value('description', product.description) },
+            // У сопоставленной чужой карточки остальных данных кабинет не получает — строки не рисуем
+            ...(product.status === 'matched'
+              ? []
+              : [
+                  { label: t(fieldLabelKey('category')), value: value('category', product.category) },
+                  { label: t(fieldLabelKey('uom')), value: value('uom', product.uom) },
+                  { label: t(fieldLabelKey('hs_code')), value: value('hs_code', product.hs_code) },
+                  { label: t(fieldLabelKey('description')), value: value('description', product.description) },
+                ]),
           ]}
         />
         {!product.is_own ? <p className="mt-2 text-xs text-muted-foreground">{t('partner.sheet.foreignNote')}</p> : null}

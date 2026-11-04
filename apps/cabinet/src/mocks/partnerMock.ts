@@ -82,11 +82,14 @@ export function partnerProducts(): Product[] {
       can_submit: false,
       offer: offer('0.06', { valid_until: '2026-09-30', freshness: 'expired' }),
     }),
+    // Цена привязалась к чужой неопубликованной карточке: только то, что партнёр прислал сам (название строки, бренд, артикул)
     card(9008, 'Уплотнитель дверной', {
-      status: 'review',
+      status: 'matched',
       is_own: false,
       can_submit: false,
-      brand: null,
+      brand: 'Аквилон',
+      category: null,
+      completeness: 0,
       manufacturer_part_number: 'SEAL-D1',
       offer: offer('3.40'),
     }),
@@ -111,6 +114,7 @@ export function detailOf(product: Product): Detail {
   if (product.is_own && product.status === 'published') {
     history.push({ submitted_at: '2026-09-25T12:00:00+05:00', decision: 'published', reason: '', issues: [], decided_at: '2026-09-26T09:40:00+05:00' });
   }
+  if (product.status === 'matched') return { ...product, description: '', hs_code: '', uom: null, missing: [], history: [] };
   return {
     ...product,
     description: product.is_own ? `Описание: ${product.name}.` : '',
@@ -123,7 +127,14 @@ export function detailOf(product: Product): Detail {
 
 export function statusCounts(items: Product[]): Schemas['PartnerStatusCounts'] {
   const count = (status: Schemas['PartnerCardStatus']) => items.filter((item) => item.status === status).length;
-  return { all: items.length, draft: count('draft'), review: count('review'), returned: count('returned'), published: count('published') };
+  return {
+    all: items.length,
+    draft: count('draft'),
+    review: count('review'),
+    returned: count('returned'),
+    published: count('published'),
+    matched: count('matched'),
+  };
 }
 
 export function attention(items: Product[]): Schemas['PartnerAttention'] {
