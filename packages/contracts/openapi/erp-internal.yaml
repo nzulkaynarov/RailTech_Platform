@@ -30746,15 +30746,33 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/_Attribute'
+        manufacturer:
+          allOf:
+          - $ref: '#/components/schemas/_Manufacturer'
+          nullable: true
+        manufacturer_part_number:
+          type: string
+          nullable: true
+        country_of_origin:
+          type: string
+          nullable: true
+        warranty:
+          allOf:
+          - $ref: '#/components/schemas/_Warranty'
+          nullable: true
       required:
       - attributes
       - category
+      - country_of_origin
       - description
       - id
       - images
       - kind
+      - manufacturer
+      - manufacturer_part_number
       - name
       - unit
+      - warranty
     PurchaseActualRequest:
       type: object
       properties:
@@ -34378,6 +34396,17 @@ components:
       required:
       - name
       - value
+    _Manufacturer:
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          type: string
+          nullable: true
+      required:
+      - country
+      - name
     _Money:
       type: object
       properties:
@@ -34418,6 +34447,16 @@ components:
       required:
       - message
       - reason
+    _Warranty:
+      type: object
+      properties:
+        months:
+          type: integer
+        terms:
+          type: string
+      required:
+      - months
+      - terms
   securitySchemes:
     jwtAuth:
       type: http

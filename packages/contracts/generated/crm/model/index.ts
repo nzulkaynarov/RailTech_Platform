@@ -11,6 +11,7 @@ export * from "./attachment";
 export * from "./availability";
 export * from "./catalogItem";
 export * from "./catalogItemKind";
+export * from "./catalogItemManufacturer";
 export * from "./catalogMode";
 export * from "./clientRequestIn";
 export * from "./clientRequestInNeed";

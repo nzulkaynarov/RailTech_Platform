@@ -1442,6 +1442,25 @@ components:
         lead_time_days:
           type: [integer, 'null']
           minimum: 0
+        manufacturer:
+          description: Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2). Присутствует в обоих режимах
+          oneOf:
+            - type: object
+              required: [name, country]
+              properties:
+                name:
+                  type: string
+                country:
+                  type: [string, 'null']
+                  description: Название страны изготовителя
+              additionalProperties: false
+            - type: 'null'
+        manufacturer_part_number:
+          type: [string, 'null']
+          description: Артикул изготовителя (MPN); `null` — не указан. Артикул продавца и поставщика не отдаётся (CAT-CARD-2)
+        country_of_origin:
+          type: [string, 'null']
+          description: Название страны происхождения (своя у карточки, иначе страна изготовителя); `null` — не указана (CAT-CARD-2)
 
     ProvisionUserRequest:
       type: object

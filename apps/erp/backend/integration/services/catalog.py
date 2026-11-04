@@ -27,6 +27,9 @@ def search_published_catalog(query: str, mode: str, limit: int = 10) -> List[Dic
             "name": proj["name"],
             "description": proj["description"],
             "unit": proj["unit"],
+            "manufacturer": proj["manufacturer"],
+            "manufacturer_part_number": proj["manufacturer_part_number"],
+            "country_of_origin": proj["country_of_origin"],
         }
         if mode == "client":
             item["price"] = proj.get("price")

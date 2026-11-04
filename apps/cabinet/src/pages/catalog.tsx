@@ -6,6 +6,7 @@ import { Check, ChevronLeft, ChevronRight, FilePlus2, Package, Plus, Search, Sea
 import { isPortalApiError, type CatalogItem } from '@/api/portal';
 import { useCatalog, useCatalogCategories, useCatalogItem } from '@/api/queries';
 import { SectionTitle } from '@/components/Details';
+import { DocumentsBlock, ManufacturerBlock, ProductGallery, WarrantyBlock } from '@/components/CatalogProduct';
 import { EmptyState } from '@/components/EmptyState';
 import { PageHeader } from '@/components/PageHeader';
 import { DetailSkeleton, ErrorState, ListSkeleton } from '@/components/QueryStates';
@@ -349,20 +350,7 @@ export function CatalogItemPage() {
       <PageHeader title={item.name} crumb={item.name} />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="flex min-w-0 flex-col gap-4">
-          {item.images?.length ? (
-            <ul className="flex snap-x gap-2 overflow-x-auto" aria-label={t('pages.catalogItem.photos')}>
-              {item.images.map((src, index) => (
-                <li key={src} className="shrink-0 snap-start">
-                  <img
-                    src={src}
-                    alt={t('pages.catalogItem.photoAlt', { name: item.name, n: index + 1 })}
-                    className="h-48 w-auto max-w-[80vw] rounded-lg border object-contain"
-                    loading="lazy"
-                  />
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <ProductGallery name={item.name} images={item.images ?? []} />
           {item.description ? (
             <section aria-labelledby="catalog-description">
               <SectionTitle>
@@ -386,6 +374,9 @@ export function CatalogItemPage() {
               </dl>
             </section>
           ) : null}
+          <ManufacturerBlock item={item} />
+          <WarrantyBlock item={item} />
+          <DocumentsBlock item={item} />
         </div>
         <Card className="h-fit">
           <CardContent className="flex flex-col gap-3">
