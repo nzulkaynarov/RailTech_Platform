@@ -75,6 +75,7 @@ exports[`карты статусов > снимок карты: изменени
   },
   "crmClient": {
     "conflict": "red",
+    "held": "gold",
     "linked": "green",
     "pending_confirmation": "gold",
     "requested": "gold",
