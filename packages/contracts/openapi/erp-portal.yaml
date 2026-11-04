@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -13,7 +13,7 @@ info:
 
     Защита сессии в cookie от CSRF (FIX-15): каждый `POST` и `PATCH` обязан нести
     заголовок `Idempotency-Key` (без него — 400 `IDEMPOTENCY_KEY_REQUIRED`) и тело `application/json`
-    (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; единственное исключение — `multipart/form-data` на `/uploads`). Повтор с тем же
+    (иное — 415 `UNSUPPORTED_MEDIA_TYPE`; исключения — `multipart/form-data` на `/uploads` и `/partner/price-list`). Повтор с тем же
     ключом и тем же методом/путём в пределах сессии возвращает прежний ответ (заголовок `Idempotent-Replay: true`);
     исключение — ответы с `Set-Cookie` (`/auth/*`): они не кэшируются, повтор исполняется заново.
 
@@ -43,6 +43,17 @@ info:
     `/invoices*` — `invoices`, `/acts*` — `acts`, `/deliveries*` — `deliveries`, `/documents*` — `documents`, `/company` —
     `company`, `/team*` — `team`; без модуля — 403 `MODULE_REQUIRED`. Включение и выключение модуля действует на следующем
     запросе, без перевхода. Приостановленное отношение закрывает вход, живая сессия партнёра гаснет на следующем запросе (401).
+
+    0.5.0 (PART-2, ADR-0022 п. 4): раздел «Мои товары» партнёра — модуль `my_products`, пути `/partner/*`. Партнёр видит
+    только свои карточки (где он источник данных или у него есть цена) и только свою цену по ним; чужие цены, другие
+    поставщики и наши цены продажи и закупки не отдаются. Карточкой владеем мы: статусы `draft` → `review` → `published` |
+    `returned` (с причиной) → `review`; публикует сотрудник, из портала публикации нет. Правка опубликованной карточки —
+    предложение по полям (`has_pending_change`), клиент видит прежнюю версию. Прайс загружается по шаблону (`GET
+    /partner/price-template`, `POST /partner/price-list` — `multipart/form-data`; `dry_run`
+    — предпросмотр без записи), результат — по `task_id`. Цены не модерируются: «подтвердить актуальность»
+    (`POST /partner/offers/confirm`), признак `freshness` (`fresh`, `expiring`, `stale`, `expired`). Изменяющие операции
+    требуют `can_act`. Новые коды `ErrorCode`: `XLSX_REQUIRED`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`,
+    `PRODUCT_NOT_SUBMITTABLE`, `OFFER_EXPIRED`, `IMPORT_FAILED`.
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -64,6 +75,8 @@ tags:
   - name: catalog
     description: Опубликованный слой с ценой и наличием — только здесь (решение владельца 2026-10-13)
   - name: company
+  - name: partner
+    description: Раздел «Мои товары» партнёра — модуль `my_products` (ADR-0022, PART-2)
 
 paths:
   /auth/telegram:
@@ -1151,6 +1164,266 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
+  /partner/products:
+    get:
+      tags: [partner]
+      operationId: listPartnerProducts
+      summary: Мои товары — свои карточки и свои цены (модуль `my_products`)
+      description: |
+        Карточки, где компания сессии — источник данных, или у неё есть цена. Цена — только этой компании. Чужие цены,
+        другие поставщики и наши цены продажи и закупки не отдаются. Чужая карточка, которая ещё не опубликована, показана
+        как `review` (внутренний ход чужой карточки не раскрывается).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/PartnerCardStatus'
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Страница карточек и количество по статусам (для вкладок)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/products/{id}:
+    get:
+      tags: [partner]
+      operationId: getPartnerProduct
+      summary: Моя карточка с историей проверок
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Карточка; чужая или несуществующая — 404
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerProductDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/products/submit:
+    post:
+      tags: [partner]
+      operationId: submitPartnerProducts
+      summary: Отправить карточки на проверку
+      description: |
+        Черновики и возвращённые карточки компании → `review`; сотрудникам уходит уведомление. Ответ 200 всегда
+        построчный: по каждому id либо отправлено, либо ошибка (`NOT_FOUND` — чужая или несуществующая карточка,
+        `PRODUCT_NOT_SUBMITTABLE` — своя, но уже на проверке или опубликована).
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerSubmitRequest'
+      responses:
+        '200':
+          description: Итог по каждой карточке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerSubmitResult'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/offers/confirm:
+    post:
+      tags: [partner]
+      operationId: confirmPartnerOffers
+      summary: Подтвердить актуальность цен
+      description: |
+        Без модерации. `ids` — id карточек, цены компании по которым подтверждаются, или `all: true` — все цены компании.
+        Цена с истёкшим сроком не подтверждается (`OFFER_EXPIRED` — нужен новый прайс); карточка без цены компании — `NOT_FOUND`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerConfirmRequest'
+      responses:
+        '200':
+          description: Сколько цен подтверждено и что не подтверждено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerConfirmResult'
+        '400':
+          $ref: '#/components/responses/IdempotencyKeyRequired'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/price-template:
+    get:
+      tags: [partner]
+      operationId: getPartnerPriceTemplate
+      summary: Шаблон прайса (.xlsx) — тот же, что у сотрудника
+      responses:
+        '200':
+          description: Файл шаблона со справочниками допустимых значений
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /partner/price-list:
+    post:
+      tags: [partner]
+      operationId: uploadPartnerPriceList
+      summary: Загрузить прайс по шаблону
+      description: |
+        `multipart/form-data` (как `/uploads`): файл `.xlsx` до 20 МБ. Поставщик — компания сессии, выбрать другого нельзя.
+        `dry_run=true` — предпросмотр: те же проверки и отчёт, ничего не записывается. Срок действия цен на весь файл —
+        `valid_from` / `valid_until` (колонки «Действует с / до» строки главнее). Загруженные цены считаются подтверждёнными.
+        Новые карточки — черновики; карточки, которыми владеем мы или которые опубликованы, прайс не переписывает —
+        расхождения уходят в предложения по полям. Обработка асинхронная: 202 и `task_id`.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                dry_run:
+                  type: boolean
+                  default: false
+                valid_from:
+                  type: string
+                  format: date
+                valid_until:
+                  type: string
+                  format: date
+      responses:
+        '202':
+          description: Загрузка принята
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceListAccepted'
+        '400':
+          description: Нет заголовка `Idempotency-Key`, файл не передан (`FILE_REQUIRED`) или это не `.xlsx` (`XLSX_REQUIRED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Файл больше 20 МБ (`FILE_TOO_LARGE`), дата не `ГГГГ-ММ-ДД` (`VALID_DATE_INVALID`) или «до» раньше «с» (`OFFER_VALIDITY_RANGE_INVALID`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          description: Очередь обработки недоступна (`IMPORT_FAILED`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /partner/price-list/{task_id}:
+    get:
+      tags: [partner]
+      operationId: getPartnerPriceListTask
+      summary: Состояние и отчёт загрузки прайса
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Состояние; отчёт — когда `status` = `completed`. Задача другой компании или несуществующая — 404
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PriceListTask'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
   /company:
     get:
       tags: [company]
@@ -1395,6 +1668,545 @@ components:
         - INVOICE_NOT_OPEN
         - TEXT_REQUIRED
         - CONFLICT
+        - XLSX_REQUIRED
+        - VALID_DATE_INVALID
+        - OFFER_VALIDITY_RANGE_INVALID
+        - PRODUCT_NOT_SUBMITTABLE
+        - OFFER_EXPIRED
+        - IMPORT_FAILED
+
+    PartnerCardStatus:
+      type: string
+      description: |
+        Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
+        `published` — опубликована. Чужая неопубликованная карточка — `review`.
+      enum: [draft, review, returned, published]
+
+    OfferFreshness:
+      type: string
+      description: |
+        Свежесть цены: `expired` — срок действия истёк (подтвердить нельзя, нужен новый прайс); `stale` — не подтверждена
+        дольше N дней (настройка компании, по умолчанию 30); `expiring` — срок кончается в ближайшие 7 дней; иначе `fresh`.
+      enum: [fresh, expiring, stale, expired]
+
+    PartnerOffer:
+      type: object
+      description: Цена этой компании по карточке. Цен других поставщиков в ответах нет.
+      required: [price, valid_from, valid_until, delivery_basis, min_order_qty, confirmed_at, freshness]
+      properties:
+        price:
+          oneOf:
+            - $ref: '#/components/schemas/Money'
+            - type: 'null'
+        valid_from:
+          type: [string, 'null']
+          format: date
+        valid_until:
+          type: [string, 'null']
+          format: date
+        delivery_basis:
+          type: [string, 'null']
+          description: Код Incoterms (FCA, DAP, EXW…)
+        min_order_qty:
+          type: integer
+          minimum: 0
+        confirmed_at:
+          type: [string, 'null']
+          format: date-time
+        freshness:
+          $ref: '#/components/schemas/OfferFreshness'
+      additionalProperties: false
+
+    PartnerIssueField:
+      type: string
+      description: Поле карточки, к которому сотрудник привязал замечание при возврате; `other` — замечание не к одному полю
+      enum:
+        - name
+        - description
+        - brand
+        - manufacturer_part_number
+        - gost_drawing
+        - category
+        - uom
+        - hs_code
+        - price
+        - valid_until
+        - other
+
+    PartnerIssue:
+      type: object
+      required: [field, comment]
+      properties:
+        field:
+          $ref: '#/components/schemas/PartnerIssueField'
+        comment:
+          type: string
+          maxLength: 500
+      additionalProperties: false
+
+    PartnerMissingField:
+      type: object
+      required: [code, label]
+      properties:
+        code:
+          type: string
+          description: Поле, которого не хватает для публикации (name, uom, category, hs_code, identity)
+        label:
+          type: string
+      additionalProperties: false
+
+    PartnerProduct:
+      type: object
+      required:
+        - id
+        - name
+        - brand
+        - manufacturer_part_number
+        - category
+        - status
+        - return_reason
+        - return_issues
+        - completeness
+        - offer
+        - has_pending_change
+        - is_own
+        - can_submit
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        brand:
+          type: [string, 'null']
+        manufacturer_part_number:
+          type: string
+        category:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/PartnerCardStatus'
+        return_reason:
+          type: [string, 'null']
+          description: Общий комментарий последнего возврата — только у своей карточки в статусе `returned`
+        return_issues:
+          type: array
+          description: Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned`
+          items:
+            $ref: '#/components/schemas/PartnerIssue'
+        completeness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Полнота по полям, которые партнёр заполняет прайсом
+        offer:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerOffer'
+            - type: 'null'
+        has_pending_change:
+          type: boolean
+          description: У карточки есть правка этой компании, ожидающая решения сотрудника
+        is_own:
+          type: boolean
+          description: Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку
+        can_submit:
+          type: boolean
+          description: Можно отправить на проверку (своя карточка в статусе `draft` или `returned`)
+        updated_at:
+          type: string
+          format: date-time
+      additionalProperties: false
+
+    PartnerStatusCounts:
+      type: object
+      required: [all, draft, review, returned, published]
+      properties:
+        all:
+          type: integer
+          minimum: 0
+        draft:
+          type: integer
+          minimum: 0
+        review:
+          type: integer
+          minimum: 0
+        returned:
+          type: integer
+          minimum: 0
+        published:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerAttention:
+      type: object
+      description: Сколько цен компании требуют внимания (по всем ценам, а не по странице); для плашки «подтвердите актуальность»
+      required: [expired, stale, expiring]
+      properties:
+        expired:
+          type: integer
+          minimum: 0
+        stale:
+          type: integer
+          minimum: 0
+        expiring:
+          type: integer
+          minimum: 0
+      additionalProperties: false
+
+    PartnerProductPage:
+      type: object
+      required: [items, page, page_size, total, counts, attention]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerProduct'
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total:
+          type: integer
+          minimum: 0
+        counts:
+          $ref: '#/components/schemas/PartnerStatusCounts'
+        attention:
+          $ref: '#/components/schemas/PartnerAttention'
+      additionalProperties: false
+
+    PartnerReviewEntry:
+      type: object
+      required: [submitted_at, decision, reason, issues, decided_at]
+      properties:
+        submitted_at:
+          type: string
+          format: date-time
+        decision:
+          type: string
+          enum: [pending, published, returned]
+        reason:
+          type: string
+          description: Общий комментарий возврата
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerIssue'
+        decided_at:
+          type: [string, 'null']
+          format: date-time
+      additionalProperties: false
+
+    PartnerProductDetail:
+      type: object
+      description: 'Карточка списка (`PartnerProduct`) и подробности; поля списка повторены, чтобы схема была закрытой'
+      required:
+        - id
+        - name
+        - brand
+        - manufacturer_part_number
+        - category
+        - status
+        - return_reason
+        - return_issues
+        - completeness
+        - offer
+        - has_pending_change
+        - is_own
+        - can_submit
+        - updated_at
+        - description
+        - hs_code
+        - uom
+        - missing
+        - history
+      properties:
+        id:
+          type: integer
+          format: int64
+        name:
+          type: string
+        brand:
+          type: [string, 'null']
+        manufacturer_part_number:
+          type: string
+        category:
+          type: [string, 'null']
+        status:
+          $ref: '#/components/schemas/PartnerCardStatus'
+        return_reason:
+          type: [string, 'null']
+          description: Общий комментарий последнего возврата — только у своей карточки в статусе `returned`
+        return_issues:
+          type: array
+          description: Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned`
+          items:
+            $ref: '#/components/schemas/PartnerIssue'
+        completeness:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: Полнота по полям, которые партнёр заполняет прайсом
+        offer:
+          oneOf:
+            - $ref: '#/components/schemas/PartnerOffer'
+            - type: 'null'
+        has_pending_change:
+          type: boolean
+          description: У карточки есть правка этой компании, ожидающая решения сотрудника
+        is_own:
+          type: boolean
+          description: Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку
+        can_submit:
+          type: boolean
+          description: Можно отправить на проверку (своя карточка в статусе `draft` или `returned`)
+        updated_at:
+          type: string
+          format: date-time
+        description:
+          type: string
+        hs_code:
+          type: string
+        uom:
+          type: [string, 'null']
+        missing:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerMissingField'
+        history:
+          type: array
+          description: Отправки на проверку и решения, новые сверху; только у своей карточки
+          items:
+            $ref: '#/components/schemas/PartnerReviewEntry'
+      additionalProperties: false
+
+    PartnerSubmitRequest:
+      type: object
+      required: [ids]
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: integer
+            format: int64
+      additionalProperties: false
+
+    PartnerItemError:
+      type: object
+      required: [id, code]
+      properties:
+        id:
+          type: integer
+          format: int64
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+      additionalProperties: false
+
+    PartnerSubmitResult:
+      type: object
+      required: [submitted, errors]
+      properties:
+        submitted:
+          type: array
+          items:
+            type: integer
+            format: int64
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerItemError'
+      additionalProperties: false
+
+    PartnerConfirmRequest:
+      type: object
+      description: 'Либо `ids`, либо `all: true`'
+      properties:
+        ids:
+          type: array
+          minItems: 1
+          maxItems: 500
+          items:
+            type: integer
+            format: int64
+        all:
+          type: boolean
+      additionalProperties: false
+
+    PartnerConfirmResult:
+      type: object
+      required: [confirmed, expired, errors]
+      properties:
+        confirmed:
+          type: integer
+          minimum: 0
+        expired:
+          type: integer
+          minimum: 0
+          description: 'Сколько цен не подтверждено из-за истёкшего срока (по `ids` те же цены перечислены в `errors`)'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartnerItemError'
+      additionalProperties: false
+
+    PriceListAccepted:
+      type: object
+      required: [task_id]
+      properties:
+        task_id:
+          type: string
+      additionalProperties: false
+
+    PriceListField:
+      type: string
+      description: Колонка шаблона, в которой проблема строки
+      enum:
+        - name
+        - brand
+        - manufacturer_part_number
+        - gost_drawing
+        - supplier_sku
+        - description
+        - category
+        - hs_code
+        - domain_type
+        - uom
+        - price
+        - currency
+        - stock
+        - lead
+        - moq
+        - valid_from
+        - valid_until
+
+    PriceListRowIssue:
+      type: object
+      description: Что исправить в строке файла. Cabinet показывает текст по `code` и `field`, незнакомый код — общим «строка не загружена»
+      required: [row, field, code, value]
+      properties:
+        row:
+          type: integer
+          minimum: 2
+          description: Номер строки файла (с учётом строки заголовков)
+        field:
+          oneOf:
+            - $ref: '#/components/schemas/PriceListField'
+            - type: 'null'
+        code:
+          type: string
+          description: 'Код проблемы: `PRICE_NOT_A_NUMBER`, `PRICE_NOT_POSITIVE`, `UNKNOWN_CATEGORY`, `UNKNOWN_DOMAIN`, `UNKNOWN_CURRENCY`, `UNKNOWN_STOCK_STATUS`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`, `HS_CODE_TOO_LONG`, `HS_CODE_NOT_IN_CLASSIFIER`, `HS_CODE_RETIRED`, `ROW_FAILED`'
+        value:
+          type: [string, 'null']
+          description: Значение из файла, которое не подошло (категория, валюта, код ТН ВЭД…)
+      additionalProperties: false
+
+    PriceListProposal:
+      type: object
+      required: [row, field]
+      properties:
+        row:
+          type: integer
+        field:
+          type: string
+          description: Поле карточки, по которому отправлено предложение изменения
+      additionalProperties: false
+
+    PriceListMissing:
+      type: object
+      required: [code, label, count]
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        count:
+          type: integer
+      additionalProperties: false
+
+    PriceListReport:
+      type: object
+      required:
+        - dry_run
+        - created
+        - updated
+        - offers_created
+        - offers_updated
+        - proposal_count
+        - proposals
+        - error_count
+        - errors
+        - warning_count
+        - warnings
+        - rows_truncated
+        - unpublishable
+        - missing_breakdown
+      properties:
+        dry_run:
+          type: boolean
+        created:
+          type: integer
+          description: Новых карточек
+        updated:
+          type: integer
+          description: Строк по уже известным карточкам
+        offers_created:
+          type: integer
+        offers_updated:
+          type: integer
+        proposal_count:
+          type: integer
+          description: Предложений изменить поля чужой, опубликованной или находящейся на проверке карточки
+        proposals:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceListProposal'
+        error_count:
+          type: integer
+          description: Строк с ошибкой — они не загружены
+        errors:
+          type: array
+          description: Первые 200 строк с ошибкой
+          items:
+            $ref: '#/components/schemas/PriceListRowIssue'
+        warning_count:
+          type: integer
+        warnings:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceListRowIssue'
+        rows_truncated:
+          type: integer
+          description: Сколько строк файла не прочитано из-за предела размера
+        unpublishable:
+          type: integer
+          description: Сколько карточек файла не наберут полноты для публикации
+        missing_breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/PriceListMissing'
+      additionalProperties: false
+
+    PriceListTask:
+      type: object
+      required: [task_id, status, error, report]
+      properties:
+        task_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        error:
+          type: [string, 'null']
+          description: Код ошибки уровня файла при `failed` (`NAME_COLUMN_NOT_FOUND` — нет колонки наименования)
+        report:
+          oneOf:
+            - $ref: '#/components/schemas/PriceListReport'
+            - type: 'null'
+      additionalProperties: false
 
     Reason:
       type: object

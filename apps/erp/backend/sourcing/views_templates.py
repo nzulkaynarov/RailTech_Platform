@@ -79,6 +79,46 @@ def _template_example(categories, domains) -> list:
     return example
 
 
+def build_template_response():
+    """Файл шаблона прайса: заголовки, пример строки и справочники допустимых значений (из базы).
+
+    Один шаблон на двух: сотрудник (`CatalogTemplateView`) и партнёр в кабинете (`GET /api/portal/v1/partner/price-template`, PART-2).
+    """
+    from openpyxl import Workbook
+
+    from catalog.models import Category, DomainType, StockStatus
+    from master_data.models import Currency, UnitOfMeasure
+
+    categories = list(Category.objects.filter(is_active=True).order_by("sort_order", "name"))
+    domains = list(DomainType.objects.all().order_by("sort_order", "code"))
+
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.title = "Товары"
+    sheet.append(CATALOG_TEMPLATE_HEADERS)
+    sheet.append(_template_example(categories, domains))
+
+    reference = workbook.create_sheet("Справочники (коды)")
+    reference.append(["Тип", "Код", "Название"])
+    for currency in Currency.objects.all().order_by("code"):
+        reference.append(["Валюта", currency.code, currency.name])
+    for stock in StockStatus.objects.all().order_by("code"):
+        reference.append(["Наличие", stock.code, stock.name])
+    for unit in UnitOfMeasure.objects.all().order_by("code"):
+        reference.append(["Ед. изм.", unit.code, unit.name])
+    # Категория и направление сверяются со справочником построчно: продавец должен видеть
+    # ДОПУСТИМЫЕ значения здесь же, иначе первая же загрузка вернёт UNKNOWN_CATEGORY.
+    for domain in domains:
+        reference.append(["Направление", domain.code, domain.name])
+    for category in categories:
+        reference.append(["Категория", "", category.name])
+
+    response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    response["Content-Disposition"] = 'attachment; filename="catalog_template.xlsx"'
+    workbook.save(response)
+    return response
+
+
 @extend_schema(
     summary="Download catalog import template",
     description=(
@@ -95,36 +135,4 @@ class CatalogTemplateView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        from openpyxl import Workbook
-
-        from catalog.models import Category, DomainType, StockStatus
-        from master_data.models import Currency, UnitOfMeasure
-
-        categories = list(Category.objects.filter(is_active=True).order_by("sort_order", "name"))
-        domains = list(DomainType.objects.all().order_by("sort_order", "code"))
-
-        workbook = Workbook()
-        sheet = workbook.active
-        sheet.title = "Товары"
-        sheet.append(CATALOG_TEMPLATE_HEADERS)
-        sheet.append(_template_example(categories, domains))
-
-        reference = workbook.create_sheet("Справочники (коды)")
-        reference.append(["Тип", "Код", "Название"])
-        for currency in Currency.objects.all().order_by("code"):
-            reference.append(["Валюта", currency.code, currency.name])
-        for stock in StockStatus.objects.all().order_by("code"):
-            reference.append(["Наличие", stock.code, stock.name])
-        for unit in UnitOfMeasure.objects.all().order_by("code"):
-            reference.append(["Ед. изм.", unit.code, unit.name])
-        # Категория и направление сверяются со справочником построчно: продавец должен видеть
-        # ДОПУСТИМЫЕ значения здесь же, иначе первая же загрузка вернёт UNKNOWN_CATEGORY.
-        for domain in domains:
-            reference.append(["Направление", domain.code, domain.name])
-        for category in categories:
-            reference.append(["Категория", "", category.name])
-
-        response = HttpResponse(content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        response["Content-Disposition"] = 'attachment; filename="catalog_template.xlsx"'
-        workbook.save(response)
-        return response
+        return build_template_response()

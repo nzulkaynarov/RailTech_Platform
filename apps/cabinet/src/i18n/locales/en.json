@@ -27,7 +27,13 @@
     "expandSidebar": "Expand menu",
     "collapseSidebar": "Collapse menu",
     "sectionMain": "Main",
-    "sectionDocumentsAndTeam": "Documents and company"
+    "sectionDocumentsAndTeam": "Documents and company",
+    "myProducts": "My products",
+    "groups": {
+      "buy": "I buy",
+      "supply": "I supply",
+      "account": "Company"
+    }
   },
   "crumbs": {
     "request": "Request",
@@ -130,6 +136,18 @@
       "pending": "Under review",
       "confirmed": "Payment confirmed",
       "rejected": "Rejected"
+    },
+    "partner": {
+      "draft": "Draft",
+      "review": "In review",
+      "returned": "Returned",
+      "published": "Published"
+    },
+    "freshness": {
+      "fresh": "Price is current",
+      "expiring": "Expires soon",
+      "stale": "Price is outdated",
+      "expired": "Price expired"
     }
   },
   "documents": {
@@ -757,7 +775,13 @@
     "INVOICE_NOT_OPEN": "The invoice is already paid or cancelled — no payment order needed. Refresh the page.",
     "TEXT_REQUIRED": "Write the comment text.",
     "LOGIN_CODE_INVALID": "The code is wrong or expired. Check the email or send a new code.",
-    "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one."
+    "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one.",
+    "XLSX_REQUIRED": "An Excel file (.xlsx) is required. Download the template and fill it in.",
+    "VALID_DATE_INVALID": "The date is invalid — use DD.MM.YYYY.",
+    "OFFER_VALIDITY_RANGE_INVALID": "The “to” date cannot be earlier than the “from” date.",
+    "PRODUCT_NOT_SUBMITTABLE": "This card cannot be submitted: it is already in review or published.",
+    "OFFER_EXPIRED": "The price has expired and cannot be confirmed. Upload a new price list.",
+    "IMPORT_FAILED": "The file could not be accepted. Please try again in a moment."
   },
   "widgets": {
     "actionRequired": {
@@ -790,5 +814,239 @@
     "text": "Changes in the form are not saved and will be lost.",
     "leave": "Leave without saving",
     "stay": "Stay"
+  },
+  "partner": {
+    "title": "My products",
+    "tabsLabel": "Card statuses",
+    "tabs": {
+      "all": "All",
+      "draft": "Drafts",
+      "review": "In review",
+      "returned": "Returned",
+      "published": "Published"
+    },
+    "search": "Search by name, brand or part number",
+    "searchLabel": "Search",
+    "uploadPrice": "Upload price list",
+    "downloadTemplate": "Download template",
+    "templateFailed": "Could not download the template. Please try again.",
+    "submit": "Submit for review",
+    "submitSelected": "Submit for review ({{count}})",
+    "submitAllDrafts": "Submit all drafts ({{count}})",
+    "confirm": "Confirm prices are current",
+    "confirmSelected": "Confirm selected prices ({{count}})",
+    "confirmAll": "Confirm all prices",
+    "selectRow": "Select card {{name}}",
+    "selectAll": "Select all cards on this page",
+    "selected_one": "{{count}} card selected",
+    "selected_other": "{{count}} cards selected",
+    "clearSelection": "Clear selection",
+    "list": "My cards",
+    "columns": {
+      "product": "Product",
+      "article": "Part number",
+      "category": "Category",
+      "status": "Status",
+      "price": "My price",
+      "completeness": "Completed",
+      "actions": "Actions"
+    },
+    "noPrice": "No price",
+    "priceNotConfirmed": "Not confirmed",
+    "priceConfirmed": "Confirmed {{date}}",
+    "validUntil": "valid until {{date}}",
+    "moq": "from {{count}} pcs",
+    "completenessValue": "{{percent}}%",
+    "pendingChange": "Change under review",
+    "foreignCard": "Card in the catalog",
+    "returnedReason": "Reason for return: {{reason}}",
+    "returnedFixHint": "Fix the fields, upload the price list again, then submit the card for review.",
+    "openCard": "Open card {{name}}",
+    "page": "Page {{page}} of {{pages}}",
+    "pagination": "List pages",
+    "prev": "Back",
+    "next": "Next",
+    "found_one": "{{count}} card found",
+    "found_other": "{{count}} cards found",
+    "emptyTab": "Nothing in this tab yet.",
+    "notFoundTitle": "Nothing found",
+    "notFoundText": "Change the search or pick another tab.",
+    "reset": "Clear search",
+    "attention": {
+      "title": "Prices need attention",
+      "text": "Outdated: {{stale}}. Expired: {{expired}}. Expiring soon: {{expiring}}. Confirm that your prices are current — it takes one click.",
+      "expiredHint": "Expired prices cannot be confirmed — upload a new price list."
+    },
+    "empty": {
+      "title": "Upload a price list from the template — your cards will appear here",
+      "text": "Three simple steps. Cards start as drafts; after review we publish them in the catalog.",
+      "stepsLabel": "How to upload a price list",
+      "step1Title": "Download the template",
+      "step1Text": "An Excel file with ready columns and hints for allowed values.",
+      "step2Title": "Fill it in",
+      "step2Text": "Add products and prices: one row per product. Only the name and the price are required.",
+      "step3Title": "Upload",
+      "step3Text": "We check the file and show errors by row before anything is saved."
+    },
+    "submitDialog": {
+      "title": "Submit for review?",
+      "description_one": "Submitting {{count}} card.",
+      "description_other": "Submitting {{count}} cards.",
+      "consequence": "The cards become “In review” and go to a catalog employee. While under review, price lists do not change them: differences go to “changes under review”.",
+      "confirm": "Submit",
+      "loadingAll": "Collecting drafts…",
+      "nothing": "No cards can be submitted: only drafts and returned cards can."
+    },
+    "submitted": {
+      "title_one": "{{count}} card submitted",
+      "title_other": "{{count}} cards submitted",
+      "sla": "Review usually takes 1 business day. The result appears in this tab: “Published” or “Returned” with a reason.",
+      "failed": "Not submitted: {{count}}",
+      "code": {
+        "NOT_FOUND": "card not found",
+        "PRODUCT_NOT_SUBMITTABLE": "already in review or published"
+      }
+    },
+    "confirmed": {
+      "title_one": "{{count}} price confirmed",
+      "title_other": "{{count}} prices confirmed",
+      "expired": "Not confirmed because the price expired: {{count}}. Upload a new price list.",
+      "failed": "Not confirmed: {{count}}",
+      "code": {
+        "NOT_FOUND": "you have no price for this card",
+        "OFFER_EXPIRED": "the price has expired"
+      },
+      "none": "There are no prices to confirm."
+    },
+    "sheet": {
+      "close": "Close",
+      "description": "A product card from your list",
+      "loadFailed": "Could not open the card.",
+      "fields": "Card data",
+      "fix": "Needs fixing",
+      "completeness": "{{percent}}% completed",
+      "missing": "Missing for publication",
+      "myPrice": "My price",
+      "history": "Review history",
+      "historyEmpty": "This card has not been submitted for review yet.",
+      "decision": {
+        "pending": "Awaiting decision",
+        "published": "Published",
+        "returned": "Returned"
+      },
+      "submittedAt": "Submitted {{date}}",
+      "decidedAt": "Decision {{date}}",
+      "issuesTitle": "What to fix",
+      "generalComment": "General comment",
+      "foreignNote": "This card was created from another source. Your price on it is saved; you do not change the card fields."
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "brand": "Brand",
+      "manufacturer_part_number": "Manufacturer part number",
+      "gost_drawing": "GOST / drawing",
+      "category": "Category",
+      "uom": "Unit of measure",
+      "hs_code": "HS code",
+      "price": "Price",
+      "valid_until": "Price validity",
+      "other": "Other",
+      "supplier_sku": "Supplier part number",
+      "domain_type": "Type",
+      "currency": "Currency",
+      "stock": "Availability",
+      "lead": "Lead time",
+      "moq": "Minimum order",
+      "valid_from": "Valid from",
+      "identity": "Manufacturer part number or GOST"
+    },
+    "wizard": {
+      "title": "Upload a price list",
+      "description": "Download the template, fill it in and upload the file. We check everything first — nothing is saved until you press “Upload”.",
+      "steps": {
+        "file": "File",
+        "check": "Check",
+        "done": "Done"
+      },
+      "stepsLabel": "Upload steps",
+      "stepOf": "Step {{current}} of {{total}}",
+      "template": "1. Download the template",
+      "templateText": "The same columns our employees use: name, brand, part number, price, currency, lead time…",
+      "chooseFile": "2. Choose the filled-in file",
+      "fileHint": "Excel (.xlsx), up to 20 MB.",
+      "fileLabel": "Price list file",
+      "validity": "3. Price validity",
+      "validityText": "Optional. Without a date, the “Valid from / to” columns are used, or the price has no end date.",
+      "validFrom": "Prices valid from",
+      "validUntil": "Prices valid until",
+      "dateInvalid": "Enter the full date: DD.MM.YYYY.",
+      "rangeInvalid": "The “until” date cannot be earlier than the “from” date.",
+      "badType": "An Excel file (.xlsx) is required.",
+      "tooLarge": "The file is larger than 20 MB.",
+      "check": "Check the file",
+      "checking": "Checking the file…",
+      "checkingText": "Nothing is saved. It takes a few seconds.",
+      "previewTitle": "Check complete",
+      "previewReady": "No errors — you can upload.",
+      "previewWithErrors_one": "{{count}} row has an error. We will skip it and upload the rest.",
+      "previewWithErrors_other": "{{count}} rows have errors. We will skip them and upload the rest.",
+      "nothingToLoad": "Nothing to upload: no row passed the check. Fix the file and check again.",
+      "load": "Upload",
+      "loadWithSkipped": "Upload without the rows with errors",
+      "loading": "Uploading…",
+      "loadingText": "Saving cards and prices.",
+      "chooseAnother": "Choose another file",
+      "doneTitle": "Price list uploaded",
+      "doneText": "The cards are now in “Drafts”. Check them and submit for review.",
+      "goDrafts": "Go to drafts",
+      "closeBtn": "Close",
+      "failedTitle": "File not accepted",
+      "failedText": "The file could not be processed.",
+      "failedCode": {
+        "NAME_COLUMN_NOT_FOUND": "The file has no “Name” column. Download the template and copy your data into it.",
+        "IMPORT_FAILED": "The file could not be processed. Make sure it is the Excel template and try again."
+      },
+      "retry": "Try again",
+      "summary": {
+        "created": "New cards",
+        "updated": "Known products",
+        "offers": "Prices saved",
+        "proposals": "Changes for review",
+        "errors": "Rows with errors",
+        "warnings": "Remarks"
+      },
+      "summaryLabel": "Check summary",
+      "rowsTitle": "What to fix",
+      "rowsCaption": "File rows with errors",
+      "rowsShown": "Showing the first {{shown}} of {{total}}.",
+      "rowHeader": "Row",
+      "fieldHeader": "Field",
+      "fixHeader": "What to fix",
+      "warningsTitle": "Remarks (rows were uploaded)",
+      "proposalsTitle": "Changes to card fields",
+      "proposalsText": "These products are already in the catalog. Your prices are saved, and field changes went to review without changing the cards.",
+      "truncated": "The file is over the limit — rows not read: {{count}}.",
+      "unpublishable_one": "{{count}} card cannot be published without additions.",
+      "unpublishable_other": "{{count}} cards cannot be published without additions.",
+      "unpublishableHint": "Missing: {{list}}. Fill in these columns in the file and upload it again."
+    },
+    "issues": {
+      "UNKNOWN": "The row was not uploaded. Check the values in this row.",
+      "PRICE_NOT_A_NUMBER": "The price must be a number, for example 150.50.",
+      "PRICE_NOT_POSITIVE": "The price must be greater than zero.",
+      "UNKNOWN_CATEGORY": "The category “{{value}}” is not in the list. Pick one from the second sheet of the template.",
+      "UNKNOWN_DOMAIN": "The type “{{value}}” is not in the list. Pick one from the second sheet of the template.",
+      "UNKNOWN_CURRENCY": "The currency “{{value}}” is not in the list. Use a code such as USD or UZS.",
+      "UNKNOWN_STOCK_STATUS": "The availability “{{value}}” is not in the list. Pick a code from the second sheet of the template.",
+      "VALID_DATE_INVALID": "The date is invalid. Use DD.MM.YYYY.",
+      "OFFER_VALIDITY_RANGE_INVALID": "The “to” date is earlier than the “from” date. Swap them.",
+      "HS_CODE_TOO_LONG": "The HS code “{{value}}” is too long and was not saved. Check the code.",
+      "HS_CODE_NOT_IN_CLASSIFIER": "The HS code “{{value}}” is not in the classifier. The row was uploaded — check the code.",
+      "HS_CODE_RETIRED": "The HS code “{{value}}” is no longer valid. The row was uploaded — confirm the code.",
+      "ROW_FAILED": "The row could not be processed. Check its values.",
+      "NAME": "The name is missing."
+    },
+    "cardNumber": "Card no. {{id}}"
   }
 }

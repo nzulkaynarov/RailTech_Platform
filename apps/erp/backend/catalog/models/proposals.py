@@ -60,6 +60,15 @@ class ProductFieldProposal(models.Model):
         related_name="+",
         verbose_name=_("Кто загрузил"),
     )
+    #: PART-2: предложение партнёра из кабинета — автор контакт портала (пользователя ERP у него нет). Не больше одного из двух.
+    contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто загрузил (контакт кабинета)"),
+    )
     decided_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -82,7 +91,13 @@ class ProductFieldProposal(models.Model):
                 condition=Q(status="pending"),
                 nulls_distinct=False,
                 name="catalog_one_open_field_proposal",
-            )
+            ),
+            # Автор — пользователь ERP или контакт кабинета, не оба сразу (у старых строк и после удаления пользователя
+            # `created_by` пуст, поэтому «ровно один» здесь нельзя).
+            models.CheckConstraint(
+                condition=Q(created_by__isnull=True) | Q(contact__isnull=True),
+                name="catalog_proposal_one_author",
+            ),
         ]
 
     def __str__(self):

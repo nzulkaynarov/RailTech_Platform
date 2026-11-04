@@ -46,7 +46,8 @@ export async function downloadDocument(id: number, fallbackName: string, options
   throw new DocumentNotReadyError();
 }
 
-function saveBlob(blob: Blob, fileName: string): void {
+/** Сохранить файл в браузере (скрытая ссылка `download`). */
+export function saveBlob(blob: Blob, fileName: string): void {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

@@ -9,6 +9,7 @@ from .offers import SupplierOffer
 from .products import Product, ProductDocument, ProductImage
 from .proposals import ProductFieldProposal
 from .requests import CategoryRequest
+from .reviews import ProductReview
 from .taxonomy import Category, Manufacturer
 from .tech_docs import CONFORMITY_KIND_CODES, DocumentKind, TechDocument
 
@@ -27,6 +28,7 @@ __all__ = [
     "ProductDocument",
     "ProductFieldProposal",
     "ProductImage",
+    "ProductReview",
     "ProductStatus",
     "StockStatus",
     "SupplierOffer",

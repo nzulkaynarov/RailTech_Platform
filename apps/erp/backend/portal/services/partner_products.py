@@ -1,0 +1,361 @@
+"""«Мои товары» партнёра: свои карточки и свои цены, отправка на проверку, подтверждение актуальности (PART-2, ADR-0022 п. 4).
+
+Партнёр видит только своё: карточки, где он источник данных (`Product.source_supplier`) или у него есть цена, и только
+собственную цену по ним. Чужие цены, другие поставщики, наши цены продажи и закупки сюда не попадают — модуль строит ответ
+из запросов, которые фильтруют по компании сессии, а не из общих проекций каталога.
+
+Карточкой владеем мы: партнёр может отправить свой черновик или возвращённую карточку на проверку (`REVIEW`); публикует и
+возвращает сотрудник (очередь проверки — PART-3). Из портала публикации нет.
+"""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import pghistory
+from django.db import transaction
+from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models.functions import Greatest
+from django.utils import timezone
+
+from catalog.completeness import CompletenessContext, requirements_for
+from catalog.constants import DEFAULT_OFFER_CONFIRM_DAYS
+from catalog.models import Product, ProductFieldProposal, ProductReview, ProductStatus, SupplierOffer
+from catalog.offer_freshness import EXPIRING_DAYS, freshness
+from catalog.policy import policy_for
+from core.tenant import own_company_id
+
+DRAFT = "draft"
+REVIEW = "review"
+RETURNED = "returned"
+PUBLISHED = "published"
+CARD_STATUSES = (DRAFT, REVIEW, RETURNED, PUBLISHED)
+
+#: Коды статуса карточки в справочнике ERP.
+CODE_DRAFT = "DRAFT"
+CODE_REVIEW = "REVIEW"
+CODE_RETURNED = "RETURNED"
+CODE_PUBLISHED = "PUBLISHED"
+CODE_ARCHIVED = "ARCHIVED"
+
+#: Поля, которые партнёр заполняет прайсом: только по ним считается его «полнота» и список «не хватает». Остальное
+#: (цена-витрина, документ соответствия, фото) заполняет сотрудник — требовать это от партнёра нечестно.
+PARTNER_FIELD_CODES = ("name", "uom", "category", "hs_code", "identity")
+
+MAX_BATCH = 500
+NOTIFY_EVENT = "portal.partner_products_submitted"
+
+
+def _own_q(company) -> Q:
+    return Q(source_supplier_id=company.pk)
+
+
+def status_filter(company, status: str) -> Q:
+    """Фильтр вкладки. Чужая неопубликованная карточка — «на проверке»: внутренний ход чужой карточки партнёру не виден."""
+    own = _own_q(company)
+    published = Q(status__code=CODE_PUBLISHED)
+    if status == PUBLISHED:
+        return published
+    if status == RETURNED:
+        return own & Q(status__code=CODE_RETURNED)
+    if status == REVIEW:
+        return ~published & ((own & Q(status__code=CODE_REVIEW)) | ~own)
+    if status == DRAFT:
+        return own & (Q(status__isnull=True) | ~Q(status__code__in=(CODE_PUBLISHED, CODE_REVIEW, CODE_RETURNED)))
+    raise ValueError(status)
+
+
+def partner_cards(company):
+    """Карточки партнёра: он источник данных или у него есть цена. Архивные не показываются."""
+    mine = SupplierOffer.objects.filter(product=OuterRef("pk"), supplier=company)
+    return (
+        Product.objects.annotate(_has_my_offer=Exists(mine))
+        .filter(Q(source_supplier_id=company.pk) | Q(_has_my_offer=True))
+        .exclude(status__code=CODE_ARCHIVED)
+        .select_related("status", "brand", "category", "domain_type", "uom")
+    )
+
+
+def card_status(product, company_id: int) -> str:
+    code = product.status.code if product.status_id else None
+    if code == CODE_PUBLISHED:
+        return PUBLISHED
+    if product.source_supplier_id != company_id:
+        return REVIEW
+    if code == CODE_REVIEW:
+        return REVIEW
+    if code == CODE_RETURNED:
+        return RETURNED
+    return DRAFT
+
+
+def status_counts(company, queryset) -> dict:
+    aggregates = {status: Count("pk", filter=status_filter(company, status)) for status in CARD_STATUSES}
+    counts = queryset.aggregate(all=Count("pk"), **aggregates)
+    return {key: counts[key] for key in ("all", *CARD_STATUSES)}
+
+
+def search(queryset, text: str):
+    text = (text or "").strip()
+    if not text:
+        return queryset
+    return queryset.filter(
+        Q(name__icontains=text) | Q(manufacturer_part_number__icontains=text) | Q(brand__name__icontains=text)
+    )
+
+
+def offers_attention(company) -> dict:
+    """Сколько цен компании требуют внимания: срок истёк, не подтверждены дольше N дней, срок скоро кончится.
+
+    Те же правила, что `catalog/offer_freshness.py`, но одним запросом по всем ценам компании — для плашки «подтвердите
+    актуальность» над списком (карточки страницы всех цен не покрывают).
+    """
+    today, now = timezone.localdate(), timezone.now()
+    confirm_days = policy_for(own_company_id()).offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
+    moment = Greatest("confirmed_at", "updated_at")
+    expired = Q(valid_until__lt=today)
+    stale = ~expired & Q(_moment__lt=now - timedelta(days=confirm_days))
+    expiring = ~expired & ~stale & Q(valid_until__lte=today + timedelta(days=EXPIRING_DAYS))
+    totals = (
+        SupplierOffer.objects.filter(supplier=company, is_active=True)
+        .annotate(_moment=moment)
+        .aggregate(
+            expired=Count("pk", filter=expired),
+            stale=Count("pk", filter=stale),
+            expiring=Count("pk", filter=expiring),
+        )
+    )
+    return totals
+
+
+# ── Проекция карточки ────────────────────────────────────────────────────────────────────────────────
+
+
+def partner_completeness(product, ctx: CompletenessContext) -> dict:
+    """Полнота по полям, которые партнёр заполняет прайсом: `{percent, missing: [{code, label}]}`."""
+    requirements = [item for item in requirements_for(product, ctx) if item[0] in PARTNER_FIELD_CODES]
+    missing = [{"code": code, "label": str(label)} for code, label, check in requirements if not check(product, ctx)]
+    percent = round((len(requirements) - len(missing)) * 100 / len(requirements)) if requirements else 100
+    return {"percent": percent, "missing": missing}
+
+
+def _offer_view(offer, *, today, now, confirm_days: int) -> dict:
+    currency = offer.currency.code if offer.currency_id else None
+    return {
+        "price": {"amount": f"{offer.base_price:.2f}", "currency": currency} if currency else None,
+        "valid_from": offer.valid_from,
+        "valid_until": offer.valid_until,
+        "delivery_basis": offer.delivery_basis.code if offer.delivery_basis_id else None,
+        "min_order_qty": offer.min_order_qty,
+        "confirmed_at": offer.confirmed_at,
+        "freshness": freshness(offer, today=today, now=now, confirm_days=confirm_days),
+    }
+
+
+def _issues(review) -> list[dict]:
+    """Замечания последнего возврата: `[{field, comment}]` — поле подсвечивается в карточке кабинета."""
+    return list(review.field_issues or []) if review is not None else []
+
+
+def project_cards(company, products: list) -> list[dict]:
+    """Карточки страницы → элементы `PartnerProduct`. Запросы — на страницу, не на строку."""
+    if not products:
+        return []
+    ids = [product.pk for product in products]
+    today, now = timezone.localdate(), timezone.now()
+    confirm_days = policy_for(own_company_id()).offer_confirm_days or DEFAULT_OFFER_CONFIRM_DAYS
+    offers = {
+        offer.product_id: offer
+        for offer in SupplierOffer.objects.filter(supplier=company, is_active=True, product_id__in=ids).select_related(
+            "currency", "delivery_basis"
+        )
+    }
+    pending = set(
+        ProductFieldProposal.objects.filter(
+            supplier=company, status=ProductFieldProposal.Status.PENDING, product_id__in=ids
+        ).values_list("product_id", flat=True)
+    )
+    returns: dict[int, ProductReview] = {}
+    for review in ProductReview.objects.filter(
+        product_id__in=ids, decision=ProductReview.Decision.RETURNED, product__source_supplier=company
+    ).order_by("-decided_at", "-id"):
+        returns.setdefault(review.product_id, review)
+    ctx = CompletenessContext(products)
+    items = []
+    for product in products:
+        own = product.source_supplier_id == company.pk
+        status = card_status(product, company.pk)
+        offer = offers.get(product.pk)
+        items.append(
+            {
+                "id": product.pk,
+                "name": product.name,
+                "brand": product.brand.name if product.brand_id else None,
+                "manufacturer_part_number": product.manufacturer_part_number or "",
+                "category": product.category.name if product.category_id else None,
+                "status": status,
+                "return_reason": (
+                    (returns[product.pk].reason or None)
+                    if own and status == RETURNED and product.pk in returns
+                    else None
+                ),
+                "return_issues": _issues(returns.get(product.pk)) if own and status == RETURNED else [],
+                "completeness": partner_completeness(product, ctx)["percent"],
+                "offer": _offer_view(offer, today=today, now=now, confirm_days=confirm_days) if offer else None,
+                "has_pending_change": product.pk in pending,
+                "is_own": own,
+                "can_submit": own and status in (DRAFT, RETURNED),
+                "updated_at": product.updated_at,
+            }
+        )
+    return items
+
+
+def project_detail(company, product) -> dict:
+    """Одна карточка с описанием, недостающими полями и историей проверок (только своя)."""
+    [item] = project_cards(company, [product])
+    ctx = CompletenessContext([product])
+    own = product.source_supplier_id == company.pk
+    history = []
+    if own:
+        history = [
+            {
+                "submitted_at": review.submitted_at,
+                "decision": review.decision,
+                "reason": review.reason,
+                "issues": list(review.field_issues or []),
+                "decided_at": review.decided_at,
+            }
+            for review in product.reviews.all()
+        ]
+    return {
+        **item,
+        "description": product.description or "",
+        "hs_code": product.hs_code or "",
+        "uom": product.uom.code if product.uom_id else None,
+        "missing": partner_completeness(product, ctx)["missing"],
+        "history": history,
+    }
+
+
+# ── Отправка на проверку ─────────────────────────────────────────────────────────────────────────────
+
+
+def _unique(ids) -> list[int]:
+    return list(dict.fromkeys(ids))
+
+
+@transaction.atomic
+def submit_for_review(*, company, contact, ids) -> tuple[list[int], list[dict]]:
+    """Свои черновики и возвращённые карточки → «на проверке». Итог построчный: `(отправлено, ошибки по id)`.
+
+    Чужая и несуществующая карточка неотличимы — `NOT_FOUND`; своя, но уже на проверке или опубликованная —
+    `PRODUCT_NOT_SUBMITTABLE`. Строки блокируются на время проверки: две одновременные отправки не создают две проверки
+    (ограничение `catalog_one_pending_review` — вторая страховка).
+    """
+    ids = _unique(ids)
+    locked = {
+        product.pk: product
+        for product in Product.objects.select_for_update(of=("self",))
+        .select_related("status")
+        .filter(pk__in=ids, source_supplier_id=company.pk)
+        .exclude(status__code=CODE_ARCHIVED)
+    }
+    review_status = ProductStatus.objects.filter(code=CODE_REVIEW).first()
+    submitted, errors = [], []
+    for product_id in ids:
+        product = locked.get(product_id)
+        if product is None:
+            errors.append({"id": product_id, "code": "NOT_FOUND"})
+            continue
+        code = product.status.code if product.status_id else CODE_DRAFT
+        if code not in (CODE_DRAFT, CODE_RETURNED) or review_status is None:
+            errors.append({"id": product_id, "code": "PRODUCT_NOT_SUBMITTABLE"})
+            continue
+        product.status = review_status
+        product.save(update_fields=["status", "updated_at"])
+        ProductReview.objects.create(product=product, submitted_by_contact=contact)
+        submitted.append(product_id)
+    return submitted, errors
+
+
+def catalog_reviewers():
+    """Кому сообщить об отправке: ответственный сотрудник отношения — иначе тем, у кого право публикации каталога."""
+    from accounts.models import CustomUser
+
+    own_id = own_company_id()
+    return CustomUser.objects.filter(
+        is_active=True,
+        memberships__company_id=own_id,
+        memberships__is_active=True,
+        memberships__company_roles__permissions__contains=["catalog.publish"],
+    ).distinct()
+
+
+def notify_submitted(company, count: int) -> None:
+    """Уведомление сотрудникам: тот же механизм, что у остальных событий портала (`notifications.services`).
+
+    Ответственный сотрудник отношения получает его, если он есть; иначе — все с правом `catalog.publish`; никого —
+    администраторы платформы. Один раз на отправку, а не на карточку.
+    """
+    from parties.models import CompanyRelationship, RelationshipRole
+
+    from notifications.services import notify_platform_admins, notify_user
+
+    if count <= 0:
+        return
+    title = f"Партнёр «{company.name}» отправил карточки на проверку"
+    message = f"Карточек на проверке: {count}. Проверьте и опубликуйте или верните партнёру с причиной."
+    params = {"company": company.name, "count": count}
+    relationship = (
+        CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER)
+        .select_related("responsible")
+        .first()
+    )
+    recipients = (
+        [relationship.responsible] if relationship and relationship.responsible_id else list(catalog_reviewers())
+    )
+    if not recipients:
+        notify_platform_admins(
+            title=title, message=message, type_code="INFO", event_code=NOTIFY_EVENT, event_params=params
+        )
+        return
+    for user in recipients:
+        notify_user(
+            user=user, title=title, message=message, type_code="INFO", event_code=NOTIFY_EVENT, event_params=params
+        )
+
+
+# ── Подтверждение актуальности ───────────────────────────────────────────────────────────────────────
+
+
+@transaction.atomic
+def confirm_offers(*, company, contact, ids=None) -> dict:
+    """«Подтвердить актуальность» цен компании: без модерации. `ids=None` — все цены компании.
+
+    Цена с истёкшим сроком не подтверждается (`OFFER_EXPIRED` — нужен новый прайс); по `ids` без цены компании —
+    `NOT_FOUND` (чужая карточка неотличима от несуществующей). В `expired` — сколько цен пропущено из-за срока.
+    """
+    today, now = timezone.localdate(), timezone.now()
+    offers = SupplierOffer.objects.select_for_update(of=("self",)).filter(supplier=company, is_active=True)
+    if ids is not None:
+        ids = _unique(ids)
+        offers = offers.filter(product_id__in=ids)
+    by_product = {offer.product_id: offer for offer in offers}
+    errors, confirm_pks, expired = [], [], 0
+    for offer in by_product.values():
+        if offer.valid_until is not None and offer.valid_until < today:
+            expired += 1
+            continue
+        confirm_pks.append(offer.pk)
+    if ids is not None:
+        for product_id in ids:
+            offer = by_product.get(product_id)
+            if offer is None:
+                errors.append({"id": product_id, "code": "NOT_FOUND"})
+            elif offer.valid_until is not None and offer.valid_until < today:
+                errors.append({"id": product_id, "code": "OFFER_EXPIRED"})
+    if confirm_pks:
+        with pghistory.context(contact=contact.pk, source="confirm"):
+            SupplierOffer.objects.filter(pk__in=confirm_pks).update(confirmed_at=now, confirmed_by_contact=contact)
+    return {"confirmed": len(confirm_pks), "expired": expired, "errors": errors}

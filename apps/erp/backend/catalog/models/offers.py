@@ -146,6 +146,24 @@ class SupplierOffer(models.Model):
         help_text=_("Неактивные офферы не отображаются при выборе"),
     )
 
+    # PART-2: «подтвердить актуальность» — партнёр в кабинете (или загрузка прайса из кабинета) подтверждает, что цена
+    # действует. Без модерации; признак «устарела» считается от этой даты (`catalog/offer_freshness.py`).
+    confirmed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Актуальность подтверждена"),
+        help_text=_("Когда поставщик в последний раз подтвердил, что цена действует"),
+    )
+    confirmed_by_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто подтвердил"),
+        help_text=_("Контакт кабинета партнёра, подтвердивший актуальность"),
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_("Дата создания"),

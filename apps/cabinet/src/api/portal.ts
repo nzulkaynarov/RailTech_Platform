@@ -276,24 +276,75 @@ function fileNameFrom(disposition: string | null): string | null {
   return /filename="?([^";]+)"?/i.exec(disposition)?.[1] ?? null;
 }
 
+// --- «Мои товары» партнёра (модуль `my_products`, PART-2) ------------------------------------
+
+export type PartnerProduct = Schemas['PartnerProduct'];
+export type PartnerProductDetail = Schemas['PartnerProductDetail'];
+export type PartnerProductPage = Schemas['PartnerProductPage'];
+export type PartnerCardStatus = Schemas['PartnerCardStatus'];
+export type PartnerOffer = Schemas['PartnerOffer'];
+export type OfferFreshness = Schemas['OfferFreshness'];
+export type PartnerIssue = Schemas['PartnerIssue'];
+export type PartnerSubmitResult = Schemas['PartnerSubmitResult'];
+export type PartnerConfirmResult = Schemas['PartnerConfirmResult'];
+export type PartnerConfirmRequest = Schemas['PartnerConfirmRequest'];
+export type PriceListTask = Schemas['PriceListTask'];
+export type PriceListReport = Schemas['PriceListReport'];
+export type PriceListRowIssue = Schemas['PriceListRowIssue'];
+export type PartnerProductsQuery = QueryOf<paths['/partner/products']['get']>;
+
+export const listPartnerProducts = (params: PartnerProductsQuery = {}) =>
+  portalRequest<PartnerProductPage>(`/partner/products${toQuery(params)}`);
+export const getPartnerProduct = (id: number) => portalRequest<PartnerProductDetail>(`/partner/products/${id}`);
+export function submitPartnerProducts(ids: number[]): Promise<PartnerSubmitResult> {
+  const body: JsonBody<paths['/partner/products/submit']['post']> = { ids };
+  return portalRequest<PartnerSubmitResult>('/partner/products/submit', { method: 'POST', body });
+}
+export function confirmPartnerOffers(body: PartnerConfirmRequest): Promise<PartnerConfirmResult> {
+  return portalRequest<PartnerConfirmResult>('/partner/offers/confirm', { method: 'POST', body });
+}
+export const getPriceListTask = (taskId: string) =>
+  portalRequest<PriceListTask>(`/partner/price-list/${encodeURIComponent(taskId)}`);
+
+const XLSX_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+
+/** Шаблон прайса — тот же файл, что у сотрудника; в браузере сохраняется как `price-template.xlsx`. */
+export async function getPriceTemplate(): Promise<Blob> {
+  const response = await send('/partner/price-template', { accept: XLSX_TYPE });
+  return response.blob();
+}
+
+export interface PriceListUpload {
+  file: File;
+  /** Предпросмотр: проверка и отчёт без записи. */
+  dryRun: boolean;
+  /** Срок действия цен на весь файл, `ГГГГ-ММ-ДД`; пусто — как в колонках файла или без срока. */
+  validFrom?: string;
+  validUntil?: string;
+}
+
+/** Загрузка прайса (`multipart/form-data`): 202 и `task_id`, состояние — `getPriceListTask`. */
+export async function uploadPriceList({ file, dryRun, validFrom, validUntil }: PriceListUpload): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('dry_run', String(dryRun));
+  if (validFrom) formData.append('valid_from', validFrom);
+  if (validUntil) formData.append('valid_until', validUntil);
+  const response = await postForm('/partner/price-list', formData);
+  return ((await response.json()) as Schemas['PriceListAccepted']).task_id;
+}
+
 export const listCatalog = (params: CatalogQuery = {}) => portalRequest<CatalogPage>(`/catalog${toQuery(params)}`);
 export const listCatalogCategories = () => portalRequest<CatalogCategory[]>('/catalog/categories');
 export const getCatalogItem = (id: number) => portalRequest<CatalogItem>(`/catalog/${id}`);
 
-export async function uploadFile(file: File): Promise<PortalUploadResponse> {
-  const formData = new FormData();
-  formData.append('file', file);
-  const base = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
-  const url = new URL(`${base}${PORTAL_BASE_PATH}/uploads`, window.location.origin).toString();
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-    'Idempotency-Key': newIdempotencyKey(),
-  };
+/** `POST multipart/form-data` с ключом попытки; ошибка — `PortalApiError` с кодом из `{"detail": CODE}`. */
+async function postForm(path: string, formData: FormData): Promise<Response> {
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetch(portalUrl(path), {
       method: 'POST',
-      headers,
+      headers: { Accept: 'application/json', 'Idempotency-Key': newIdempotencyKey() },
       credentials: 'include',
       body: formData,
     });
@@ -303,6 +354,13 @@ export async function uploadFile(file: File): Promise<PortalUploadResponse> {
   if (!response.ok) {
     throw new PortalApiError(response.status, await readErrorCode(response), parseRetryAfter(response.headers.get('Retry-After')));
   }
+  return response;
+}
+
+export async function uploadFile(file: File): Promise<PortalUploadResponse> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const response = await postForm('/uploads', formData);
   return (await response.json()) as PortalUploadResponse;
 }
 

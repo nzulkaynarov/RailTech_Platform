@@ -15,6 +15,12 @@ The supplier is the company the VIEW resolved: the uploader's own seller company
 (self-service path) or a supplier chosen explicitly by a back-office employee with the
 catalog and supply rights (CAT-1, `supplier_company_id`) — never a column in the file.
 
+PART-2 — загрузку из кабинета партнёра запускает контакт компании (`contact_id`), а не пользователь ERP: он же автор
+предложений по полям (`ProductFieldProposal.contact`) и «подтвердил актуальность» на записанных ценах. Поставщик — компания
+сессии кабинета, выбрать другого нельзя; новые карточки — нашего каталога (владелец — своя компания), поставщик — источник
+данных. Свою карточку партнёр правит прайсом, пока она «черновик» или «возвращена»; на проверке и опубликованная — только
+предложения по полям.
+
 CAT-1 — чужие карточки не перезаписываются. Совпадение по бренду+MPN (или ГОСТ/чертежу) с
 карточкой, которую завёл ДРУГОЙ поставщик или которая уже не черновик, обновляет только
 предложение поставщика; расхождения полей уходят в `catalog.ProductFieldProposal` на одобрение
@@ -259,6 +265,8 @@ class _Ctx:
     #: CAT-1: предложения по полям чужих карточек, кто загрузил, срок цены на весь файл.
     Proposal: object = None
     actor: object = None
+    #: PART-2: контакт кабинета партнёра, загрузивший файл (вместо пользователя ERP).
+    contact: object = None
     valid_from: object = None
     valid_until: object = None
     #: Владелец новых карточек: своя компания на пути сотрудника, иначе сам поставщик (путь продавца).
@@ -378,6 +386,11 @@ def _find_by_own_offer(ctx: _Ctx, fields: dict, supplier_sku: str):
     return match.product if match else None
 
 
+#: Статусы карточки, поля которой прайс своего поставщика меняет: черновик и возвращённая с причиной (PART-2: партнёр
+#: исправляет её тем же прайсом). «На проверке», опубликованная и архивная — только предложения по полям.
+EDITABLE_STATUS_CODES = ("DRAFT", "RETURNED")
+
+
 def _is_foreign_card(ctx: _Ctx, product) -> bool:
     """Карточку завёл другой поставщик (или сотрудник) или она уже не черновик — прайс её полей не меняет (CAT-1).
 
@@ -385,7 +398,7 @@ def _is_foreign_card(ctx: _Ctx, product) -> bool:
     владельцу, как до CAT-1 (путь продавца: своя компания загружает свой каталог).
     """
     status_code = getattr(product.status, "code", None)
-    if status_code and status_code != "DRAFT":
+    if status_code and status_code not in EDITABLE_STATUS_CODES:
         return True
     supplier_id = getattr(ctx.supplier, "pk", None)
     if product.source_supplier_id is not None:
@@ -430,7 +443,12 @@ def _propose(ctx: _Ctx, product, field_name: str, current: str, proposed: str, r
     pending = Proposal.objects.filter(**scope, status=Proposal.Status.PENDING).first()
     if pending is None:
         Proposal.objects.create(
-            **scope, current_value=current, proposed_value=proposed, proposed_ref=ref, created_by=ctx.actor
+            **scope,
+            current_value=current,
+            proposed_value=proposed,
+            proposed_ref=ref,
+            created_by=ctx.actor,
+            contact=ctx.contact,
         )
     elif (pending.proposed_value, pending.proposed_ref, pending.current_value) != (proposed, ref, current):
         pending.proposed_value, pending.proposed_ref, pending.current_value = proposed, ref, current
@@ -489,6 +507,12 @@ def _upsert_offer(ctx: _Ctx, product, offer: dict) -> bool:
     for key in ("valid_from", "valid_until"):
         if offer.get(key) is not None:
             defaults[key] = offer[key]
+    if ctx.contact is not None:
+        # Свежий прайс из кабинета сам подтверждает актуальность загруженных цен (PART-2).
+        from django.utils import timezone
+
+        defaults["confirmed_at"] = timezone.now()
+        defaults["confirmed_by_contact"] = ctx.contact
     _, created = ctx.SupplierOffer.objects.update_or_create(product=product, supplier=ctx.supplier, defaults=defaults)
     return created
 
@@ -778,6 +802,7 @@ def run_catalog_import_frame(
     progress_callback=None,
     *,
     actor_id=None,
+    contact_id=None,
     valid_from=None,
     valid_until=None,
     owner_company_id=None,
@@ -810,6 +835,7 @@ def run_catalog_import_frame(
         dry_run,
         hs_status=_prescan_hs_codes(data_frame, columns),
         actor=_actor(actor_id),
+        contact=_contact(contact_id),
         owner=Company.objects.filter(id=owner_company_id).first() if owner_company_id else supplier,
         valid_from=_as_date(valid_from),
         valid_until=_as_date(valid_until),
@@ -824,7 +850,9 @@ def run_catalog_import_frame(
             transaction.set_rollback(True)
     else:
         # История цены (pghistory, CAT-1): кто загрузил и откуда цена — в контексте каждого снимка предложения.
-        with pghistory.context(user=actor_id, source="price_list"):
+        # PART-2: загрузка из кабинета — автор контакт (`contact`), пользователя ERP нет.
+        extra = {"contact": contact_id} if contact_id else {}
+        with pghistory.context(user=actor_id, source="price_list", **extra):
             _iterate_rows(ctx, data_frame, columns, result, progress_callback)
         _summarize_publishability(ctx, result)
 
@@ -837,6 +865,14 @@ def _actor(actor_id):
     from accounts.models import CustomUser
 
     return CustomUser.objects.filter(pk=actor_id).first()
+
+
+def _contact(contact_id):
+    if not contact_id:
+        return None
+    from parties.models import Contact
+
+    return Contact.objects.filter(pk=contact_id).first()
 
 
 def _as_date(value):

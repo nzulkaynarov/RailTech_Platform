@@ -16,6 +16,10 @@ type StatusMaps = {
   act: Schemas['ActStatus'];
   delivery: Schemas['DeliveryStatus'];
   availability: Schemas['Availability'];
+  /** Статус карточки партнёра («Мои товары»): цвет и подпись как у Ozon / Wildberries — серый, синий, оранжевый, зелёный. */
+  partner: Schemas['PartnerCardStatus'];
+  /** Свежесть цены партнёра. */
+  freshness: Schemas['OfferFreshness'];
 };
 
 export type StatusEntity = keyof StatusMaps;
@@ -46,6 +50,9 @@ const TONES: { [E in StatusEntity]: Record<StatusMaps[E], StatusTone> } = {
     disputed: 'danger',
   },
   availability: { in_stock: 'success', on_order: 'warning', expected: 'info' },
+  // Черновик — серый (ничего не ждём), на проверке — синий (ждём нас), возвращена — оранжевый (нужно исправить), опубликована — зелёный
+  partner: { draft: 'neutral', review: 'info', returned: 'warning', published: 'success' },
+  freshness: { fresh: 'success', expiring: 'warning', stale: 'warning', expired: 'danger' },
 };
 
 export function statusTone<E extends StatusEntity>(entity: E, code: StatusMaps[E]): StatusTone {

@@ -4,6 +4,7 @@ import type { Schemas } from '@/api/portal';
 import { businessToday } from '@/lib/format';
 import { crmFormHandlers, resetMockCrmForm } from './crmForm';
 import * as fixtures from './fixtures';
+import * as partner from './partnerMock';
 
 /**
  * Мок портального API на MSW — граница HTTP для dev (`VITE_PORTAL_MOCK=1`) и тестов.
@@ -86,6 +87,9 @@ function createDb(dataset: Dataset = 'demo') {
     quoteCodes: new Map<number, string>(),
     /** Загруженные файлы (`/uploads`): upload_id → имя; приёмка акта проверяет, что скан загружен. */
     uploads: new Map<string, string>(),
+    /** «Мои товары» партнёра (PART-2): карточки с ценой компании и задачи загрузки прайса. */
+    partnerProducts: empty ? [] : partner.partnerProducts(),
+    priceTasks: new Map<string, ReturnType<typeof partner.newTask>>(),
   };
 }
 
@@ -125,12 +129,15 @@ function sessionFromToken(token: string, authMethod: MockSession['auth_method'])
     role: token.includes('viewer') ? 'viewer' : 'actor',
     auth_method: authMethod,
     dataset: token.includes('empty') ? 'empty' : 'demo',
-    // Токен с `partner` — партнёр (каталог и заявки + «Мои товары»), с `partner-min` — только «Мои товары» (ADR-0022)
-    access: token.includes('partner-min')
-      ? { roles: ['partner'], modules: ['my_products', 'profile'] }
-      : token.includes('partner')
-        ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'profile'] }
-        : undefined,
+    // Токен с `dual` — клиент и партнёр сразу (меню «Покупаю / Поставляю»), `partner` — партнёр (каталог и заявки +
+    // «Мои товары»), `partner-min` — только «Мои товары» (ADR-0022)
+    access: token.includes('dual')
+      ? { roles: ['client', 'partner'], modules: [...fixtures.CLIENT_ACCESS.modules, 'my_products'] }
+      : token.includes('partner-min')
+        ? { roles: ['partner'], modules: ['my_products', 'profile'] }
+        : token.includes('partner')
+          ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'profile'] }
+          : undefined,
   };
 }
 
@@ -669,6 +676,101 @@ export const handlers = [
       { action: true },
     ),
   ),
+  // --- «Мои товары» партнёра (модуль my_products, PART-2) ---------------------------------------
+  http.get(
+    `${API}/partner/products`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const status = url.searchParams.get('status');
+      const q = url.searchParams.get('q')?.trim().toLowerCase() ?? '';
+      const page = Math.max(1, Number(url.searchParams.get('page') ?? 1) || 1);
+      const pageSize = Math.min(100, Math.max(1, Number(url.searchParams.get('page_size') ?? 20) || 20));
+      if (status && !['draft', 'review', 'returned', 'published'].includes(status)) return error(422, 'VALIDATION_ERROR');
+      const searched = db.partnerProducts.filter(
+        (item) =>
+          !q || item.name.toLowerCase().includes(q) || item.manufacturer_part_number.toLowerCase().includes(q) || (item.brand ?? '').toLowerCase().includes(q),
+      );
+      const found = status ? searched.filter((item) => item.status === status) : searched;
+      const body: Schemas['PartnerProductPage'] = {
+        items: found.slice((page - 1) * pageSize, page * pageSize),
+        page,
+        page_size: pageSize,
+        total: found.length,
+        counts: partner.statusCounts(searched),
+        attention: partner.attention(db.partnerProducts),
+      };
+      return json(body);
+    }),
+  ),
+  http.get<IdParams>(
+    `${API}/partner/products/:id`,
+    withSession<IdParams>(({ db, params }) => {
+      const item = byId(db.partnerProducts, params.id);
+      return item ? json(partner.detailOf(item)) : error(404, 'NOT_FOUND');
+    }),
+  ),
+  http.post(
+    `${API}/partner/products/submit`,
+    withSession(
+      async ({ db, request }) => {
+        const body = await readJson<{ ids: number[] }>(request);
+        if (!Array.isArray(body.ids) || body.ids.length === 0 || body.ids.length > 500) return error(422, 'VALIDATION_ERROR');
+        return json(partner.submitIds(db.partnerProducts, body.ids));
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/partner/offers/confirm`,
+    withSession(
+      async ({ db, request }) => {
+        const body = await readJson<{ ids?: number[]; all?: boolean }>(request);
+        const byIds = Array.isArray(body.ids) && body.ids.length > 0;
+        if (byIds === Boolean(body.all)) return error(422, 'VALIDATION_ERROR');
+        return json(partner.confirmIds(db.partnerProducts, body.all ? null : (body.ids as number[])));
+      },
+      { action: true },
+    ),
+  ),
+  http.get(
+    `${API}/partner/price-template`,
+    withSession(
+      () =>
+        new HttpResponse(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': 'attachment; filename="catalog_template.xlsx"',
+          },
+        }),
+    ),
+  ),
+  http.post(
+    `${API}/partner/price-list`,
+    withSession(
+      async ({ db, request }) => {
+        const form = await request.formData();
+        const file = form.get('file');
+        if (!(file instanceof File)) return error(400, 'FILE_REQUIRED');
+        if (!/\.xlsx$/i.test(file.name)) return error(400, 'XLSX_REQUIRED');
+        if (file.size > 20 * 1024 * 1024) return error(422, 'FILE_TOO_LARGE');
+        const from = String(form.get('valid_from') ?? '');
+        const until = String(form.get('valid_until') ?? '');
+        if (from && until && until < from) return error(422, 'OFFER_VALIDITY_RANGE_INVALID');
+        const taskId = `task_${db.priceTasks.size + 1}`;
+        db.priceTasks.set(taskId, partner.newTask(file.name, String(form.get('dry_run')) === 'true'));
+        return json({ task_id: taskId } satisfies Schemas['PriceListAccepted'], 202);
+      },
+      { action: true },
+    ),
+  ),
+  http.get<{ taskId: string }>(
+    `${API}/partner/price-list/:taskId`,
+    withSession<{ taskId: string }>(({ db, params }) => {
+      const task = db.priceTasks.get(params.taskId);
+      return task ? json(partner.taskView(params.taskId, task, db.partnerProducts)) : error(404, 'NOT_FOUND');
+    }),
+  ),
+
   // Публичная форма CRM «Запрос» со страницы «Я новый клиент» (M2-CAB-03) — src/mocks/crmForm.ts.
   ...crmFormHandlers,
 ];
