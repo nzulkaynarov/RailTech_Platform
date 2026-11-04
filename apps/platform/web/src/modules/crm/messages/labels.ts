@@ -1,7 +1,7 @@
 import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
-import type { HandoffFacts } from "../../../shared/api/generated/model";
+import type { HandoffFacts, MessageContext } from "../../../shared/api/generated/model";
 
 const KNOWN_REASONS = new Set([
   "human_requested",
@@ -20,8 +20,9 @@ const KNOWN_REASONS = new Set([
   "agent_unavailable",
   "stop_word",
   "handed_over",
+  "cabinet_message",
 ]);
-const KNOWN_CHANNELS = new Set(["telegram", "web", "email", "phone", "referral"]);
+const KNOWN_CHANNELS = new Set(["telegram", "cabinet", "web", "email", "phone", "referral"]);
 
 /** Причины передачи словами; неизвестный код CRM — «Другая причина», без сырого кода в интерфейсе. */
 export function reasonLabels(t: TFunction, codes: readonly string[]): string[] {
@@ -33,6 +34,11 @@ export function reasonLabels(t: TFunction, codes: readonly string[]): string[] {
 
 export function channelLabel(t: TFunction, channel: string): string {
   return t(`messages:channels.${KNOWN_CHANNELS.has(channel) ? channel : "other"}`);
+}
+
+/** Метка документа у сообщения из кабинета словами: «КП KP-2026-0042», «Счёт S-2026-0124» (CHAT-1). */
+export function contextLabel(t: TFunction, context: MessageContext): string {
+  return t(`messages:thread.context.${context.kind}`, { number: context.number });
 }
 
 /** Факты квалификации строками «подпись: значение»; пустые не показываются. */
