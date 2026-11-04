@@ -14,33 +14,6 @@
 #
 # Запись, которой ничего не соответствует (изменение уже слито), печатается предупреждением: удалите её.
 exceptions:
-  # ErrorCode портала — открытое множество (B3, волна 11; сужено в NOTIFY-1): `detail` описан как anyOf [ErrorCode, string],
-  # клиенты понимают незнакомый код по HTTP-статусу (контракт, Q-17), поэтому новый код ошибки — добавление (ADR-0016 п. 2).
-  # Запись покрывает только новое значение схемы ErrorCode (поле text), не другие enum ответов (статусы КП, счетов, карточек).
-  # Срок — пересмотр; сделать правило постоянным (без срока) — вопрос архитектору в docs/QUESTIONS.md (NOTIFY-1).
-  - file: erp-portal.yaml
-    id: response-property-enum-value-added
-    text: "#/components/schemas/ErrorCode]"
-    reason: "Новое значение ErrorCode портала: anyOf со string, клиенты понимают незнакомый код по HTTP-статусу (ADR-0016 п. 2)"
-    until: 2026-12-31
-  # Построчные ответы «Моих товаров» (PART-2) ссылаются на ErrorCode напрямую (`errors[].code`, без anyOf со string), поэтому
-  # новый код там oasdiff видит как ломающее. Коды NOTIFY-1 (Telegram) в построчных ошибках ERP не отдаёт — там только
-  # NOT_FOUND, PRODUCT_NOT_SUBMITTABLE, OFFER_EXPIRED; сделать поле открытым (anyOf, как `detail`) или своим перечнем — тот
-  # же вопрос архитектору (docs/QUESTIONS.md, NOTIFY-1).
-  - file: erp-portal.yaml
-    id: response-property-enum-value-added
-    path: /partner/products/submit
-    operation: POST
-    text: "`errors/items/code`"
-    reason: "Новые коды ErrorCode (Telegram, NOTIFY-1) в построчных ошибках «Моих товаров» не возникают: там только коды строк"
-    until: 2026-12-31
-  - file: erp-portal.yaml
-    id: response-property-enum-value-added
-    path: /partner/offers/confirm
-    operation: POST
-    text: "`errors/items/code`"
-    reason: "Новые коды ErrorCode (Telegram, NOTIFY-1) в построчных ошибках «Моих товаров» не возникают: там только коды строк"
-    until: 2026-12-31
   # B4 (волна 11): приёмник шины /bus/v1/events заменяет вебхук ERP → CRM. Вызывающая сторона (ERP) переходит на шину в B3,
   # данных прода нет (карт-бланш владельца, runbook wave11-bus-v1), поэтому deprecated и срок отказа не нужны. Запись удалить
   # сразу после слияния B4 (проверка напечатает предупреждение, что она ничему не соответствует).

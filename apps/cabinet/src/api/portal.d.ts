@@ -928,10 +928,12 @@ export interface components {
             detail: components["schemas"]["ErrorCode"] | string;
         };
         /**
-         * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
-         * @enum {string}
+         * @description Коды ошибок портала (Q-17) — **открытое множество** (решение архитектора 2026-11-04, CONTRACTS §7.2; эталон —
+         *     Zalando RESTful API Guidelines, `x-extensible-enum`): перечень ниже — известные на сегодня коды, новый код
+         *     добавляется без смены версии и не ломает контракт. Клиент обрабатывает незнакомый код как общую ошибку по
+         *     HTTP-статусу (Cabinet — `apiErrorKey`). Поэтому здесь `x-extensible-enum`, а не `enum`.
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "CONTACT_NOT_IN_CRM" | "TELEGRAM_LINK_UNAVAILABLE" | "TELEGRAM_NOT_LINKED" | "TELEGRAM_ALREADY_LINKED" | "XLSX_REQUIRED" | "VALID_DATE_INVALID" | "OFFER_VALIDITY_RANGE_INVALID" | "PRODUCT_NOT_SUBMITTABLE" | "OFFER_EXPIRED" | "IMPORT_FAILED";
+        ErrorCode: string;
         /**
          * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
          *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой

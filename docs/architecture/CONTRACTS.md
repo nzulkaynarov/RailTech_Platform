@@ -334,6 +334,16 @@ BFF (модели ответов CRM, `make -C apps/platform crm-models`). Св�
 бэкенда, выключены только для него). Правило мажора то же, что для остальных файлов (в том числе «поднятый мажор не оправдывает ломку живой операции»): внутренний API CRM `/api/v1`
 меняется совместимо либо через `deprecated` и срок, либо записью в файл исключений.
 
+### 7.2. ErrorCode — открытое множество (решение архитектора 2026-11-04, NOTIFY-1)
+
+Коды ошибок портала (`ErrorCode` в `erp-portal.yaml`: `detail` и построчные `errors[].code`) — открытое множество по
+образцу Zalando RESTful API Guidelines (`x-extensible-enum`): перечень — известные на сегодня коды, новый код
+добавляется без смены версии и не ломает контракт. Поэтому в схеме `type: string` + `x-extensible-enum`, а не `enum`
+(oasdiff не считает новое значение ломающим, исключений в `openapi-breaking-exceptions.yaml` не нужно). Клиент обязан
+обрабатывать незнакомый код как общую ошибку по HTTP-статусу: Cabinet — `apiErrorKey` и `rowErrorKey`
+(`apps/cabinet/src/api/errors.ts`), тест — `portal-client.test.ts`. Новый код по-прежнему попадает в перечень в том же
+PR, что и код ERP (`portal/error_codes.py`, сверка — `portal/tests/test_error_codes.py`).
+
 ## 9. Шина rt_bus (события v2)
 
 ADR-0014 (шина, правило «интеграции только через шину» — ORCHESTRATOR §3.14), ADR-0015 (владелец поля, домены),

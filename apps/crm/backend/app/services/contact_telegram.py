@@ -285,3 +285,42 @@ async def sync_telegram_names(
         return
     identity.tg_username, identity.tg_first_name = username, first_name
     await republish_contacts_of(session, [identity.id], audit.Actor(None, "bot"))
+
+
+async def unlink_erased(
+    session: AsyncSession, identity_ids: Sequence[int], moment: datetime, actor: audit.Actor
+) -> None:
+    """`/delete` (решение архитектора 2026-11-04): Telegram обезличенного лида отвязывается от
+    контактов — снимаются привязка, клиент и подтверждение, ставится `notifications_off_at`, а
+    контакты уходят `crm.contact.updated` без `telegram_user_id` и имён (Mini App закрыт). Новое
+    сообщение того же человека — новое анонимное обращение; имена в ERP снова попадут, только когда
+    контакт сам привяжет Telegram по ссылке из кабинета (привязка и есть согласие)."""
+    if not identity_ids:
+        return
+    contacts = (
+        await session.scalars(
+            select(ClientContact)
+            .where(ClientContact.telegram_identity_id.in_(list(identity_ids)))
+            .with_for_update()
+        )
+    ).all()
+    identities = (
+        await session.scalars(
+            select(TelegramIdentity)
+            .where(TelegramIdentity.id.in_(list(identity_ids)))
+            .with_for_update()
+        )
+    ).all()
+    for identity in identities:
+        _release_telegram(identity, moment)
+    for contact in contacts:
+        contact.telegram_identity_id = None
+        await audit.record(
+            session,
+            actor,
+            "client.contact_telegram_self_unlink",
+            "client",
+            contact.client_id,
+            after={"contact_id": contact.id, "reason": "erased"},
+        )
+        await bus_events.contact_updated(session, contact, actor)

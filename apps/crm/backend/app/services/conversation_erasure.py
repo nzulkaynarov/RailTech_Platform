@@ -14,7 +14,7 @@ from app.models.leads import TelegramIdentity
 from app.repositories import leads as repo
 from app.security.audit import Actor
 from app.services import cabinet_chat
-from app.services.contact_telegram import republish_contacts_of
+from app.services.contact_telegram import unlink_erased
 from app.services.conversation_support import current_lead, lang_of, report_failure
 from app.services.conversation_types import AttachmentsEraser, Outgoing
 from app.services.settings import SettingsService
@@ -75,8 +75,9 @@ class ErasureMixin:
                 # Кабинет (CHAT-1): только сообщения этого человека; беседа остаётся клиенту.
                 cabinet = await cabinet_chat.erase_for_lead(session, lead)
                 count = await repo.erase_lead(session, lead, now)
-                # Имя и ник Telegram стёрты — ERP стирает их и в проекции контакта (NOTIFY-1).
-                await republish_contacts_of(session, identity_ids, Actor(None, "bot"))
+                # Telegram отвязывается от контактов (решение архитектора 2026-11-04, NOTIFY-1): ERP
+                # получает контакт без Telegram и имён, Mini App закрывается.
+                await unlink_erased(session, identity_ids, now, Actor(None, "bot"))
                 # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id
                 # и — для ленты кабинета — чьи сообщения стереть.
                 await bus_events.lead_erased(session, lead, Actor(None, "bot"), cabinet=cabinet)

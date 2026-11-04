@@ -270,7 +270,7 @@ class TestMe:
         ]
         assert set(schemas["ModuleCode"]["enum"]) == {m for modules in ROLE_MODULES.values() for m in modules}
         assert set(schemas["PortalRole"]["enum"]) == {role.value for role in RelationshipRole}
-        assert "MODULE_REQUIRED" in component("ErrorCode")["enum"]
+        assert "MODULE_REQUIRED" in component("ErrorCode")["x-extensible-enum"]
 
 
 # ── Эндпоинты по модулям ───────────────────────────────────────────────────────────────────────────

@@ -1958,8 +1958,12 @@ components:
 
     ErrorCode:
       type: string
-      description: Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
-      enum:
+      description: |
+        Коды ошибок портала (Q-17) — **открытое множество** (решение архитектора 2026-11-04, CONTRACTS §7.2; эталон —
+        Zalando RESTful API Guidelines, `x-extensible-enum`): перечень ниже — известные на сегодня коды, новый код
+        добавляется без смены версии и не ломает контракт. Клиент обрабатывает незнакомый код как общую ошибку по
+        HTTP-статусу (Cabinet — `apiErrorKey`). Поэтому здесь `x-extensible-enum`, а не `enum`.
+      x-extensible-enum:
         - UNAUTHORIZED
         - INVALID_INIT_DATA
         - FORBIDDEN

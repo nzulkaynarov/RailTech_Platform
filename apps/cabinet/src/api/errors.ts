@@ -27,6 +27,16 @@ export function apiErrorKey(error: unknown): string {
 }
 
 /**
+ * Код ошибки строки (построчные ответы «Моих товаров» и подобные) → ключ i18n: известный — свой текст `<prefix>.<CODE>`,
+ * незнакомый — общий текст. ErrorCode портала — открытое множество (CONTRACTS §7.2): новый код ERP не должен показываться
+ * клиенту ключом перевода.
+ */
+export function rowErrorKey(prefix: string, code: string): string {
+  const own = `${prefix}.${code}`;
+  return i18n.exists(own) ? own : 'apiErrors.UNKNOWN';
+}
+
+/**
  * Ошибка входа (magic-link, Telegram): 429 — лимит попыток входа, 403 — доступ закрыт
  * (компания в архиве, Q-18); остальное — как везде.
  */
