@@ -38,7 +38,13 @@ NOT_FOR_CRM: Final = frozenset(
 OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})
 #: Партнёр приглашён в кабинет (PART-CRM): CRM заводит клиента — `app/services/partner_clients.py`.
 #: Не событие сделки (в `data` нет `crm_client_id`), поэтому `ErpEventsService` его не получает.
-PARTNER_REQUEST: Final = frozenset({"uz.railtech.erp.partner.client_requested.v1"})
+PARTNER_REQUEST: Final = frozenset(
+    {
+        "uz.railtech.erp.partner.client_requested.v1",
+        # ERP не приняла `linked` (клиент CRM занят в ERP другой компанией): CRM снимает привязку.
+        "uz.railtech.erp.partner.client_rejected.v1",
+    }
+)
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")
 
 

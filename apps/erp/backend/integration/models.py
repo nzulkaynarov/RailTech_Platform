@@ -288,6 +288,7 @@ class ServiceCredential(models.Model):
 
 class PartnerCrmStatus(models.TextChoices):
     REQUESTED = "requested", _("Запрошен")
+    PENDING_CONFIRMATION = "pending_confirmation", _("Ждёт подтверждения менеджера")
     CONFLICT = "conflict", _("Конфликт")
 
 
@@ -296,8 +297,10 @@ class PartnerCrmLink(models.Model):
 
     «Заведён» живёт в самом сопоставлении, поэтому здесь только два состояния: `requested` — ERP опубликовала
     `partner.client_requested` (дата последнего запроса) и ждёт ответ; `conflict` — CRM ответила, что найденный клиент уже
-    сопоставлен другой компании ERP (`crm_client_id` — этот клиент, `conflict_company_id` — та компания). Строка не заменяет
-    сопоставление: когда оно появилось, состояние читается из него.
+    сопоставлен другой компании ERP (`crm_client_id` — этот клиент, `conflict_company_id` — та компания);
+    `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера («Это та же компания»
+    или «Нет — завести нового»; `crm_client_id` — найденный клиент). Строка не заменяет сопоставление: когда оно
+    появилось, состояние читается из него.
     """
 
     company = models.OneToOneField(
@@ -306,7 +309,7 @@ class PartnerCrmLink(models.Model):
         related_name="partner_crm_link",
         verbose_name=_("Компания ERP"),
     )
-    status = models.CharField(max_length=16, choices=PartnerCrmStatus.choices, default=PartnerCrmStatus.REQUESTED)
+    status = models.CharField(max_length=24, choices=PartnerCrmStatus.choices, default=PartnerCrmStatus.REQUESTED)
     crm_client_id = models.BigIntegerField(
         null=True,
         blank=True,

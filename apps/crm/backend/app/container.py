@@ -539,7 +539,7 @@ class Container:
         """Клиенты из кабинета партнёров ERP (PART-CRM): запрос по шине → клиент и контакты."""
         from app.services.partner_clients import PartnerClientService
 
-        return PartnerClientService()
+        return PartnerClientService(self.session_factory)
 
     @cached_property
     def eds_notices(self) -> "EdsNoticeService":

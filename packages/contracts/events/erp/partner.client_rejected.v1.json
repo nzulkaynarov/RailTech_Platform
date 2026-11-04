@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/partner.client_rejected.v1.json",
+  "title": "Привязка клиента партнёра отклонена ERP",
+  "description": "Тип uz.railtech.erp.partner.client_rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP не приняла ответ CRM uz.railtech.crm.partner.client_resolved.v1 со status = linked: клиент CRM crm_client_id в ERP уже сопоставлен другой компании (other_erp_company_id), либо эта компания уже сопоставлена другому клиенту CRM, а ERP ничего не перепривязывает. CRM снимает со своего клиента erp_company_id, записывает это в журнал аудита и уведомляет ответственного; сотрудник исправляет ИНН или рег. номер и приглашает партнёра ещё раз. Только идентификаторы.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "reason",
+    "actor"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания партнёра в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент CRM, которого ERP не приняла"
+    },
+    "reason": {
+      "type": "string",
+      "enum": [
+        "client_mapped_to_other_company",
+        "company_mapped_to_other_client"
+      ],
+      "description": "Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client)"
+    },
+    "other_erp_company_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Компания ERP, с которой клиент CRM уже сопоставлен (только при client_mapped_to_other_company)"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

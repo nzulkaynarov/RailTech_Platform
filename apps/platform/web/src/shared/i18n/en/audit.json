@@ -234,6 +234,8 @@
       "erp_handoff_failed": "Client handoff to ERP failed",
       "partner_linked": "Partner became a client (linked to the ERP company)",
       "partner_conflict": "Partner client: ERP mapping conflict",
+      "partner_pending": "ERP partner matches a client: waiting for a manager's confirmation",
+      "partner_released": "Client's link to the partner's ERP company removed",
       "close_request": "Closed a service request",
       "contact_create": "Added a client contact",
       "contact_update": "Updated a client contact",

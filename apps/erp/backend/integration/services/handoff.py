@@ -37,7 +37,7 @@ from portal.services.invitation import invite_contact
 from crm.models import ActivityLog, Deal
 
 from ..exceptions import IntegrationConflict
-from ..models import CrmClientMapping, CrmContactMapping
+from ..models import CrmClientMapping, CrmContactMapping, PartnerCrmLink
 from . import events, stages
 
 logger = logging.getLogger(__name__)
@@ -272,9 +272,15 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
         return _repeat_response(mapping, _requested_channels(data)), False
 
     company, linked_by_inn = _get_or_create_company(data, crm_client_id)
+    from . import partner_client  # здесь, а не наверху: partner_client берёт `_advisory_lock` отсюда
+
+    partner_client.lock_company(company.pk)  # по очереди с заявками партнёра и ответом CRM (PART-CRM)
     # Сопоставление — ДО сделки и приглашения: события строятся по нему.
     mapping = CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
     _consent(company, data["consent"])
+    # Заявки партнёра, ждавшие сопоставления, уходят тем же путём, что после ответа CRM (PART-CRM).
+    partner_client.release_deferred_requests(company, crm_client_id)
+    PartnerCrmLink.objects.filter(company=company).delete()
 
     _contacts, primary = _create_contacts(company, data, can_act=not linked_by_inn)
 

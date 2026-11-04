@@ -642,13 +642,15 @@
       "label": "CRM client",
       "linked": "Created",
       "requested": "Pending",
+      "pending_confirmation": "Waiting for a manager's confirmation",
       "conflict": "Conflict",
       "open": "Open the client",
       "openNamed": "Open CRM client #{{id}}",
       "hint": {
         "linked": "The partner is a CRM client: their requests go to the manager like client requests; quotes and documents work.",
         "requested": "The request has gone to CRM and the client is being created. Until then the partner's requests are kept here and reach the manager on their own.",
-        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed: merge the cards in CRM and invite the partner again."
+        "pending_confirmation": "The partner looks like an existing CRM client. A manager confirms in the client's card whether it is the same company; until then the partner's requests are kept here and will go on their own.",
+        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the supplier's card and on the CRM client, fix the wrong one and invite the partner again."
       }
     },
     "rights": "What the partner will see",

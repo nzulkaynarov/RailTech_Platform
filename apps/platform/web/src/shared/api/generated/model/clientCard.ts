@@ -8,6 +8,7 @@ import type { ClientContactView } from "./clientContactView";
 import type { ClientDocumentRow } from "./clientDocumentRow";
 import type { ClientInvitation } from "./clientInvitation";
 import type { ClientLeadLink } from "./clientLeadLink";
+import type { ClientPartnerRequest } from "./clientPartnerRequest";
 import type { ClientRequestRow } from "./clientRequestRow";
 
 export interface ClientCard {
@@ -25,6 +26,8 @@ export interface ClientCard {
   requests: ClientRequestRow[];
   documents: ClientDocumentRow[];
   invitation: ClientInvitation | null;
+  /** Партнёры из ERP, похожие на этого клиента по ИНН или паре «страна + рег. номер» и ждущие решения менеджера (PART-CRM); пусто — решать нечего */
+  partner_requests: ClientPartnerRequest[];
   /** Части карточки, которые CRM не отдала (`unavailable`) — экран показывает плашку в разделе */
   sources: ClientCardSources;
 }

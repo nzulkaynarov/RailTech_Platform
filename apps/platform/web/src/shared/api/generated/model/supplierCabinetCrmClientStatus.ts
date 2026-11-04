@@ -4,7 +4,7 @@
  */
 
 /**
- * `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `linked` — клиент заведён (новый или найденный) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+ * `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
  */
 export type SupplierCabinetCrmClientStatus =
   (typeof SupplierCabinetCrmClientStatus)[keyof typeof SupplierCabinetCrmClientStatus];
@@ -12,6 +12,7 @@ export type SupplierCabinetCrmClientStatus =
 export const SupplierCabinetCrmClientStatus = {
   none: "none",
   requested: "requested",
+  pending_confirmation: "pending_confirmation",
   linked: "linked",
   conflict: "conflict",
 } as const;

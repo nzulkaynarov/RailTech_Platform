@@ -34,6 +34,18 @@
   },
   "retry": "Retry",
   "card": {
+    "partner": {
+      "title": "A partner from the cabinet is waiting for confirmation",
+      "text": "A manufacturer or supplier was invited to the cabinet and its details match this client. We never merge them on our own: if it is the same company, confirm and the partner's requests will arrive in this client's card; if not, we will create a new client for the partner.",
+      "erp": "ERP company #",
+      "matchedBy": {
+        "inn": "tax ID matches",
+        "registration_number": "country and registration number match"
+      },
+      "confirm": "Same company",
+      "decline": "No — create a new client",
+      "readOnly": "A colleague who can manage clients decides."
+    },
     "label": "Client card",
     "close": "Close",
     "inn": "TIN",

@@ -264,6 +264,12 @@ channels:
     messages:
       uz.railtech.erp.partner.client_requested.v1:
         $ref: '#/components/messages/uz.railtech.erp.partner.client_requested.v1'
+  uz.railtech.erp.partner.client_rejected.v1:
+    address: uz.railtech.erp.partner.client_rejected.v1
+    title: Привязка клиента партнёра отклонена ERP
+    messages:
+      uz.railtech.erp.partner.client_rejected.v1:
+        $ref: '#/components/messages/uz.railtech.erp.partner.client_rejected.v1'
   uz.railtech.erp.invoice.issued.v1:
     address: uz.railtech.erp.invoice.issued.v1
     title: Счёт выставлен
@@ -707,6 +713,15 @@ operations:
       $ref: '#/channels/uz.railtech.erp.partner.client_requested.v1'
     messages:
       - $ref: '#/channels/uz.railtech.erp.partner.client_requested.v1/messages/uz.railtech.erp.partner.client_requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.partner.client_rejected.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.partner.client_rejected.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.partner.client_rejected.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.partner.client_rejected.v1/messages/uz.railtech.erp.partner.client_rejected.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.invoice.issued.v1:
@@ -1836,6 +1851,31 @@ components:
                   const: rt://contracts/events/erp/partner.client_requested/v1
                 data:
                   $ref: './erp/partner.client_requested.v1.json'
+    uz.railtech.erp.partner.client_rejected.v1:
+      name: uz.railtech.erp.partner.client_rejected.v1
+      title: Привязка клиента партнёра отклонена ERP
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.partner.client_rejected.v1
+                dataschema:
+                  const: rt://contracts/events/erp/partner.client_rejected/v1
+                data:
+                  $ref: './erp/partner.client_rejected.v1.json'
     uz.railtech.erp.invoice.issued.v1:
       name: uz.railtech.erp.invoice.issued.v1
       title: Счёт выставлен

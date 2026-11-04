@@ -329,6 +329,8 @@ export * from "./offsiteConnectorIn";
 export * from "./offsiteConnectorInProvider";
 export * from "./offsiteStatusOut";
 export * from "./offsiteStatusOutProvider";
+export * from "./partnerRequestContact";
+export * from "./partnerRequestOut";
 export * from "./passwordReset";
 export * from "./permissionsResponse";
 export * from "./permissionsResponsePermissions";

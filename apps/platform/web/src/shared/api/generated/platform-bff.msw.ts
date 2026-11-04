@@ -244,6 +244,7 @@ import type {
   OffsiteCheck,
   OnBehalfNote,
   OnBehalfRecord,
+  PartnerRequestDecision,
   PaymentBoard,
   PaymentCard,
   PaymentMemoCard,
@@ -23010,6 +23011,22 @@ export const getGetCrmClientResponseMock = (
     { ...getGetCrmClientResponseClientInvitationMock() },
     null,
   ]),
+  partner_requests: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    id: faker.number.int(),
+    erp_company_id: faker.number.int(),
+    company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    matched_by: faker.helpers.arrayElement(["inn", "registration_number"] as const),
+    contacts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
   sources: {
     contacts: faker.helpers.arrayElement(Object.values(SourceState)),
     requests: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -23017,6 +23034,14 @@ export const getGetCrmClientResponseMock = (
   },
   ...overrideResponse,
 });
+
+export const getConfirmCrmPartnerRequestResponseMock = (
+  overrideResponse: Partial<Extract<PartnerRequestDecision, object>> = {},
+): PartnerRequestDecision => ({ client_id: faker.number.int(), ...overrideResponse });
+
+export const getDeclineCrmPartnerRequestResponseMock = (
+  overrideResponse: Partial<Extract<PartnerRequestDecision, object>> = {},
+): PartnerRequestDecision => ({ client_id: faker.number.int(), ...overrideResponse });
 
 export const getResendCrmClientInvitationResponseMock = (
   overrideResponse: Partial<Extract<ClientInvitation, object>> = {},
@@ -24918,7 +24943,13 @@ export const getGetSupplierCabinetAccessResponseMock = (
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   crm_client: {
-    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    status: faker.helpers.arrayElement([
+      "none",
+      "requested",
+      "pending_confirmation",
+      "linked",
+      "conflict",
+    ] as const),
     crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   },
   relationship: faker.helpers.arrayElement([
@@ -25050,7 +25081,13 @@ export const getUpdateSupplierCabinetRightsResponseMock = (
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   crm_client: {
-    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    status: faker.helpers.arrayElement([
+      "none",
+      "requested",
+      "pending_confirmation",
+      "linked",
+      "conflict",
+    ] as const),
     crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   },
   relationship: faker.helpers.arrayElement([
@@ -25142,7 +25179,13 @@ export const getInviteSupplierToCabinetResponseMock = (
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   crm_client: {
-    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    status: faker.helpers.arrayElement([
+      "none",
+      "requested",
+      "pending_confirmation",
+      "linked",
+      "conflict",
+    ] as const),
     crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   },
   relationship: faker.helpers.arrayElement([
@@ -25234,7 +25277,13 @@ export const getSuspendSupplierCabinetAccessResponseMock = (
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   crm_client: {
-    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    status: faker.helpers.arrayElement([
+      "none",
+      "requested",
+      "pending_confirmation",
+      "linked",
+      "conflict",
+    ] as const),
     crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
   },
   relationship: faker.helpers.arrayElement([
@@ -33722,6 +33771,54 @@ export const getGetCrmClientMockHandler = (
   );
 };
 
+export const getConfirmCrmPartnerRequestMockHandler = (
+  overrideResponse?:
+    | PartnerRequestDecision
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerRequestDecision> | PartnerRequestDecision),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/clients/:id/partner-requests/:requestId/confirm",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getConfirmCrmPartnerRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeclineCrmPartnerRequestMockHandler = (
+  overrideResponse?:
+    | PartnerRequestDecision
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PartnerRequestDecision> | PartnerRequestDecision),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/clients/:id/partner-requests/:requestId/decline",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeclineCrmPartnerRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getResendCrmClientInvitationMockHandler = (
   overrideResponse?:
     | ClientInvitation
@@ -35297,6 +35394,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetCrmLeadMockHandler(),
   getListCrmClientsMockHandler(),
   getGetCrmClientMockHandler(),
+  getConfirmCrmPartnerRequestMockHandler(),
+  getDeclineCrmPartnerRequestMockHandler(),
   getResendCrmClientInvitationMockHandler(),
   getCreateCrmRequestMockHandler(),
   getRetryCrmRequestMockHandler(),

@@ -201,11 +201,16 @@ class TestLinked:
         assert supplier.types.filter(code="CLIENT").count() == 1
         assert ActivityLog.objects.filter(event_code="partner.crm_linked", company_id=supplier.pk).count() == 1
 
-    def test_company_mapped_to_another_crm_client_is_not_rebound(self, supplier, contact):
+    def test_company_mapped_to_another_crm_client_is_not_rebound_and_crm_is_told(self, supplier, contact):
         CrmClientMapping.objects.create(crm_client_id=55, company=supplier)
-        outcome = partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=77))
-        assert outcome.status == partner_client.SKIPPED_OTHER_CLIENT
+
+        partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=77))
+
         assert CrmClientMapping.objects.get(company=supplier).crm_client_id == 55
+        event = bus_support.only("partner.client_rejected")
+        bus_support.assert_matches_contract(event)
+        assert event["data"]["crm_client_id"] == 77
+        assert event["data"]["reason"] == "company_mapped_to_other_client"
 
     def test_crm_client_held_by_another_company_is_a_conflict_not_a_rebind(self, supplier, contact):
         other = Company.objects.create(name="Другая", inn="300000111")
@@ -216,6 +221,16 @@ class TestLinked:
         assert CrmClientMapping.objects.get(crm_client_id=77).company_id == other.pk
         assert not CrmClientMapping.objects.filter(company=supplier).exists()
         assert partner_client.crm_client_state(supplier) == {"status": "conflict", "crm_client_id": 77}
+        # CRM снимет `erp_company_id` со своего клиента: ERP отвечает ей событием, а не молчит
+        event = bus_support.only("partner.client_rejected")
+        bus_support.assert_matches_contract(event)
+        assert event["data"] == {
+            "erp_company_id": supplier.pk,
+            "crm_client_id": 77,
+            "reason": "client_mapped_to_other_company",
+            "other_erp_company_id": other.pk,
+            "actor": {"type": "system"},
+        }
 
     def test_unknown_company_is_skipped(self):
         outcome = partner_client.apply_client_resolved(
@@ -232,6 +247,65 @@ class TestLinked:
 
 
 # ── Ответ: conflict ───────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+class TestPendingConfirmation:
+    """CRM нашла похожего клиента без сопоставления и ждёт менеджера: ничего не привязывается (решение архитектора по #397)."""
+
+    def pending(self, supplier, crm_client_id=88):
+        return {
+            "erp_company_id": supplier.pk,
+            "status": "pending_confirmation",
+            "crm_client_id": crm_client_id,
+            "matched_by": "inn",
+            "actor": {"type": "system"},
+        }
+
+    def test_no_mapping_no_client_type_no_contact_mapping(self, supplier, contact):
+        outcome = partner_client.apply_client_resolved(self.pending(supplier))
+
+        assert outcome.applied
+        assert not CrmClientMapping.objects.exists()
+        assert not supplier.types.filter(code="CLIENT").exists()
+        assert not CrmContactMapping.objects.exists()
+        assert partner_client.crm_client_state(supplier) == {"status": "pending_confirmation", "crm_client_id": 88}
+
+    def test_requests_stay_deferred_until_the_manager_decides(self, supplier, contact):
+        from django.conf import settings as dj_settings
+        from portal.tests.conftest import PortalAPIClient, make_portal_session
+
+        CompanyRelationship.objects.create(
+            company=supplier, role="partner", status="active", modules=["my_products", "catalog_requests"]
+        )
+        session = make_portal_session(contact, supplier, "magic_link")
+        api = PortalAPIClient()
+        api.cookies[dj_settings.PORTAL_SESSION_COOKIE_NAME] = session.raw_token
+        api.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+        assert (
+            api.post(f"{PORTAL}/requests", {"summary": "Кабель", "lines": [{"text": "К"}]}, format="json").status_code
+            == 201
+        )
+
+        partner_client.apply_client_resolved(self.pending(supplier))
+        assert bus_support.published("request.created") == []
+        assert DeferredRequestEvent.objects.get().published_at is None
+
+        partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=88))  # менеджер подтвердил
+        assert len(bus_support.published("request.created")) == 1
+        assert partner_client.crm_client_state(supplier) == {"status": "linked", "crm_client_id": 88}
+
+    def test_repeat_does_not_duplicate_the_journal(self, supplier, contact):
+        from crm.models import ActivityLog
+
+        partner_client.apply_client_resolved(self.pending(supplier))
+        partner_client.apply_client_resolved(self.pending(supplier))
+        assert ActivityLog.objects.filter(event_code="partner.crm_pending", company_id=supplier.pk).count() == 1
+
+    def test_late_pending_after_mapping_is_ignored(self, supplier):
+        CrmClientMapping.objects.create(crm_client_id=55, company=supplier)
+        outcome = partner_client.apply_client_resolved(self.pending(supplier))
+        assert outcome.status == partner_client.SKIPPED_OTHER_CLIENT
+        assert not PartnerCrmLink.objects.exists()
 
 
 class TestConflict:
@@ -260,6 +334,8 @@ class TestConflict:
 
         notes = Notification.objects.filter(user=relationship.responsible, event_code="partner.crm_conflict")
         assert notes.count() == 1
+        assert "объедин" not in notes[0].message.lower(), "шаги — исправить ИНН и пригласить ещё раз, а не «объединить»"
+        assert "ИНН" in notes[0].message
 
     def test_stale_conflict_after_mapping_is_ignored(self, supplier):
         CrmClientMapping.objects.create(crm_client_id=55, company=supplier)
@@ -332,9 +408,46 @@ class TestDeferredRequests:
         self.create_request(partner_api)
         assert Notification.objects.filter(event_code="portal.partner_request_unrouted").exists()
 
-    def test_client_request_without_mapping_is_not_deferred(self, supplier):
+    def test_request_of_a_company_without_the_partner_relationship_is_not_deferred(self, supplier, contact):
         """Отложенные события — только у партнёров: клиента без сопоставления по-прежнему заводит передача из CRM."""
+        from django.conf import settings as dj_settings
+        from portal.tests.conftest import PortalAPIClient, make_portal_session
+
+        client_type = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})[0]
+        supplier.types.add(client_type)  # клиент без отношения partner и без сопоставления CRM
+        assert not CompanyRelationship.objects.filter(company=supplier).exists()
+        session = make_portal_session(contact, supplier, "magic_link")
+        api = PortalAPIClient()
+        api.cookies[dj_settings.PORTAL_SESSION_COOKIE_NAME] = session.raw_token
+        api.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+
+        self.create_request(api)
+
         assert not DeferredRequestEvent.objects.exists()
+        assert bus_support.published("request.created") == []
+
+    def test_a_handoff_from_crm_releases_the_deferred_requests_of_a_partner(
+        self, partner_api, supplier, contact, settings
+    ):
+        """Сопоставление пришло не ответом CRM, а передачей клиента (`POST /clients/handoff`): заявки тоже уходят."""
+        from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+
+        self.create_request(partner_api)
+        assert DeferredRequestEvent.objects.get().published_at is None
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+
+        response = handoff(
+            api, payload(crm_client_id=4001, inn=supplier.inn, create_request=False, email="x@s.example.uz")
+        )
+
+        assert response.status_code == 201, response.content
+        created = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+        assert len(created) == 1 and created[0]["data"]["crm_client_id"] == 4001
+        assert DeferredRequestEvent.objects.get().published_at is not None
 
 
 # ── Роли сессии ───────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -376,6 +489,15 @@ class TestDeskState:
         assert state() == {"status": "none", "crm_client_id": None}
         assert invite(world, contact).status_code == 200
         assert state() == {"status": "requested", "crm_client_id": None}
+        partner_client.apply_client_resolved(
+            {
+                "erp_company_id": supplier.pk,
+                "status": "pending_confirmation",
+                "crm_client_id": 90,
+                "actor": {"type": "system"},
+            }
+        )
+        assert state() == {"status": "pending_confirmation", "crm_client_id": 90}
         partner_client.apply_client_resolved(resolved(supplier, status="conflict", crm_client_id=88))
         assert state() == {"status": "conflict", "crm_client_id": 88}
         partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=77))

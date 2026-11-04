@@ -16,7 +16,7 @@ import uuid
 
 from django.core.files import File
 from django.db import transaction
-from integration.services import events
+from integration.services import events, partner_client
 from portal.exceptions import PortalValidationError
 from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 
@@ -67,6 +67,9 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
     """Создаёт запрос клиента; вернуть сделку. Данные уже прошли `ClientRequestCreateSerializer`."""
     draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
     with transaction.atomic():
+        # Партнёр: ответ CRM «клиент заведён» (`partner.client_resolved`) и эта заявка идут по очереди — иначе заявка, созданная
+        # между проверкой сопоставления и записью отложенного события, осталась бы неопубликованной навсегда.
+        partner_client.lock_if_partner(company)
         uploads = _lock_uploads(company, attachments)
         deal = Deal(
             company=company,

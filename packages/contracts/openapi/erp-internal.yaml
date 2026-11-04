@@ -23779,10 +23779,11 @@ components:
           allOf:
           - $ref: '#/components/schemas/DeskSupplierAccessCrmClientStatusEnum'
           description: |-
-            Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+            Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
 
             * `none` - none
             * `requested` - requested
+            * `pending_confirmation` - pending_confirmation
             * `linked` - linked
             * `conflict` - conflict
         crm_client_id:
@@ -23796,12 +23797,14 @@ components:
       enum:
       - none
       - requested
+      - pending_confirmation
       - linked
       - conflict
       type: string
       description: |-
         * `none` - none
         * `requested` - requested
+        * `pending_confirmation` - pending_confirmation
         * `linked` - linked
         * `conflict` - conflict
     DeskSupplierAccessInviteInRequest:

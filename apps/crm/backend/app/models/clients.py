@@ -1,7 +1,7 @@
 """Клиенты, документы клиентов, журнал доступа, сервисные запросы (SPEC §5.2, §5.6)."""
 
 from datetime import date, datetime
-from typing import Final
+from typing import Any, Final
 
 from sqlalchemy import (
     BigInteger,
@@ -18,7 +18,7 @@ from sqlalchemy import (
     func,
 )
 from sqlalchemy import text as sql
-from sqlalchemy.dialects.postgresql import TSVECTOR
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base, TimestampMixin
@@ -38,13 +38,6 @@ class Client(TimestampMixin, Base):
         CheckConstraint(
             "erp_handoff_status IS NULL OR erp_handoff_status IN ('pending', 'done', 'failed')",
             name="erp_handoff_status",
-        ),
-        Index("ix_clients_inn", "inn"),
-        Index(
-            "ix_clients_country_registration_number",
-            "country",
-            "registration_number",
-            postgresql_where=sql("registration_number IS NOT NULL"),
         ),
     )
 
@@ -67,6 +60,40 @@ class Client(TimestampMixin, Base):
     erp_handoff_error: Mapped[str | None] = mapped_column(String(500))
     # Заявку в ERP ещё предстоит завести: не теряется при повторе после сбоя.
     erp_handoff_request: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+
+
+class PartnerClientRequest(TimestampMixin, Base):
+    """Запрос ERP «завести клиента для партнёра», ждущий решения менеджера (PART-CRM).
+
+    Найденный по ИНН или паре «страна + рег. номер» существующий клиент без сопоставления не
+    привязывается сам: совпадение по ключу — предложение слияния человеку. Менеджер в карточке
+    клиента подтверждает («Это та же компания») или заводит нового клиента. `payload` — `data`
+    события запроса целиком (реквизиты и контакты партнёра), чтобы решение не зависело от ERP.
+    """
+
+    __tablename__ = "partner_client_requests"
+    __table_args__ = (
+        CheckConstraint("status IN ('pending', 'confirmed', 'declined')", name="status"),
+        Index("ix_partner_client_requests_client_id", "client_id"),
+        # Одна ждущая заявка на компанию ERP: повторный запрос обновляет её, а не плодит новые.
+        Index(
+            "uq_partner_client_requests_pending",
+            "erp_company_id",
+            unique=True,
+            postgresql_where=sql("status = 'pending'"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    client_id: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"))
+    erp_company_id: Mapped[int] = mapped_column(BigInteger)
+    matched_by: Mapped[str] = mapped_column(String(24))
+    status: Mapped[str] = mapped_column(String(12), server_default=sql("'pending'"))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    decided_by_user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Document(TimestampMixin, Base):

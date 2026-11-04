@@ -18,7 +18,7 @@ RelationshipStatus = Literal["invited", "active", "suspended"]
 PartnerKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 PartnerModule = Literal["my_products", "catalog_requests"]
 Language = Literal["ru", "uz", "en"]
-CrmClientStatus = Literal["none", "requested", "linked", "conflict"]
+CrmClientStatus = Literal["none", "requested", "pending_confirmation", "linked", "conflict"]
 
 
 class Out(BaseModel):
@@ -125,7 +125,12 @@ def to_contact(raw: Mapping[str, Any]) -> SupplierCabinetContact:
 
 def _crm_client(raw: Any) -> dict[str, Any]:
     """Клиент партнёра в CRM (PART-CRM); ответ ERP без поля — «не просили»."""
-    if not isinstance(raw, Mapping) or raw.get("status") not in ("requested", "linked", "conflict"):
+    if not isinstance(raw, Mapping) or raw.get("status") not in (
+        "requested",
+        "pending_confirmation",
+        "linked",
+        "conflict",
+    ):
         return {"status": "none", "crm_client_id": None}
     return {"status": raw["status"], "crm_client_id": opt_ident(raw.get("crm_client_id"))}
 

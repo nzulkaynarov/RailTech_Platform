@@ -143,6 +143,8 @@ export const labelsRu = {
     "client.erp_handoff_failed": "Передача клиента в бэк-офис (ERP) не удалась",
     "client.partner_linked": "Партнёр стал клиентом (сопоставлен с компанией ERP)",
     "client.partner_conflict": "Клиент партнёра: конфликт сопоставления с ERP",
+    "client.partner_pending": "Партнёр ERP совпал с клиентом: ждёт подтверждения менеджера",
+    "client.partner_released": "Снята привязка клиента к компании ERP партнёра",
     "client.unlink_telegram": "Отвязал Telegram",
     "client.close_request": "Закрыл сервисный запрос",
     "client.contact_create": "Добавил контакт",

@@ -62,15 +62,20 @@ def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> 
         assert handler.func is on_mail_requested
 
 
-def test_partner_client_request_has_its_own_handler_and_no_deal_feed() -> None:
-    """PART-CRM: `erp.partner.client_requested` — `PartnerClientService`, не `ErpEventsService`."""
-    from app.bus.handlers import on_partner_client_requested
+def test_partner_client_events_have_their_own_handlers_and_no_deal_feed() -> None:
+    """PART-CRM: `erp.partner.client_*` — `PartnerClientService`, не `ErpEventsService`."""
+    from app.bus.handlers import on_partner_client_rejected, on_partner_client_requested
 
+    own = {
+        "uz.railtech.erp.partner.client_requested.v1": on_partner_client_requested,
+        "uz.railtech.erp.partner.client_rejected.v1": on_partner_client_rejected,
+    }
+    assert set(own) == PARTNER_REQUEST
     assert not set(erp_types()) & PARTNER_REQUEST
-    for event_type in PARTNER_REQUEST:
+    for event_type, func in own.items():
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
-        assert handler.func is on_partner_client_requested
+        assert handler.func is func
         data = example_envelope(event_type)["data"]
         assert REGISTRY.validate_data(event_type, data, tolerant=False) == []
         assert REGISTRY.validate_data(event_type, {**data, "future": 1}, tolerant=True) == []

@@ -4011,6 +4011,184 @@ export const useResendInvitation = <TError = ErrorType<ErrorOut>, TContext = unk
   return useMutation(getResendInvitationMutationOptions(options), queryClient);
 };
 
+export const getConfirmPartnerRequestUrl = (clientId: number, requestId: number) => {
+  return `/api/v1/clients/${clientId}/partner-requests/${requestId}/confirm`;
+};
+
+/**
+ * «Это та же компания» (PART-CRM): клиент сопоставляется компании ERP партнёра, контакты
+ * запроса добавляются, ERP получает `partner.client_resolved` со статусом `linked`.
+ *
+ * 404 — заявки нет или она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+ * @summary Confirm Partner Request
+ */
+export const confirmPartnerRequest = async (
+  clientId: number,
+  requestId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionResult> => {
+  return http<ActionResult>(getConfirmPartnerRequestUrl(clientId, requestId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getConfirmPartnerRequestMutationKey = () => ["confirmPartnerRequest"] as const;
+
+export const getConfirmPartnerRequestMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmPartnerRequest>>,
+    TError,
+    ConfirmPartnerRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmPartnerRequest>>,
+  TError,
+  ConfirmPartnerRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmPartnerRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmPartnerRequest>>,
+    ConfirmPartnerRequestMutationVariables
+  > = (props) => {
+    const { clientId, requestId } = props ?? {};
+
+    return confirmPartnerRequest(clientId, requestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmPartnerRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmPartnerRequest>>
+>;
+
+export type ConfirmPartnerRequestMutationError = ErrorType<ErrorOut>;
+export type ConfirmPartnerRequestMutationVariables = { clientId: number; requestId: number };
+
+/**
+ * @summary Confirm Partner Request
+ */
+export const useConfirmPartnerRequest = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmPartnerRequest>>,
+      TError,
+      ConfirmPartnerRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmPartnerRequest>>,
+  TError,
+  ConfirmPartnerRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmPartnerRequestMutationOptions(options), queryClient);
+};
+
+export const getDeclinePartnerRequestUrl = (clientId: number, requestId: number) => {
+  return `/api/v1/clients/${clientId}/partner-requests/${requestId}/decline`;
+};
+
+/**
+ * «Нет — завести нового клиента» (PART-CRM): найденный клиент не меняется, для партнёра
+ * создаётся новый клиент, ERP получает `linked`. Ответ — id нового клиента.
+ * @summary Decline Partner Request
+ */
+export const declinePartnerRequest = async (
+  clientId: number,
+  requestId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Created> => {
+  return http<Created>(getDeclinePartnerRequestUrl(clientId, requestId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDeclinePartnerRequestMutationKey = () => ["declinePartnerRequest"] as const;
+
+export const getDeclinePartnerRequestMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof declinePartnerRequest>>,
+    TError,
+    DeclinePartnerRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof declinePartnerRequest>>,
+  TError,
+  DeclinePartnerRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeclinePartnerRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof declinePartnerRequest>>,
+    DeclinePartnerRequestMutationVariables
+  > = (props) => {
+    const { clientId, requestId } = props ?? {};
+
+    return declinePartnerRequest(clientId, requestId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeclinePartnerRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof declinePartnerRequest>>
+>;
+
+export type DeclinePartnerRequestMutationError = ErrorType<ErrorOut>;
+export type DeclinePartnerRequestMutationVariables = { clientId: number; requestId: number };
+
+/**
+ * @summary Decline Partner Request
+ */
+export const useDeclinePartnerRequest = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof declinePartnerRequest>>,
+      TError,
+      DeclinePartnerRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof declinePartnerRequest>>,
+  TError,
+  DeclinePartnerRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeclinePartnerRequestMutationOptions(options), queryClient);
+};
+
 export const getLinkTelegramUrl = (clientId: number) => {
   return `/api/v1/clients/${clientId}/telegram`;
 };

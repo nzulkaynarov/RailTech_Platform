@@ -10933,6 +10933,66 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /crm/clients/{id}/partner-requests/{request_id}/confirm:
+    post:
+      tags: [clients]
+      operationId: confirmCrmPartnerRequest
+      summary: '«Это та же компания»: партнёр ERP, похожий на клиента, привязывается к найденному клиенту'
+      description: >-
+        CRM `POST /clients/{id}/partner-requests/{request_id}/confirm` (PART-CRM). Раздел `crm.clients` полный. Совпадение по
+        ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер подтверждает. Клиент сопоставляется компании
+        ERP партнёра, контакты партнёра добавляются, ERP получает ответ, заявки партнёра уходят менеджеру. 404 — заявки нет или
+        она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ClientIdPath'
+        - $ref: '#/components/parameters/PartnerRequestIdPath'
+      responses:
+        '200':
+          description: Клиент партнёра
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestDecision'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/clients/{id}/partner-requests/{request_id}/decline:
+    post:
+      tags: [clients]
+      operationId: declineCrmPartnerRequest
+      summary: '«Нет — завести нового клиента»: для партнёра ERP создаётся новый клиент CRM'
+      description: >-
+        CRM `POST /clients/{id}/partner-requests/{request_id}/decline` (PART-CRM). Раздел `crm.clients` полный. Найденный клиент
+        не меняется; новый клиент сопоставляется компании ERP партнёра. 404 — заявки нет или она уже решена.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ClientIdPath'
+        - $ref: '#/components/parameters/PartnerRequestIdPath'
+      responses:
+        '200':
+          description: Новый клиент партнёра
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PartnerRequestDecision'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /crm/clients/{id}/invitation:
     post:
       tags: [clients]
@@ -12693,6 +12753,14 @@ components:
       in: path
       required: true
       description: Клиент CRM (id)
+      schema:
+        type: integer
+        minimum: 1
+    PartnerRequestIdPath:
+      name: request_id
+      in: path
+      required: true
+      description: Заявка партнёра ERP на подтверждение (id)
       schema:
         type: integer
         minimum: 1
@@ -22806,7 +22874,7 @@ components:
     ClientCard:
       type: object
       additionalProperties: false
-      required: [id, name, inn, segment, in_erp, handoff, contacts, leads, requests, documents, invitation, sources]
+      required: [id, name, inn, segment, in_erp, handoff, contacts, leads, requests, documents, invitation, partner_requests, sources]
       properties:
         id: {type: integer}
         name: {type: string}
@@ -22828,6 +22896,12 @@ components:
           oneOf:
             - $ref: '#/components/schemas/ClientInvitation'
             - type: 'null'
+        partner_requests:
+          type: array
+          items: {$ref: '#/components/schemas/ClientPartnerRequest'}
+          description: >-
+            Партнёры из ERP, похожие на этого клиента по ИНН или паре «страна + рег. номер» и ждущие решения менеджера (PART-CRM);
+            пусто — решать нечего
         sources:
           type: object
           additionalProperties: false
@@ -22838,6 +22912,34 @@ components:
             requests: {$ref: '#/components/schemas/SourceState'}
             documents: {$ref: '#/components/schemas/SourceState'}
 
+    ClientPartnerRequest:
+      type: object
+      additionalProperties: false
+      required: [id, erp_company_id, company_name, matched_by, contacts, created_at]
+      description: >-
+        Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только
+        с подтверждения менеджера
+      properties:
+        id: {type: integer}
+        erp_company_id: {type: integer, description: Компания партнёра в ERP}
+        company_name: {type: string}
+        matched_by: {type: string, enum: [inn, registration_number], description: По чему найден клиент}
+        contacts:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [full_name, email]
+            properties:
+              full_name: {type: string}
+              email: {type: string}
+        created_at: {type: string, format: date-time}
+    PartnerRequestDecision:
+      type: object
+      additionalProperties: false
+      required: [client_id]
+      properties:
+        client_id: {type: integer, description: Клиент партнёра в CRM — подтверждённый найденный или новый}
     InvitationResendIn:
       type: object
       additionalProperties: false
@@ -23389,13 +23491,15 @@ components:
       properties:
         status:
           type: string
-          enum: [none, requested, linked, conflict]
+          enum: [none, requested, pending_confirmation, linked, conflict]
           description: >-
-            `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `linked` — клиент заведён (новый или найденный)
+            `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего
+            клиента без сопоставления и ждёт решения менеджера («Это та же компания» или «Нет — завести нового»), ничего не
+            привязано, заявки партнёра отложены; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
             и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
         crm_client_id:
           oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
-          description: 'Клиент CRM (`linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
+          description: 'Клиент CRM (`pending_confirmation`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
     SupplierCabinetContactCreate:
       type: object
       additionalProperties: false

@@ -37329,7 +37329,7 @@
                                 "$ref": "#/components/schemas/DeskSupplierAccessCrmClientStatusEnum"
                             }
                         ],
-                        "description": "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.\n\n* `none` - none\n* `requested` - requested\n* `linked` - linked\n* `conflict` - conflict"
+                        "description": "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.\n\n* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `linked` - linked\n* `conflict` - conflict"
                     },
                     "crm_client_id": {
                         "type": "integer",
@@ -37346,11 +37346,12 @@
                 "enum": [
                     "none",
                     "requested",
+                    "pending_confirmation",
                     "linked",
                     "conflict"
                 ],
                 "type": "string",
-                "description": "* `none` - none\n* `requested` - requested\n* `linked` - linked\n* `conflict` - conflict"
+                "description": "* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `linked` - linked\n* `conflict` - conflict"
             },
             "DeskSupplierAccessInviteInRequest": {
                 "type": "object",

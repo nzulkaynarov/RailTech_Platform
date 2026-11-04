@@ -186,7 +186,7 @@ export const STATUS_TONE = {
   /** Доступ партнёра в кабинет (PART-1): не открыт, приглашён, активен, приостановлен — слово даёт модуль */
   cabinetAccess: { none: NONE, invited: W, active: OK, suspended: NO },
   /** Клиент партнёра в CRM (PART-CRM): ждём ответ CRM, заведён и сопоставлен, конфликт сопоставления */
-  crmClient: { requested: W, linked: OK, conflict: NO },
+  crmClient: { requested: W, pending_confirmation: W, linked: OK, conflict: NO },
   /** Запрос на новую категорию каталога */
   categoryRequest: { pending: W, approved: OK, rejected: NO },
   /** Вид позиции каталога и строки расчёта — категория, не статус: товар, под заказ, услуга */

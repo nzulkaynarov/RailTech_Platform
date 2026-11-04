@@ -145,7 +145,29 @@ class ClientReceivablesOut(BaseModel):
     retry_after_s: int | None = None
 
 
+class PartnerRequestContact(BaseModel):
+    full_name: str
+    email: str
+
+
+class PartnerRequestOut(BaseModel):
+    """Партнёр из ERP, похожий на этого клиента: ждёт решения менеджера (PART-CRM).
+
+    Совпадение по ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер
+    подтверждает («Это та же компания») или заводит нового клиента.
+    """
+
+    id: int
+    erp_company_id: int
+    company_name: str
+    matched_by: str
+    contacts: list[PartnerRequestContact]
+    created_at: datetime
+
+
 class ClientDetail(ClientOut):
+    # Партнёры ERP, ждущие подтверждения менеджера (PART-CRM).
+    partner_requests: list[PartnerRequestOut] = []
     # Приглашение в кабинет: итог последней попытки, каналы контакта, действие «повторить» (D1-9).
     invitation: InvitationOut | None = None
     identities: list[IdentityOut]

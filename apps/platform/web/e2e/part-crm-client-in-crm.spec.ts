@@ -31,7 +31,7 @@ for (const width of WIDTHS) {
     drawer = page.getByRole("dialog", { name: "ИП «Восточный склад»" });
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Конфликт", { exact: true })).toBeVisible();
-    await expect(block.getByText(/объедините карточки в CRM/)).toBeVisible();
+    await expect(block.getByText(/Проверьте ИНН/)).toBeVisible();
     await expect(block.getByRole("link", { name: "Открыть клиента CRM №88" })).toBeVisible();
     await expectNoViolations(page, "Поставщик · клиент в CRM, конфликт");
     await block.scrollIntoViewIfNeeded();
@@ -43,5 +43,23 @@ for (const width of WIDTHS) {
     block = drawer.getByRole("region", { name: "Доступ в кабинет" });
     await expect(block.getByText("Не открыт")).toBeVisible();
     await expect(block.getByText("Клиент в CRM")).toBeHidden();
+  });
+}
+
+// Карточка клиента CRM: партнёр ERP, совпавший по ИНН, ждёт решения менеджера (подтвердить или завести нового клиента).
+for (const width of WIDTHS) {
+  test(`карточка клиента: партнёр ждёт подтверждения, ${String(width)} px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/crm/clients/6?panel=open&tab=card");
+    const partner = page.getByRole("region", { name: "Партнёр из кабинета ждёт подтверждения" });
+    await expect(partner.getByText("Демо Мануфактуринг ООО")).toBeVisible();
+    await expect(partner.getByText(/совпал ИНН/)).toBeVisible();
+    await expect(partner.getByRole("button", { name: "Это та же компания" })).toBeVisible();
+    await expectNoViolations(page, "Клиент · партнёр ждёт подтверждения");
+    await partner.scrollIntoViewIfNeeded();
+    await settledScreenshot(page, "client-partner-confirmation");
+    await partner.getByRole("button", { name: "Это та же компания" }).click();
+    await expect(partner).toBeHidden();
   });
 }

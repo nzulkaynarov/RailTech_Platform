@@ -234,6 +234,8 @@
       "erp_handoff_failed": "Mijozni ERP ga uzatish muvaffaqiyatsiz",
       "partner_linked": "Hamkor mijozga aylandi (ERP kompaniyasi bilan bog'landi)",
       "partner_conflict": "Hamkor mijozi: ERP bilan bog'lash ziddiyati",
+      "partner_pending": "ERP hamkori mijozga mos keldi: menejer tasdig'i kutilmoqda",
+      "partner_released": "Mijozning hamkor ERP kompaniyasiga bog'lanishi olib tashlandi",
       "close_request": "Xizmat so'rovini yopdi",
       "contact_create": "Mijoz kontaktini qo'shdi",
       "contact_update": "Mijoz kontaktini o'zgartirdi",

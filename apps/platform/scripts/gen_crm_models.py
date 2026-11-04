@@ -34,6 +34,8 @@ SCHEMA_REF = "#/components/schemas/"
 ROOTS = (
     "TokenResponse",
     "SsoTokenResponse",
+    # PART-CRM: партнёр ERP в карточке клиента, ждущий подтверждения менеджера
+    "PartnerRequestOut",
     # Admin · Внешние интеграции (W13-A1): коннекторы ERP, Telegram, почта; реестр внешних сервисов; модели, расходы,
     # бэкапы и состояние системы. Значений секретов в этих ответах нет — только «задан» и последние 4 символа.
     "ErpStatusOut",

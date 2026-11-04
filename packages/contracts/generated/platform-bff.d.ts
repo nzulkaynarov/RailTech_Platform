@@ -5972,6 +5972,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/clients/{id}/partner-requests/{request_id}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Это та же компания»: партнёр ERP, похожий на клиента, привязывается к найденному клиенту
+     * @description CRM `POST /clients/{id}/partner-requests/{request_id}/confirm` (PART-CRM). Раздел `crm.clients` полный. Совпадение по ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер подтверждает. Клиент сопоставляется компании ERP партнёра, контакты партнёра добавляются, ERP получает ответ, заявки партнёра уходят менеджеру. 404 — заявки нет или она уже решена; 409 — клиент или компания ERP уже сопоставлены.
+     */
+    post: operations["confirmCrmPartnerRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}/partner-requests/{request_id}/decline": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Нет — завести нового клиента»: для партнёра ERP создаётся новый клиент CRM
+     * @description CRM `POST /clients/{id}/partner-requests/{request_id}/decline` (PART-CRM). Раздел `crm.clients` полный. Найденный клиент не меняется; новый клиент сопоставляется компании ERP партнёра. 404 — заявки нет или она уже решена.
+     */
+    post: operations["declineCrmPartnerRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/clients/{id}/invitation": {
     parameters: {
       query?: never;
@@ -13371,12 +13411,36 @@ export interface components {
       requests: components["schemas"]["ClientRequestRow"][];
       documents: components["schemas"]["ClientDocumentRow"][];
       invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Партнёры из ERP, похожие на этого клиента по ИНН или паре «страна + рег. номер» и ждущие решения менеджера (PART-CRM); пусто — решать нечего */
+      partner_requests: components["schemas"]["ClientPartnerRequest"][];
       /** @description Части карточки, которые CRM не отдала (`unavailable`) — экран показывает плашку в разделе */
       sources: {
         contacts: components["schemas"]["SourceState"];
         requests: components["schemas"]["SourceState"];
         documents: components["schemas"]["SourceState"];
       };
+    };
+    /** @description Партнёр из ERP (PART-CRM), приглашённый в кабинет: по ключу совпал с этим клиентом, но клиент ничей — привязка только с подтверждения менеджера */
+    ClientPartnerRequest: {
+      id: number;
+      /** @description Компания партнёра в ERP */
+      erp_company_id: number;
+      company_name: string;
+      /**
+       * @description По чему найден клиент
+       * @enum {string}
+       */
+      matched_by: "inn" | "registration_number";
+      contacts: {
+        full_name: string;
+        email: string;
+      }[];
+      /** Format: date-time */
+      created_at: string;
+    };
+    PartnerRequestDecision: {
+      /** @description Клиент партнёра в CRM — подтверждённый найденный или новый */
+      client_id: number;
     };
     InvitationResendIn: {
       /** @enum {string} */
@@ -13892,11 +13956,11 @@ export interface components {
     /** @description Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам), заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM. */
     SupplierCabinetCrmClient: {
       /**
-       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `linked` — клиент заведён (новый или найденный) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
        * @enum {string}
        */
-      status: "none" | "requested" | "linked" | "conflict";
-      /** @description Клиент CRM (`linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
+      status: "none" | "requested" | "pending_confirmation" | "linked" | "conflict";
+      /** @description Клиент CRM (`pending_confirmation`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
       crm_client_id: components["schemas"]["CompanyItemRef"] | null;
     };
     SupplierCabinetContactCreate: {
@@ -14525,6 +14589,8 @@ export interface components {
     TicketNumberPath: string;
     /** @description Клиент CRM (id) */
     ClientIdPath: number;
+    /** @description Заявка партнёра ERP на подтверждение (id) */
+    PartnerRequestIdPath: number;
     /** @description Номер лида `L-NNNN` */
     LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -25257,6 +25323,71 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["ClientCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  confirmCrmPartnerRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+        /** @description Заявка партнёра ERP на подтверждение (id) */
+        request_id: components["parameters"]["PartnerRequestIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Клиент партнёра */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerRequestDecision"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  declineCrmPartnerRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+        /** @description Заявка партнёра ERP на подтверждение (id) */
+        request_id: components["parameters"]["PartnerRequestIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Новый клиент партнёра */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerRequestDecision"];
         };
       };
       401: components["responses"]["SessionExpired"];

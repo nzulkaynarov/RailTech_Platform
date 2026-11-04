@@ -6,6 +6,7 @@ import type { ClientDetailErpHandoffStatus } from "./clientDetailErpHandoffStatu
 import type { IdentityOut } from "./identityOut";
 import type { InvitationOut } from "./invitationOut";
 import type { LeadBrief } from "./leadBrief";
+import type { PartnerRequestOut } from "./partnerRequestOut";
 import type { ServiceRequestOut } from "./serviceRequestOut";
 
 export interface ClientDetail {
@@ -23,6 +24,7 @@ export interface ClientDetail {
   name: string;
   notes: string | null;
   owner_user_id: number | null;
+  partner_requests?: PartnerRequestOut[];
   segment: string | null;
   service_requests: ServiceRequestOut[];
 }

@@ -842,6 +842,33 @@ class MailRequestedV1(BaseModel):
     """
 
 
+class PartnerClientRejectedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.partner.client_rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP не приняла ответ CRM uz.railtech.crm.partner.client_resolved.v1 со status = linked: клиент CRM crm_client_id в ERP уже сопоставлен другой компании (other_erp_company_id), либо эта компания уже сопоставлена другому клиенту CRM, а ERP ничего не перепривязывает. CRM снимает со своего клиента erp_company_id, записывает это в журнал аудита и уведомляет ответственного; сотрудник исправляет ИНН или рег. номер и приглашает партнёра ещё раз. Только идентификаторы.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания партнёра в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент CRM, которого ERP не приняла
+    """
+    reason: Reason
+    """
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client)
+    """
+    other_erp_company_id: int | None = None
+    """
+    Компания ERP, с которой клиент CRM уже сопоставлен (только при client_mapped_to_other_company)
+    """
+    actor: Actor
+
+
 class PartnerClientRequestedV1(BaseModel):
     """
     Тип uz.railtech.erp.partner.client_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Сотрудник пригласил партнёра (изготовителя, поставщика) в кабинет, а компания ещё не сопоставлена клиенту CRM (PART-CRM, решение владельца 2026-11-04: «партнёр = клиент + «Мои товары»»). CRM — источник правды по клиентам и контактам: находит клиента по ИНН (иностранную компанию — по паре «страна + регистрационный номер») или по erp_company_id, иначе создаёт; находит контакты по e-mail, иначе создаёт; ставит сопоставление и отвечает событием uz.railtech.crm.partner.client_resolved.v1. Публикуется в транзакции первого приглашения и повторно при каждом следующем, пока сопоставления нет (CRM дедуплицирует по id события и по erp_company_id). Кроме названия и реквизитов компании, а также имени, e-mail, телефона и языка контактов с e-mail, данных нет; секретов и ссылок входа нет.
@@ -1182,6 +1209,15 @@ class QuoteVisaAuthor(BaseModel):
     null — сотрудник ERP без связи с CRM
     """
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class Reason(StrEnum):
+    """
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client)
+    """
+
+    client_mapped_to_other_company = "client_mapped_to_other_company"
+    company_mapped_to_other_client = "company_mapped_to_other_client"
 
 
 class RecordedByStaff(BaseModel):
