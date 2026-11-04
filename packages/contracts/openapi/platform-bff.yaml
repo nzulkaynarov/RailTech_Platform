@@ -23087,13 +23087,14 @@ components:
     SupplierCabinetContact:
       type: object
       additionalProperties: false
-      required: [id, name, email, phone, language, invited_at, last_login_at]
+      required: [id, name, email, phone, language, can_act, invited_at, last_login_at]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         name: {type: string}
         email: {type: string}
         phone: {type: string}
         language: {type: string, enum: [ru, uz, en], description: Язык писем контакту}
+        can_act: {type: boolean, description: 'Может создавать запросы и загружать файлы (участник); иначе — только просмотр'}
         invited_at: {type: [string, 'null'], format: date-time}
         last_login_at: {type: [string, 'null'], format: date-time}
     SupplierCabinetRelationship:
@@ -23156,6 +23157,7 @@ components:
         email: {type: string, minLength: 3, maxLength: 254}
         phone: {type: string, maxLength: 50}
         language: {type: string, enum: [ru, uz, en]}
+        can_act: {type: boolean}
     SupplierCabinetContactUpdate:
       type: object
       additionalProperties: false
@@ -23165,6 +23167,7 @@ components:
         email: {type: string, minLength: 3, maxLength: 254}
         phone: {type: string, maxLength: 50}
         language: {type: string, enum: [ru, uz, en]}
+        can_act: {type: boolean}
     SupplierCabinetRightsUpdate:
       type: object
       additionalProperties: false

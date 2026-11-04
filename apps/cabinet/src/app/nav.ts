@@ -92,9 +92,14 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+/** Модуль, который есть у любой сессии (выход и язык): сам по себе разделов не открывает (ADR-0022). */
+export const PROFILE_MODULE = 'profile';
+
 export interface Nav {
   /** Пункты, доступные сессии, в порядке меню. */
   items: NavItem[];
+  /** Рабочие разделы — без «Профиля»: нет ни одного, значит разделы компании ещё настраиваются. */
+  work: NavItem[];
   primary: NavItem[];
   secondary: NavItem[];
 }
@@ -105,6 +110,7 @@ export function navFor(modules: readonly string[] | undefined): Nav {
   const items = NAV_ITEMS.filter((item) => allowed.has(item.module));
   return {
     items,
+    work: items.filter((item) => item.module !== PROFILE_MODULE),
     primary: items.filter((item) => item.primary),
     secondary: items.filter((item) => !item.primary),
   };

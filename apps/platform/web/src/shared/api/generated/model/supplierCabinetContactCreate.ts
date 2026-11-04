@@ -18,4 +18,5 @@ export interface SupplierCabinetContactCreate {
   /** @maxLength 50 */
   phone?: string;
   language?: SupplierCabinetContactCreateLanguage;
+  can_act?: boolean;
 }

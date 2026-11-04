@@ -67,6 +67,40 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
     expect(within(section).getByText("nodira@sever-supply.example")).toBeVisible();
   });
 
+  it("право контакта действовать: по умолчанию включено, выключается у контакта и в форме", async () => {
+    const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
+    const section = await block(drawer);
+    const aziz = await within(section).findByRole("switch", {
+      name: "Может создавать запросы и загружать файлы: Азиз Тошматов",
+    });
+    expect(aziz).toBeChecked();
+    fireEvent.click(aziz);
+    await waitFor(() => {
+      expect(
+        within(section).getByRole("switch", {
+          name: "Может создавать запросы и загружать файлы: Азиз Тошматов",
+        }),
+      ).not.toBeChecked();
+    });
+
+    fireEvent.click(within(section).getByRole("button", { name: "Добавить контакт" }));
+    const form = await findModal("Новый контакт поставщика");
+    const canAct = within(form).getByRole("switch");
+    expect(canAct).toBeChecked();
+    fireEvent.click(canAct);
+    fireEvent.change(within(form).getByLabelText("ФИО"), { target: { value: "Нодира Рахимова" } });
+    fireEvent.change(within(form).getByLabelText("E-mail"), {
+      target: { value: "nodira@sever-supply.example" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: "Добавить" }));
+    await modalClosed("Новый контакт поставщика");
+    expect(
+      await within(section).findByRole("switch", {
+        name: "Может создавать запросы и загружать файлы: Нодира Рахимова",
+      }),
+    ).not.toBeChecked();
+  });
+
   it("повторный адрес — ошибка словами, окно остаётся", async () => {
     const drawer = await openSupplier("supply@demo.example", "1", "ООО «Поставщик Север»");
     const section = await block(drawer);
@@ -146,5 +180,8 @@ describe("Поставщик: блок «Доступ в кабинет»", () =
       expect(within(section).queryByRole("button", { name })).toBeNull();
     }
     expect(within(section).getByRole("switch", { name: /Мои товары/ })).toBeDisabled();
+    expect(
+      within(section).getByRole("switch", { name: /Может создавать запросы и загружать файлы/ }),
+    ).toBeDisabled();
   });
 });

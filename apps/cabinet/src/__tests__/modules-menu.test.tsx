@@ -1,4 +1,5 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { parse } from 'yaml';
 import { axe } from 'vitest-axe';
 
@@ -23,8 +24,8 @@ const CLIENT_LINKS = [
   'Профиль',
 ];
 
-const PARTNER_DEFAULT = { roles: ['partner' as const], modules: ['my_products', 'catalog_requests'] };
-const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products'] };
+const PARTNER_DEFAULT = { roles: ['partner' as const], modules: ['my_products', 'catalog_requests', 'profile'] };
+const PARTNER_PRODUCTS_ONLY = { roles: ['partner' as const], modules: ['my_products', 'profile'] };
 
 describe('меню из /me.modules', () => {
   it('клиент: меню прежнее — те же 11 пунктов в том же порядке, нижняя навигация с «Ещё»', async () => {
@@ -66,9 +67,12 @@ describe('меню из /me.modules', () => {
       '/requests',
       '/catalog',
     ]);
+    // «Профиль» есть у любой сессии, но рабочим разделом не считается
+    expect(navFor(['my_products', 'profile']).items.map((item) => item.to)).toEqual(['/profile']);
+    expect(navFor(['my_products', 'profile']).work).toEqual([]);
   });
 
-  it('партнёр с «Каталог и заявки»: только «Запросы» и «Каталог», без «Ещё»; корень ведёт в «Запросы»', async () => {
+  it('партнёр с «Каталог и заявки»: «Запросы», «Каталог» и «Профиль»; корень ведёт в «Запросы»', async () => {
     signedIn('actor', 'demo', PARTNER_DEFAULT);
     const { router } = renderApp('/');
     await screen.findByRole('heading', { level: 1, name: 'Запросы' });
@@ -79,21 +83,36 @@ describe('меню из /me.modules', () => {
       within(side)
         .getAllByRole('link')
         .map((link) => link.textContent?.trim()),
-    ).toEqual(['Запросы', 'Каталог']);
+    ).toEqual(['Запросы', 'Каталог', 'Профиль']);
     const bottom = screen.getByRole('navigation', { name: 'Основные разделы' });
-    expect(within(bottom).queryByRole('button', { name: 'Ещё' })).not.toBeInTheDocument();
+    expect(within(bottom).getByRole('button', { name: 'Ещё' })).toBeInTheDocument(); // в «Ещё» — «Профиль»
   });
 
-  it('партнёр: «Запросы» без виджета решений (КП, счетов, актов у него нет), «Новый запрос» доступен без can_act', async () => {
-    // Контакт «viewer» мока — без права действовать и с узбекским языком: тексты берём из словаря, а не из русской строки
-    signedIn('viewer', 'demo', PARTNER_DEFAULT);
-    renderApp('/requests');
-
+  it('партнёр: «Запросы» без виджета решений (КП, счетов, актов у него нет); «Новый запрос» — по can_act, как у клиента', async () => {
+    // Мок: контакт «actor» с правом действовать, «viewer» — без права (и с узбекским языком): тексты берём из словаря
+    signedIn('actor', 'demo', PARTNER_DEFAULT);
+    const actor = renderApp('/requests');
     await screen.findByText('Z-2026-0061');
     expect(screen.getByRole('link', { name: i18n.t('pages.requests.new') })).toBeInTheDocument();
     expect(screen.queryByText(i18n.t('widgets.actionRequired.title'))).not.toBeInTheDocument();
     expect(screen.queryByTestId('action-required-error')).not.toBeInTheDocument();
-    expect(screen.queryByText(i18n.t('common.viewOnly'))).not.toBeInTheDocument();
+    // «Проект …» — просто текст: страница проекта собирает КП, договоры и счета
+    expect(screen.queryByRole('link', { name: /D-57/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/D-57/)).toBeInTheDocument();
+    actor.unmount();
+
+    signedIn('viewer', 'demo', PARTNER_DEFAULT);
+    renderApp('/requests');
+    await screen.findByText('Z-2026-0061');
+    expect(screen.queryByRole('link', { name: i18n.t('pages.requests.new') })).not.toBeInTheDocument();
+    expect(screen.getByText(i18n.t('common.viewOnly'))).toBeInTheDocument();
+  });
+
+  it('клиент видит «Проект …» ссылкой', async () => {
+    signedIn();
+    renderApp('/requests');
+    await screen.findByText('Z-2026-0061');
+    expect(screen.getByRole('link', { name: /D-57/ })).toHaveAttribute('href', '/deals/57');
   });
 
   it('клиент без права действовать по-прежнему только смотрит', async () => {
@@ -126,7 +145,7 @@ describe('меню из /me.modules', () => {
     }
   });
 
-  it('партнёр без известных разделов: «Доступ открыт…», меню нет', async () => {
+  it('партнёр без известных разделов: «Доступ открыт…», в меню только «Профиль»', async () => {
     signedIn('actor', 'demo', PARTNER_PRODUCTS_ONLY);
     renderApp('/');
 
@@ -134,9 +153,12 @@ describe('меню из /me.modules', () => {
     expect(
       screen.getByText('Разделы для вашей компании ещё настраиваются — свяжитесь с вашим менеджером.'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('navigation', { name: 'Разделы кабинета' })).toBeInTheDocument(); // пустая боковая панель
-    expect(within(screen.getByRole('navigation', { name: 'Разделы кабинета' })).queryAllByRole('link')).toHaveLength(0);
-    expect(screen.queryByRole('navigation', { name: 'Основные разделы' })).not.toBeInTheDocument();
+    const side = screen.getByRole('navigation', { name: 'Разделы кабинета' });
+    expect(
+      within(side)
+        .getAllByRole('link')
+        .map((link) => link.textContent?.trim()),
+    ).toEqual(['Профиль']);
     expect(screen.queryByText(/скоро/i)).not.toBeInTheDocument();
   });
 
@@ -144,6 +166,28 @@ describe('меню из /me.modules', () => {
     signedIn('actor', 'demo', { roles: ['partner'], modules: [] });
     renderApp('/requests');
     expect(await screen.findByRole('heading', { level: 1, name: 'Доступ открыт' })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['по умолчанию', PARTNER_DEFAULT, '/requests'],
+    ['только «Мои товары» (экран «Доступ открыт»)', PARTNER_PRODUCTS_ONLY, '/'],
+  ])('профиль партнёра %s: меню «Профиль», смена языка и выход', async (_name, access, start) => {
+    signedIn('actor', 'demo', access);
+    const user = userEvent.setup();
+    const { router } = renderApp(start);
+    await screen.findByRole('navigation', { name: 'Разделы кабинета' });
+
+    await user.click(within(screen.getByRole('navigation', { name: 'Разделы кабинета' })).getByRole('link', { name: 'Профиль' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Профиль' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/profile');
+
+    await user.click(screen.getByRole('button', { name: 'English' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Profile' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Русский' }));
+    await screen.findByRole('heading', { level: 1, name: 'Профиль' });
+
+    await user.click(screen.getByRole('button', { name: 'Выйти из кабинета' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
   });
 
   it('axe: экран «Доступ открыт» и меню партнёра без нарушений', async () => {

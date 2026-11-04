@@ -41,18 +41,12 @@ class HasPortalModule(permissions.BasePermission):
         return True
 
 
-def _wanted_modules(view) -> tuple:
-    required = getattr(view, "required_module", None)
-    return (required,) if isinstance(required, str) else tuple(required or ())
-
-
 class CanAct(permissions.BasePermission):
     """Требует права «действовать» (can_act=True) у контакта клиента.
 
-    Если can_act=False, контакт имеет только доступ на чтение, мутации запрещены. Исключение — сессия партнёра без роли
-    клиента в разделах, которые шаблон разрешает партнёру («Мои товары», «Каталог и заявки»): право «подписывать за
-    компанию» там не нужно, партнёр заполняет свои карточки и создаёт заявки; КП, договоры, счета и акты ему закрыты
-    модулем. Стала компания клиентом — снова решает `can_act`.
+    Если can_act=False, контакт имеет только доступ на чтение, мутации запрещены — у клиента и у партнёра одинаково
+    (ADR-0022: право «действовать» не зависит от роли; у контакта партнёра оно по умолчанию включено, сотрудник выключает его
+    в блоке «Доступ в кабинет»).
     """
 
     message = "FORBIDDEN"
@@ -63,16 +57,6 @@ class CanAct(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         contact = getattr(request, "portal_contact", None)
-        if contact and not contact.can_act and self._partner_scope(request, view):
-            return True
         if not contact or not contact.can_act:
             raise exceptions.PermissionDenied(self.message)
         return True
-
-    @staticmethod
-    def _partner_scope(request, view) -> bool:
-        from portal.services.roles import PARTNER, ROLE_MODULES
-
-        wanted = _wanted_modules(view)
-        roles = getattr(request, "portal_roles", ())
-        return bool(wanted) and "client" not in roles and PARTNER in roles and set(wanted) <= set(ROLE_MODULES[PARTNER])

@@ -36,6 +36,7 @@ CONTACT = {
     "email": "dilshod@supplier-north.example.uz",
     "phone": "+998901112233",
     "language": "uz",
+    "can_act": True,
     "invited_at": None,
     "last_login_at": None,
 }

@@ -18,4 +18,5 @@ export interface SupplierCabinetContactUpdate {
   /** @maxLength 50 */
   phone?: string;
   language?: SupplierCabinetContactUpdateLanguage;
+  can_act?: boolean;
 }

@@ -127,9 +127,9 @@ function sessionFromToken(token: string, authMethod: MockSession['auth_method'])
     dataset: token.includes('empty') ? 'empty' : 'demo',
     // Токен с `partner` — партнёр (каталог и заявки + «Мои товары»), с `partner-min` — только «Мои товары» (ADR-0022)
     access: token.includes('partner-min')
-      ? { roles: ['partner'], modules: ['my_products'] }
+      ? { roles: ['partner'], modules: ['my_products', 'profile'] }
       : token.includes('partner')
-        ? { roles: ['partner'], modules: ['my_products', 'catalog_requests'] }
+        ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'profile'] }
         : undefined,
   };
 }

@@ -23375,6 +23375,9 @@ components:
           type: string
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        can_act:
+          type: boolean
+          description: Может создавать запросы и загружать файлы (участник); иначе — просмотр.
         invited_at:
           type: string
           format: date-time
@@ -23384,6 +23387,7 @@ components:
           format: date-time
           nullable: true
       required:
+      - can_act
       - email
       - id
       - invited_at
@@ -23407,6 +23411,9 @@ components:
           maxLength: 50
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        can_act:
+          type: boolean
+          default: true
       required:
       - email
       - name
@@ -27885,6 +27892,8 @@ components:
           maxLength: 50
         language:
           $ref: '#/components/schemas/LanguageEnum'
+        can_act:
+          type: boolean
     PatchedDeskSupplierAccessRelationshipPatchRequest:
       type: object
       properties:

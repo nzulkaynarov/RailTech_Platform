@@ -53,7 +53,11 @@ def supplier_company(db):
 @pytest.fixture
 def supplier_contact(supplier_company):
     return Contact.objects.create(
-        company=supplier_company, name="Dilshod Supplier", email="dilshod@supplier-north.example.uz", language="uz"
+        company=supplier_company,
+        name="Dilshod Supplier",
+        email="dilshod@supplier-north.example.uz",
+        language="uz",
+        can_act=True,  # как у контакта, заведённого в блоке «Доступ в кабинет»
     )
 
 
@@ -156,7 +160,11 @@ class TestEntryPaths:
         assert relationship.status == RelationshipStatus.ACTIVE and relationship.activated_at is not None
         me = anon_portal_client.get(ME)
         assert me.status_code == 200
-        assert me.json()["roles"] == ["partner"] and me.json()["modules"] == ["my_products", "catalog_requests"]
+        assert me.json()["roles"] == ["partner"] and me.json()["modules"] == [
+            "my_products",
+            "catalog_requests",
+            "profile",
+        ]
 
     def test_invitation_mail_for_supplier_has_no_client_sections(self, supplier_company, supplier_contact):
         relate(supplier_company, RelationshipStatus.INVITED)
@@ -220,14 +228,15 @@ class TestMe:
 
     def test_partner_me_defaults(self, partner_client):
         body = partner_client.get(ME).json()
-        assert body["roles"] == ["partner"] and body["modules"] == ["my_products", "catalog_requests"]
+        assert body["roles"] == ["partner"] and body["modules"] == ["my_products", "catalog_requests", "profile"]
 
     def test_partner_me_follows_enabled_modules_at_once(self, partner_client, supplier_company):
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=["my_products"])
-        assert partner_client.get(ME).json()["modules"] == ["my_products"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "profile"]
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=[])
         body = partner_client.get(ME).json()
-        assert body["roles"] == ["partner"] and body["modules"] == []  # доступ открыт, разделы не настроены
+        # доступ открыт, разделы не настроены: остаётся «Профиль» (выход и язык) — он есть у любой сессии
+        assert body["roles"] == ["partner"] and body["modules"] == ["profile"]
 
     def test_client_and_partner_roles_and_modules_add_up(self, client_company, portal_client):
         relate(client_company, modules=["my_products"])
@@ -241,7 +250,7 @@ class TestMe:
         CompanyRelationship.objects.filter(company=supplier_company).update(
             modules=["quotes", "invoices", "my_products", "my_products"]
         )
-        assert partner_client.get(ME).json()["modules"] == ["my_products"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "profile"]
         assert partner_client.get(PREFIX + "/quotes").status_code == 403
         assert partner_client.get(PREFIX + "/invoices").status_code == 403
 
@@ -342,14 +351,58 @@ class TestEndpointsFollowModules:
         _only_my_products(supplier_company)
         assert partner_client.post(PREFIX + "/uploads", {}, format="json").status_code == 403
 
-    def test_partner_without_can_act_creates_a_request_but_client_readonly_still_cannot(
-        self, partner_client, readonly_portal_client
+    def test_can_act_is_the_same_for_partner_and_client(self, partner_client, supplier_contact, readonly_portal_client):
+        """Право действовать одинаково у клиента и партнёра: без него — 403 FORBIDDEN на заявке и загрузке, с ним — 201."""
+        body = {"summary": "Нужен кабель", "lines": [{"text": "Кабель"}]}
+        supplier_contact.can_act = False
+        supplier_contact.save(update_fields=["can_act"])
+        for url, payload in (("/requests", body), ("/uploads", {})):
+            denied = partner_client.post(PREFIX + url, payload, format="json")
+            assert denied.status_code == 403 and denied.json() == {"detail": "FORBIDDEN"}, url
+        assert readonly_portal_client.post(PREFIX + "/requests", body, format="json").status_code == 403
+
+        supplier_contact.can_act = True
+        supplier_contact.save(update_fields=["can_act"])
+        assert partner_client.post(PREFIX + "/requests", body, format="json").status_code == 201
+        assert partner_client.post(PREFIX + "/uploads", {}, format="json").status_code != 403
+
+    def test_partner_request_without_crm_mapping_is_not_lost(self, partner_client, supplier_company, django_user_model):
+        """Компания не сопоставлена клиенту CRM, `request.created` не уходит: ответственный сотрудник получает уведомление."""
+        from notifications.models import Notification
+
+        staff = django_user_model.objects.create_user(email="supply-resp@d2-3.test", username="resp", password="x")
+        CompanyRelationship.objects.filter(company=supplier_company).update(responsible=staff)
+        body = {"summary": "Нужен кабель", "lines": [{"text": "Кабель"}]}
+
+        assert partner_client.post(PREFIX + "/requests", body, format="json").status_code == 201
+
+        note = Notification.objects.get(user=staff, event_code="portal.partner_request_unrouted")
+        assert supplier_company.name in note.title and note.deal_id is not None
+
+    def test_unrouted_partner_request_goes_to_platform_admins_without_responsible(
+        self, partner_client, supplier_company
     ):
-        """Партнёр заполняет заявки без права «подписывать»; право действовать клиента по-прежнему решает `can_act`."""
+        from notifications.models import Notification
+
+        CompanyRelationship.objects.filter(company=supplier_company).update(responsible=None)
         body = {"summary": "Нужен кабель", "lines": [{"text": "Кабель"}]}
         assert partner_client.post(PREFIX + "/requests", body, format="json").status_code == 201
-        denied = readonly_portal_client.post(PREFIX + "/requests", body, format="json")
-        assert denied.status_code == 403 and denied.json() == {"detail": "FORBIDDEN"}
+        assert Notification.objects.filter(
+            audience=Notification.AUDIENCE_PLATFORM_ADMIN, event_code="portal.partner_request_unrouted"
+        ).exists()
+
+    def test_client_request_does_not_notify_about_routing(self, portal_client):
+        from notifications.models import Notification
+
+        body = {"summary": "Нужен кабель", "lines": [{"text": "Кабель"}]}
+        assert portal_client.post(PREFIX + "/requests", body, format="json").status_code == 201
+        assert not Notification.objects.filter(event_code="portal.partner_request_unrouted").exists()
+
+    def test_profile_module_is_always_there_and_never_switched_off(self, partner_client, supplier_company):
+        for modules in (["my_products", "catalog_requests"], ["my_products"], []):
+            CompanyRelationship.objects.filter(company=supplier_company).update(modules=modules)
+            assert "profile" in partner_client.get(ME).json()["modules"]
+        assert partner_client.post(PREFIX + "/auth/logout").status_code in (200, 204)
 
     def test_client_is_not_affected(self, portal_client):
         for url in ("/requests", "/quotes", "/catalog", "/company", "/team"):

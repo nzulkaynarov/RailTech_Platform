@@ -38,6 +38,7 @@ function seed(): Record<string, Entry> {
           email: "aziz@sever-supply.example",
           phone: "+998 90 000 00 01",
           language: "uz",
+          can_act: true,
           invited_at: null,
           last_login_at: null,
         },
@@ -64,6 +65,7 @@ function seed(): Record<string, Entry> {
           email: "malika@yuzhny-metall.example",
           phone: "",
           language: "ru",
+          can_act: true,
           invited_at: "2026-10-30T09:00:00+05:00",
           last_login_at: "2026-11-03T08:15:00+05:00",
         },
@@ -191,6 +193,7 @@ export const erpSupplierAccessHandlers = [
       email: string;
       phone?: string;
       language?: "ru" | "uz" | "en";
+      can_act?: boolean;
     }>(request);
     const email = data.email.trim().toLowerCase();
     if (found[1].contacts.some((c) => c.email.toLowerCase() === email)) {
@@ -202,6 +205,7 @@ export const erpSupplierAccessHandlers = [
       email,
       phone: (data.phone ?? "").trim(),
       language: data.language ?? "ru",
+      can_act: data.can_act ?? true,
       invited_at: null,
       last_login_at: null,
     };
@@ -222,6 +226,7 @@ export const erpSupplierAccessHandlers = [
         ...(data.email !== undefined ? { email: data.email.trim().toLowerCase() } : {}),
         ...(data.phone !== undefined ? { phone: data.phone.trim() } : {}),
         ...(data.language !== undefined ? { language: data.language } : {}),
+        ...(data.can_act !== undefined ? { can_act: data.can_act } : {}),
       });
       return HttpResponse.json(contact);
     },

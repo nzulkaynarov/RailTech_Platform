@@ -31,24 +31,39 @@ CLIENT_MODULES = (
 #: счета, акты, отгрузки и документы партнёру не включаются: они появляются, когда компания становится клиентом.
 ROLE_MODULES: dict[str, tuple[str, ...]] = {
     RelationshipRole.CLIENT.value: CLIENT_MODULES,
-    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests"),
+    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "profile"),
 }
+
+#: Модули, которые есть у любой сессии кабинета и не выключаются переключателем: «Профиль» — выход и язык (владелец 2026-11-04).
+ALWAYS_ON = ("profile",)
 
 #: Что получает новое отношение. Клиент — всё (тип CLIENT, отношения у клиента нет); партнёр — «Мои товары» и «Каталог и
 #: заявки» (владелец 2026-11-04: оба включены по умолчанию, сотрудник выключает переключателем в Платформе).
 ROLE_DEFAULT_MODULES: dict[str, tuple[str, ...]] = {
     RelationshipRole.CLIENT.value: CLIENT_MODULES,
-    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests"),
+    RelationshipRole.PARTNER.value: ("my_products", "catalog_requests", "profile"),
 }
+
+#: Модули партнёра, которые сотрудник включает и выключает (шаблон роли без обязательных).
+PARTNER_TOGGLEABLE = tuple(m for m in ROLE_MODULES[RelationshipRole.PARTNER.value] if m not in ALWAYS_ON)
+PARTNER_DEFAULT_TOGGLEABLE = tuple(
+    m for m in ROLE_DEFAULT_MODULES[RelationshipRole.PARTNER.value] if m not in ALWAYS_ON
+)
 
 PARTNER = RelationshipRole.PARTNER.value
 CLIENT = RelationshipRole.CLIENT.value
 
 
 def partner_enabled(modules) -> list[str]:
-    """Включённые партнёру модули: только из шаблона роли, в порядке шаблона (мусор и повторы в базе не открывают ничего)."""
-    wanted = set(modules or [])
+    """Модули партнёра в кабинете: включённые сотрудником и обязательные, только из шаблона роли, в порядке шаблона
+    (мусор и повторы в базе не открывают ничего)."""
+    wanted = set(modules or []) | set(ALWAYS_ON)
     return [module for module in ROLE_MODULES[PARTNER] if module in wanted]
+
+
+def partner_toggled(modules) -> list[str]:
+    """То, что сотрудник видит переключателями: включённые партнёру модули без обязательных."""
+    return [module for module in partner_enabled(modules) if module not in ALWAYS_ON]
 
 
 def modules_for(roles: list[str], partner_modules=None) -> list[str]:

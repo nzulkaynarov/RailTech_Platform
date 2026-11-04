@@ -36,7 +36,8 @@ info:
     0.4.0 (PART-1, ADR-0022): в кабинет входят клиенты и партнёры (изготовители, поставщики, принципалы — по отношению
     компании, которое заводит сотрудник). Ролей две и они складываются: `client` (тип компании CLIENT) и `partner`.
     `GET /me` отдаёт `roles` и `modules` — разделы кабинета: клиенту весь шаблон роли, партнёру те, что сотрудник включил
-    на отношении (из шаблона роли `partner`, по умолчанию `my_products` и `catalog_requests`). Шаблоны — `Me.x-role-modules`
+    на отношении (из шаблона роли `partner`, по умолчанию `my_products` и `catalog_requests`), и всегда `profile` (выход и язык;
+    не выключается). Шаблоны — `Me.x-role-modules`
     и `Me.x-role-default-modules`; меню Cabinet строится из `modules`. Эндпоинт открыт сессии, у которой есть его модуль:
     `/requests*`, `/catalog*`, `/uploads` — `catalog_requests`, `/quotes*` — `quotes`, `/contracts*` — `contracts`,
     `/invoices*` — `invoices`, `/acts*` — `acts`, `/deliveries*` — `deliveries`, `/documents*` — `documents`, `/company` —
@@ -1495,10 +1496,10 @@ components:
       required: [contact, company, can_act, auth_method, roles, modules]
       x-role-modules:
         client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
-        partner: [my_products, catalog_requests]
+        partner: [my_products, catalog_requests, profile]
       x-role-default-modules:
         client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
-        partner: [my_products, catalog_requests]
+        partner: [my_products, catalog_requests, profile]
 
     PortalRole:
       type: string

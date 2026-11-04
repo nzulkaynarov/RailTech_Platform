@@ -69,8 +69,10 @@ export function WebOnly() {
 
 /** Корень `/` → первый раздел сессии (у клиента «Запросы»; deep-link Mini App разрешается раньше — `initialPath`). */
 export function HomeRedirect() {
-  const { items } = useNav();
-  return <Navigate to={items[0]?.to ?? '/requests'} replace />;
+  const { work } = useNav();
+  // Нет рабочих разделов — остаёмся на «/»: оболочка показывает «Доступ открыт» и «Профиль» в меню
+  if (work.length === 0) return null;
+  return <Navigate to={work[0]?.to ?? '/requests'} replace />;
 }
 
 /**
@@ -79,10 +81,10 @@ export function HomeRedirect() {
  */
 export function RequireModule() {
   const { pathname } = useLocation();
-  const { items } = useNav();
+  const { items, work } = useNav();
   const section = navItemFor(pathname);
   if (section && !items.some((item) => item.module === section.module)) {
-    return <Navigate to={items[0]?.to ?? '/'} replace />;
+    return <Navigate to={work[0]?.to ?? '/'} replace />;
   }
   return <Outlet />;
 }

@@ -11978,6 +11978,8 @@ export interface components {
             email: string;
             phone: string;
             language: components["schemas"]["LanguageEnum"];
+            /** @description Может создавать запросы и загружать файлы (участник); иначе — просмотр. */
+            can_act: boolean;
             /** Format: date-time */
             invited_at: string | null;
             /** Format: date-time */
@@ -11989,6 +11991,8 @@ export interface components {
             email: string;
             phone?: string;
             language?: components["schemas"]["LanguageEnum"];
+            /** @default true */
+            can_act: boolean;
         };
         DeskSupplierAccessInviteInRequest: {
             /** @description Контакт компании, которому уходит письмо с кодом входа. */
@@ -14565,6 +14569,7 @@ export interface components {
             email?: string;
             phone?: string;
             language?: components["schemas"]["LanguageEnum"];
+            can_act?: boolean;
         };
         PatchedDeskSupplierAccessRelationshipPatchRequest: {
             modules?: string[];

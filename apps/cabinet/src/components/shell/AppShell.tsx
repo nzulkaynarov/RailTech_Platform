@@ -254,7 +254,7 @@ export function AppShell() {
                   ) : null}
                 </div>
               ) : null}
-              {nav.items.length === 0 ? <NoSections /> : <Outlet />}
+              {nav.work.length === 0 && location.pathname !== '/profile' ? <NoSections /> : <Outlet />}
             </main>
           </div>
         </div>

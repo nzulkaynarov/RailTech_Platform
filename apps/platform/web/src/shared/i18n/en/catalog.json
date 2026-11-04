@@ -640,7 +640,9 @@
       "edit": "Edit",
       "editNamed": "Edit contact {{name}}",
       "lastLoginAt": "signed in {{date}}",
-      "notInvited": "not invited"
+      "notInvited": "not invited",
+      "canAct": "Can create requests and upload files",
+      "canActNamed": "Can create requests and upload files: {{name}}"
     },
     "languages": {
       "ru": "Русский",
@@ -663,7 +665,8 @@
       "steps": [
         "The contact appears on the supplier card",
         "The invitation is sent by the separate Invite button"
-      ]
+      ],
+      "canAct": "Can create requests and upload files"
     },
     "suspendForm": {
       "title": "Suspend cabinet access",

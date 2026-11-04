@@ -11,6 +11,9 @@ class DeskSupplierAccessContact(serializers.Serializer):
     email = serializers.CharField()
     phone = serializers.CharField()
     language = serializers.ChoiceField(choices=["ru", "uz", "en"])
+    can_act = serializers.BooleanField(
+        help_text="Может создавать запросы и загружать файлы (участник); иначе — просмотр."
+    )
     invited_at = serializers.DateTimeField(allow_null=True)
     last_login_at = serializers.DateTimeField(allow_null=True)
 
@@ -63,6 +66,7 @@ class DeskSupplierAccessContactIn(serializers.Serializer):
     email = serializers.EmailField()
     phone = serializers.CharField(required=False, allow_blank=True, max_length=50)
     language = serializers.ChoiceField(required=False, choices=["ru", "uz", "en"])
+    can_act = serializers.BooleanField(required=False, default=True)
 
 
 class DeskSupplierAccessContactPatch(serializers.Serializer):
@@ -70,6 +74,7 @@ class DeskSupplierAccessContactPatch(serializers.Serializer):
     email = serializers.EmailField(required=False)
     phone = serializers.CharField(required=False, allow_blank=True, max_length=50)
     language = serializers.ChoiceField(required=False, choices=["ru", "uz", "en"])
+    can_act = serializers.BooleanField(required=False)
 
 
 class DeskSupplierAccessInviteIn(serializers.Serializer):

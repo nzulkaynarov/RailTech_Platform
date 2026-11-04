@@ -93,7 +93,10 @@ class TestContacts:
         listed = call(world, "supply", "get").json()["contacts"]
         assert [c["id"] for c in listed] == [created["id"]]
         contact = Contact.objects.get(pk=created["id"])
-        assert contact.can_act is False and contact.company_id == world["supplier"].pk
+        assert (
+            contact.can_act is True and contact.company_id == world["supplier"].pk
+        )  # право действовать — по умолчанию
+        assert created["can_act"] is True
 
     def test_email_is_required_and_language_is_validated(self, world):
         assert call(world, "supply", "post", "contacts/", {"name": "A"}).status_code == 400
@@ -112,6 +115,22 @@ class TestContacts:
         )
         assert response.status_code == 200
         assert response.json()["name"] == "Dilshod K." and response.json()["language"] == "en"
+
+    def test_can_act_switch_per_contact_changes_what_the_partner_may_do(self, world):
+        from portal.tests.conftest import PortalAPIClient
+
+        created = add_contact(world, can_act=False)
+        assert created["can_act"] is False
+        call(world, "supply", "post", "invite/", {"contact_id": created["id"]})
+        code = re.search(r"\b(\d{6})\b", mail.outbox[0].body).group(1)
+        portal = PortalAPIClient()
+        portal.post("/api/portal/v1/auth/code", {"email": created["email"], "code": code}, format="json")
+        body = {"summary": "Нужен кабель", "lines": [{"text": "Кабель"}]}
+        assert portal.post("/api/portal/v1/requests", body, format="json").status_code == 403
+
+        on = call(world, "supply", "patch", f"contacts/{created['id']}/", {"can_act": True})
+        assert on.status_code == 200 and on.json()["can_act"] is True
+        assert portal.post("/api/portal/v1/requests", body, format="json").status_code == 201
 
     def test_patch_foreign_contact_is_404(self, world):
         other = Company.objects.create(name="Other Co", inn="300000999")
@@ -159,7 +178,7 @@ class TestInvite:
         )
         assert login.status_code == 200, login.content
         me = portal.get("/api/portal/v1/me").json()
-        assert me["roles"] == ["partner"] and me["modules"] == ["my_products", "catalog_requests"]
+        assert me["roles"] == ["partner"] and me["modules"] == ["my_products", "catalog_requests", "profile"]
         assert CompanyRelationship.objects.get(company=world["supplier"]).status == RelationshipStatus.ACTIVE
         assert portal.get("/api/portal/v1/catalog").status_code == 200  # «Каталог и заявки» включён по умолчанию
         assert portal.get("/api/portal/v1/quotes").status_code == 403
@@ -279,7 +298,8 @@ class TestRights:
         assert (
             add["relationship"]["modules"] == ["my_products", "catalog_requests"] and add["relationship"]["kind"] == ""
         )
-        assert add["cabinet_roles"] == ["partner"] and add["cabinet_modules"] == ["my_products", "catalog_requests"]
+        assert add["cabinet_roles"] == ["partner"]
+        assert add["cabinet_modules"] == ["my_products", "catalog_requests", "profile"]
 
     def test_invite_with_chosen_modules_and_kind(self, world):
         contact_id = add_contact(world)["id"]
@@ -300,14 +320,14 @@ class TestRights:
         assert off.status_code == 200 and off.json()["relationship"]["modules"] == ["my_products"]
         assert portal.get("/api/portal/v1/catalog").status_code == 403
         assert portal.get("/api/portal/v1/requests").status_code == 403
-        assert portal.get("/api/portal/v1/me").json()["modules"] == ["my_products"]
+        assert portal.get("/api/portal/v1/me").json()["modules"] == ["my_products", "profile"]
 
         call(world, "supply", "patch", "relationship/", {"modules": ["my_products", "catalog_requests"]})
         assert portal.get("/api/portal/v1/catalog").status_code == 200
 
     def test_module_outside_the_partner_template_is_refused(self, world):
         call(world, "supply", "post", "invite/", {"contact_id": add_contact(world)["id"]})
-        for module in ("quotes", "invoices", "contracts", "profile", "unknown"):
+        for module in ("quotes", "invoices", "contracts", "unknown"):
             response = call(world, "supply", "patch", "relationship/", {"modules": [module]})
             assert response.status_code == 400, module
         relationship = CompanyRelationship.objects.get()

@@ -23,7 +23,7 @@ from parties.models import (
 )
 from portal.services.access import cabinet_company_q, company_access
 from portal.services.invitation import invite_contact
-from portal.services.roles import PARTNER, ROLE_DEFAULT_MODULES, ROLE_MODULES, partner_enabled
+from portal.services.roles import PARTNER, PARTNER_DEFAULT_TOGGLEABLE, PARTNER_TOGGLEABLE, ROLE_MODULES, partner_toggled
 
 from catalog.desk.audit import record
 
@@ -31,7 +31,7 @@ LANGUAGES = ("ru", "uz", "en")
 ROLE = RelationshipRole.PARTNER
 KINDS = tuple(PartnerKind.values)
 
-CONTACT_FIELDS = ("name", "email", "phone", "language")
+CONTACT_FIELDS = ("name", "email", "phone", "language", "can_act")
 
 
 class AccessError(Exception):
@@ -65,6 +65,7 @@ def contact_row(contact: Contact) -> dict:
         "email": contact.email,
         "phone": contact.phone,
         "language": contact.language,
+        "can_act": contact.can_act,
         "invited_at": contact.invited_at,
         "last_login_at": contact.last_login_at,
     }
@@ -76,7 +77,7 @@ def clean_modules(modules) -> list[str]:
         raise AccessError("VALIDATION_ERROR")
     if set(modules) - set(ROLE_MODULES[PARTNER]):
         raise AccessError("MODULE_NOT_ALLOWED")
-    return partner_enabled(modules)
+    return partner_toggled(modules)  # «Профиль» обязателен и в список переключателей не входит
 
 
 def clean_kind(kind) -> str:
@@ -100,7 +101,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
             else {
                 "role": relationship.role,
                 "kind": relationship.kind,
-                "modules": partner_enabled(relationship.modules),
+                "modules": partner_toggled(relationship.modules),
                 "status": relationship.status,
                 "invited_at": relationship.invited_at,
                 "activated_at": relationship.activated_at,
@@ -110,7 +111,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
             }
         ),
         "contacts": [contact_row(c) for c in contacts],
-        "partner_modules": {"allowed": list(ROLE_MODULES[PARTNER]), "default": list(ROLE_DEFAULT_MODULES[PARTNER])},
+        "partner_modules": {"allowed": list(PARTNER_TOGGLEABLE), "default": list(PARTNER_DEFAULT_TOGGLEABLE)},
         "cabinet_roles": roles,
         "cabinet_modules": modules,
         "can_manage": can_manage,
@@ -135,6 +136,8 @@ def _clean_contact(data: dict, *, partial: bool) -> dict:
         if data["language"] not in LANGUAGES:
             raise AccessError("VALIDATION_ERROR")
         out["language"] = data["language"]
+    if "can_act" in data:
+        out["can_act"] = bool(data["can_act"])
     return out
 
 
@@ -151,10 +154,12 @@ def create_contact(company: Company, data: dict, user) -> Contact:
         raise AccessError("CONTACT_EXISTS", 409)
     contact = Contact.objects.create(
         company=company,
-        can_act=False,  # право подписывать за компанию партнёру не выдаётся
         preferred_channel="email",
         created_by=user,
-        **clean,
+        **{
+            "can_act": True,
+            **clean,
+        },  # право действовать (заявки, загрузки) — по умолчанию; сотрудник выключает в блоке
     )
     record(
         user,
@@ -235,7 +240,7 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
                     responsible=user,
                     invited_by=user,
                     invited_at=now,
-                    modules=list(ROLE_DEFAULT_MODULES[PARTNER]),
+                    modules=list(PARTNER_DEFAULT_TOGGLEABLE),
                 )
             else:
                 if relationship.responsible_id is None:
@@ -273,7 +278,7 @@ def _snapshot(relationship: CompanyRelationship) -> dict:
     return {
         "status": relationship.status,
         "kind": relationship.kind,
-        "modules": partner_enabled(relationship.modules),
+        "modules": partner_toggled(relationship.modules),
     }
 
 

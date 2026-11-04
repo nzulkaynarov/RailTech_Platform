@@ -182,6 +182,7 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
                       : t("cabinetAccess.contact.notInvited")}
                 </span>
               </div>
+              <ContactRight supplierId={supplierId} contact={contact} editable={editable} />
               {editable ? (
                 <div className="pf-cat-actions">
                   <Button
@@ -351,7 +352,8 @@ function ContactForm({
   const [language, setLanguage] = useState<SupplierCabinetContactCreateLanguage>(
     contact?.language ?? "ru",
   );
-  const ids = { name: useId(), email: useId(), phone: useId(), language: useId() };
+  const [canAct, setCanAct] = useState(contact?.can_act ?? true);
+  const ids = { name: useId(), email: useId(), phone: useId(), language: useId(), canAct: useId() };
   const done = () => {
     void queryClient.invalidateQueries({
       queryKey: getGetSupplierCabinetAccessQueryKey(supplierId),
@@ -364,7 +366,13 @@ function ContactForm({
   const fields = errorFields(mutation.error);
   const valid = name.trim() !== "" && /^\S+@\S+\.\S+$/.test(email.trim());
   const submit = () => {
-    const data = { name: name.trim(), email: email.trim(), phone: phone.trim(), language };
+    const data = {
+      name: name.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      language,
+      can_act: canAct,
+    };
     if (contact) update.mutate({ id: supplierId, contactId: contact.id, data });
     else create.mutate({ id: supplierId, data });
   };
@@ -434,7 +442,54 @@ function ContactForm({
           options={LANGUAGES.map((l) => ({ value: l, label: t(`cabinetAccess.languages.${l}`) }))}
         />
       </FormField>
+      <div className="pf-cat-switch">
+        <Switch
+          checked={canAct}
+          aria-labelledby={`${ids.canAct}-label`}
+          onChange={(on) => {
+            setCanAct(on);
+          }}
+        />
+        <span id={`${ids.canAct}-label`}>{t("cabinetAccess.contactForm.canAct")}</span>
+      </div>
     </FormModal>
+  );
+}
+
+/** Право контакта действовать: «участник» создаёт запросы и загружает файлы, «просмотр» только читает. Правится сразу. */
+function ContactRight({
+  supplierId,
+  contact,
+  editable,
+}: {
+  supplierId: string;
+  contact: SupplierCabinetContact;
+  editable: boolean;
+}) {
+  const { t } = useTranslation("catalog");
+  const queryClient = useQueryClient();
+  const update = useUpdateSupplierCabinetContact({
+    mutation: {
+      onSuccess: () => {
+        void queryClient.invalidateQueries({
+          queryKey: getGetSupplierCabinetAccessQueryKey(supplierId),
+        });
+      },
+    },
+  });
+  return (
+    <div className="pf-cat-switch pf-cat-contact-right">
+      <Switch
+        checked={contact.can_act}
+        disabled={!editable || update.isPending}
+        aria-label={t("cabinetAccess.contact.canActNamed", { name: contact.name })}
+        onChange={(on) => {
+          update.mutate({ id: supplierId, contactId: contact.id, data: { can_act: on } });
+        }}
+      />
+      <span aria-hidden="true">{t("cabinetAccess.contact.canAct")}</span>
+      <ErrorNote message={update.error ? catalogErrorText(t, update.error) : null} />
+    </div>
   );
 }
 

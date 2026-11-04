@@ -35,6 +35,7 @@ class SupplierCabinetContact(Out):
     email: str
     phone: str
     language: Language
+    can_act: bool
     invited_at: str | None
     last_login_at: str | None
 
@@ -72,6 +73,7 @@ class SupplierCabinetContactCreate(Body):
     email: str = Field(min_length=3, max_length=254)
     phone: str | None = Field(default=None, max_length=50)
     language: Language | None = None
+    can_act: bool | None = None
 
 
 class SupplierCabinetContactUpdate(Patch):
@@ -79,6 +81,7 @@ class SupplierCabinetContactUpdate(Patch):
     email: str | None = Field(default=None, min_length=3, max_length=254)
     phone: str | None = Field(default=None, max_length=50)
     language: Language | None = None
+    can_act: bool | None = None
 
 
 class SupplierCabinetRightsUpdate(Patch):
@@ -106,6 +109,7 @@ def to_contact(raw: Mapping[str, Any]) -> SupplierCabinetContact:
             "email": text(raw.get("email")),
             "phone": text(raw.get("phone")),
             "language": raw.get("language") if raw.get("language") in ("ru", "uz", "en") else "ru",
+            "can_act": bool(raw.get("can_act")),
             "invited_at": raw.get("invited_at"),
             "last_login_at": raw.get("last_login_at"),
         }

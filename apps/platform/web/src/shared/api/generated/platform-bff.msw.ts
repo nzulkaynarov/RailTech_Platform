@@ -24619,6 +24619,7 @@ export const getGetSupplierCabinetAccessResponseMock = (
       email: faker.string.alpha({ length: { min: 10, max: 20 } }),
       phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
       language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      can_act: faker.datatype.boolean(),
       invited_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -24650,6 +24651,7 @@ export const getCreateSupplierCabinetContactResponseMock = (
   email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
   language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  can_act: faker.datatype.boolean(),
   invited_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -24669,6 +24671,7 @@ export const getUpdateSupplierCabinetContactResponseMock = (
   email: faker.string.alpha({ length: { min: 10, max: 20 } }),
   phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
   language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+  can_act: faker.datatype.boolean(),
   invited_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
@@ -24744,6 +24747,7 @@ export const getUpdateSupplierCabinetRightsResponseMock = (
       email: faker.string.alpha({ length: { min: 10, max: 20 } }),
       phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
       language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      can_act: faker.datatype.boolean(),
       invited_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -24831,6 +24835,7 @@ export const getInviteSupplierToCabinetResponseMock = (
       email: faker.string.alpha({ length: { min: 10, max: 20 } }),
       phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
       language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      can_act: faker.datatype.boolean(),
       invited_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,
@@ -24918,6 +24923,7 @@ export const getSuspendSupplierCabinetAccessResponseMock = (
       email: faker.string.alpha({ length: { min: 10, max: 20 } }),
       phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
       language: faker.helpers.arrayElement(["ru", "uz", "en"] as const),
+      can_act: faker.datatype.boolean(),
       invited_at: faker.helpers.arrayElement([
         faker.date.past().toISOString().slice(0, 19) + "Z",
         null,

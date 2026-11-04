@@ -640,7 +640,9 @@
       "edit": "O'zgartirish",
       "editNamed": "{{name}} kontaktini o'zgartirish",
       "lastLoginAt": "kirgan {{date}}",
-      "notInvited": "taklif qilinmagan"
+      "notInvited": "taklif qilinmagan",
+      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin",
+      "canActNamed": "So'rovlar yaratishi va fayllar yuklashi mumkin: {{name}}"
     },
     "languages": {
       "ru": "Русский",
@@ -663,7 +665,8 @@
       "steps": [
         "Kontakt yetkazib beruvchi kartochkasida paydo bo'ladi",
         "Taklif alohida «Taklif qilish» tugmasi bilan yuboriladi"
-      ]
+      ],
+      "canAct": "So'rovlar yaratishi va fayllar yuklashi mumkin"
     },
     "suspendForm": {
       "title": "Kabinetga kirishni to'xtatish",

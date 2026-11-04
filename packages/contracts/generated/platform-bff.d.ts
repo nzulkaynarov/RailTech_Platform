@@ -13673,6 +13673,8 @@ export interface components {
        * @enum {string}
        */
       language: "ru" | "uz" | "en";
+      /** @description Может создавать запросы и загружать файлы (участник); иначе — только просмотр */
+      can_act: boolean;
       /** Format: date-time */
       invited_at: string | null;
       /** Format: date-time */
@@ -13728,6 +13730,7 @@ export interface components {
       phone?: string;
       /** @enum {string} */
       language?: "ru" | "uz" | "en";
+      can_act?: boolean;
     };
     SupplierCabinetContactUpdate: {
       name?: string;
@@ -13735,6 +13738,7 @@ export interface components {
       phone?: string;
       /** @enum {string} */
       language?: "ru" | "uz" | "en";
+      can_act?: boolean;
     };
     SupplierCabinetRightsUpdate: {
       modules?: ("my_products" | "catalog_requests")[];
