@@ -442,7 +442,9 @@ describe("Условия КП: маржа — группа cost_margin", () => {
 describe("Условия КП: напоминания о просрочке (NOTIFY-2)", () => {
   it("по умолчанию выключено; включение сохраняется", async () => {
     await openTab("quote");
-    const toggle = await screen.findByRole("switch", { name: "Напоминать клиентам о просроченных счетах" });
+    const toggle = await screen.findByRole("switch", {
+      name: "Напоминать клиентам о просроченных счетах",
+    });
     expect(toggle).not.toBeChecked();
     fireEvent.click(toggle);
     fireEvent.click(await button("Сохранить условия"));
