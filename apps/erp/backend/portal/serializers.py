@@ -683,10 +683,11 @@ def portal_message_data(message, contact_id: int) -> dict:
     return {
         "id": message.pk,
         "direction": message.direction,
-        "author_name": message.author_name or None,
+        "author_name": None if message.erased else (message.author_name or None),
         "mine": message.author_contact_id is not None and message.author_contact_id == contact_id,
-        "text": message.text,
+        "text": "" if message.erased else message.text,
         "context": context,
         "created_at": message.created_at,
         "client_message_id": message.client_message_id,
+        "erased": message.erased,
     }

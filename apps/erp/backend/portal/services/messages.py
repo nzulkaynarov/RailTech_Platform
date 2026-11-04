@@ -7,7 +7,8 @@
   тем же `client_message_id` в пределах компании — прежнее сообщение, второго события нет. Компания без сопоставления с
   клиентом CRM тоже публикует событие (`crm_client_id: null`) — сообщение не теряется.
 * Ответ менеджера (`crm.cabinet.message_sent`) — строка ленты, идемпотентно по `crm_message_id`; ответ, отправленный не
-  позже стирания ленты (`crm.lead.erased` с `cabinet_erp_company_id`), не применяется.
+  позже стирания ленты клиента целиком (`crm.lead.erased`, `cabinet.scope=company`), не применяется. Стирание человека
+  (`scope=authors`) убирает только его сообщения.
 * Присутствие (`PortalChatReader.last_seen_at`) обновляет опрос ленты не чаще `PRESENCE_STEP` — по нему NOTIFY-2 решает,
   в кабинете ли контакт.
 """
@@ -47,8 +48,20 @@ class Context:
     number: str
 
 
-def _context_of(company: Company, kind: str, pk: int) -> Context:
-    """Документ метки среди видимых клиенту документов компании сессии; иначе `ContextNotFound`."""
+#: Модули сессии, которым открыт документ метки (как разделы Cabinet): проект — «КП» или «Каталог и заявки» (заявка — та же
+#: сделка), КП — «КП», счёт — «Счета», акт — «Акты». Без модуля метка — «нет документа» (404), номер не раскрывается.
+CONTEXT_MODULES = {
+    "deal": ("quotes", "catalog_requests"),
+    "quote": ("quotes",),
+    "invoice": ("invoices",),
+    "act": ("acts",),
+}
+
+
+def _context_of(company: Company, kind: str, pk: int, modules=None) -> Context:
+    """Документ метки среди видимых клиенту документов компании сессии и открытых её модулям; иначе `ContextNotFound`."""
+    if modules is not None and not set(CONTEXT_MODULES.get(kind, ())) & set(modules):
+        raise ContextNotFound(kind)
     if kind == "deal":
         deal = Deal.objects.filter(company=company, pk=pk).first()
         if deal is not None:
@@ -120,13 +133,19 @@ def mark_read(company: Company, contact, last_id: int) -> int:
 
 
 def post_message(
-    company: Company, contact, *, text: str, client_message_id: str, context: Optional[dict[str, Any]]
+    company: Company,
+    contact,
+    *,
+    text: str,
+    client_message_id: str,
+    context: Optional[dict[str, Any]],
+    modules=None,
 ) -> tuple[PortalMessage, bool]:
     """Сообщение контакта и событие на шину одной транзакцией; второе — создано ли сейчас (повтор ключа — `False`)."""
     existing = _by_key(company, client_message_id)
     if existing is not None:
         return existing, False
-    label = _context_of(company, context["kind"], int(context["id"])) if context else None
+    label = _context_of(company, context["kind"], int(context["id"]), modules) if context else None
     try:
         with transaction.atomic():
             message = PortalMessage.objects.create(
@@ -213,15 +232,30 @@ def apply_manager_reply(data: dict[str, Any]) -> Optional[PortalMessage]:
 
 
 def apply_lead_erased(data: dict[str, Any]) -> int:
-    """`crm.lead.erased` с `cabinet_erp_company_id`: лента компании до `erased_at` стирается, отметка стирания — чтобы
-    опоздавший ответ менеджера её не восстановил. Без поля — ничего (беседы кабинета у лида не было)."""
-    company_id = data.get("cabinet_erp_company_id")
-    if company_id is None:
+    """`crm.lead.erased` с `cabinet` — чьи сообщения ленты стереть (правило Slack, Intercom: стирается только автор).
+
+    * `scope=authors` — сообщения перечисленных контактов: текст и автор удаляются (`erased`), строка остаётся; лента
+      компании, ответы менеджеров и сообщения коллег не меняются;
+    * `scope=company` — стирание клиента целиком: лента компании до `erased_at` удаляется, отметка стирания не даёт
+      опоздавшему ответу менеджера её вернуть.
+
+    Без `cabinet` — ничего (в ленте кабинета стирать нечего). Возвращает число затронутых сообщений."""
+    cabinet = data.get("cabinet")
+    if not cabinet:
         return 0
-    erased_at = parse_datetime(str(data["erased_at"])) or timezone.now()
-    company = Company.objects.filter(pk=company_id).first()
+    company = Company.objects.filter(pk=cabinet["erp_company_id"]).first()
     if company is None:
         return 0
+    erased_at = parse_datetime(str(data["erased_at"])) or timezone.now()
+    if cabinet["scope"] == "authors":
+        touched = PortalMessage.objects.filter(
+            company=company,
+            direction=PortalMessage.DIRECTION_CLIENT,
+            author_contact_id__in=list(cabinet.get("erp_contact_ids") or []),
+            created_at__lte=erased_at,
+        ).update(erased=True, text="", author_name="", author_contact=None)
+        logger.info("cabinet_chat_authors_erased", extra={"erp_company_id": company.pk, "messages": touched})
+        return touched
     deleted, _ = PortalMessage.objects.filter(company=company, created_at__lte=erased_at).delete()
     mark, created = PortalChatErasure.objects.get_or_create(company=company, defaults={"erased_at": erased_at})
     if not created and erased_at > mark.erased_at:

@@ -287,7 +287,8 @@ class PortalMessage(models.Model):
 
     Сообщение контакта пишет портал (`POST /messages`) вместе с событием `erp.cabinet.message_posted` — CRM кладёт его в
     беседу канала `cabinet`; ответ менеджера приходит событием `crm.cabinet.message_sent` (`crm_message_id`). Владелец
-    переписки — CRM; стирание ПД клиента в CRM стирает и эту ленту (`crm.lead.erased`, `PortalChatErasure`).
+    переписки — CRM; стирание ПД человека в CRM стирает только его сообщения (`erased`: текста и автора нет), стирание
+    клиента целиком — всю ленту (`crm.lead.erased`, `PortalChatErasure`).
     """
 
     DIRECTION_CLIENT = "client"
@@ -319,6 +320,8 @@ class PortalMessage(models.Model):
     context_number = models.CharField(max_length=64, blank=True, verbose_name=_("Метка: номер документа"))
     client_message_id = models.CharField(max_length=64, null=True, blank=True, verbose_name=_("Ключ повтора Cabinet"))
     crm_message_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Сообщение CRM"))
+    #: Автор стёр свои ПД (`crm.lead.erased`, scope=authors): текста и автора нет, строка ленты остаётся.
+    erased = models.BooleanField(default=False, verbose_name=_("Стёрто по запросу автора"))
     created_at = models.DateTimeField(default=timezone.now, db_index=True)
 
     class Meta:

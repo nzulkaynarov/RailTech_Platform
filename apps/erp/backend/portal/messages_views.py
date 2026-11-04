@@ -60,6 +60,7 @@ class MessageListView(BasePortalView):
                 text=text,
                 client_message_id=data["client_message_id"],
                 context=data.get("context"),
+                modules=request.portal_modules,
             )
         except chat.ContextNotFound:
             raise Http404 from None

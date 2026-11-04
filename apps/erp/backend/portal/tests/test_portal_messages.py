@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 import pytest
 from django.conf import settings as dj_settings
@@ -22,6 +23,9 @@ from portal.services.roles import ROLE_DEFAULT_MODULES
 from portal.tests.conftest import PortalAPIClient, make_portal_session
 from portal.tests.contract_support import check_response, response_schema
 from rt_bus.django.models import Outbox
+
+from crm.constants import ActStatusCode, InvoiceStatusCode
+from crm.models import Act, ActStatus, Deal, Invoice, InvoiceStatus
 
 pytestmark = pytest.mark.django_db
 
@@ -192,9 +196,35 @@ def test_context_of_an_own_deal_is_its_deal_ref(contract_world, portal_client):
     assert response.json()["context"]["number"] == f"D-{deal.pk}"
 
 
-@pytest.mark.parametrize("kind", ["deal", "quote"])
-def test_context_of_another_company_is_404_without_a_trace(contract_world, portal_client, kind):
-    foreign = contract_world["other"][kind]
+def _foreign_documents(world) -> dict:
+    """Сделка, КП, счёт и акт чужой компании, все видимые её контактам (выставлены)."""
+    other_deal = world["other"]["deal"]
+    invoice = Invoice.objects.create(
+        deal=other_deal,
+        number="INV-CHAT-other",
+        status=InvoiceStatus.objects.get_or_create(code=InvoiceStatusCode.ISSUED, defaults={"name": "x"})[0],
+        due_date=timezone.localdate() + datetime.timedelta(days=10),
+        issued_at=timezone.localdate(),
+        total_incl_vat=Decimal("1000"),
+        currency=world["uzs"],
+    )
+    act = Act.objects.create(
+        deal=other_deal,
+        invoice=invoice,
+        number="ACT-CHAT-other",
+        status=ActStatus.objects.get_or_create(code=ActStatusCode.ISSUED, defaults={"name": "x"})[0],
+        issued_at=timezone.localdate(),
+        total_amount=Decimal("1000"),
+    )
+    return {"deal": other_deal, "quote": world["other"]["quote"], "invoice": invoice, "act": act}
+
+
+@pytest.mark.parametrize("kind", ["deal", "quote", "invoice", "act"])
+def test_context_of_another_company_is_404_without_a_trace(contract_world, portal_client, other_portal_client, kind):
+    foreign = _foreign_documents(contract_world)[kind]
+    if kind in ("invoice", "act"):  # документ действительно виден своей компании: 404 — из-за чужой сессии
+        listed = other_portal_client.get(f"{API}/{kind}s").json()
+        assert foreign.pk in {row["id"] for row in listed}
     before = PortalMessage.objects.count()
     response = send(portal_client, context={"kind": kind, "id": foreign.pk})
 
@@ -207,6 +237,50 @@ def test_context_of_another_company_is_404_without_a_trace(contract_world, porta
 @pytest.mark.parametrize("kind", ["invoice", "act"])
 def test_context_of_a_missing_document_is_404(contract_world, portal_client, kind):
     assert send(portal_client, context={"kind": kind, "id": 987654}).status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("kind", "pick"),
+    [
+        ("quote", lambda w: w["hidden_quotes"]["sent_without_link"]),
+        ("quote", lambda w: next(q for k, q in w["hidden_quotes"].items() if k != "sent_without_link")),
+        ("invoice", lambda w: w["invoices"]["draft"]),
+        ("invoice", lambda w: w["invoices"]["not_issued"]),
+        ("act", lambda w: w["acts"]["draft"]),
+    ],
+)
+def test_context_of_an_own_document_hidden_from_the_client_is_404(contract_world, portal_client, kind, pick):
+    """Документ своей компании, которого клиент не видит в списках портала (черновик КП, счёт вне `client_invoices_q`,
+    черновик акта), меткой не становится — тот же 404, номер не раскрывается."""
+    hidden = pick(contract_world)
+    before = PortalMessage.objects.count()
+    response = send(portal_client, context={"kind": kind, "id": hidden.pk})
+    assert response.status_code == 404
+    if hidden.number:
+        assert hidden.number not in response.content.decode()
+    assert PortalMessage.objects.count() == before
+
+
+def test_context_needs_the_module_of_the_document(contract_world):
+    """Партнёрская сессия без «КП» и «Счетов» не ссылается на КП и счёт своей компании (не узнаёт их номер): 404; на
+    заявку (сделку) — может, у неё «Каталог и заявки»."""
+    supplier = Company.objects.create(name="OOO Partner Chat", inn="300000888")
+    supplier.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик"})[0])
+    contact = Contact.objects.create(company=supplier, name="Partner Chat", email="pc@partner.example", can_act=True)
+    CompanyRelationship.objects.create(
+        company=supplier, role=RelationshipRole.PARTNER, status=RelationshipStatus.ACTIVE, modules=["catalog_requests"]
+    )
+    deal = contract_world["main"]
+    Deal.objects.filter(pk=deal.pk).update(company=supplier)  # сделка, КП и счёт мира — теперь документы партнёра
+    partner = client_for(make_portal_session(contact, supplier, "magic_link"))
+    me = partner.get(f"{API}/me").json()
+    assert "quotes" not in me["modules"] and "messages" in me["modules"]
+    quote = contract_world["quotes"]["sent"]
+    assert send(partner, key="cm_partner_q1", context={"kind": "quote", "id": quote.pk}).status_code == 404
+    invoice = contract_world["invoices"]["issued"]
+    assert send(partner, key="cm_partner_i1", context={"kind": "invoice", "id": invoice.pk}).status_code == 404
+    response = send(partner, key="cm_partner_d1", context={"kind": "deal", "id": deal.pk})
+    assert response.status_code == 201
 
 
 # ── Права и модули ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -314,28 +388,67 @@ def test_reply_to_an_unknown_company_is_skipped():
     assert PortalMessage.objects.count() == 0
 
 
-def test_lead_erasure_wipes_the_feed_and_a_late_reply_does_not_bring_it_back(portal_client, client_company):
-    before = timezone.now() - datetime.timedelta(minutes=5)
-    send(portal_client)
-    reply(client_company, 501, sent_at=before)
-    erased_at = timezone.now()
-
-    deleted = chat.apply_lead_erased(
+def erased(company, scope, contact_ids=(), at=None):
+    return chat.apply_lead_erased(
         {
             "crm_lead_id": 7,
             "crm_client_id": None,
-            "erased_at": erased_at.isoformat(),
+            "erased_at": (at or timezone.now()).isoformat(),
             "actor": {"type": "bot"},
-            "cabinet_erp_company_id": client_company.pk,
+            "cabinet": {"erp_company_id": company.pk, "scope": scope, "erp_contact_ids": list(contact_ids)},
         }
     )
 
-    assert deleted == 2
+
+def test_erasing_a_person_erases_only_their_messages(
+    portal_client, readonly_portal_client, client_company, client_contact, readonly_contact
+):
+    """Стирание контакта А (Slack, Intercom): его сообщения — «Удалённый пользователь» без текста; сообщения коллеги Б,
+    ответ менеджера и сама лента компании остаются."""
+    send(portal_client, text="Пишет А", key="cm_person_a_1")
+    reply(client_company, 501, "Ответ менеджера")
+    # коллега Б (контакт только для чтения) пишет из той же компании — строка ленты напрямую
+    PortalMessage.objects.create(
+        company=client_company,
+        direction=PortalMessage.DIRECTION_CLIENT,
+        author_contact=readonly_contact,
+        author_name=readonly_contact.name,
+        text="Пишет Б",
+        client_message_id="cm_person_b_1",
+    )
+
+    assert erased(client_company, "authors", [client_contact.pk]) == 1
+
+    items = portal_client.get(f"{API}/messages").json()["items"]
+    assert [(i["text"], i["erased"], i["author_name"]) for i in items] == [
+        ("", True, None),
+        ("Ответ менеджера", False, "Илья Смирнов"),
+        ("Пишет Б", False, readonly_contact.name),
+    ]
+    assert items[0]["mine"] is False  # автора больше нет
+    assert check_response(portal_client.get(f"{API}/messages").json(), response_schema("/messages", "get")) == []
+    assert reply(client_company, 502, "Новый ответ") is not None  # лента живёт дальше
+
+
+def test_erasing_the_client_wipes_the_whole_feed_and_a_late_reply_does_not_bring_it_back(portal_client, client_company):
+    before = timezone.now() - datetime.timedelta(minutes=5)
+    send(portal_client)
+    reply(client_company, 501, sent_at=before)
+    at = timezone.now()
+
+    assert erased(client_company, "company", at=at) == 2
+
     assert PortalMessage.objects.filter(company=client_company).count() == 0
     # опоздавший ответ, отправленный до стирания, ленту не восстанавливает; новый — ложится
     assert reply(client_company, 502, sent_at=before) is None
-    assert reply(client_company, 503, sent_at=erased_at + datetime.timedelta(seconds=1)) is not None
+    assert reply(client_company, 503, sent_at=at + datetime.timedelta(seconds=1)) is not None
     assert portal_client.get(f"{API}/messages").json()["items"][0]["text"] == "Счёт сегодня"
+
+
+def test_erasing_a_person_of_another_company_does_not_touch_this_feed(portal_client, other_company, client_contact):
+    send(portal_client)
+    assert erased(other_company, "authors", [client_contact.pk]) == 0
+    assert PortalMessage.objects.get().erased is False
 
 
 def test_erasure_of_a_lead_without_a_cabinet_conversation_keeps_the_feed(portal_client):
