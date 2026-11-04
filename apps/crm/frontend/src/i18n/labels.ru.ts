@@ -142,6 +142,8 @@ export const labelsRu = {
     "deal.erp_request_retry": "Повторил отправку заявки в ERP",
     "client.erp_handoff_failed": "Передача клиента в бэк-офис (ERP) не удалась",
     "client.unlink_telegram": "Отвязал Telegram",
+    "client.contact_telegram_self_link": "Контакт сам подключил Telegram из кабинета",
+    "client.contact_telegram_self_unlink": "Контакт сам отключил Telegram в кабинете",
     "client.close_request": "Закрыл сервисный запрос",
     "client.contact_create": "Добавил контакт",
     "client.contact_update": "Изменил контакт",
