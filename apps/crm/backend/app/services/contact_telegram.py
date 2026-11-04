@@ -1,0 +1,208 @@
+"""Telegram контакта без подтверждения менеджера (NOTIFY-1, ADR-0023 п. 3): привязка по ссылке
+из кабинета и отключение по запросу ERP.
+
+Привязка. Контакт в кабинете (Профиль → «Уведомления») получает от ERP одноразовую ссылку
+`t.me/<бот>?start=tg_…`; бот после приветствия (`ConversationService.start` уже завёл
+Telegram-идентичность) передаёт параметр сюда. В одной транзакции: подпись и срок
+(`domain/contact_link.py`), погашение nonce (`telegram_link_nonces`, `INSERT … ON CONFLICT DO
+NOTHING`: повтор и параллельный повтор — один выигравший), привязка Telegram к контакту
+(`ClientContact.telegram_identity_id`) и к клиенту с отметкой подтверждения (`verified_at`, без
+`verified_by_user_id` — подтвердил сам контакт ссылкой из своей сессии), лид этого Telegram —
+клиенту (как при подтверждении менеджером), аудит и `crm.contact.updated` с `telegram_user_id` в
+outbox. ERP по нему заполняет проекцию — Mini App входит.
+
+Безопасность. Повтор, чужой, подделанный и просроченный токен и токен несуществующего контакта
+получают один нейтральный отказ (не выдаём, существует ли контакт). Telegram, уже связанный с
+другим клиентом или с другим контактом, молча не перепривязывается (как
+`ClientService.link_identity` — `TELEGRAM_LINKED_ELSEWHERE`): отдельный ответ «уже связан с другим
+контактом» — он говорит человеку только о его собственном Telegram, о контакте из ссылки — ничего;
+транзакция откатывается, ссылка остаётся неиспользованной.
+
+Отключение. ERP публикует `uz.railtech.erp.contact.telegram_unlink_requested.v1` (поле принадлежит
+CRM, ADR-0015); здесь, в транзакции inbox, контакт теряет Telegram, а Telegram — клиента и
+подтверждение (общая часть с отвязкой менеджером — `release_identity`), и уходит
+`crm.contact.updated` без `telegram_user_id`. Повтор и уже отвязанный контакт — без действий.
+"""
+
+from collections.abc import Awaitable, Callable, Sequence
+from datetime import UTC, datetime
+
+import structlog
+from rt_bus import Event
+from rt_contracts.events.erp import ContactTelegramUnlinkRequestedV1
+from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.bus import events as bus_events
+from app.domain import client_texts, contact_link
+from app.models.clients import Client, ClientContact
+from app.models.leads import Lead, TelegramIdentity, TelegramLinkNonce
+from app.security import audit
+from app.services.clients import release_identity
+from app.services.leads import ChatsChanged, notify_chats
+
+logger = structlog.get_logger(__name__)
+
+__all__ = ["UNLINK_REQUESTED", "ContactTelegramService", "PairSecrets"]
+
+UNLINK_REQUESTED = "uz.railtech.erp.contact.telegram_unlink_requested.v1"
+#: Действующие секреты пары шины `erp → crm` (первый — текущий, затем прежний); перед чтением кэш
+#: секретов обновляется.
+PairSecrets = Callable[[], Awaitable[Sequence[str]]]
+
+
+class _RefusedError(Exception):
+    """Нейтральный отказ: причина — только в журнал."""
+
+
+class _TakenError(Exception):
+    """Telegram уже связан с другим клиентом или контактом."""
+
+
+class ContactTelegramService:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        pair_secrets: PairSecrets,
+        on_chats_changed: ChatsChanged | None = None,
+    ) -> None:
+        self._sessions = sessions
+        self._pair_secrets = pair_secrets
+        self._on_chats_changed = on_chats_changed
+
+    async def bind(self, tg_user_id: int, raw: str, now: datetime | None = None) -> list[str]:
+        """Тексты бота после `/start tg_…`: приветствие на языке контакта или отказ на языке
+        чата."""
+        moment = now or datetime.now(UTC)
+        link = contact_link.verify(raw, await self._pair_secrets(), moment)
+        if link is None:
+            logger.info("contact_link_refused", reason="invalid_or_expired")
+            return [client_texts.contact_link_refused(await self._chat_language(tg_user_id))]
+        try:
+            async with self._sessions() as session, session.begin():
+                company = await self._bind(session, tg_user_id, link, moment)
+        except _RefusedError as refused:
+            logger.info("contact_link_refused", reason=str(refused))
+            return [client_texts.contact_link_refused(await self._chat_language(tg_user_id))]
+        except _TakenError:
+            logger.info("contact_link_refused", reason="telegram_linked_elsewhere")
+            return [client_texts.contact_link_taken(await self._chat_language(tg_user_id))]
+        await notify_chats(self._on_chats_changed, [tg_user_id])
+        return [client_texts.contact_link_bound(link.language, company)]
+
+    async def _bind(
+        self,
+        session: AsyncSession,
+        tg_user_id: int,
+        link: contact_link.ContactLink,
+        moment: datetime,
+    ) -> str:
+        """Погасить nonce и привязать; отказ — исключением (транзакция откатывается). Возвращает
+        название компании."""
+        used = await session.scalar(
+            insert(TelegramLinkNonce)
+            .values(
+                nonce=link.nonce,
+                crm_contact_id=link.crm_contact_id,
+                tg_user_id=tg_user_id,
+                expires_at=link.expires_at,
+            )
+            .on_conflict_do_nothing(index_elements=["nonce"])
+            .returning(TelegramLinkNonce.nonce)
+        )
+        if used is None:
+            raise _RefusedError("replayed")
+        contact = await session.get(ClientContact, link.crm_contact_id, with_for_update=True)
+        if contact is None:
+            raise _RefusedError("no_contact")
+        identity = await session.scalar(
+            select(TelegramIdentity)
+            .where(TelegramIdentity.tg_user_id == tg_user_id)
+            .with_for_update()
+        )
+        if identity is None:
+            raise _RefusedError("no_identity")
+        if identity.client_id not in (None, contact.client_id) or await _other_contact(
+            session, identity.id, contact.id
+        ):
+            raise _TakenError
+        before = {"contact_id": contact.id, "telegram_identity_id": contact.telegram_identity_id}
+        identity.client_id = contact.client_id
+        identity.verified_at, identity.verified_by_user_id = moment, None
+        contact.telegram_identity_id = identity.id
+        actor = audit.Actor.system()
+        if identity.lead_id is not None:
+            lead = await session.get(Lead, identity.lead_id, with_for_update=True)
+            if lead is not None and lead.client_id is None:
+                lead.client_id = contact.client_id
+                await bus_events.lead_updated(session, lead, actor, ["crm_client_id"])
+        await audit.record(
+            session,
+            actor,
+            "client.contact_telegram_self_link",
+            "client",
+            contact.client_id,
+            before=before,
+            after={
+                "contact_id": contact.id,
+                "telegram_identity_id": identity.id,
+                "tg_user_id": tg_user_id,
+            },
+        )
+        await bus_events.contact_updated(session, contact, actor)
+        return await session.scalar(select(Client.name).where(Client.id == contact.client_id)) or ""
+
+    async def _chat_language(self, tg_user_id: int) -> str | None:
+        async with self._sessions() as session:
+            return await session.scalar(
+                select(Lead.language)
+                .join(TelegramIdentity, TelegramIdentity.lead_id == Lead.id)
+                .where(TelegramIdentity.tg_user_id == tg_user_id)
+            )
+
+    async def unlink_requested(self, session: AsyncSession, event: Event) -> None:
+        """`erp.contact.telegram_unlink_requested` в транзакции inbox; повтор и отвязанный контакт
+        — без действий."""
+        data = ContactTelegramUnlinkRequestedV1.model_validate(event.data)
+        crm_contact_id = data.payload.crm_contact_id
+        contact = await session.get(ClientContact, crm_contact_id, with_for_update=True)
+        if contact is None or contact.client_id != data.crm_client_id:
+            logger.warning(
+                "contact_telegram_unlink_skipped",
+                crm_contact_id=crm_contact_id,
+                reason="not_this_client",
+            )
+            return
+        identity_id = contact.telegram_identity_id
+        if identity_id is None:
+            return
+        contact.telegram_identity_id = None
+        actor = audit.Actor.system()
+        after: dict[str, object] = {"contact_id": contact.id, "telegram_identity_id": None}
+        identity = await session.get(TelegramIdentity, identity_id, with_for_update=True)
+        if (
+            identity is not None
+            and identity.client_id == contact.client_id
+            and not await _other_contact(session, identity.id, contact.id)
+        ):
+            after |= await release_identity(session, identity, contact.client_id, actor)
+        await audit.record(
+            session,
+            actor,
+            "client.contact_telegram_self_unlink",
+            "client",
+            contact.client_id,
+            before={"contact_id": contact.id, "telegram_identity_id": identity_id},
+            after=after,
+        )
+        await bus_events.contact_updated(session, contact, actor)
+
+
+async def _other_contact(session: AsyncSession, identity_id: int, contact_id: int) -> bool:
+    found = await session.scalar(
+        select(ClientContact.id)
+        .where(ClientContact.telegram_identity_id == identity_id, ClientContact.id != contact_id)
+        .limit(1)
+    )
+    return found is not None

@@ -35,7 +35,13 @@ NOT_FOR_CRM: Final = frozenset(
 )
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
 #: (W18A-P1, `app/services/mail_requests.py`) — не событие сделки, ленты и бота.
-OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})
+OWN_HANDLER: Final = frozenset(
+    {
+        "uz.railtech.erp.mail.requested.v1",
+        # NOTIFY-1: контакт отключил Telegram в кабинете — `app/services/contact_telegram.py`.
+        "uz.railtech.erp.contact.telegram_unlink_requested.v1",
+    }
+)
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")
 
 

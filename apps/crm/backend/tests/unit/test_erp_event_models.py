@@ -52,12 +52,16 @@ def test_the_contract_has_twenty_three_erp_types_for_the_crm_with_one_example_ea
 
 def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> None:
     """W18A-P1: `erp.mail.requested` — один обработчик (почтовый сервис), не `ErpEventsService`."""
-    from app.bus.handlers import on_mail_requested
+    from app.bus.handlers import on_contact_telegram_unlink, on_mail_requested
 
-    for event_type in OWN_HANDLER | {"uz.railtech.eds.mail.requested.v1"}:
+    own = {"uz.railtech.erp.mail.requested.v1": on_mail_requested}
+    # NOTIFY-1: отключение Telegram контактом — свой обработчик в очереди, не лента сделки.
+    own["uz.railtech.erp.contact.telegram_unlink_requested.v1"] = on_contact_telegram_unlink
+    assert set(own) == OWN_HANDLER
+    for event_type, func in {**own, "uz.railtech.eds.mail.requested.v1": on_mail_requested}.items():
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
-        assert handler.func is on_mail_requested
+        assert handler.func is func
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:

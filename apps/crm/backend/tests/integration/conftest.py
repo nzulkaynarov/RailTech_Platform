@@ -39,6 +39,7 @@ TABLES = (
     "deals",
     "leads",
     "telegram_identities",
+    "telegram_link_nonces",
     "conversations",
     "messages",
     "tg_updates",
