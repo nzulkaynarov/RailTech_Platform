@@ -53,6 +53,42 @@ class Author(StrEnum):
     system = "system"
 
 
+class CabinetMessageSentV1(BaseModel):
+    """
+    Тип uz.railtech.crm.cabinet.message_sent.v1, источник rt://crm (CHAT-1, ADR-0023). Поле data конверта (envelope.v1.json). Менеджер ответил клиенту, последнее входящее сообщение которого пришло из кабинета: CRM пишет сообщение в беседу канала cabinet и это событие одной транзакцией (откат — события нет). Подписчик — ERP: строка ленты кабинета компании erp_company_id, идемпотентно по message_id; поздний ответ с sent_at не позже стирания ленты (crm.lead.erased.v1) не применяется. Текст на шине — по ADR-0023.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    message_id: int
+    """
+    Сообщение в CRM (ключ идемпотентности у подписчика)
+    """
+    crm_lead_id: int
+    """
+    Лид, к которому привязана беседа кабинета (якорь очереди «Сообщения»)
+    """
+    crm_client_id: int | None
+    """
+    Клиент CRM беседы; null — компания ещё не сопоставлена клиенту
+    """
+    erp_company_id: int
+    """
+    Компания-контрагент в ERP, чья лента получает ответ
+    """
+    text: Annotated[str, Field(max_length=4000, min_length=1)]
+    manager_name: Annotated[str | None, Field(max_length=255)]
+    """
+    Имя менеджера для подписи в кабинете; null — имени нет
+    """
+    sent_at: AwareDatetime
+    """
+    Время записи сообщения в CRM
+    """
+    actor: Actor
+
+
 class ChangedField(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")]
 
@@ -274,6 +310,10 @@ class LeadErasedV1(BaseModel):
     Момент обезличивания в CRM (время базы)
     """
     actor: Actor
+    cabinet_erp_company_id: int | None = None
+    """
+    Лид вёл беседу чата кабинета этой компании ERP (CHAT-1): её сообщения в CRM стёрты вместе с перепиской лида — подписчик ERP стирает ленту кабинета компании до erased_at и не принимает ответы менеджера с sent_at не позже erased_at. Нет поля или null — беседы кабинета у лида не было
+    """
 
 
 class LeadMergedV1(BaseModel):
