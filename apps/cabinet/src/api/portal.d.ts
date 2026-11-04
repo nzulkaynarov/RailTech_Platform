@@ -625,6 +625,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/catalog/{id}/documents/{doc_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл документа карточки (поток, аудит выдачи)
+         * @description Документ карточки из `CatalogItem.documents` (CAT-CARD-2): только опубликованная карточка, только документ этой
+         *     карточки, видимый клиенту и действующий (срок «действует до» не прошёл). Иначе — 404, одинаково для скрытого,
+         *     просроченного, чужого и несуществующего документа и для неопубликованной карточки (причины не различаются).
+         *     Имя файла в `Content-Disposition` — из названия документа (`title`) и расширения, имя загруженного файла не
+         *     отдаётся. Каждая выдача пишется в журнал ERP (кто, что, когда). Доступно при модуле `catalog_requests`.
+         */
+        get: operations["getCatalogItemDocumentFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/company": {
         parameters: {
             query?: never;
@@ -1017,11 +1041,54 @@ export interface components {
             price: components["schemas"]["Money"] | null;
             availability: components["schemas"]["Availability"];
             lead_time_days?: number | null;
+            /** @description Ссылки на фото; главное фото — первым (CAT-CARD-2) */
             images?: string[];
             attributes?: {
                 name: string;
                 value: string;
             }[];
+            /** @description Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2) */
+            manufacturer?: components["schemas"]["CatalogManufacturer"] | null;
+            /** @description Артикул изготовителя (MPN); `null` — не указан. Артикул продавца или поставщика сюда не попадает */
+            manufacturer_part_number?: string | null;
+            /** @description Название страны происхождения — своя у карточки, иначе страна изготовителя; `null` — нигде не указана */
+            country_of_origin?: string | null;
+            /** @description Гарантия — своя у карточки, иначе срок по умолчанию у компании; `null`, если нигде не задана или равна нулю */
+            warranty?: components["schemas"]["CatalogWarranty"] | null;
+            /**
+             * @description Только в карточке `GET /catalog/{id}`; в списке `GET /catalog`, в `erp-integration` и MCP документов нет. Только
+             *     документы, отмеченные «видно клиенту», и только действующие (срок «действует до» не прошёл; пусто — бессрочно).
+             *     Файл — `GET /catalog/{id}/documents/{doc_id}/file`.
+             */
+            documents?: components["schemas"]["CatalogItemDocument"][];
+        };
+        CatalogManufacturer: {
+            name: string;
+            /** @description Название страны изготовителя */
+            country: string | null;
+        };
+        CatalogWarranty: {
+            months: number;
+            /** @description Условия гарантии; пустая строка — не заданы */
+            terms: string;
+        };
+        CatalogItemDocument: {
+            /** Format: int64 */
+            id: number;
+            /** @description Название вида документа (справочник, ведёт администратор) */
+            kind_name: string;
+            title: string;
+            /** @description Пустая строка — номера нет */
+            number: string;
+            /** @description Кем выдан; пустая строка — не указано */
+            issued_by: string;
+            /** Format: date */
+            issued_at: string | null;
+            /**
+             * Format: date
+             * @description Действует до; `null` — бессрочно
+             */
+            valid_until: string | null;
         };
         CatalogPage: {
             items: components["schemas"]["CatalogItem"][];
@@ -2451,6 +2518,36 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getCatalogItemDocumentFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                /** @description `CatalogItemDocument.id` */
+                doc_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Файл (вложение) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                    "image/png": string;
+                    "image/jpeg": string;
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };

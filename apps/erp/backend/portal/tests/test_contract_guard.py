@@ -59,6 +59,9 @@ GET_CASES = {
     "/catalog/categories": lambda w: ["/catalog/categories"],
     "/catalog": lambda w: ["/catalog"],
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
+    "/catalog/{id}/documents/{doc_id}/file": lambda w: [
+        f"/catalog/{w['product'].pk}/documents/{w['certificate'].pk}/file"
+    ],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
@@ -146,7 +149,13 @@ def _portal_get_routes() -> set[str]:
         if not route.startswith("api/portal/v1/"):
             continue
         path = "/" + route.removeprefix("api/portal/v1/")
-        path = path.replace("<int:pk>", "{id}").replace("<str:token>", "{token}").rstrip("/") or "/"
+        path = (
+            path.replace("<int:pk>", "{id}")
+            .replace("<int:doc_id>", "{doc_id}")
+            .replace("<str:token>", "{token}")
+            .rstrip("/")
+            or "/"
+        )
         portal.add(path)
     return portal
 
@@ -159,7 +168,7 @@ def test_every_portal_get_route_is_in_the_contract():
 
 # ── 1. Ответы по схемам ─────────────────────────────────────────────────────────────────────────────
 
-JSON_GET_PATHS = sorted(set(GET_CASES) - {"/documents/{id}/file"})
+JSON_GET_PATHS = sorted(set(GET_CASES) - {"/documents/{id}/file", "/catalog/{id}/documents/{doc_id}/file"})
 
 
 @pytest.mark.parametrize("contract_path", JSON_GET_PATHS)
@@ -264,6 +273,18 @@ def test_documents_file_endpoint(contract_world, portal_client, monkeypatch):
     assert response.status_code == 202
     assert response["Retry-After"].isdigit()
     assert response.json()["detail"] in error_codes()
+
+
+def test_catalog_document_file_endpoint(contract_world, portal_client):
+    product, certificate = contract_world["product"], contract_world["certificate"]
+    detail = portal_client.get(api(f"/catalog/{product.pk}")).json()
+    assert [d["id"] for d in detail["documents"]] == [certificate.pk], "документ из детальной карточки скачивается"
+    response = portal_client.get(api(f"/catalog/{product.pk}/documents/{certificate.pk}/file"))
+    assert response.status_code == 200
+    assert "attachment" in response["Content-Disposition"]
+    missing = portal_client.get(api(f"/catalog/{product.pk}/documents/{certificate.pk + 1000}/file"))
+    assert missing.status_code == 404 and missing.json()["detail"] in error_codes()
+    assert "documents" not in portal_client.get(api("/catalog")).json()["items"][0], "в списке документов нет"
 
 
 def test_draft_and_internal_documents_are_not_in_the_list(contract_world, portal_client):

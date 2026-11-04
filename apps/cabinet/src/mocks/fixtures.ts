@@ -611,6 +611,16 @@ const goods = (
   attributes: [],
 });
 
+/** Фото-заглушка карточки: SVG в data-URI (без сети; в проде — ссылки на `/media/…`). Кольца — «подшипник». */
+const photo = (title: string, hue: number): string => {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><rect width="800" height="600" fill="hsl(${hue} 25% 94%)"/>` +
+    `<circle cx="400" cy="300" r="210" fill="hsl(${hue} 10% 70%)"/><circle cx="400" cy="300" r="170" fill="hsl(${hue} 12% 84%)"/>` +
+    `<circle cx="400" cy="300" r="110" fill="hsl(${hue} 10% 62%)"/><circle cx="400" cy="300" r="70" fill="hsl(${hue} 25% 94%)"/>` +
+    `<text x="400" y="560" font-family="sans-serif" font-size="28" text-anchor="middle" fill="hsl(${hue} 10% 35%)">${title}</text></svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
 export const catalog: Schemas['CatalogItem'][] = [
   {
     id: 1001,
@@ -622,11 +632,35 @@ export const catalog: Schemas['CatalogItem'][] = [
     price: { amount: '165000.00', currency: 'UZS' },
     availability: 'in_stock',
     lead_time_days: 2,
-    images: [],
+    images: [photo('Вид спереди', 210), photo('Вид сбоку', 30), photo('В упаковке', 140)],
     attributes: [
       { name: 'Внутренний диаметр', value: '25 мм' },
       { name: 'Наружный диаметр', value: '52 мм' },
       { name: 'Ширина', value: '15 мм' },
+    ],
+    manufacturer: { name: 'Beispiel Wälzlager GmbH', country: 'Германия' },
+    manufacturer_part_number: '6205-2RS-C3',
+    country_of_origin: 'Китай',
+    warranty: { months: 18, terms: 'Гарантия на заводской брак при соблюдении условий хранения и монтажа.' },
+    documents: [
+      {
+        id: 7001,
+        kind_name: 'Сертификат соответствия',
+        title: 'Сертификат соответствия на подшипники серии 6205',
+        number: 'ТС RU C-DE.АБ12.В.00345',
+        issued_by: 'Орган по сертификации «Эталон»',
+        issued_at: '2025-03-12',
+        valid_until: '2028-03-11',
+      },
+      {
+        id: 7002,
+        kind_name: 'Паспорт изделия',
+        title: 'Паспорт подшипника 6205-2RS',
+        number: '',
+        issued_by: '',
+        issued_at: null,
+        valid_until: null,
+      },
     ],
   },
   {
@@ -639,8 +673,13 @@ export const catalog: Schemas['CatalogItem'][] = [
     price: { amount: '390000.00', currency: 'UZS' },
     availability: 'on_order',
     lead_time_days: 14,
-    images: [],
+    images: [photo('Ремень SPZ', 20)],
     attributes: [{ name: 'Расчётная длина', value: '1250 мм' }],
+    manufacturer: { name: 'Gürtel Antriebstechnik', country: 'Германия' },
+    manufacturer_part_number: null,
+    country_of_origin: 'Германия',
+    warranty: { months: 6, terms: '' },
+    documents: [],
   },
   {
     id: 1003,

@@ -5,7 +5,7 @@ import { toast } from '@/lib/toast';
 
 import { apiErrorKey } from '@/api/errors';
 import { Button } from '@/components/ui/button';
-import { DocumentNotReadyError, downloadDocument } from '@/lib/download';
+import { DocumentNotReadyError, downloadCatalogDocument, downloadDocument } from '@/lib/download';
 
 /**
  * «Скачать» документ из ERP: `GET /documents/{id}/file`. Пока PDF рендерится (202), кнопка говорит
@@ -19,6 +19,7 @@ export function DocumentButton({
   label,
   variant = 'outline',
   text,
+  catalogItemId,
 }: {
   documentId: number;
   fileName: string;
@@ -27,6 +28,8 @@ export function DocumentButton({
   variant?: 'outline' | 'ghost' | 'default';
   /** Подпись кнопки вместо «Скачать» (например, «Скан»). */
   text?: string;
+  /** Документ карточки каталога (`GET /catalog/{id}/documents/{doc_id}/file`): `documentId` — id документа, а не выпущенного. */
+  catalogItemId?: number;
 }) {
   const { t } = useTranslation();
   const [state, setState] = useState<'idle' | 'loading' | 'pending'>('idle');
@@ -34,7 +37,8 @@ export function DocumentButton({
   const download = async () => {
     setState('loading');
     try {
-      await downloadDocument(documentId, fileName, { onPending: () => setState('pending') });
+      if (catalogItemId !== undefined) await downloadCatalogDocument(catalogItemId, documentId, fileName);
+      else await downloadDocument(documentId, fileName, { onPending: () => setState('pending') });
     } catch (error) {
       if (error instanceof DocumentNotReadyError) toast.info(t('documents.stillPreparing'));
       else toast.error(t(apiErrorKey(error)));
