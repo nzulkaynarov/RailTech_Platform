@@ -176,8 +176,8 @@ test("карточка товара на телефоне: фото и доку�
   const card = await openCard(page);
   await expect(card.getByText("3 из 10")).toBeVisible();
   await expect(card.getByRole("list", { name: "Документы позиции" })).toBeVisible();
-  const overflow = await page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  const overflow = await page.evaluate<number>(
+    "document.documentElement.scrollWidth - document.documentElement.clientWidth",
   );
   expect(overflow, `ширина ${testInfo.project.name}`).toBeLessThanOrEqual(0);
   await expectNoViolations(page, "карточка на телефоне");

@@ -13,6 +13,7 @@ import logging
 from urllib.parse import urlparse
 
 from django.core.exceptions import ValidationError
+from django.db import transaction
 
 from catalog.desk.items import ItemError
 from catalog.models import Product, ProductImage
@@ -81,6 +82,7 @@ def _stored(images: list[ProductImage]) -> dict[int, tuple[int, bool]]:
     return {image.pk: (image.sort_order, image.is_main) for image in images}
 
 
+@transaction.atomic
 def add_image(product: Product, file, *, alt: str = "", make_main: bool = False) -> ProductImage:
     """Новое фото в конец списка. Первое — главное; `make_main` ставит главным и не первое."""
     validate_image(file)
@@ -106,6 +108,7 @@ def get_image(product: Product, image_id) -> ProductImage:
     return image
 
 
+@transaction.atomic
 def update_image(product: Product, image_id, data: dict) -> ProductImage:
     """`is_main` (только `true`: главное меняется назначением нового), `sort_order` (позиция с 0), `alt_text`."""
     _lock(product)
@@ -132,6 +135,7 @@ def update_image(product: Product, image_id, data: dict) -> ProductImage:
     return get_image(product, target.pk)
 
 
+@transaction.atomic
 def delete_image(product: Product, image_id) -> None:
     """Удаляет запись и файл; если было главное — главным становится следующее по порядку."""
     _lock(product)
