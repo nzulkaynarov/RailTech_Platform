@@ -151,6 +151,7 @@ inline и до БД не доходит (§9.2).
 | `GET /documents`, `GET /documents/{id}/file` | документы (поток, аудит) |
 | `GET /catalog`, `GET /catalog/{id}` | опубликованный слой с ценой и наличием (решение владельца: только здесь) |
 | `GET /company`, `PUT /company`, `GET /team`, `POST /team/invite` | профиль и команда клиента |
+| `GET /messages?after_id=&limit=`, `POST /messages {text, client_message_id, context?}`, `POST /messages/read {last_id}` | чат кабинета (CHAT-1, ADR-0023, 0.5.0): одна лента на компанию, по возрастанию `id`; опрос ленты отмечает присутствие контакта (`last_seen`, не чаще 30 с). Сообщение и `erp.cabinet.message_posted` — одна транзакция, повтор `client_message_id` в пределах компании — прежнее сообщение (200); метка `context {kind: deal\|quote\|invoice\|act, id}` — только документ своей компании, видимый клиенту (номер подставляет ERP), иначе 404; отправка — `can_act`, отметка «прочитано» — нет. `Me.unread` — непрочитанные контактом ответы менеджера. Модуль `messages` — в шаблонах обеих ролей, не выключается |
 
 Все ответы отфильтрованы по компании сессии; тест на каждый эндпоинт «чужая компания → 404».
 
@@ -379,7 +380,9 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.contact.created.v1` / `contact.updated.v1` | `rt://crm` → erp | снимок `contact`: `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `full_name`, `position`, `phone_e164`, `email`, `telegram_user_id`, `is_primary`, `language?`, `preferred_channel?`, `updated_at` |
 | `uz.railtech.crm.contact.deleted.v1` | `rt://crm` → erp | `crm_contact_id`, `crm_client_id`, `erp_company_id?`, `deleted_at`, `actor`; поздний `contact.created/updated` с `updated_at` ≤ `deleted_at` не применяется |
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
-| `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
+| `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5), erp (CHAT-1) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor` и с CHAT-1 необязательное `cabinet_erp_company_id` (лид вёл беседу кабинета этой компании — ERP стирает ленту кабинета до `erased_at` и не принимает ответы с `sent_at` не позже): лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
+| `uz.railtech.erp.cabinet.message_posted.v1` (CHAT-1) | `rt://erp` → crm | `erp_company_id`, `crm_client_id?` (null — сопоставления нет, сообщение не теряется), `actor` (client), `payload`: `erp_message_id`, `client_message_id`, `author {erp_contact_id, crm_contact_id?, name}`, `company_name`, `text`, `context? {kind, erp_id, number}`, `posted_at`; текст на шине (ADR-0023) |
+| `uz.railtech.crm.cabinet.message_sent.v1` (CHAT-1) | `rt://crm` → erp | ответ менеджера в чат кабинета: `message_id`, `crm_lead_id`, `crm_client_id?`, `erp_company_id`, `text`, `manager_name?`, `sent_at`, `actor`; ERP — строка ленты, идемпотентно по `message_id` |
 | `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
 | `uz.railtech.crm.lead.message_added.v1` (D1-1) | `rt://crm` → platform-bff (только он; ERP и EDS — нет) | сигнал без текста: `crm_lead_id`, `crm_client_id?`, `message_id`, `direction` (`in`/`out`), `author` (`lead`/`bot`/`manager`/`system`), `channel`, `has_attachments`, `handoff` (лид не у бота), `crm_assigned_user_id?`, `sent_at`, `actor`; текста, вложений и контактов нет — переписку читают API CRM с правами сотрудника |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
@@ -469,7 +472,9 @@ subscribers:
 `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
 `uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`, с W18A-P1 — `uz.railtech.crm.mail.*.v1` (итог письма);
 `crm` с W18A-P1 ещё и ← `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (§9.9), с P8b — ←
-`uz.railtech.eds.notice.requested.v1` (колокольчик и Telegram сотрудникам по поручениям входящих); `eds` — §10.2.
+`uz.railtech.eds.notice.requested.v1` (колокольчик и Telegram сотрудникам по поручениям входящих), с CHAT-1 — ←
+`uz.railtech.erp.cabinet.message_posted.v1` (сообщение кабинета в беседу канала `cabinet`), а `erp` ← `uz.railtech.crm.cabinet.message_sent.v1`
+(ответ менеджера в ленту кабинета) и `uz.railtech.crm.lead.erased.v1` (стирание ленты); `eds` — §10.2.
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
 `uz.railtech.eds.*.v1` (с D1-6 — подсказки `queue`, `counters`, `notifications`): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
