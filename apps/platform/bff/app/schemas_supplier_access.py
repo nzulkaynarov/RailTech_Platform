@@ -11,13 +11,14 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas_company import Body, Patch, ident, text
+from app.schemas_company import Body, Patch, ident, opt_ident, text
 
 CabinetRole = Literal["client", "partner"]
 RelationshipStatus = Literal["invited", "active", "suspended"]
 PartnerKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 PartnerModule = Literal["my_products", "catalog_requests"]
 Language = Literal["ru", "uz", "en"]
+CrmClientStatus = Literal["none", "requested", "linked", "conflict"]
 
 
 class Out(BaseModel):
@@ -57,9 +58,15 @@ class SupplierCabinetModules(Out):
     default: list[PartnerModule]
 
 
+class SupplierCabinetCrmClient(Out):
+    status: CrmClientStatus
+    crm_client_id: str | None
+
+
 class SupplierCabinetAccess(Out):
     company_id: str
     company_name: str
+    crm_client: SupplierCabinetCrmClient
     relationship: SupplierCabinetRelationship | None
     contacts: list[SupplierCabinetContact]
     partner_modules: SupplierCabinetModules
@@ -116,6 +123,13 @@ def to_contact(raw: Mapping[str, Any]) -> SupplierCabinetContact:
     )
 
 
+def _crm_client(raw: Any) -> dict[str, Any]:
+    """Клиент партнёра в CRM (PART-CRM); ответ ERP без поля — «не просили»."""
+    if not isinstance(raw, Mapping) or raw.get("status") not in ("requested", "linked", "conflict"):
+        return {"status": "none", "crm_client_id": None}
+    return {"status": raw["status"], "crm_client_id": opt_ident(raw.get("crm_client_id"))}
+
+
 def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:
     relationship = raw.get("relationship")
     modules = raw.get("partner_modules") or {}
@@ -143,6 +157,7 @@ def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:
             },
             "cabinet_roles": list(raw.get("cabinet_roles") or []),
             "cabinet_modules": list(raw.get("cabinet_modules") or []),
+            "crm_client": _crm_client(raw.get("crm_client")),
             "can_manage": bool(raw.get("can_manage")),
         }
     )

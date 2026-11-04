@@ -51,6 +51,7 @@ STATE = {
     },
     "cabinet_roles": ["partner"],
     "cabinet_modules": ["my_products", "catalog_requests"],
+    "crm_client": {"status": "requested", "crm_client_id": None},
     "can_manage": True,
 }
 EMPTY = {**STATE, "relationship": None, "contacts": [], "cabinet_roles": [], "cabinet_modules": []}
@@ -152,6 +153,32 @@ async def test_state_without_relationship(web: Web, be: Any, check: ContractChec
     check(response, "/erp/catalog/suppliers/{id}/cabinet-access", "get")
     assert response.json()["relationship"] is None
     assert response.json()["cabinet_roles"] == []
+
+
+@pytest.mark.parametrize(
+    ("erp", "expected"),
+    [
+        ({"status": "linked", "crm_client_id": 58}, {"status": "linked", "crm_client_id": "58"}),
+        ({"status": "conflict", "crm_client_id": 88}, {"status": "conflict", "crm_client_id": "88"}),
+        ({"status": "requested", "crm_client_id": None}, {"status": "requested", "crm_client_id": None}),
+        (None, {"status": "none", "crm_client_id": None}),  # ERP без поля (старая версия): «не просили»
+        ({"status": "weird", "crm_client_id": 1}, {"status": "none", "crm_client_id": None}),
+    ],
+)
+async def test_crm_client_of_the_partner_is_shown_with_a_string_id(
+    web: Web, be: Any, check: ContractChecker, erp: Any, expected: Any
+) -> None:
+    """PART-CRM: «клиент в CRM» — заведён / ожидает / конфликт; id клиента CRM — строкой для ссылки на карточку."""
+    await web.login(["SUPPLY"])
+    state = {k: v for k, v in STATE.items() if k != "crm_client"}
+    if erp is not None:
+        state["crm_client"] = erp
+    mock(be).get(f"{API}/catalog/supplier-access/9/").mock(return_value=httpx.Response(200, json=state))
+
+    response = await call(web, "GET", BASE)
+
+    check(response, "/erp/catalog/suppliers/{id}/cabinet-access", "get")
+    assert response.json()["crm_client"] == expected
 
 
 async def test_contact_create_and_update_forward_only_sent_fields(

@@ -23360,10 +23360,11 @@ components:
     SupplierCabinetAccess:
       type: object
       additionalProperties: false
-      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, can_manage]
+      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, crm_client, can_manage]
       properties:
         company_id: {$ref: '#/components/schemas/CompanyItemRef'}
         company_name: {type: string}
+        crm_client: {$ref: '#/components/schemas/SupplierCabinetCrmClient'}
         relationship:
           oneOf: [{$ref: '#/components/schemas/SupplierCabinetRelationship'}, {type: 'null'}]
           description: '`null` — кабинет поставщику ещё не открывали'
@@ -23378,6 +23379,23 @@ components:
           items: {type: string}
           description: Разделы, которые откроются сессии компании
         can_manage: {type: boolean, description: 'У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка'}
+    SupplierCabinetCrmClient:
+      type: object
+      additionalProperties: false
+      required: [status, crm_client_id]
+      description: >-
+        Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам),
+        заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM.
+      properties:
+        status:
+          type: string
+          enum: [none, requested, linked, conflict]
+          description: >-
+            `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `linked` — клиент заведён (новый или найденный)
+            и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+        crm_client_id:
+          oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
+          description: 'Клиент CRM (`linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
     SupplierCabinetContactCreate:
       type: object
       additionalProperties: false

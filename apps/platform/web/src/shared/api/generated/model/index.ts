@@ -933,6 +933,8 @@ export * from "./supplierCabinetContactCreateLanguage";
 export * from "./supplierCabinetContactLanguage";
 export * from "./supplierCabinetContactUpdate";
 export * from "./supplierCabinetContactUpdateLanguage";
+export * from "./supplierCabinetCrmClient";
+export * from "./supplierCabinetCrmClientStatus";
 export * from "./supplierCabinetInvite";
 export * from "./supplierCabinetInviteKind";
 export * from "./supplierCabinetInviteModulesItem";

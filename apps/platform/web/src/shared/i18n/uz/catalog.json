@@ -638,6 +638,19 @@
     "firstLogin": "Birinchi kirish",
     "noLogin": "hali kirmagan",
     "suspendedAt": "To'xtatilgan",
+    "crmClient": {
+      "label": "CRMdagi mijoz",
+      "linked": "Yaratilgan",
+      "requested": "Kutilmoqda",
+      "conflict": "Ziddiyat",
+      "open": "Mijozni ochish",
+      "openNamed": "CRM mijozi №{{id}} ni ochish",
+      "hint": {
+        "linked": "Hamkor — CRM mijozi: uning so'rovlari menejerga mijoz so'rovlari sifatida boradi, tijorat takliflari va hujjatlar ishlaydi.",
+        "requested": "So'rov CRMga yuborildi, mijoz yaratilmoqda. Shu paytgacha hamkor so'rovlari shu yerda saqlanadi va menejerga o'zi boradi.",
+        "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi: CRMda kartochkalarni birlashtiring va hamkorni qayta taklif qiling."
+      }
+    },
     "rights": "Hamkorga nima ochiladi",
     "modules": {
       "my_products": {

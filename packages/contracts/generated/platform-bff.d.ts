@@ -13877,6 +13877,7 @@ export interface components {
     SupplierCabinetAccess: {
       company_id: components["schemas"]["CompanyItemRef"];
       company_name: string;
+      crm_client: components["schemas"]["SupplierCabinetCrmClient"];
       /** @description `null` — кабинет поставщику ещё не открывали */
       relationship: components["schemas"]["SupplierCabinetRelationship"] | null;
       contacts: components["schemas"]["SupplierCabinetContact"][];
@@ -13887,6 +13888,16 @@ export interface components {
       cabinet_modules: string[];
       /** @description У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка */
       can_manage: boolean;
+    };
+    /** @description Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам), заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM. */
+    SupplierCabinetCrmClient: {
+      /**
+       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `linked` — клиент заведён (новый или найденный) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+       * @enum {string}
+       */
+      status: "none" | "requested" | "linked" | "conflict";
+      /** @description Клиент CRM (`linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
+      crm_client_id: components["schemas"]["CompanyItemRef"] | null;
     };
     SupplierCabinetContactCreate: {
       name: string;

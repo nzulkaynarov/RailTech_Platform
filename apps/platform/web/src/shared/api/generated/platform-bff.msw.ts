@@ -24917,6 +24917,10 @@ export const getGetSupplierCabinetAccessResponseMock = (
 ): SupplierCabinetAccess => ({
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  crm_client: {
+    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  },
   relationship: faker.helpers.arrayElement([
     { ...getGetSupplierCabinetAccessResponseSupplierCabinetRelationshipMock() },
     null,
@@ -25045,6 +25049,10 @@ export const getUpdateSupplierCabinetRightsResponseMock = (
 ): SupplierCabinetAccess => ({
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  crm_client: {
+    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  },
   relationship: faker.helpers.arrayElement([
     { ...getUpdateSupplierCabinetRightsResponseSupplierCabinetRelationshipMock() },
     null,
@@ -25133,6 +25141,10 @@ export const getInviteSupplierToCabinetResponseMock = (
 ): SupplierCabinetAccess => ({
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  crm_client: {
+    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  },
   relationship: faker.helpers.arrayElement([
     { ...getInviteSupplierToCabinetResponseSupplierCabinetRelationshipMock() },
     null,
@@ -25221,6 +25233,10 @@ export const getSuspendSupplierCabinetAccessResponseMock = (
 ): SupplierCabinetAccess => ({
   company_id: faker.helpers.fromRegExp("^[0-9]+$"),
   company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  crm_client: {
+    status: faker.helpers.arrayElement(["none", "requested", "linked", "conflict"] as const),
+    crm_client_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  },
   relationship: faker.helpers.arrayElement([
     { ...getSuspendSupplierCabinetAccessResponseSupplierCabinetRelationshipMock() },
     null,

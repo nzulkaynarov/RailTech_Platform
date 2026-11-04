@@ -3,6 +3,7 @@ import { HttpResponse, http } from "msw";
 import type {
   SupplierCabinetAccess,
   SupplierCabinetContact,
+  SupplierCabinetCrmClient,
   SupplierCabinetRelationship,
 } from "../shared/api/generated/model";
 import { buildMe, readSession } from "./mockSession";
@@ -23,6 +24,8 @@ interface Entry {
   contacts: SupplierCabinetContact[];
   /** Клиентская роль компании (тип CLIENT): роли складываются. */
   client: boolean;
+  /** Клиент партнёра в CRM (PART-CRM): приглашение просит CRM его завести. */
+  crm: SupplierCabinetCrmClient;
 }
 
 function seed(): Record<string, Entry> {
@@ -31,6 +34,7 @@ function seed(): Record<string, Entry> {
       name: "ООО «Поставщик Север»",
       relationship: null,
       client: false,
+      crm: { status: "none", crm_client_id: null },
       contacts: [
         {
           id: "501",
@@ -47,6 +51,7 @@ function seed(): Record<string, Entry> {
     "2": {
       name: "АО «Южный Металл»",
       client: true,
+      crm: { status: "linked", crm_client_id: "58" },
       relationship: {
         role: "partner",
         kind: "manufacturer",
@@ -68,6 +73,35 @@ function seed(): Record<string, Entry> {
           can_act: true,
           invited_at: "2026-10-30T09:00:00+05:00",
           last_login_at: "2026-11-03T08:15:00+05:00",
+        },
+      ],
+    },
+    // Приглашён, но клиент CRM с такими реквизитами уже привязан к другой компании (PART-CRM): конфликт
+    "3": {
+      name: "ИП «Восточный склад»",
+      client: false,
+      crm: { status: "conflict", crm_client_id: "88" },
+      relationship: {
+        role: "partner",
+        kind: "supplier",
+        modules: ["my_products", "catalog_requests"],
+        status: "invited",
+        invited_at: "2026-11-04T09:00:00+05:00",
+        activated_at: null,
+        suspended_at: null,
+        responsible: { id: "7", name: "Снабженец Демо" },
+        invited_by: { id: "7", name: "Снабженец Демо" },
+      },
+      contacts: [
+        {
+          id: "503",
+          name: "Камола Рашидова",
+          email: "kamola@vostok-sklad.example",
+          phone: "",
+          language: "ru",
+          can_act: true,
+          invited_at: "2026-11-04T09:00:00+05:00",
+          last_login_at: null,
         },
       ],
     },
@@ -132,6 +166,7 @@ function view(id: string, entry: Entry, canManage = true): SupplierCabinetAccess
       ...(entry.client ? (["client"] as const) : []),
       ...(open ? (["partner"] as const) : []),
     ],
+    crm_client: entry.crm,
     cabinet_modules: [
       ...(entry.client
         ? [
@@ -279,6 +314,8 @@ export const erpSupplierAccessHandlers = [
       invited_by: person,
     };
     contact.invited_at = MOCK_NOW;
+    // Приглашение просит CRM завести клиента; клиент, уже заведённый или в конфликте, остаётся как есть.
+    if (found[1].crm.status === "none") found[1].crm = { status: "requested", crm_client_id: null };
     return HttpResponse.json(view(...found));
   }),
   http.post("*/erp/catalog/suppliers/:id/cabinet-access/suspend", ({ params }) => {
