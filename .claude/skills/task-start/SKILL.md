@@ -31,6 +31,9 @@ worktree», «Git — только в своём worktree») и `CLAUDE.md` ко
    | rt-bus, rt-docs | `make -C packages/rt-bus install`, `make -C packages/rt-docs install` |
    | Контракты | `make -C packages/contracts install` |
 
+   Задача меняет контракт — ставь зависимости и **всех потребителей** файла (список — скилл `pre-pr` п. 2): без Cabinet
+   или Платформы типы потребителя не перегенерировать, и CI краснеет на них (#389).
+
 5. Проверка места:
    - git-хуки: `ls "$(git -C .claude/worktrees/<задача> rev-parse --path-format=absolute --git-path hooks)"` — есть
      `pre-commit` и `commit-msg`; нет — `make hooks` в корне (один раз на клон, действует во всех worktree);

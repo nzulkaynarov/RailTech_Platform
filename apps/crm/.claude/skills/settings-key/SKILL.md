@@ -12,7 +12,8 @@ description: Добавить или изменить бизнес-правил�
 1. Выбери ключ (`SPEC §5.7`: `company`, `business_hours`, `texts`, `bot`, `kb`, `stop_words`, `competitors`, `escalation`, `qualification`, `notifications`, `budget`, `terms`) или обоснуй новый (новый ключ — правка `SPEC §5.7`, вопрос владельцу, если это новое бизнес-понятие).
 2. Схема — `backend/app/schemas/settings.py`: поле в модели `_Strict` с `Field(description=…)`, разумным дефолтом и ограничениями (`ge/le`, `Literal`, `min_length`). Текст для клиента — `LocalizedText` (ru/uz/en, узбекский — латиница `oʻ`/`gʻ`); плейсхолдеры `{name}` — единообразно с соседними текстами. Новый ключ → добавить в реестр ключей и в `AppSettings`.
 3. Код читает настройку через `AppSettings` (сервис/домен получают значение параметром — доменные функции остаются чистыми); тесты домена — таблицы кейсов с разными значениями настройки.
-4. Фронт (форма строится по JSON-схеме, `components/SchemaFields.tsx`):
+4. Фронт (форма строится по JSON-схеме, `components/SchemaFields.tsx`; фронтенд CRM заморожен, но подписи нужны — без них
+   падает `settingsLabels.test.ts` в задании `crm`, #378, #388):
    - подпись поля — `frontend/src/i18n/ru/settings.ts` (`fields`), текст бота — `botTexts` с `label` и `when` (когда отправляется); тест-сторож `i18n/settingsLabels.test.ts` падает на поле без подписи;
    - новый ключ — название в `keys`, раздел в `domain/settingsLayout.ts SECTION_GROUPS` (иначе попадёт в «Другое»); особый виджет (время, дни недели, пользователи, триггеры) — `widgetFor`;
    - для текстов с плейсхолдерами — пример в `settings.samples` для предпросмотра.
