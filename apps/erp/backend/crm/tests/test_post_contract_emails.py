@@ -88,6 +88,10 @@ def world(lookups):
     buyer_user = _member(buyer_co, "buyer@g3.test")
     seller_co = _company("Seller G3", "S100", "SUPPLIER")
     seller_user = _member(seller_co, "seller@g3.test", can_sell=True)
+    # Напоминания о просрочке включает компания-продавец (по умолчанию выключено — DECISIONS 2026-11-04)
+    seller_settings = seller_co.settings
+    seller_settings.remind_overdue_invoices = True
+    seller_settings.save(update_fields=["remind_overdue_invoices"])
 
     deal = Deal.objects.create(title="G3 deal", company=buyer_co, stage=DealStage.objects.get(code="CLOSED_WON"))
     quote = Quote.objects.create(
@@ -433,3 +437,45 @@ def test_contact_with_the_buyer_user_address_gets_one_invoice_email(
     assert PortalNotice.objects.get(contact=same, kind="invoice_issued").channel == NoticeChannel.SOURCE
     assert world["buyer_user"].email not in _contact_mail(contact_mail)
     assert same.email not in _contact_mail(contact_mail)
+
+
+def test_reminders_are_off_by_default(world, contacts, django_capture_on_commit_callbacks):
+    """Выключено в настройках продавца — ни письма пользователям, ни уведомления контактам, счёт не отмечен (Stripe,
+    QuickBooks: напоминания включает продавец)."""
+    from portal.models import PortalNotice
+
+    from crm.tasks import send_payment_reminders
+
+    settings_row = world["seller_co"].settings
+    settings_row.remind_overdue_invoices = False
+    settings_row.save(update_fields=["remind_overdue_invoices"])
+    invoice = _invoice(world, "ISSUED", due_date=timezone.localdate() - timedelta(days=10))
+    with (
+        patch("notifications.tasks.send_transactional_email") as users_mail,
+        patch("portal.tasks.send_notice_email") as contact_mail,
+    ):
+        with django_capture_on_commit_callbacks(execute=True):
+            assert send_payment_reminders()["reminded"] == 0
+
+    assert _sent(users_mail) == [] and _contact_mail(contact_mail) == []
+    assert not PortalNotice.objects.filter(kind="payment_overdue").exists()
+    invoice.refresh_from_db()
+    assert invoice.payment_reminder_sent_at is None, "после включения напоминание уйдёт"
+
+
+def test_reminders_schedule_is_daily_at_ten_tashkent(db):
+    from django_celery_beat.models import PeriodicTask
+
+    task = PeriodicTask.objects.get(task="crm.send_payment_reminders")
+    assert task.enabled
+    assert (task.crontab.hour, task.crontab.minute, str(task.crontab.timezone)) == ("10", "0", "Asia/Tashkent")
+
+
+def test_reminder_switch_in_company_settings(world):
+    from accounts.services.company_settings import update_company_settings
+
+    owner = CustomUser.objects.create_superuser(email="root@g3.test", username="root@g3.test", password="x")
+    row, error = update_company_settings(owner, world["seller_co"], {"remind_overdue_invoices": False})
+    assert error is None and row.remind_overdue_invoices is False
+    _row, error = update_company_settings(owner, world["seller_co"], {"remind_overdue_invoices": "yes"})
+    assert error == "BAD_BOOLEAN"

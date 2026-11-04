@@ -241,7 +241,9 @@
     "fxAgeHint": "1 dan 90 kungacha.",
     "save": "Shartlarni saqlash",
     "invalidField": "Qiymatni tekshiring",
-    "note": "Yangi TT shu qiymatlarni oladi; rasmiylashtirilgan TT o‘zgarmaydi."
+    "note": "Yangi TT shu qiymatlarni oladi; rasmiylashtirilgan TT o‘zgarmaydi.",
+    "remindOverdue": "Mijozlarga muddati oʻtgan hisob-fakturalar haqida eslatish",
+    "remindOverdueHint": "Kuniga bir marta, Toshkent vaqti bilan 10:00 da — toʻlov muddati uch kundan ortiq oʻtgan har bir hisob-faktura boʻyicha bitta eslatma: mijoz kabinetidagi qoʻngʻiroqchada va loyiha kontaktiga hamda kabinetga taklif qilinganlarga xat bilan. Sukut boʻyicha oʻchirilgan."
   },
   "charges": {
     "title": "TT xarajat moddalari",

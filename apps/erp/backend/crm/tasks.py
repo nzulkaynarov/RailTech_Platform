@@ -510,8 +510,15 @@ def send_payment_reminders(self, grace_days: int = 3) -> dict:
         .order_by("id")
     )
 
+    from .services.billing import _invoice_seller_company
+
     reminded = failed = 0
     for invoice in overdue_qs:
+        seller = _invoice_seller_company(invoice)
+        if seller is None or not seller.settings.remind_overdue_invoices:
+            # Напоминания включает компания-продавец в Настройках (по умолчанию выключено — DECISIONS 2026-11-04):
+            # счёт не отмечается, событие не публикуется — после включения напоминание уйдёт.
+            continue
         if invoice.balance_due <= 0:
             # Счёт закрыт деньгами, но статус не переключился — напоминать не о чем.
             continue

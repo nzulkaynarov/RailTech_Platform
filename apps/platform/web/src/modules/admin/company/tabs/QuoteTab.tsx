@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Alert, App, Form, Input, InputNumber, Select } from "antd";
+import { Alert, App, Form, Input, InputNumber, Select, Switch } from "antd";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -121,6 +121,15 @@ function QuoteForm({ defaults }: { defaults: QuoteDefaults }) {
         </Form.Item>
         <Form.Item name="payment_terms_days" label={t("quote.paymentDays")}>
           <InputNumber min={0} precision={0} {...NUMBER} />
+        </Form.Item>
+        <Form.Item
+          name="remind_overdue_invoices"
+          label={t("quote.remindOverdue")}
+          extra={t("quote.remindOverdueHint")}
+          valuePropName="checked"
+          className="pf-co-wide"
+        >
+          <Switch />
         </Form.Item>
         <Form.Item name="default_warranty_months" label={t("quote.warranty")}>
           <InputNumber min={0} precision={0} {...NUMBER} />

@@ -439,6 +439,18 @@ describe("Условия КП: маржа — группа cost_margin", () => {
   });
 });
 
+describe("Условия КП: напоминания о просрочке (NOTIFY-2)", () => {
+  it("по умолчанию выключено; включение сохраняется", async () => {
+    await openTab("quote");
+    const toggle = await screen.findByRole("switch", { name: "Напоминать клиентам о просроченных счетах" });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    fireEvent.click(await button("Сохранить условия"));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    expect(readCompanyMock().quote.remind_overdue_invoices).toBe(true);
+  });
+});
+
 describe("Статьи расхода", () => {
   it("список по базисам, изменение суммы и удаление с блоком «Что произойдёт»", async () => {
     await openTab("charges");

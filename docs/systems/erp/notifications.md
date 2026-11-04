@@ -39,13 +39,14 @@
 |---|---|---|---|---|---|
 | `quote.sent` (отправка КП, автоотправка ERP-11) | `quote_sent` · documents | КП → `/quotes/<id>` | да | да, если среди каналов Telegram | получателю КП — письмо с КП (ERP-11); остальным без Telegram — письмо |
 | `invoice.issued` (выставление счёта) | `invoice_issued` · money | счёт → `/invoices?focus=<id>` | да | да | контакту без Telegram — письмо |
-| `invoice.overdue` (напоминание о просрочке) | `payment_overdue` · money | счёт → `/invoices?focus=<id>` | да | нет | письмо всем контактам с адресом |
+| `invoice.overdue` (напоминание о просрочке: Beat 10:00 по Ташкенту, только если у продавца включено «Напоминать клиентам о просроченных счетах», по умолчанию выключено) | `payment_overdue` · money | счёт → `/invoices?focus=<id>` | да | нет | письмо, и контакту с Telegram |
 | `act.issued` (выпуск и повторный выпуск акта) | `act_issued` · documents | акт → `/acts?focus=<id>` | да | да | контакту без Telegram — письмо |
 | «Напомнить» по акту (без события шины) | `act_issued` · documents | акт → `/acts?focus=<id>` | да | нет | письмо всем контактам с адресом |
 | `delivery.status_changed` (статусы продавца) | `delivery_status_changed` · deliveries | поставка (`object.id` — id сделки) → `/deals/<id сделки>` | нет | да | только колокольчик |
 | `delivery.eta_changed` (сдвиг срока) | `delivery_eta_changed` · deliveries | поставка (`object.id` — id сделки) → `/deals/<id сделки>` | да | да | контакту без Telegram — письмо |
-| ответ менеджера в чате кабинета (CHAT-1) | `manager_replied` · messages | чат → `/messages` | да | нет | письмо через 10 минут, если не прочитано и контакт не заходил |
-| возврат карточки партнёра (PART-3) | `partner_card_returned` · partner_products | карточка → `/my-products?card=<id>` | да | нет | письмо |
+| `crm.cabinet.message_sent` — ответ менеджера в чате кабинета (приёмник `messages.apply_manager_reply`) | `manager_replied` · messages | чат (`object.id` — сообщение) → `/messages` | да | нет (временно — DECISIONS 2026-11-04, B-NOTIFY2-1) | письмо через 10 минут, если не прочитано (в колокольчике или в чате) и контакт не был в кабинете; кто сейчас в чате — только лента; серия ответов — одно письмо |
+| решение по карточке партнёра (PART-3) — «возвращена» | `partner_card_returned` · partner_products | карточка → `/my-products?card=<id>` | да | нет | письмо |
+| решение по карточке партнёра (PART-3) — «опубликована» | `partner_card_published` · partner_products | карточка → `/my-products?card=<id>` | да | нет | письмо |
 | `request.created` (заявка принята) | — | — | — | да (без Telegram — письмо CRM) | колокольчика нет: клиент сам создал заявку или её завёл менеджер |
 | `invoice.paid`, `quote.accepted`, `act.accepted`, `act.returned`, `delivery.line_*` | — | — | — | `invoice.paid` — да; остальные — сотруднику | нет: решение самого клиента или факт оплаты, о котором он знает |
 
@@ -57,8 +58,16 @@
 добавляется (ключ — версия КП), письмо КП уходит процессом документа, бот пишет по повторному `quote.sent`; второго письма
 маршрутизатор не шлёт. Клиент получает КП и в почту, и в Telegram — так задумано ручной отправкой.
 
-Ответ менеджера и возврат карточки партнёра заложены видом и группой; источники подключаются, когда в `main` CHAT-1
-(`crm.cabinet.message_sent`) и PART-3. Решения клиента о поставке (принято, есть замечания) ему не повторяются.
+Ответ менеджера в чате: прочтение ленты (`POST /messages/read`) гасит уведомления до этого сообщения и их письма; отправка
+перепроверяет отметку ленты (`PortalChatReader.last_read_id`) и присутствие (`last_seen_at` после уведомления).
+
+**Решения по карточке партнёра — как PART-3 переключится на маршрутизатор.** Функция
+`portal.services.notice_sources.partner_card_decision(product, decision, *, reason="", issues=(), actor=None)` — та же подпись,
+что у `portal.services.partner_decision_mail.notify_decision` PART-3: очередь проверки вызывает её вместо прямого письма
+(`send_templated_email` шаблонов `partner_card_*`), прямое письмо убирается — второго письма нет. Пока PART-3 (#401) не в
+`main`, решения уходят прямым письмом PART-3, колокольчика по ним нет.
+
+Решения клиента о поставке (принято, есть замечания) ему не повторяются.
 
 ## Видимость
 

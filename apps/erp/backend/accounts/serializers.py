@@ -45,6 +45,7 @@ class CompanySettingsSerializer(serializers.ModelSerializer):
             "default_margin_percent",
             "default_offer_validity_days",
             "payment_terms_days",
+            "remind_overdue_invoices",
             "default_payment_terms",
             "default_warranty_months",
             "min_margin_percent",
@@ -67,6 +68,7 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
     `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
     читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
     `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
+    `remind_overdue_invoices` — напоминать клиентам о просроченных счетах (по умолчанию выключено; NOTIFY-2).
     """
 
     default_cost_currency = serializers.CharField(
@@ -87,6 +89,7 @@ class CompanySettingsUpdateSerializer(serializers.ModelSerializer):
             "target_margin_percent",
             "default_offer_validity_days",
             "payment_terms_days",
+            "remind_overdue_invoices",
             "default_payment_terms",
             "default_warranty_months",
             "catalog_price_visibility",

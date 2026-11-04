@@ -78,6 +78,7 @@ _FIELD_OF: dict[str, str] = {
     "BAD_PRICE_VISIBILITY": "catalog_price_visibility",
     "BAD_PUBLISH_THRESHOLD": "catalog_publish_threshold",
     "BAD_FX_RATE_MAX_AGE_DAYS": "fx_rate_max_age_days",
+    "BAD_BOOLEAN": "remind_overdue_invoices",
     "FX_RATE_INVALID": "rate_to_uzs",
     "FX_RATE_DATE_INVALID": "rate_date",
     "FX_RATE_DATE_IN_FUTURE": "rate_date",

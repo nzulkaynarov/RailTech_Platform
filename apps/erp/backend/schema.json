@@ -3136,7 +3136,7 @@
         "/api/v1/accounts/companies/{id}/settings/": {
             "get": {
                 "operationId": "accounts_companies_settings_retrieve",
-                "description": "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).",
+                "description": "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily overdue-invoice reminders to client contacts (default off).",
                 "summary": "Read / update company КП defaults + numbering",
                 "parameters": [
                     {
@@ -3169,7 +3169,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN",
+                        "description": "BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3198,7 +3198,7 @@
             },
             "patch": {
                 "operationId": "accounts_companies_settings_partial_update",
-                "description": "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).",
+                "description": "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily overdue-invoice reminders to client contacts (default off).",
                 "summary": "Read / update company КП defaults + numbering",
                 "parameters": [
                     {
@@ -3250,7 +3250,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN",
+                        "description": "BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -34742,6 +34742,11 @@
                         "title": "Срок оплаты счёта (дней)",
                         "description": "Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
                     },
+                    "remind_overdue_invoices": {
+                        "type": "boolean",
+                        "title": "Напоминать клиентам о просроченных счетах",
+                        "description": "Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента: колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks)."
+                    },
                     "default_payment_terms": {
                         "type": "string",
                         "title": "Условия оплаты по умолчанию",
@@ -43076,7 +43081,7 @@
             },
             "PatchedCompanySettingsUpdateRequest": {
                 "type": "object",
-                "description": "Тело `PATCH accounts/companies/{id}/settings/` — ровно то, что принимает `update_company_settings`.\n\nТолько для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а отдаёт `request.data`\nсервису, который сам разбирает поля, а ошибку возвращает кодом `BAD_*`. Справочники (`default_cost_currency`,\n`default_delivery_basis`) пишутся КОДОМ строки справочника (`\"USD\"`, `\"FCA\"`; пусто или `null` — сбросить), а\nчитаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).\n`payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).",
+                "description": "Тело `PATCH accounts/companies/{id}/settings/` — ровно то, что принимает `update_company_settings`.\n\nТолько для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а отдаёт `request.data`\nсервису, который сам разбирает поля, а ошибку возвращает кодом `BAD_*`. Справочники (`default_cost_currency`,\n`default_delivery_basis`) пишутся КОДОМ строки справочника (`\"USD\"`, `\"FCA\"`; пусто или `null` — сбросить), а\nчитаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).\n`payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).\n`remind_overdue_invoices` — напоминать клиентам о просроченных счетах (по умолчанию выключено; NOTIFY-2).",
                 "properties": {
                     "default_cost_currency": {
                         "type": "string",
@@ -43133,6 +43138,11 @@
                         "nullable": true,
                         "title": "Срок оплаты счёта (дней)",
                         "description": "Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
+                    },
+                    "remind_overdue_invoices": {
+                        "type": "boolean",
+                        "title": "Напоминать клиентам о просроченных счетах",
+                        "description": "Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента: колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks)."
                     },
                     "default_payment_terms": {
                         "type": "string",

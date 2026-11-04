@@ -126,6 +126,14 @@ def update_company_settings(
             setattr(settings_row, field, value)
             changed.append(field)
 
+    # Напоминания клиентам о просрочке (NOTIFY-2, DECISIONS 2026-11-04): только `true` / `false`.
+    if "remind_overdue_invoices" in data:
+        value = data.get("remind_overdue_invoices")
+        if not isinstance(value, bool):
+            return None, "BAD_BOOLEAN"
+        settings_row.remind_overdue_invoices = value
+        changed.append("remind_overdue_invoices")
+
     # Политики каталога (M1-ERP-07): видимость цен по умолчанию и порог публикации.
     if "catalog_price_visibility" in data:
         from catalog.constants import PriceVisibility
