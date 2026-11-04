@@ -280,3 +280,94 @@ class QuoteComment(models.Model):
 
     def __str__(self):
         return f"QuoteComment(quote={self.quote_id}, {self.created_at:%Y-%m-%d})"
+
+
+class PortalMessage(models.Model):
+    """Лента чата кабинета компании (CHAT-1, ADR-0023): проекция переписки, видят все контакты компании.
+
+    Сообщение контакта пишет портал (`POST /messages`) вместе с событием `erp.cabinet.message_posted` — CRM кладёт его в
+    беседу канала `cabinet`; ответ менеджера приходит событием `crm.cabinet.message_sent` (`crm_message_id`). Владелец
+    переписки — CRM; стирание ПД клиента в CRM стирает и эту ленту (`crm.lead.erased`, `PortalChatErasure`).
+    """
+
+    DIRECTION_CLIENT = "client"
+    DIRECTION_MANAGER = "manager"
+    CONTEXT_KINDS = ("deal", "quote", "invoice", "act")
+
+    company = models.ForeignKey(
+        "parties.Company", on_delete=models.CASCADE, related_name="portal_messages", verbose_name=_("Компания")
+    )
+    direction = models.CharField(
+        max_length=10,
+        choices=[(DIRECTION_CLIENT, _("Контакт компании")), (DIRECTION_MANAGER, _("Менеджер"))],
+        verbose_name=_("Направление"),
+    )
+    author_contact = models.ForeignKey(
+        "parties.Contact",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="portal_messages",
+        verbose_name=_("Автор — контакт компании"),
+    )
+    author_name = models.CharField(max_length=255, blank=True, verbose_name=_("Имя автора"))
+    text = models.TextField(verbose_name=_("Текст"))  # до 4000 знаков — `PortalMessageCreate.text` контракта
+    context_kind = models.CharField(
+        max_length=10, blank=True, choices=[(k, k) for k in CONTEXT_KINDS], verbose_name=_("Метка: вид документа")
+    )
+    context_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Метка: id документа"))
+    context_number = models.CharField(max_length=64, blank=True, verbose_name=_("Метка: номер документа"))
+    client_message_id = models.CharField(max_length=64, null=True, blank=True, verbose_name=_("Ключ повтора Cabinet"))
+    crm_message_id = models.BigIntegerField(null=True, blank=True, verbose_name=_("Сообщение CRM"))
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+
+    class Meta:
+        verbose_name = _("Сообщение чата кабинета")
+        verbose_name_plural = _("Сообщения чата кабинета")
+        ordering = ["id"]
+        indexes = [models.Index(fields=["company", "id"], name="portal_msg_company_id")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["company", "client_message_id"],
+                condition=models.Q(client_message_id__isnull=False),
+                name="uq_portal_msg_client_key",
+            ),
+            models.UniqueConstraint(
+                fields=["crm_message_id"],
+                condition=models.Q(crm_message_id__isnull=False),
+                name="uq_portal_msg_crm_id",
+            ),
+        ]
+
+    def __str__(self):
+        return f"PortalMessage(company={self.company_id}, {self.direction}, #{self.pk})"
+
+
+class PortalChatReader(models.Model):
+    """Прочитанность и присутствие контакта в чате кабинета: `last_read_id` — до какого сообщения прочитано (бейдж
+    `Me.unread`), `last_seen_at` — когда контакт последний раз смотрел ленту (опрос, с прореживанием; по нему уведомления
+    решают, в кабинете ли контакт сейчас — NOTIFY-2)."""
+
+    company = models.ForeignKey("parties.Company", on_delete=models.CASCADE, related_name="+")
+    contact = models.ForeignKey("parties.Contact", on_delete=models.CASCADE, related_name="portal_chat_readers")
+    last_read_id = models.BigIntegerField(default=0, verbose_name=_("Прочитано до сообщения"))
+    last_seen_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Последний раз в чате"))
+
+    class Meta:
+        verbose_name = _("Читатель чата кабинета")
+        verbose_name_plural = _("Читатели чата кабинета")
+        constraints = [models.UniqueConstraint(fields=["company", "contact"], name="uq_portal_chat_reader")]
+
+
+class PortalChatErasure(models.Model):
+    """Лента компании стёрта по `crm.lead.erased` (ПД клиента): ответ менеджера, отправленный не позже `erased_at`,
+    пришедший с опозданием, ленту не восстанавливает."""
+
+    company = models.OneToOneField(
+        "parties.Company", on_delete=models.CASCADE, related_name="portal_chat_erasure", verbose_name=_("Компания")
+    )
+    erased_at = models.DateTimeField(verbose_name=_("Стёрто в CRM"))
+
+    class Meta:
+        verbose_name = _("Стирание чата кабинета")
+        verbose_name_plural = _("Стирания чата кабинета")

@@ -163,6 +163,7 @@ class TestEntryPaths:
         assert me.json()["roles"] == ["partner"] and me.json()["modules"] == [
             "my_products",
             "catalog_requests",
+            "messages",
             "profile",
         ]
 
@@ -228,15 +229,20 @@ class TestMe:
 
     def test_partner_me_defaults(self, partner_client):
         body = partner_client.get(ME).json()
-        assert body["roles"] == ["partner"] and body["modules"] == ["my_products", "catalog_requests", "profile"]
+        assert body["roles"] == ["partner"] and body["modules"] == [
+            "my_products",
+            "catalog_requests",
+            "messages",
+            "profile",
+        ]
 
     def test_partner_me_follows_enabled_modules_at_once(self, partner_client, supplier_company):
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=["my_products"])
-        assert partner_client.get(ME).json()["modules"] == ["my_products", "profile"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "messages", "profile"]
         CompanyRelationship.objects.filter(company=supplier_company).update(modules=[])
         body = partner_client.get(ME).json()
-        # доступ открыт, разделы не настроены: остаётся «Профиль» (выход и язык) — он есть у любой сессии
-        assert body["roles"] == ["partner"] and body["modules"] == ["profile"]
+        # доступ открыт, разделы не настроены: остаются «Сообщения» и «Профиль» — они есть у любой сессии (CHAT-1)
+        assert body["roles"] == ["partner"] and body["modules"] == ["messages", "profile"]
 
     def test_client_and_partner_roles_and_modules_add_up(self, client_company, portal_client):
         relate(client_company, modules=["my_products"])
@@ -250,7 +256,7 @@ class TestMe:
         CompanyRelationship.objects.filter(company=supplier_company).update(
             modules=["quotes", "invoices", "my_products", "my_products"]
         )
-        assert partner_client.get(ME).json()["modules"] == ["my_products", "profile"]
+        assert partner_client.get(ME).json()["modules"] == ["my_products", "messages", "profile"]
         assert partner_client.get(PREFIX + "/quotes").status_code == 403
         assert partner_client.get(PREFIX + "/invoices").status_code == 403
 
@@ -269,8 +275,18 @@ class TestMe:
 
 # ── Эндпоинты по модулям ───────────────────────────────────────────────────────────────────────────
 
-#: Операции, открытые любой роли или без сессии: вход, выход и профиль. Всё остальное в контракте — по модулям.
-ANY_ROLE_PATHS = {"/auth/telegram", "/auth/magic-link", "/auth/magic", "/auth/code", "/auth/logout", "/me"}
+#: Операции, открытые любой роли или без сессии: вход, выход и профиль, а также чат кабинета — модуль `messages` есть у
+#: любой сессии и не выключается (CHAT-1, `ALWAYS_ON`). Всё остальное в контракте — по модулям.
+ANY_ROLE_PATHS = {
+    "/auth/telegram",
+    "/auth/magic-link",
+    "/auth/magic",
+    "/auth/code",
+    "/auth/logout",
+    "/me",
+    "/messages",
+    "/messages/read",
+}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {"/requests", "/requests/{id}", "/catalog", "/catalog/{id}", "/catalog/categories", "/uploads"}

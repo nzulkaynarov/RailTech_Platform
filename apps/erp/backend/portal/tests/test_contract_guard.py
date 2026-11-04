@@ -61,6 +61,7 @@ GET_CASES = {
     "/catalog/{id}": lambda w: [f"/catalog/{w['product'].pk}"],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
+    "/messages": lambda w: ["/messages"],
 }
 
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
@@ -117,7 +118,7 @@ def fetch(client, anon_client, contract_path: str, url: str):
 def test_contract_is_mounted_and_readable():
     path = find_contract_path()
     assert path.name == "erp-portal.yaml"
-    assert load_contract()["info"]["version"] == "0.4.0"
+    assert load_contract()["info"]["version"] == "0.5.0"
 
 
 def test_every_contract_get_is_covered_by_the_guard():

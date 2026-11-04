@@ -14,7 +14,7 @@ from decimal import Decimal
 import pytest
 from django.core.files.base import ContentFile
 from django.utils import timezone
-from portal.models import MagicLinkToken, PortalRequestLine, PortalUpload, QuoteComment
+from portal.models import MagicLinkToken, PortalMessage, PortalRequestLine, PortalUpload, QuoteComment
 from portal.services.tokens import hash_token
 from portal.tests.documents_world import build_document_fixtures
 
@@ -360,5 +360,34 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         "deal": other_deal,
         "quote": make_quote(other_deal, 1, QuoteStatusCode.SENT, uzs=uzs),
     }
+    # ── Чат кабинета (CHAT-1): сообщения контакта с метками всех видов и ответ менеджера ─────────────────────────
+    labels = [
+        ("deal", main.pk, f"D-{main.pk}"),
+        ("quote", quotes["sent"].pk, "KP-1"),
+        ("invoice", next(iter(invoices.values())).pk, "S-1"),
+        ("act", next(iter(acts.values())).pk, "A-1"),
+    ]
+    world["messages"] = [
+        PortalMessage.objects.create(
+            company=client_company,
+            direction=PortalMessage.DIRECTION_CLIENT,
+            author_contact=client_contact,
+            author_name=client_contact.name,
+            text=f"Вопрос по документу {number}",
+            context_kind=kind,
+            context_id=pk,
+            context_number=number,
+            client_message_id=f"cm_world_{kind}",
+        )
+        for kind, pk, number in labels
+    ] + [
+        PortalMessage.objects.create(
+            company=client_company,
+            direction=PortalMessage.DIRECTION_MANAGER,
+            author_name="Илья Смирнов",
+            text="Ответ менеджера",
+            crm_message_id=90001,
+        )
+    ]
     world.update(build_document_fixtures(world))
     return world
