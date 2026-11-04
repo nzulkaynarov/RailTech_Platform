@@ -30,4 +30,18 @@ export interface CatalogItemUpdate {
    * @pattern ^([0-9]{2}|[0-9]{4}|[0-9]{6}|[0-9]{8}|[0-9]{10})?$
    */
   hs_code?: string;
+  /** Страна происхождения; `null` — страна бренда */
+  country_of_origin_id?: CompanyItemRef | null;
+  /**
+   * Гарантия, мес.; `null` — срок компании по умолчанию
+   * @minimum 0
+   * @maximum 600
+   * @nullable
+   */
+  warranty_months?: number | null;
+  /**
+   * Условия гарантии
+   * @maxLength 5000
+   */
+  warranty_terms?: string;
 }

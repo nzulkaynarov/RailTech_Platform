@@ -4,14 +4,7 @@
  */
 
 /**
- * ТЗ, чертёж, сертификат, регламент ПНР, другое
+ * Код вида документа из справочника видов (`CatalogLookups.document_kinds`): `certificate`, `passport`, `tz`…
+ * @pattern ^[a-z0-9_-]{1,32}$
  */
-export type TechDocKind = (typeof TechDocKind)[keyof typeof TechDocKind];
-
-export const TechDocKind = {
-  tz: "tz",
-  drawing: "drawing",
-  certificate: "certificate",
-  pnr: "pnr",
-  other: "other",
-} as const;
+export type TechDocKind = string;

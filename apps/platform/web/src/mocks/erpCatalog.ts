@@ -26,16 +26,20 @@ import type {
   SupplierOfferUpdate,
   SupplierRow,
   SupplierUpdate,
+  CatalogImage,
+  CatalogTechDocRef,
   TechDoc,
-  TechDocKind,
+  TechDocUpdate,
 } from "../shared/api/generated/model";
 import {
   COUNTRIES,
   CURRENCIES,
   DEALS,
   DELIVERY_BASES,
+  DOC_KINDS,
   MOCK_TODAY,
   type MockBrigade,
+  type MockImage,
   type MockItem,
   type MockDoc,
   type MockOffer,
@@ -43,6 +47,7 @@ import {
   type MockSupplier,
   UNITS,
   dealNumber,
+  kindName,
   nextId,
   productRef,
   readErpCatalog,
@@ -211,9 +216,10 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
     source_supplier: supplierName(item.sourceSupplierId),
     offers: state.offers.filter((o) => o.itemId === item.id).map((o) => offerOf(o, who.prices)),
     prices_visible: who.prices,
-    tech_docs: state.docs
-      .filter((d) => d.doc.product?.id === item.id)
-      .map((d) => ({ id: d.doc.id, title: d.doc.title, kind: d.doc.kind })),
+    tech_docs: state.docs.filter((d) => d.doc.product?.id === item.id).map((d) => docRefOf(d.doc)),
+    images: item.images.map((image, index) => imageOf(image, index)),
+    origin: originOf(item),
+    warranty: warrantyOf(item),
     proposals: item.proposals.map((p) => ({
       id: p.id,
       field: p.field,
@@ -223,6 +229,57 @@ function detailOf(item: MockItem, who: Caller): CatalogItemDetail {
       created_at: p.created_at,
     })),
     publish: { publishable: missingOf(item).length === 0, missing: missingOf(item) },
+  };
+}
+
+function docRefOf(doc: MockDoc["doc"]): CatalogTechDocRef {
+  return {
+    id: doc.id,
+    title: doc.title,
+    kind: doc.kind,
+    kind_name: doc.kind_name,
+    number: doc.number,
+    issued_by: doc.issued_by,
+    issued_at: doc.issued_at,
+    valid_until: doc.valid_until,
+    is_expired: doc.is_expired,
+    client_visible: doc.client_visible,
+    original_name: doc.original_name,
+    size_bytes: doc.size_bytes,
+    previewable: doc.previewable,
+  };
+}
+
+function imageOf(image: MockImage, index: number): CatalogImage {
+  return { id: image.id, is_main: image.is_main, sort_order: index, alt: image.alt };
+}
+
+const countryRef = (id: string | null) => {
+  const found = COUNTRIES.find((c) => c.id === id);
+  return found ? { id: found.id, name: found.name } : null;
+};
+
+function originOf(item: MockItem): CatalogItemDetail["origin"] {
+  const brand = readErpCatalog().manufacturers.find((m) => m.id === item.brandId);
+  const own = countryRef(item.countryId);
+  const fromBrand = countryRef(brand?.country_id ?? null);
+  return {
+    own,
+    effective: own ?? fromBrand,
+    brand: fromBrand,
+    source: own ? "item" : fromBrand ? "brand" : "none",
+  };
+}
+
+function warrantyOf(item: MockItem): CatalogItemDetail["warranty"] {
+  const company = readCompanyMock().quote.default_warranty_months ?? null;
+  const months = item.warranty_months;
+  return {
+    months,
+    terms: item.warranty_terms,
+    effective_months: months ?? company,
+    company_months: company,
+    source: months !== null ? "item" : company !== null ? "company" : "none",
   };
 }
 
@@ -308,7 +365,7 @@ async function parseUpload(request: Request): Promise<Upload | null> {
     const body = part.slice(split + 4).replace(/\r\n$/, "");
     const content = Uint8Array.from(body, (c) => c.charCodeAt(0));
     const filename = /filename="([^"]*)"/.exec(head)?.[1];
-    if (filename !== undefined && field === "file") {
+    if (filename !== undefined && (field === "file" || field === "image")) {
       upload.file = {
         name: new TextDecoder().decode(Uint8Array.from(filename, (c) => c.charCodeAt(0))),
         type: /Content-Type:\s*([^\r\n]+)/i.exec(head)?.[1] ?? "",
@@ -445,6 +502,10 @@ function runImport(
           mpn: line.mpn,
           sourceSupplierId: supplier.id,
           proposals: [],
+          countryId: null,
+          warranty_months: null,
+          warranty_terms: "",
+          images: [],
         };
         state.items.push(item);
       }
@@ -583,6 +644,7 @@ export const erpCatalogHandlers = [
       currencies: CURRENCIES,
       countries: COUNTRIES,
       delivery_bases: DELIVERY_BASES,
+      document_kinds: DOC_KINDS,
     });
   }),
 
@@ -639,6 +701,10 @@ export const erpCatalogHandlers = [
       mpn: "",
       sourceSupplierId: null,
       proposals: [],
+      countryId: data.country_of_origin_id ?? null,
+      warranty_months: data.warranty_months ?? null,
+      warranty_terms: data.warranty_terms ?? "",
+      images: [],
     };
     state.items.push(item);
     return HttpResponse.json(detailOf(item, who), { status: 201 });
@@ -670,7 +736,87 @@ export const erpCatalogHandlers = [
     }
     if (data.manufacturer_part_number !== undefined) item.mpn = data.manufacturer_part_number;
     if (data.hs_code !== undefined) item.hs_code = data.hs_code;
+    if (data.country_of_origin_id !== undefined) {
+      if (data.country_of_origin_id !== null && !countryRef(data.country_of_origin_id))
+        return invalid("country_of_origin_id", "country_not_found");
+      item.countryId = data.country_of_origin_id;
+    }
+    if (data.warranty_months !== undefined) item.warranty_months = data.warranty_months;
+    if (data.warranty_terms !== undefined) item.warranty_terms = data.warranty_terms;
     return HttpResponse.json(detailOf(item, who));
+  }),
+
+  // --- фото позиции (CAT-CARD-1): до 10, одно главное, порядок задаёт сотрудник
+  http.post("*/erp/catalog/items/:id/images", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    if (!item) return notFound();
+    const form = await parseUpload(request);
+    const file = form?.file;
+    if (!form || !file) return invalid("image", "no_file_provided");
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    const types: Record<string, string> = {
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".png": "image/png",
+      ".webp": "image/webp",
+    };
+    if (!types[ext]) return invalid("image", "file_type_not_allowed");
+    if (file.bytes.length > 5 * 1024 * 1024)
+      return failure(413, "PAYLOAD_TOO_LARGE", "Фото больше 5 МБ.", "bff", {
+        max_bytes: 5 * 1024 * 1024,
+      });
+    if (item.images.length >= 10) return invalid("image", "image_limit_reached");
+    const makeMain = form.fields["is_main"] === "true";
+    if (makeMain) for (const other of item.images) other.is_main = false;
+    const created: MockImage = {
+      id: nextId(),
+      alt: (form.fields["alt_text"] ?? "").trim(),
+      is_main: makeMain || item.images.length === 0,
+      type: types[ext],
+      bytes: file.bytes,
+    };
+    item.images.push(created);
+    return HttpResponse.json(imageOf(created, item.images.length - 1), { status: 201 });
+  }),
+  http.patch("*/erp/catalog/items/:id/images/:image", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    const image = item?.images.find((i) => i.id === params["image"]);
+    if (!item || !image) return notFound();
+    const data = await body<{ is_main?: boolean; sort_order?: number; alt_text?: string }>(request);
+    if (data.alt_text !== undefined) image.alt = data.alt_text.trim();
+    if (data.is_main === true) for (const other of item.images) other.is_main = other === image;
+    if (data.sort_order !== undefined) {
+      item.images.splice(item.images.indexOf(image), 1);
+      item.images.splice(Math.min(data.sort_order, item.images.length), 0, image);
+    }
+    return HttpResponse.json(imageOf(image, item.images.indexOf(image)));
+  }),
+  http.delete("*/erp/catalog/items/:id/images/:image", ({ params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    const index = item?.images.findIndex((i) => i.id === params["image"]) ?? -1;
+    if (!item || index < 0) return notFound();
+    item.images.splice(index, 1);
+    if (item.images.length > 0 && !item.images.some((i) => i.is_main)) {
+      const first = item.images[0];
+      if (first) first.is_main = true;
+    }
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get("*/erp/catalog/items/:id/images/:image/content", ({ params }) => {
+    const who = guard("read");
+    if (isResponse(who)) return who;
+    const item = readErpCatalog().items.find((i) => i.id === params["id"]);
+    const image = item?.images.find((i) => i.id === params["image"]);
+    if (!image) return notFound();
+    return new HttpResponse(image.bytes, {
+      headers: { "Content-Type": image.type, "X-Content-Type-Options": "nosniff" },
+    });
   }),
   http.post("*/erp/catalog/items/:id/:action", ({ params }) => {
     const who = guard("full");
@@ -1167,7 +1313,12 @@ export const erpCatalogHandlers = [
     const productId = form.fields["product_id"] || null;
     const dealId = form.fields["deal_id"] || null;
     if (!productId && !dealId) return invalid("product_id", "tech_doc_link_required");
-    const kind = (form.fields["kind"] || "other") as TechDocKind;
+    const kind = form.fields["kind"] || "other";
+    if (!DOC_KINDS.some((k) => k.code === kind)) return invalid("kind", "tech_doc_kind_invalid");
+    const issuedAt = form.fields["issued_at"] || null;
+    const validUntil = form.fields["valid_until"] || null;
+    if (issuedAt && validUntil && validUntil < issuedAt)
+      return invalid("valid_until", "tech_doc_validity_range_invalid");
     const bytes = file.bytes;
     const type =
       ext === ".pdf"
@@ -1180,6 +1331,16 @@ export const erpCatalogHandlers = [
     const doc = {
       id: nextId(),
       kind,
+      kind_name: kindName(kind),
+      number: (form.fields["number"] ?? "").trim(),
+      issued_by: (form.fields["issued_by"] ?? "").trim(),
+      issued_at: issuedAt,
+      valid_until: validUntil,
+      is_expired: validUntil !== null && validUntil < MOCK_TODAY,
+      client_visible:
+        form.fields["client_visible"] !== undefined
+          ? form.fields["client_visible"] === "true"
+          : DOC_KINDS.some((k) => k.code === kind && k.client_visible_default),
       title: (form.fields["title"] ?? "").trim() || name.replace(/\.[^.]+$/, ""),
       original_name: name,
       content_type: type,
@@ -1192,6 +1353,30 @@ export const erpCatalogHandlers = [
     };
     readErpCatalog().docs.unshift({ doc, bytes });
     return HttpResponse.json(docOf(doc), { status: 201 });
+  }),
+  http.patch("*/erp/docs/files/:id", async ({ request, params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const found = readErpCatalog().docs.find((d) => d.doc.id === params["id"]);
+    if (!found) return notFound();
+    const data = await body<TechDocUpdate>(request);
+    const doc = found.doc;
+    if (data.kind !== undefined) {
+      if (!DOC_KINDS.some((k) => k.code === data.kind))
+        return invalid("kind", "tech_doc_kind_invalid");
+      doc.kind = data.kind;
+      doc.kind_name = kindName(data.kind);
+    }
+    if (data.title !== undefined && data.title.trim()) doc.title = data.title.trim();
+    if (data.number !== undefined) doc.number = data.number.trim();
+    if (data.issued_by !== undefined) doc.issued_by = data.issued_by.trim();
+    if (data.issued_at !== undefined) doc.issued_at = data.issued_at;
+    if (data.valid_until !== undefined) doc.valid_until = data.valid_until;
+    if (data.client_visible !== undefined) doc.client_visible = data.client_visible;
+    if (doc.issued_at && doc.valid_until && doc.valid_until < doc.issued_at)
+      return invalid("valid_until", "tech_doc_validity_range_invalid");
+    doc.is_expired = doc.valid_until !== null && doc.valid_until < MOCK_TODAY;
+    return HttpResponse.json(docOf(doc));
   }),
   http.delete("*/erp/docs/files/:id", ({ params }) => {
     const who = guard("full");
@@ -1238,10 +1423,7 @@ export const erpCatalogHandlers = [
 function docOf(doc: MockDoc["doc"]): TechDoc {
   const deal = DEALS.find((d) => String(d.id) === doc.dealId);
   return {
-    id: doc.id,
-    kind: doc.kind,
-    title: doc.title,
-    original_name: doc.original_name,
+    ...docRefOf(doc),
     content_type: doc.content_type,
     size_bytes: doc.size_bytes,
     previewable: doc.previewable,

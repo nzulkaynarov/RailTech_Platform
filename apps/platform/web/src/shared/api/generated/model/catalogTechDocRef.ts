@@ -9,4 +9,25 @@ export interface CatalogTechDocRef {
   id: CompanyItemRef;
   title: string;
   kind: TechDocKind;
+  /** Название вида из справочника */
+  kind_name: string;
+  /** Номер документа; пусто, если не задан */
+  number: string;
+  /** Кем выдан */
+  issued_by: string;
+  /** @nullable */
+  issued_at: string | null;
+  /**
+   * Действует до; `null` — бессрочно
+   * @nullable
+   */
+  valid_until: string | null;
+  /** Срок «действует до» прошёл — пометка для сотрудника */
+  is_expired: boolean;
+  /** Клиент видит документ в кабинете */
+  client_visible: boolean;
+  original_name: string;
+  /** @minimum 0 */
+  size_bytes: number;
+  previewable: boolean;
 }
