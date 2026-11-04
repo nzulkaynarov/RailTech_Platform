@@ -367,7 +367,7 @@ async def test_a_failed_reply_publishes_nothing_and_keeps_no_message(
         await original(*args, **kwargs)
         raise RuntimeError("after publish")
 
-    monkeypatch.setattr(cabinet_chat.bus_events, "cabinet_message_sent", publish_then_fail)
+    monkeypatch.setattr(bus_events, "cabinet_message_sent", publish_then_fail)
     with pytest.raises(RuntimeError):
         await cabinet_chat.send_reply(
             sessions, lead_id, "Не уйдёт", "reply-00003", sent_by_user_id=who.user_id

@@ -47,7 +47,7 @@ def test_types_present() -> None:
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
         len([t for t in TYPES if t.domain == "erp"]) == 28
-    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), cabinet.message_posted
+    )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), CHAT-1
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
