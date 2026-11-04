@@ -773,7 +773,9 @@
       "responderTeam": "RailTech jamoasi javob beradi",
       "visibleToCompany": "Yozishmani kompaniyangizning kabinetdagi barcha xodimlari ko‘radi",
       "attachHint": "Hozircha chatga fayl biriktirilmaydi — uni so‘rovga biriktiring.",
-      "attachLink": "So‘rovlarga o‘tish"
+      "attachLink": "So‘rovlarga o‘tish",
+      "deletedUser": "O‘chirilgan foydalanuvchi",
+      "deletedText": "Xabar muallif so‘rovi bilan o‘chirildi"
     }
   },
   "apiErrors": {

@@ -126,8 +126,9 @@ function Feed({
           mine={message.mine}
           author={authorOf(message, t)}
           time={message.created_at}
-          text={message.text}
-          context={message.context}
+          text={message.erased ? t('pages.messages.deletedText') : message.text}
+          erased={message.erased}
+          context={message.erased ? null : message.context}
         />
       ))}
       {pending.map((item) => (
@@ -149,6 +150,7 @@ function Feed({
 }
 
 function authorOf(message: PortalMessage, t: (key: string, options?: Record<string, unknown>) => string): string {
+  if (message.erased) return t('pages.messages.deletedUser');
   if (message.mine) return t('pages.messages.you');
   if (message.direction === 'manager') {
     return message.author_name
@@ -164,6 +166,7 @@ function Bubble({
   time,
   text,
   context,
+  erased = false,
   children,
 }: {
   mine: boolean;
@@ -171,6 +174,7 @@ function Bubble({
   time?: string;
   text: string;
   context: MessageContext | null;
+  erased?: boolean;
   children?: ReactNode;
 }) {
   const { i18n } = useTranslation();
@@ -189,7 +193,11 @@ function Bubble({
       <p
         className={cn(
           'rounded-2xl px-3 py-2 text-sm break-words whitespace-pre-wrap',
-          mine ? 'bg-primary text-primary-foreground' : 'border border-border bg-background text-foreground',
+          erased
+            ? 'border border-dashed border-border bg-background text-muted-foreground italic'
+            : mine
+              ? 'bg-primary text-primary-foreground'
+              : 'border border-border bg-background text-foreground',
         )}
       >
         {text}

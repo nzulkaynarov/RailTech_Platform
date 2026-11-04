@@ -1173,6 +1173,8 @@ export interface components {
             created_at: string;
             /** @description Ключ повтора сообщения контакта (у ответа менеджера — `null`) */
             client_message_id: string | null;
+            /** @description Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется */
+            erased: boolean;
         };
         PortalMessagePage: {
             items: components["schemas"]["PortalMessage"][];

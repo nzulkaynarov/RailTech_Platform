@@ -211,6 +211,36 @@ describe('«Сообщения»', () => {
     await expectNoAxeViolations();
   });
 
+  it('стёртое по запросу автора сообщение — «Удалённый пользователь», без текста и метки', async () => {
+    signedIn();
+    portalServer.use(
+      http.get('*/messages', () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: 900,
+              direction: 'client',
+              author_name: null,
+              mine: false,
+              text: '',
+              context: null,
+              created_at: '2026-10-14T05:05:00Z',
+              client_message_id: 'cm_erased_0001',
+              erased: true,
+            },
+          ],
+          has_more: false,
+        }),
+      ),
+    );
+    renderApp('/messages');
+    await heading('Сообщения');
+    const list = await within(page()).findByRole('list', { name: 'Переписка с менеджером' });
+    const [item] = within(list).getAllByRole('listitem');
+    expect(item).toHaveTextContent('Удалённый пользователь');
+    expect(item).toHaveTextContent('Сообщение удалено по запросу автора');
+  });
+
   it('пустая лента — отвечает команда; без раздела запросов подсказка о файле без ссылки', async () => {
     signedIn('actor', 'empty', { roles: ['partner'], modules: ['my_products', 'messages', 'profile'] });
     renderApp('/messages');

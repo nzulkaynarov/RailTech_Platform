@@ -773,7 +773,9 @@
       "responderTeam": "The RailTech team replies here",
       "visibleToCompany": "Everyone from your company in the cabinet can see this conversation",
       "attachHint": "Files can’t be attached to chat yet — attach them to a request.",
-      "attachLink": "Go to requests"
+      "attachLink": "Go to requests",
+      "deletedUser": "Deleted user",
+      "deletedText": "Message deleted at the author’s request"
     }
   },
   "apiErrors": {

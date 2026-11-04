@@ -144,6 +144,7 @@ export function pushManagerReply(text: string, dataset: Dataset = 'demo'): Schem
     context: null,
     created_at: new Date().toISOString(),
     client_message_id: null,
+    erased: false,
   };
   db.messages = [...db.messages, message];
   return message;
@@ -750,6 +751,7 @@ export const handlers = [
           context,
           created_at: new Date().toISOString(),
           client_message_id: body.client_message_id ?? null,
+          erased: false,
         };
         db.messages = [...db.messages, message];
         return json(message, 201);

@@ -760,6 +760,7 @@ export const messages: Schemas['PortalMessage'][] = [
     context: { kind: 'quote', id: 301, number: 'KP-2026-0042' },
     created_at: '2026-10-14T10:05:00+05:00',
     client_message_id: 'cm_demo_000501',
+    erased: false,
   },
   {
     id: 502,
@@ -770,6 +771,7 @@ export const messages: Schemas['PortalMessage'][] = [
     context: null,
     created_at: '2026-10-14T10:20:00+05:00',
     client_message_id: null,
+    erased: false,
   },
   {
     id: 503,
@@ -780,6 +782,7 @@ export const messages: Schemas['PortalMessage'][] = [
     context: { kind: 'invoice', id: 603, number: 'S-2026-0124' },
     created_at: '2026-10-14T11:02:00+05:00',
     client_message_id: 'cm_demo_000503',
+    erased: false,
   },
   {
     id: 504,
@@ -790,6 +793,7 @@ export const messages: Schemas['PortalMessage'][] = [
     context: null,
     created_at: '2026-10-14T15:40:00+05:00',
     client_message_id: null,
+    erased: false,
   },
 ];
 /** До какого сообщения контакт прочитал ленту в моке: после него — один ответ менеджера. */
