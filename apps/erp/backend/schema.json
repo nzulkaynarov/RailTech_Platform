@@ -1215,6 +1215,62 @@
                 }
             }
         },
+        "/api/portal/v1/notifications": {
+            "get": {
+                "operationId": "api_portal_v1_notifications_retrieve",
+                "description": "GET /notifications — лента контакта по убыванию `id`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/notifications/": {
+            "get": {
+                "operationId": "api_portal_v1_notifications_retrieve_2",
+                "description": "GET /notifications — лента контакта по убыванию `id`.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/notifications/read": {
+            "post": {
+                "operationId": "api_portal_v1_notifications_read_create",
+                "description": "POST /notifications/read — прочитать свои уведомления (`ids`) или все (`all`). Чтение: `can_act` не нужен.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/notifications/read/": {
+            "post": {
+                "operationId": "api_portal_v1_notifications_read_create_2",
+                "description": "POST /notifications/read — прочитать свои уведомления (`ids`) или все (`all`). Чтение: `can_act` не нужен.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/offers/confirm": {
             "post": {
                 "operationId": "api_portal_v1_partner_offers_confirm_create",
