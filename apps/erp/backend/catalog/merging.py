@@ -84,6 +84,10 @@ def merge_products(survivor, duplicate, actor) -> tuple[object | None, str | Non
         return None, "PRODUCT_STATUS_MISSING"
     duplicate.status = archived
     duplicate.save(update_fields=["status", "updated_at"])
+    from .models import ProductReview
+    from .review_flow import close_pending_review
+
+    close_pending_review(duplicate, ProductReview.Decision.CANCELLED)  # слитый дубль не ждёт проверки (PART-2)
     return survivor, None
 
 

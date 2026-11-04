@@ -22,6 +22,8 @@
   },
   "itemStatus": {
     "DRAFT": "Draft",
+    "REVIEW": "In review",
+    "RETURNED": "Returned",
     "PUBLISHED": "Published"
   },
   "brigadeKinds": {

@@ -34,6 +34,7 @@ CODE_CALLS = {
     "PortalGone",
     "PortalTooManyRequests",
     "PortalDeliveryFailed",
+    "PortalUnavailable",
     "PortalValidationError",
     "PortalBadRequest",
     "PermissionDenied",

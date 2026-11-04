@@ -137,6 +137,8 @@ class Command(BaseCommand):
             ("DRAFT", "Черновик"),
             ("PUBLISHED", "Опубликован"),
             ("ARCHIVED", "В архиве"),
+            ("REVIEW", "На проверке"),
+            ("RETURNED", "Возвращена"),
         ]
         for code, name in p_statuses:
             _seed(ProductStatus, code, name=name)

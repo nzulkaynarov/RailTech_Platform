@@ -52,7 +52,8 @@ export async function downloadCatalogDocument(itemId: number, documentId: number
   saveBlob(file.blob, file.fileName ?? fallbackName);
 }
 
-function saveBlob(blob: Blob, fileName: string): void {
+/** Сохранить файл в браузере (скрытая ссылка `download`). */
+export function saveBlob(blob: Blob, fileName: string): void {
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;

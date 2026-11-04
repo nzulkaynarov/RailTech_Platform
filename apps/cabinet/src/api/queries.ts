@@ -22,6 +22,10 @@ export const keys = {
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
   company: ['company'] as const,
   team: ['team'] as const,
+  partnerProducts: ['partner', 'products'] as const,
+  partnerProductList: (params: portal.PartnerProductsQuery) => ['partner', 'products', 'list', params] as const,
+  partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,
+  priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -58,6 +62,33 @@ export const useCatalogItem = (id: number) =>
   useQuery({ queryKey: keys.catalogItem(id), queryFn: () => portal.getCatalogItem(id), enabled: Number.isFinite(id) });
 export const useCompany = () => useQuery({ queryKey: keys.company, queryFn: portal.getCompany });
 export const useTeam = () => useQuery({ queryKey: keys.team, queryFn: portal.listTeam });
+
+export const usePartnerProducts = (params: portal.PartnerProductsQuery) =>
+  useQuery({
+    queryKey: keys.partnerProductList(params),
+    queryFn: () => portal.listPartnerProducts(params),
+    placeholderData: keepPreviousData,
+  });
+export const usePartnerProduct = (id: number | null) =>
+  useQuery({
+    queryKey: keys.partnerProduct(id ?? 0),
+    queryFn: () => portal.getPartnerProduct(id as number),
+    enabled: id !== null,
+  });
+
+/** Состояние загрузки прайса: опрашивается, пока ERP обрабатывает файл (`pending` / `running`). */
+export const PRICE_TASK_POLL_MS = 1500;
+export const usePriceListTask = (taskId: string | null) =>
+  useQuery({
+    queryKey: keys.priceListTask(taskId ?? ''),
+    queryFn: () => portal.getPriceListTask(taskId as string),
+    enabled: taskId !== null,
+    refetchInterval: (query) => {
+      const status = query.state.data?.status;
+      return status === 'completed' || status === 'failed' ? false : PRICE_TASK_POLL_MS;
+    },
+    gcTime: 0,
+  });
 
 /** Мутация, после которой связанные списки перечитываются у ERP. */
 function useInvalidatingMutation<TVars, TData>(
@@ -149,3 +180,12 @@ export const useUpdateCompany = () =>
     client.setQueryData(keys.company, company),
   );
 export const useInviteTeamMember = () => useInvalidatingMutation(portal.inviteTeamMember, [keys.team]);
+
+// --- «Мои товары» партнёра (PART-2) -------------------------------------------------------------
+
+export const useUploadPriceList = () => useMutation({ mutationFn: portal.uploadPriceList });
+/** Реальная загрузка меняет карточки и цены; предпросмотр — нет, список перечитывает мастер после записи. */
+export const useSubmitPartnerProducts = () =>
+  useInvalidatingMutation(portal.submitPartnerProducts, [keys.partnerProducts]);
+export const useConfirmPartnerOffers = () =>
+  useInvalidatingMutation(portal.confirmPartnerOffers, [keys.partnerProducts]);

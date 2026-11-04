@@ -55,6 +55,17 @@ class PortalDeliveryFailed(APIException):
         super().__init__(detail=detail, code=detail)
 
 
+class PortalUnavailable(APIException):
+    """Служба недоступна (очередь обработки): 503 с кодом из `ErrorCode` (PART-2: `IMPORT_FAILED`)."""
+
+    status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    default_detail = "IMPORT_FAILED"
+    default_code = "unavailable"
+
+    def __init__(self, detail="IMPORT_FAILED"):
+        super().__init__(detail=detail, code=detail)
+
+
 class PortalValidationError(APIException):
     status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
     default_detail = "VALIDATION_ERROR"
