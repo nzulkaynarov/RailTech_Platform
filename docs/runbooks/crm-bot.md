@@ -92,3 +92,8 @@ curl -s 127.0.0.1:18999/_log                                                    
 
 Отключение: кабинет → `DELETE /me/telegram` → событие `erp.contact.telegram_unlink_requested` → CRM в очереди шины снимает
 Telegram с контакта и клиента (`client.contact_telegram_self_unlink` в аудите) → `crm.contact.updated` без `telegram_user_id`.
+
+Проверочное сообщение: кабинет → `POST /me/telegram/test` → событие `erp.contact.telegram_test_requested` (inline) → бот пишет
+«Проверка связи…» на привязанный Telegram контакта. Не пришло — в логе CRM `contact_telegram_test_skipped` (контакт без
+привязки или заблокировал бота, бот не настроен) или `contact_telegram_test_failed` (ошибка Telegram); повторить можно через
+минуту (раньше ERP отвечает 429).
