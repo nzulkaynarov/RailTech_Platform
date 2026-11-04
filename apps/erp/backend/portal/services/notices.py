@@ -24,6 +24,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Iterable, Optional
 
+from celery.exceptions import SoftTimeLimitExceeded
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.core.validators import validate_email
@@ -364,7 +365,8 @@ def _record_crash(notice_id: int, error: Exception) -> str:
         )
         if notice is None:
             return "skipped"
-        return _attempt_failed(notice, f"{error.__class__.__name__}: {error}", timezone.now())
+        # Только имя класса: текст исключения может нести адрес, данные письма или секрет — в базу и журнал он не идёт.
+        return _attempt_failed(notice, error.__class__.__name__, timezone.now())
 
 
 def _email_money(amount: Optional[str], currency: Optional[str]) -> str:
@@ -431,8 +433,10 @@ def send_due_emails(limit: int = 200) -> dict:
     for notice_id in due:
         try:
             outcome = deliver_email(notice_id)
+        except SoftTimeLimitExceeded:
+            raise  # время задачи вышло — не сбой строки: попытку не засчитываем, остальное доберёт следующий запуск
         except Exception as error:  # noqa: BLE001 — сбой строки не должен вечно держать очередь писем всех компаний
-            logger.exception("portal notice #%s: сбой отправки письма", notice_id)
+            logger.error("portal notice #%s: сбой отправки письма (%s)", notice_id, error.__class__.__name__)
             outcome = _record_crash(notice_id, error)
         result[outcome] += 1
     return result

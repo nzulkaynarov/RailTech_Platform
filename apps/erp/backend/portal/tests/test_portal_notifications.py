@@ -257,20 +257,44 @@ def test_eta_shift_is_important(
     assert enqueued.count(row.pk) == 1
 
 
-def test_eta_back_to_an_earlier_date_is_a_new_notice(contract_world, no_tg_contact, enqueued):
-    """Ключ — от изменения, а не от даты: A → B → A даёт три уведомления, а не два."""
+def _save_change(fulfillment, **fields):
+    """Одно изменение поставки: новое время сохранения строки исполнения (как `update_fulfillment_status`)."""
+    for name, value in fields.items():
+        setattr(fulfillment, name, value)
+    fulfillment.updated_at = timezone.now() + timedelta(microseconds=1)
+    fulfillment.save(update_fields=[*fields, "updated_at"])
+
+
+def test_eta_back_and_forth_is_a_notice_per_change(contract_world, no_tg_contact, enqueued):
+    """Ключ — от изменения, а не от значения: A → B → A → B — три уведомления (третий переход по значению совпадает с
+    первым); повтор вызова без нового сохранения строку не добавляет."""
     fulfillment = contract_world["deliveries"]["in_transit"]
-    first = fulfillment.expected_delivery_date
-    second = first + timedelta(days=7)
-    for previous, new in ((first, second), (second, first)):
-        fulfillment.expected_delivery_date = new
-        fulfillment.updated_at = timezone.now()
-        fulfillment.save(update_fields=["expected_delivery_date", "updated_at"])
+    a = fulfillment.expected_delivery_date
+    b = a + timedelta(days=7)
+    for previous, new in ((a, b), (b, a), (a, b)):
+        _save_change(fulfillment, expected_delivery_date=new)
         notice_sources.delivery_eta_changed(fulfillment, previous)
+        notice_sources.delivery_eta_changed(fulfillment, previous)  # повтор того же события
     rows = PortalNotice.objects.filter(
         kind="delivery_eta_changed", contact=no_tg_contact, object_id=fulfillment.deal_id
     )
-    assert sorted(row.params["eta"] for row in rows) == sorted([second.isoformat(), first.isoformat()])
+    assert [row.params["eta"] for row in rows.order_by("pk")] == [b.isoformat(), a.isoformat(), b.isoformat()]
+
+
+def test_delivery_status_back_and_forth_is_a_notice_per_change(contract_world, no_tg_contact):
+    """Статус X → Y → X — три уведомления; повтор вызова без нового сохранения — нет."""
+    from sales.models import FulfillmentStatus
+
+    fulfillment = contract_world["deliveries"]["shipped"]
+    shipped, in_transit = (FulfillmentStatus.objects.get(code=code) for code in ("SHIPPED", "IN_TRANSIT"))
+    for status, code in ((in_transit, "in_transit"), (shipped, "shipped"), (in_transit, "in_transit")):
+        _save_change(fulfillment, status=status)
+        notice_sources.delivery_status_changed(fulfillment, code)
+        notice_sources.delivery_status_changed(fulfillment, code)
+    rows = PortalNotice.objects.filter(
+        kind="delivery_status_changed", contact=no_tg_contact, object_id=fulfillment.deal_id
+    )
+    assert [row.params["status"] for row in rows.order_by("pk")] == ["in_transit", "shipped", "in_transit"]
 
 
 def test_archived_contacts_and_closed_companies_get_nothing(client_company, client_contact, no_tg_contact):
@@ -647,6 +671,7 @@ def test_a_failing_row_does_not_block_the_others_and_ends_failed(flaky_mail, cli
         row = PortalNotice.objects.get(pk=rows[contact.pk].pk)
         assert row.email_state == NoticeEmailState.FAILED and row.email_attempts == notices.MAX_EMAIL_ATTEMPTS
         assert row.email_reason, "причина записана"
+    assert PortalNotice.objects.get(pk=rows[crash.pk].pk).email_reason == "RuntimeError", "без текста исключения"
     _due_now(rows[bounce.pk], rows[crash.pk])
     assert notices.send_due_emails()["sent"] + notices.send_due_emails()["retry"] == 0, "конечное состояние не крутится"
     assert len(flaky_mail) == 1
@@ -661,3 +686,20 @@ def test_retry_waits_for_the_pause(flaky_mail, client_company):
     row.refresh_from_db()
     assert row.email_due_at > timezone.now() + notices.EMAIL_RETRY_DELAYS[0] - timedelta(minutes=1)
     assert notices.deliver_email(row.pk) == "not_due"
+
+
+def test_task_time_limit_is_not_a_row_failure(monkeypatch, client_company, no_tg_contact):
+    """Время задачи вышло (`SoftTimeLimitExceeded`) — это не сбой строки: исключение наружу, попытка не засчитана."""
+    from celery.exceptions import SoftTimeLimitExceeded
+
+    row = next(r for r in _notify(client_company, dedup="limit") if r.contact_id == no_tg_contact.pk)
+    _due_now(row)
+
+    def out_of_time(_notice_id):
+        raise SoftTimeLimitExceeded()
+
+    monkeypatch.setattr(notices, "deliver_email", out_of_time)
+    with pytest.raises(SoftTimeLimitExceeded):
+        notices.send_due_emails()
+    row.refresh_from_db()
+    assert row.email_state == NoticeEmailState.PENDING and row.email_attempts == 0 and row.email_reason == ""
