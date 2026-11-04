@@ -206,6 +206,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "erp_rate_limited",
         # Передача клиента (FIX-31).
         "erp_inn_conflict",
+        "erp_partner_verification",
         # Сопряжение с ERP (M3-CRM-10).
         "erp_pairing_code_invalid",
         "erp_pairing_code_expired",

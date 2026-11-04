@@ -525,6 +525,54 @@ async def test_confirm_races_with_a_repeat_request_without_a_deadlock(
     assert (await stand.clients())[0].erp_company_id == ERP_COMPANY
 
 
+async def test_confirm_is_not_found_when_the_request_was_retargeted_while_waiting_for_the_lock(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Пока подтверждающий ждал блокировку, повторный запрос переадресовал заявку на другого.
+
+    После перечитывания под `FOR UPDATE` заявка у Y, а подтверждают её на X: «не найдена».
+    """
+    manager = await manager_of(stand)
+    x = await make_client(stand.h.sessions, name="X", inn="301234567")
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    assert pending.client_id == x
+    async with (
+        stand.h.sessions() as session,
+        session.begin(),
+    ):  # X больше не ищется по ключу, появился Y
+        await session.execute(
+            text("UPDATE clients SET is_active = false WHERE id = :id"), {"id": x}
+        )
+    y = await make_client(stand.h.sessions, name="Y", inn="301234567")
+    real_lock = partner_clients._lock
+    calls = {"n": 0}
+
+    async def slow_lock(session: AsyncSession, erp_company_id: int) -> None:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            await asyncio.sleep(0.6)  # подтверждающий ещё не взял блокировку
+        await real_lock(session, erp_company_id)
+
+    monkeypatch.setattr(partner_clients, "_lock", slow_lock)
+    again = await stand.h.receive(REQUESTED_TYPE, request_data())
+
+    async def repeat() -> str | None:
+        await asyncio.sleep(0.15)
+        return await stand.h.process(again)
+
+    service = PartnerClientService(stand.h.sessions)
+    results = await asyncio.gather(
+        service.confirm(manager, x, pending.id), repeat(), return_exceptions=True
+    )
+
+    assert isinstance(results[0], NotFoundError)
+    assert results[1] == "processed"
+    [row] = await stand.requests()
+    assert (row.status, row.client_id) == ("pending", y)
+    assert all(c.erp_company_id is None for c in await stand.clients())
+
+
 async def test_foreign_company_by_the_pair_goes_to_confirmation_too(stand: Stand) -> None:
     same = await make_client(stand.h.sessions, country="CN", registration_number="abc-1")
     other_country = await make_client(stand.h.sessions, country="KZ", registration_number="ABC-1")

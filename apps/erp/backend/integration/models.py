@@ -289,6 +289,7 @@ class ServiceCredential(models.Model):
 class PartnerCrmStatus(models.TextChoices):
     REQUESTED = "requested", _("Запрошен")
     PENDING_CONFIRMATION = "pending_confirmation", _("Ждёт подтверждения менеджера")
+    HELD = "held", _("Удержано после передачи клиента")
     CONFLICT = "conflict", _("Конфликт")
 
 
@@ -300,7 +301,8 @@ class PartnerCrmLink(models.Model):
     сопоставлен другой компании ERP (`crm_client_id` — этот клиент, `conflict_company_id` — та компания);
     `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера («Это та же компания»
     или «Нет — завести нового»; `crm_client_id` — найденный клиент). Строка не заменяет сопоставление: когда оно
-    появилось, состояние читается из него.
+    появилось, состояние читается из него. `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не
+    создано, заявки удержаны до повторного приглашения (`crm_client_id` — клиент передачи).
     """
 
     company = models.OneToOneField(

@@ -18,7 +18,7 @@ RelationshipStatus = Literal["invited", "active", "suspended"]
 PartnerKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 PartnerModule = Literal["my_products", "catalog_requests"]
 Language = Literal["ru", "uz", "en"]
-CrmClientStatus = Literal["none", "requested", "pending_confirmation", "linked", "conflict"]
+CrmClientStatus = Literal["none", "requested", "pending_confirmation", "held", "linked", "conflict"]
 
 
 class Out(BaseModel):
@@ -128,6 +128,7 @@ def _crm_client(raw: Any) -> dict[str, Any]:
     if not isinstance(raw, Mapping) or raw.get("status") not in (
         "requested",
         "pending_confirmation",
+        "held",
         "linked",
         "conflict",
     ):

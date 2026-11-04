@@ -13956,11 +13956,11 @@ export interface components {
     /** @description Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам), заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM. */
     SupplierCabinetCrmClient: {
       /**
-       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
        * @enum {string}
        */
-      status: "none" | "requested" | "pending_confirmation" | "linked" | "conflict";
-      /** @description Клиент CRM (`pending_confirmation`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
+      status: "none" | "requested" | "pending_confirmation" | "held" | "linked" | "conflict";
+      /** @description Клиент CRM (`pending_confirmation`, `held`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
       crm_client_id: components["schemas"]["CompanyItemRef"] | null;
     };
     SupplierCabinetContactCreate: {

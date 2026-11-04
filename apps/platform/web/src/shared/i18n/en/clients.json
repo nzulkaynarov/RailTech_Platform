@@ -124,6 +124,7 @@
     "erp_request_conflict": "the request data changed after sending — create the request again",
     "handoff_no_consent": "no client consent to data processing",
     "erp_inn_conflict": "this TIN already belongs to another client",
+    "erp_partner_verification": "the company with this TIN is a cabinet partner, the handoff is held until the TIN is checked in the back office",
     "enqueue_failed": "could not queue the transfer",
     "other": "reason unknown"
   }

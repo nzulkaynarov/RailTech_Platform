@@ -43,9 +43,9 @@ class DeskSupplierAccessModules(serializers.Serializer):
 
 class DeskSupplierAccessCrmClient(serializers.Serializer):
     status = serializers.ChoiceField(
-        choices=["none", "requested", "pending_confirmation", "linked", "conflict"],
+        choices=["none", "requested", "pending_confirmation", "held", "linked", "conflict"],
         help_text=(
-            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера, "
+            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, "
             "`linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP."
         ),
     )

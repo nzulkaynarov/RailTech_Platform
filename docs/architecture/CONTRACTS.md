@@ -83,7 +83,7 @@ NNN; ERP-09) выдаёт ERP из счётчика года под блокир
 компании. Портал (Cabinet) пока показывает `D-<id>` (контракт `erp-portal.yaml`, отдельная задача).
 
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
-`request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
+`request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; компания партнёра кабинета, найденная по ИНН, — 409 `PARTNER_VERIFICATION_REQUIRED` (сопоставление не создаётся, PART-CRM); согласие хранится
 в ERP как пришло. Стадия `stage` во всех ответах, событиях и инструментах MCP — одна функция сопоставления FSM ERP → шкала
 контракта (`DealStage`, 11 кодов). Статусы строк поставки: ERP — `assembling…delivered`, клиент — `accepted`/`disputed`.
 

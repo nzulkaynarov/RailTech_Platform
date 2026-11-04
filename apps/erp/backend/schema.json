@@ -37629,7 +37629,7 @@
                                 "$ref": "#/components/schemas/DeskSupplierAccessCrmClientStatusEnum"
                             }
                         ],
-                        "description": "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.\n\n* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `linked` - linked\n* `conflict` - conflict"
+                        "description": "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.\n\n* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `held` - held\n* `linked` - linked\n* `conflict` - conflict"
                     },
                     "crm_client_id": {
                         "type": "integer",
@@ -37647,11 +37647,12 @@
                     "none",
                     "requested",
                     "pending_confirmation",
+                    "held",
                     "linked",
                     "conflict"
                 ],
                 "type": "string",
-                "description": "* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `linked` - linked\n* `conflict` - conflict"
+                "description": "* `none` - none\n* `requested` - requested\n* `pending_confirmation` - pending_confirmation\n* `held` - held\n* `linked` - linked\n* `conflict` - conflict"
             },
             "DeskSupplierAccessInviteInRequest": {
                 "type": "object",

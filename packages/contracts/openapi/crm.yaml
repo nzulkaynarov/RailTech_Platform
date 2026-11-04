@@ -7783,6 +7783,7 @@ components:
       - erp_rate_limited
       - client_not_in_erp
       - erp_inn_conflict
+      - erp_partner_verification
       - erp_pairing_code_invalid
       - erp_pairing_code_expired
       - erp_pairing_code_used
@@ -10124,7 +10125,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.20.0
+  version: 0.21.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:

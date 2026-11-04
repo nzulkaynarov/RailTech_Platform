@@ -53,10 +53,12 @@ REQUESTED = "requested"
 PENDING_CONFIRMATION = "pending_confirmation"
 CONFLICT = "conflict"
 NONE = "none"
+HELD = "held"
 
 APPLIED = "applied"
 SKIPPED_UNKNOWN_COMPANY = "skipped_unknown_company"
 SKIPPED_OTHER_CLIENT = "skipped_other_client"
+SKIPPED_NO_REQUEST = "skipped_no_request"
 
 #: `maxItems` контактов в событии (контракт).
 MAX_CONTACTS = 50
@@ -132,37 +134,36 @@ def lock_if_partner(company: Company) -> None:
 
 
 def hold_for_verification(company: Company, crm_client_id: int) -> None:
-    """Компанию партнёра сопоставила передача клиента из CRM (по ИНН): заявки партнёра остаются отложенными.
+    """Передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление НЕ создаётся, заявки остаются отложенными.
 
-    Состояние — «ждёт подтверждения менеджера», ответственному уходит уведомление. Сотрудник сверяет ИНН и нажимает
-    «Пригласить ещё раз»: это и есть подтверждение — запрос уходит в CRM, ответ `linked` выпускает заявки
-    (`request_client_in_crm`, `apply_client_resolved`). Вызывать под `lock_company`.
+    Инвариант PART-CRM: у партнёра `CrmClientMapping` появляется только после подтверждённой связи — ответа `linked` на
+    запрос, отправленный после последнего «Пригласить», либо подтверждения менеджером в CRM. Состояние `held`,
+    ответственному уходит уведомление; сотрудник сверяет ИНН и нажимает «Пригласить ещё раз» — запрос уходит в CRM, и
+    дальше связь подтверждает менеджер CRM. Вызывать под `lock_company`.
     """
-    if not is_partner(company):
-        return  # у клиента без отношения partner отложенных заявок нет
+    link = PartnerCrmLink.objects.filter(company=company).first()
+    already = link is not None and link.status == PartnerCrmStatus.HELD and link.crm_client_id == crm_client_id
     PartnerCrmLink.objects.update_or_create(
         company=company,
         defaults={
-            "status": PartnerCrmStatus.PENDING_CONFIRMATION,
+            "status": PartnerCrmStatus.HELD,
             "crm_client_id": crm_client_id,
             "conflict_company_id": None,
             "resolved_at": timezone.now(),
         },
     )
+    if already:  # повтор передачи (ручной повтор в CRM) не задваивает ни журнал, ни уведомление
+        return
     _log(
         company,
-        "partner.crm_pending",
-        "Клиент партнёра в CRM: ждёт подтверждения менеджера",
-        f"Передача клиента из CRM сопоставила компанию с клиентом #{crm_client_id} по ИНН; заявки партнёра не выпускаются.",
+        "partner.crm_held",
+        "Клиент партнёра в CRM: передача клиента удержана до сверки",
+        f"Передача клиента #{crm_client_id} из CRM нашла компанию по ИНН; сопоставление не создано, заявки партнёра не "
+        "выпускаются.",
         "WARNING",
         crm_client_id=crm_client_id,
     )
     _notify_unverified(company, crm_client_id)
-
-
-def _awaits_verification(company: Company) -> bool:
-    """Сопоставление сделала передача из CRM, и сотрудник ещё не подтвердил его повторным приглашением."""
-    return PartnerCrmLink.objects.filter(company=company, status=PartnerCrmStatus.PENDING_CONFIRMATION).exists()
 
 
 def build_request_data(company: Company, user: Any = None) -> Optional[Dict[str, Any]]:
@@ -193,11 +194,10 @@ def build_request_data(company: Company, user: Any = None) -> Optional[Dict[str,
 def request_client_in_crm(company: Company, user: Any = None) -> Optional[Event]:
     """Попросить CRM завести (или найти) клиента для компании партнёра. Вызывать внутри `transaction.atomic()` приглашения.
 
-    `None` — просить не нужно: компания уже сопоставлена клиенту CRM (кроме удержанной передачей по ИНН — там повторное
-    приглашение и есть подтверждение, `hold_for_verification`), либо у неё нет контакта с e-mail. Ошибка публикации
+    `None` — просить не нужно: компания уже сопоставлена клиенту CRM, либо у неё нет контакта с e-mail. Ошибка публикации
     (`data` не по схеме) идёт наружу и откатывает приглашение.
     """
-    if CrmClientMapping.objects.filter(company=company).exists() and not _awaits_verification(company):
+    if CrmClientMapping.objects.filter(company=company).exists():
         return None
     data = build_request_data(company, user)
     if data is None:
@@ -434,6 +434,22 @@ def apply_client_resolved(data: Mapping[str, Any]) -> Outcome:
         )
     created = mapping is None
     if created:
+        link = PartnerCrmLink.objects.filter(company=company).first()
+        if link is None or link.status not in (PartnerCrmStatus.REQUESTED, PartnerCrmStatus.PENDING_CONFIRMATION):
+            # Инвариант PART-CRM: сопоставление партнёра — только по ответу на текущий запрос (связь в «запрошено» или
+            # «ждёт подтверждения менеджера CRM»). Поздний ответ на старый запрос (после передачи клиента, конфликта)
+            # ничего не создаёт и заявок не выпускает.
+            state = link.status if link is not None else "нет запроса"
+            _log(
+                company,
+                "partner.crm_linked_ignored",
+                "Ответ CRM «клиент заведён» проигнорирован",
+                f"Клиент CRM #{crm_client_id}: связь в состоянии «{state}», подтверждённого запроса нет. Сопоставление "
+                "не создано, заявки партнёра не выпущены; нажмите «Пригласить ещё раз», если связь нужна.",
+                "WARNING",
+                crm_client_id=crm_client_id,
+            )
+            return Outcome(SKIPPED_NO_REQUEST, f"нет подтверждённого запроса ({state})")
         holder = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).first()
         if holder is not None:  # клиент CRM уже у другой компании ERP: не перепривязываем, CRM снимет свою привязку
             return _reject(
@@ -470,17 +486,15 @@ def crm_client_state(company: Company) -> Dict[str, Any]:
     """Что показать сотруднику: `linked` (сопоставление есть), `requested` (ждём CRM), `pending_confirmation` (ждём менеджера
     CRM), `conflict`, `none` (не просили)."""
     mapping = CrmClientMapping.objects.filter(company=company).first()
-    link = PartnerCrmLink.objects.filter(company=company).first()
-    if mapping is not None and link is None:
+    if mapping is not None:  # сопоставление партнёра появляется только после подтверждённой связи (PART-CRM)
         return {"status": LINKED, "crm_client_id": mapping.crm_client_id}
+    link = PartnerCrmLink.objects.filter(company=company).first()
     if link is None:
         return {"status": NONE, "crm_client_id": None}
-    if mapping is not None:  # сопоставление есть, но заявки удержаны до подтверждения сотрудником
-        if link.status == PartnerCrmStatus.PENDING_CONFIRMATION:
-            return {"status": PENDING_CONFIRMATION, "crm_client_id": mapping.crm_client_id}
-        return {"status": REQUESTED, "crm_client_id": mapping.crm_client_id}
     if link.status == PartnerCrmStatus.PENDING_CONFIRMATION:
         return {"status": PENDING_CONFIRMATION, "crm_client_id": link.crm_client_id}
+    if link.status == PartnerCrmStatus.HELD:
+        return {"status": HELD, "crm_client_id": link.crm_client_id}
     if link.status == PartnerCrmStatus.CONFLICT:
         return {"status": CONFLICT, "crm_client_id": link.crm_client_id}
     return {"status": REQUESTED, "crm_client_id": None}

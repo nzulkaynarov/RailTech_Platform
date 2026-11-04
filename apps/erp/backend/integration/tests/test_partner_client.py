@@ -180,6 +180,11 @@ class TestRequest:
 
 
 class TestLinked:
+    @pytest.fixture(autouse=True)
+    def _asked(self, supplier):
+        """Ответ `linked` принимается только на запрос: связь в «запрошено» (инвариант PART-CRM)."""
+        PartnerCrmLink.objects.create(company=supplier, status="requested")
+
     def test_mapping_client_type_and_contact_mapping(self, supplier, contact):
         outcome = partner_client.apply_client_resolved(resolved(supplier, contact, matched_by="inn"))
 
@@ -358,6 +363,11 @@ class TestConflict:
 
 
 class TestDeferredRequests:
+    @pytest.fixture(autouse=True)
+    def _asked(self, supplier):
+        """Ответ `linked` принимается только на запрос: связь в «запрошено» (инвариант PART-CRM)."""
+        PartnerCrmLink.objects.create(company=supplier, status="requested")
+
     @pytest.fixture
     def partner_api(self, supplier, contact):
         from django.conf import settings as dj_settings
@@ -426,52 +436,96 @@ class TestDeferredRequests:
         assert not DeferredRequestEvent.objects.exists()
         assert bus_support.published("request.created") == []
 
-    def test_a_handoff_of_a_foreign_client_with_the_partners_inn_does_not_leak_the_partners_requests(
-        self, partner_api, supplier, contact, settings, world
-    ):
-        """Партнёр указал ИНН чужого клиента CRM, и передача этого клиента сопоставила компанию с ним по ИНН.
-
-        Заявки партнёра у чужого клиента не появляются: состояние «ждёт подтверждения менеджера», уведомление. Сотрудник
-        сверяет ИНН и жмёт «Пригласить ещё раз» — это подтверждение: запрос уходит в CRM, ответ `linked` выпускает заявки.
-        """
+    def _handoff_of_foreign_client(self, supplier, settings, crm_client_id=4001):
         from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
         from rest_framework.test import APIClient
 
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+        return handoff(
+            api,
+            payload(crm_client_id=crm_client_id, inn=supplier.inn, create_request=False, email="x@other.example.uz"),
+        )
+
+    def cabinet_events(self):
+        return [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+
+    def test_a_handoff_of_a_foreign_client_with_the_partners_inn_creates_no_mapping_and_leaks_nothing(
+        self, partner_api, supplier, contact, settings, world
+    ):
+        """Партнёр указал ИНН чужого клиента CRM, и передача этого клиента нашла компанию по ИНН.
+
+        Инвариант: у партнёра сопоставление — только после подтверждённой связи. Передача его не создаёт (409
+        `PARTNER_VERIFICATION_REQUIRED`), заявки партнёра у чужого клиента не появляются, в том числе новые.
+        """
         from notifications.models import Notification
 
-        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
         relationship = CompanyRelationship.objects.get(company=supplier)
         staff = world["users"]["supply"]
         relationship.responsible = staff
         relationship.save(update_fields=["responsible"])
         self.create_request(partner_api)
         assert DeferredRequestEvent.objects.get().published_at is None
-        api = APIClient()
-        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
 
-        response = handoff(
-            api, payload(crm_client_id=4001, inn=supplier.inn, create_request=False, email="x@other.example.uz")
-        )
+        response = self._handoff_of_foreign_client(supplier, settings)
 
-        assert response.status_code == 201, response.content
-        assert CrmClientMapping.objects.get(company=supplier).crm_client_id == 4001
-        cabinet = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
-        assert cabinet == [], "заявки партнёра не выпущены чужому клиенту"
-        assert DeferredRequestEvent.objects.get().published_at is None
-        assert partner_client.crm_client_state(supplier) == {"status": "pending_confirmation", "crm_client_id": 4001}
+        assert response.status_code == 409 and response.json() == {"detail": "PARTNER_VERIFICATION_REQUIRED"}
+        assert not CrmClientMapping.objects.exists(), "сопоставление партнёра не создано"
+        assert not supplier.types.filter(code="CLIENT").exists()
+        assert partner_client.crm_client_state(supplier) == {"status": "held", "crm_client_id": 4001}
         assert Notification.objects.filter(user=staff, event_code="partner.crm_unverified").count() == 1
+        # повтор передачи (ручной повтор в CRM): тот же ответ, без второго уведомления
+        assert self._handoff_of_foreign_client(supplier, settings).status_code == 409
+        assert Notification.objects.filter(user=staff, event_code="partner.crm_unverified").count() == 1
+        # заявка партнёра после передачи, до повторного приглашения: сопоставления нет — отложена, чужому клиенту не уходит
+        self.create_request(partner_api, "Новая заявка после передачи")
+        assert self.cabinet_events() == []
+        assert DeferredRequestEvent.objects.filter(published_at__isnull=True).count() == 2
 
-        # сотрудник проверил ИНН и приглашает ещё раз: запрос уходит в CRM
-        assert invite(world, contact).status_code == 200
+    def test_a_late_linked_after_the_handoff_hold_releases_nothing(self, partner_api, supplier, contact, settings):
+        """Передача удержана; поздний `linked` на старый запрос (отправлен до передачи) ничего не создаёт и не выпускает."""
+        from crm.models import ActivityLog
+
+        PartnerCrmLink.objects.filter(company=supplier).delete()
+        PartnerCrmLink.objects.create(company=supplier, status="requested")
+        self.create_request(partner_api)
+        assert self._handoff_of_foreign_client(supplier, settings).status_code == 409
+
+        outcome = partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=4001))
+
+        assert outcome.status == partner_client.SKIPPED_NO_REQUEST
+        assert not CrmClientMapping.objects.exists() and not CrmContactMapping.objects.exists()
+        assert not supplier.types.filter(code="CLIENT").exists()
+        assert self.cabinet_events() == []
+        assert DeferredRequestEvent.objects.get().published_at is None
+        assert partner_client.crm_client_state(supplier)["status"] == "held"
+        assert ActivityLog.objects.filter(event_code="partner.crm_linked_ignored", company_id=supplier.pk).count() == 1
+
+    def test_reinvite_after_the_hold_goes_to_crm_and_only_a_confirmed_link_releases_the_requests(
+        self, partner_api, supplier, contact, settings, world
+    ):
+        self.create_request(partner_api)
+        assert self._handoff_of_foreign_client(supplier, settings).status_code == 409
+
+        assert invite(world, contact).status_code == 200  # сотрудник сверил ИНН: запрос уходит в CRM
         assert bus_support.only("partner.client_requested")["data"]["erp_company_id"] == supplier.pk
         assert partner_client.crm_client_state(supplier)["status"] == "requested"
-        assert bus_support.published("request.created") == [] or all(
-            e["data"]["payload"]["source"] != "cabinet" for e in bus_support.published("request.created")
+        assert self.cabinet_events() == []
+        # CRM нашла клиента по ИНН и просит подтверждение менеджера: по-прежнему ничего не выпущено
+        partner_client.apply_client_resolved(
+            {
+                "erp_company_id": supplier.pk,
+                "status": "pending_confirmation",
+                "crm_client_id": 4001,
+                "actor": {"type": "system"},
+            }
         )
-
-        # CRM нашла клиента по erp_company_id и отвечает linked: теперь заявки уходят
+        assert partner_client.crm_client_state(supplier)["status"] == "pending_confirmation"
+        assert self.cabinet_events() == [] and not CrmClientMapping.objects.exists()
+        # менеджер CRM подтвердил: `linked`
         partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=4001))
-        released = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+        released = self.cabinet_events()
         assert len(released) == 1 and released[0]["data"]["crm_client_id"] == 4001
         assert partner_client.crm_client_state(supplier) == {"status": "linked", "crm_client_id": 4001}
 
@@ -479,6 +533,7 @@ class TestDeferredRequests:
         from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
         from rest_framework.test import APIClient
 
+        PartnerCrmLink.objects.all().delete()  # фикстура класса создала связь, у клиента без отношения её нет
         settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
         api = APIClient()
         api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
@@ -493,6 +548,11 @@ class TestDeferredRequests:
 
 
 class TestRoles:
+    @pytest.fixture(autouse=True)
+    def _asked(self, supplier):
+        """Ответ `linked` принимается только на запрос: связь в «запрошено» (инвариант PART-CRM)."""
+        PartnerCrmLink.objects.create(company=supplier, status="requested")
+
     def test_me_of_a_linked_partner_has_client_and_partner(self, supplier, contact):
         from django.conf import settings as dj_settings
         from portal.tests.conftest import PortalAPIClient, make_portal_session
@@ -539,6 +599,7 @@ class TestDeskState:
         assert state() == {"status": "pending_confirmation", "crm_client_id": 90}
         partner_client.apply_client_resolved(resolved(supplier, status="conflict", crm_client_id=88))
         assert state() == {"status": "conflict", "crm_client_id": 88}
+        assert invite(world, contact).status_code == 200  # «Пригласить ещё раз» — новый запрос
         partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=77))
         assert state() == {"status": "linked", "crm_client_id": 77}
 
@@ -547,6 +608,11 @@ class TestDeskState:
 
 
 class TestBusHandler:
+    @pytest.fixture(autouse=True)
+    def _asked(self, supplier):
+        """Ответ `linked` принимается только на запрос: связь в «запрошено» (инвариант PART-CRM)."""
+        PartnerCrmLink.objects.create(company=supplier, status="requested")
+
     def test_the_answer_event_goes_through_the_registered_handler(self, supplier, contact):
         from types import SimpleNamespace
 

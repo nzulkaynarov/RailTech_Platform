@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             name='PartnerCrmLink',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('status', models.CharField(choices=[('requested', 'Запрошен'), ('pending_confirmation', 'Ждёт подтверждения менеджера'), ('conflict', 'Конфликт')], default='requested', max_length=24)),
+                ('status', models.CharField(choices=[('requested', 'Запрошен'), ('pending_confirmation', 'Ждёт подтверждения менеджера'), ('held', 'Удержано после передачи клиента'), ('conflict', 'Конфликт')], default='requested', max_length=24)),
                 ('crm_client_id', models.BigIntegerField(blank=True, help_text='При конфликте — найденный клиент CRM, уже занятый другой компанией', null=True, verbose_name='Клиент CRM')),
                 ('conflict_company_id', models.BigIntegerField(blank=True, help_text='При конфликте — компания ERP, с которой клиент CRM уже сопоставлен', null=True, verbose_name='Другая компания ERP')),
                 ('requested_at', models.DateTimeField(default=django.utils.timezone.now)),

@@ -124,6 +124,7 @@
     "erp_request_conflict": "yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
     "handoff_no_consent": "mijozning ma’lumotlarga roziligi yo‘q",
     "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
+    "erp_partner_verification": "bu STIRdagi kompaniya kabinet hamkori, topshirish orqa ofisda STIR tekshirilguncha ushlab turildi",
     "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
     "other": "sababi aniqlanmadi"
   }

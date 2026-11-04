@@ -43,6 +43,10 @@ from . import events, stages
 logger = logging.getLogger(__name__)
 
 INN_CONFLICT = "INN_CONFLICT"
+#: Компания, найденная по ИНН, — партнёр кабинета без подтверждённой связи с этим клиентом: сопоставление не создаётся,
+#: передача отвечает 409 (PART-CRM). CRM показывает менеджеру причину и не повторяет передачу сама.
+PARTNER_VERIFICATION_REQUIRED = "PARTNER_VERIFICATION_REQUIRED"
+_HELD = object()
 _LOCK_NAMESPACE = "integration.handoff"
 
 
@@ -255,13 +259,17 @@ def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
     crm_client_id = data["crm_client_id"]
     try:
         with transaction.atomic():
-            return _handoff(data, crm_client_id)
+            outcome = _handoff(data, crm_client_id)
     except IntegrityError:
         # Последний рубеж гонки, которую не поймала блокировка: победитель уже зафиксирован — отвечаем по нему.
         mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
         if mapping is None:
             raise
         return _repeat_response(mapping, _requested_channels(data)), False
+    if outcome[0] is _HELD:
+        # Удержание (состояние, уведомление) уже зафиксировано; ответ — не молчаливый успех, а 409 с понятным кодом.
+        raise IntegrationConflict(PARTNER_VERIFICATION_REQUIRED)
+    return outcome
 
 
 def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], bool]:
@@ -274,13 +282,17 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
     company, linked_by_inn = _get_or_create_company(data, crm_client_id)
     from . import partner_client  # здесь, а не наверху: partner_client берёт `_advisory_lock` отсюда
 
+    if partner_client.is_partner(company):
+        # Инвариант PART-CRM: у компании с отношением partner сопоставление появляется только после подтверждённой связи
+        # (ответ CRM на запрос после «Пригласить» либо подтверждение менеджера в CRM). Передача по ИНН его не создаёт и
+        # заявок не выпускает: иначе ИНН чужого клиента отдал бы ему заявки и документы партнёра.
+        partner_client.lock_company(company.pk)
+        partner_client.hold_for_verification(company, crm_client_id)
+        return _HELD, False
     partner_client.lock_company(company.pk)  # по очереди с заявками партнёра и ответом CRM (PART-CRM)
     # Сопоставление — ДО сделки и приглашения: события строятся по нему.
     mapping = CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
     _consent(company, data["consent"])
-    # Партнёр, чью компанию нашли по ИНН: заявки партнёра этому клиенту НЕ выпускаются, пока сотрудник не проверит, что это та
-    # же компания (иначе ИНН чужого клиента отдал бы ему заявки партнёра). Отпускает повторное приглашение (PART-CRM).
-    partner_client.hold_for_verification(company, crm_client_id)
 
     _contacts, primary = _create_contacts(company, data, can_act=not linked_by_inn)
 

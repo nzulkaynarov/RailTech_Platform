@@ -368,7 +368,8 @@ class PartnerClientService:
         row = await session.get(
             PartnerClientRequest, request_id, with_for_update=True, populate_existing=True
         )
-        if row is None or row.status != "pending":
+        if row is None or row.status != "pending" or row.client_id != client_id:
+            # решили, закрыли или переадресовали на другого клиента, пока ждали блокировку
             raise NotFoundError("partner request not found")
         holder = await session.scalar(
             select(Client.id).where(Client.erp_company_id == erp_company_id).limit(1)

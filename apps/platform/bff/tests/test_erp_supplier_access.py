@@ -172,6 +172,10 @@ async def test_state_without_relationship(web: Web, be: Any, check: ContractChec
             {"status": "pending_confirmation", "crm_client_id": "90"},
         ),
         (
+            {"status": "held", "crm_client_id": 4001},
+            {"status": "held", "crm_client_id": "4001"},
+        ),
+        (
             None,
             {"status": "none", "crm_client_id": None},
         ),  # ERP без поля (старая версия): «не просили»

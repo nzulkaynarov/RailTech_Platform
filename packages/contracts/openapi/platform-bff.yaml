@@ -23491,15 +23491,16 @@ components:
       properties:
         status:
           type: string
-          enum: [none, requested, pending_confirmation, linked, conflict]
+          enum: [none, requested, pending_confirmation, held, linked, conflict]
           description: >-
             `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего
-            клиента без сопоставления и ждёт решения менеджера («Это та же компания» или «Нет — завести нового»), ничего не
-            привязано, заявки партнёра отложены; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
+            клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не
+            привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не
+            создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
             и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
         crm_client_id:
           oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
-          description: 'Клиент CRM (`pending_confirmation`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
+          description: 'Клиент CRM (`pending_confirmation`, `held`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'
     SupplierCabinetContactCreate:
       type: object
       additionalProperties: false

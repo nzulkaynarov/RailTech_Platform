@@ -13,7 +13,7 @@ import threading
 
 import pytest
 from django.db import connection
-from integration.models import CrmClientMapping, DeferredRequestEvent
+from integration.models import CrmClientMapping, DeferredRequestEvent, PartnerCrmLink
 from integration.services import events, partner_client
 from integration.tests import bus_support
 from parties.models import Company, CompanyRelationship, CompanyType, Contact
@@ -29,6 +29,7 @@ def test_a_partner_request_made_during_the_answer_is_published_once(monkeypatch)
         company=company, role="partner", status="active", modules=["my_products", "catalog_requests"]
     )
     contact = Contact.objects.create(company=company, name="Race", email="race@supplier.example.uz", can_act=True)
+    PartnerCrmLink.objects.create(company=company, status="requested")  # запрос отправлен: ответ `linked` принимается
     bus_support.reset()
 
     original = events.publish_request_created

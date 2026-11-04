@@ -12399,11 +12399,12 @@ export interface components {
         };
         DeskSupplierAccessCrmClient: {
             /**
-             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
              *
              *     * `none` - none
              *     * `requested` - requested
              *     * `pending_confirmation` - pending_confirmation
+             *     * `held` - held
              *     * `linked` - linked
              *     * `conflict` - conflict
              */
@@ -12415,11 +12416,12 @@ export interface components {
          * @description * `none` - none
          *     * `requested` - requested
          *     * `pending_confirmation` - pending_confirmation
+         *     * `held` - held
          *     * `linked` - linked
          *     * `conflict` - conflict
          * @enum {string}
          */
-        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "pending_confirmation" | "linked" | "conflict";
+        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "pending_confirmation" | "held" | "linked" | "conflict";
         DeskSupplierAccessInviteInRequest: {
             /** @description Контакт компании, которому уходит письмо с кодом входа. */
             contact_id: number;
