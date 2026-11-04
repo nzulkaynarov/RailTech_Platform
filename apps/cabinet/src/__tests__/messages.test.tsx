@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 
-import { pushManagerReply } from '@/mocks/handlers';
+import { eraseMessage, pushManagerReply } from '@/mocks/handlers';
 import { portalServer } from '@/mocks/server';
 import { POLL_INTERVAL_MS } from '@/lib/messages';
 import { renderApp, signedIn } from '@/test/render';
@@ -209,6 +209,21 @@ describe('«Сообщения»', () => {
     expect(within(page()).getByText(/Файлы в чат пока не прикладываются/)).toBeInTheDocument();
     expect(within(page()).getByRole('link', { name: 'Перейти к запросам' })).toHaveAttribute('href', '/requests');
     await expectNoAxeViolations();
+  });
+
+  it('сообщение, стёртое после открытия экрана, исчезает из ленты на следующем опросе (CHAT-1b)', async () => {
+    signedIn();
+    renderApp('/messages');
+    await heading('Сообщения');
+    const list = await within(page()).findByRole('list', { name: 'Переписка с менеджером' });
+    const colleague = within(list).getByText(/платёжку приложили/);
+    expect(colleague).toBeInTheDocument();
+    eraseMessage(503);
+    setVisibility('visible'); // вернулись на вкладку — опрос сразу
+    await waitFor(() => expect(within(feed()).queryByText(/платёжку приложили/)).not.toBeInTheDocument());
+    expect(within(feed()).getByText('Сообщение удалено по запросу автора')).toBeInTheDocument();
+    expect(within(feed()).getAllByText('Удалённый пользователь')).toHaveLength(1);
+    expect(within(feed()).queryByRole('link', { name: 'Счёт S-2026-0124' })).toBeNull(); // метки нет
   });
 
   it('стёртое по запросу автора сообщение — «Удалённый пользователь», без текста и метки', async () => {

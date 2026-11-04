@@ -154,6 +154,14 @@ export function pushManagerReply(text: string, dataset: Dataset = 'demo'): Schem
   return message;
 }
 
+/** Стереть сообщение ленты по запросу автора (CHAT-1b: `crm.lead.erased` → ERP) — для сценария опроса в тестах и dev. */
+export function eraseMessage(id: number, dataset: Dataset = 'demo'): void {
+  const db = dbs[dataset];
+  db.messages = db.messages.map((message) =>
+    message.id === id ? { ...message, erased: true, text: '', author_name: null, context: null, mine: false } : message,
+  );
+}
+
 const MESSAGES_PAGE = 50;
 const CLIENT_MESSAGE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
 
@@ -727,10 +735,11 @@ export const handlers = [
       const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? MESSAGES_PAGE) || MESSAGES_PAGE));
       if (url.searchParams.has('after_id')) {
         const newer = db.messages.filter((message) => message.id > after);
-        return json({ items: newer.slice(0, limit), has_more: newer.length > limit } satisfies Schemas['PortalMessagePage']);
+        const erased_ids = db.messages.filter((message) => message.erased && message.id <= after).map((message) => message.id);
+        return json({ items: newer.slice(0, limit), has_more: newer.length > limit, erased_ids } satisfies Schemas['PortalMessagePage']);
       }
       const items = db.messages.slice(-limit);
-      return json({ items, has_more: db.messages.length > limit } satisfies Schemas['PortalMessagePage']);
+      return json({ items, has_more: db.messages.length > limit, erased_ids: [] } satisfies Schemas['PortalMessagePage']);
     }),
   ),
   http.post(
