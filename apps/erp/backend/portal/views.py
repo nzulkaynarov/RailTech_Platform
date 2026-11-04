@@ -937,6 +937,8 @@ class CatalogDetailView(BasePortalView):
 class CatalogDocumentFileView(BasePortalView):
     """GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2)."""
 
+    required_module = "catalog_requests"
+
     def get(self, request, pk, doc_id):
         document = catalog_documents.find_client_document(pk, doc_id)
         if document is None:
