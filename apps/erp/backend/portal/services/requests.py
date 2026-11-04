@@ -96,5 +96,51 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
             detail=f"Клиент создал запрос из Cabinet: {summary}",
             event_params={"source": REQUEST_SOURCE, "contact_id": contact.id},
         )
-        events.publish_request_created(deal, source=REQUEST_SOURCE, erp_request_id=deal.id, summary=summary)
+        event = events.publish_request_created(deal, source=REQUEST_SOURCE, erp_request_id=deal.id, summary=summary)
+        if event is None:
+            _notify_unrouted_partner_request(company, deal, summary)
     return deal
+
+
+PARTNER_REQUEST_NOTIFY_EVENT = "portal.partner_request_unrouted"
+
+
+def _notify_unrouted_partner_request(company, deal: Deal, summary: str) -> None:
+    """Заявка партнёра, чья компания не сопоставлена клиенту CRM, в CRM не попадает (`request.created` несёт только
+    привязанных клиентов, CONTRACTS §3): уведомляем ответственного сотрудника отношения, чтобы она не потерялась.
+    Ответственного нет — уведомление получают администраторы платформы. Новый контракт события не нужен."""
+    from parties.models import CompanyRelationship, RelationshipRole
+
+    from notifications.services import notify_platform_admins, notify_user
+
+    relationship = (
+        CompanyRelationship.objects.filter(company=company, role=RelationshipRole.PARTNER)
+        .select_related("responsible")
+        .first()
+    )
+    if relationship is None:
+        return  # не партнёр: прежнее поведение (клиента без сопоставления CRM заводит передача из CRM)
+    params = {"company": company.name, "deal_id": deal.pk}
+    title = f"Заявка партнёра «{company.name}» не попала в CRM"
+    message = (
+        f"Партнёр создал заявку из кабинета: {summary[:300]}. Компания не сопоставлена клиенту CRM, поэтому заявка "
+        "осталась только в ERP: разберите её здесь или заведите клиента в CRM."
+    )
+    if relationship.responsible_id:
+        notify_user(
+            user=relationship.responsible,
+            title=title,
+            message=message,
+            deal=deal,
+            type_code="WARNING",
+            event_code=PARTNER_REQUEST_NOTIFY_EVENT,
+            event_params=params,
+        )
+    else:
+        notify_platform_admins(
+            title=title,
+            message=message,
+            type_code="WARNING",
+            event_code=PARTNER_REQUEST_NOTIFY_EVENT,
+            event_params=params,
+        )

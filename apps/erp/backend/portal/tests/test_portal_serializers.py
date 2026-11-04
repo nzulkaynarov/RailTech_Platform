@@ -566,6 +566,8 @@ def test_me_form(client_contact, client_company):
             "company": CompanySerializer(client_company).data,
             "can_act": True,
             "auth_method": "telegram",
+            "roles": ["client", "partner"],
+            "modules": ["catalog_requests", "my_products"],
         }
     ).data
     assert set(data) == set(component("Me")["properties"])

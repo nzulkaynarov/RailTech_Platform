@@ -408,6 +408,12 @@ import type {
   StockShipmentList,
   StockSupplierList,
   StockTraceList,
+  SupplierCabinetAccess,
+  SupplierCabinetContact,
+  SupplierCabinetContactCreate,
+  SupplierCabinetContactUpdate,
+  SupplierCabinetInvite,
+  SupplierCabinetRightsUpdate,
   SupplierCreate,
   SupplierDetail,
   SupplierOfferCreate,
@@ -45901,6 +45907,833 @@ export function useGetSupplierOfferHistory<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getGetSupplierCabinetAccessUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access`;
+};
+
+/**
+ * ERP `catalog/supplier-access/{id}/`: отношение «партнёр» (статус, вид, включённые модули), контакты компании, роли и разделы кабинета, которые откроются партнёру сейчас. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Поставщик: доступ в кабинет
+ */
+export const getSupplierCabinetAccess = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  return http<SupplierCabinetAccess>(getGetSupplierCabinetAccessUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSupplierCabinetAccessQueryKey = (id: CompanyItemRef) => {
+  return [`/api/v1/erp/catalog/suppliers/${id}/cabinet-access`] as const;
+};
+
+export const getGetSupplierCabinetAccessQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSupplierCabinetAccessQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierCabinetAccess>>> = ({
+    signal,
+  }) => getSupplierCabinetAccess(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSupplierCabinetAccessQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSupplierCabinetAccess>>
+>;
+export type GetSupplierCabinetAccessQueryError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+
+export function useGetSupplierCabinetAccess<
+  TData = Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierCabinetAccess>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierCabinetAccess<
+  TData = Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierCabinetAccess>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierCabinetAccess<
+  TData = Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Поставщик: доступ в кабинет
+ */
+
+export function useGetSupplierCabinetAccess<
+  TData = Awaited<ReturnType<typeof getSupplierCabinetAccess>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: CompanyItemRef,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSupplierCabinetAccess>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSupplierCabinetAccessQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateSupplierCabinetContactUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/contacts`;
+};
+
+/**
+ * ERP `POST catalog/supplier-access/{id}/contacts/` — право `supply.manage`. ФИО и e-mail обязательны (в кабинет входят по e-mail), язык писем — ru, uz или en. Такой адрес у компании уже есть — 409 (`CONTACT_EXISTS`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: добавить контакт
+ */
+export const createSupplierCabinetContact = async (
+  id: CompanyItemRef,
+  supplierCabinetContactCreate: SupplierCabinetContactCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetContact> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierCabinetContact>(getCreateSupplierCabinetContactUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierCabinetContactCreate),
+  });
+};
+
+export const getCreateSupplierCabinetContactMutationKey = () =>
+  ["createSupplierCabinetContact"] as const;
+
+export const getCreateSupplierCabinetContactMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSupplierCabinetContact>>,
+    TError,
+    CreateSupplierCabinetContactMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSupplierCabinetContact>>,
+  TError,
+  CreateSupplierCabinetContactMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSupplierCabinetContactMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSupplierCabinetContact>>,
+    CreateSupplierCabinetContactMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return createSupplierCabinetContact(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSupplierCabinetContactMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSupplierCabinetContact>>
+>;
+export type CreateSupplierCabinetContactMutationBody = SupplierCabinetContactCreate;
+export type CreateSupplierCabinetContactMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateSupplierCabinetContactMutationVariables = {
+  id: CompanyItemRef;
+  data: SupplierCabinetContactCreate;
+};
+
+/**
+ * @summary Расчёт · Поставщик: добавить контакт
+ */
+export const useCreateSupplierCabinetContact = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSupplierCabinetContact>>,
+      TError,
+      CreateSupplierCabinetContactMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSupplierCabinetContact>>,
+  TError,
+  CreateSupplierCabinetContactMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSupplierCabinetContactMutationOptions(options), queryClient);
+};
+
+export const getUpdateSupplierCabinetContactUrl = (
+  id: CompanyItemRef,
+  contactId: CompanyItemRef,
+) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/contacts/${contactId}`;
+};
+
+/**
+ * ERP `PATCH catalog/supplier-access/{id}/contacts/{contact_id}/` — право `supply.manage`. Приходят только изменённые поля. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: изменить контакт
+ */
+export const updateSupplierCabinetContact = async (
+  id: CompanyItemRef,
+  contactId: CompanyItemRef,
+  supplierCabinetContactUpdate: SupplierCabinetContactUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetContact> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierCabinetContact>(getUpdateSupplierCabinetContactUrl(id, contactId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierCabinetContactUpdate),
+  });
+};
+
+export const getUpdateSupplierCabinetContactMutationKey = () =>
+  ["updateSupplierCabinetContact"] as const;
+
+export const getUpdateSupplierCabinetContactMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSupplierCabinetContact>>,
+    TError,
+    UpdateSupplierCabinetContactMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSupplierCabinetContact>>,
+  TError,
+  UpdateSupplierCabinetContactMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSupplierCabinetContactMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSupplierCabinetContact>>,
+    UpdateSupplierCabinetContactMutationVariables
+  > = (props) => {
+    const { id, contactId, data } = props ?? {};
+
+    return updateSupplierCabinetContact(id, contactId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSupplierCabinetContactMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSupplierCabinetContact>>
+>;
+export type UpdateSupplierCabinetContactMutationBody = SupplierCabinetContactUpdate;
+export type UpdateSupplierCabinetContactMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateSupplierCabinetContactMutationVariables = {
+  id: CompanyItemRef;
+  contactId: CompanyItemRef;
+  data: SupplierCabinetContactUpdate;
+};
+
+/**
+ * @summary Расчёт · Поставщик: изменить контакт
+ */
+export const useUpdateSupplierCabinetContact = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSupplierCabinetContact>>,
+      TError,
+      UpdateSupplierCabinetContactMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSupplierCabinetContact>>,
+  TError,
+  UpdateSupplierCabinetContactMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSupplierCabinetContactMutationOptions(options), queryClient);
+};
+
+export const getUpdateSupplierCabinetRightsUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/relationship`;
+};
+
+/**
+ * ERP `PATCH catalog/supplier-access/{id}/relationship/` — право `supply.manage`. Включённые модули (`my_products`, `catalog_requests`) и вид партнёра; действует на следующем запросе партнёра, без перевхода. Модуль не из шаблона роли — 422 (`details.reason = module_not_allowed`); отношения ещё нет — 404. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: права партнёра в кабинете
+ */
+export const updateSupplierCabinetRights = async (
+  id: CompanyItemRef,
+  supplierCabinetRightsUpdate: SupplierCabinetRightsUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierCabinetAccess>(getUpdateSupplierCabinetRightsUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierCabinetRightsUpdate),
+  });
+};
+
+export const getUpdateSupplierCabinetRightsMutationKey = () =>
+  ["updateSupplierCabinetRights"] as const;
+
+export const getUpdateSupplierCabinetRightsMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSupplierCabinetRights>>,
+    TError,
+    UpdateSupplierCabinetRightsMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSupplierCabinetRights>>,
+  TError,
+  UpdateSupplierCabinetRightsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSupplierCabinetRightsMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSupplierCabinetRights>>,
+    UpdateSupplierCabinetRightsMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSupplierCabinetRights(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSupplierCabinetRightsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSupplierCabinetRights>>
+>;
+export type UpdateSupplierCabinetRightsMutationBody = SupplierCabinetRightsUpdate;
+export type UpdateSupplierCabinetRightsMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateSupplierCabinetRightsMutationVariables = {
+  id: CompanyItemRef;
+  data: SupplierCabinetRightsUpdate;
+};
+
+/**
+ * @summary Расчёт · Поставщик: права партнёра в кабинете
+ */
+export const useUpdateSupplierCabinetRights = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSupplierCabinetRights>>,
+      TError,
+      UpdateSupplierCabinetRightsMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSupplierCabinetRights>>,
+  TError,
+  UpdateSupplierCabinetRightsMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSupplierCabinetRightsMutationOptions(options), queryClient);
+};
+
+export const getInviteSupplierToCabinetUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/invite`;
+};
+
+/**
+ * ERP `POST catalog/supplier-access/{id}/invite/` — право `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке; ссылки и кода в ответе нет. Письмо не ушло — 422 (`details.reason = email_delivery_failed`), отношение не меняется; адрес общий с контактом другой компании кабинета — 409. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: пригласить в кабинет
+ */
+export const inviteSupplierToCabinet = async (
+  id: CompanyItemRef,
+  supplierCabinetInvite: SupplierCabinetInvite,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierCabinetAccess>(getInviteSupplierToCabinetUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierCabinetInvite),
+  });
+};
+
+export const getInviteSupplierToCabinetMutationKey = () => ["inviteSupplierToCabinet"] as const;
+
+export const getInviteSupplierToCabinetMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof inviteSupplierToCabinet>>,
+    TError,
+    InviteSupplierToCabinetMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof inviteSupplierToCabinet>>,
+  TError,
+  InviteSupplierToCabinetMutationVariables,
+  TContext
+> => {
+  const mutationKey = getInviteSupplierToCabinetMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof inviteSupplierToCabinet>>,
+    InviteSupplierToCabinetMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return inviteSupplierToCabinet(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type InviteSupplierToCabinetMutationResult = NonNullable<
+  Awaited<ReturnType<typeof inviteSupplierToCabinet>>
+>;
+export type InviteSupplierToCabinetMutationBody = SupplierCabinetInvite;
+export type InviteSupplierToCabinetMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CatalogConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type InviteSupplierToCabinetMutationVariables = {
+  id: CompanyItemRef;
+  data: SupplierCabinetInvite;
+};
+
+/**
+ * @summary Расчёт · Поставщик: пригласить в кабинет
+ */
+export const useInviteSupplierToCabinet = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CatalogConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof inviteSupplierToCabinet>>,
+      TError,
+      InviteSupplierToCabinetMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof inviteSupplierToCabinet>>,
+  TError,
+  InviteSupplierToCabinetMutationVariables,
+  TContext
+> => {
+  return useMutation(getInviteSupplierToCabinetMutationOptions(options), queryClient);
+};
+
+export const getSuspendSupplierCabinetAccessUrl = (id: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/cabinet-access/suspend`;
+};
+
+/**
+ * ERP `POST catalog/supplier-access/{id}/suspend/` — право `supply.manage`. Вход закрыт, живые сессии партнёра гаснут на следующем запросе; вернуть доступ — «Пригласить». Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: приостановить доступ в кабинет
+ */
+export const suspendSupplierCabinetAccess = async (
+  id: CompanyItemRef,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierCabinetAccess> => {
+  return http<SupplierCabinetAccess>(getSuspendSupplierCabinetAccessUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSuspendSupplierCabinetAccessMutationKey = () =>
+  ["suspendSupplierCabinetAccess"] as const;
+
+export const getSuspendSupplierCabinetAccessMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>,
+    TError,
+    SuspendSupplierCabinetAccessMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>,
+  TError,
+  SuspendSupplierCabinetAccessMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSuspendSupplierCabinetAccessMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>,
+    SuspendSupplierCabinetAccessMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return suspendSupplierCabinetAccess(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SuspendSupplierCabinetAccessMutationResult = NonNullable<
+  Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>
+>;
+
+export type SuspendSupplierCabinetAccessMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SuspendSupplierCabinetAccessMutationVariables = { id: CompanyItemRef };
+
+/**
+ * @summary Расчёт · Поставщик: приостановить доступ в кабинет
+ */
+export const useSuspendSupplierCabinetAccess = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>,
+      TError,
+      SuspendSupplierCabinetAccessMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof suspendSupplierCabinetAccess>>,
+  TError,
+  SuspendSupplierCabinetAccessMutationVariables,
+  TContext
+> => {
+  return useMutation(getSuspendSupplierCabinetAccessMutationOptions(options), queryClient);
+};
 
 export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {
   return `/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}`;

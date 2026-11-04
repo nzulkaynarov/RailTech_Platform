@@ -118,6 +118,12 @@
       "rows_token_invalid": "The check is out of date. Press “Check” again.",
       "offer_source_invalid": "Choose the price source.",
       "role_not_permitted": "Catalog and procurement rights are needed.",
+      "contact_exists": "The company already has a contact with this address.",
+      "contact_email_ambiguous": "This address is already used by a contact of another cabinet company. Use a different address.",
+      "email_delivery_failed": "The e-mail was not sent. Check the mail service and try again — access is unchanged.",
+      "module_not_allowed": "This section cannot be enabled for a partner.",
+      "contact_name_required": "Enter the contact's full name.",
+      "contact_email_required": "Enter the contact's e-mail.",
       "image_limit_reached": "Limit reached: 10 photos per item.",
       "image_main_required": "Change the main photo by choosing another photo.",
       "image_order_invalid": "There is no such place in the list.",
@@ -612,6 +618,97 @@
     "email": "Email",
     "phone": "Phone",
     "maker": "Makes the goods (manufacturer)"
+  },
+  "cabinetAccess": {
+    "title": "Cabinet access",
+    "status": {
+      "none": "Not opened",
+      "invited": "Invited",
+      "active": "Active",
+      "suspended": "Suspended"
+    },
+    "roles": {
+      "client": "Client",
+      "partner": "Partner"
+    },
+    "rolesLine": "In the cabinet: {{roles}}",
+    "closed": "Cabinet closed: the partner cannot sign in.",
+    "notOpened": "The cabinet has not been opened for this supplier yet. Add a contact and invite them: a sign-in code is sent by e-mail.",
+    "invitedBy": "Invited by",
+    "firstLogin": "First sign-in",
+    "noLogin": "has not signed in yet",
+    "suspendedAt": "Suspended",
+    "rights": "What the partner will see",
+    "modules": {
+      "my_products": {
+        "label": "My products",
+        "hint": "The partner fills in cards and prices of their own products; we publish after review."
+      },
+      "catalog_requests": {
+        "label": "Catalog and requests",
+        "hint": "The catalog is the same as clients see: published products and prices, no suppliers."
+      }
+    },
+    "kind": {
+      "label": "Partner type",
+      "hint": "A label for lists and reports; it does not affect rights.",
+      "none": "Not set",
+      "manufacturer": "Manufacturer",
+      "supplier": "Supplier",
+      "principal": "Principal",
+      "other": "Other"
+    },
+    "contacts": "Company contacts",
+    "contactsTable": "Supplier contacts",
+    "noContacts": "No contacts yet. Add the person who will get the invitation: the cabinet is entered by e-mail only.",
+    "contact": {
+      "name": "Full name",
+      "email": "E-mail",
+      "phone": "Phone",
+      "language": "Letter language",
+      "lastLogin": "Last sign-in",
+      "invitedAt": "invited {{date}}",
+      "edit": "Edit",
+      "editNamed": "Edit contact {{name}}",
+      "lastLoginAt": "signed in {{date}}",
+      "notInvited": "not invited",
+      "canAct": "Can create requests and upload files",
+      "canActNamed": "Can create requests and upload files: {{name}}"
+    },
+    "languages": {
+      "ru": "Русский",
+      "uz": "Oʻzbekcha",
+      "en": "English"
+    },
+    "addContact": "Add contact",
+    "invite": "Invite",
+    "inviteAgain": "Invite again",
+    "inviteNamed": "{{action}}: {{name}}",
+    "inviteSent": "The e-mail with the sign-in code has been sent.",
+    "suspend": "Suspend access",
+    "readOnly": "Only staff allowed to manage suppliers can invite and change rights.",
+    "contactForm": {
+      "addTitle": "New supplier contact",
+      "editTitle": "Supplier contact",
+      "add": "Add",
+      "emailHint": "The sign-in code is sent to this address.",
+      "languageHint": "The invitation e-mail is sent in this language.",
+      "steps": [
+        "The contact appears on the supplier card",
+        "The invitation is sent by the separate Invite button"
+      ],
+      "canAct": "Can create requests and upload files"
+    },
+    "suspendForm": {
+      "title": "Suspend cabinet access",
+      "ok": "Suspend",
+      "text": "The partner cannot sign in until you invite them again.",
+      "steps": [
+        "Sign-in is closed for all contacts of the company",
+        "Open sessions of the partner end on the next action",
+        "Access is restored with the Invite button"
+      ]
+    }
   },
   "offerCreate": {
     "open": "Add price",

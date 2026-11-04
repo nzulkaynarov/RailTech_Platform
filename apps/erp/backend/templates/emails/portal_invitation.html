@@ -1,14 +1,14 @@
 {% extends "emails/base.html" %}
 {% load i18n %}
 {% block subject %}{% blocktranslate with company=company_name %}Приглашение в личный кабинет «{{ company }}»{% endblocktranslate %}{% endblock %}
-{% block header_hint %}{% translate "Личный кабинет клиента" %}{% endblock %}
+{% block header_hint %}{% if portal_role == "partner" %}{% translate "Личный кабинет партнёра" %}{% else %}{% translate "Личный кабинет клиента" %}{% endif %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
     {% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
   </h1>
   <p style="margin:0 0 16px 0; font-size:15px; line-height:1.5; color:#374151;">
     {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вас пригласили в личный кабинет компании <strong>«{{ company }}»</strong> на платформе <strong>{{ platform }}</strong>.{% endblocktranslate %}
-    {% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}
+    {% if portal_role == "partner" %}{% translate "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их." %}{% else %}{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}{% endif %}
   </p>
   <p style="margin:0 0 4px 0; font-size:14px; color:#374151;">{% translate "Код входа:" %}</p>
   <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 16px 0;">

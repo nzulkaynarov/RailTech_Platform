@@ -1,5 +1,6 @@
 import { useActs, useContracts, useInvoices, useQuotes } from '@/api/queries';
 import { useNow } from '@/hooks/useNow';
+import { useHasModule } from '@/session/useMe';
 import { invoiceViews } from '@/lib/invoice';
 import { quoteAwaitsDecision } from '@/lib/quotes';
 import { contractAwaitsClient } from '@/lib/status';
@@ -11,18 +12,34 @@ import { contractAwaitsClient } from '@/lib/status';
  */
 export function useActionRequired() {
   const now = useNow();
-  const queries = [useQuotes(), useContracts(), useInvoices(), useActs()] as const;
+  const modules = {
+    quotes: useHasModule('quotes'),
+    contracts: useHasModule('contracts'),
+    invoices: useHasModule('invoices'),
+    acts: useHasModule('acts'),
+  };
+  const queries = [
+    useQuotes({ enabled: modules.quotes }),
+    useContracts({ enabled: modules.contracts }),
+    useInvoices({ enabled: modules.invoices }),
+    useActs({ enabled: modules.acts }),
+  ] as const;
   const [quotes, contracts, invoices, acts] = queries;
-  const isPending = queries.some((query) => query.isPending);
+  // Список закрытого модуля не грузится и не ждётся; нет ни одного модуля (партнёр) — виджета нет вовсе
+  const available = Object.values(modules).some(Boolean);
+  const isPending = queries.some((query) => query.isPending && query.fetchStatus !== 'idle');
   const failed = queries.filter((query) => query.isError);
   const views = invoiceViews(invoices.data ?? [], now);
   return {
+    available,
     isPending,
     error: failed[0]?.error ?? null,
     retry: () => failed.forEach((query) => void query.refetch()),
     views,
     quotes: (quotes.data ?? []).filter((quote) => quoteAwaitsDecision(quote, now)),
-    contracts: (contracts.data ?? []).filter((contract) => contractAwaitsClient(contract.status) && !contract.signed_by_client_at),
+    contracts: (contracts.data ?? []).filter(
+      (contract) => contractAwaitsClient(contract.status) && !contract.signed_by_client_at,
+    ),
     invoices: (invoices.data ?? []).filter((invoice) => Boolean(views.get(invoice.id)?.overdueDays)),
     acts: (acts.data ?? []).filter((act) => act.status === 'issued'),
   };

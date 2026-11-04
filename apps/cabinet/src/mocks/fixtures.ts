@@ -689,6 +689,23 @@ export const catalog: Schemas['CatalogItem'][] = [
   goods(1024, 'Задвижка 30с41нж Ду100', 'Арматура', 'шт', null, 'on_order', 25),
 ];
 
-export function meFor(contact: Schemas['TeamMember'], authMethod: Schemas['Me']['auth_method']): Schemas['Me'] {
-  return { contact, company, can_act: contact.can_act, auth_method: authMethod };
+/** Роли и модули клиента — шаблон роли из контракта (`Me.x-role-modules`); сверяет `modules-menu.test`. */
+export const CLIENT_ACCESS: { roles: Schemas['Me']['roles']; modules: string[] } = {
+  roles: ['client'],
+  modules: ['catalog_requests', 'quotes', 'documents', 'contracts', 'invoices', 'acts', 'deliveries', 'company', 'team', 'profile'],
+};
+
+export function meFor(
+  contact: Schemas['TeamMember'],
+  authMethod: Schemas['Me']['auth_method'],
+  access: { roles: Schemas['Me']['roles']; modules: string[] } = CLIENT_ACCESS,
+): Schemas['Me'] {
+  return {
+    contact,
+    company,
+    can_act: contact.can_act,
+    auth_method: authMethod,
+    roles: access.roles,
+    modules: access.modules as Schemas['Me']['modules'],
+  };
 }

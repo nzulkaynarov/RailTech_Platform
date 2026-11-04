@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Portal API (Cabinet → ERP)
-  version: 0.3.1
+  version: 0.4.0
   summary: Пространство `/api/portal/v1/` — вызывает Cabinet SPA от имени клиента.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §4 и ADR-0004 (Cabinet без бэкенда). Версия 0 (M0-INF-02):
@@ -32,6 +32,17 @@ info:
     экране «Мы отправили письмо» (`POST /auth/code`), если ссылка не открывается или письмо пришло на другое устройство.
     Ссылка и код — одна запись, живут 60 минут (приглашение — 24 часа), гасятся вместе; 5 неверных кодов подряд —
     429 `LOGIN_CODE_LOCKED` до нового запроса.
+
+    0.4.0 (PART-1, ADR-0022): в кабинет входят клиенты и партнёры (изготовители, поставщики, принципалы — по отношению
+    компании, которое заводит сотрудник). Ролей две и они складываются: `client` (тип компании CLIENT) и `partner`.
+    `GET /me` отдаёт `roles` и `modules` — разделы кабинета: клиенту весь шаблон роли, партнёру те, что сотрудник включил
+    на отношении (из шаблона роли `partner`, по умолчанию `my_products` и `catalog_requests`), и всегда `profile` (выход и язык;
+    не выключается). Шаблоны — `Me.x-role-modules`
+    и `Me.x-role-default-modules`; меню Cabinet строится из `modules`. Эндпоинт открыт сессии, у которой есть его модуль:
+    `/requests*`, `/catalog*`, `/uploads` — `catalog_requests`, `/quotes*` — `quotes`, `/contracts*` — `contracts`,
+    `/invoices*` — `invoices`, `/acts*` — `acts`, `/deliveries*` — `deliveries`, `/documents*` — `documents`, `/company` —
+    `company`, `/team*` — `team`; без модуля — 403 `MODULE_REQUIRED`. Включение и выключение модуля действует на следующем
+    запросе, без перевхода. Приостановленное отношение закрывает вход, живая сессия партнёра гаснет на следующем запросе (401).
 servers:
   - url: https://erp.railtech.uz/api/portal/v1
     description: prod
@@ -308,6 +319,8 @@ paths:
                   $ref: '#/components/schemas/ClientRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
     post:
@@ -359,6 +372,8 @@ paths:
                 $ref: '#/components/schemas/ClientRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -380,6 +395,8 @@ paths:
                   $ref: '#/components/schemas/QuoteListItem'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -399,6 +416,8 @@ paths:
                 $ref: '#/components/schemas/Quote'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -600,6 +619,8 @@ paths:
                   $ref: '#/components/schemas/Contract'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -652,6 +673,8 @@ paths:
                   $ref: '#/components/schemas/Invoice'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -727,6 +750,8 @@ paths:
                   $ref: '#/components/schemas/Act'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -835,6 +860,8 @@ paths:
                   $ref: '#/components/schemas/DeliveryLine'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -946,6 +973,8 @@ paths:
                   $ref: '#/components/schemas/Document'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -977,6 +1006,8 @@ paths:
                 minimum: 1
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -1045,6 +1076,8 @@ paths:
                   $ref: '#/components/schemas/CatalogCategory'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1090,6 +1123,8 @@ paths:
                 $ref: '#/components/schemas/CatalogPage'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1109,6 +1144,8 @@ paths:
                 $ref: '#/components/schemas/CatalogItem'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -1128,6 +1165,8 @@ paths:
                 $ref: '#/components/schemas/Company'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
     put:
@@ -1175,6 +1214,8 @@ paths:
                   $ref: '#/components/schemas/TeamMember'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -1257,7 +1298,7 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
     Forbidden:
-      description: У контакта нет права действовать (`can_act = false`; `FORBIDDEN`)
+      description: У контакта нет права действовать (`can_act = false`; `FORBIDDEN`) или у сессии нет модуля эндпоинта (`MODULE_REQUIRED`)
       content:
         application/json:
           schema:
@@ -1324,6 +1365,7 @@ components:
         - UNAUTHORIZED
         - INVALID_INIT_DATA
         - FORBIDDEN
+        - MODULE_REQUIRED
         - NOT_FOUND
         - MAGIC_LINK_EXPIRED
         - LOGIN_CODE_INVALID
@@ -1430,7 +1472,6 @@ components:
 
     Me:
       type: object
-      required: [contact, company, can_act, auth_method]
       properties:
         contact:
           $ref: '#/components/schemas/TeamMember'
@@ -1442,6 +1483,34 @@ components:
         auth_method:
           type: string
           enum: [telegram, magic_link]
+        roles:
+          type: array
+          description: Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются.
+          items:
+            $ref: '#/components/schemas/PortalRole'
+        modules:
+          type: array
+          description: Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены.
+          items:
+            $ref: '#/components/schemas/ModuleCode'
+      required: [contact, company, can_act, auth_method, roles, modules]
+      x-role-modules:
+        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
+        partner: [my_products, catalog_requests, profile]
+      x-role-default-modules:
+        client: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile]
+        partner: [my_products, catalog_requests, profile]
+
+    PortalRole:
+      type: string
+      enum: [client, partner]
+
+    ModuleCode:
+      type: string
+      description: |
+        Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
+        незнакомый пропускает.
+      enum: [catalog_requests, quotes, documents, contracts, invoices, acts, deliveries, company, team, profile, my_products]
 
     RequestStatus:
       type: string

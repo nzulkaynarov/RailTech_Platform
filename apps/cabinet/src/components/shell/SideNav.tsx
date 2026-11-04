@@ -2,10 +2,11 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { PanelLeftClose, PanelLeft } from 'lucide-react';
 
-import { PRIMARY_NAV, SECONDARY_NAV, type NavItem } from '@/app/nav';
+import { type NavItem } from '@/app/nav';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useMe } from '@/session/useMe';
+import { useCanAct, useMe } from '@/session/useMe';
+import { useNav } from '@/session/useNav';
 import { BrandMark } from './BrandMark';
 
 export interface SideNavProps {
@@ -24,6 +25,8 @@ export interface SideNavProps {
 export function SideNav({ companyName, collapsed = false, onToggleCollapse }: SideNavProps) {
   const { t } = useTranslation();
   const me = useMe().data;
+  const canAct = useCanAct();
+  const { primary, secondary } = useNav();
 
   return (
     <aside
@@ -77,10 +80,10 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
             {me ? (
               <p className="flex items-center gap-1.5 px-1.5 text-xs text-muted-foreground">
                 <span
-                  className={cn('inline-block size-1.5 shrink-0 rounded-full', me.can_act ? 'bg-success' : 'bg-warning')}
+                  className={cn('inline-block size-1.5 shrink-0 rounded-full', canAct ? 'bg-success' : 'bg-warning')}
                   aria-hidden="true"
                 />
-                {me.can_act ? t('access.canAct') : t('access.viewOnly')}
+                {canAct ? t('access.canAct') : t('access.viewOnly')}
               </p>
             ) : null}
           </div>
@@ -88,19 +91,31 @@ export function SideNav({ companyName, collapsed = false, onToggleCollapse }: Si
       </div>
 
       <nav aria-label={t('app.sideNav')} className="flex-1 overflow-y-auto px-2 py-3">
-        {!collapsed && (
-          <p className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-            {t('nav.sectionMain')}
-          </p>
+        {primary.length > 0 && (
+          <>
+            {!collapsed && (
+              <p className="px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                {t('nav.sectionMain')}
+              </p>
+            )}
+            <NavList items={primary} collapsed={collapsed} />
+          </>
         )}
-        <NavList items={PRIMARY_NAV} collapsed={collapsed} />
 
-        {!collapsed && (
-          <p className="mt-4 px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
-            {t('nav.sectionDocumentsAndTeam')}
-          </p>
+        {secondary.length > 0 && (
+          <>
+            {!collapsed && (
+              <p className="mt-4 px-2 pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
+                {t('nav.sectionDocumentsAndTeam')}
+              </p>
+            )}
+            <NavList
+              items={secondary}
+              collapsed={collapsed}
+              className={cn(collapsed && 'mt-2 border-t border-border/60 pt-2')}
+            />
+          </>
         )}
-        <NavList items={SECONDARY_NAV} collapsed={collapsed} className={cn(collapsed && 'mt-2 border-t border-border/60 pt-2')} />
       </nav>
     </aside>
   );

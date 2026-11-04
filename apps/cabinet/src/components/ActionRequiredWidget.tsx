@@ -1,7 +1,15 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { AlertCircle, CheckCircle2, ClipboardCheck, FileSignature, FileText, Receipt, type LucideIcon } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  ClipboardCheck,
+  FileSignature,
+  FileText,
+  Receipt,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { ErrorState } from '@/components/QueryStates';
 import { ToneBadge } from '@/components/StatusBadge';
@@ -30,6 +38,7 @@ export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: 
 
   // `holdSkeleton` — экран ещё грузит свой список: виджет и список появляются в одном кадре, скелетон списка под
   // виджетом не сдвигается, когда виджет дорисовался раньше (K10).
+  if (!actions.available) return null; // у партнёра нет КП, договоров, счетов и актов — ждать от него решений нечего
   if (actions.isPending || holdSkeleton) return <ActionRequiredSkeleton />;
   if (actions.error) {
     return (
@@ -102,7 +111,9 @@ export function ActionRequiredWidget({ holdSkeleton = false }: { holdSkeleton?: 
             >
               <span className="flex flex-wrap items-center gap-1.5">
                 {hint('payInvoice')}
-                <ToneBadge tone="danger">{t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}</ToneBadge>
+                <ToneBadge tone="danger">
+                  {t('pages.invoices.overdueDays', { count: view?.overdueDays ?? 1 })}
+                </ToneBadge>
               </span>
             </ActionCard>
           );

@@ -637,7 +637,7 @@ export interface components {
          * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
          * @enum {string}
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT";
+        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT";
         Reason: {
             reason: string;
         };
@@ -677,7 +677,19 @@ export interface components {
             can_act: boolean;
             /** @enum {string} */
             auth_method: "telegram" | "magic_link";
+            /** @description Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются. */
+            roles: components["schemas"]["PortalRole"][];
+            /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
+            modules: components["schemas"]["ModuleCode"][];
         };
+        /** @enum {string} */
+        PortalRole: "client" | "partner";
+        /**
+         * @description Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
+         *     незнакомый пропускает.
+         * @enum {string}
+         */
+        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products";
         /** @enum {string} */
         RequestStatus: "new" | "in_progress" | "quoted" | "closed";
         RequestLineIn: {
@@ -1009,7 +1021,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description У контакта нет права действовать (`can_act = false`; `FORBIDDEN`) */
+        /** @description У контакта нет права действовать (`can_act = false`; `FORBIDDEN`) или у сессии нет модуля эндпоинта (`MODULE_REQUIRED`) */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1350,6 +1362,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -1411,6 +1424,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
@@ -1434,6 +1448,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -1458,6 +1473,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
@@ -1688,6 +1704,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -1753,6 +1770,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -1832,6 +1850,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -1959,6 +1978,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2084,6 +2104,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2117,6 +2138,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
@@ -2199,6 +2221,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2226,6 +2249,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2250,6 +2274,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
         };
@@ -2273,6 +2298,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2323,6 +2349,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             429: components["responses"]["TooManyRequests"];
         };
     };

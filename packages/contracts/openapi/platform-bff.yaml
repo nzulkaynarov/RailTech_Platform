@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.40.0
+  version: 0.41.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -11696,6 +11696,198 @@ paths:
           $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access:
+    get:
+      tags: [erp-catalog]
+      operationId: getSupplierCabinetAccess
+      summary: 'Расчёт · Поставщик: доступ в кабинет'
+      description: >-
+        ERP `catalog/supplier-access/{id}/`: отношение «партнёр» (статус, вид, включённые модули), контакты компании, роли и разделы кабинета, которые откроются партнёру сейчас. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/contacts:
+    post:
+      tags: [erp-catalog]
+      operationId: createSupplierCabinetContact
+      summary: 'Расчёт · Поставщик: добавить контакт'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/contacts/` — право `supply.manage`. ФИО и e-mail обязательны (в кабинет входят по e-mail), язык писем — ru, uz или en. Такой адрес у компании уже есть — 409 (`CONTACT_EXISTS`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCabinetContactCreate'
+      responses:
+        '201':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetContact'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/contacts/{contact_id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateSupplierCabinetContact
+      summary: 'Расчёт · Поставщик: изменить контакт'
+      description: >-
+        ERP `PATCH catalog/supplier-access/{id}/contacts/{contact_id}/` — право `supply.manage`. Приходят только изменённые поля. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: contact_id, in: path, required: true, description: Id контакта компании, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCabinetContactUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetContact'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/relationship:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateSupplierCabinetRights
+      summary: 'Расчёт · Поставщик: права партнёра в кабинете'
+      description: >-
+        ERP `PATCH catalog/supplier-access/{id}/relationship/` — право `supply.manage`. Включённые модули (`my_products`, `catalog_requests`) и вид партнёра; действует на следующем запросе партнёра, без перевхода. Модуль не из шаблона роли — 422 (`details.reason = module_not_allowed`); отношения ещё нет — 404. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCabinetRightsUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/invite:
+    post:
+      tags: [erp-catalog]
+      operationId: inviteSupplierToCabinet
+      summary: 'Расчёт · Поставщик: пригласить в кабинет'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/invite/` — право `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке; ссылки и кода в ответе нет. Письмо не ушло — 422 (`details.reason = email_delivery_failed`), отношение не меняется; адрес общий с контактом другой компании кабинета — 409. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCabinetInvite'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/suspend:
+    post:
+      tags: [erp-catalog]
+      operationId: suspendSupplierCabinetAccess
+      summary: 'Расчёт · Поставщик: приостановить доступ в кабинет'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/suspend/` — право `supply.manage`. Вход закрыт, живые сессии партнёра гаснут на следующем запросе; вернуть доступ — «Пригласить». Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -23115,6 +23307,117 @@ components:
         email: {type: string, maxLength: 254}
         website: {type: string, maxLength: 255}
         is_manufacturer: {type: boolean}
+    SupplierCabinetPerson:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+    SupplierCabinetContact:
+      type: object
+      additionalProperties: false
+      required: [id, name, email, phone, language, can_act, invited_at, last_login_at]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        language: {type: string, enum: [ru, uz, en], description: Язык писем контакту}
+        can_act: {type: boolean, description: 'Может создавать запросы и загружать файлы (участник); иначе — только просмотр'}
+        invited_at: {type: [string, 'null'], format: date-time}
+        last_login_at: {type: [string, 'null'], format: date-time}
+    SupplierCabinetRelationship:
+      type: object
+      additionalProperties: false
+      required: [role, kind, modules, status, invited_at, activated_at, suspended_at, responsible, invited_by]
+      properties:
+        role: {type: string, enum: [partner]}
+        kind: {type: string, enum: ['', manufacturer, supplier, principal, other], description: 'Вид партнёра — метка, на права не влияет'}
+        modules:
+          type: array
+          items: {type: string, enum: [my_products, catalog_requests]}
+          description: Включённые партнёру модули кабинета
+        status: {type: string, enum: [invited, active, suspended]}
+        invited_at: {type: [string, 'null'], format: date-time}
+        activated_at: {type: [string, 'null'], format: date-time, description: Первый вход}
+        suspended_at: {type: [string, 'null'], format: date-time}
+        responsible: {oneOf: [{$ref: '#/components/schemas/SupplierCabinetPerson'}, {type: 'null'}]}
+        invited_by: {oneOf: [{$ref: '#/components/schemas/SupplierCabinetPerson'}, {type: 'null'}]}
+    SupplierCabinetModules:
+      type: object
+      additionalProperties: false
+      required: [allowed, default]
+      properties:
+        allowed:
+          type: array
+          items: {type: string, enum: [my_products, catalog_requests]}
+          description: Что шаблон роли разрешает включить
+        default:
+          type: array
+          items: {type: string, enum: [my_products, catalog_requests]}
+          description: Что получает новое отношение
+    SupplierCabinetAccess:
+      type: object
+      additionalProperties: false
+      required: [company_id, company_name, relationship, contacts, partner_modules, cabinet_roles, cabinet_modules, can_manage]
+      properties:
+        company_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        company_name: {type: string}
+        relationship:
+          oneOf: [{$ref: '#/components/schemas/SupplierCabinetRelationship'}, {type: 'null'}]
+          description: '`null` — кабинет поставщику ещё не открывали'
+        contacts: {type: array, items: {$ref: '#/components/schemas/SupplierCabinetContact'}}
+        partner_modules: {$ref: '#/components/schemas/SupplierCabinetModules'}
+        cabinet_roles:
+          type: array
+          items: {type: string, enum: [client, partner]}
+          description: 'Роли компании в кабинете сейчас: клиент (тип CLIENT) и/или партнёр (действующее отношение); роли складываются'
+        cabinet_modules:
+          type: array
+          items: {type: string}
+          description: Разделы, которые откроются сессии компании
+        can_manage: {type: boolean, description: 'У сотрудника есть `supply.manage` в ERP: контакты, приглашение, права, приостановка'}
+    SupplierCabinetContactCreate:
+      type: object
+      additionalProperties: false
+      required: [name, email]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, minLength: 3, maxLength: 254}
+        phone: {type: string, maxLength: 50}
+        language: {type: string, enum: [ru, uz, en]}
+        can_act: {type: boolean}
+    SupplierCabinetContactUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        email: {type: string, minLength: 3, maxLength: 254}
+        phone: {type: string, maxLength: 50}
+        language: {type: string, enum: [ru, uz, en]}
+        can_act: {type: boolean}
+    SupplierCabinetRightsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        modules:
+          type: array
+          items: {type: string, enum: [my_products, catalog_requests]}
+        kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
+    SupplierCabinetInvite:
+      type: object
+      additionalProperties: false
+      required: [contact_id]
+      properties:
+        contact_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        modules:
+          type: array
+          items: {type: string, enum: [my_products, catalog_requests]}
+          description: Включённые модули; не указаны — у нового отношения значения по умолчанию
+        kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
     SupplierOfferCreate:
       type: object
       additionalProperties: false

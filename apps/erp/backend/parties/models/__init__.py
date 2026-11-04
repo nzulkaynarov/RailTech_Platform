@@ -5,14 +5,19 @@ from .contacts import Contact, active_contact_q
 from .core import Company, CompanyQuerySet, active_company_q, seller_company_q
 from .document_profile import CompanyDocumentProfile
 from .lookups import CompanyType
+from .relationships import CompanyRelationship, PartnerKind, RelationshipRole, RelationshipStatus
 
 __all__ = [
     "Company",
     "CompanyDocumentProfile",
     "CompanyQuerySet",
+    "CompanyRelationship",
     "CompanySettings",
     "CompanyType",
     "Contact",
+    "PartnerKind",
+    "RelationshipRole",
+    "RelationshipStatus",
     "active_company_q",
     "active_contact_q",
     "seller_company_q",

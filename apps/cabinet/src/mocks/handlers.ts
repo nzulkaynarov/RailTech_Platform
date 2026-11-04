@@ -31,11 +31,18 @@ const SESSION_KEY = 'cabinet.mock.session';
 
 type Role = 'actor' | 'viewer';
 type Dataset = 'demo' | 'empty';
+/** Роли и модули сессии мока; модули — любые строки (тест «неизвестный модуль не рисуется»). */
+export interface MockAccess {
+  roles: Schemas['Me']['roles'];
+  modules: string[];
+}
 interface MockSession {
   role: Role;
   auth_method: Schemas['Me']['auth_method'];
   /** `empty` — компания без запросов, КП, документов (пустые состояния экранов). */
   dataset?: Dataset;
+  /** Роли и модули сессии (`/me`); нет — клиент со всеми разделами. Партнёр — `{roles: ['partner'], modules: [...]}`. */
+  access?: MockAccess;
 }
 
 let memorySession: MockSession | null = null;
@@ -107,7 +114,10 @@ function dbOf(session: MockSession): Db {
 }
 
 function me(session: MockSession): Schemas['Me'] {
-  return { ...fixtures.meFor(contactFor(session.role), session.auth_method), company: dbOf(session).company };
+  return {
+    ...fixtures.meFor(contactFor(session.role), session.auth_method, session.access),
+    company: dbOf(session).company,
+  };
 }
 
 function sessionFromToken(token: string, authMethod: MockSession['auth_method']): MockSession {
@@ -115,6 +125,12 @@ function sessionFromToken(token: string, authMethod: MockSession['auth_method'])
     role: token.includes('viewer') ? 'viewer' : 'actor',
     auth_method: authMethod,
     dataset: token.includes('empty') ? 'empty' : 'demo',
+    // Токен с `partner` — партнёр (каталог и заявки + «Мои товары»), с `partner-min` — только «Мои товары» (ADR-0022)
+    access: token.includes('partner-min')
+      ? { roles: ['partner'], modules: ['my_products', 'profile'] }
+      : token.includes('partner')
+        ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'profile'] }
+        : undefined,
   };
 }
 
