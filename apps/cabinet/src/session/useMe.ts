@@ -15,9 +15,23 @@ export function useMe({ enabled = true }: { enabled?: boolean } = {}) {
   });
 }
 
-/** `can_act` из `/me`: `false` — только просмотр, кнопки действий скрыты (API всё равно ответит 403). */
+/**
+ * Может ли сессия действовать: `can_act` из `/me` (`false` — только просмотр, кнопки действий скрыты, API всё равно ответит 403).
+ * Партнёр без роли клиента действует в своих разделах («Мои товары», «Каталог и заявки») и без `can_act`: подписывать за
+ * компанию ему нечего, КП, договоры и акты ему закрыты модулями (ADR-0022; то же правило у ERP, `portal/permissions.py`).
+ */
+export function canActIn(me: Me | null | undefined): boolean {
+  if (!me) return false;
+  return me.can_act || (me.roles.includes('partner') && !me.roles.includes('client'));
+}
+
 export function useCanAct(): boolean {
-  return useMe().data?.can_act ?? false;
+  return canActIn(useMe().data);
+}
+
+/** Есть ли у сессии модуль кабинета (`/me.modules`). */
+export function useHasModule(module: string): boolean {
+  return (useMe().data?.modules as readonly string[] | undefined)?.includes(module) ?? false;
 }
 
 /** Записать сессию, полученную входом (`/auth/telegram`, `POST /auth/magic`). */

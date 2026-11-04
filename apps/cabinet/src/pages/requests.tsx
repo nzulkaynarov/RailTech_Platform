@@ -29,7 +29,7 @@ import { normalizeQuantity, requestSourceKey, type NewRequestPrefill } from '@/l
 import { clearRequestDraft, loadRequestDraft, requestDraftKey, saveRequestDraft } from '@/lib/requestDraft';
 import { MAX_UPLOAD_BYTES } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
-import { useMe } from '@/session/useMe';
+import { useHasModule, useMe } from '@/session/useMe';
 
 /**
  * Запросы клиента (B2B `MyRequestsPage` / `RequestDetailPage`, покупательская часть): список, карточка
@@ -85,7 +85,11 @@ export function RequestsPage() {
             ),
           }}
           columns={[
-            { id: 'status', header: t('pages.requests.columns.status'), cell: (row) => <StatusBadge entity="request" code={row.status} /> },
+            {
+              id: 'status',
+              header: t('pages.requests.columns.status'),
+              cell: (row) => <StatusBadge entity="request" code={row.status} />,
+            },
             { id: 'created', header: t('pages.requests.columns.created'), cell: (row) => formatDate(row.created_at) },
             { id: 'deal', header: t('pages.requests.columns.deal'), cell: (row) => <DealLink deal={row.deal} /> },
           ]}
@@ -100,12 +104,13 @@ export function RequestDetailPage() {
   const id = Number(useParams().id);
   const requests = useRequests();
   const detailQuery = useRequest(id);
-  const quotes = useQuotes();
+  const quotes = useQuotes({ enabled: useHasModule('quotes') });
   const now = useNow();
   const request = detailQuery.data ?? requests.data?.find((item) => item.id === id);
 
   if (requests.isPending && detailQuery.isPending) return <ListSkeleton rows={2} />;
-  if (requests.isError && detailQuery.isError) return <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />;
+  if (requests.isError && detailQuery.isError)
+    return <ErrorState error={requests.error} onRetry={() => void requests.refetch()} />;
   if (!request) {
     return (
       <>
@@ -136,7 +141,9 @@ export function RequestDetailPage() {
             <DetailList
               items={[
                 { label: t('pages.requestDetail.created'), value: formatDateTime(request.created_at) },
-                request.source ? { label: t('pages.requestDetail.source'), value: t(requestSourceKey(request.source)) } : null,
+                request.source
+                  ? { label: t('pages.requestDetail.source'), value: t(requestSourceKey(request.source)) }
+                  : null,
                 { label: t('pages.requestDetail.deal'), value: <DealLink deal={request.deal} showTitle /> },
               ]}
             />
@@ -225,7 +232,13 @@ interface LineDraft {
 const SUMMARY_MAX = 5000;
 const LINE_MAX = 1000;
 let lineKey = 0;
-const blankLine = (prefill?: Partial<LineDraft>): LineDraft => ({ key: ++lineKey, text: '', quantity: '', unit: '', ...prefill });
+const blankLine = (prefill?: Partial<LineDraft>): LineDraft => ({
+  key: ++lineKey,
+  text: '',
+  quantity: '',
+  unit: '',
+  ...prefill,
+});
 
 export function RequestNewPage() {
   const { t } = useTranslation();
@@ -338,7 +351,9 @@ function RequestForm() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    const badQuantity = lines.filter((line) => line.quantity.trim() && normalizeQuantity(line.quantity) === null).map((line) => line.key);
+    const badQuantity = lines
+      .filter((line) => line.quantity.trim() && normalizeQuantity(line.quantity) === null)
+      .map((line) => line.key);
     const summaryMissing = !summary.trim();
     setErrors({ summary: summaryMissing, quantity: badQuantity });
     if (summaryMissing || badQuantity.length) return;
@@ -359,17 +374,14 @@ function RequestForm() {
         : {}),
     };
 
-    create.mutate(
-      payload,
-      {
-        onSuccess: (created) => {
-          setSubmitted(true);
-          if (draftKey) clearRequestDraft(draftKey);
-          toast.success(t('pages.requestNew.sent', { number: created.number }));
-          navigate(`/requests/${created.id}`, { replace: true });
-        },
+    create.mutate(payload, {
+      onSuccess: (created) => {
+        setSubmitted(true);
+        if (draftKey) clearRequestDraft(draftKey);
+        toast.success(t('pages.requestNew.sent', { number: created.number }));
+        navigate(`/requests/${created.id}`, { replace: true });
       },
-    );
+    });
   };
 
   return (
@@ -445,7 +457,11 @@ function RequestForm() {
               disabled={isUploading}
               onClick={() => document.getElementById(fileInputId)?.click()}
             >
-              {isUploading ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <Upload aria-hidden="true" />}
+              {isUploading ? (
+                <Loader2 className="motion-safe:animate-spin" aria-hidden="true" />
+              ) : (
+                <Upload aria-hidden="true" />
+              )}
               {isUploading ? t('pages.requestNew.uploading') : t('pages.requestNew.uploadButton')}
             </Button>
           </div>
@@ -460,7 +476,9 @@ function RequestForm() {
                     <Paperclip className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
                     <span className="truncate font-medium">{file.name}</span>
                     {file.size_bytes ? (
-                      <span className="shrink-0 text-xs text-muted-foreground">({formatFileSize(file.size_bytes)})</span>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        ({formatFileSize(file.size_bytes)})
+                      </span>
                     ) : null}
                   </span>
                   <Button
@@ -501,7 +519,11 @@ function RequestForm() {
             </Link>
           </Button>
           <Button type="submit" disabled={create.isPending || isUploading}>
-            {create.isPending ? <Loader2 className="motion-safe:animate-spin" aria-hidden="true" /> : <FilePlus2 aria-hidden="true" />}
+            {create.isPending ? (
+              <Loader2 className="motion-safe:animate-spin" aria-hidden="true" />
+            ) : (
+              <FilePlus2 aria-hidden="true" />
+            )}
             {t('pages.requestNew.submit')}
           </Button>
         </div>
@@ -613,7 +635,13 @@ function LineRow({
           />
         </div>
         {canRemove ? (
-          <Button type="button" variant="ghost" size="icon" onClick={onRemove} aria-label={t('pages.requestNew.removeLine', { n })}>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={onRemove}
+            aria-label={t('pages.requestNew.removeLine', { n })}
+          >
             <Trash2 aria-hidden="true" />
           </Button>
         ) : null}

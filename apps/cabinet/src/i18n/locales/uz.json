@@ -72,6 +72,10 @@
     }
   },
   "access": {
+    "noSections": {
+      "title": "Kirish ochiq",
+      "text": "Kompaniyangiz uchun bo'limlar hali sozlanmoqda — menejeringiz bilan bog'laning."
+    },
     "canAct": "Vakolat tasdiqlangan",
     "viewOnly": "Faqat koʻrish"
   },

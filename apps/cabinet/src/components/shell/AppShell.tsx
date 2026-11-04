@@ -5,11 +5,13 @@ import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'l
 import { toast } from '@/lib/toast';
 
 import { Button } from '@/components/ui/button';
+import { usePageTitle } from '@/hooks/usePageTitle';
 import { isSidebarToggle, shortcutLabel } from '@/lib/keyboard';
 import { copyText, shareableUrl } from '@/lib/shareLink';
 import { cn } from '@/lib/utils';
 import { useAppMode } from '@/session/mode';
-import { useMe } from '@/session/useMe';
+import { useCanAct, useMe } from '@/session/useMe';
+import { useNav } from '@/session/useNav';
 import { BottomNav } from './BottomNav';
 import { BrandMark } from './BrandMark';
 import { SetCrumbContext, type PageCrumb } from './crumbs';
@@ -28,6 +30,8 @@ export function AppShell() {
   const { t } = useTranslation();
   const mode = useAppMode();
   const me = useMe().data;
+  const canAct = useCanAct();
+  const nav = useNav();
   const location = useLocation();
   const [pageCrumb, setPageCrumb] = useState<PageCrumb | null>(null);
   useTelegramBackButton();
@@ -132,11 +136,7 @@ export function AppShell() {
           {t('app.skipToContent')}
         </a>
 
-        <SideNav
-          companyName={me?.company.name}
-          collapsed={sidebarCollapsed}
-          onToggleCollapse={toggleSidebar}
-        />
+        <SideNav companyName={me?.company.name} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar} />
 
         <div className="flex min-w-0 flex-1 flex-col md:p-2.5">
           <div className="flex min-w-0 flex-1 flex-col rounded-none border-0 bg-background shadow-none md:rounded-2xl md:border md:border-border md:shadow-xs">
@@ -155,7 +155,11 @@ export function AppShell() {
                     title={`${sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')} (${shortcutLabel('\\')})`}
                     aria-label={sidebarCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
                   >
-                    {sidebarCollapsed ? <PanelLeft className="size-4" aria-hidden="true" /> : <PanelLeftClose className="size-4" aria-hidden="true" />}
+                    {sidebarCollapsed ? (
+                      <PanelLeft className="size-4" aria-hidden="true" />
+                    ) : (
+                      <PanelLeftClose className="size-4" aria-hidden="true" />
+                    )}
                   </Button>
 
                   {/* Телефон: сайдбара нет — марка RailTech в шапке */}
@@ -169,7 +173,10 @@ export function AppShell() {
                   </Link>
 
                   <div className="min-w-0">
-                    <nav aria-label={t('app.breadcrumbs')} className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <nav
+                      aria-label={t('app.breadcrumbs')}
+                      className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
+                    >
                       <Link
                         to="/company"
                         className="truncate font-medium text-foreground hover:text-primary hover:underline transition-colors"
@@ -190,7 +197,12 @@ export function AppShell() {
                                 {segment.label}
                               </Link>
                             ) : (
-                              <span className={cn('truncate', isLast ? 'font-semibold text-primary' : 'font-medium text-foreground')}>
+                              <span
+                                className={cn(
+                                  'truncate',
+                                  isLast ? 'font-semibold text-primary' : 'font-medium text-foreground',
+                                )}
+                              >
                                 {segment.label}
                               </span>
                             )}
@@ -215,8 +227,12 @@ export function AppShell() {
               </header>
             ) : null}
 
-            <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 outline-none md:px-8 md:py-6">
-              {me && !me.can_act ? (
+            <main
+              id="main"
+              tabIndex={-1}
+              className="mx-auto w-full max-w-6xl flex-1 px-4 pt-4 pb-24 outline-none md:px-8 md:py-6"
+            >
+              {me && !canAct ? (
                 <div
                   role="status"
                   className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-accent/60 p-3.5 text-sm text-primary"
@@ -238,7 +254,7 @@ export function AppShell() {
                   ) : null}
                 </div>
               ) : null}
-              <Outlet />
+              {nav.items.length === 0 ? <NoSections /> : <Outlet />}
             </main>
           </div>
         </div>
@@ -246,5 +262,20 @@ export function AppShell() {
         <BottomNav />
       </div>
     </SetCrumbContext.Provider>
+  );
+}
+
+/**
+ * Сессия без известных Cabinet разделов (`/me.modules` пуст или модули пока не имеют экранов, ADR-0022): доступ открыт,
+ * разделы настраивает менеджер. Один простой экран вместо меню и заглушек «скоро».
+ */
+function NoSections() {
+  const { t } = useTranslation();
+  usePageTitle(t('access.noSections.title'));
+  return (
+    <section className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center" aria-live="polite">
+      <h1 className="text-xl font-semibold">{t('access.noSections.title')}</h1>
+      <p className="text-sm text-muted-foreground">{t('access.noSections.text')}</p>
+    </section>
   );
 }
