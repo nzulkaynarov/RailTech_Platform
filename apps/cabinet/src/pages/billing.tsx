@@ -27,6 +27,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useNow } from '@/hooks/useNow';
 import { businessToday, currencyLabel, formatDate, formatDateTime, formatMoney, sumByCurrency } from '@/lib/format';
 import { invoiceOpen, invoiceView, parseAmount, PROOF_COMMENT_MAX } from '@/lib/invoice';
+import { dealContext } from '@/lib/messages';
 import { contractAwaitsClient } from '@/lib/status';
 import { scanProblem, type UploadProblem } from '@/lib/upload';
 import { CanAct } from '@/session/CanAct';
@@ -97,7 +98,7 @@ export function ContractsPage() {
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutContract', { number: row.number })} />
+                  <ManagerButton compact context={dealContext(row.deal)} label={t('manager.aboutContract', { number: row.number })} />
                   {contractAwaitsClient(row.status) ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget(row)} aria-label={t('pages.contracts.signNamed', { number: row.number })}>
@@ -244,7 +245,11 @@ export function InvoicesPage() {
               cell: (row) => (
                 <>
                   <RowDocument documentId={row.document_id} number={row.number} />
-                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutInvoice', { number: row.number })} />
+                  <ManagerButton
+                    compact
+                    context={{ kind: 'invoice', id: row.id, number: row.number }}
+                    label={t('manager.aboutInvoice', { number: row.number })}
+                  />
                   {invoiceOpen(row) ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setPaying(row)} aria-label={t('pages.invoices.payNamed', { number: row.number })}>
@@ -513,7 +518,11 @@ export function ActsPage() {
                       text={t('pages.acts.scan')}
                     />
                   ) : null}
-                  <ManagerButton compact dealId={row.deal?.id} label={t('manager.aboutAct', { number: row.number })} />
+                  <ManagerButton
+                    compact
+                    context={{ kind: 'act', id: row.id, number: row.number }}
+                    label={t('manager.aboutAct', { number: row.number })}
+                  />
                   {row.status === 'issued' ? (
                     <CanAct>
                       <Button size="sm" onClick={() => setTarget({ act: row, action: 'accept' })} aria-label={t('pages.acts.acceptNamed', { number: row.number })}>

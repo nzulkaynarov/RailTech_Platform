@@ -53,6 +53,61 @@ class Author(StrEnum):
     system = "system"
 
 
+class Cabinet(BaseModel):
+    """
+    Чат кабинета (CHAT-1): чьи сообщения ленты кабинета стереть. Стирается только автор: scope=authors — сообщения перечисленных контактов ERP (их пишет человек, обезличенный этим событием; текст удаляется, автор — «Удалённый пользователь»), лента компании, сообщения менеджеров и других контактов остаются; scope=company — стирание клиента целиком: вся лента компании до erased_at, ответы менеджера с sent_at не позже erased_at больше не применяются. Нет поля или null — в ленте кабинета стирать нечего
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания ERP, чья лента кабинета
+    """
+    scope: Scope
+    erp_contact_ids: list[int]
+    """
+    Контакты ERP — авторы, чьи сообщения стираются (scope=authors); при scope=company — пусто
+    """
+
+
+class CabinetMessageSentV1(BaseModel):
+    """
+    Тип uz.railtech.crm.cabinet.message_sent.v1, источник rt://crm (CHAT-1, ADR-0023). Поле data конверта (envelope.v1.json). Менеджер ответил клиенту, последнее входящее сообщение которого пришло из кабинета: CRM пишет сообщение в беседу канала cabinet и это событие одной транзакцией (откат — события нет). Подписчик — ERP: строка ленты кабинета компании erp_company_id, идемпотентно по message_id; поздний ответ с sent_at не позже стирания ленты (crm.lead.erased.v1) не применяется. Текст на шине — по ADR-0023.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    message_id: int
+    """
+    Сообщение в CRM (ключ идемпотентности у подписчика)
+    """
+    crm_lead_id: int
+    """
+    Лид, к которому привязана беседа кабинета (якорь очереди «Сообщения»)
+    """
+    crm_client_id: int | None
+    """
+    Клиент CRM беседы; null — компания ещё не сопоставлена клиенту
+    """
+    erp_company_id: int
+    """
+    Компания-контрагент в ERP, чья лента получает ответ
+    """
+    text: Annotated[str, Field(max_length=4000, min_length=1)]
+    manager_name: Annotated[str | None, Field(max_length=255)]
+    """
+    Имя менеджера для подписи в кабинете; null — имени нет
+    """
+    sent_at: AwareDatetime
+    """
+    Время записи сообщения в CRM
+    """
+    actor: Actor
+
+
 class ChangedField(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")]
 
@@ -242,6 +297,10 @@ class Lead(BaseModel):
     Заявка ERP, созданная передачей лида; null — не передан
     """
     updated_at: AwareDatetime
+    source_detail: Annotated[str | None, Field(pattern="^[a-z][a-z_]{0,15}$")] = None
+    """
+    Точный источник лида в CRM, если его нет в перечне LeadSource v1 (CHAT-1: cabinet — лид-якорь беседы чата кабинета; в source тогда web — веб-канал). Перечень source расширяется только в lead.*.v2 (ADR-0016)
+    """
 
 
 class LeadCreatedV1(BaseModel):
@@ -274,6 +333,10 @@ class LeadErasedV1(BaseModel):
     Момент обезличивания в CRM (время базы)
     """
     actor: Actor
+    cabinet: Cabinet | None = None
+    """
+    Чат кабинета (CHAT-1): чьи сообщения ленты кабинета стереть. Стирается только автор: scope=authors — сообщения перечисленных контактов ERP (их пишет человек, обезличенный этим событием; текст удаляется, автор — «Удалённый пользователь»), лента компании, сообщения менеджеров и других контактов остаются; scope=company — стирание клиента целиком: вся лента компании до erased_at, ответы менеджера с sent_at не позже erased_at больше не применяются. Нет поля или null — в ленте кабинета стирать нечего
+    """
 
 
 class LeadMergedV1(BaseModel):
@@ -502,6 +565,11 @@ class Ref(BaseModel):
     )
     kind: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,31}$")]
     id: Annotated[str, Field(max_length=64, min_length=1)]
+
+
+class Scope(StrEnum):
+    authors = "authors"
+    company = "company"
 
 
 class Type(StrEnum):

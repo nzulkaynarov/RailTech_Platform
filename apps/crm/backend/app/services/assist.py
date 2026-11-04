@@ -193,7 +193,8 @@ class DbAssistStore:
             lead = await repo.get_lead(session, lead_id)
             if lead is None or lead.erased_at is not None:
                 return None
-            rows = await repo.recent_messages(session, lead_id, history)
+            # Менеджеру — вся переписка, и Telegram, и кабинет (CHAT-1)
+            rows = await repo.recent_messages(session, lead_id, history, channel=None)
             return LeadSnapshot(
                 owner_mode=lead.owner_mode,
                 assigned_user_id=lead.assigned_user_id,

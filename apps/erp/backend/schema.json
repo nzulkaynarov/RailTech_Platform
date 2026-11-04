@@ -1215,6 +1215,86 @@
                 }
             }
         },
+        "/api/portal/v1/messages": {
+            "get": {
+                "operationId": "api_portal_v1_messages_retrieve",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_messages_create",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/": {
+            "get": {
+                "operationId": "api_portal_v1_messages_retrieve_2",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_messages_create_2",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/read": {
+            "post": {
+                "operationId": "api_portal_v1_messages_read_create",
+                "description": "POST /messages/read — отметка «прочитано» контактом сессии; `can_act` не нужен (это чтение).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/read/": {
+            "post": {
+                "operationId": "api_portal_v1_messages_read_create_2",
+                "description": "POST /messages/read — отметка «прочитано» контактом сессии; `can_act` не нужен (это чтение).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/notifications": {
             "get": {
                 "operationId": "api_portal_v1_notifications_retrieve",

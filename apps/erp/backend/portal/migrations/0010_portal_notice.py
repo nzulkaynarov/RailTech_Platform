@@ -8,7 +8,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('parties', '0011_part2_offer_confirm_days'),
-        ('portal', '0008_magiclinktoken_login_code'),
+        ('portal', '0009_portal_chat'),
     ]
 
     operations = [

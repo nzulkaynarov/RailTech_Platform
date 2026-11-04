@@ -458,6 +458,7 @@ ATOMIC_BY_CALLER = {
     "crm/services/deals.py::_publish_stage_events",  # из transition_deal_stage (@atomic)
     "crm/services/deals.py::register_new_deal",  # из DealViewSet.perform_create (with atomic)
     "sales/services/delivery_lines.py::_publish_decision",  # из accept/dispute_delivery_line (@atomic)
+    "portal/services/messages.py::_publish_posted",  # из post_message (with atomic), CHAT-1
     "portal/services/acceptance.py::_emit_code_event",  # из request_acceptance_code (with transaction.atomic)
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
     "crm/services/contract_flow.py::_publish",  # из apply_transition, generate_contract_from_quote, sign_* (все @atomic)

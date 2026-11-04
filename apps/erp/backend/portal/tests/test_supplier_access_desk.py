@@ -178,7 +178,12 @@ class TestInvite:
         )
         assert login.status_code == 200, login.content
         me = portal.get("/api/portal/v1/me").json()
-        assert me["roles"] == ["partner"] and me["modules"] == ["my_products", "catalog_requests", "profile"]
+        assert me["roles"] == ["partner"] and me["modules"] == [
+            "my_products",
+            "catalog_requests",
+            "messages",
+            "profile",
+        ]
         assert CompanyRelationship.objects.get(company=world["supplier"]).status == RelationshipStatus.ACTIVE
         assert portal.get("/api/portal/v1/catalog").status_code == 200  # «Каталог и заявки» включён по умолчанию
         assert portal.get("/api/portal/v1/quotes").status_code == 403
@@ -299,7 +304,7 @@ class TestRights:
             add["relationship"]["modules"] == ["my_products", "catalog_requests"] and add["relationship"]["kind"] == ""
         )
         assert add["cabinet_roles"] == ["partner"]
-        assert add["cabinet_modules"] == ["my_products", "catalog_requests", "profile"]
+        assert add["cabinet_modules"] == ["my_products", "catalog_requests", "messages", "profile"]
 
     def test_invite_with_chosen_modules_and_kind(self, world):
         contact_id = add_contact(world)["id"]
@@ -320,7 +325,7 @@ class TestRights:
         assert off.status_code == 200 and off.json()["relationship"]["modules"] == ["my_products"]
         assert portal.get("/api/portal/v1/catalog").status_code == 403
         assert portal.get("/api/portal/v1/requests").status_code == 403
-        assert portal.get("/api/portal/v1/me").json()["modules"] == ["my_products", "profile"]
+        assert portal.get("/api/portal/v1/me").json()["modules"] == ["my_products", "messages", "profile"]
 
         call(world, "supply", "patch", "relationship/", {"modules": ["my_products", "catalog_requests"]})
         assert portal.get("/api/portal/v1/catalog").status_code == 200

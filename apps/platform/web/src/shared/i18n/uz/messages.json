@@ -18,7 +18,8 @@
       "text": "Mijoz inson so'ramaguncha bot o'zi javob beradi.",
       "action": "Lidlarni ochish"
     },
-    "handedTo": "Topshirildi: {{name}}"
+    "handedTo": "Topshirildi: {{name}}",
+    "channel": "Kanal: {{channel}}"
   },
   "sla": {
     "waiting": "{{duration}} kutmoqda",
@@ -54,7 +55,8 @@
     "agent_unavailable": "Bot javob bera olmadi",
     "stop_word": "Xabarda taqiqlangan so'z",
     "other": "Boshqa sabab",
-    "handed_over": "Ish yurituvchi topshirdi"
+    "handed_over": "Ish yurituvchi topshirdi",
+    "cabinet_message": "Kabinetda yozdi"
   },
   "channels": {
     "telegram": "Telegram",
@@ -62,6 +64,7 @@
     "email": "Pochta",
     "phone": "Qo'ng'iroq",
     "referral": "Tavsiya",
+    "cabinet": "Kabinet",
     "other": "Boshqa kanal"
   },
   "timeline": {
@@ -138,7 +141,15 @@
       "unconfirmedFinal": "Yetkazilgani tasdiqlanmadi — mijoz javobni olganini tekshiring"
     },
     "toRequest": "Arizaga",
-    "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida"
+    "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida",
+    "channelCabinet": "Kabinet",
+    "context": {
+      "deal": "Bitim {{number}}",
+      "quote": "TK {{number}}",
+      "invoice": "Hisob {{number}}",
+      "act": "Dalolatnoma {{number}}"
+    },
+    "contextLabel": "Hujjat sahifasidan yozdi: {{label}}"
   },
   "composer": {
     "mode": "Kimga yozamiz",
@@ -166,7 +177,8 @@
     "takeFirst": "Javob berish uchun lidni oling",
     "readOnly": "Faqat ko'rish: menejerlar javob beradi",
     "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin",
-    "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan."
+    "managerReplies": "Mijozga javobni menejer beradi. Lidni saralang va «Menejerga topshirish» tugmasini bosing — mijozga nima kerakligi haqida izoh bilan.",
+    "selfHintCabinet": "Mijozga kabinetda yuboriladi"
   },
   "card": {
     "title": "Lid kartasi",
@@ -180,6 +192,7 @@
     "consent": "Ma'lumotlarga rozilik",
     "consentGiven": "{{date}} olingan",
     "consentMissing": "yo'q — mijozga yozish mumkin emas",
+    "consentMissingCabinet": "yo'q — kabinetga javob berish mumkin, Telegramga emas",
     "client": "ERP dagi mijoz",
     "clientYes": "ha",
     "clientNo": "hali yo'q",

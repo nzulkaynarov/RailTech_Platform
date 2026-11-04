@@ -379,6 +379,27 @@ export async function uploadFile(file: File): Promise<PortalUploadResponse> {
   return (await response.json()) as PortalUploadResponse;
 }
 
+// --- чат кабинета (CHAT-1, ADR-0023) -------------------------------------------------------
+
+export type PortalMessage = Schemas['PortalMessage'];
+export type PortalMessagePage = Schemas['PortalMessagePage'];
+export type PortalMessageCreate = Schemas['PortalMessageCreate'];
+export type MessageContext = Schemas['MessageContext'];
+export type MessageContextKind = Schemas['MessageContextKind'];
+export type MessagesQuery = QueryOf<paths['/messages']['get']>;
+
+/** Лента компании по возрастанию `id`: с `after_id` — новые после него (опрос), без — последние `limit`. */
+export const listMessages = (params: MessagesQuery = {}) =>
+  portalRequest<PortalMessagePage>(`/messages${toQuery(params)}`);
+/** Сообщение менеджеру: повтор с тем же `client_message_id` возвращает прежнее (ERP не создаёт второе). */
+export const postMessage = (body: PortalMessageCreate) =>
+  portalRequest<PortalMessage>('/messages', { method: 'POST', body });
+/** Контакт прочитал ленту до `last_id`; ответ — сколько ответов менеджера осталось непрочитанными. */
+export function markMessagesRead(lastId: number): Promise<Schemas['PortalMessageUnread']> {
+  const body: JsonBody<paths['/messages/read']['post']> = { last_id: lastId };
+  return portalRequest<Schemas['PortalMessageUnread']>('/messages/read', { method: 'POST', body });
+}
+
 export const getCompany = () => portalRequest<Company>('/company');
 export const updateCompany = (body: CompanyUpdate) => portalRequest<Company>('/company', { method: 'PUT', body });
 export const listTeam = () => portalRequest<TeamMember[]>('/team');

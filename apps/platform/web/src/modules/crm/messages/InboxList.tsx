@@ -8,6 +8,7 @@ import type { MessageInboxItem, MessageInboxItemGroup } from "../../../shared/ap
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { withParams } from "../kb/refresh";
 import { useLeadActions } from "./actions";
+import { ChannelMark } from "./ChannelMark";
 import { canTake, handedOver } from "./logic";
 import { reasonLabels } from "./labels";
 import { SlaTimer } from "./SlaTimer";
@@ -58,6 +59,7 @@ function Row({
       >
         <span className="pf-msg-row-head">
           <span className="pf-msg-row-name">{item.name}</span>
+          <ChannelMark channel={item.channel} />
           {item.unread ? <span className="pf-msg-unread">{t("list.unread")}</span> : null}
         </span>
         <span className="pf-msg-row-summary">{summary}</span>

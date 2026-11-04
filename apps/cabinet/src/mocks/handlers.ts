@@ -26,6 +26,10 @@ import * as partner from './partnerMock';
  * `INVOICE_NOT_OPEN`; комментарий к КП — только пока КП ждёт решения (иначе 409), пустой текст → 422 `TEXT_REQUIRED`;
  * КП с истёкшим сроком → 409 `QUOTE_EXPIRED`; повторное действие над закрытым объектом → 409 `*_FINALIZED`;
  * PDF документа `DOC_PREPARING_ONCE` первый раз отвечает 202 + `Retry-After`, `DOC_ALWAYS_PREPARING` — всегда 202.
+ *
+ * Чат кабинета (CHAT-1): лента компании `GET /messages[?after_id]`, `POST /messages` (повтор того же `client_message_id`
+ * — прежнее сообщение, 200; текст `fail` — 503 для сценария «Не отправлено»), `POST /messages/read` — отметка не назад,
+ * чужой `last_id` → 404; `/me.unread` — ответы менеджера после отметки. `pushManagerReply` — ответ менеджера для опроса.
  */
 const API = '*/api/portal/v1';
 const SESSION_KEY = 'cabinet.mock.session';
@@ -89,6 +93,9 @@ function createDb(dataset: Dataset = 'demo') {
     uploads: new Map<string, string>(),
     /** Колокольчик (NOTIFY-2): лента контакта; у пустой компании — пусто (пустое состояние шторки). */
     notifications: empty ? [] : structuredClone(fixtures.notifications),
+    /** Лента чата кабинета и отметка «прочитано» (одна на мок-сессию). */
+    messages: empty ? [] : structuredClone(fixtures.messages),
+    readMark: empty ? 0 : fixtures.MOCK_READ_MARK,
     /** «Мои товары» партнёра (PART-2): карточки с ценой компании и задачи загрузки прайса. */
     partnerProducts: empty ? [] : partner.partnerProducts(),
     priceTasks: new Map<string, ReturnType<typeof partner.newTask>>(),
@@ -119,12 +126,56 @@ function dbOf(session: MockSession): Db {
   return dbs[session.dataset ?? 'demo'];
 }
 
+function unreadOf(db: Db): number {
+  return db.messages.filter((message) => message.direction === 'manager' && message.id > db.readMark).length;
+}
+
 function me(session: MockSession): Schemas['Me'] {
+  const db = dbOf(session);
   return {
-    ...fixtures.meFor(contactFor(session.role), session.auth_method, session.access),
-    company: dbOf(session).company,
-    notifications_unread: dbOf(session).notifications.filter((item) => item.read_at === null).length,
+    ...fixtures.meFor(contactFor(session.role), session.auth_method, session.access, unreadOf(db)),
+    company: db.company,
+    notifications_unread: db.notifications.filter((item) => item.read_at === null).length,
   };
+}
+
+/** Тесты и dev: менеджер ответил в чат (следующий опрос `?after_id` его увидит). */
+export function pushManagerReply(text: string, dataset: Dataset = 'demo'): Schemas['PortalMessage'] {
+  const db = dbs[dataset];
+  const message: Schemas['PortalMessage'] = {
+    id: Math.max(500, ...db.messages.map((item) => item.id)) + 1,
+    direction: 'manager',
+    author_name: 'Илья Смирнов',
+    mine: false,
+    text,
+    context: null,
+    created_at: new Date().toISOString(),
+    client_message_id: null,
+    erased: false,
+  };
+  db.messages = [...db.messages, message];
+  return message;
+}
+
+const MESSAGES_PAGE = 50;
+const CLIENT_MESSAGE_ID_RE = /^[A-Za-z0-9_-]{8,64}$/;
+
+/** Номер документа для метки сообщения — только своего (чужой или несуществующий → `null`, ответ 404). */
+function contextOf(db: Db, ref: Schemas['MessageContextRef']): Schemas['MessageContext'] | null {
+  const find = (): string | undefined => {
+    switch (ref.kind) {
+      case 'quote':
+        return db.quotes.find((item) => item.id === ref.id)?.number;
+      case 'invoice':
+        return db.invoices.find((item) => item.id === ref.id)?.number;
+      case 'act':
+        return db.acts.find((item) => item.id === ref.id)?.number;
+      case 'deal':
+        return fixtures.deals[ref.id]?.number;
+    }
+  };
+  const number = find();
+  return number ? { kind: ref.kind, id: ref.id, number } : null;
 }
 
 function sessionFromToken(token: string, authMethod: MockSession['auth_method']): MockSession {
@@ -137,9 +188,9 @@ function sessionFromToken(token: string, authMethod: MockSession['auth_method'])
     access: token.includes('dual')
       ? { roles: ['client', 'partner'], modules: [...fixtures.CLIENT_ACCESS.modules, 'my_products'] }
       : token.includes('partner-min')
-        ? { roles: ['partner'], modules: ['my_products', 'profile'] }
+        ? { roles: ['partner'], modules: ['my_products', 'messages', 'profile'] }
         : token.includes('partner')
-          ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'profile'] }
+          ? { roles: ['partner'], modules: ['my_products', 'catalog_requests', 'messages', 'profile'] }
           : undefined,
   };
 }
@@ -697,6 +748,64 @@ export const handlers = [
       },
       { action: true },
     ),
+  ),
+  // --- чат кабинета (CHAT-1) ----------------------------------------------------------------
+  http.get(
+    `${API}/messages`,
+    withSession(({ db, request }) => {
+      const url = new URL(request.url);
+      const after = Number(url.searchParams.get('after_id') ?? '');
+      const limit = Math.min(100, Math.max(1, Number(url.searchParams.get('limit') ?? MESSAGES_PAGE) || MESSAGES_PAGE));
+      if (url.searchParams.has('after_id')) {
+        const newer = db.messages.filter((message) => message.id > after);
+        return json({ items: newer.slice(0, limit), has_more: newer.length > limit } satisfies Schemas['PortalMessagePage']);
+      }
+      const items = db.messages.slice(-limit);
+      return json({ items, has_more: db.messages.length > limit } satisfies Schemas['PortalMessagePage']);
+    }),
+  ),
+  http.post(
+    `${API}/messages`,
+    withSession(
+      async ({ session, db, request }) => {
+        const body = await readJson<Schemas['PortalMessageCreate']>(request);
+        const text = body.text?.trim() ?? '';
+        if (!text) return error(422, 'TEXT_REQUIRED');
+        if (text.length > 4000 || !CLIENT_MESSAGE_ID_RE.test(body.client_message_id ?? '')) {
+          return error(422, 'VALIDATION_ERROR');
+        }
+        const repeat = db.messages.find((message) => message.client_message_id === body.client_message_id);
+        if (repeat) return json(repeat, 200);
+        if (text === 'fail') return error(503, 'HTTP_503');
+        const context = body.context ? contextOf(db, body.context) : null;
+        if (body.context && !context) return error(404, 'NOT_FOUND');
+        const contact = contactFor(session.role);
+        const message: Schemas['PortalMessage'] = {
+          id: Math.max(500, ...db.messages.map((item) => item.id)) + 1,
+          direction: 'client',
+          author_name: contact.name,
+          mine: true,
+          text,
+          context,
+          created_at: new Date().toISOString(),
+          client_message_id: body.client_message_id ?? null,
+          erased: false,
+        };
+        db.messages = [...db.messages, message];
+        return json(message, 201);
+      },
+      { action: true },
+    ),
+  ),
+  http.post(
+    `${API}/messages/read`,
+    withSession(async ({ db, request }) => {
+      const { last_id } = await readJson<Schemas['PortalMessageReadMark']>(request);
+      if (typeof last_id !== 'number' || last_id < 1) return error(422, 'VALIDATION_ERROR');
+      if (!db.messages.some((message) => message.id === last_id)) return error(404, 'NOT_FOUND');
+      db.readMark = Math.max(db.readMark, last_id);
+      return json({ unread: unreadOf(db) } satisfies Schemas['PortalMessageUnread']);
+    }),
   ),
   http.get(`${API}/team`, withSession(({ db }) => json(db.team))),
   http.post(

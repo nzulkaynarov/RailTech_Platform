@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MoreHorizontal, X } from 'lucide-react';
 
-import { isWithin, type NavItem } from '@/app/nav';
+import { MESSAGES_MODULE, isWithin, type NavItem } from '@/app/nav';
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useNav } from '@/session/useNav';
+import { useUnread, useUnreadText } from '@/hooks/useUnread';
+import { UnreadBadge, UnreadNote } from './MessagesLink';
 
 const tabClass =
   'flex min-h-14 flex-col items-center justify-center gap-0.5 px-1 text-xs outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring';
@@ -21,6 +23,14 @@ export function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false);
   const { primary, secondary, groups } = useNav();
   const moreActive = secondary.some((item) => isWithin(pathname, item.to));
+  const unread = useUnread();
+  const unreadText = useUnreadText(unread);
+  const tabNoteId = useId();
+  const sheetNoteId = useId();
+  // Непрочитанные в «Сообщениях» (CHAT-1): бейдж на вкладке раздела или на «Ещё», если раздел там
+  const badgeOf = (module: string) => (module === MESSAGES_MODULE ? unread : 0);
+  const moreBadge = secondary.reduce((sum, item) => sum + badgeOf(item.module), 0);
+  const moreUnreadId = useId();
   if (primary.length + secondary.length === 0) return null; // разделы ещё не настроены: вместо меню — экран в AppShell
 
   return (
@@ -39,13 +49,16 @@ export function BottomNav() {
           <li key={item.to}>
             <NavLink
               to={item.to}
+              aria-describedby={badgeOf(item.module) > 0 && unreadText ? tabNoteId : undefined}
               className={({ isActive }) =>
-                cn(tabClass, isActive ? 'font-medium text-primary' : 'text-muted-foreground')
+                cn(tabClass, 'relative', isActive ? 'font-medium text-primary' : 'text-muted-foreground')
               }
             >
               <item.icon className="size-5" aria-hidden="true" />
+              <UnreadBadge count={badgeOf(item.module)} className="absolute top-1 right-1/4" />
               <span className="max-w-full truncate">{t(item.labelKey)}</span>
             </NavLink>
+            {badgeOf(item.module) > 0 ? <UnreadNote id={tabNoteId} text={unreadText} /> : null}
           </li>
         ))}
         {secondary.length > 0 && (
@@ -53,14 +66,21 @@ export function BottomNav() {
             <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
               <button
                 type="button"
-                className={cn(tabClass, 'w-full', moreActive ? 'font-medium text-primary' : 'text-muted-foreground')}
+                className={cn(
+                  tabClass,
+                  'relative w-full',
+                  moreActive ? 'font-medium text-primary' : 'text-muted-foreground',
+                )}
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
+                aria-describedby={moreBadge > 0 ? moreUnreadId : undefined}
                 onClick={() => setMoreOpen(true)}
               >
                 <MoreHorizontal className="size-5" aria-hidden="true" />
+                <UnreadBadge count={moreBadge} className="absolute top-1 right-1/4" />
                 <span>{t('nav.more')}</span>
               </button>
+              <UnreadNote id={moreUnreadId} text={moreBadge > 0 ? unreadText : null} />
               <SheetContent side="bottom" showCloseButton={false} className="pb-[env(safe-area-inset-bottom)]">
                 <SheetHeader className="flex-row items-start justify-between gap-2">
                   <div className="flex flex-col gap-1">
@@ -85,12 +105,12 @@ export function BottomNav() {
                         <h3 id={`more-group-${group.key}`} className="pb-1.5 text-xs font-medium tracking-wider text-muted-foreground uppercase">
                           {t(group.labelKey)}
                         </h3>
-                        <MoreLinks items={group.items} onNavigate={() => setMoreOpen(false)} />
+                        <MoreLinks items={group.items} badgeOf={badgeOf} unreadText={unreadText} noteId={sheetNoteId} onNavigate={() => setMoreOpen(false)} />
                       </section>
                     ))
                 ) : (
                   <div className="px-4 pb-4">
-                    <MoreLinks items={secondary} onNavigate={() => setMoreOpen(false)} />
+                    <MoreLinks items={secondary} badgeOf={badgeOf} unreadText={unreadText} noteId={sheetNoteId} onNavigate={() => setMoreOpen(false)} />
                   </div>
                 )}
               </SheetContent>
@@ -102,7 +122,20 @@ export function BottomNav() {
   );
 }
 
-function MoreLinks({ items, onNavigate }: { items: NavItem[]; onNavigate: () => void }) {
+function MoreLinks({
+  items,
+  badgeOf,
+  unreadText,
+  noteId,
+  onNavigate,
+}: {
+  items: NavItem[];
+  /** Бейдж непрочитанного у пункта (CHAT-1: «Сообщения»), 0 — без бейджа. */
+  badgeOf: (module: string) => number;
+  unreadText: string | null;
+  noteId: string;
+  onNavigate: () => void;
+}) {
   const { t } = useTranslation();
   return (
     <ul className="grid grid-cols-2 gap-2">
@@ -111,6 +144,7 @@ function MoreLinks({ items, onNavigate }: { items: NavItem[]; onNavigate: () => 
           <NavLink
             to={item.to}
             onClick={onNavigate}
+            aria-describedby={badgeOf(item.module) > 0 && unreadText ? noteId : undefined}
             className={({ isActive }) =>
               cn(
                 'flex min-h-12 items-center gap-2 rounded-md border px-3 text-sm outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring',
@@ -120,7 +154,9 @@ function MoreLinks({ items, onNavigate }: { items: NavItem[]; onNavigate: () => 
           >
             <item.icon className="size-4" aria-hidden="true" />
             {t(item.labelKey)}
+            <UnreadBadge count={badgeOf(item.module)} className="ml-auto" />
           </NavLink>
+          {badgeOf(item.module) > 0 ? <UnreadNote id={noteId} text={unreadText} /> : null}
         </li>
       ))}
     </ul>

@@ -89,6 +89,7 @@ class MeSerializer(serializers.Serializer):
     notifications_unread = serializers.IntegerField(min_value=0)
     roles = serializers.ListField(child=serializers.ChoiceField(choices=["client", "partner"]))
     modules = serializers.ListField(child=serializers.CharField())
+    unread = serializers.IntegerField(min_value=0)  # непрочитанные ответы менеджера в чате кабинета (CHAT-1)
 
 
 class TelegramAuthSerializer(serializers.Serializer):
@@ -653,3 +654,41 @@ class PortalUploadResponseSerializer(serializers.Serializer):
     name = serializers.CharField()
     mime_type = serializers.CharField(required=False)
     size_bytes = serializers.IntegerField(required=False)
+
+
+# ── Чат кабинета (CHAT-1, ADR-0023) ─────────────────────────────────────────────────────────────────────────────────
+
+
+class _MessageContextRefSerializer(serializers.Serializer):
+    kind = serializers.ChoiceField(choices=["deal", "quote", "invoice", "act"])
+    id = serializers.IntegerField(min_value=1)
+
+
+class PortalMessageCreateSerializer(serializers.Serializer):
+    """`PortalMessageCreate`: текст, ключ повтора Cabinet и необязательная метка документа (вид и id)."""
+
+    text = serializers.CharField(max_length=4000, allow_blank=True, trim_whitespace=False)
+    client_message_id = serializers.RegexField(r"^[A-Za-z0-9_-]{8,64}$")
+    context = _MessageContextRefSerializer(required=False, allow_null=True)
+
+
+class PortalMessageReadMarkSerializer(serializers.Serializer):
+    last_id = serializers.IntegerField(min_value=1)
+
+
+def portal_message_data(message, contact_id: int) -> dict:
+    """`PortalMessage` контракта: направление, автор, «моё», текст как есть, метка документа."""
+    context = None
+    if message.context_kind:
+        context = {"kind": message.context_kind, "id": message.context_id, "number": message.context_number}
+    return {
+        "id": message.pk,
+        "direction": message.direction,
+        "author_name": None if message.erased else (message.author_name or None),
+        "mine": message.author_contact_id is not None and message.author_contact_id == contact_id,
+        "text": "" if message.erased else message.text,
+        "context": context,
+        "created_at": message.created_at,
+        "client_message_id": message.client_message_id,
+        "erased": message.erased,
+    }

@@ -81,6 +81,9 @@ class LeadOut(BaseModel):
 
     # Записка передачи — только в `GET /inbox` (CRM-06); в остальных выдачах null.
     handoff_note: HandoffNote | None = None
+    # Канал последнего сообщения клиента — туда уйдёт ответ менеджера (CHAT-1): `telegram` |
+    # `cabinet`; null — клиент ещё не писал. Только в `GET /inbox` и карточке лида.
+    reply_channel: str | None = None
 
 
 class LeadDetail(LeadOut):
@@ -127,10 +130,24 @@ class LeadPage(BaseModel):
     total: int
 
 
+class MessageContextOut(BaseModel):
+    """Метка документа у сообщения кабинета (CHAT-1): вид, id в ERP и номер."""
+
+    kind: Literal["deal", "quote", "invoice", "act"]
+    erp_id: int
+    number: str
+
+
 class MessageOut(BaseModel):
     id: int
     role: str
     text: str
+    # Канал беседы сообщения (CHAT-1): `telegram` или `cabinet`.
+    channel: str = "telegram"
+    # Метка документа, со страницы которого клиент написал в кабинете; null — нет.
+    context: MessageContextOut | None = None
+    # Имя контакта, написавшего в кабинете; у прочих сообщений — null.
+    author_name: str | None = None
     # Вложения сообщения по порядку: `kind`, `name`, `mime`, `size`, `stored` (файл сохранён),
     # `too_large`/`note` (почему не сохранён). Ключа хранилища нет (D1-8, B-014): файл отдаёт только
     # `GET /leads/{lead_id}/messages/{message_id}/attachments/{index}` по номеру в этом списке.

@@ -14,7 +14,7 @@ import { chooseOption } from "../../../test/fields";
 import { renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import i18n from "../../../shared/i18n";
 import { ApiError } from "../../../shared/api/errors";
-import { sendFailure } from "./labels";
+import { channelLabel, contextLabel, reasonLabels, sendFailure } from "./labels";
 import { canTake, mergeThread } from "./logic";
 import { durationParts, slaState } from "./sla";
 import { SlaTimer } from "./SlaTimer";
@@ -102,7 +102,7 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     await open("manager@demo.example");
     const nav = await screen.findByRole("navigation", { name: "Диалоги, которые ждут ответа" });
     expect(within(nav).getByRole("heading", { name: "Передачи от бота · 2" })).toBeVisible();
-    expect(within(nav).getByRole("heading", { name: "Мои диалоги · 1" })).toBeVisible();
+    expect(within(nav).getByRole("heading", { name: "Мои диалоги · 2" })).toBeVisible();
     expect(within(nav).getByText("ждёт 12 мин")).toBeVisible();
     expect(within(nav).getByText("ждёт 40 мин · срок прошёл")).toBeVisible();
     expect(within(nav).getAllByText("Срочно")[0]).toBeVisible();
@@ -112,6 +112,38 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     await waitFor(() => {
       expect(readMessages().leads[0]?.card.owner_mode).toBe("manager");
     });
+  });
+
+  it("CHAT-1: беседа из кабинета — значок канала, имя контакта, метка КП и ответ уйдёт в кабинет", async () => {
+    await open("manager@demo.example", "?lead=L-2070");
+    const nav = await screen.findByRole("navigation", { name: "Диалоги, которые ждут ответа" });
+    expect(within(nav).getByRole("img", { name: "Канал: Кабинет" })).toBeVisible();
+    expect(within(nav).getAllByRole("img", { name: "Канал: Telegram" }).length).toBeGreaterThan(0);
+
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "ООО «Пример-Снаб»" }),
+    ).toBeVisible();
+    expect(
+      await screen.findByText("Можно ли поставку разбить на две партии?", {
+        selector: ".pf-msg-bubble",
+      }),
+    ).toBeVisible();
+    expect(screen.getAllByText("Анна Примерова")[0]).toBeVisible();
+    expect(screen.getAllByText("Кабинет", { selector: ".pf-msg-tag-channel" }).length).toBe(3);
+    const labels = screen.getAllByLabelText("Написал со страницы документа: КП KP-2026-0042");
+    expect(labels).toHaveLength(2);
+    expect(labels[0]).toHaveTextContent("КП KP-2026-0042");
+    expect(screen.getByText("Уйдёт клиенту в кабинет")).toBeVisible();
+    expect(screen.queryByText("Уйдёт клиенту в Telegram")).toBeNull();
+  });
+
+  it("CHAT-1: причина передачи «Написал в кабинете» и подписи канала словами", () => {
+    const t = i18n.getFixedT("ru");
+    expect(reasonLabels(t, ["cabinet_message"])).toEqual(["Написал в кабинете"]);
+    expect(channelLabel(t, "cabinet")).toBe("Кабинет");
+    expect(contextLabel(t, { kind: "invoice", number: "S-2026-0124" })).toBe("Счёт S-2026-0124");
+    expect(contextLabel(t, { kind: "act", number: "A-2026-0090" })).toBe("Акт A-2026-0090");
+    expect(contextLabel(t, { kind: "deal", number: "D-35" })).toBe("Сделка D-35");
   });
 
   it("диалог: записка передачи, лента с вложением, подпись «Уйдёт клиенту в Telegram» и заметка команде", async () => {
@@ -242,6 +274,8 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
       created_at: new Date().toISOString(),
       attachments: [],
       delivery: null,
+      channel: "telegram",
+      context: null,
     });
     writeMessages(state);
     expect(screen.queryByText("Новое сообщение клиента из бота")).toBeNull();
@@ -350,6 +384,8 @@ describe("лента: склейка страниц и заметок", () => {
       created_at: at,
       attachments: [],
       delivery: null,
+      channel: "telegram",
+      context: null,
     });
     const note = {
       id: 1,

@@ -731,13 +731,79 @@ export const catalog: Schemas['CatalogItem'][] = [
 /** Роли и модули клиента — шаблон роли из контракта (`Me.x-role-modules`); сверяет `modules-menu.test`. */
 export const CLIENT_ACCESS: { roles: Schemas['Me']['roles']; modules: string[] } = {
   roles: ['client'],
-  modules: ['catalog_requests', 'quotes', 'documents', 'contracts', 'invoices', 'acts', 'deliveries', 'company', 'team', 'profile'],
+  modules: [
+    'catalog_requests',
+    'quotes',
+    'documents',
+    'contracts',
+    'invoices',
+    'acts',
+    'deliveries',
+    'messages',
+    'company',
+    'team',
+    'profile',
+  ],
 };
+
+/**
+ * Лента чата кабинета (CHAT-1): вопрос контакта о КП, ответ менеджера, вопрос коллеги и свежий ответ менеджера —
+ * последний не прочитан (`MOCK_READ_MARK`), бейдж «Сообщения» в меню — 1. Имена вымышленные.
+ */
+export const messages: Schemas['PortalMessage'][] = [
+  {
+    id: 501,
+    direction: 'client',
+    author_name: 'Алишер Каримов',
+    mine: true,
+    text: 'Добрый день! Можно ли сдвинуть поставку по КП на неделю раньше?',
+    context: { kind: 'quote', id: 301, number: 'KP-2026-0042' },
+    created_at: '2026-10-14T10:05:00+05:00',
+    client_message_id: 'cm_demo_000501',
+    erased: false,
+  },
+  {
+    id: 502,
+    direction: 'manager',
+    author_name: 'Илья Смирнов',
+    mine: false,
+    text: 'Здравствуйте! Уточню у склада и отвечу сегодня до 17:00.',
+    context: null,
+    created_at: '2026-10-14T10:20:00+05:00',
+    client_message_id: null,
+    erased: false,
+  },
+  {
+    id: 503,
+    direction: 'client',
+    author_name: 'Dilnoza Yusupova',
+    mine: false,
+    text: 'Счёт S-2026-0124 оплатили вчера,\nплатёжку приложили к счёту.',
+    context: { kind: 'invoice', id: 603, number: 'S-2026-0124' },
+    created_at: '2026-10-14T11:02:00+05:00',
+    client_message_id: 'cm_demo_000503',
+    erased: false,
+  },
+  {
+    id: 504,
+    direction: 'manager',
+    author_name: 'Илья Смирнов',
+    mine: false,
+    text: 'Склад подтвердил: отгрузим 21 октября. Оплату видим, спасибо!',
+    context: null,
+    created_at: '2026-10-14T15:40:00+05:00',
+    client_message_id: null,
+    erased: false,
+  },
+];
+/** До какого сообщения контакт прочитал ленту в моке: после него — один ответ менеджера. */
+export const MOCK_READ_MARK = 503;
 
 export function meFor(
   contact: Schemas['TeamMember'],
   authMethod: Schemas['Me']['auth_method'],
   access: { roles: Schemas['Me']['roles']; modules: string[] } = CLIENT_ACCESS,
+  unread = 0,
 ): Schemas['Me'] {
   return {
     contact,
@@ -747,6 +813,7 @@ export function meFor(
     notifications_unread: 0,
     roles: access.roles,
     modules: access.modules as Schemas['Me']['modules'],
+    unread,
   };
 }
 

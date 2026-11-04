@@ -88,6 +88,8 @@ class ConversationCard(BaseModel):
     name: str
     language: Language
     channel: str
+    # Куда уйдёт ответ — канал последнего сообщения клиента (CHAT-1); `None` — клиент не писал
+    reply_channel: str | None
     owner_mode: OwnerMode
     assigned: PersonRef | None
     consent_given_at: datetime | None
@@ -106,6 +108,13 @@ class ThreadAttachment(BaseModel):
     url: str | None
 
 
+class MessageContext(BaseModel):
+    """Метка документа у сообщения из кабинета (CHAT-1): «КП KP-2026-0042»."""
+
+    kind: Literal["deal", "quote", "invoice", "act"]
+    number: str
+
+
 class ThreadMessage(BaseModel):
     id: int
     author: Author
@@ -114,6 +123,9 @@ class ThreadMessage(BaseModel):
     created_at: datetime
     attachments: list[ThreadAttachment]
     delivery: Literal["sending", "unconfirmed"] | None = None
+    # Канал сообщения (`telegram` | `cabinet`) и метка документа из кабинета (CHAT-1)
+    channel: str = "telegram"
+    context: MessageContext | None = None
 
 
 class TeamNote(BaseModel):

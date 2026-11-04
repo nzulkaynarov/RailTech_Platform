@@ -37,6 +37,8 @@ subscribers:
       # W18A-P2 (B-INB-5): ВХ, зарегистрированный из очереди «Входящая почта» (`source.crm_inbound_mail_id`), —
       # CRM снимает письмо с очереди и показывает номер ВХ. Прочие регистрации CRM пропускает.
       - uz.railtech.eds.letter.registered.v1
+      # CHAT-1 (ADR-0023): сообщение контакта в чат кабинета — в беседу канала cabinet клиента и очередь «Сообщения».
+      - uz.railtech.erp.cabinet.message_posted.v1
 
   - name: erp
     endpoint: http://erp-backend:8000/bus/v1/events
@@ -50,6 +52,10 @@ subscribers:
       - uz.railtech.eds.approval.decided.v1
       # W18A-P1: итог доставки письма, запрошенного ERP с notify = true (журнал писем ERP, Quote.send_report КП).
       - uz.railtech.crm.mail.*.v1
+      # CHAT-1 (ADR-0023): ответ менеджера в чат кабинета — лента кабинета компании; обезличивание лида, который вёл
+      # беседу кабинета (`cabinet_erp_company_id`), стирает ленту. Прочие сигналы лидов ERP не получает.
+      - uz.railtech.crm.cabinet.message_sent.v1
+      - uz.railtech.crm.lead.erased.v1
 
   # BFF Платформы (B5): события ERP, лидов CRM и сотрудников → подсказки инвалидации в SSE браузеру (уведомления, счётчики
   # меню, «Моя очередь», лента «Сегодня»). Данных событий BFF не хранит. Приёмник — только внутри сети compose (Caddy

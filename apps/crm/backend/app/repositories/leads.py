@@ -66,10 +66,17 @@ async def create_lead_with_identity(
     return lead, identity, conversation
 
 
-async def open_conversation(session: AsyncSession, lead_id: int) -> Conversation | None:
+async def open_conversation(
+    session: AsyncSession, lead_id: int, channel: str = "telegram"
+) -> Conversation | None:
+    """Открытая беседа лида в канале; по умолчанию — чат Telegram (у беседы кабинета чата нет)."""
     stmt = (
         select(Conversation)
-        .where(Conversation.lead_id == lead_id, Conversation.is_open)
+        .where(
+            Conversation.lead_id == lead_id,
+            Conversation.is_open,
+            Conversation.channel == channel,
+        )
         .order_by(Conversation.id.desc())
     )
     return (await session.scalars(stmt)).first()
@@ -101,7 +108,12 @@ async def add_message(
     return message
 
 
-async def recent_messages(session: AsyncSession, lead_id: int, limit: int) -> Sequence[Message]:
+async def recent_messages(
+    session: AsyncSession, lead_id: int, limit: int, *, channel: str | None = "telegram"
+) -> Sequence[Message]:
+    """Последние сообщения лида по возрастанию. По умолчанию — только чат Telegram: история бота,
+    квалификатора и MCP (переписка коллег контакта в кабинете в контекст модели в Telegram не
+    попадает, CHAT-1); `channel=None` — все беседы («Подсказать ответ» менеджеру)."""
     stmt = (
         select(Message)
         .join(Conversation, Conversation.id == Message.conversation_id)
@@ -109,6 +121,8 @@ async def recent_messages(session: AsyncSession, lead_id: int, limit: int) -> Se
         .order_by(Message.id.desc())
         .limit(limit)
     )
+    if channel is not None:
+        stmt = stmt.where(Conversation.channel == channel)
     return list(reversed((await session.scalars(stmt)).all()))
 
 
