@@ -1,4 +1,7 @@
-"""Техдокументация (D2-3): реестр файлов ТЗ, чертежей, сертификатов и регламентов ПНР с привязкой к позиции и проекту.
+"""Документы товара и техдокументация (D2-3, CAT-CARD-1): реестр файлов с привязкой к позиции и проекту.
+
+Вид документа — запись справочника `DocumentKind`; у документа номер, «кем выдан», «выдан», «действует до» (пусто — бессрочно) и
+«видно клиенту» (по умолчанию — из вида). Эталоны: 1С:УТ «Сертификаты номенклатуры», GS1 GDSN certification module.
 
 Загрузка — через проверки `core.validators` (расширение, тип содержимого, подпись файла, размер), хранение — приватный
 бакет ERP (`TechDocument.file`), выдача — потоком через представление с проверкой прав (`catalog.desk.views_tech_docs`).
@@ -10,10 +13,12 @@ import os
 
 from django.core.exceptions import ValidationError
 from django.db.models import Q
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from sales.models import Deal
 
 from catalog.desk.items import ItemError
-from catalog.models import Product, TechDocument
+from catalog.models import DocumentKind, Product, TechDocument
 from core.validators import _validate_file
 
 #: Разрешённые форматы: документы Office, PDF и растровые изображения (чертёж скриншотом/сканом).
@@ -60,8 +65,9 @@ def list_queryset(params):
         queryset = queryset.filter(
             Q(title__icontains=text) | Q(original_name__icontains=text) | Q(product__name__icontains=text)
         )
-    if params.get("kind") in TechDocument.Kind.values:
-        queryset = queryset.filter(kind=params["kind"])
+    kind = (params.get("kind") or "").strip()
+    if kind:
+        queryset = queryset.filter(kind=kind)
     if str(params.get("product", "")).isdigit():
         queryset = queryset.filter(product_id=int(params["product"]))
     if str(params.get("deal", "")).isdigit():
@@ -69,16 +75,41 @@ def list_queryset(params):
     return queryset.order_by("-created_at", "-id")
 
 
-def doc_row(doc) -> dict:
-    deal = doc.deal
+def is_expired(doc, today=None) -> bool:
+    """Срок «действует до» прошёл (пусто — бессрочно, не истёк)."""
+    return bool(doc.valid_until and doc.valid_until < (today or timezone.localdate()))
+
+
+def kind_names() -> dict[str, str]:
+    """Код вида -> название, одним запросом на ответ (виды выключенные тоже: документы на них остаются)."""
+    return dict(DocumentKind.objects.values_list("code", "name"))
+
+
+def doc_fields(doc, names: dict[str, str], today=None) -> dict:
+    """Поля документа, общие для строки реестра и карточки товара."""
     return {
         "id": doc.pk,
         "kind": doc.kind,
+        "kind_name": names.get(doc.kind, doc.kind),
         "title": doc.title,
+        "number": doc.number,
+        "issued_by": doc.issued_by,
+        "issued_at": doc.issued_at,
+        "valid_until": doc.valid_until,
+        "is_expired": is_expired(doc, today),
+        "client_visible": doc.client_visible,
         "original_name": doc.original_name,
-        "content_type": doc.content_type,
         "size_bytes": doc.size_bytes,
         "previewable": is_previewable(doc),
+    }
+
+
+def doc_row(doc, names: dict[str, str] | None = None) -> dict:
+    deal = doc.deal
+    names = names if names is not None else kind_names()
+    return {
+        **doc_fields(doc, names),
+        "content_type": doc.content_type,
         "product": {"id": doc.product_id, "name": doc.product.name, "sku": doc.product.sku} if doc.product_id else None,
         "deal": (
             {
@@ -101,18 +132,60 @@ def _client_name(deal) -> str:
     return deal.company.name if deal.company_id else ""
 
 
-def create_doc(file, data: dict, actor) -> TechDocument:
-    kind = data.get("kind") or TechDocument.Kind.OTHER
-    if kind not in TechDocument.Kind.values:
+def _kind(code) -> DocumentKind:
+    kind = DocumentKind.objects.filter(code=(code or "other"), is_active=True).first()
+    if kind is None:
         raise ItemError("TECH_DOC_KIND_INVALID", "kind")
+    return kind
+
+
+def _date(value, field: str):
+    if value in (None, ""):
+        return None
+    parsed = value if hasattr(value, "year") else parse_date(str(value))
+    if parsed is None:
+        raise ItemError("TECH_DOC_DATE_INVALID", field)
+    return parsed
+
+
+def _flag(value) -> bool:
+    return value is True or str(value).strip().lower() in ("1", "true", "yes", "on")
+
+
+def _check_range(issued_at, valid_until) -> None:
+    if issued_at and valid_until and valid_until < issued_at:
+        raise ItemError("TECH_DOC_VALIDITY_RANGE_INVALID", "valid_until")
+
+
+def _passport(data: dict) -> dict:
+    """Номер, орган, даты и видимость из тела запроса: только те ключи, что пришли."""
+    out: dict = {}
+    if "number" in data:
+        out["number"] = (data["number"] or "").strip()[:100]
+    if "issued_by" in data:
+        out["issued_by"] = (data["issued_by"] or "").strip()[:255]
+    if "issued_at" in data:
+        out["issued_at"] = _date(data["issued_at"], "issued_at")
+    if "valid_until" in data:
+        out["valid_until"] = _date(data["valid_until"], "valid_until")
+    if "client_visible" in data and data["client_visible"] not in (None, ""):
+        out["client_visible"] = _flag(data["client_visible"])
+    return out
+
+
+def create_doc(file, data: dict, actor) -> TechDocument:
+    kind = _kind(data.get("kind"))
     content_type = validate_upload(file)
     product = _product(data.get("product_id"))
     deal = _deal(data.get("deal_id"))
     if product is None and deal is None:
         raise ItemError("TECH_DOC_LINK_REQUIRED", "product_id")
+    passport = _passport(data)
+    _check_range(passport.get("issued_at"), passport.get("valid_until"))
+    passport.setdefault("client_visible", kind.client_visible_default)
     title = (data.get("title") or "").strip() or os.path.splitext(file.name)[0]
     return TechDocument.objects.create(
-        kind=kind,
+        kind=kind.code,
         title=title[:255],
         file=file,
         original_name=os.path.basename(file.name)[:255],
@@ -121,7 +194,23 @@ def create_doc(file, data: dict, actor) -> TechDocument:
         product=product,
         deal=deal,
         uploaded_by=actor,
+        **passport,
     )
+
+
+def update_doc(doc: TechDocument, data: dict) -> TechDocument:
+    """Правка паспорта документа: вид, название, номер, орган, даты, «видно клиенту». Файл не меняется."""
+    if "kind" in data:
+        doc.kind = _kind(data["kind"]).code
+    if "title" in data:
+        title = (data["title"] or "").strip()
+        if title:
+            doc.title = title[:255]
+    for name, value in _passport(data).items():
+        setattr(doc, name, value)
+    _check_range(doc.issued_at, doc.valid_until)
+    doc.save()
+    return doc
 
 
 def _product(value):

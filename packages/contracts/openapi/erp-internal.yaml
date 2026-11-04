@@ -4484,6 +4484,37 @@ paths:
                 $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/document-kinds/:
+    get:
+      operationId: catalog_document_kinds_list
+      description: 'Действующие виды по порядку: код, название, «имеет срок действия», «по умолчанию видно клиенту».'
+      summary: Document kinds for product documents
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskDocumentKindList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/catalog/domain-types/:
     get:
       operationId: catalog_domain_types_list
@@ -4794,6 +4825,149 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/items/{id}/images/:
+    post:
+      operationId: catalog_items_images_create
+      description: 'Needs `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на товар; первое фото становится главным.
+        Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, IMAGE_LIMIT_REACHED, NO_FILE_PROVIDED.'
+      summary: Upload a product photo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskImageUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskImage'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/items/{id}/images/{image_id}/:
+    patch:
+      operationId: catalog_items_images_update
+      description: 'Needs `catalog.manage`. `is_main: true` — главное фото; `sort_order` — новая позиция с нуля (остальные
+        сдвигаются); `alt_text`. Главное можно только назначить другому, снять нельзя (IMAGE_MAIN_REQUIRED).'
+      summary: Edit a product photo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskImageInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskImage'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+    delete:
+      operationId: catalog_items_images_destroy
+      description: Needs `catalog.manage`. Файл удаляется; если было главное, главным становится следующее по порядку.
+      summary: Delete a product photo
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: path
+        name: image_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
         '403':
           description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
           content:
@@ -6788,12 +6962,7 @@ paths:
         name: kind
         schema:
           type: string
-          enum:
-          - certificate
-          - drawing
-          - other
-          - pnr
-          - tz
+        description: Код вида из справочника видов.
       - in: query
         name: page
         schema:
@@ -6832,8 +7001,10 @@ paths:
     post:
       operationId: catalog_tech_docs_create
       description: 'Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна
-        привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH,
-        TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.'
+        привязка к позиции (`product_id`) или заявке (`deal_id`). Вид — код из справочника (`catalog/document-kinds/`), «видно
+        клиенту» без значения берётся из вида. Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED,
+        TECH_DOC_KIND_INVALID, TECH_DOC_DATE_INVALID, TECH_DOC_VALIDITY_RANGE_INVALID, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND,
+        NO_FILE_PROVIDED.'
       summary: Upload a technical document
       tags:
       - Catalog
@@ -6867,6 +7038,59 @@ paths:
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/tech-docs/{id}/:
+    patch:
+      operationId: catalog_tech_docs_update
+      description: Needs `catalog.manage`. Вид, название, номер, кем выдан, даты, «видно клиенту»; файл не меняется.
+      summary: Edit a technical document passport
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskTechDocInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskTechDocInRequest'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskTechDocInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskTechDoc'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
     delete:
       operationId: catalog_tech_docs_destroy
       description: Needs `catalog.manage`. Файл удаляется из хранилища.
@@ -22445,6 +22669,30 @@ components:
       required:
       - amount
       - currency
+    DeskDocumentKind:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        has_validity:
+          type: boolean
+          description: У документа этого вида есть срок действия.
+        client_visible_default:
+          type: boolean
+          description: Новый документ этого вида по умолчанию виден клиенту.
+        sort_order:
+          type: integer
+      required:
+      - client_visible_default
+      - code
+      - has_validity
+      - id
+      - name
+      - sort_order
     DeskExchangeRate:
       type: object
       properties:
@@ -22527,6 +22775,43 @@ components:
           type: string
           format: date
           nullable: true
+    DeskImage:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          description: Путь файла в хранилище ERP (`/media/…`); в браузер его отдаёт только BFF.
+        is_main:
+          type: boolean
+        sort_order:
+          type: integer
+          description: Позиция в галерее с нуля, без пропусков.
+        alt:
+          type: string
+          description: Подпись фото.
+      required:
+      - alt
+      - id
+      - is_main
+      - sort_order
+      - url
+    DeskImageUploadRequest:
+      type: object
+      description: 'multipart/form-data: JPEG, PNG или WebP до 5 МБ.'
+      properties:
+        image:
+          type: string
+          format: binary
+        alt_text:
+          type: string
+          maxLength: 255
+        is_main:
+          type: boolean
+          description: Сделать главным; первое фото товара главное само.
+      required:
+      - image
     DeskItemDetail:
       type: object
       properties:
@@ -22611,6 +22896,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeskTechDocRef'
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskImage'
+          description: Фото по порядку; ровно одно главное, если фото есть.
+        origin:
+          $ref: '#/components/schemas/DeskOrigin'
+        warranty:
+          $ref: '#/components/schemas/DeskWarranty'
         proposals:
           type: array
           items:
@@ -22627,6 +22921,7 @@ components:
       - gost_drawing
       - hs_code
       - id
+      - images
       - is_service
       - kind
       - manufacturer_part_number
@@ -22634,6 +22929,7 @@ components:
       - nearest_valid_until
       - offers
       - offers_count
+      - origin
       - prices_visible
       - proposals
       - proposals_count
@@ -22645,6 +22941,7 @@ components:
       - unit
       - vat_effective
       - vat_rate
+      - warranty
     DeskItemInRequest:
       type: object
       description: Создание и правка позиции. При правке приходят только изменяемые поля.
@@ -22677,6 +22974,17 @@ components:
           type: string
           description: 2–10 цифр.
           maxLength: 20
+        country_of_origin_id:
+          type: integer
+          nullable: true
+          description: Страна происхождения; пусто — страна бренда.
+        warranty_months:
+          type: integer
+          nullable: true
+          description: Гарантия, мес. (0–600); пусто — срок компании по умолчанию.
+        warranty_terms:
+          type: string
+          description: Условия гарантии.
     DeskItemKindEnum:
       enum:
       - stock
@@ -22956,6 +23264,48 @@ components:
       required:
       - id
       - name
+    DeskOrigin:
+      type: object
+      properties:
+        own:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+          description: Страна, заданная в карточке.
+        effective:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+          description: 'Показываемая страна: своя, иначе страна бренда.'
+        brand:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+          description: Страна бренда карточки (подсказка к пустому полю).
+        source:
+          allOf:
+          - $ref: '#/components/schemas/DeskOriginSourceEnum'
+          description: |-
+            Откуда взята показываемая страна.
+
+            * `item` - item
+            * `brand` - brand
+            * `none` - none
+      required:
+      - brand
+      - effective
+      - own
+      - source
+    DeskOriginSourceEnum:
+      enum:
+      - item
+      - brand
+      - none
+      type: string
+      description: |-
+        * `item` - item
+        * `brand` - brand
+        * `none` - none
     DeskProposal:
       type: object
       properties:
@@ -23187,22 +23537,47 @@ components:
       - tin
     DeskTechDoc:
       type: object
+      description: 'Документ товара в карточке (CAT-CARD-1): вид из справочника, номер, орган, сроки, видимость клиенту.'
       properties:
         id:
           type: integer
-        kind:
-          $ref: '#/components/schemas/TechDocKindEnum'
         title:
           type: string
-        original_name:
+        kind:
           type: string
-        content_type:
+          description: Код вида из справочника видов документов.
+        kind_name:
+          type: string
+          description: Название вида.
+        number:
+          type: string
+          description: Номер документа (сертификата, декларации…); пусто, если не задан.
+        issued_by:
+          type: string
+          description: Кем выдан.
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Действует до; null — бессрочно.
+        is_expired:
+          type: boolean
+          description: Срок «действует до» прошёл.
+        client_visible:
+          type: boolean
+          description: Клиент видит документ в кабинете.
+        original_name:
           type: string
         size_bytes:
           type: integer
         previewable:
           type: boolean
-          description: PDF и изображения открываются для просмотра; остальное скачивается.
+        content_type:
+          type: string
         product:
           allOf:
           - $ref: '#/components/schemas/DeskTechDocProduct'
@@ -23218,17 +23593,24 @@ components:
           type: string
           format: date-time
       required:
+      - client_visible
       - content_type
       - created_at
       - deal
       - id
+      - is_expired
+      - issued_at
+      - issued_by
       - kind
+      - kind_name
+      - number
       - original_name
       - previewable
       - product
       - size_bytes
       - title
       - uploaded_by
+      - valid_until
     DeskTechDocDeal:
       type: object
       properties:
@@ -23269,30 +23651,92 @@ components:
       - sku
     DeskTechDocRef:
       type: object
+      description: 'Документ товара в карточке (CAT-CARD-1): вид из справочника, номер, орган, сроки, видимость клиенту.'
       properties:
         id:
           type: integer
         title:
           type: string
         kind:
-          $ref: '#/components/schemas/TechDocKindEnum'
+          type: string
+          description: Код вида из справочника видов документов.
+        kind_name:
+          type: string
+          description: Название вида.
+        number:
+          type: string
+          description: Номер документа (сертификата, декларации…); пусто, если не задан.
+        issued_by:
+          type: string
+          description: Кем выдан.
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Действует до; null — бессрочно.
+        is_expired:
+          type: boolean
+          description: Срок «действует до» прошёл.
+        client_visible:
+          type: boolean
+          description: Клиент видит документ в кабинете.
+        original_name:
+          type: string
+        size_bytes:
+          type: integer
+        previewable:
+          type: boolean
       required:
+      - client_visible
       - id
+      - is_expired
+      - issued_at
+      - issued_by
       - kind
+      - kind_name
+      - number
+      - original_name
+      - previewable
+      - size_bytes
       - title
+      - valid_until
     DeskTechDocUploadRequest:
       type: object
       description: 'multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или
         заявка.'
       properties:
-        file:
-          type: string
-          format: binary
         kind:
-          $ref: '#/components/schemas/TechDocKindEnum'
+          type: string
+          minLength: 1
+          description: Код вида из справочника (`catalog/document-kinds/`).
         title:
           type: string
           maxLength: 255
+        number:
+          type: string
+          maxLength: 100
+        issued_by:
+          type: string
+          maxLength: 255
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Пусто — бессрочно.
+        client_visible:
+          type: boolean
+          description: Пусто — по умолчанию вида.
+        file:
+          type: string
+          format: binary
         product_id:
           type: integer
         deal_id:
@@ -23312,6 +23756,49 @@ components:
       - code
       - id
       - name
+    DeskWarranty:
+      type: object
+      properties:
+        months:
+          type: integer
+          nullable: true
+          description: Срок, заданный в карточке.
+        terms:
+          type: string
+          description: Условия гарантии.
+        effective_months:
+          type: integer
+          nullable: true
+          description: 'Показываемый срок: свой, иначе срок компании.'
+        company_months:
+          type: integer
+          nullable: true
+          description: Срок компании по умолчанию (подсказка к пустому полю).
+        source:
+          allOf:
+          - $ref: '#/components/schemas/DeskWarrantySourceEnum'
+          description: |-
+            Откуда взят показываемый срок.
+
+            * `item` - item
+            * `company` - company
+            * `none` - none
+      required:
+      - company_months
+      - effective_months
+      - months
+      - source
+      - terms
+    DeskWarrantySourceEnum:
+      enum:
+      - item
+      - company
+      - none
+      type: string
+      description: |-
+        * `item` - item
+        * `company` - company
+        * `none` - none
     DisplayStatusEnum:
       enum:
       - draft
@@ -26115,6 +26602,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DeskBrigade'
+    PaginatedDeskDocumentKindList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskDocumentKind'
     PaginatedDeskExchangeRateList:
       type: object
       required:
@@ -27300,6 +27810,19 @@ components:
           type: string
           format: date
           nullable: true
+    PatchedDeskImageInRequest:
+      type: object
+      properties:
+        is_main:
+          type: boolean
+          description: 'Только true: главное меняется назначением другого.'
+        sort_order:
+          type: integer
+          minimum: 0
+          description: Новая позиция с нуля.
+        alt_text:
+          type: string
+          maxLength: 255
     PatchedDeskItemInRequest:
       type: object
       description: Создание и правка позиции. При правке приходят только изменяемые поля.
@@ -27332,6 +27855,17 @@ components:
           type: string
           description: 2–10 цифр.
           maxLength: 20
+        country_of_origin_id:
+          type: integer
+          nullable: true
+          description: Страна происхождения; пусто — страна бренда.
+        warranty_months:
+          type: integer
+          nullable: true
+          description: Гарантия, мес. (0–600); пусто — срок компании по умолчанию.
+        warranty_terms:
+          type: string
+          description: Условия гарантии.
     PatchedDeskOfferInRequest:
       type: object
       properties:
@@ -27420,6 +27954,35 @@ components:
           type: string
         is_manufacturer:
           type: boolean
+    PatchedDeskTechDocInRequest:
+      type: object
+      description: Правка паспорта документа (файл не меняется).
+      properties:
+        kind:
+          type: string
+          minLength: 1
+          description: Код вида из справочника (`catalog/document-kinds/`).
+        title:
+          type: string
+          maxLength: 255
+        number:
+          type: string
+          maxLength: 100
+        issued_by:
+          type: string
+          maxLength: 255
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+          description: Пусто — бессрочно.
+        client_visible:
+          type: boolean
+          description: Пусто — по умолчанию вида.
     PatchedDocumentTemplateWriteRequest:
       type: object
       description: |-
@@ -32817,20 +33380,6 @@ components:
         * `proofs` - proofs
         * `overdue` - overdue
         * `all` - all
-    TechDocKindEnum:
-      enum:
-      - tz
-      - drawing
-      - certificate
-      - pnr
-      - other
-      type: string
-      description: |-
-        * `tz` - tz
-        * `drawing` - drawing
-        * `certificate` - certificate
-        * `pnr` - pnr
-        * `other` - other
     TimelineEntry:
       type: object
       properties:

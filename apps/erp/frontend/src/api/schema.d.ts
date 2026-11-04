@@ -3319,6 +3319,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/document-kinds/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Document kinds for product documents
+         * @description Действующие виды по порядку: код, название, «имеет срок действия», «по умолчанию видно клиенту».
+         */
+        get: operations["catalog_document_kinds_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/domain-types/": {
         parameters: {
             query?: never;
@@ -3445,6 +3465,50 @@ export interface paths {
          * @description Needs `catalog.manage`. НДС: пусто — ставка компании по умолчанию.
          */
         patch: operations["catalog_items_update"];
+        trace?: never;
+    };
+    "/api/v1/catalog/items/{id}/images/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload a product photo
+         * @description Needs `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на товар; первое фото становится главным. Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, IMAGE_LIMIT_REACHED, NO_FILE_PROVIDED.
+         */
+        post: operations["catalog_items_images_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/items/{id}/images/{image_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a product photo
+         * @description Needs `catalog.manage`. Файл удаляется; если было главное, главным становится следующее по порядку.
+         */
+        delete: operations["catalog_items_images_destroy"];
+        options?: never;
+        head?: never;
+        /**
+         * Edit a product photo
+         * @description Needs `catalog.manage`. `is_main: true` — главное фото; `sort_order` — новая позиция с нуля (остальные сдвигаются); `alt_text`. Главное можно только назначить другому, снять нельзя (IMAGE_MAIN_REQUIRED).
+         */
+        patch: operations["catalog_items_images_update"];
         trace?: never;
     };
     "/api/v1/catalog/items/{id}/publish/": {
@@ -4355,7 +4419,7 @@ export interface paths {
         put?: never;
         /**
          * Upload a technical document
-         * @description Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.
+         * @description Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна привязка к позиции (`product_id`) или заявке (`deal_id`). Вид — код из справочника (`catalog/document-kinds/`), «видно клиенту» без значения берётся из вида. Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, TECH_DOC_KIND_INVALID, TECH_DOC_DATE_INVALID, TECH_DOC_VALIDITY_RANGE_INVALID, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.
          */
         post: operations["catalog_tech_docs_create"];
         delete?: never;
@@ -4381,7 +4445,11 @@ export interface paths {
         delete: operations["catalog_tech_docs_destroy"];
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Edit a technical document passport
+         * @description Needs `catalog.manage`. Вид, название, номер, кем выдан, даты, «видно клиенту»; файл не меняется.
+         */
+        patch: operations["catalog_tech_docs_update"];
         trace?: never;
     };
     "/api/v1/catalog/tech-docs/{id}/file/": {
@@ -11604,6 +11672,16 @@ export interface components {
             amount: string;
             currency: string;
         };
+        DeskDocumentKind: {
+            id: number;
+            code: string;
+            name: string;
+            /** @description У документа этого вида есть срок действия. */
+            has_validity: boolean;
+            /** @description Новый документ этого вида по умолчанию виден клиенту. */
+            client_visible_default: boolean;
+            sort_order: number;
+        };
         DeskExchangeRate: {
             id: number;
             currency: string;
@@ -11637,6 +11715,24 @@ export interface components {
             valid_from?: string | null;
             /** Format: date */
             valid_until?: string | null;
+        };
+        DeskImage: {
+            id: number;
+            /** @description Путь файла в хранилище ERP (`/media/…`); в браузер его отдаёт только BFF. */
+            url: string;
+            is_main: boolean;
+            /** @description Позиция в галерее с нуля, без пропусков. */
+            sort_order: number;
+            /** @description Подпись фото. */
+            alt: string;
+        };
+        /** @description multipart/form-data: JPEG, PNG или WebP до 5 МБ. */
+        DeskImageUploadRequest: {
+            /** Format: binary */
+            image: string;
+            alt_text?: string;
+            /** @description Сделать главным; первое фото товара главное само. */
+            is_main?: boolean;
         };
         DeskItemDetail: {
             id: number;
@@ -11680,6 +11776,10 @@ export interface components {
             /** @description Видит ли сотрудник цены поставщиков (иначе price = null). */
             prices_visible: boolean;
             tech_docs: components["schemas"]["DeskTechDocRef"][];
+            /** @description Фото по порядку; ровно одно главное, если фото есть. */
+            images: components["schemas"]["DeskImage"][];
+            origin: components["schemas"]["DeskOrigin"];
+            warranty: components["schemas"]["DeskWarranty"];
             /** @description Изменения от поставщиков на одобрении. */
             proposals: components["schemas"]["DeskProposal"][];
             publish: components["schemas"]["DeskPublishState"];
@@ -11698,6 +11798,12 @@ export interface components {
             manufacturer_part_number?: string;
             /** @description 2–10 цифр. */
             hs_code?: string;
+            /** @description Страна происхождения; пусто — страна бренда. */
+            country_of_origin_id?: number | null;
+            /** @description Гарантия, мес. (0–600); пусто — срок компании по умолчанию. */
+            warranty_months?: number | null;
+            /** @description Условия гарантии. */
+            warranty_terms?: string;
         };
         /**
          * @description * `stock` - stock
@@ -11818,6 +11924,29 @@ export interface components {
             id: number;
             name: string;
         };
+        DeskOrigin: {
+            /** @description Страна, заданная в карточке. */
+            own: components["schemas"]["DeskRef"] | null;
+            /** @description Показываемая страна: своя, иначе страна бренда. */
+            effective: components["schemas"]["DeskRef"] | null;
+            /** @description Страна бренда карточки (подсказка к пустому полю). */
+            brand: components["schemas"]["DeskRef"] | null;
+            /**
+             * @description Откуда взята показываемая страна.
+             *
+             *     * `item` - item
+             *     * `brand` - brand
+             *     * `none` - none
+             */
+            source: components["schemas"]["DeskOriginSourceEnum"];
+        };
+        /**
+         * @description * `item` - item
+         *     * `brand` - brand
+         *     * `none` - none
+         * @enum {string}
+         */
+        DeskOriginSourceEnum: "item" | "brand" | "none";
         DeskProposal: {
             id: number;
             field: components["schemas"]["ProductFieldProposalFieldEnum"];
@@ -11903,15 +12032,33 @@ export interface components {
             /** Format: date */
             nearest_valid_until: string | null;
         };
+        /** @description Документ товара в карточке (CAT-CARD-1): вид из справочника, номер, орган, сроки, видимость клиенту. */
         DeskTechDoc: {
             id: number;
-            kind: components["schemas"]["TechDocKindEnum"];
             title: string;
+            /** @description Код вида из справочника видов документов. */
+            kind: string;
+            /** @description Название вида. */
+            kind_name: string;
+            /** @description Номер документа (сертификата, декларации…); пусто, если не задан. */
+            number: string;
+            /** @description Кем выдан. */
+            issued_by: string;
+            /** Format: date */
+            issued_at: string | null;
+            /**
+             * Format: date
+             * @description Действует до; null — бессрочно.
+             */
+            valid_until: string | null;
+            /** @description Срок «действует до» прошёл. */
+            is_expired: boolean;
+            /** @description Клиент видит документ в кабинете. */
+            client_visible: boolean;
             original_name: string;
-            content_type: string;
             size_bytes: number;
-            /** @description PDF и изображения открываются для просмотра; остальное скачивается. */
             previewable: boolean;
+            content_type: string;
             product: components["schemas"]["DeskTechDocProduct"] | null;
             deal: components["schemas"]["DeskTechDocDeal"] | null;
             uploaded_by: string | null;
@@ -11934,17 +12081,51 @@ export interface components {
             name: string;
             sku: string;
         };
+        /** @description Документ товара в карточке (CAT-CARD-1): вид из справочника, номер, орган, сроки, видимость клиенту. */
         DeskTechDocRef: {
             id: number;
             title: string;
-            kind: components["schemas"]["TechDocKindEnum"];
+            /** @description Код вида из справочника видов документов. */
+            kind: string;
+            /** @description Название вида. */
+            kind_name: string;
+            /** @description Номер документа (сертификата, декларации…); пусто, если не задан. */
+            number: string;
+            /** @description Кем выдан. */
+            issued_by: string;
+            /** Format: date */
+            issued_at: string | null;
+            /**
+             * Format: date
+             * @description Действует до; null — бессрочно.
+             */
+            valid_until: string | null;
+            /** @description Срок «действует до» прошёл. */
+            is_expired: boolean;
+            /** @description Клиент видит документ в кабинете. */
+            client_visible: boolean;
+            original_name: string;
+            size_bytes: number;
+            previewable: boolean;
         };
         /** @description multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или заявка. */
         DeskTechDocUploadRequest: {
+            /** @description Код вида из справочника (`catalog/document-kinds/`). */
+            kind?: string;
+            title?: string;
+            number?: string;
+            issued_by?: string;
+            /** Format: date */
+            issued_at?: string | null;
+            /**
+             * Format: date
+             * @description Пусто — бессрочно.
+             */
+            valid_until?: string | null;
+            /** @description Пусто — по умолчанию вида. */
+            client_visible?: boolean;
             /** Format: binary */
             file: string;
-            kind?: components["schemas"]["TechDocKindEnum"];
-            title?: string;
             product_id?: number;
             deal_id?: number;
         };
@@ -11953,6 +12134,31 @@ export interface components {
             code: string;
             name: string;
         };
+        DeskWarranty: {
+            /** @description Срок, заданный в карточке. */
+            months: number | null;
+            /** @description Условия гарантии. */
+            terms: string;
+            /** @description Показываемый срок: свой, иначе срок компании. */
+            effective_months: number | null;
+            /** @description Срок компании по умолчанию (подсказка к пустому полю). */
+            company_months: number | null;
+            /**
+             * @description Откуда взят показываемый срок.
+             *
+             *     * `item` - item
+             *     * `company` - company
+             *     * `none` - none
+             */
+            source: components["schemas"]["DeskWarrantySourceEnum"];
+        };
+        /**
+         * @description * `item` - item
+         *     * `company` - company
+         *     * `none` - none
+         * @enum {string}
+         */
+        DeskWarrantySourceEnum: "item" | "company" | "none";
         /**
          * @description * `draft` - draft
          *     * `issued` - issued
@@ -13430,6 +13636,21 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["DeskBrigade"][];
         };
+        PaginatedDeskDocumentKindList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskDocumentKind"][];
+        };
         PaginatedDeskExchangeRateList: {
             /** @example 123 */
             count: number;
@@ -14336,6 +14557,13 @@ export interface components {
             /** Format: date */
             valid_until?: string | null;
         };
+        PatchedDeskImageInRequest: {
+            /** @description Только true: главное меняется назначением другого. */
+            is_main?: boolean;
+            /** @description Новая позиция с нуля. */
+            sort_order?: number;
+            alt_text?: string;
+        };
         /** @description Создание и правка позиции. При правке приходят только изменяемые поля. */
         PatchedDeskItemInRequest: {
             name?: string;
@@ -14350,6 +14578,12 @@ export interface components {
             manufacturer_part_number?: string;
             /** @description 2–10 цифр. */
             hs_code?: string;
+            /** @description Страна происхождения; пусто — страна бренда. */
+            country_of_origin_id?: number | null;
+            /** @description Гарантия, мес. (0–600); пусто — срок компании по умолчанию. */
+            warranty_months?: number | null;
+            /** @description Условия гарантии. */
+            warranty_terms?: string;
         };
         PatchedDeskOfferInRequest: {
             /** @description Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED). */
@@ -14383,6 +14617,23 @@ export interface components {
             website?: string;
             legal_address?: string;
             is_manufacturer?: boolean;
+        };
+        /** @description Правка паспорта документа (файл не меняется). */
+        PatchedDeskTechDocInRequest: {
+            /** @description Код вида из справочника (`catalog/document-kinds/`). */
+            kind?: string;
+            title?: string;
+            number?: string;
+            issued_by?: string;
+            /** Format: date */
+            issued_at?: string | null;
+            /**
+             * Format: date
+             * @description Пусто — бессрочно.
+             */
+            valid_until?: string | null;
+            /** @description Пусто — по умолчанию вида. */
+            client_visible?: boolean;
         };
         /**
          * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
@@ -17708,15 +17959,6 @@ export interface components {
          * @enum {string}
          */
         TabEnum: "to_issue" | "awaiting" | "proofs" | "overdue" | "all";
-        /**
-         * @description * `tz` - tz
-         *     * `drawing` - drawing
-         *     * `certificate` - certificate
-         *     * `pnr` - pnr
-         *     * `other` - other
-         * @enum {string}
-         */
-        TechDocKindEnum: "tz" | "drawing" | "certificate" | "pnr" | "other";
         TimelineEntry: {
             readonly id: number;
             /**
@@ -23795,6 +24037,32 @@ export interface operations {
             };
         };
     };
+    catalog_document_kinds_list: {
+        parameters: {
+            query?: {
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskDocumentKindList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
     catalog_domain_types_list: {
         parameters: {
             query?: {
@@ -24071,6 +24339,153 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_images_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["DeskImageUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskImage"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_images_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_images_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                image_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskImageInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskImage"];
                 };
             };
             /** @description Отказ проверки: код в `detail` или ошибки полей. */
@@ -25828,7 +26243,8 @@ export interface operations {
             query?: {
                 /** @description Id заявки или проекта. */
                 deal?: number;
-                kind?: "certificate" | "drawing" | "other" | "pnr" | "tz";
+                /** @description Код вида из справочника видов. */
+                kind?: string;
                 /** @description Номер страницы. */
                 page?: number;
                 /** @description Строк на странице, до 200. */
@@ -25915,6 +26331,61 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_tech_docs_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["PatchedDeskTechDocInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskTechDocInRequest"];
+                "application/json": components["schemas"]["PatchedDeskTechDocInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskTechDoc"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
             401: components["responses"]["UnauthorizedResponse"];
             /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */

@@ -6,10 +6,14 @@ from parties.models import Company
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
-from catalog.desk import items, proposals, suppliers
+from catalog.desk import images, items, proposals, suppliers
 from catalog.desk.serializers import (
+    DeskImage,
+    DeskImageIn,
+    DeskImageUpload,
     DeskItemDetail,
     DeskItemIn,
     DeskItemRow,
@@ -39,6 +43,8 @@ class ItemDeskViewSet(DeskViewSet):
         "partial_update": "catalog.manage",
         "publish": "catalog.publish",
         "unpublish": "catalog.publish",
+        "add_image": "catalog.manage",
+        "image": "catalog.manage",
     }
     lookup_value_regex = r"\d+"
     queryset = Product.objects.none()
@@ -47,7 +53,16 @@ class ItemDeskViewSet(DeskViewSet):
     def _product(self, pk) -> Product:
         product = (
             Product.objects.exclude(status__code="ARCHIVED")
-            .select_related("domain_type", "uom", "category", "status", "brand", "source_supplier")
+            .select_related(
+                "domain_type",
+                "uom",
+                "category",
+                "status",
+                "brand",
+                "brand__country",
+                "source_supplier",
+                "country_of_origin",
+            )
             .filter(pk=pk)
             .first()
         )
@@ -117,6 +132,80 @@ class ItemDeskViewSet(DeskViewSet):
         except items.ItemError as error:
             return refuse(error)
         return Response(items.item_detail(self._product(product.pk), request.user))
+
+    @extend_schema(
+        operation_id="catalog_items_images_create",
+        summary="Upload a product photo",
+        description=(
+            "Needs `catalog.manage`. JPEG, PNG или WebP до 5 МБ, до 10 фото на товар; первое фото становится главным. "
+            "Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, IMAGE_LIMIT_REACHED, NO_FILE_PROVIDED."
+        ),
+        request={"multipart/form-data": DeskImageUpload},
+        responses={201: DeskImage, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="images",
+        url_name="images",
+        parser_classes=[MultiPartParser, FormParser],
+    )
+    def add_image(self, request, pk=None):
+        product = self._product(pk)
+        file = request.FILES.get("image")
+        if file is None:
+            return Response({"detail": "NO_FILE_PROVIDED"}, status=status.HTTP_400_BAD_REQUEST)
+        make_main = str(request.data.get("is_main", "")).strip().lower() in ("1", "true", "yes", "on")
+        try:
+            with transaction.atomic():
+                created = images.add_image(product, file, alt=request.data.get("alt_text", ""), make_main=make_main)
+        except items.ItemError as error:
+            return refuse(error)
+        return Response(images.image_row(created), status=status.HTTP_201_CREATED)
+
+    @extend_schema(
+        methods=["PATCH"],
+        operation_id="catalog_items_images_update",
+        summary="Edit a product photo",
+        description=(
+            "Needs `catalog.manage`. `is_main: true` — главное фото; `sort_order` — новая позиция с нуля (остальные "
+            "сдвигаются); `alt_text`. Главное можно только назначить другому, снять нельзя (IMAGE_MAIN_REQUIRED)."
+        ),
+        request=DeskImageIn,
+        responses={200: DeskImage, 400: REFUSED, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @extend_schema(
+        methods=["DELETE"],
+        operation_id="catalog_items_images_destroy",
+        summary="Delete a product photo",
+        description="Needs `catalog.manage`. Файл удаляется; если было главное, главным становится следующее по порядку.",
+        responses={204: None, 403: FORBIDDEN, 404: NOT_FOUND},
+        tags=["Catalog"],
+    )
+    @action(
+        detail=True,
+        methods=["patch", "delete"],
+        url_path=r"images/(?P<image_id>[0-9]+)",
+        url_name="image",
+        parser_classes=[JSONParser],
+    )
+    def image(self, request, pk=None, image_id=None):
+        product = self._product(pk)
+        try:
+            with transaction.atomic():
+                if request.method == "DELETE":
+                    images.delete_image(product, image_id)
+                    return Response(status=status.HTTP_204_NO_CONTENT)
+                body = DeskImageIn(data=request.data, partial=True)
+                body.is_valid(raise_exception=True)
+                changed = images.update_image(product, image_id, dict(body.validated_data))
+        except items.ItemError as error:
+            if error.code == "IMAGE_NOT_FOUND":
+                raise NotFound() from None
+            return refuse(error)
+        return Response(images.image_row(changed))
 
     def _set_published(self, request, pk, publish: bool):
         product = self._product(pk)

@@ -91,7 +91,7 @@ from accounts.wizard import WIZARD_FORMS, CompanyWizardView
 from catalog.desk.views_items import ItemDeskViewSet, ProposalDeskViewSet, SupplierDeskViewSet
 from catalog.desk.views_people import BrigadeDeskViewSet
 from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
-from catalog.desk.views_tech_docs import TechDocDeskViewSet
+from catalog.desk.views_tech_docs import DocumentKindDeskViewSet, TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
     CategoryViewSet,
@@ -186,6 +186,7 @@ router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-suppli
 router.register(r"catalog/field-proposals", ProposalDeskViewSet, basename="desk-field-proposal")
 router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
 router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")
+router.register(r"catalog/document-kinds", DocumentKindDeskViewSet, basename="desk-document-kind")
 router.register(r"master-data/hs-codes", HsCodeDeskViewSet, basename="desk-hs-code")
 router.register(r"exchange-rates", ExchangeRateListViewSet, basename="desk-exchange-rate")
 router.register(r"catalog/products", ProductViewSet, basename="product")

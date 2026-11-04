@@ -10,6 +10,7 @@ from core.admin_mixins import ReadOnlyInspectionMixin, superuser_only_action
 from .models import (
     Category,
     CategoryRequest,
+    DocumentKind,
     DomainType,
     Manufacturer,
     Product,
@@ -115,6 +116,23 @@ class ManufacturerAdmin(ModelAdmin):
     search_fields = ("name",)
     list_per_page = 30
     list_select_related = ("country", "company")
+
+
+@admin.register(DocumentKind)
+class DocumentKindAdmin(ModelAdmin):
+    """Виды документов товара (CAT-CARD-1): администратор правит названия и флаги; код после создания не меняется, вид не удаляется —
+    документы ссылаются на него по коду, ненужный вид выключают флагом «Активен»."""
+
+    list_display = ("name", "code", "has_validity", "client_visible_default", "is_active", "sort_order")
+    list_filter = ("is_active", "has_validity")
+    search_fields = ("name", "code")
+    ordering = ("sort_order", "id")
+
+    def get_readonly_fields(self, request, obj=None):
+        return ("code",) if obj else ()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 # ────────────────────────────────────────────
