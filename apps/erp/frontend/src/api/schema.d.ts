@@ -1044,7 +1044,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /me — Текущий профиль сессии (контакт, компания, права). */
+        /** @description GET /me — Текущий профиль сессии (контакт, компания, права, роли и модули кабинета). */
         get: operations["api_portal_v1_me_retrieve"];
         put?: never;
         post?: never;
@@ -1061,7 +1061,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description GET /me — Текущий профиль сессии (контакт, компания, права). */
+        /** @description GET /me — Текущий профиль сессии (контакт, компания, права, роли и модули кабинета). */
         get: operations["api_portal_v1_me_retrieve_2"];
         put?: never;
         post?: never;
@@ -4226,6 +4226,126 @@ export interface paths {
         get: operations["catalog_stock_statuses_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Supplier cabinet access
+         * @description Отношение `supplier` поставщика (статус, кто и когда пригласил) и контакты компании.
+         */
+        get: operations["catalog_supplier_access_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/contacts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a supplier contact
+         * @description Needs `supply.manage`. ФИО и e-mail обязательны (вход только по e-mail), телефон и язык писем (ru, uz, en) — по желанию. Такой адрес уже есть у контакта компании — 409 `CONTACT_EXISTS`.
+         */
+        post: operations["catalog_supplier_access_contact_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/contacts/{contact_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a supplier contact
+         * @description Needs `supply.manage`. Приходят только изменённые поля.
+         */
+        patch: operations["catalog_supplier_access_contact_update"];
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/invite/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Invite a supplier contact to the cabinet
+         * @description Needs `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту письмо с кодом входа на его языке. Письмо не ушло — 503 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий с контактом другой компании кабинета — 409 `CONTACT_EMAIL_AMBIGUOUS`.
+         */
+        post: operations["catalog_supplier_access_invite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/relationship/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change partner rights in the cabinet
+         * @description Needs `supply.manage`. Включённые модули (`my_products`, `catalog_requests`) и вид партнёра; действует сразу, без перевхода. Модуль не из шаблона роли — 400 `MODULE_NOT_ALLOWED`; отношения ещё нет — 404.
+         */
+        patch: operations["catalog_supplier_access_relationship_update"];
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/suspend/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suspend supplier cabinet access
+         * @description Needs `supply.manage`. Вход закрыт, живые сессии партнёра гаснут на следующем запросе. Вернуть — «Пригласить».
+         */
+        post: operations["catalog_supplier_access_suspend"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11838,6 +11958,75 @@ export interface components {
             id: number;
             name: string;
         };
+        DeskSupplierAccess: {
+            company_id: number;
+            company_name: string;
+            /** @description `null` — кабинет поставщику не открывали. */
+            relationship: components["schemas"]["DeskSupplierAccessRelationship"] | null;
+            contacts: components["schemas"]["DeskSupplierAccessContact"][];
+            partner_modules: components["schemas"]["DeskSupplierAccessModules"];
+            /** @description Роли компании в кабинете сейчас: клиент (тип CLIENT) и/или партнёр (действующее отношение). */
+            cabinet_roles: string[];
+            /** @description Разделы, которые откроются сессии компании. */
+            cabinet_modules: string[];
+            /** @description У сотрудника есть `supply.manage`: контакты, приглашение, приостановка. */
+            can_manage: boolean;
+        };
+        DeskSupplierAccessContact: {
+            id: number;
+            name: string;
+            email: string;
+            phone: string;
+            language: components["schemas"]["LanguageEnum"];
+            /** Format: date-time */
+            invited_at: string | null;
+            /** Format: date-time */
+            last_login_at: string | null;
+        };
+        DeskSupplierAccessContactInRequest: {
+            name: string;
+            /** Format: email */
+            email: string;
+            phone?: string;
+            language?: components["schemas"]["LanguageEnum"];
+        };
+        DeskSupplierAccessInviteInRequest: {
+            /** @description Контакт компании, которому уходит письмо с кодом входа. */
+            contact_id: number;
+            /** @description Включённые модули; не указаны — у нового отношения значения по умолчанию. */
+            modules?: string[];
+            kind?: string;
+        };
+        DeskSupplierAccessModules: {
+            /** @description Что шаблон роли разрешает включить. */
+            allowed: string[];
+            /** @description Что получает новое отношение. */
+            default: string[];
+        };
+        DeskSupplierAccessRelationship: {
+            /** @description Роль отношения: `partner`. */
+            role: string;
+            /** @description Вид партнёра — метка, на права не влияет: manufacturer, supplier, principal, other или пусто. */
+            kind: string;
+            /** @description Включённые партнёру модули кабинета (`my_products`, `catalog_requests`). */
+            modules: string[];
+            status: components["schemas"]["DeskSupplierAccessRelationshipStatusEnum"];
+            /** Format: date-time */
+            invited_at: string | null;
+            /** Format: date-time */
+            activated_at: string | null;
+            /** Format: date-time */
+            suspended_at: string | null;
+            responsible: components["schemas"]["DeskRef"] | null;
+            invited_by: components["schemas"]["DeskRef"] | null;
+        };
+        /**
+         * @description * `invited` - invited
+         *     * `active` - active
+         *     * `suspended` - suspended
+         * @enum {string}
+         */
+        DeskSupplierAccessRelationshipStatusEnum: "invited" | "active" | "suspended";
         DeskSupplierDetail: {
             id: number;
             name: string;
@@ -14369,6 +14558,17 @@ export interface components {
             lead_time?: string;
             supplier_sku?: string;
             source?: components["schemas"]["SupplierOfferSourceEnum"];
+        };
+        PatchedDeskSupplierAccessContactPatchRequest: {
+            name?: string;
+            /** Format: email */
+            email?: string;
+            phone?: string;
+            language?: components["schemas"]["LanguageEnum"];
+        };
+        PatchedDeskSupplierAccessRelationshipPatchRequest: {
+            modules?: string[];
+            kind?: string;
         };
         /** @description Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно. */
         PatchedDeskSupplierInRequest: {
@@ -25486,6 +25686,326 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    catalog_supplier_access_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_contact_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskSupplierAccessContactInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskSupplierAccessContactInRequest"];
+                "multipart/form-data": components["schemas"]["DeskSupplierAccessContactInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccessContact"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_contact_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskSupplierAccessContactPatchRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskSupplierAccessContactPatchRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskSupplierAccessContactPatchRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccessContact"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_invite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeskSupplierAccessInviteInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskSupplierAccessInviteInRequest"];
+                "multipart/form-data": components["schemas"]["DeskSupplierAccessInviteInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_relationship_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskSupplierAccessRelationshipPatchRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskSupplierAccessRelationshipPatchRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskSupplierAccessRelationshipPatchRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     catalog_suppliers_list: {

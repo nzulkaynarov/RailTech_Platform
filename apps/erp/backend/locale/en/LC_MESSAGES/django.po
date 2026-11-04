@@ -6779,3 +6779,9 @@ msgstr "Your quotes, contracts, invoices, deliveries and documents are in the po
 
 msgid "Код и ссылка действуют 24 часа."
 msgstr "The code and the link are valid for 24 hours."
+
+msgid "Личный кабинет партнёра"
+msgstr "Partner portal"
+
+msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
+msgstr "In the portal — your products and prices: you fill in the cards, we review and publish them."

@@ -1,7 +1,7 @@
 {% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
 
 {% blocktranslate with company=company_name platform=platform_name|default:'ERP' %}Вас пригласили в личный кабинет компании «{{ company }}» на платформе {{ platform }}.{% endblocktranslate %}
-{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}
+{% if portal_role == "partner" %}{% translate "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их." %}{% else %}{% translate "В кабинете — ваши коммерческие предложения, договоры, счета, поставки и документы." %}{% endif %}
 
 {% translate "Код входа:" %} {{ login_code }}
 

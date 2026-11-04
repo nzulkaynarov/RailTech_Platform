@@ -6423,6 +6423,322 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/catalog/supplier-access/{id}/:
+    get:
+      operationId: catalog_supplier_access_retrieve
+      description: Отношение `supplier` поставщика (статус, кто и когда пригласил) и контакты компании.
+      summary: Supplier cabinet access
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/supplier-access/{id}/contacts/:
+    post:
+      operationId: catalog_supplier_access_contact_create
+      description: Needs `supply.manage`. ФИО и e-mail обязательны (вход только по e-mail), телефон и язык писем (ru, uz,
+        en) — по желанию. Такой адрес уже есть у контакта компании — 409 `CONTACT_EXISTS`.
+      summary: Add a supplier contact
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessContactInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessContactInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessContactInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccessContact'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/contacts/{contact_id}/:
+    patch:
+      operationId: catalog_supplier_access_contact_update
+      description: Needs `supply.manage`. Приходят только изменённые поля.
+      summary: Edit a supplier contact
+      parameters:
+      - in: path
+        name: contact_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessContactPatchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessContactPatchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessContactPatchRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccessContact'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/invite/:
+    post:
+      operationId: catalog_supplier_access_invite
+      description: Needs `supply.manage`. Создаёт отношение «партнёр» (или возвращает приостановленное) и отправляет контакту
+        письмо с кодом входа на его языке. Письмо не ушло — 503 `EMAIL_DELIVERY_FAILED`, отношение не меняется; адрес общий
+        с контактом другой компании кабинета — 409 `CONTACT_EMAIL_AMBIGUOUS`.
+      summary: Invite a supplier contact to the cabinet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessInviteInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessInviteInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskSupplierAccessInviteInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/relationship/:
+    patch:
+      operationId: catalog_supplier_access_relationship_update
+      description: Needs `supply.manage`. Включённые модули (`my_products`, `catalog_requests`) и вид партнёра; действует
+        сразу, без перевхода. Модуль не из шаблона роли — 400 `MODULE_NOT_ALLOWED`; отношения ещё нет — 404.
+      summary: Change partner rights in the cabinet
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessRelationshipPatchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessRelationshipPatchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskSupplierAccessRelationshipPatchRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/suspend/:
+    post:
+      operationId: catalog_supplier_access_suspend
+      description: Needs `supply.manage`. Вход закрыт, живые сессии партнёра гаснут на следующем запросе. Вернуть — «Пригласить».
+      summary: Suspend supplier cabinet access
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/suppliers/:
     get:
       operationId: catalog_suppliers_list
@@ -23006,6 +23322,183 @@ components:
       required:
       - id
       - name
+    DeskSupplierAccess:
+      type: object
+      properties:
+        company_id:
+          type: integer
+        company_name:
+          type: string
+        relationship:
+          allOf:
+          - $ref: '#/components/schemas/DeskSupplierAccessRelationship'
+          nullable: true
+          description: '`null` — кабинет поставщику не открывали.'
+        contacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskSupplierAccessContact'
+        partner_modules:
+          $ref: '#/components/schemas/DeskSupplierAccessModules'
+        cabinet_roles:
+          type: array
+          items:
+            type: string
+          description: 'Роли компании в кабинете сейчас: клиент (тип CLIENT) и/или партнёр (действующее отношение).'
+        cabinet_modules:
+          type: array
+          items:
+            type: string
+          description: Разделы, которые откроются сессии компании.
+        can_manage:
+          type: boolean
+          description: 'У сотрудника есть `supply.manage`: контакты, приглашение, приостановка.'
+      required:
+      - cabinet_modules
+      - cabinet_roles
+      - can_manage
+      - company_id
+      - company_name
+      - contacts
+      - partner_modules
+      - relationship
+    DeskSupplierAccessContact:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+        invited_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_login_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - email
+      - id
+      - invited_at
+      - language
+      - last_login_at
+      - name
+      - phone
+    DeskSupplierAccessContactInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          maxLength: 50
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+      required:
+      - email
+      - name
+    DeskSupplierAccessInviteInRequest:
+      type: object
+      properties:
+        contact_id:
+          type: integer
+          description: Контакт компании, которому уходит письмо с кодом входа.
+        modules:
+          type: array
+          items:
+            type: string
+            minLength: 1
+          description: Включённые модули; не указаны — у нового отношения значения по умолчанию.
+        kind:
+          type: string
+          maxLength: 20
+      required:
+      - contact_id
+    DeskSupplierAccessModules:
+      type: object
+      properties:
+        allowed:
+          type: array
+          items:
+            type: string
+          description: Что шаблон роли разрешает включить.
+        default:
+          type: array
+          items:
+            type: string
+          description: Что получает новое отношение.
+      required:
+      - allowed
+      - default
+    DeskSupplierAccessRelationship:
+      type: object
+      properties:
+        role:
+          type: string
+          description: 'Роль отношения: `partner`.'
+        kind:
+          type: string
+          description: 'Вид партнёра — метка, на права не влияет: manufacturer, supplier, principal, other или пусто.'
+        modules:
+          type: array
+          items:
+            type: string
+          description: Включённые партнёру модули кабинета (`my_products`, `catalog_requests`).
+        status:
+          $ref: '#/components/schemas/DeskSupplierAccessRelationshipStatusEnum'
+        invited_at:
+          type: string
+          format: date-time
+          nullable: true
+        activated_at:
+          type: string
+          format: date-time
+          nullable: true
+        suspended_at:
+          type: string
+          format: date-time
+          nullable: true
+        responsible:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+        invited_by:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+      required:
+      - activated_at
+      - invited_at
+      - invited_by
+      - kind
+      - modules
+      - responsible
+      - role
+      - status
+      - suspended_at
+    DeskSupplierAccessRelationshipStatusEnum:
+      enum:
+      - invited
+      - active
+      - suspended
+      type: string
+      description: |-
+        * `invited` - invited
+        * `active` - active
+        * `suspended` - suspended
     DeskSupplierDetail:
       type: object
       properties:
@@ -27376,6 +27869,33 @@ components:
           maxLength: 100
         source:
           $ref: '#/components/schemas/SupplierOfferSourceEnum'
+    PatchedDeskSupplierAccessContactPatchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        email:
+          type: string
+          format: email
+          minLength: 1
+        phone:
+          type: string
+          maxLength: 50
+        language:
+          $ref: '#/components/schemas/LanguageEnum'
+    PatchedDeskSupplierAccessRelationshipPatchRequest:
+      type: object
+      properties:
+        modules:
+          type: array
+          items:
+            type: string
+            minLength: 1
+        kind:
+          type: string
+          maxLength: 20
     PatchedDeskSupplierInRequest:
       type: object
       description: 'Поставщик — простая карточка компании (CAT-1): ИНН или рег. номер нерезидента — хотя бы одно.'

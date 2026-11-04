@@ -7,7 +7,7 @@ from parties.models import active_contact_q
 from rest_framework import authentication, exceptions
 
 from .models import PortalSession
-from .services.access import cabinet_company_q
+from .services.access import access_from_row, cabinet_company_q, role_annotations
 from .services.tokens import hash_token
 
 
@@ -19,12 +19,14 @@ class PortalAuthentication(authentication.BaseAuthentication):
       - `request.portal_session`: PortalSession
       - `request.portal_contact`: Contact
       - `request.portal_company`: Company
+      - `request.portal_roles`, `request.portal_modules`: роли (`client`, `partner`) и модули компании сессии — по модулю
+        эндпоинт решает, кого пустить (`portal.permissions.HasPortalModule`); читаются тем же запросом, что и сессия
     Возвращает (AnonymousUser(), session).
     Сотрудники бэк-офиса изолированы: сессия сотрудника не дает доступа к порталу и наоборот.
 
     Живая сессия валидна, только пока валидны её основания (FIX-15, хвост ревью FIX-14): срок не вышел,
-    компания допущена в кабинет (`cabinet_company_q`: не в архиве и с типом CLIENT — K0; сняли тип, сессия гаснет на
-    следующем же запросе) и контакт всё ещё принадлежит компании сессии
+    компания допущена в кабинет (`cabinet_company_q`: не в архиве и клиент либо партнёр с действующим отношением; сняли
+    тип CLIENT или приостановили отношение — сессия гаснет на следующем же запросе) и контакт всё ещё принадлежит компании сессии
     (контакт перевели или удалили — прежняя сессия не открывает чужие данные). Иначе 401, как без сессии.
     """
 
@@ -40,6 +42,7 @@ class PortalAuthentication(authentication.BaseAuthentication):
         session = (
             PortalSession.objects.filter(token_hash=hash_token(token))
             .filter(cabinet_company_q("company"), active_contact_q("contact"), company_id=F("contact__company_id"))
+            .annotate(**role_annotations("company"))
             .select_related("contact", "company")
             .first()
         )
@@ -50,5 +53,6 @@ class PortalAuthentication(authentication.BaseAuthentication):
         request.portal_session = session
         request.portal_contact = session.contact
         request.portal_company = session.company
+        request.portal_roles, request.portal_modules = access_from_row(session)
 
         return (AnonymousUser(), session)

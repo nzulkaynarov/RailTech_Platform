@@ -125,3 +125,9 @@ msgstr "Kabinetda — tijorat takliflaringiz, shartnomalar, hisob-fakturalar, ye
 
 msgid "Код и ссылка действуют 24 часа."
 msgstr "Kod va havola 24 soat amal qiladi."
+
+msgid "Личный кабинет партнёра"
+msgstr "Hamkor kabineti"
+
+msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
+msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartochkalarni siz to'ldirasiz, biz tekshirib e'lon qilamiz."
