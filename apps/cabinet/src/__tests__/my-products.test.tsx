@@ -60,8 +60,12 @@ describe('Мои товары: список', () => {
     await waitFor(() => expect(within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem')).toHaveLength(1));
     await user.click(screen.getByRole('button', { name: 'Все 8' }));
     await user.type(screen.getByRole('searchbox'), 'гайка{Enter}');
-    await waitFor(() => expect(within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem')).toHaveLength(1));
-    expect(within(await list()).getByText('Гайка М12')).toBeInTheDocument();
+    await waitFor(() => {
+      // не просто «одна строка»: она могла остаться от вкладки «Возвращены», пока список «Все» ещё не перечитан
+      const rows = within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem');
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]).getByText('Гайка М12')).toBeInTheDocument();
+    });
     expect(router.state.location.search).toContain('q=');
   });
 
