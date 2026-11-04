@@ -28,6 +28,7 @@ from app.bus.erp_event import (
     INVITE_TYPE,
     NOT_FOR_CRM,
     OWN_HANDLER,
+    PARTNER_REQUEST,
     erp_types,
     parse_erp_event,
     plain,
@@ -35,8 +36,9 @@ from app.bus.erp_event import (
 from tests.bus_events import event_types, example_envelope, example_types
 
 #: События ERP о сделке и клиенте, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`, и
-#: без запроса письма почтовому сервису — `OWN_HANDLER`, W18A-P1).
-ALL_TYPES = [t for t in event_types("erp") if t not in NOT_FOR_CRM | OWN_HANDLER]
+#: без запроса письма почтовому сервису — `OWN_HANDLER`, W18A-P1, и без запроса «завести клиента для
+#: партнёра» — `PARTNER_REQUEST`, PART-CRM: у него нет `crm_client_id` и сделки).
+ALL_TYPES = [t for t in event_types("erp") if t not in NOT_FOR_CRM | OWN_HANDLER | PARTNER_REQUEST]
 REGISTRY = SchemaRegistry()
 
 
@@ -58,6 +60,20 @@ def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> 
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
         assert handler.func is on_mail_requested
+
+
+def test_partner_client_request_has_its_own_handler_and_no_deal_feed() -> None:
+    """PART-CRM: `erp.partner.client_requested` — `PartnerClientService`, не `ErpEventsService`."""
+    from app.bus.handlers import on_partner_client_requested
+
+    assert not set(erp_types()) & PARTNER_REQUEST
+    for event_type in PARTNER_REQUEST:
+        (handler,) = default_registry.match(event_type)
+        assert handler.inline is False
+        assert handler.func is on_partner_client_requested
+        data = example_envelope(event_type)["data"]
+        assert REGISTRY.validate_data(event_type, data, tolerant=False) == []
+        assert REGISTRY.validate_data(event_type, {**data, "future": 1}, tolerant=True) == []
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:

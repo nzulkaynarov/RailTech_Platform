@@ -21,6 +21,7 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
+from integration.services.partner_client import crm_client_state, request_client_in_crm
 from portal.services.access import cabinet_company_q, company_access
 from portal.services.invitation import invite_contact
 from portal.services.roles import PARTNER, PARTNER_DEFAULT_TOGGLEABLE, PARTNER_TOGGLEABLE, ROLE_MODULES, partner_toggled
@@ -114,6 +115,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
         "partner_modules": {"allowed": list(PARTNER_TOGGLEABLE), "default": list(PARTNER_DEFAULT_TOGGLEABLE)},
         "cabinet_roles": roles,
         "cabinet_modules": modules,
+        "crm_client": crm_client_state(company),
         "can_manage": can_manage,
     }
 
@@ -258,6 +260,8 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
             outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
             if outcome.error:
                 raise _Undo(outcome.error)
+            # Партнёр должен стать клиентом CRM (PART-CRM): просьба к CRM — в той же транзакции, что приглашение.
+            request_client_in_crm(company, user)
             record(
                 user,
                 entity="supplier_access",

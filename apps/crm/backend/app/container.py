@@ -75,6 +75,7 @@ if TYPE_CHECKING:
     from app.services.mail_requests import MailRequestService
     from app.services.mail_types import MailTypesService
     from app.services.offsite_connector import OffsiteConnectorService
+    from app.services.partner_clients import PartnerClientService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
@@ -532,6 +533,13 @@ class Container:
         return ErpEventNotices(
             self.session_factory, self.telegram_bot, self.settings, mail=self.mail_service
         )
+
+    @cached_property
+    def partner_clients(self) -> "PartnerClientService":
+        """Клиенты из кабинета партнёров ERP (PART-CRM): запрос по шине → клиент и контакты."""
+        from app.services.partner_clients import PartnerClientService
+
+        return PartnerClientService()
 
     @cached_property
     def eds_notices(self) -> "EdsNoticeService":

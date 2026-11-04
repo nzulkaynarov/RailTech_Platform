@@ -39,11 +39,23 @@ class Client(TimestampMixin, Base):
             "erp_handoff_status IS NULL OR erp_handoff_status IN ('pending', 'done', 'failed')",
             name="erp_handoff_status",
         ),
+        Index("ix_clients_inn", "inn"),
+        Index(
+            "ix_clients_country_registration_number",
+            "country",
+            "registration_number",
+            postgresql_where=sql("registration_number IS NOT NULL"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
     inn: Mapped[str | None] = mapped_column(String(32))
+    # Иностранная компания (PART-CRM): ИНН РУз у неё нет — регистрационный номер страны
+    # регистрации; номера разных стран пересекаются, поэтому клиент ищется только парой
+    # «страна + номер». Страна — ISO 3166-1 alpha-2.
+    country: Mapped[str | None] = mapped_column(String(2))
+    registration_number: Mapped[str | None] = mapped_column(String(64))
     segment: Mapped[str | None] = mapped_column(String(64))
     owner_user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     is_active: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))

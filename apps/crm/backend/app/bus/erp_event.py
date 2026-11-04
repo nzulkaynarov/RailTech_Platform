@@ -36,6 +36,9 @@ NOT_FOR_CRM: Final = frozenset(
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
 #: (W18A-P1, `app/services/mail_requests.py`) — не событие сделки, ленты и бота.
 OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})
+#: Партнёр приглашён в кабинет (PART-CRM): CRM заводит клиента — `app/services/partner_clients.py`.
+#: Не событие сделки (в `data` нет `crm_client_id`), поэтому `ErpEventsService` его не получает.
+PARTNER_REQUEST: Final = frozenset({"uz.railtech.erp.partner.client_requested.v1"})
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")
 
 
@@ -56,6 +59,7 @@ def erp_types() -> list[str]:
         and t not in INLINE_TYPES
         and t not in NOT_FOR_CRM
         and t not in OWN_HANDLER
+        and t not in PARTNER_REQUEST
     )
 
 

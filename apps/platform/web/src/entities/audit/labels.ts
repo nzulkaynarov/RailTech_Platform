@@ -74,6 +74,8 @@ export const AUDIT_ACTIONS = [
   "client.erp_handoff",
   "client.erp_handoff_done",
   "client.erp_handoff_failed",
+  "client.partner_linked",
+  "client.partner_conflict",
   "client.close_request",
   "client.contact_create",
   "client.contact_update",

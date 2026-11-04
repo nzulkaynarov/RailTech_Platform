@@ -41,6 +41,20 @@ class DeskSupplierAccessModules(serializers.Serializer):
     default = serializers.ListField(child=serializers.CharField(), help_text="Что получает новое отношение.")
 
 
+class DeskSupplierAccessCrmClient(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=["none", "requested", "linked", "conflict"],
+        help_text=(
+            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, "
+            "`linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP."
+        ),
+    )
+    crm_client_id = serializers.IntegerField(
+        allow_null=True,
+        help_text="Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента».",
+    )
+
+
 class DeskSupplierAccess(serializers.Serializer):
     company_id = serializers.IntegerField()
     company_name = serializers.CharField()
@@ -55,6 +69,9 @@ class DeskSupplierAccess(serializers.Serializer):
     )
     cabinet_modules = serializers.ListField(
         child=serializers.CharField(), help_text="Разделы, которые откроются сессии компании."
+    )
+    crm_client = DeskSupplierAccessCrmClient(
+        help_text="Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении."
     )
     can_manage = serializers.BooleanField(
         help_text="У сотрудника есть `supply.manage`: контакты, приглашение, приостановка."

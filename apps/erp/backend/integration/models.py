@@ -4,6 +4,8 @@
 - `CrmClientMapping`: crm_client_id ↔ parties.Company
 - `CrmContactMapping`: crm_contact_id ↔ parties.Contact
 - `CrmUserMapping`: crm_user_id ↔ CustomUser
+- `PartnerCrmLink`: состояние «клиент партнёра в CRM» до сопоставления (PART-CRM): запрошен или конфликт
+- `DeferredRequestEvent`: заявка партнёра, чей `request.created` ждёт сопоставления клиента CRM (PART-CRM)
 - `IntegrationIdempotencyKey`: Idempotency-Key (UUID) с TTL 7 дней (Q-15, CONTRACTS §0)
 - `PairingCode`, `ServiceCredential`: сопряжение с CRM одним кодом — одноразовый код (хеш) и сервисные
   токены/секрет вебхуков, зашифрованные в БД (M3-ERP-05)
@@ -282,3 +284,74 @@ class ServiceCredential(models.Model):
 
     def __str__(self):
         return f"ServiceCredential({self.slot})"
+
+
+class PartnerCrmStatus(models.TextChoices):
+    REQUESTED = "requested", _("Запрошен")
+    CONFLICT = "conflict", _("Конфликт")
+
+
+class PartnerCrmLink(models.Model):
+    """Что известно о клиенте CRM для приглашённого партнёра, пока сопоставления `CrmClientMapping` нет (PART-CRM).
+
+    «Заведён» живёт в самом сопоставлении, поэтому здесь только два состояния: `requested` — ERP опубликовала
+    `partner.client_requested` (дата последнего запроса) и ждёт ответ; `conflict` — CRM ответила, что найденный клиент уже
+    сопоставлен другой компании ERP (`crm_client_id` — этот клиент, `conflict_company_id` — та компания). Строка не заменяет
+    сопоставление: когда оно появилось, состояние читается из него.
+    """
+
+    company = models.OneToOneField(
+        "parties.Company",
+        on_delete=models.CASCADE,
+        related_name="partner_crm_link",
+        verbose_name=_("Компания ERP"),
+    )
+    status = models.CharField(max_length=16, choices=PartnerCrmStatus.choices, default=PartnerCrmStatus.REQUESTED)
+    crm_client_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Клиент CRM"),
+        help_text=_("При конфликте — найденный клиент CRM, уже занятый другой компанией"),
+    )
+    conflict_company_id = models.BigIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Другая компания ERP"),
+        help_text=_("При конфликте — компания ERP, с которой клиент CRM уже сопоставлен"),
+    )
+    requested_at = models.DateTimeField(default=timezone.now)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Клиент партнёра в CRM")
+        verbose_name_plural = _("Клиенты партнёров в CRM")
+
+    def __str__(self):
+        return f"PartnerCrmLink(company={self.company_id}, {self.status})"
+
+
+class DeferredRequestEvent(models.Model):
+    """Заявка партнёра из кабинета, чей `request.created` не ушёл: компания не сопоставлена клиенту CRM (PART-CRM).
+
+    Строка пишется в той же транзакции, что и заявка. После сопоставления ERP публикует событие и ставит `published_at`
+    (повтор ничего не публикует). Заявку клиента с сопоставлением строка не создаёт — её событие уходит сразу.
+    """
+
+    deal = models.OneToOneField(
+        "sales.Deal",
+        on_delete=models.CASCADE,
+        related_name="deferred_request_event",
+        verbose_name=_("Заявка"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    published_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Отложенное событие заявки")
+        verbose_name_plural = _("Отложенные события заявок")
+        indexes = [models.Index(fields=["published_at"], name="deferred_request_pending")]
+
+    def __str__(self):
+        return f"DeferredRequestEvent(deal={self.deal_id}, published={self.published_at is not None})"

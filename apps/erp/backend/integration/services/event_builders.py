@@ -21,8 +21,9 @@ from . import stages
 
 logger = logging.getLogger(__name__)
 
-#: Короткие имена 25 типов ERP (`<сущность>.<действие>`); полный тип — `uz.railtech.erp.<имя>.v1`. `quote.ready_for_approval`
-#: адресован EDS (EDS-03) и CRM не доставляется (`bus/subscriptions.yaml`).
+#: Короткие имена 26 типов ERP (`<сущность>.<действие>`); полный тип — `uz.railtech.erp.<имя>.v1`. `quote.ready_for_approval`
+#: адресован EDS (EDS-03) и CRM не доставляется (`bus/subscriptions.yaml`). `partner.client_requested` (PART-CRM) — единственное
+#: событие без `crm_client_id` в `data`: оно просит CRM завести клиента, сопоставления ещё нет.
 VALID_EVENT_TYPES = {
     "request.created",
     "deal.stage_changed",
@@ -49,6 +50,7 @@ VALID_EVENT_TYPES = {
     "invite.requested",
     "delivery.line_accepted",
     "delivery.line_disputed",
+    "partner.client_requested",
 }
 
 EVENT_TYPE_PREFIX = "uz.railtech.erp."

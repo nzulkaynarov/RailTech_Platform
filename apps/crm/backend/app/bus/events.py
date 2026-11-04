@@ -48,6 +48,7 @@ USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
 MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
 MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 AI_POLICY_CHANGED = "uz.railtech.crm.ai_policy.changed.v1"
+PARTNER_CLIENT_RESOLVED = "uz.railtech.crm.partner.client_resolved.v1"
 
 
 def _require_transaction(session: AsyncSession) -> None:
@@ -93,6 +94,36 @@ async def client_updated(
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, CLIENT_UPDATED, data, f"client/{client.id}")
+
+
+async def partner_client_resolved(
+    session: AsyncSession,
+    *,
+    erp_company_id: int,
+    status: str,
+    crm_client_id: int,
+    matched_by: str | None = None,
+    contacts: list[dict[str, int]] | None = None,
+    conflict_erp_company_id: int | None = None,
+) -> None:
+    """Итог запроса ERP «завести клиента для партнёра» (PART-CRM): `linked` или `conflict`.
+
+    Только идентификаторы.
+    """
+    _require_transaction(session)
+    data: dict[str, Any] = {
+        "erp_company_id": erp_company_id,
+        "status": status,
+        "crm_client_id": crm_client_id,
+        "actor": snapshots.actor_of(Actor.system()),
+    }
+    if matched_by is not None:
+        data["matched_by"] = matched_by
+    if contacts is not None:
+        data["contacts"] = contacts
+    if status == "conflict":
+        data["conflict_erp_company_id"] = conflict_erp_company_id
+    await _publish(session, PARTNER_CLIENT_RESOLVED, data, f"client/{crm_client_id}")
 
 
 async def contact_created(session: AsyncSession, contact: ClientContact, actor: Actor) -> None:

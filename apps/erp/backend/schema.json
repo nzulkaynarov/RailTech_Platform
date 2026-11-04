@@ -37221,6 +37221,14 @@
                         },
                         "description": "Разделы, которые откроются сессии компании."
                     },
+                    "crm_client": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskSupplierAccessCrmClient"
+                            }
+                        ],
+                        "description": "Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении."
+                    },
                     "can_manage": {
                         "type": "boolean",
                         "description": "У сотрудника есть `supply.manage`: контакты, приглашение, приостановка."
@@ -37233,6 +37241,7 @@
                     "company_id",
                     "company_name",
                     "contacts",
+                    "crm_client",
                     "partner_modules",
                     "relationship"
                 ]
@@ -37310,6 +37319,38 @@
                     "email",
                     "name"
                 ]
+            },
+            "DeskSupplierAccessCrmClient": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskSupplierAccessCrmClientStatusEnum"
+                            }
+                        ],
+                        "description": "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.\n\n* `none` - none\n* `requested` - requested\n* `linked` - linked\n* `conflict` - conflict"
+                    },
+                    "crm_client_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента»."
+                    }
+                },
+                "required": [
+                    "crm_client_id",
+                    "status"
+                ]
+            },
+            "DeskSupplierAccessCrmClientStatusEnum": {
+                "enum": [
+                    "none",
+                    "requested",
+                    "linked",
+                    "conflict"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `requested` - requested\n* `linked` - linked\n* `conflict` - conflict"
             },
             "DeskSupplierAccessInviteInRequest": {
                 "type": "object",

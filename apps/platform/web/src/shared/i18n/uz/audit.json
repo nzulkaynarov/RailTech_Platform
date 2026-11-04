@@ -232,6 +232,8 @@
       "erp_handoff": "Mijozni ERP ga qayta uzatishni so'radi",
       "erp_handoff_done": "Mijoz ERP ga uzatildi",
       "erp_handoff_failed": "Mijozni ERP ga uzatish muvaffaqiyatsiz",
+      "partner_linked": "Hamkor mijozga aylandi (ERP kompaniyasi bilan bog'landi)",
+      "partner_conflict": "Hamkor mijozi: ERP bilan bog'lash ziddiyati",
       "close_request": "Xizmat so'rovini yopdi",
       "contact_create": "Mijoz kontaktini qo'shdi",
       "contact_update": "Mijoz kontaktini o'zgartirdi",

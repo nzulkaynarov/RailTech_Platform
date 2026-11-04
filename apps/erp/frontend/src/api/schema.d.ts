@@ -12098,6 +12098,8 @@ export interface components {
             cabinet_roles: string[];
             /** @description Разделы, которые откроются сессии компании. */
             cabinet_modules: string[];
+            /** @description Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении. */
+            crm_client: components["schemas"]["DeskSupplierAccessCrmClient"];
             /** @description У сотрудника есть `supply.manage`: контакты, приглашение, приостановка. */
             can_manage: boolean;
         };
@@ -12123,6 +12125,27 @@ export interface components {
             /** @default true */
             can_act: boolean;
         };
+        DeskSupplierAccessCrmClient: {
+            /**
+             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+             *
+             *     * `none` - none
+             *     * `requested` - requested
+             *     * `linked` - linked
+             *     * `conflict` - conflict
+             */
+            status: components["schemas"]["DeskSupplierAccessCrmClientStatusEnum"];
+            /** @description Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента». */
+            crm_client_id: number | null;
+        };
+        /**
+         * @description * `none` - none
+         *     * `requested` - requested
+         *     * `linked` - linked
+         *     * `conflict` - conflict
+         * @enum {string}
+         */
+        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "linked" | "conflict";
         DeskSupplierAccessInviteInRequest: {
             /** @description Контакт компании, которому уходит письмо с кодом входа. */
             contact_id: number;
