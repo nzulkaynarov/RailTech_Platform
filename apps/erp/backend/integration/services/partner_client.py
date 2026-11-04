@@ -141,11 +141,12 @@ def request_client_in_crm(company: Company, user: Any = None) -> Optional[Event]
     data = build_request_data(company, user)
     if data is None:
         return None
-    PartnerCrmLink.objects.update_or_create(
-        company=company,
-        defaults={"status": PartnerCrmStatus.REQUESTED, "requested_at": timezone.now(), "resolved_at": None},
-    )
-    return get_bus().publish(event_type_name("partner.client_requested"), data, subject=f"company/{company.pk}")
+    with transaction.atomic():  # внутри приглашения это та же транзакция; отдельно — своя
+        PartnerCrmLink.objects.update_or_create(
+            company=company,
+            defaults={"status": PartnerCrmStatus.REQUESTED, "requested_at": timezone.now(), "resolved_at": None},
+        )
+        return get_bus().publish(event_type_name("partner.client_requested"), data, subject=f"company/{company.pk}")
 
 
 # ── Ответ CRM ─────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -215,22 +216,23 @@ def _map_contacts(company: Company, items: List[Mapping[str, Any]]) -> int:
 
 def release_deferred_requests(company: Company, crm_client_id: int) -> int:
     """Опубликовать `request.created` заявок партнёра, созданных до сопоставления. Идемпотентно: опубликованная помечена."""
-    released = 0
-    pending = (
-        DeferredRequestEvent.objects.select_for_update()
-        .select_related("deal")
-        .filter(deal__company=company, published_at__isnull=True)
-        .order_by("id")
-    )
-    for row in pending:
-        deal = row.deal
-        summary = getattr(getattr(deal, "portal_summary", None), "text", None) or deal.title
-        events.publish_request_created(
-            deal, source="cabinet", erp_request_id=deal.pk, summary=summary, crm_client_id=crm_client_id
+    with transaction.atomic():
+        released = 0
+        pending = (
+            DeferredRequestEvent.objects.select_for_update()
+            .select_related("deal")
+            .filter(deal__company=company, published_at__isnull=True)
+            .order_by("id")
         )
-        row.published_at = timezone.now()
-        row.save(update_fields=["published_at"])
-        released += 1
+        for row in pending:
+            deal = row.deal
+            summary = getattr(getattr(deal, "portal_summary", None), "text", None) or deal.title
+            events.publish_request_created(
+                deal, source="cabinet", erp_request_id=deal.pk, summary=summary, crm_client_id=crm_client_id
+            )
+            row.published_at = timezone.now()
+            row.save(update_fields=["published_at"])
+            released += 1
     return released
 
 

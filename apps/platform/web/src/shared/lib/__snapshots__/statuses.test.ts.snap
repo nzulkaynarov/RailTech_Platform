@@ -73,6 +73,11 @@ exports[`карты статусов > снимок карты: изменени
     "rejected": "red",
     "signed": "green",
   },
+  "crmClient": {
+    "conflict": "red",
+    "linked": "green",
+    "requested": "gold",
+  },
   "due": {
     "later": "default",
     "memo": "purple",

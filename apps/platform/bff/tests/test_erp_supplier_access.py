@@ -159,21 +159,32 @@ async def test_state_without_relationship(web: Web, be: Any, check: ContractChec
     ("erp", "expected"),
     [
         ({"status": "linked", "crm_client_id": 58}, {"status": "linked", "crm_client_id": "58"}),
-        ({"status": "conflict", "crm_client_id": 88}, {"status": "conflict", "crm_client_id": "88"}),
-        ({"status": "requested", "crm_client_id": None}, {"status": "requested", "crm_client_id": None}),
-        (None, {"status": "none", "crm_client_id": None}),  # ERP без поля (старая версия): «не просили»
+        (
+            {"status": "conflict", "crm_client_id": 88},
+            {"status": "conflict", "crm_client_id": "88"},
+        ),
+        (
+            {"status": "requested", "crm_client_id": None},
+            {"status": "requested", "crm_client_id": None},
+        ),
+        (
+            None,
+            {"status": "none", "crm_client_id": None},
+        ),  # ERP без поля (старая версия): «не просили»
         ({"status": "weird", "crm_client_id": 1}, {"status": "none", "crm_client_id": None}),
     ],
 )
 async def test_crm_client_of_the_partner_is_shown_with_a_string_id(
     web: Web, be: Any, check: ContractChecker, erp: Any, expected: Any
 ) -> None:
-    """PART-CRM: «клиент в CRM» — заведён / ожидает / конфликт; id клиента CRM — строкой для ссылки на карточку."""
+    """PART-CRM: «клиент в CRM» — заведён, ожидает, конфликт; id клиента CRM — строкой."""
     await web.login(["SUPPLY"])
     state = {k: v for k, v in STATE.items() if k != "crm_client"}
     if erp is not None:
         state["crm_client"] = erp
-    mock(be).get(f"{API}/catalog/supplier-access/9/").mock(return_value=httpx.Response(200, json=state))
+    mock(be).get(f"{API}/catalog/supplier-access/9/").mock(
+        return_value=httpx.Response(200, json=state)
+    )
 
     response = await call(web, "GET", BASE)
 

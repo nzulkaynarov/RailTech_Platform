@@ -24,7 +24,6 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
 import { ErrorNote, FormField, QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
-import { MEANING_TONE } from "../../../shared/lib/statuses";
 import { FormModal } from "./common";
 import { catalogErrorText, errorFields } from "./errors";
 import { queryLabels } from "./labels";
@@ -524,12 +523,6 @@ function SuspendModal({
   );
 }
 
-const CRM_CLIENT_TONE = {
-  linked: MEANING_TONE.done,
-  requested: MEANING_TONE.waiting,
-  conflict: MEANING_TONE.failed,
-} as const;
-
 /**
  * «Клиент в CRM» (PART-CRM): приглашённый партнёр становится клиентом CRM — заведён / ожидает / конфликт, и ссылка на
  * карточку клиента. CRM — источник правды по клиентам; конфликт значит «найденный клиент привязан к другой компании ERP».
@@ -540,7 +533,7 @@ function CrmClientLine({ crmClient }: { crmClient: AccessData["crm_client"] }) {
   return (
     <div className="pf-cat-actions" aria-live="polite">
       <span className="pf-cat-note">{t("cabinetAccess.crmClient.label")}</span>
-      <StatusTag tone={CRM_CLIENT_TONE[crmClient.status]}>
+      <StatusTag kind="crmClient" status={crmClient.status}>
         {t(`cabinetAccess.crmClient.${crmClient.status}`)}
       </StatusTag>
       {crmClient.crm_client_id ? (

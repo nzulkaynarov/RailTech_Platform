@@ -12,6 +12,7 @@ from __future__ import annotations
 import pghistory
 from django.db import transaction
 from django.utils import timezone
+from integration.services.partner_client import crm_client_state, request_client_in_crm
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -21,7 +22,6 @@ from parties.models import (
     RelationshipStatus,
     active_contact_q,
 )
-from integration.services.partner_client import crm_client_state, request_client_in_crm
 from portal.services.access import cabinet_company_q, company_access
 from portal.services.invitation import invite_contact
 from portal.services.roles import PARTNER, PARTNER_DEFAULT_TOGGLEABLE, PARTNER_TOGGLEABLE, ROLE_MODULES, partner_toggled
