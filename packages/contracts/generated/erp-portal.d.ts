@@ -1255,7 +1255,8 @@ export interface components {
      * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
      *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
      *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
-     *     `partner_card_returned` — карточка партнёра возвращена на доработку. Незнакомый вид Cabinet показывает общим текстом.
+     *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+     *     Незнакомый вид Cabinet показывает общим текстом.
      * @enum {string}
      */
     NotificationKind:
@@ -1266,7 +1267,8 @@ export interface components {
       | "delivery_status_changed"
       | "delivery_eta_changed"
       | "manager_replied"
-      | "partner_card_returned";
+      | "partner_card_returned"
+      | "partner_card_published";
     /**
      * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
      * @enum {string}
@@ -1286,7 +1288,8 @@ export interface components {
       | "status_changed"
       | "eta_changed"
       | "replied"
-      | "returned";
+      | "returned"
+      | "published";
     /**
      * @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
      *     id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).

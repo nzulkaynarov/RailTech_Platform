@@ -461,7 +461,17 @@ def locmem(settings):
 
 @pytest.mark.parametrize("language", ["ru", "uz", "en"])
 @pytest.mark.parametrize(
-    "kind", ["invoice_issued", "payment_overdue", "act_issued", "quote_sent", "delivery_eta_changed"]
+    "kind",
+    [
+        "invoice_issued",
+        "payment_overdue",
+        "act_issued",
+        "quote_sent",
+        "delivery_eta_changed",
+        "manager_replied",
+        "partner_card_returned",
+        "partner_card_published",
+    ],
 )
 def test_email_is_in_the_contact_language_with_settings_footer(locmem, client_company, no_tg_contact, kind, language):
     no_tg_contact.language = language
@@ -489,6 +499,7 @@ def test_email_is_in_the_contact_language_with_settings_footer(locmem, client_co
         bot_reaches=True,
     )
     row = next(r for r in row if r.contact_id == no_tg_contact.pk)
+    _due_now(row)  # отложенное (ответ менеджера) — срок наступил
     assert notices.deliver_email(row.pk) == "sent"
     assert len(locmem) == 1
     message = locmem[0]
@@ -703,3 +714,142 @@ def test_task_time_limit_is_not_a_row_failure(monkeypatch, client_company, no_tg
         notices.send_due_emails()
     row.refresh_from_db()
     assert row.email_state == NoticeEmailState.PENDING and row.email_attempts == 0 and row.email_reason == ""
+
+
+# ── 7. Ответ менеджера в чате кабинета (CHAT-1 → NOTIFY-2) ─────────────────────────────────────────────────────────────
+
+
+def _reply(company, message_id=7001, text="Счёт сегодня"):
+    from portal.services import messages as chat
+
+    return chat.apply_manager_reply(
+        {
+            "erp_company_id": company.pk,
+            "message_id": message_id,
+            "text": text,
+            "manager_name": "Manager",
+            "sent_at": timezone.now().isoformat(),
+        }
+    )
+
+
+def _reply_row(message, contact):
+    return PortalNotice.objects.get(kind="manager_replied", object_id=message.pk, contact=contact)
+
+
+def test_manager_reply_is_a_bell_item_and_a_delayed_email(client_company, client_contact, no_tg_contact):
+    message = _reply(client_company)
+    _reply(client_company)  # повтор события `crm.cabinet.message_sent` — без второй строки
+    assert PortalNotice.objects.filter(kind="manager_replied", contact=no_tg_contact).count() == 1
+    row = _reply_row(message, no_tg_contact)
+    assert (row.group, row.object_type, row.action, row.link) == ("messages", "chat", "replied", "/messages")
+    assert row.channel == NoticeChannel.EMAIL_DELAYED and row.email_state == NoticeEmailState.PENDING
+    # контакт сделки с Telegram, но не приглашён и не контакт документа — только колокольчик
+    assert _reply_row(message, client_contact).channel == NoticeChannel.CABINET
+
+
+def test_contact_in_the_chat_now_gets_no_email(client_company, no_tg_contact):
+    """«Контакт сейчас в кабинете — только кабинет» (ADR-0023): смотрит ленту — письма нет вовсе."""
+    from portal.models import PortalChatReader
+
+    PortalChatReader.objects.create(company=client_company, contact=no_tg_contact, last_seen_at=timezone.now())
+    row = _reply_row(_reply(client_company), no_tg_contact)
+    assert row.channel == NoticeChannel.CABINET and row.email_reason == "present"
+
+
+def test_a_series_of_replies_is_one_email(client_company, no_tg_contact):
+    first = _reply_row(_reply(client_company, 7001), no_tg_contact)
+    second = _reply_row(_reply(client_company, 7002), no_tg_contact)
+    assert first.email_state == NoticeEmailState.PENDING
+    assert second.channel == NoticeChannel.CABINET and second.email_reason == "batched"
+
+
+def test_reading_the_chat_reads_the_notice_and_cancels_the_email(locmem, client_company, no_tg_contact):
+    """Защита 3: прочтение в чате (`POST /messages/read`) гасит уведомление и отложенное письмо."""
+    from portal.services import messages as chat
+
+    message = _reply(client_company)
+    chat.mark_read(client_company, no_tg_contact, message.pk)
+    row = _reply_row(message, no_tg_contact)
+    assert row.read_at is not None
+    assert row.email_state == NoticeEmailState.CANCELLED and row.email_reason == "read_in_chat"
+    _due_now(row)
+    assert notices.send_due_emails()["sent"] == 0 and locmem == []
+
+
+def test_delivery_rechecks_the_chat_read_mark(locmem, client_company, no_tg_contact):
+    """Защита 4: отметка «прочитано» ленты, записанная мимо `mark_read` (гонка с задачей), гасит письмо при отправке."""
+    from portal.models import PortalChatReader
+
+    message = _reply(client_company)
+    row = _reply_row(message, no_tg_contact)
+    PortalChatReader.objects.create(company=client_company, contact=no_tg_contact, last_read_id=message.pk)
+    _due_now(row)
+    assert notices.deliver_email(row.pk) == "cancelled"
+    row.refresh_from_db()
+    assert row.email_reason == "read_in_chat" and locmem == []
+
+
+def test_chat_presence_after_the_reply_cancels_the_email(locmem, client_company, no_tg_contact):
+    """Защита 5: контакт открыл чат после ответа (опрос ленты, `last_seen_at`) — письма нет."""
+    from portal.models import PortalChatReader
+
+    row = _reply_row(_reply(client_company), no_tg_contact)
+    PortalChatReader.objects.create(
+        company=client_company, contact=no_tg_contact, last_seen_at=timezone.now() + timedelta(seconds=1)
+    )
+    _due_now(row)
+    assert notices.deliver_email(row.pk) == "cancelled"
+    row.refresh_from_db()
+    assert row.email_reason == "present" and locmem == []
+
+
+def test_unread_reply_goes_by_email_after_the_delay(locmem, client_company, no_tg_contact):
+    row = _reply_row(_reply(client_company), no_tg_contact)
+    _due_now(row)
+    assert notices.send_due_emails()["sent"] == 1
+    assert [message.to for message in locmem] == [["nodira@client.example"]]
+
+
+# ── 8. Решение по карточке партнёра (PART-3 вызовет вместо прямого письма) ─────────────────────────────────────────────
+
+
+def _partner_product(company):
+    from catalog.models import Product, ProductStatus
+
+    status, _ = ProductStatus.objects.get_or_create(code="DRAFT", defaults={"name": "Черновик"})
+    return Product.objects.create(name="Болт М12", status=status, source_supplier=company)
+
+
+@pytest.mark.parametrize(
+    ("decision", "kind"), [("published", "partner_card_published"), ("returned", "partner_card_returned")]
+)
+def test_partner_card_decision_is_a_bell_item_and_an_email(
+    supplier_partner, enqueued, decision, kind, django_capture_on_commit_callbacks
+):
+    company, contact, client = supplier_partner
+    Contact.objects.filter(pk=contact.pk).update(invited_at=timezone.now())
+    product = _partner_product(company)
+    with django_capture_on_commit_callbacks(execute=True):
+        assert (
+            notice_sources.partner_card_decision(product, decision, reason="Нет артикула", issues=[{"field": "name"}])
+            == 1
+        )
+    row = PortalNotice.objects.get(kind=kind, contact=contact)
+    assert (row.group, row.object_type, row.object_id, row.link) == (
+        "partner_products",
+        "partner_product",
+        product.pk,
+        f"/my-products?card={product.pk}",
+    )
+    assert row.channel == NoticeChannel.EMAIL and enqueued == [row.pk]
+    assert [item["id"] for item in client.get(f"{API}/notifications").json()["items"]] == [row.pk]
+
+
+def test_partner_without_my_products_gets_no_card_notice(supplier_partner):
+    from parties.models import CompanyRelationship
+
+    company, contact, _client = supplier_partner
+    CompanyRelationship.objects.filter(company=company).update(modules=["catalog_requests"])
+    assert notice_sources.partner_card_decision(_partner_product(company), "returned", reason="x") == 0
+    assert notice_sources.partner_card_decision(_partner_product(company), "unknown") == 0

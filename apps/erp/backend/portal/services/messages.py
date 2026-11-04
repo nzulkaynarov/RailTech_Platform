@@ -129,6 +129,10 @@ def mark_read(company: Company, contact, last_id: int) -> int:
         if last_id > reader.last_read_id:
             reader.last_read_id = last_id
             reader.save(update_fields=["last_read_id"])
+        # Прочитано в чате — уведомления «ответ менеджера» до этого сообщения прочитаны, их письма отменены (NOTIFY-2)
+        from portal.services.notices import mark_chat_read
+
+        mark_chat_read(company, contact, last_id)
     return unread_count(company.pk, contact.pk)
 
 
@@ -218,16 +222,22 @@ def apply_manager_reply(data: dict[str, Any]) -> Optional[PortalMessage]:
     erased = PortalChatErasure.objects.filter(company=company).values_list("erased_at", flat=True).first()
     if erased is not None and sent_at <= erased:
         return None
-    message, _ = PortalMessage.objects.get_or_create(
-        crm_message_id=int(data["message_id"]),
-        defaults={
-            "company": company,
-            "direction": PortalMessage.DIRECTION_MANAGER,
-            "author_name": (data.get("manager_name") or "")[:255],
-            "text": data["text"],
-            "created_at": sent_at,
-        },
-    )
+    with transaction.atomic():
+        message, created = PortalMessage.objects.get_or_create(
+            crm_message_id=int(data["message_id"]),
+            defaults={
+                "company": company,
+                "direction": PortalMessage.DIRECTION_MANAGER,
+                "author_name": (data.get("manager_name") or "")[:255],
+                "text": data["text"],
+                "created_at": sent_at,
+            },
+        )
+        if created:
+            # Колокольчик и отложенное письмо контактам (NOTIFY-2) — той же транзакцией, что и строка ленты
+            from portal.services import notice_sources
+
+            notice_sources.manager_replied(message)
     return message
 
 

@@ -1127,7 +1127,8 @@
       "delivery_eta_changed": "{{deal}} loyihasi boʻyicha yetkazib berish muddati oʻzgardi: endi {{eta}}",
       "manager_replied": "Menejer sizga chatda javob berdi",
       "partner_card_returned": "«{{number}}» kartochkasi qayta ishlashga qaytarildi",
-      "fallback": "Yangi bildirishnoma {{number}}"
+      "fallback": "Yangi bildirishnoma {{number}}",
+      "partner_card_published": "«{{number}}» kartochkasi katalogda eʼlon qilindi"
     }
   }
 }

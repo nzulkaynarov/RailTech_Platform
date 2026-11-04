@@ -124,7 +124,7 @@ describe('текст уведомления', () => {
   const t = i18n.getFixedT('ru');
 
   it('у каждого вида есть текст во всех трёх словарях', () => {
-    const keys = [...notifications.map((item) => item.text_key), 'act_issued_reminder', 'manager_replied', 'payment_overdue', 'partner_card_returned', 'fallback'];
+    const keys = [...notifications.map((item) => item.text_key), 'act_issued_reminder', 'manager_replied', 'payment_overdue', 'partner_card_returned', 'partner_card_published', 'fallback'];
     for (const language of ['ru', 'uz', 'en']) {
       for (const key of keys) {
         expect(i18n.exists(`notifications.text.${key}`, { lng: language }), `${language}: ${key}`).toBe(true);

@@ -75,6 +75,9 @@ KINDS: dict[str, NoticeKind] = {
         NoticeKind(
             "partner_card_returned", "partner_products", "partner_product", "returned", "my_products", True, False
         ),
+        NoticeKind(
+            "partner_card_published", "partner_products", "partner_product", "published", "my_products", True, False
+        ),
     )
 }
 
@@ -157,6 +160,7 @@ def notify(
     bot_reaches: Optional[bool] = None,
     already_emailed: Iterable[str] = (),
     document_contact_ids: Iterable[int] = (),
+    email_skip: Optional[dict[int, str]] = None,
 ) -> list[PortalNotice]:
     """Записать событие в ленту каждого действующего контакта компании и выбрать каждому внешний канал.
 
@@ -179,6 +183,11 @@ def notify(
         channel, reason = choose_channel(
             kind, contact, bot_reaches=bot_reaches, already_emailed=emailed, document_contact_ids=document_contacts
         )
+        if channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED) and (email_skip or {}).get(contact.pk):
+            channel, reason = NoticeChannel.CABINET, email_skip[contact.pk]
+        if channel == NoticeChannel.EMAIL_DELAYED and _pending_delayed(contact, kind):
+            # Уже ждёт письмо этого вида (несколько ответов менеджера подряд) — одно письмо на серию (Slack, Intercom)
+            channel, reason = NoticeChannel.CABINET, "batched"
         wants_email = channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED)
         notice, was_created = PortalNotice.objects.get_or_create(
             contact=contact,
@@ -206,6 +215,10 @@ def notify(
     if immediate:
         transaction.on_commit(lambda: _enqueue_emails(immediate))
     return created
+
+
+def _pending_delayed(contact, kind: NoticeKind) -> bool:
+    return PortalNotice.objects.filter(contact=contact, kind=kind.code, email_state=NoticeEmailState.PENDING).exists()
 
 
 def _enqueue_emails(notice_ids: list[int]) -> None:
@@ -270,13 +283,61 @@ NOTIFICATION_SETTINGS_PATH = "/profile#notifications"
 
 
 def contact_was_present(notice: PortalNotice) -> bool:
-    """Контакт заходил в кабинет после уведомления — письмо об ответе менеджера не нужно (ADR-0023 п. 2).
+    """Контакт был в кабинете после уведомления — письмо об ответе менеджера не нужно (ADR-0023 п. 2).
 
-    Присутствие — вход в кабинет после уведомления (`Contact.last_login_at`); отметку чата (`last_seen` ленты сообщений)
-    добавляет часть «ответ менеджера» после слияния CHAT-1.
+    Присутствие — вход в кабинет (`Contact.last_login_at`) или опрос ленты чата (`PortalChatReader.last_seen_at`, CHAT-1)
+    позже уведомления.
     """
+    from ..models import PortalChatReader
+
     last_login = notice.contact.last_login_at
-    return bool(last_login and last_login >= notice.created_at)
+    if last_login and last_login >= notice.created_at:
+        return True
+    return PortalChatReader.objects.filter(
+        company_id=notice.company_id, contact_id=notice.contact_id, last_seen_at__gte=notice.created_at
+    ).exists()
+
+
+def _read_in_chat(notice: PortalNotice) -> bool:
+    """Контакт прочитал ленту чата до этого ответа (отметка CHAT-1 `last_read_id`) — письмо не нужно."""
+    from ..models import PortalChatReader
+
+    return PortalChatReader.objects.filter(
+        company_id=notice.company_id, contact_id=notice.contact_id, last_read_id__gte=notice.object_id
+    ).exists()
+
+
+#: «Контакт сейчас в кабинете»: смотрел ленту чата не раньше этого (опрос — раз в 10 с, отметка — не чаще 30 с).
+PRESENT_WINDOW = timedelta(seconds=90)
+
+
+def present_contacts(company_id: int, now=None) -> set[int]:
+    """Контакты компании, которые сейчас в чате кабинета: им об ответе менеджера — только колокольчик и лента."""
+    from ..models import PortalChatReader
+
+    since = (now or timezone.now()) - PRESENT_WINDOW
+    return set(
+        PortalChatReader.objects.filter(company_id=company_id, last_seen_at__gte=since).values_list(
+            "contact_id", flat=True
+        )
+    )
+
+
+def mark_chat_read(company, contact, last_message_id: int) -> None:
+    """Прочтение в чате (CHAT-1, `POST /messages/read`): уведомления «ответ менеджера» до этого сообщения прочитаны,
+    отложенные письма по ним отменены — так же, как прочтение в колокольчике."""
+    rows = PortalNotice.objects.filter(
+        contact=contact,
+        company=company,
+        kind="manager_replied",
+        object_id__lte=last_message_id,
+        read_at__isnull=True,
+    )
+    with transaction.atomic():
+        rows.filter(email_state=NoticeEmailState.PENDING).update(
+            email_state=NoticeEmailState.CANCELLED, email_reason="read_in_chat"
+        )
+        rows.update(read_at=timezone.now())
 
 
 def deliver_email(notice_id: int) -> str:
@@ -305,6 +366,8 @@ def deliver_email(notice_id: int) -> str:
         reason = None
         if notice.read_at is not None:
             reason = "read"
+        elif notice.kind == "manager_replied" and _read_in_chat(notice):
+            reason = "read_in_chat"
         elif KINDS[notice.kind].email_delay and contact_was_present(notice):
             reason = "present"
         elif contact.archived_at is not None or contact.company_id != notice.company_id:

@@ -6867,3 +6867,8 @@ msgstr "Open in the client portal"
 
 msgid "Настроить уведомления"
 msgstr "Notification settings"
+msgid "Карточка товара %(number)s опубликована"
+msgstr "Product card %(number)s has been published"
+
+msgid "Карточка товара %(number)s опубликована в каталоге — клиенты её видят."
+msgstr "Product card %(number)s has been published in the catalogue — customers can see it."

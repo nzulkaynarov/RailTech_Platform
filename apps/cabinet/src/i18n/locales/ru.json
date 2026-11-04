@@ -1158,7 +1158,8 @@
       "delivery_eta_changed": "Изменился срок поставки по проекту {{deal}}: теперь {{eta}}",
       "manager_replied": "Менеджер ответил вам в чате",
       "partner_card_returned": "Карточка «{{number}}» возвращена на доработку",
-      "fallback": "Новое уведомление {{number}}"
+      "fallback": "Новое уведомление {{number}}",
+      "partner_card_published": "Карточка «{{number}}» опубликована в каталоге"
     }
   }
 }

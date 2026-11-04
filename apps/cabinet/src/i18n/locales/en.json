@@ -1127,7 +1127,8 @@
       "delivery_eta_changed": "Delivery date for project {{deal}} changed: now {{eta}}",
       "manager_replied": "Your manager replied in the chat",
       "partner_card_returned": "Product card «{{number}}» was returned for revision",
-      "fallback": "New notification {{number}}"
+      "fallback": "New notification {{number}}",
+      "partner_card_published": "Product card «{{number}}» has been published"
     }
   }
 }

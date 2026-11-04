@@ -222,3 +222,8 @@ msgstr "Shaxsiy kabinetda ochish"
 
 msgid "Настроить уведомления"
 msgstr "Bildirishnomalarni sozlash"
+msgid "Карточка товара %(number)s опубликована"
+msgstr "%(number)s mahsulot kartochkasi eʼlon qilindi"
+
+msgid "Карточка товара %(number)s опубликована в каталоге — клиенты её видят."
+msgstr "%(number)s mahsulot kartochkasi katalogda eʼlon qilindi — mijozlar uni koʻrmoqda."
