@@ -20,8 +20,9 @@ outbox. ERP по нему заполняет проекцию — Mini App вх�
 
 Отключение. ERP публикует `uz.railtech.erp.contact.telegram_unlink_requested.v1` (поле принадлежит
 CRM, ADR-0015); здесь, в транзакции inbox, контакт теряет Telegram, а Telegram — клиента и
-подтверждение (общая часть с отвязкой менеджером — `release_identity`), и уходит
-`crm.contact.updated` без `telegram_user_id`. Повтор и уже отвязанный контакт — без действий.
+подтверждение (`_release_telegram`; лид, его клиент и стадия не меняются — отключение уведомлений
+не потеря клиента), и уходит `crm.contact.updated` без `telegram_user_id`. Повтор и уже
+отвязанный контакт — без действий. Повторная привязка другим аккаунтом освобождает прежний так же.
 """
 
 from collections.abc import Awaitable, Callable, Sequence
@@ -39,7 +40,6 @@ from app.domain import client_texts, contact_link
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity, TelegramLinkNonce
 from app.security import audit
-from app.services.clients import release_identity
 from app.services.leads import ChatsChanged, notify_chats
 
 logger = structlog.get_logger(__name__)
@@ -127,11 +127,23 @@ class ContactTelegramService:
             session, identity.id, contact.id
         ):
             raise _TakenError
-        before = {"contact_id": contact.id, "telegram_identity_id": contact.telegram_identity_id}
-        identity.client_id = contact.client_id
-        identity.verified_at, identity.verified_by_user_id = moment, None
-        contact.telegram_identity_id = identity.id
         actor = audit.Actor.system()
+        before = {
+            "contact_id": contact.id,
+            "telegram_identity_id": contact.telegram_identity_id,
+            "verified_by_user_id": identity.verified_by_user_id,
+        }
+        after: dict[str, object] = {}
+        previous_id = contact.telegram_identity_id
+        if previous_id is not None and previous_id != identity.id:
+            # Повторная привязка другим аккаунтом: прежний Telegram контакта больше не аккаунт
+            # клиента — иначе он получал бы уведомления, а из кабинета его не отключить.
+            after |= await _release_previous(session, previous_id, contact)
+        if identity.client_id != contact.client_id or identity.verified_at is None:
+            identity.verified_at, identity.verified_by_user_id = moment, None
+        # Уже подтверждённый менеджером Telegram этого клиента сохраняет `verified_by_user_id`.
+        identity.client_id = contact.client_id
+        contact.telegram_identity_id = identity.id
         if identity.lead_id is not None:
             lead = await session.get(Lead, identity.lead_id, with_for_update=True)
             if lead is not None and lead.client_id is None:
@@ -148,6 +160,8 @@ class ContactTelegramService:
                 "contact_id": contact.id,
                 "telegram_identity_id": identity.id,
                 "tg_user_id": tg_user_id,
+                "verified_by_user_id": identity.verified_by_user_id,
+                **after,
             },
         )
         await bus_events.contact_updated(session, contact, actor)
@@ -186,7 +200,7 @@ class ContactTelegramService:
             and identity.client_id == contact.client_id
             and not await _other_contact(session, identity.id, contact.id)
         ):
-            after |= await release_identity(session, identity, contact.client_id, actor)
+            after |= _release_telegram(identity)
         await audit.record(
             session,
             actor,
@@ -206,3 +220,30 @@ async def _other_contact(session: AsyncSession, identity_id: int, contact_id: in
         .limit(1)
     )
     return found is not None
+
+
+def _release_telegram(identity: TelegramIdentity) -> dict[str, object]:
+    """Отключение Telegram самим контактом: аккаунт больше не Telegram клиента (снимаются клиент и
+    подтверждение — бот не шлёт ему уведомления клиента, Mini App не входит). Лид этого Telegram,
+    его `client_id` и стадия **не меняются**: отключение уведомлений — не потеря клиента, и
+    повторное подключение возвращает всё как было (отвязка менеджером —
+    `ClientService.unlink_identity` — другое действие и откатывает стадию)."""
+    released: dict[str, object] = {
+        "tg_user_id": identity.tg_user_id,
+        "verified_by_user_id_before": identity.verified_by_user_id,
+    }
+    identity.client_id, identity.verified_at, identity.verified_by_user_id = None, None, None
+    return released
+
+
+async def _release_previous(
+    session: AsyncSession, identity_id: int, contact: ClientContact
+) -> dict[str, object]:
+    previous = await session.get(TelegramIdentity, identity_id, with_for_update=True)
+    if (
+        previous is None
+        or previous.client_id != contact.client_id
+        or await _other_contact(session, previous.id, contact.id)
+    ):
+        return {}
+    return {"released": _release_telegram(previous)}

@@ -181,7 +181,14 @@ class ClientService:
             identity = await _identity(session, tg_user_id)
             if identity.client_id != client_id:
                 raise NotFoundError("identity is not linked to this client")
-            after = await release_identity(session, identity, client_id, who.actor)
+            identity.client_id, identity.verified_at, identity.verified_by_user_id = (
+                None,
+                None,
+                None,
+            )
+            after: dict[str, Any] = {"tg_user_id": tg_user_id}
+            if identity.lead_id is not None:
+                after |= await _detach_lead(session, identity.lead_id, client_id, who)
             await audit.record(
                 session, who.actor, "client.unlink_telegram", "client", client_id, after=after
             )
@@ -437,23 +444,8 @@ def only_service_request(reason_codes: list[str] | None) -> bool:
     return bool(codes) and codes <= {TriggerCode.SERVICE_REQUEST.value}
 
 
-async def release_identity(
-    session: AsyncSession, identity: TelegramIdentity, client_id: int, actor: audit.Actor
-) -> dict[str, Any]:
-    """Telegram больше не принадлежит клиенту: снять клиента и подтверждение, лид без другого
-    подтверждённого Telegram
-    перестаёт быть клиентом (SPEC §7.3). Общая часть отвязки менеджером и отключения контактом из
-    кабинета (NOTIFY-1).
-    Возвращает, что изменилось (для аудита)."""
-    identity.client_id, identity.verified_at, identity.verified_by_user_id = None, None, None
-    after: dict[str, Any] = {"tg_user_id": identity.tg_user_id}
-    if identity.lead_id is not None:
-        after |= await _detach_lead(session, identity.lead_id, client_id, actor)
-    return after
-
-
 async def _detach_lead(
-    session: AsyncSession, lead_id: int, client_id: int, actor: audit.Actor
+    session: AsyncSession, lead_id: int, client_id: int, who: Principal
 ) -> dict[str, Any]:
     """Последний подтверждённый Telegram лида отвязан — лид больше не клиент (SPEC §7.3)."""
     still_linked = await session.scalar(
@@ -469,7 +461,7 @@ async def _detach_lead(
     if still_linked is not None or lead is None or lead.client_id != client_id:
         return {}
     lead.client_id = None
-    await bus_events.lead_updated(session, lead, actor, ["crm_client_id"])
+    await bus_events.lead_updated(session, lead, who.actor, ["crm_client_id"])
     changes: dict[str, Any] = {"lead_id": lead_id, "lead_client_cleared": True}
     if lead.stage == Stage.CUSTOMER:
         target = stage_after_unlink(await lead_parts.history(session, lead_id))
@@ -479,7 +471,7 @@ async def _detach_lead(
             target,
             TransitionSource.USER,
             reason="telegram unlinked from client",
-            actor_user_id=actor.user_id,
+            actor_user_id=who.user_id,
         )
         changes["stage"] = target.value
     await events.publish(session, "lead.updated", lead_id=lead_id)

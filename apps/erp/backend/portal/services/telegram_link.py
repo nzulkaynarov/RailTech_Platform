@@ -118,12 +118,25 @@ def _crm_contact_id(contact: Contact) -> Optional[int]:
 def telegram_status(contact: Contact) -> dict:
     """`TelegramStatus`: привязан ли (по проекции CRM) и можно ли выпустить ссылку (бот, сопряжение, сопоставление)."""
     available = bool(_bot_username()) and _crm_contact_id(contact) is not None and _pair_secret() is not None
-    return {"linked": bool(contact.telegram_user_id), "available": available}
+    linked = bool(contact.telegram_user_id)
+    return {"linked": linked, "available": available, "account": _account(contact) if linked else None}
+
+
+def _account(contact: Contact) -> Optional[str]:
+    """Какой аккаунт привязан: `@имя_пользователя` или имя профиля Telegram (проекция CRM)."""
+    username = (contact.telegram_username or "").strip().lstrip("@")
+    if username:
+        return f"@{username}"[:255]
+    return (getattr(contact, "telegram_name", "") or "").strip()[:255] or None
 
 
 def issue_telegram_link(contact: Contact, now: Optional[datetime] = None) -> TelegramLink:
-    """Ссылка привязки для контакта сессии. Нет сопоставления с CRM — 422 `CONTACT_NOT_IN_CRM`; нет бота или секрета пары —
+    """Ссылка привязки для контакта сессии. Уже привязан — 409 `TELEGRAM_ALREADY_LINKED`; нет сопоставления с CRM — 422
+    `CONTACT_NOT_IN_CRM`; нет бота или секрета пары —
     503 `TELEGRAM_LINK_UNAVAILABLE` (ни то ни другое не 500)."""
+    if contact.telegram_user_id:
+        # Сначала «Отвязать»: молча сменённый аккаунт оставил бы прежний подтверждённым Telegram клиента.
+        raise PortalConflict("TELEGRAM_ALREADY_LINKED")
     crm_contact_id = _crm_contact_id(contact)
     if crm_contact_id is None:
         raise PortalValidationError("CONTACT_NOT_IN_CRM")

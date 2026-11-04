@@ -22,6 +22,7 @@ from app.repositories import leads as repo
 from app.services.contact_telegram import UNLINK_REQUESTED, ContactTelegramService
 from app.services.contact_telegram_test import TEST_REQUESTED, TelegramTestDelivery
 from app.services.start_links import StartLinkService
+from tests.integration.crm_helpers import make_user
 from tests.unit.test_contact_link import BEFORE, PAIR_SECRET, token
 
 pytestmark = pytest.mark.integration
@@ -132,6 +133,7 @@ async def test_valid_link_binds_telegram_without_a_manager_and_tells_erp(
     (event,) = await published(sessions, CONTACT_UPDATED)
     assert event["contact"]["crm_contact_id"] == contact_id
     assert event["contact"]["telegram_user_id"] == USER
+    assert event["contact"]["telegram_name"] == "Азамат", "кабинет покажет, какой аккаунт привязан"
 
 
 async def test_bot_start_routes_the_contact_link_to_the_binding(
@@ -253,6 +255,42 @@ async def test_telegram_of_a_colleague_contact_is_not_moved_silently(
     assert (await contact_row(sessions, second_id)).telegram_identity_id is None
 
 
+async def test_relinking_with_another_telegram_releases_the_previous_one(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    await chat(sessions, OTHER_USER)
+    client_id, contact_id = await contact(sessions)
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+
+    texts = await service.bind(OTHER_USER, token(contact=contact_id, nonce=b"\x02" * 9), BEFORE)
+
+    assert texts == [client_texts.contact_link_bound("uz", "ООО Альфа")]
+    previous, current = await identity(sessions, USER), await identity(sessions, OTHER_USER)
+    assert (previous.client_id, previous.verified_at) == (None, None), (
+        "прежний — не аккаунт клиента"
+    )
+    assert current.client_id == client_id
+    assert (await contact_row(sessions, contact_id)).telegram_identity_id == current.id
+
+
+async def test_self_link_keeps_the_managers_confirmation(
+    sessions: async_sessionmaker[AsyncSession], service: ContactTelegramService
+) -> None:
+    await chat(sessions, USER)
+    client_id, contact_id = await contact(sessions)
+    manager, _ = await make_user(sessions, "manager@alfa.example", ["manager"])
+    async with sessions() as session, session.begin():
+        found = await repo.get_identity(session, USER)
+        assert found is not None
+        found.client_id, found.verified_at = client_id, datetime.now(UTC)
+        found.verified_by_user_id = manager.id
+
+    await service.bind(USER, token(contact=contact_id), BEFORE)
+
+    assert (await identity(sessions, USER)).verified_by_user_id == manager.id
+
+
 # ── отключение по запросу ERP ────────────────────────────────────────────────────────
 
 
@@ -281,6 +319,10 @@ async def test_unlink_request_releases_telegram_once_and_publishes_the_snapshot(
     lead_id = await chat(sessions, USER)
     client_id, contact_id = await contact(sessions)
     await service.bind(USER, token(contact=contact_id), BEFORE)
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        lead.stage = "customer"
 
     for _ in range(2):  # повтор события — без второго эффекта
         async with sessions() as session, session.begin():
@@ -292,7 +334,8 @@ async def test_unlink_request_releases_telegram_once_and_publishes_the_snapshot(
     async with sessions() as session:
         lead = await session.get(Lead, lead_id)
         assert lead is not None
-        assert lead.client_id is None
+        # Отключение уведомлений — не потеря клиента: воронка не меняется.
+        assert (lead.client_id, lead.stage) == (client_id, "customer")
     bound, unlinked = await published(sessions, CONTACT_UPDATED)
     assert bound["contact"]["telegram_user_id"] == USER
     assert unlinked["contact"]["telegram_user_id"] is None

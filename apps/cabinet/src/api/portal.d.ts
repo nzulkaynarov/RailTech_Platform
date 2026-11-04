@@ -880,7 +880,7 @@ export interface components {
          * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
          * @enum {string}
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "CONTACT_NOT_IN_CRM" | "TELEGRAM_LINK_UNAVAILABLE" | "TELEGRAM_NOT_LINKED" | "XLSX_REQUIRED" | "VALID_DATE_INVALID" | "OFFER_VALIDITY_RANGE_INVALID" | "PRODUCT_NOT_SUBMITTABLE" | "OFFER_EXPIRED" | "IMPORT_FAILED";
+        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "CONTACT_NOT_IN_CRM" | "TELEGRAM_LINK_UNAVAILABLE" | "TELEGRAM_NOT_LINKED" | "TELEGRAM_ALREADY_LINKED" | "XLSX_REQUIRED" | "VALID_DATE_INVALID" | "OFFER_VALIDITY_RANGE_INVALID" | "PRODUCT_NOT_SUBMITTABLE" | "OFFER_EXPIRED" | "IMPORT_FAILED";
         /**
          * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
          *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
@@ -1143,6 +1143,8 @@ export interface components {
         TelegramStatus: {
             /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
             linked: boolean;
+            /** @description Какой аккаунт привязан — `@имя_пользователя` или имя профиля Telegram (из проекции CRM); `null` — Telegram не привязан или CRM не прислала имени. Защита от пересланной ссылки: человек видит, чей Telegram получает коды акцепта и входит в Mini App */
+            account?: string | null;
             /** @description Можно ли выпустить ссылку привязки: бот настроен и контакт сопоставлен с CRM. `false` — Cabinet не предлагает «Подключить» (плашку не показывает, в Профиле — подсказка написать менеджеру) */
             available: boolean;
         };
@@ -1991,6 +1993,15 @@ export interface operations {
             };
             400: components["responses"]["IdempotencyKeyRequired"];
             401: components["responses"]["Unauthorized"];
+            /** @description Telegram уже привязан (`TELEGRAM_ALREADY_LINKED`): сначала «Отвязать» — иначе прежний аккаунт остался бы подтверждённым Telegram клиента */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             415: components["responses"]["UnsupportedMediaType"];
             /** @description Контакт ещё не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`): привязать Telegram сейчас нельзя, поможет менеджер */
             422: {

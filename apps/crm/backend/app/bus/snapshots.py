@@ -140,17 +140,33 @@ async def client_snapshot(session: AsyncSession, client: Client) -> dict[str, An
     }
 
 
-async def _telegram_user_id(session: AsyncSession, identity_id: int | None) -> int | None:
+async def _telegram(
+    session: AsyncSession, identity_id: int | None
+) -> tuple[int | None, str | None, str | None]:
+    """Telegram контакта: id, имя пользователя без @ и имя профиля (NOTIFY-1: кабинет показывает,
+    какой аккаунт привязан)."""
     if identity_id is None:
-        return None
-    return await session.scalar(
-        select(TelegramIdentity.tg_user_id).where(TelegramIdentity.id == identity_id)
-    )
+        return None, None, None
+    row = (
+        await session.execute(
+            select(
+                TelegramIdentity.tg_user_id,
+                TelegramIdentity.tg_username,
+                TelegramIdentity.tg_first_name,
+            ).where(TelegramIdentity.id == identity_id)
+        )
+    ).first()
+    if row is None:
+        return None, None, None
+    return int(row[0]), clip((row[1] or "").lstrip("@"), 64), clip(row[2], 255)
 
 
 async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dict[str, Any]:
     erp_company_id = await session.scalar(
         select(Client.erp_company_id).where(Client.id == contact.client_id)
+    )
+    telegram_user_id, telegram_username, telegram_name = await _telegram(
+        session, contact.telegram_identity_id
     )
     snapshot: dict[str, Any] = {
         "crm_contact_id": contact.id,
@@ -160,10 +176,15 @@ async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dic
         "position": clip(contact.position, 255),
         "phone_e164": clean_phone(contact.phone_e164),
         "email": clean_email(contact.email),
-        "telegram_user_id": await _telegram_user_id(session, contact.telegram_identity_id),
+        "telegram_user_id": telegram_user_id,
         "is_primary": bool(contact.is_primary),
         "updated_at": utc(await fresh_updated_at(session, ClientContact, contact.id)),
     }
+    # Какой аккаунт привязан (NOTIFY-1): кабинет показывает контакту; без значения поле не шлём.
+    if telegram_username:
+        snapshot["telegram_username"] = telegram_username
+    if telegram_name:
+        snapshot["telegram_name"] = telegram_name
     if contact.preferred_channel:
         # Предпочитаемый канал (D1-9): ERP берёт его при приглашении в кабинет; без выбора поле не
         # шлём.

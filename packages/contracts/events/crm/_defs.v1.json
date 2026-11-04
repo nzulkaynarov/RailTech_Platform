@@ -196,6 +196,22 @@
           ],
           "description": "Telegram контакта (вход в Cabinet, доставка кода акцепта ботом CRM); null — Telegram не привязан"
         },
+        "telegram_username": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Имя пользователя Telegram без @ (NOTIFY-1): кабинет показывает контакту, какой аккаунт привязан; null — нет имени или Telegram не привязан"
+        },
+        "telegram_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Имя в профиле Telegram (NOTIFY-1), когда нет имени пользователя; null — неизвестно или Telegram не привязан"
+        },
         "is_primary": {
           "type": "boolean",
           "description": "Основной контакт клиента (не более одного)"

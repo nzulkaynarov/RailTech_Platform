@@ -917,6 +917,7 @@ export interface components {
       | "CONTACT_NOT_IN_CRM"
       | "TELEGRAM_LINK_UNAVAILABLE"
       | "TELEGRAM_NOT_LINKED"
+      | "TELEGRAM_ALREADY_LINKED"
       | "XLSX_REQUIRED"
       | "VALID_DATE_INVALID"
       | "OFFER_VALIDITY_RANGE_INVALID"
@@ -1213,6 +1214,8 @@ export interface components {
     TelegramStatus: {
       /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
       linked: boolean;
+      /** @description Какой аккаунт привязан — `@имя_пользователя` или имя профиля Telegram (из проекции CRM); `null` — Telegram не привязан или CRM не прислала имени. Защита от пересланной ссылки: человек видит, чей Telegram получает коды акцепта и входит в Mini App */
+      account?: string | null;
       /** @description Можно ли выпустить ссылку привязки: бот настроен и контакт сопоставлен с CRM. `false` — Cabinet не предлагает «Подключить» (плашку не показывает, в Профиле — подсказка написать менеджеру) */
       available: boolean;
     };
@@ -2087,6 +2090,15 @@ export interface operations {
       };
       400: components["responses"]["IdempotencyKeyRequired"];
       401: components["responses"]["Unauthorized"];
+      /** @description Telegram уже привязан (`TELEGRAM_ALREADY_LINKED`): сначала «Отвязать» — иначе прежний аккаунт остался бы подтверждённым Telegram клиента */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       415: components["responses"]["UnsupportedMediaType"];
       /** @description Контакт ещё не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`): привязать Telegram сейчас нельзя, поможет менеджер */
       422: {

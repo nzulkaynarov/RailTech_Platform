@@ -52,6 +52,14 @@ def linkable(settings, monkeypatch, client_company, client_contact, other_compan
     bus_support.reset()
 
 
+@pytest.fixture
+def unlinked(client_contact, other_contact, readonly_contact):
+    """Контакты ещё без Telegram: ссылку выпускают только им (у привязанного — 409)."""
+    for contact in (client_contact, other_contact, readonly_contact):
+        contact.telegram_user_id, contact.telegram_username = None, ""
+        contact.save(update_fields=["telegram_user_id", "telegram_username"])
+
+
 # ── формат токена ────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -79,7 +87,7 @@ def test_every_token_is_new_and_the_biggest_contact_id_still_fits():
 # ── POST /me/telegram-link ───────────────────────────────────────────────────────────────────────────
 
 
-def test_contact_session_gets_a_15_minute_link_for_its_own_crm_contact(linkable, portal_client):
+def test_contact_session_gets_a_15_minute_link_for_its_own_crm_contact(linkable, unlinked, portal_client):
     before = datetime.now(timezone.utc)
 
     res = portal_client.post(LINK, {}, format="json")
@@ -96,7 +104,7 @@ def test_contact_session_gets_a_15_minute_link_for_its_own_crm_contact(linkable,
     assert timedelta(minutes=14) < expires_at - before <= timedelta(minutes=15, seconds=10)
 
 
-def test_company_b_session_never_gets_a_token_for_company_a_contact(linkable, other_portal_client):
+def test_company_b_session_never_gets_a_token_for_company_a_contact(linkable, unlinked, other_portal_client):
     res = other_portal_client.post(LINK, {}, format="json")
 
     assert res.status_code == status.HTTP_201_CREATED
@@ -104,7 +112,7 @@ def test_company_b_session_never_gets_a_token_for_company_a_contact(linkable, ot
 
 
 def test_contact_without_the_right_to_act_can_still_connect_telegram(
-    linkable, readonly_contact, readonly_portal_client
+    linkable, unlinked, readonly_contact, readonly_portal_client
 ):
     CrmContactMapping.objects.create(contact=readonly_contact, crm_contact_id=60)
 
@@ -114,7 +122,7 @@ def test_contact_without_the_right_to_act_can_still_connect_telegram(
     assert _decode(res.data["url"].split("start=", 1)[1])[2] == 60
 
 
-def test_contact_not_mapped_to_crm_gets_a_code_not_a_500(linkable, readonly_portal_client):
+def test_contact_not_mapped_to_crm_gets_a_code_not_a_500(linkable, unlinked, readonly_portal_client):
     res = readonly_portal_client.post(LINK, {}, format="json")
 
     assert res.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -122,7 +130,9 @@ def test_contact_not_mapped_to_crm_gets_a_code_not_a_500(linkable, readonly_port
 
 
 @pytest.mark.parametrize("missing", ["bot", "pair_secret"])
-def test_without_bot_or_crm_pairing_the_link_is_unavailable(linkable, settings, monkeypatch, portal_client, missing):
+def test_without_bot_or_crm_pairing_the_link_is_unavailable(
+    linkable, unlinked, settings, monkeypatch, portal_client, missing
+):
     import integration.bus
 
     if missing == "bot":
@@ -143,16 +153,31 @@ def test_link_and_status_need_a_portal_session(linkable, anon_portal_client):
     assert anon_portal_client.delete(STATUS).status_code == status.HTTP_401_UNAUTHORIZED
 
 
+def test_already_linked_contact_must_unlink_before_a_new_link(linkable, portal_client):
+    """Новый токен при привязанном Telegram — 409: иначе прежний аккаунт остался бы Telegram клиента."""
+    res = portal_client.post(LINK, {}, format="json")
+
+    assert res.status_code == status.HTTP_409_CONFLICT
+    assert res.data == {"detail": "TELEGRAM_ALREADY_LINKED"}
+
+
+def test_status_shows_which_account_is_linked_username_or_profile_name(linkable, portal_client, client_contact):
+    client_contact.telegram_username, client_contact.telegram_name = "", "Азамат"
+    client_contact.save(update_fields=["telegram_username", "telegram_name"])
+
+    assert portal_client.get(STATUS).data["account"] == "Азамат"
+
+
 # ── GET и DELETE /me/telegram ────────────────────────────────────────────────────────────────────────
 
 
 def test_status_follows_the_crm_projection(linkable, portal_client, client_contact):
-    assert portal_client.get(STATUS).data == {"linked": True, "available": True}
+    assert portal_client.get(STATUS).data == {"linked": True, "available": True, "account": "@azamat_client"}
 
     client_contact.telegram_user_id = None
     client_contact.save(update_fields=["telegram_user_id"])
 
-    assert portal_client.get(STATUS).data == {"linked": False, "available": True}
+    assert portal_client.get(STATUS).data == {"linked": False, "available": True, "account": None}
 
 
 def test_unlink_asks_crm_through_the_outbox_and_leaves_the_field_to_the_projection(
@@ -222,10 +247,14 @@ def test_projection_from_the_bot_binding_lets_the_mini_app_in(
         "crm_client_id": 42,
         "full_name": readonly_contact.name,
         "telegram_user_id": 700000001,
+        "telegram_username": "new_account",
+        "telegram_name": "Сардор",
         "is_primary": False,
         "updated_at": "2026-11-04T07:05:00Z",
     }
     assert projections.apply_contact_snapshot({"contact": snapshot}).applied
+    readonly_contact.refresh_from_db()
+    assert (readonly_contact.telegram_username, readonly_contact.telegram_name) == ("new_account", "Сардор")
 
     res = anon_portal_client.post("/api/portal/v1/auth/telegram", {"init_data": init_data}, format="json")
     assert res.status_code == status.HTTP_200_OK
@@ -234,7 +263,7 @@ def test_projection_from_the_bot_binding_lets_the_mini_app_in(
     unlinked = {**snapshot, "telegram_user_id": None, "updated_at": "2026-11-04T07:10:00Z"}
     assert projections.apply_contact_snapshot({"contact": unlinked}).applied
     readonly_contact.refresh_from_db()
-    assert readonly_contact.telegram_user_id is None
+    assert (readonly_contact.telegram_user_id, readonly_contact.telegram_name) == (None, "")
 
 
 # ── письма ───────────────────────────────────────────────────────────────────────────────────────────

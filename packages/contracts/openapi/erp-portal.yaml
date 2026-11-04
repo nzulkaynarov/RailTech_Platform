@@ -439,6 +439,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: >-
+            Telegram уже привязан (`TELEGRAM_ALREADY_LINKED`): сначала «Отвязать» — иначе прежний аккаунт остался бы
+            подтверждённым Telegram клиента
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
         '503':
@@ -1854,6 +1862,7 @@ components:
         - CONTACT_NOT_IN_CRM
         - TELEGRAM_LINK_UNAVAILABLE
         - TELEGRAM_NOT_LINKED
+        - TELEGRAM_ALREADY_LINKED
         - XLSX_REQUIRED
         - VALID_DATE_INVALID
         - OFFER_VALIDITY_RANGE_INVALID
@@ -2512,6 +2521,13 @@ components:
         linked:
           type: boolean
           description: Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма
+        account:
+          type: [string, 'null']
+          maxLength: 255
+          description: >-
+            Какой аккаунт привязан — `@имя_пользователя` или имя профиля Telegram (из проекции CRM); `null` — Telegram не
+            привязан или CRM не прислала имени. Защита от пересланной ссылки: человек видит, чей Telegram получает коды
+            акцепта и входит в Mini App
         available:
           type: boolean
           description: >-

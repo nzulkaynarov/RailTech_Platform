@@ -43,6 +43,15 @@ class ContactLink:
     nonce: str  # hex, 18 символов: ключ одноразовости
 
 
+_ANY_TOKEN: Final = re.compile(r"tg_[A-Za-z0-9_-]{48}")
+
+
+def mask_tokens(text: str) -> str:
+    """Текст для хранения и показа менеджеру: токены привязки заменены на `tg_***` (непогашенный
+    токен в переписке позволил бы сотруднику привязать к контакту свой Telegram)."""
+    return _ANY_TOKEN.sub("tg_***", text)
+
+
 def looks_like(raw: str | None) -> bool:
     """Похоже ли на токен привязки (по форме, без проверки подписи) — для разбора `/start`."""
     return bool(_TOKEN.fullmatch((raw or "").strip()))
