@@ -18,8 +18,8 @@ from portal.models import MagicLinkToken, PortalMessage, PortalRequestLine, Port
 from portal.services.tokens import hash_token
 from portal.tests.documents_world import build_document_fixtures
 
-from catalog.models import Category, Product, ProductStatus
-from core.models import Currency
+from catalog.models import Category, Manufacturer, Product, ProductStatus, TechDocument
+from core.models import Country, Currency
 from crm.constants import (
     ActStatusCode,
     ContractStatusCode,
@@ -137,9 +137,34 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         list_price=Decimal("450000"),
         list_price_currency=uzs,
         price_visibility="cabinet",
+        brand=Manufacturer.objects.create(
+            name="Beispiel GmbH", country=Country.objects.get_or_create(code="DE", defaults={"name": "Германия"})[0]
+        ),
+        manufacturer_part_number="PIPE-89-4-ST20",
+        warranty_months=12,
+        warranty_terms="Гарантия на заводской брак",
     )
+    # Карточка в кабинете: действующий документ «видно клиенту» (CAT-CARD-2) — схема детальной карточки проверяется с ним.
+    certificate = TechDocument(
+        kind="certificate",
+        title="Сертификат соответствия",
+        number="N-1",
+        issued_by="Орган по сертификации",
+        client_visible=True,
+        original_name="scan.pdf",
+        content_type="application/pdf",
+        product=product,
+    )
+    certificate.file.save("scan.pdf", ContentFile(b"%PDF-1.4 fake"), save=False)
+    certificate.save()
 
-    world: dict = {"uzs": uzs, "product": product, "company": client_company, "contact": client_contact}
+    world: dict = {
+        "uzs": uzs,
+        "product": product,
+        "certificate": certificate,
+        "company": client_company,
+        "contact": client_contact,
+    }
 
     # ── Запросы: четыре статуса и три источника ────────────────────────────────────────────────
     new_deal = Deal.objects.create(

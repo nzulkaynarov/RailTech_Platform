@@ -651,6 +651,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/catalog/{id}/documents/{doc_id}/file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2). */
+        get: operations["api_portal_v1_catalog_documents_file_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/catalog/{id}/documents/{doc_id}/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /catalog/{id}/documents/{doc_id}/file — файл документа карточки: поток и запись аудита (CAT-CARD-2). */
+        get: operations["api_portal_v1_catalog_documents_file_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/catalog/categories": {
         parameters: {
             query?: never;
@@ -16461,6 +16495,10 @@ export interface components {
             lead_time_days?: number | null;
             images: string[];
             attributes: components["schemas"]["_Attribute"][];
+            manufacturer: components["schemas"]["_Manufacturer"] | null;
+            manufacturer_part_number: string | null;
+            country_of_origin: string | null;
+            warranty: components["schemas"]["_Warranty"] | null;
         };
         PurchaseActualRequest: {
             /** @description Валюта себестоимости строк опорного КП (или UZS). */
@@ -18518,6 +18556,10 @@ export interface components {
             name: string;
             value: string;
         };
+        _Manufacturer: {
+            name: string;
+            country: string | null;
+        };
         _Money: {
             amount: string;
             currency: string;
@@ -18535,6 +18577,10 @@ export interface components {
             reason: components["schemas"]["ReasonEnum"];
             /** @description Текст ошибки Django (до 300 символов) */
             message: string;
+        };
+        _Warranty: {
+            months: number;
+            terms: string;
         };
         /** @description Отказ ERP: `detail` — код ошибки (`UPPER_SNAKE`, например `REASON_REQUIRED`; допустимые коды операции перечислены в описании ответа) или английская фраза DRF для ошибок авторизации и лимитов. `message` — текст для человека, если ERP его присылает. */
         ErrorDetail: {
@@ -19278,6 +19324,48 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_catalog_documents_file_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: number;
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_catalog_documents_file_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                doc_id: number;
                 id: number;
             };
             cookie?: never;

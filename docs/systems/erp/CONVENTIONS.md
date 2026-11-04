@@ -160,6 +160,16 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   `CatalogItem` контракта портала **белым списком** (`CATALOG_ITEM_KEYS`), `project_many()` — пачкой,
   `published_products()` — queryset без N+1. Портал (M2-ERP-01), интеграционный поиск и `erp-mcp` (M3) отдают
   каталог только через него; режим `lead` — без цены, наличия и срока.
+- **Карточка товара клиенту (CAT-CARD-2).** В каждой проекции — `manufacturer {name, country}` (бренд), `manufacturer_part_number`
+  (MPN, не артикул продавца и не артикул поставщика), `country_of_origin` (своя у товара, иначе страна бренда) и `warranty
+  {months, terms}` (свой срок товара, иначе срок компании `CompanySettings.default_warranty_months`; `null`, если нигде нет или 0
+  — «без гарантии»). `documents` — только `project(..., with_documents=True)` (детальная карточка портала): `TechDocument` с
+  «видно клиенту» и действующие (`valid_until` пусто или не раньше сегодня — как «Сертификаты номенклатуры» 1С), без файла,
+  имени загруженного файла и размера. Файл — `GET /catalog/{id}/documents/{doc_id}/file` (`portal/services/catalog_documents.py`):
+  потоком из приватного хранилища, 404 одинаковый для скрытого, просроченного, чужого и несуществующего документа и для
+  неопубликованной карточки; имя файла — из `title` + расширение хранимого файла, `original_name` (в нём бывает поставщик)
+  клиенту не уходит; аудит — `ActivityLog` `document.downloaded_by_client` с `source: catalog`, `entity_type: tech_document`.
+  Интеграционный поиск и MCP получают изготовителя, артикул и страну; документов там нет.
 - **Политика**: на карточке `price_visibility` (`cabinet` / `on_request` / пусто = политика компании),
   `list_price` + `list_price_currency` (цена-витрина, не себестоимость), `fulfillment_policy` у услуг
   (`fixed` / `milestones` / `time`; у товара пусто, нормализует `Product.save`). Политика компании —

@@ -600,6 +600,26 @@ class CatalogCategorySerializer(serializers.Serializer):
     count = serializers.IntegerField()
 
 
+class CatalogManufacturerSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    country = serializers.CharField(allow_null=True)
+
+
+class CatalogWarrantySerializer(serializers.Serializer):
+    months = serializers.IntegerField(min_value=1)
+    terms = serializers.CharField(allow_blank=True)
+
+
+class CatalogItemDocumentSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    kind_name = serializers.CharField()
+    title = serializers.CharField()
+    number = serializers.CharField(allow_blank=True)
+    issued_by = serializers.CharField(allow_blank=True)
+    issued_at = serializers.DateField(allow_null=True)
+    valid_until = serializers.DateField(allow_null=True)
+
+
 class CatalogItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     kind = serializers.ChoiceField(choices=["goods", "service"])
@@ -613,6 +633,12 @@ class CatalogItemSerializer(serializers.Serializer):
     lead_time_days = serializers.IntegerField(allow_null=True)
     images = serializers.ListField(child=serializers.CharField(), default=list)
     attributes = AttributeItemSerializer(many=True, default=list)
+    manufacturer = CatalogManufacturerSerializer(allow_null=True, required=False)
+    manufacturer_part_number = serializers.CharField(allow_null=True, required=False)
+    country_of_origin = serializers.CharField(allow_null=True, required=False)
+    warranty = CatalogWarrantySerializer(allow_null=True, required=False)
+    # Только в детальной карточке: в списке ключа нет (проекция не кладёт его без `with_documents`).
+    documents = CatalogItemDocumentSerializer(many=True, required=False)
 
 
 class CatalogPageSerializer(serializers.Serializer):
