@@ -217,7 +217,11 @@ def project_cards(company, products: list) -> list[dict]:
             items.append(
                 {
                     "id": product.pk,
-                    "name": my_offer.supplier_item_name or my_offer.supplier_sku or "—",
+                    # Старые предложения без названия строки: бренд и артикул, но не название чужой карточки
+                    "name": my_offer.supplier_item_name
+                    or " ".join(filter(None, (my_offer.supplier_brand, my_offer.supplier_mpn)))
+                    or my_offer.supplier_sku
+                    or "—",
                     "brand": my_offer.supplier_brand or None,
                     "manufacturer_part_number": my_offer.supplier_mpn,
                     "category": None,

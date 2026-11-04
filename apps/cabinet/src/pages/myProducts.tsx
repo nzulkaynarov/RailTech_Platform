@@ -27,6 +27,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useUrlParams } from '@/hooks/useUrlParams';
 import { pageCount, parsePage } from '@/lib/catalog';
 import { downloadTemplate } from '@/lib/priceList';
 import { toast } from '@/lib/toast';
@@ -71,7 +72,7 @@ async function collectIds(status: 'draft'): Promise<number[]> {
  */
 export function MyProductsPage() {
   const { t } = useTranslation();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const tab = parseTab(params.get('tab'));
   const q = params.get('q') ?? '';
   const page = parsePage(params.get('page'));
@@ -88,35 +89,17 @@ export function MyProductsPage() {
   const query = usePartnerProducts({ status: tabStatus(tab), q: q || undefined, page, page_size: PARTNER_PAGE_SIZE });
   const data = query.data;
 
+  const patchUrl = useUrlParams();
   const update = (patch: Record<string, string | null>) => {
     setSelected(new Set());
-    setParams(
-      (current) => {
-        const copy = new URLSearchParams(current);
-        for (const [key, value] of Object.entries(patch)) {
-          if (value) copy.set(key, value);
-          else copy.delete(key);
-        }
-        return copy;
-      },
-      { replace: true },
-    );
+    patchUrl(patch);
   };
 
   const items = data?.items ?? [];
   const { submit: submitIds, confirm: confirmIds } = splitSelection(items, selected);
   const total = data?.total ?? 0;
   const pages = pageCount(total, PARTNER_PAGE_SIZE);
-  const openCard = (id: number | null) =>
-    setParams(
-      (current) => {
-        const copy = new URLSearchParams(current);
-        if (id) copy.set('card', String(id));
-        else copy.delete('card');
-        return copy;
-      },
-      { replace: true },
-    );
+  const openCard = (id: number | null) => patchUrl({ card: id ? String(id) : null });
 
   const askSubmit = (ids: number[]) => {
     submit.reset();

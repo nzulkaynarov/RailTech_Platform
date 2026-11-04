@@ -382,7 +382,20 @@ def _find_by_own_offer(ctx: _Ctx, fields: dict, supplier_sku: str):
     offers = ctx.SupplierOffer.objects.filter(supplier=ctx.supplier).select_related("product__domain_type")
     match = offers.filter(supplier_sku__iexact=supplier_sku).first() if supplier_sku else None
     if match is None:
-        match = offers.filter(product__name__iexact=fields["name"]).order_by("id").first()
+        by_card_name = offers.filter(product__name__iexact=fields["name"]).order_by("id")
+        if ctx.contact is not None:
+            # Загрузка из кабинета (PART-2): название чужой неопубликованной карточки угадывать нельзя — совпадение по нему
+            # было бы подсказкой «такая карточка есть» (счётчики, цена не дописывается). По названию карточки ищем только
+            # свои и опубликованные; скрытую — лишь по тому, что партнёр прислал сам (`supplier_item_name`).
+            from django.db.models import Q
+
+            own_or_published = Q(product__source_supplier_id=ctx.supplier.pk) | Q(product__status__code="PUBLISHED")
+            by_card_name = by_card_name.filter(own_or_published)
+            match = (
+                by_card_name.first() or offers.filter(supplier_item_name__iexact=fields["name"]).order_by("id").first()
+            )
+        else:
+            match = by_card_name.first()
     return match.product if match else None
 
 

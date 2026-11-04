@@ -59,6 +59,8 @@ describe('Мои товары: список', () => {
     expect(router.state.location.search).toBe('?tab=returned');
     await waitFor(() => expect(within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem')).toHaveLength(1));
     await user.click(screen.getByRole('button', { name: 'Все 8' }));
+    // вкладка применилась — только потом поиск (быстрые действия подряд покрывает тест «два действия подряд» ниже)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Все 8' })).toHaveAttribute('aria-pressed', 'true'));
     await user.type(screen.getByRole('searchbox'), 'гайка{Enter}');
     await waitFor(() => expect(decodeURIComponent(router.state.location.search)).toContain('q=гайка'));
     await waitFor(() => {
@@ -68,6 +70,25 @@ describe('Мои товары: список', () => {
       expect(within(rows[0]).getByText('Гайка М12')).toBeInTheDocument();
     });
     expect(router.state.location.search).toContain('q=');
+  });
+
+  it('два быстрых действия подряд — вкладка и поиск — не затирают друг друга в адресе', async () => {
+    const user = userEvent.setup();
+    const { router } = await open();
+    await screen.findByRole('button', { name: 'Возвращены 1' });
+    // без ожидания между действиями: так нажимает человек; раньше второе обновление адреса теряло первое
+    await user.click(screen.getByRole('button', { name: 'Возвращены 1' }));
+    await user.type(screen.getByRole('searchbox'), 'кабель{Enter}');
+    await waitFor(() => {
+      const search = new URLSearchParams(router.state.location.search);
+      expect(search.get('tab')).toBe('returned');
+      expect(search.get('q')).toBe('кабель');
+    });
+    await waitFor(() => {
+      const rows = within(screen.getByRole('list', { name: 'Мои карточки' })).getAllByRole('listitem');
+      expect(rows).toHaveLength(1);
+      expect(within(rows[0]).getByText('Кабель силовой 3×2,5')).toBeInTheDocument();
+    });
   });
 
   it('чужую карточку с моей ценой можно выбрать только для подтверждения цены, на проверку — нельзя', async () => {

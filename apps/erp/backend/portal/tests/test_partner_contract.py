@@ -42,17 +42,24 @@ def test_list_and_detail_match_the_contract(partner_world):
             assert_matches(response.json(), "/partner/products/{id}")
 
 
-def test_every_review_decision_is_reachable_in_history(partner_world):
+def test_every_review_decision_of_the_contract_is_reachable_and_valid_in_history(partner_world):
+    """Решения истории сверяются с enum контракта, как статусы: каждое достижимо из модели, детальная — по схеме."""
     from catalog.models import ProductReview
 
     w = partner_world
     ProductReview.objects.create(product=w["cards"]["published"], decision="published")
+    ProductReview.objects.create(product=w["cards"]["draft"], decision="cancelled")
+    # значения модели и контракта совпадают: добавили решение в одном месте — тест краснеет, пока нет другого
+    model_values = {value for value, _label in ProductReview.Decision.choices}
+    contract_values = set(component("PartnerReviewEntry")["properties"]["decision"]["enum"])
+    assert model_values == contract_values
     decisions = set()
     for card in w["cards"].values():
         response = w["client_a"].get(f"{PREFIX}/products/{card.pk}")
         if response.status_code == 200:
+            assert_matches(response.json(), "/partner/products/{id}")
             decisions |= {h["decision"] for h in response.json()["history"]}
-    assert decisions == {"pending", "published", "returned"}
+    assert decisions == contract_values
 
 
 def test_submit_and_confirm_match_the_contract(partner_world):

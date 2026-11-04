@@ -104,6 +104,70 @@ class TestForeignDraftIsNotRevealed:
         assert item["status"] == "published" and item["name"] == "Деталь Б-2 в работе"
 
 
+class TestRowWithoutKeysDoesNotGuessForeignName:
+    """Строка без артикула, бренда+MPN и ГОСТ: скрытую чужую карточку по её названию не находим (подсказка «такая есть»)."""
+
+    def _keyless(self, name):
+        return {"Наименование": name, "Цена": "77.00", "Валюта": "USD"}
+
+    def _counts(self, w, name, dry):
+        task_id = upload(w["client_a"], xlsx([self._keyless(name)]), dry_run=dry).json()["task_id"]
+        result = report(w["client_a"], task_id)["report"]
+        return {k: result[k] for k in ("created", "updated", "offers_created", "offers_updated", "proposal_count")}
+
+    def test_right_and_wrong_foreign_name_give_the_same_counts_and_keep_the_price(self, partner_world, broker):
+        w = partner_world
+        card = w["cards"]["b_draft_with_a_offer"]
+        right, wrong = "Деталь Б-2 в работе", "Совсем другое название"
+        before = SupplierOffer.objects.get(product=card, supplier=w["a"])
+        for dry in ("true", "false"):
+            assert (
+                self._counts(w, right, dry)
+                == self._counts(w, wrong, dry)
+                == {
+                    "created": 1,
+                    "updated": 0,
+                    "offers_created": 1,
+                    "offers_updated": 0,
+                    "proposal_count": 0,
+                }
+            )
+        # ни dry_run, ни запись не нашли чужую карточку по названию: её цена А не тронута, лишняя карточка заведена отдельно
+        after = SupplierOffer.objects.get(product=card, supplier=w["a"])
+        assert (after.base_price, after.supplier_item_name) == (before.base_price, before.supplier_item_name)
+        assert Product.objects.filter(name__in=[right, wrong], source_supplier=w["a"]).count() == 2
+
+    def test_own_row_name_still_matches_the_hidden_card(self, partner_world, broker):
+        """По тому, что партнёр прислал сам (`supplier_item_name`), повторная загрузка находит своё предложение."""
+        w = partner_world
+        task_id = upload(w["client_a"], xlsx([self._keyless("Моя деталь Б-2")]), dry_run="false").json()["task_id"]
+        result = report(w["client_a"], task_id)["report"]
+        assert (result["created"], result["updated"], result["offers_updated"]) == (0, 1, 1)
+        offer = SupplierOffer.objects.get(product=w["cards"]["b_draft_with_a_offer"], supplier=w["a"])
+        assert offer.base_price == 77
+
+    def test_own_and_published_cards_are_still_found_by_card_name(self, partner_world, broker):
+        w = partner_world
+        task_id = upload(w["client_a"], xlsx([self._keyless("Болт А-1")]), dry_run="true").json()["task_id"]
+        assert report(w["client_a"], task_id)["report"]["updated"] == 1
+        task_id = upload(w["client_a"], xlsx([self._keyless("Общая деталь")]), dry_run="true").json()["task_id"]
+        assert report(w["client_a"], task_id)["report"]["updated"] == 1
+
+    def test_old_offer_without_a_row_name_shows_brand_and_article_not_the_card_name(self, partner_world):
+        w = partner_world
+        card = w["cards"]["b_draft_with_a_offer"]
+        SupplierOffer.objects.filter(product=card, supplier=w["a"]).update(
+            supplier_item_name="", supplier_brand="Аквилон", supplier_mpn="B-2"
+        )
+        item = next(i for i in w["client_a"].get(f"{PREFIX}/products").json()["items"] if i["id"] == card.pk)
+        assert item["name"] == "Аквилон B-2" and "Деталь Б-2" not in item["name"]
+        SupplierOffer.objects.filter(product=card, supplier=w["a"]).update(
+            supplier_brand="", supplier_mpn="", supplier_sku=""
+        )
+        item = next(i for i in w["client_a"].get(f"{PREFIX}/products").json()["items"] if i["id"] == card.pk)
+        assert item["name"] == "—"
+
+
 class TestReviewDoesNotHang:
     def _complete(self, card):
         from master_data.models import UnitOfMeasure
