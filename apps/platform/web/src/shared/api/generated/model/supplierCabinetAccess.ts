@@ -5,12 +5,14 @@
 import type { CompanyItemRef } from "./companyItemRef";
 import type { SupplierCabinetAccessCabinetRolesItem } from "./supplierCabinetAccessCabinetRolesItem";
 import type { SupplierCabinetContact } from "./supplierCabinetContact";
+import type { SupplierCabinetCrmClient } from "./supplierCabinetCrmClient";
 import type { SupplierCabinetModules } from "./supplierCabinetModules";
 import type { SupplierCabinetRelationship } from "./supplierCabinetRelationship";
 
 export interface SupplierCabinetAccess {
   company_id: CompanyItemRef;
   company_name: string;
+  crm_client: SupplierCabinetCrmClient;
   /** `null` — кабинет поставщику ещё не открывали */
   relationship: SupplierCabinetRelationship | null;
   contacts: SupplierCabinetContact[];

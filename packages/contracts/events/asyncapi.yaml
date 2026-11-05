@@ -276,6 +276,18 @@ channels:
     messages:
       uz.railtech.erp.invite.requested.v1:
         $ref: '#/components/messages/uz.railtech.erp.invite.requested.v1'
+  uz.railtech.erp.partner.client_requested.v1:
+    address: uz.railtech.erp.partner.client_requested.v1
+    title: Партнёр приглашён в кабинет, нужен клиент в CRM
+    messages:
+      uz.railtech.erp.partner.client_requested.v1:
+        $ref: '#/components/messages/uz.railtech.erp.partner.client_requested.v1'
+  uz.railtech.erp.partner.client_rejected.v1:
+    address: uz.railtech.erp.partner.client_rejected.v1
+    title: Привязка клиента партнёра отклонена ERP
+    messages:
+      uz.railtech.erp.partner.client_rejected.v1:
+        $ref: '#/components/messages/uz.railtech.erp.partner.client_rejected.v1'
   uz.railtech.erp.invoice.issued.v1:
     address: uz.railtech.erp.invoice.issued.v1
     title: Счёт выставлен
@@ -360,6 +372,12 @@ channels:
     messages:
       uz.railtech.crm.ai_policy.changed.v1:
         $ref: '#/components/messages/uz.railtech.crm.ai_policy.changed.v1'
+  uz.railtech.crm.partner.client_resolved.v1:
+    address: uz.railtech.crm.partner.client_resolved.v1
+    title: Клиент партнёра в CRM, итог
+    messages:
+      uz.railtech.crm.partner.client_resolved.v1:
+        $ref: '#/components/messages/uz.railtech.crm.partner.client_resolved.v1'
   uz.railtech.crm.mail.sent.v1:
     address: uz.railtech.crm.mail.sent.v1
     title: Письмо отправлено
@@ -739,6 +757,24 @@ operations:
       - $ref: '#/channels/uz.railtech.erp.invite.requested.v1/messages/uz.railtech.erp.invite.requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.partner.client_requested.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.partner.client_requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.partner.client_requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.partner.client_requested.v1/messages/uz.railtech.erp.partner.client_requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.partner.client_rejected.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.partner.client_rejected.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.partner.client_rejected.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.partner.client_rejected.v1/messages/uz.railtech.erp.partner.client_rejected.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.invoice.issued.v1:
     action: send
     summary: rt://erp публикует uz.railtech.erp.invoice.issued.v1
@@ -863,6 +899,15 @@ operations:
       $ref: '#/channels/uz.railtech.crm.ai_policy.changed.v1'
     messages:
       - $ref: '#/channels/uz.railtech.crm.ai_policy.changed.v1/messages/uz.railtech.crm.ai_policy.changed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.partner.client_resolved.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.partner.client_resolved.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.partner.client_resolved.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.partner.client_resolved.v1/messages/uz.railtech.crm.partner.client_resolved.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.crm.mail.sent.v1:
@@ -1916,6 +1961,56 @@ components:
                   const: rt://contracts/events/erp/invite.requested/v1
                 data:
                   $ref: './erp/invite.requested.v1.json'
+    uz.railtech.erp.partner.client_requested.v1:
+      name: uz.railtech.erp.partner.client_requested.v1
+      title: Партнёр приглашён в кабинет, нужен клиент в CRM
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.partner.client_requested.v1
+                dataschema:
+                  const: rt://contracts/events/erp/partner.client_requested/v1
+                data:
+                  $ref: './erp/partner.client_requested.v1.json'
+    uz.railtech.erp.partner.client_rejected.v1:
+      name: uz.railtech.erp.partner.client_rejected.v1
+      title: Привязка клиента партнёра отклонена ERP
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.partner.client_rejected.v1
+                dataschema:
+                  const: rt://contracts/events/erp/partner.client_rejected/v1
+                data:
+                  $ref: './erp/partner.client_rejected.v1.json'
     uz.railtech.erp.invoice.issued.v1:
       name: uz.railtech.erp.invoice.issued.v1
       title: Счёт выставлен
@@ -2266,6 +2361,31 @@ components:
                   const: rt://contracts/events/crm/ai_policy.changed/v1
                 data:
                   $ref: './crm/ai_policy.changed.v1.json'
+    uz.railtech.crm.partner.client_resolved.v1:
+      name: uz.railtech.crm.partner.client_resolved.v1
+      title: Клиент партнёра в CRM, итог
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.partner.client_resolved.v1
+                dataschema:
+                  const: rt://contracts/events/crm/partner.client_resolved/v1
+                data:
+                  $ref: './crm/partner.client_resolved.v1.json'
     uz.railtech.crm.mail.sent.v1:
       name: uz.railtech.crm.mail.sent.v1
       title: Письмо отправлено

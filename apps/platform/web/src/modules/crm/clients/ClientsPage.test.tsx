@@ -121,4 +121,47 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     expect(within(panel).queryByRole("button", { name: /Повторить отправку/ })).toBeNull();
     expect(within(panel).queryByRole("button", { name: /Отправить ещё раз/ })).toBeNull();
   });
+
+  it("PART-CRM: партнёр ERP, совпавший по ИНН, ждёт подтверждения; «Это та же компания» убирает его из карточки", async () => {
+    await open("manager@demo.example", "/crm/clients/6?panel=open&tab=card");
+    const panel = await panelEl();
+    const partner = await within(panel).findByRole("region", {
+      name: "Партнёр из кабинета ждёт подтверждения",
+    });
+    expect(within(partner).getByText("Демо Мануфактуринг ООО")).toBeVisible();
+    expect(within(partner).getByText(/совпал ИНН/)).toBeVisible();
+    expect(within(partner).getByText(/ivanov@manufacturing.example/)).toBeVisible();
+
+    fireEvent.click(within(partner).getByRole("button", { name: "Это та же компания" }));
+
+    await waitFor(() => {
+      expect(
+        within(panel).queryByRole("region", { name: "Партнёр из кабинета ждёт подтверждения" }),
+      ).toBeNull();
+    });
+  });
+
+  it("PART-CRM: «Нет — завести нового клиента» открывает карточку нового клиента партнёра", async () => {
+    await open("manager@demo.example", "/crm/clients/6?panel=open&tab=card");
+    const panel = await panelEl();
+    const partner = await within(panel).findByRole("region", {
+      name: "Партнёр из кабинета ждёт подтверждения",
+    });
+
+    fireEvent.click(within(partner).getByRole("button", { name: "Нет — завести нового клиента" }));
+
+    expect(
+      await within(await panelEl()).findByRole("heading", { name: "Демо Мануфактуринг ООО" }),
+    ).toBeVisible();
+  });
+
+  it("PART-CRM: сотрудник с правом только читать клиентов видит партнёра, но решить не может", async () => {
+    await open("accountant@demo.example", "/crm/clients/6?panel=open&tab=card");
+    const panel = await panelEl();
+    const partner = await within(panel).findByRole("region", {
+      name: "Партнёр из кабинета ждёт подтверждения",
+    });
+    expect(within(partner).queryByRole("button", { name: "Это та же компания" })).toBeNull();
+    expect(within(partner).getByText(/Решить может сотрудник/)).toBeVisible();
+  });
 });

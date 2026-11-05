@@ -21,6 +21,8 @@ from app.schemas_crm_leads import (
     ClientDocumentRow,
     ClientHandoff,
     ClientLeadLink,
+    ClientPartnerContact,
+    ClientPartnerRequest,
     ClientRequestRow,
     ClientRow,
     ClientSees,
@@ -72,6 +74,7 @@ class CrmClientDetail(_Crm):
     identities: list[CrmIdentity] = []
     leads: list[CrmLeadBrief] = []
     invitation: crm.InvitationOut | None = None
+    partner_requests: list[crm.PartnerRequestOut] = []
 
 
 class CrmContact(_Crm):
@@ -283,6 +286,18 @@ def lead_link(brief: CrmLeadBrief) -> ClientLeadLink:
     )
 
 
+def partner_request(row: crm.PartnerRequestOut) -> ClientPartnerRequest:
+    """Ждущая заявка партнёра ERP для карточки клиента."""
+    return ClientPartnerRequest(
+        id=row.id,
+        erp_company_id=row.erp_company_id,
+        company_name=row.company_name,
+        matched_by="registration_number" if row.matched_by == "registration_number" else "inn",
+        contacts=[ClientPartnerContact(full_name=c.full_name, email=c.email) for c in row.contacts],
+        created_at=row.created_at,
+    )
+
+
 def client_card(
     detail: CrmClientDetail,
     contacts: CrmContacts | None,
@@ -307,6 +322,7 @@ def client_card(
         requests=[request_row(d) for d in deals or []],
         documents=[document_row(d) for d in documents or []],
         invitation=invitation(detail.invitation),
+        partner_requests=[partner_request(r) for r in detail.partner_requests],
         sources=ClientSources(
             contacts=state(contacts), requests=state(deals), documents=state(documents)
         ),

@@ -179,6 +179,92 @@ async def test_unknown_client_is_404(web: Web, crm: CrmLeadsFake, check: Contrac
     assert response.json()["code"] == "NOT_FOUND"
 
 
+PARTNER_REQUEST = {
+    "id": 31,
+    "erp_company_id": 214,
+    "company_name": "Демо Мануфактуринг ООО",
+    "matched_by": "inn",
+    "contacts": [{"full_name": "Иванов Пётр", "email": "ivanov@manufacturing.example"}],
+    "created_at": "2026-11-04T09:15:00Z",
+}
+
+
+async def test_card_shows_partners_waiting_for_the_managers_decision(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """PART-CRM: партнёр ERP, похожий на клиента, ждёт подтверждения: карточка отдаёт его заявку."""
+    crm.answer("GET", "clients/12", body=client_detail(12, partner_requests=[PARTNER_REQUEST]))
+    await web.login(["SUPPLY"])
+
+    response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
+
+    assert response.json()["partner_requests"] == [PARTNER_REQUEST]
+
+
+async def test_card_without_waiting_partners_has_an_empty_list(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
+    assert response.json()["partner_requests"] == []
+
+
+async def test_manager_confirms_a_partner_request(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer("POST", "clients/12/partner-requests/31/confirm", body={"ok": True})
+    await web.login(["MANAGER"])
+
+    response = check(
+        await web.send("POST", f"{BASE}/12/partner-requests/31/confirm"),
+        "/crm/clients/{id}/partner-requests/{request_id}/confirm",
+        "post",
+    )
+
+    assert response.json() == {"client_id": 12}
+
+
+async def test_manager_declines_a_partner_request_and_gets_the_new_client(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    crm.answer("POST", "clients/12/partner-requests/31/decline", 201, {"id": 77})
+    await web.login(["MANAGER"])
+
+    response = check(
+        await web.send("POST", f"{BASE}/12/partner-requests/31/decline"),
+        "/crm/clients/{id}/partner-requests/{request_id}/decline",
+        "post",
+    )
+
+    assert response.json() == {"client_id": 77}
+
+
+async def test_partner_request_decision_needs_the_full_clients_right_and_keeps_crm_refusals(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])  # клиенты — только чтение
+    for action in ("confirm", "decline"):
+        denied = await web.send("POST", f"{BASE}/12/partner-requests/31/{action}")
+        assert denied.status_code == 403
+    assert crm.calls == []
+
+    await web.login(["MANAGER"])
+    crm.error("POST", "clients/12/partner-requests/31/confirm", 404, "not_found")
+    gone = check(
+        await web.send("POST", f"{BASE}/12/partner-requests/31/confirm"),
+        "/crm/clients/{id}/partner-requests/{request_id}/confirm",
+        "post",
+    )
+    assert gone.status_code == 404
+    crm.error("POST", "clients/12/partner-requests/32/confirm", 409, "conflict")
+    taken = check(
+        await web.send("POST", f"{BASE}/12/partner-requests/32/confirm"),
+        "/crm/clients/{id}/partner-requests/{request_id}/confirm",
+        "post",
+    )
+    assert taken.status_code == 409
+
+
 async def test_resend_invitation_returns_the_result_of_crm(
     web: Web, crm: CrmLeadsFake, check: ContractChecker
 ) -> None:

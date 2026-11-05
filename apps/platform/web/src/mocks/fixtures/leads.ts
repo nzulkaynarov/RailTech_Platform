@@ -278,6 +278,7 @@ function clientCards(base: number): ClientCard[] {
         },
       ],
       invitation: invitation(base),
+      partner_requests: [],
       sources: ok,
     },
     {
@@ -311,6 +312,7 @@ function clientCards(base: number): ClientCard[] {
       requests: [],
       documents: [],
       invitation: null,
+      partner_requests: [],
       sources: ok,
     },
     {
@@ -325,6 +327,7 @@ function clientCards(base: number): ClientCard[] {
       requests: [],
       documents: [],
       invitation: null,
+      partner_requests: [],
       sources: ok,
     },
     {
@@ -362,6 +365,17 @@ function clientCards(base: number): ClientCard[] {
         suggested_channel: "email",
         can_resend: true,
       },
+      // PART-CRM: партнёр из кабинета ERP совпал по ИНН, привязка только с подтверждения менеджера
+      partner_requests: [
+        {
+          id: 31,
+          erp_company_id: 214,
+          company_name: "Демо Мануфактуринг ООО",
+          matched_by: "inn",
+          contacts: [{ full_name: "Иванов Пётр", email: "ivanov@manufacturing.example" }],
+          created_at: ago(base, 45),
+        },
+      ],
       sources: ok,
     },
   ];

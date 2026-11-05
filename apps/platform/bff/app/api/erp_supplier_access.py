@@ -106,3 +106,23 @@ async def invite(
 )
 async def suspend(id: SupplierId, authed: Writer) -> SupplierCabinetAccess:
     return to_access(await _erp(authed).data("POST", _path(id, "suspend/")))
+
+
+@router.post(
+    "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm",
+    response_model=SupplierCabinetAccess,
+    operation_id="confirmSupplierCrmClient",
+)
+async def confirm_crm_client(id: SupplierId, authed: Writer) -> SupplierCabinetAccess:
+    """«Да, это та же компания» (PART-CRM): сопоставление проверено, заявки уходят."""
+    return to_access(await _erp(authed).data("POST", _path(id, "crm-client/confirm/")))
+
+
+@router.post(
+    "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/reject",
+    response_model=SupplierCabinetAccess,
+    operation_id="rejectSupplierCrmClient",
+)
+async def reject_crm_client(id: SupplierId, authed: Writer) -> SupplierCabinetAccess:
+    """«Нет, другая компания» (PART-CRM): сопоставление снято, CRM получает отказ."""
+    return to_access(await _erp(authed).data("POST", _path(id, "crm-client/reject/")))

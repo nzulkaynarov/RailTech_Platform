@@ -41,6 +41,26 @@ class DeskSupplierAccessModules(serializers.Serializer):
     default = serializers.ListField(child=serializers.CharField(), help_text="Что получает новое отношение.")
 
 
+class DeskSupplierAccessCrmClient(serializers.Serializer):
+    status = serializers.ChoiceField(
+        choices=["none", "requested", "pending_confirmation", "held", "unverified", "linked", "conflict"],
+        help_text=(
+            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `unverified` — сопоставление создала передача по совпадению ИНН и оно не проверено: сотрудник подтверждает («Да»/«Нет») здесь же, "
+            "`linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP."
+        ),
+    )
+    crm_client_id = serializers.IntegerField(
+        allow_null=True,
+        help_text="Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента».",
+    )
+    crm_client_name = serializers.CharField(
+        required=False, allow_null=True, help_text="`unverified`: как клиент назван в передаче из CRM."
+    )
+    inn = serializers.CharField(
+        required=False, allow_null=True, help_text="`unverified`: ИНН, по которому компания связана с клиентом."
+    )
+
+
 class DeskSupplierAccess(serializers.Serializer):
     company_id = serializers.IntegerField()
     company_name = serializers.CharField()
@@ -55,6 +75,9 @@ class DeskSupplierAccess(serializers.Serializer):
     )
     cabinet_modules = serializers.ListField(
         child=serializers.CharField(), help_text="Разделы, которые откроются сессии компании."
+    )
+    crm_client = DeskSupplierAccessCrmClient(
+        help_text="Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении."
     )
     can_manage = serializers.BooleanField(
         help_text="У сотрудника есть `supply.manage`: контакты, приглашение, приостановка."

@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/partner.client_resolved.v1.json",
+  "title": "Клиент партнёра в CRM, итог",
+  "description": "Тип uz.railtech.crm.partner.client_resolved.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Ответ CRM на uz.railtech.erp.partner.client_requested.v1 (PART-CRM). Три исхода. linked — клиент CRM создан либо уже сопоставлен этой компании (по erp_company_id), либо найденного по ИНН или паре «страна + регистрационный номер» менеджер подтвердил как ту же компанию, либо менеджер решил завести нового клиента. pending_confirmation — по ИНН или паре найден существующий клиент, не сопоставленный ни одной компании ERP: CRM ничего не меняет и просит менеджера подтвердить («Это та же компания» или «Нет — завести нового»; совпадение по ключу — предложение слияния человеку, не автопривязка, как правила дублей Salesforce и HubSpot); после решения придёт linked. conflict — найденный клиент уже сопоставлен другой компании ERP, CRM ничего не перезаписывает, пишет в журнал и уведомляет ответственного. По linked ERP ставит сопоставление клиента, тип компании CLIENT, сопоставляет контакты и публикует заявки партнёра, ожидавшие сопоставления; по pending_confirmation и conflict — показывает сотруднику состояние и ссылку на клиента CRM, заявки остаются отложенными. Ответов может быть несколько на один запрос (pending_confirmation, затем linked), каждый безопасен при повторе (ERP идемпотентна по erp_company_id). Только идентификаторы, данных людей нет.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "status",
+    "crm_client_id",
+    "actor"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания партнёра в ERP (из запроса)"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "linked",
+        "pending_confirmation",
+        "conflict"
+      ],
+      "description": "linked — клиент CRM сопоставлен компании ERP; pending_confirmation — найден существующий клиент, нужно подтверждение менеджера CRM, ничего не изменено; conflict — найденный клиент уже сопоставлен другой компании, ничего не изменено"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент CRM: сопоставленный (linked), найденный и ждущий подтверждения (pending_confirmation) или найденный и занятый другой компанией (conflict)"
+    },
+    "matched_by": {
+      "type": "string",
+      "enum": [
+        "erp_company_id",
+        "inn",
+        "registration_number",
+        "created"
+      ],
+      "description": "Как найден клиент: уже сопоставлен с этой компанией, по ИНН, по паре «страна + регистрационный номер» (оба сравниваются по нормализованному ключу) или создан новый (created, только при linked)"
+    },
+    "conflict_erp_company_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Другая компания ERP, с которой клиент CRM уже сопоставлен (только при conflict)"
+    },
+    "contacts": {
+      "type": "array",
+      "description": "Сопоставление контактов запроса с контактами CRM (только при linked); контакт без e-mail в запросе не приходит",
+      "maxItems": 50,
+      "items": {
+        "type": "object",
+        "required": [
+          "erp_contact_id",
+          "crm_contact_id"
+        ],
+        "properties": {
+          "erp_contact_id": {
+            "type": "integer"
+          },
+          "crm_contact_id": {
+            "type": "integer"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

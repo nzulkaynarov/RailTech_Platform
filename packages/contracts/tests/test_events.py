@@ -46,9 +46,9 @@ def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
     assert (
-        len([t for t in TYPES if t.domain == "erp"]) == 30
+        len([t for t in TYPES if t.domain == "erp"]) == 32
     )  # + contract.status_changed (D2-5), mail.requested (W18A-P1), letterhead.updated (W18A-P4), CHAT-1,
-    # contact.telegram_unlink_requested, contact.telegram_test_requested (NOTIFY-1)
+    # NOTIFY-1, partner (PART-CRM)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -165,6 +165,9 @@ ERP_EVENTS_NOTIFY = {"contact.telegram_unlink_requested", "contact.telegram_test
 #: CHAT-1 (ADR-0023): сообщение контакта в чат кабинета — CRM кладёт его в беседу канала cabinet.
 ERP_EVENTS_CHAT = {"cabinet.message_posted"}
 
+#: PART-CRM: партнёр приглашён в кабинет — CRM заводит клиента (ответ — crm.partner.client_resolved).
+ERP_EVENTS_PART_CRM = {"partner.client_requested", "partner.client_rejected"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
@@ -176,6 +179,7 @@ def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> 
         | ERP_EVENTS_D2
         | ERP_EVENTS_W18A
         | ERP_EVENTS_W18A_P4
+        | ERP_EVENTS_PART_CRM
         | ERP_EVENTS_CHAT
         | ERP_EVENTS_NOTIFY
     )
@@ -416,6 +420,7 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.lead.erased.v1",
         "uz.railtech.crm.mail.failed.v1",
         "uz.railtech.crm.mail.sent.v1",
+        "uz.railtech.crm.partner.client_resolved.v1",
         "uz.railtech.eds.approval.decided.v1",
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.resolved.v1",
