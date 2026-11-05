@@ -154,6 +154,25 @@ def test_not_invited_colleague_gets_the_bell_but_no_email(client_company, client
     assert rows[stranger.pk].email_reason == "not_invited"
 
 
+def test_two_contacts_with_one_address_get_one_email(
+    client_company, no_tg_contact, enqueued, django_capture_on_commit_callbacks
+):
+    """Один адрес у двух действующих контактов (регистр не важен) — одно письмо; второму — лента и причина «тот же адрес»."""
+    twin = Contact.objects.create(
+        company=client_company,
+        name="Nodira Twin",
+        email="  Nodira@Client.example ",
+        invited_at=timezone.now(),
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        rows = _by_contact(_notify(client_company, dedup="twins"))
+    first, second = rows[no_tg_contact.pk], rows[twin.pk]
+    assert first.channel == NoticeChannel.EMAIL and first.email_state == NoticeEmailState.PENDING
+    assert second.channel == NoticeChannel.SOURCE and second.email_reason == "same_address"
+    assert second.email_state == NoticeEmailState.NONE
+    assert enqueued.count(first.pk) == 1 and second.pk not in enqueued
+
+
 # ── 2. Источники: событие → строка ленты на контакт, идемпотентно ────────────────────────────────────────────────────
 
 

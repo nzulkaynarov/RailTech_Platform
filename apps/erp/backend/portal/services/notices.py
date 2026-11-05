@@ -98,6 +98,7 @@ def _normalized(email: str | None) -> str:
 REASON_NOT_INVITED = "not_invited"
 REASON_INVALID_EMAIL = "invalid_email"
 REASON_NO_EMAIL = "no_email"
+REASON_SAME_ADDRESS = "same_address"
 
 
 def email_allowed(contact: Contact, document_contact_ids: Iterable[int] = ()) -> Optional[str]:
@@ -178,6 +179,7 @@ def notify(
     text_params = {key: "" if value is None else str(value) for key, value in (params or {}).items()}
     now = timezone.now()
     created: list[PortalNotice] = []
+    sent_now: set[str] = set()  # адреса, которым это событие уже выбрало письмо
     contacts = Contact.objects.filter(active_contact_q(), company_id=company.pk).order_by("pk")
     for contact in contacts:
         channel, reason = choose_channel(
@@ -188,6 +190,14 @@ def notify(
         if channel == NoticeChannel.EMAIL_DELAYED and _pending_delayed(contact, kind):
             # Уже ждёт письмо этого вида (несколько ответов менеджера подряд) — одно письмо на серию (Slack, Intercom)
             channel, reason = NoticeChannel.CABINET, "batched"
+        address = _normalized(contact.email)
+        if channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED):
+            # Два контакта компании с одним адресом (регистр не важен) — одно письмо на адрес: следующему choose_channel
+            # вернёт SOURCE, а причина — «тот же адрес»
+            sent_now.add(address)
+            emailed.add(address)
+        elif channel == NoticeChannel.SOURCE and not reason and address in sent_now:
+            reason = REASON_SAME_ADDRESS
         wants_email = channel in (NoticeChannel.EMAIL, NoticeChannel.EMAIL_DELAYED)
         notice, was_created = PortalNotice.objects.get_or_create(
             contact=contact,
