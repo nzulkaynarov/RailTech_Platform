@@ -47,3 +47,12 @@ class PortalLoginRateThrottle(SimpleRateThrottle):
 
     def get_cache_key(self, request, view):
         return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}
+
+
+class PortalVerifyRateThrottle(SimpleRateThrottle):
+    """Публичная проверка подлинности официального документа (/verify/<код>, SIGN-VERIFY-1): лимит на IP."""
+
+    scope = "portal_verify"
+
+    def get_cache_key(self, request, view):
+        return self.cache_format % {"scope": self.scope, "ident": self.get_ident(request)}

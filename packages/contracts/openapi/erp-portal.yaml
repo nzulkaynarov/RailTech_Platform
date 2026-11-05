@@ -86,6 +86,8 @@ tags:
     description: Чат кабинета с менеджером (ADR-0023) — лента компании, обновление опросом
   - name: notifications
     description: Колокольчик кабинета — лента уведомлений контакта (ADR-0023 п. 2, NOTIFY-2)
+  - name: verify
+    description: Публичная проверка подлинности официальных документов по коду и QR (ADR-0024 §6, SIGN-VERIFY-1)
 
 paths:
   /auth/telegram:
@@ -1255,6 +1257,39 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /verify/{code}:
+    get:
+      tags: [verify]
+      operationId: verifyDocument
+      summary: Проверка подлинности официального документа по коду (ADR-0024 §6)
+      description: |
+        Публичный эндпоинт проверки официального документа (без авторизации, лимит частоты portal_verify).
+        Возвращает данные о документе, подписанте, основании и контрольную сумму SHA-256 файла PDF для проверки.
+      security: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          description: Код проверки с QR-кода на бланке или из колонтитула
+          schema:
+            type: string
+            pattern: '^[A-Za-z0-9_-]{8,32}$'
+      responses:
+        '200':
+          description: Документ найден и проверен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentVerification'
+        '404':
+          description: Документ с таким кодом не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '429':
           $ref: '#/components/responses/TooManyRequests'
 
@@ -3342,6 +3377,70 @@ components:
         size_bytes:
           type: integer
           minimum: 0
+
+    DocumentVerificationKind:
+      type: string
+      enum: [letter_out, quote, contract, invoice, act, memo, other]
+      description: Вид официального документа для публичной проверки
+
+    DocumentVerification:
+      type: object
+      required:
+        - code
+        - kind
+        - number
+        - date
+        - company_name
+        - signatory_name
+        - signatory_position
+        - signatory_basis
+        - status
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{8,32}$'
+          description: Код проверки (с QR-кода или колонтитула)
+        kind:
+          $ref: '#/components/schemas/DocumentVerificationKind'
+        number:
+          type: string
+          description: Регистрационный номер документа (например, ИСХ-042/26)
+        date:
+          type: string
+          format: date
+          description: Дата документа
+        company_name:
+          type: string
+          description: Наименование организации-эмитента
+        signatory_name:
+          type: string
+          description: ФИО подписанта
+        signatory_position:
+          type: string
+          description: Должность подписанта
+        signatory_basis:
+          type: string
+          description: Основание полномочий (Устав, приказ или доверенность)
+        status:
+          type: string
+          enum: [valid, revoked]
+          description: Статус документа (действует / отозван)
+        sha256_hash:
+          type: [string, 'null']
+          pattern: '^[0-9a-f]{64}$'
+          description: Контрольная сумма SHA-256 итогового файла PDF
+        signed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время подписания
+        revoked_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время отзыва документа
+        revocation_reason:
+          type: [string, 'null']
+          description: Причина отзыва документа
+      additionalProperties: false
 
     Availability:
       type: string

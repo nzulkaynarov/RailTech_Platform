@@ -105,3 +105,49 @@ def apply_approval_decided(data: dict[str, Any]) -> Outcome:
         approved_late=bool(data.get("approved_late")),
     )
     return Outcome(result == "applied", result)
+
+
+def apply_document_signed(data: dict[str, Any], event_id: Optional[UUID] = None) -> Outcome:
+    """`document.signed` → проекция официального документа в PortalDocumentVerification для публичной проверки (ADR-0024 §6, SIGN-VERIFY-1)."""
+    doc = data.get("document") or {}
+    code = doc.get("verification_code")
+    if not code:
+        logger.warning("eds.document.signed: нет verification_code — пропуск")
+        return Outcome(False, "no_verification_code")
+
+    from portal.models import PortalDocumentVerification
+
+    from core.tenant import own_company
+
+    company = own_company()
+    company_name = company.name if company else "RailTech"
+
+    signer = doc.get("signer") or {}
+    signed_at_str = doc.get("signed_at")
+    signed_at_dt = _when(signed_at_str) if signed_at_str else None
+    doc_date = signed_at_dt.date() if signed_at_dt else date.today()
+
+    basis_val = doc.get("basis") or "charter"
+    basis_text = doc.get("basis_text") or ("на основании Устава" if basis_val == "charter" else "")
+
+    eds_doc_id_raw = doc.get("eds_document_id")
+    eds_doc_id = UUID(str(eds_doc_id_raw)) if eds_doc_id_raw else None
+
+    obj, created = PortalDocumentVerification.objects.update_or_create(
+        code=code,
+        defaults={
+            "kind": doc.get("kind") or "letter_out",
+            "number": doc.get("number") or "",
+            "date": doc_date,
+            "company_name": company_name,
+            "signatory_name": signer.get("name") or "",
+            "signatory_position": signer.get("position") or "",
+            "signatory_basis": basis_text,
+            "status": "valid",
+            "sha256_hash": doc.get("pdf_hash"),
+            "signed_at": signed_at_dt,
+            "eds_document_id": eds_doc_id,
+        },
+    )
+    logger.info("eds.document.signed: сохранена проекция проверки документа %s (#%s)", code, obj.number)
+    return Outcome(True, "created" if created else "updated")

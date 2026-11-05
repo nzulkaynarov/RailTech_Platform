@@ -628,6 +628,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/verify/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Проверка подлинности официального документа по коду (ADR-0024 §6)
+         * @description Публичный эндпоинт проверки официального документа (без авторизации, лимит частоты portal_verify).
+         *     Возвращает данные о документе, подписанте, основании и контрольную сумму SHA-256 файла PDF для проверки.
+         */
+        get: operations["verifyDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/uploads": {
         parameters: {
             query?: never;
@@ -1571,6 +1592,50 @@ export interface components {
             title: string;
             file_name?: string;
             size_bytes?: number;
+        };
+        /**
+         * @description Вид официального документа для публичной проверки
+         * @enum {string}
+         */
+        DocumentVerificationKind: "letter_out" | "quote" | "contract" | "invoice" | "act" | "memo" | "other";
+        DocumentVerification: {
+            /** @description Код проверки (с QR-кода или колонтитула) */
+            code: string;
+            kind: components["schemas"]["DocumentVerificationKind"];
+            /** @description Регистрационный номер документа (например, ИСХ-042/26) */
+            number: string;
+            /**
+             * Format: date
+             * @description Дата документа
+             */
+            date: string;
+            /** @description Наименование организации-эмитента */
+            company_name: string;
+            /** @description ФИО подписанта */
+            signatory_name: string;
+            /** @description Должность подписанта */
+            signatory_position: string;
+            /** @description Основание полномочий (Устав, приказ или доверенность) */
+            signatory_basis: string;
+            /**
+             * @description Статус документа (действует / отозван)
+             * @enum {string}
+             */
+            status: "valid" | "revoked";
+            /** @description Контрольная сумма SHA-256 итогового файла PDF */
+            sha256_hash?: string | null;
+            /**
+             * Format: date-time
+             * @description Дата и время подписания
+             */
+            signed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description Дата и время отзыва документа
+             */
+            revoked_at?: string | null;
+            /** @description Причина отзыва документа */
+            revocation_reason?: string | null;
         };
         /** @enum {string} */
         Availability: "in_stock" | "on_order" | "expected";
@@ -3117,6 +3182,39 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    verifyDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Код проверки с QR-кода на бланке или из колонтитула */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Документ найден и проверен */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentVerification"];
+                };
+            };
+            /** @description Документ с таким кодом не найден */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };

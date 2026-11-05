@@ -30,6 +30,7 @@ export const keys = {
   partnerProductList: (params: portal.PartnerProductsQuery) => ['partner', 'products', 'list', params] as const,
   partnerProduct: (id: number) => ['partner', 'products', 'item', id] as const,
   priceListTask: (taskId: string) => ['partner', 'price-list', taskId] as const,
+  verify: (code: string) => ['verify', code] as const,
 };
 
 /** Список раздела грузится, только если у сессии есть его модуль (партнёру клиентские разделы закрыты, ADR-0022). */
@@ -212,3 +213,13 @@ export const useSubmitPartnerProducts = () =>
   useInvalidatingMutation(portal.submitPartnerProducts, [keys.partnerProducts]);
 export const useConfirmPartnerOffers = () =>
   useInvalidatingMutation(portal.confirmPartnerOffers, [keys.partnerProducts]);
+
+// --- публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1) -----------------------
+
+export const useVerifyDocument = (code: string, enabled = true) =>
+  useQuery({
+    queryKey: keys.verify(code),
+    queryFn: () => portal.verifyDocument(code),
+    enabled: Boolean(code) && enabled,
+    retry: false,
+  });

@@ -936,3 +936,19 @@ export const notifications: Schemas['PortalNotification'][] = [
     '2026-10-09T09:00:00+05:00',
   ),
 ];
+
+export const mockDocumentVerification: Schemas['DocumentVerification'] = {
+  code: 'doc-verify-12345',
+  kind: 'letter_out',
+  number: 'ИСХ-042/26',
+  date: '2026-11-05',
+  company_name: 'OOO «RailTech»',
+  signatory_name: 'Иванов Иван Иванович',
+  signatory_position: 'Генеральный директор',
+  signatory_basis: 'на основании Устава',
+  status: 'valid',
+  sha256_hash: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+  signed_at: '2026-11-05T12:00:00Z',
+  revoked_at: null,
+  revocation_reason: null,
+};

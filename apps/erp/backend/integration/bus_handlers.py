@@ -86,6 +86,11 @@ def on_approval_decided(event: Event) -> None:
     eds_inbound.apply_approval_decided(event.data)
 
 
+@subscribe("uz.railtech.eds.document.signed.v1")
+def on_document_signed(event: Event) -> None:
+    eds_inbound.apply_document_signed(event.data, event_id=_event_uuid(event))
+
+
 def _event_uuid(event: Event) -> Optional[UUID]:
     try:
         return UUID(str(event.id))

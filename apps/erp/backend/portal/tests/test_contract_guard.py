@@ -67,6 +67,7 @@ GET_CASES = {
     "/team": lambda w: ["/team"],
     "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/messages": lambda w: ["/messages"],
+    "/verify/{code}": lambda w: [f"/verify/{w['verification'].code}"],
 }
 
 #: Достижимые из модели значения статусов, которых сторож не ждёт, — с причиной. Всё остальное из enum контракта
@@ -110,7 +111,7 @@ def api(path: str) -> str:
 
 
 def anonymous_for(path: str) -> bool:
-    return path.startswith("/auth/")
+    return path.startswith("/auth/") or path.startswith("/verify")
 
 
 def fetch(client, anon_client, contract_path: str, url: str):
@@ -166,6 +167,7 @@ def _portal_get_routes() -> set[str]:
             .replace("<int:doc_id>", "{doc_id}")
             .replace("<str:token>", "{token}")
             .replace("<str:task_id>", "{task_id}")
+            .replace("<str:code>", "{code}")
             .rstrip("/")
             or "/"
         )

@@ -416,6 +416,24 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
     ]
     world.update(build_document_fixtures(world))
 
+    # ── Публичная проверка подлинности (SIGN-VERIFY-1) ──────────────────────────────────────────
+    from portal.models import PortalDocumentVerification
+
+    verification = PortalDocumentVerification.objects.create(
+        code="VERIFY-WORLD-001",
+        kind="letter_out",
+        number="01-12/34",
+        date=TODAY,
+        company_name='OOO "RailTech"',
+        signatory_name="Иванов Иван Иванович",
+        signatory_position="Генеральный директор",
+        signatory_basis="Устав",
+        status="valid",
+        sha256_hash="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        signed_at=timezone.now(),
+    )
+    world["verification"] = verification
+
     # ── Колокольчик (NOTIFY-2): уведомления видов, открытых клиенту, — для сторожа `GET /notifications` ────────
     from portal.services import notice_sources
 

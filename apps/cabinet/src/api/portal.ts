@@ -439,3 +439,11 @@ export const listNotifications = (params: NotificationsQuery = {}) =>
 export function markNotificationsRead(body: JsonBody<paths['/notifications/read']['post']>) {
   return portalRequest<Schemas['NotificationUnread']>('/notifications/read', { method: 'POST', body });
 }
+
+// --- публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1) -----------------------
+
+export type DocumentVerification = Schemas['DocumentVerification'];
+export type DocumentVerificationKind = Schemas['DocumentVerificationKind'];
+
+export const verifyDocument = (code: string) =>
+  portalRequest<DocumentVerification>(`/verify/${encodeURIComponent(code)}`);

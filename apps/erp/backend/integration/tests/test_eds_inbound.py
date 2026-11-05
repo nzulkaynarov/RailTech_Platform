@@ -314,3 +314,46 @@ def test_receiver_accepts_signed_eds_events_and_the_handlers_apply_them(
     assert Inbox.objects.get(event_id=rej["id"]).status == "processed"
     assert _stage(deal) == DealStageCode.CLOSED_LOST
     assert DealStage.objects.filter(code=DealStageCode.CLOSED_LOST).exists()
+
+
+@pytest.mark.django_db
+def test_apply_document_signed_creates_and_updates_projection():
+    from portal.models import PortalDocumentVerification
+
+    doc_id = str(uuid.uuid4())
+    data = {
+        "document": {
+            "eds_document_id": doc_id,
+            "kind": "letter_out",
+            "number": "ИСХ-077/26",
+            "subject": "Коммерческое предложение по рельсам",
+            "author": {"crm_user_id": 10, "name": "Автор А.А."},
+            "signer": {"crm_user_id": 1, "name": "Директоров Д.Д.", "position": "Директор"},
+            "authority_id": str(uuid.uuid4()),
+            "basis": "charter",
+            "basis_text": "на основании Устава",
+            "signed_at": "2026-11-05T12:00:00Z",
+            "verification_code": "code-xyz-777",
+            "verification_url": "https://cabinet.railtech.uz/v/code-xyz-777",
+            "pdf_hash": "a" * 64,
+        },
+        "actor": {"crm_user_id": 1, "name": "Директоров Д.Д."},
+    }
+
+    outcome = eds_inbound.apply_document_signed(data, event_id=uuid.uuid4())
+    assert outcome.applied is True
+    assert outcome.reason == "created"
+
+    proj = PortalDocumentVerification.objects.get(code="code-xyz-777")
+    assert proj.number == "ИСХ-077/26"
+    assert proj.signatory_name == "Директоров Д.Д."
+    assert proj.signatory_position == "Директор"
+    assert proj.signatory_basis == "на основании Устава"
+    assert proj.status == "valid"
+    assert proj.sha256_hash == "a" * 64
+
+    # Idempotent re-apply
+    outcome2 = eds_inbound.apply_document_signed(data, event_id=uuid.uuid4())
+    assert outcome2.applied is True
+    assert outcome2.reason == "updated"
+    assert PortalDocumentVerification.objects.filter(code="code-xyz-777").count() == 1
