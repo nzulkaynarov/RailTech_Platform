@@ -1279,6 +1279,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /notifications — лента контакта по убыванию `id`. */
+        get: operations["api_portal_v1_notifications_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/notifications/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /notifications — лента контакта по убыванию `id`. */
+        get: operations["api_portal_v1_notifications_retrieve_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/notifications/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /notifications/read — прочитать свои уведомления (`ids`) или все (`all`). Чтение: `can_act` не нужен. */
+        post: operations["api_portal_v1_notifications_read_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/notifications/read/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /notifications/read — прочитать свои уведомления (`ids`) или все (`all`). Чтение: `can_act` не нужен. */
+        post: operations["api_portal_v1_notifications_read_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/partner/offers/confirm": {
         parameters: {
             query?: never;
@@ -2128,7 +2196,7 @@ export interface paths {
         };
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily overdue-invoice reminders to client contacts (default off).
          */
         get: operations["accounts_companies_settings_retrieve"];
         put?: never;
@@ -2138,7 +2206,7 @@ export interface paths {
         head?: never;
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily overdue-invoice reminders to client contacts (default off).
          */
         patch: operations["accounts_companies_settings_partial_update"];
         trace?: never;
@@ -4820,6 +4888,46 @@ export interface paths {
          * @description Needs `supply.manage`. Приходят только изменённые поля.
          */
         patch: operations["catalog_supplier_access_contact_update"];
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/crm-client/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the CRM client found by TIN
+         * @description Needs `supply.manage`. Сопоставление компании с клиентом CRM создала передача по совпадению ИНН и не проверено (PART-CRM): «Да, это та же компания» делает его проверенным, открывает компании клиентские модули кабинета и выпускает отложенные заявки партнёра. Проверять нечего — 409 `NOTHING_TO_VERIFY`.
+         */
+        post: operations["catalog_supplier_access_crm_client_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/crm-client/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject the CRM client found by TIN
+         * @description Needs `supply.manage`. «Нет, другая компания»: сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM получает `partner.client_rejected` и снимает привязку у клиента; затем компания запрашивается в CRM обычным путём. Проверять нечего — 409 `NOTHING_TO_VERIFY`.
+         */
+        post: operations["catalog_supplier_access_crm_client_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/catalog/supplier-access/{id}/invite/": {
@@ -11347,6 +11455,11 @@ export interface components {
              */
             payment_terms_days?: number | null;
             /**
+             * Напоминать клиентам о просроченных счетах
+             * @description Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента: колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks).
+             */
+            remind_overdue_invoices?: boolean;
+            /**
              * Условия оплаты по умолчанию
              * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
              */
@@ -12665,6 +12778,8 @@ export interface components {
             cabinet_roles: string[];
             /** @description Разделы, которые откроются сессии компании. */
             cabinet_modules: string[];
+            /** @description Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении. */
+            crm_client: components["schemas"]["DeskSupplierAccessCrmClient"];
             /** @description У сотрудника есть `supply.manage`: контакты, приглашение, приостановка. */
             can_manage: boolean;
         };
@@ -12690,6 +12805,37 @@ export interface components {
             /** @default true */
             can_act: boolean;
         };
+        DeskSupplierAccessCrmClient: {
+            /**
+             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `unverified` — сопоставление создала передача по совпадению ИНН и оно не проверено: сотрудник подтверждает («Да»/«Нет») здесь же, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+             *
+             *     * `none` - none
+             *     * `requested` - requested
+             *     * `pending_confirmation` - pending_confirmation
+             *     * `held` - held
+             *     * `unverified` - unverified
+             *     * `linked` - linked
+             *     * `conflict` - conflict
+             */
+            status: components["schemas"]["DeskSupplierAccessCrmClientStatusEnum"];
+            /** @description Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента». */
+            crm_client_id: number | null;
+            /** @description `unverified`: как клиент назван в передаче из CRM. */
+            crm_client_name?: string | null;
+            /** @description `unverified`: ИНН, по которому компания связана с клиентом. */
+            inn?: string | null;
+        };
+        /**
+         * @description * `none` - none
+         *     * `requested` - requested
+         *     * `pending_confirmation` - pending_confirmation
+         *     * `held` - held
+         *     * `unverified` - unverified
+         *     * `linked` - linked
+         *     * `conflict` - conflict
+         * @enum {string}
+         */
+        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "pending_confirmation" | "held" | "unverified" | "linked" | "conflict";
         DeskSupplierAccessInviteInRequest: {
             /** @description Контакт компании, которому уходит письмо с кодом входа. */
             contact_id: number;
@@ -15029,6 +15175,7 @@ export interface components {
          *     `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
          *     читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
          *     `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
+         *     `remind_overdue_invoices` — напоминать клиентам о просроченных счетах (по умолчанию выключено; NOTIFY-2).
          */
         PatchedCompanySettingsUpdateRequest: {
             /** @description Код валюты справочника, например USD */
@@ -15069,6 +15216,11 @@ export interface components {
              * @description Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате.
              */
             payment_terms_days?: number | null;
+            /**
+             * Напоминать клиентам о просроченных счетах
+             * @description Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента: колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks).
+             */
+            remind_overdue_invoices?: boolean;
             /**
              * Условия оплаты по умолчанию
              * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
@@ -20607,6 +20759,78 @@ export interface operations {
             };
         };
     };
+    api_portal_v1_notifications_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_read_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_notifications_read_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     api_portal_v1_partner_offers_confirm_create: {
         parameters: {
             query?: never;
@@ -21967,7 +22191,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanySettings"];
                 };
             };
-            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN */
+            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -22015,7 +22239,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanySettings"];
                 };
             };
-            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN */
+            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / BAD_BOOLEAN / DOC_PREFIX_TAKEN */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -27459,6 +27683,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_crm_client_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_crm_client_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];

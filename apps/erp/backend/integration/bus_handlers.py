@@ -3,7 +3,7 @@
 Регистрируются в реестре по умолчанию при загрузке приложения (`IntegrationConfig.ready`); вызываются задачей Celery
 `rt_bus.process_inbox` в одной транзакции со статусом записи inbox. Исключение — автоповтор шины (30 с, 2 мин, 10 мин), затем
 `failed` с возможностью «повторить» (`manage.py bus_retry --inbox <id>`). Логика — `services/crm_projections.py` (CRM) и
-`services/eds_inbound.py` (EDS, волна 12: резолюция → задание расчёта, отказ → LOST, решение по КП — EDS-03), итог
+`services/partner_client.py` (итог «клиент партнёра в CRM», PART-CRM), `services/eds_inbound.py` (EDS, волна 12: резолюция → задание расчёта, отказ → LOST, решение по КП — EDS-03), итог
 доставки письма почтовым сервисом CRM — `notifications/mail_bus.py` (W18A-P1: журнал писем ERP, итог письма с КП), чат
 кабинета — `portal/services/messages.py` (CHAT-1: ответ менеджера в ленту, стирание ленты по обезличиванию лида).
 """
@@ -15,7 +15,7 @@ from uuid import UUID
 
 from rt_bus import Event, subscribe
 
-from .services import crm_projections, eds_inbound
+from .services import crm_projections, eds_inbound, partner_client
 
 
 @subscribe("uz.railtech.crm.client.updated.v1")
@@ -36,6 +36,11 @@ def on_contact_updated(event: Event) -> None:
 @subscribe("uz.railtech.crm.contact.deleted.v1")
 def on_contact_deleted(event: Event) -> None:
     crm_projections.apply_contact_deleted(event.data)
+
+
+@subscribe("uz.railtech.crm.partner.client_resolved.v1")
+def on_partner_client_resolved(event: Event) -> None:
+    partner_client.apply_client_resolved(event.data)
 
 
 @subscribe("uz.railtech.crm.mail.sent.v1")

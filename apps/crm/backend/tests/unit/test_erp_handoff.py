@@ -189,6 +189,21 @@ async def test_handoff_client_inn_conflict_is_a_permanent_conflict_error() -> No
 
 
 @pytest.mark.asyncio
+async def test_handoff_client_partner_verification_is_a_permanent_conflict_error() -> None:
+    """PART-CRM: 409 `PARTNER_VERIFICATION_REQUIRED` — своя причина, повтор не поможет."""
+    config = Settings(erp_base_url="https://erp.internal", erp_service_token="test-token")
+    client = HttpxErpClient(_DummyStore("test-token"), config)
+
+    with respx.mock:
+        respx.post("https://erp.internal/api/integration/v1/clients/handoff").respond(
+            409, json={"detail": "PARTNER_VERIFICATION_REQUIRED"}
+        )
+        with pytest.raises(ConflictError) as exc_info:
+            await client.handoff_client(_sample_payload())
+    assert exc_info.value.details["reason"] == Reason.ERP_PARTNER_VERIFICATION.value
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize("body", [{"detail": "IDEMPOTENCY_CONFLICT"}, {"detail": "OTHER"}, None])
 async def test_handoff_client_other_409_is_not_reported_as_inn_conflict(
     body: dict[str, str] | None,

@@ -838,6 +838,22 @@ class Language1(StrEnum):
     en = "en"
 
 
+class Language2(StrEnum):
+    """
+    Язык документов компании в ERP
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
+class Language3(StrEnum):
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
 class Letterhead(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -969,6 +985,99 @@ class MailRequestedV1(BaseModel):
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
     """
+
+
+class PartnerClientRejectedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.partner.client_rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP не приняла ответ CRM uz.railtech.crm.partner.client_resolved.v1 со status = linked: клиент CRM crm_client_id в ERP уже сопоставлен другой компании (other_erp_company_id), либо эта компания уже сопоставлена другому клиенту CRM, а ERP ничего не перепривязывает; либо сотрудник бэк-офиса отклонил непроверенное сопоставление, созданное передачей клиента по совпадению ИНН. CRM снимает со своего клиента erp_company_id, записывает это в журнал аудита и уведомляет ответственного; сотрудник исправляет ИНН или рег. номер и приглашает партнёра ещё раз. Только идентификаторы.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания партнёра в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент CRM, которого ERP не приняла
+    """
+    reason: Reason
+    """
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client); либо сотрудник бэк-офиса решил, что найденный по ИНН клиент CRM — другая компания (rejected_by_staff)
+    """
+    other_erp_company_id: int | None = None
+    """
+    Компания ERP, с которой клиент CRM уже сопоставлен (только при client_mapped_to_other_company)
+    """
+    actor: Actor
+
+
+class PartnerClientRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.partner.client_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Сотрудник пригласил партнёра (изготовителя, поставщика) в кабинет, а компания ещё не сопоставлена клиенту CRM (PART-CRM, решение владельца 2026-11-04: «партнёр = клиент + «Мои товары»»). CRM — источник правды по клиентам и контактам: находит клиента по ИНН (иностранную компанию — по паре «страна + регистрационный номер») или по erp_company_id, иначе создаёт; находит контакты по e-mail, иначе создаёт; ставит сопоставление и отвечает событием uz.railtech.crm.partner.client_resolved.v1. Публикуется в транзакции первого приглашения и повторно при каждом следующем, пока сопоставления нет (CRM дедуплицирует по id события и по erp_company_id). Кроме названия и реквизитов компании, а также имени, e-mail, телефона и языка контактов с e-mail, данных нет; секретов и ссылок входа нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания партнёра в ERP
+    """
+    company: PartnerClientRequestedV1PartnerCompany
+    contacts: Annotated[
+        list[PartnerClientRequestedV1PartnerContact], Field(max_length=50, min_length=1)
+    ]
+    """
+    Активные контакты компании с адресом e-mail (по нему CRM ищет совпадение); приглашённый контакт — среди них
+    """
+    actor: Actor
+    invited_by_crm_user_id: int | None = None
+    """
+    Сотрудник, пригласивший партнёра, — его идентификатор в CRM, если у него есть сопоставление. Если он активный сотрудник CRM, он становится ответственным менеджером нового клиента; иначе ответственного назначает CRM по своим правилам
+    """
+
+
+class PartnerClientRequestedV1PartnerCompany(BaseModel):
+    """
+    Реквизиты компании партнёра. Резидент — inn; иностранная компания — registration_number и country (номера разных стран пересекаются, поэтому только парой)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    name: Annotated[str, Field(max_length=255, min_length=1)]
+    inn: Annotated[str | None, Field(max_length=32)]
+    """
+    ИНН; null — компания иностранная или ИНН не указан
+    """
+    registration_number: Annotated[str | None, Field(max_length=64)]
+    """
+    Регистрационный номер в стране регистрации (нерезидент)
+    """
+    country: Annotated[str | None, Field(pattern="^[A-Z]{2}$")]
+    """
+    Страна регистрации, ISO 3166-1 alpha-2
+    """
+    address: Annotated[str | None, Field(max_length=1000)]
+    website: Annotated[str | None, Field(max_length=255)]
+    language: Language2
+    """
+    Язык документов компании в ERP
+    """
+
+
+class PartnerClientRequestedV1PartnerContact(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    full_name: Annotated[str, Field(max_length=255, min_length=1)]
+    email: Annotated[EmailStr, Field(max_length=255)]
+    phone: Annotated[str | None, Field(max_length=50)]
+    language: Language3
 
 
 class Payload(BaseModel):
@@ -1273,6 +1382,16 @@ class QuoteVisaAuthor(BaseModel):
     null — сотрудник ERP без связи с CRM
     """
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
+
+
+class Reason(StrEnum):
+    """
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client); либо сотрудник бэк-офиса решил, что найденный по ИНН клиент CRM — другая компания (rejected_by_staff)
+    """
+
+    client_mapped_to_other_company = "client_mapped_to_other_company"
+    company_mapped_to_other_client = "company_mapped_to_other_client"
+    rejected_by_staff = "rejected_by_staff"
 
 
 class RecordedByStaff(BaseModel):

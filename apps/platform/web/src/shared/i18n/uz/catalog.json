@@ -644,6 +644,32 @@
     "firstLogin": "Birinchi kirish",
     "noLogin": "hali kirmagan",
     "suspendedAt": "To'xtatilgan",
+    "crmClient": {
+      "label": "CRMdagi mijoz",
+      "linked": "Yaratilgan",
+      "requested": "Kutilmoqda",
+      "pending_confirmation": "Menejer tasdig'i kutilmoqda",
+      "held": "Tekshirilguncha ushlab turilgan",
+      "unverified": "Sizning tasdig'ingizni kutmoqda",
+      "conflict": "Ziddiyat",
+      "open": "Mijozni ochish",
+      "openNamed": "CRM mijozi №{{id}} ni ochish",
+      "verify": {
+        "found": "CRM mijozi «{{name}}», STIR {{inn}}, STIR mos kelgani uchun bog'langan.",
+        "question": "Bu bir xil kompaniyami? Javob berguningizcha hamkor so'rovlari shu yerda saqlanadi va mijozga ketmaydi.",
+        "yes": "Ha, bir xil kompaniya",
+        "no": "Yo'q, boshqa kompaniya",
+        "readOnly": "Tasdiqlash — yetkazib beruvchilarni yurituvchi xodimning vazifasi."
+      },
+      "hint": {
+        "linked": "Hamkor — CRM mijozi: uning so'rovlari menejerga mijoz so'rovlari sifatida boradi, tijorat takliflari va hujjatlar ishlaydi.",
+        "requested": "So'rov CRMga yuborildi, mijoz yaratilmoqda. Shu paytgacha hamkor so'rovlari shu yerda saqlanadi va menejerga o'zi boradi.",
+        "pending_confirmation": "Hamkor CRMdagi mavjud mijozga o'xshaydi. CRM menejeri mijoz kartochkasida bu bir xil kompaniya ekanini tasdiqlaydi; shu paytgacha hamkor so'rovlari shu yerda saqlanadi va o'zi ketadi. CRMda menejer tasdig'i kutilmoqda.",
+        "held": "Mijoz topshirilgandan keyin ushlab turilgan: yetkazib beruvchi kartochkasida va CRMdagi mijozda STIRni tekshiring va «Qayta taklif qilish» tugmasini bosing. Bog'lanish yaratilmadi, hamkor so'rovlari shu yerda saqlanadi.",
+        "unverified": "Bog'lanishni CRMdan mijoz topshirilishi STIR mos kelgani bo'yicha yaratdi. Bir xil kompaniya ekanini tasdiqlamaguningizcha hamkor so'rovlari shu yerda saqlanadi.",
+        "conflict": "CRMda bunday rekvizitli mijoz bor, lekin u boshqa kompaniyaga bog'langan. Hech narsa o'zgartirilmadi. Yetkazib beruvchi kartochkasida va CRMdagi mijozda STIR yoki ro'yxatdan o'tish raqamini tekshiring, xatosini to'g'rilang va hamkorni qayta taklif qiling."
+      }
+    },
     "rights": "Hamkorga nima ochiladi",
     "modules": {
       "my_products": {

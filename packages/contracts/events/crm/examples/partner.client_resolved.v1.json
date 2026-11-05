@@ -1,0 +1,27 @@
+{
+  "specversion": "1.0",
+  "id": "8e3a1d52-6f4b-5c07-b1a9-2d5e7f903c18",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.partner.client_resolved.v1",
+  "time": "2026-11-04T09:15:05Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/partner.client_resolved/v1",
+  "tenant": "railtech",
+  "correlationid": "0c4b6f1e-2d8a-5f3b-8a77-61e5d9b2c3f4",
+  "subject": "client/58",
+  "data": {
+    "erp_company_id": 214,
+    "status": "linked",
+    "crm_client_id": 58,
+    "matched_by": "inn",
+    "contacts": [
+      {
+        "erp_contact_id": 612,
+        "crm_contact_id": 91
+      }
+    ],
+    "actor": {
+      "type": "system"
+    }
+  }
+}

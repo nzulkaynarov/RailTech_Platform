@@ -1658,6 +1658,27 @@ class Owner1(StrEnum):
     provider = "provider"
 
 
+class PartnerRequestContact(BaseModel):
+    email: Annotated[str, Field(title="Email")]
+    full_name: Annotated[str, Field(title="Full Name")]
+
+
+class PartnerRequestOut(BaseModel):
+    """
+    Партнёр из ERP, похожий на этого клиента: ждёт решения менеджера (PART-CRM).
+
+    Совпадение по ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер
+    подтверждает («Это та же компания») или заводит нового клиента.
+    """
+
+    company_name: Annotated[str, Field(title="Company Name")]
+    contacts: Annotated[list[PartnerRequestContact], Field(title="Contacts")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    erp_company_id: Annotated[int, Field(title="Erp Company Id")]
+    id: Annotated[int, Field(title="Id")]
+    matched_by: Annotated[str, Field(title="Matched By")]
+
+
 class PasswordReset(BaseModel):
     temporary_password: Annotated[str, Field(title="Temporary Password")]
 

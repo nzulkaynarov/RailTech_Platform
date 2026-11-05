@@ -43,6 +43,8 @@ class SupplierAccessViewSet(DeskViewSet):
         "update_contact": SUPPLY_MANAGE,
         "update_relationship": SUPPLY_MANAGE,
         "invite": SUPPLY_MANAGE,
+        "confirm_crm_client": SUPPLY_MANAGE,
+        "reject_crm_client": SUPPLY_MANAGE,
         "suspend": SUPPLY_MANAGE,
     }
     lookup_value_regex = r"\d+"
@@ -153,6 +155,46 @@ class SupplierAccessViewSet(DeskViewSet):
                     company, data["contact_id"], request.user, modules=data.get("modules"), kind=data.get("kind")
                 )
             )
+        except service.AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
+        operation_id="catalog_supplier_access_crm_client_confirm",
+        summary="Confirm the CRM client found by TIN",
+        description=(
+            "Needs `supply.manage`. Сопоставление компании с клиентом CRM создала передача по совпадению ИНН и не проверено "
+            "(PART-CRM): «Да, это та же компания» делает его проверенным, открывает компании клиентские модули кабинета и "
+            "выпускает отложенные заявки партнёра. Проверять нечего — 409 `NOTHING_TO_VERIFY`."
+        ),
+        request=None,
+        responses={200: DeskSupplierAccess, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="crm-client/confirm", url_name="crm-client-confirm")
+    def confirm_crm_client(self, request, pk=None):
+        company = self._supplier(pk)
+        try:
+            return Response(service.verify_crm_client(company, request.user, confirm=True))
+        except service.AccessError as error:
+            return _refused(error)
+
+    @extend_schema(
+        operation_id="catalog_supplier_access_crm_client_reject",
+        summary="Reject the CRM client found by TIN",
+        description=(
+            "Needs `supply.manage`. «Нет, другая компания»: сопоставление снимается, контакты, пришедшие с передачей клиента, "
+            "уходят в архив, CRM получает `partner.client_rejected` и снимает привязку у клиента; затем компания "
+            "запрашивается в CRM обычным путём. Проверять нечего — 409 `NOTHING_TO_VERIFY`."
+        ),
+        request=None,
+        responses={200: DeskSupplierAccess, 403: FORBIDDEN, 404: NOT_FOUND, 409: REFUSED},
+        tags=["Catalog"],
+    )
+    @action(detail=True, methods=["post"], url_path="crm-client/reject", url_name="crm-client-reject")
+    def reject_crm_client(self, request, pk=None):
+        company = self._supplier(pk)
+        try:
+            return Response(service.verify_crm_client(company, request.user, confirm=False))
         except service.AccessError as error:
             return _refused(error)
 

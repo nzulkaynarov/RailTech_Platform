@@ -12,6 +12,8 @@ from __future__ import annotations
 import pghistory
 from django.db import transaction
 from django.utils import timezone
+from integration.services import partner_client
+from integration.services.partner_client import crm_client_state, lock_company, request_client_in_crm
 from parties.models import (
     Company,
     CompanyRelationship,
@@ -125,6 +127,7 @@ def access_state(company: Company, *, can_manage: bool) -> dict:
         "partner_modules": {"allowed": list(PARTNER_TOGGLEABLE), "default": list(PARTNER_DEFAULT_TOGGLEABLE)},
         "cabinet_roles": roles,
         "cabinet_modules": modules,
+        "crm_client": crm_client_state(company),
         "can_manage": can_manage,
     }
 
@@ -242,6 +245,9 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
     now = timezone.now()
     try:
         with transaction.atomic(), pghistory.context(user=getattr(user, "pk", None), source="supplier_access"):
+            # Общая блокировка по компании (PART-CRM): передача клиента из CRM и первое приглашение идут по очереди, иначе
+            # передача успеет создать сопоставление, не увидев ещё не зафиксированное отношение партнёра.
+            lock_company(company.pk)
             relationship = CompanyRelationship.objects.select_for_update().filter(company=company, role=ROLE).first()
             before = None if relationship is None else _snapshot(relationship)
             if relationship is None:
@@ -269,6 +275,8 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
             outcome = invite_contact(contact, actor=user, channel="email", language=contact.language)
             if outcome.error:
                 raise _Undo(outcome.error)
+            # Партнёр должен стать клиентом CRM (PART-CRM): просьба к CRM — в той же транзакции, что приглашение.
+            request_client_in_crm(company, user)
             record(
                 user,
                 entity="supplier_access",
@@ -282,6 +290,30 @@ def invite(company: Company, contact_id: int, user, *, modules=None, kind=None) 
     except _Undo as undo:
         code = str(undo)
         raise AccessError(code) from None
+    return access_state(company, can_manage=True)
+
+
+def verify_crm_client(company: Company, user, *, confirm: bool) -> dict:
+    """«Найден клиент CRM, связан по совпадению ИНН. Это та же компания?»: да — сопоставление проверено, заявки уходят;
+    нет — сопоставление снято, CRM получает отказ и обычный запрос. Нечего проверять — 409 `NOTHING_TO_VERIFY`."""
+    try:
+        if confirm:
+            released = partner_client.confirm_unverified(company, user)
+        else:
+            partner_client.reject_unverified(company, user)
+            released = 0
+    except partner_client.NothingToVerify:
+        raise AccessError("NOTHING_TO_VERIFY", 409) from None
+    record(
+        user,
+        entity="supplier_access",
+        instance=company,
+        event="crm_client_confirmed" if confirm else "crm_client_rejected",
+        action="Связь с клиентом CRM подтверждена" if confirm else "Связь с клиентом CRM отклонена",
+        before=None,
+        after={"released_requests": released},
+        detail=company.name,
+    )
     return access_state(company, can_manage=True)
 
 

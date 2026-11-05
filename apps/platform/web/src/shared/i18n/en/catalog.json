@@ -644,6 +644,32 @@
     "firstLogin": "First sign-in",
     "noLogin": "has not signed in yet",
     "suspendedAt": "Suspended",
+    "crmClient": {
+      "label": "CRM client",
+      "linked": "Created",
+      "requested": "Pending",
+      "pending_confirmation": "Waiting for a manager's confirmation",
+      "held": "Held until checked",
+      "unverified": "Waiting for your confirmation",
+      "conflict": "Conflict",
+      "open": "Open the client",
+      "openNamed": "Open CRM client #{{id}}",
+      "verify": {
+        "found": "CRM client “{{name}}”, TIN {{inn}}, was linked by a matching TIN.",
+        "question": "Is it the same company? Until you answer, the partner's requests are kept here and do not go to that client.",
+        "yes": "Yes, same company",
+        "no": "No, a different company",
+        "readOnly": "A colleague who can manage suppliers confirms."
+      },
+      "hint": {
+        "linked": "The partner is a CRM client: their requests go to the manager like client requests; quotes and documents work.",
+        "requested": "The request has gone to CRM and the client is being created. Until then the partner's requests are kept here and reach the manager on their own.",
+        "pending_confirmation": "The partner looks like an existing CRM client. A CRM manager confirms in the client's card whether it is the same company; until then the partner's requests are kept here and will go on their own. Waiting for a manager's confirmation in CRM.",
+        "held": "Held after a client handoff: check the tax ID in the supplier's card and on the CRM client, then press “Invite again”. No link was created, the partner's requests are kept here.",
+        "unverified": "The link was created by a client handoff from CRM by a matching TIN. The partner's requests are kept here until you confirm it is the same company.",
+        "conflict": "CRM already has a client with these details, but it is linked to another company. Nothing was changed. Check the tax ID or registration number in the supplier's card and on the CRM client, fix the wrong one and invite the partner again."
+      }
+    },
     "rights": "What the partner will see",
     "modules": {
       "my_products": {

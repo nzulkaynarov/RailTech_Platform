@@ -846,6 +846,7 @@ def settings_json(**extra: Any) -> dict[str, Any]:
         "target_margin_percent": "20.00",
         "default_offer_validity_days": 14,
         "payment_terms_days": None,
+        "remind_overdue_invoices": False,
         "default_payment_terms": "Предоплата 30%",
         "default_warranty_months": 12,
         "catalog_price_visibility": "cabinet",
@@ -938,6 +939,28 @@ async def test_quote_defaults_patch_sends_codes_and_returns_masked_result(
     }
     assert response.json()["default_cost_currency"] == "UZS"
     assert "min_margin_percent" not in response.json()
+
+
+async def test_quote_defaults_overdue_reminders_switch(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """Напоминания о просрочке (NOTIFY-2): выключено по умолчанию, включение уходит в ERP."""
+    await web.login(["ADMIN"])
+    erp.get(f"{COMPANY}/settings/").mock(return_value=httpx.Response(200, json=settings_json()))
+    current = await web.client.get("/api/v1/admin/company/quote-defaults")
+    assert current.json()["remind_overdue_invoices"] is False
+    route = erp.patch(f"{COMPANY}/settings/").mock(
+        return_value=httpx.Response(200, json=settings_json(remind_overdue_invoices=True))
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/quote-defaults", json={"remind_overdue_invoices": True}
+    )
+
+    assert response.status_code == 200
+    check(response, "/admin/company/quote-defaults", "patch")
+    assert sent(route) == {"remind_overdue_invoices": True}
+    assert response.json()["remind_overdue_invoices"] is True
 
 
 async def test_quote_defaults_validation_codes_become_fields(

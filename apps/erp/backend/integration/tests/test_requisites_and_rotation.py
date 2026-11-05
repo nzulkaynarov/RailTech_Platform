@@ -135,6 +135,15 @@ def test_events_signed_before_the_rotation_are_still_accepted_after_it(settings)
 # ── send_payment_reminders ───────────────────────────────────────────────────────────────────────
 
 
+@pytest.fixture(autouse=True)
+def reminders_on(monkeypatch):
+    """Напоминания о просрочке включает компания-продавец (по умолчанию выключено — DECISIONS 2026-11-04, NOTIFY-2);
+    здесь проверяется шина, а не настройка — считаем её включённой (сама настройка — `test_post_contract_emails.py`)."""
+    import crm.tasks
+
+    monkeypatch.setattr(crm.tasks, "reminders_enabled", lambda invoice: True)
+
+
 def test_a_publication_failure_of_one_invoice_does_not_stop_the_others(django_capture_on_commit_callbacks):
     from integration.services import events
     from integration.tests import world as w

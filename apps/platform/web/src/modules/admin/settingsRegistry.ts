@@ -294,9 +294,9 @@ export const SETTINGS: readonly SettingEntry[] = [
       en: "Quotes, contracts, invoices, emails, quote terms",
     },
     keywords: {
-      ru: ["шаблон", "письма", "условия кп", "срок действия", "оплата"],
-      uz: ["shablon", "xatlar", "tk shartlari"],
-      en: ["template", "emails", "quote terms", "validity", "payment"],
+      ru: ["шаблон", "письма", "условия кп", "срок действия", "оплата", "просрочка", "напоминание"],
+      uz: ["shablon", "xatlar", "tk shartlari", "eslatma"],
+      en: ["template", "emails", "quote terms", "validity", "payment", "overdue", "reminder"],
     },
   },
   {

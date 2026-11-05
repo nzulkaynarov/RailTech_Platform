@@ -241,7 +241,9 @@
     "fxAgeHint": "From 1 to 90 days.",
     "save": "Save terms",
     "invalidField": "Check the value",
-    "note": "New quotes take these values; issued quotes do not change."
+    "note": "New quotes take these values; issued quotes do not change.",
+    "remindOverdue": "Remind customers about overdue invoices",
+    "remindOverdueHint": "Once a day at 10:00 Tashkent time — one reminder per invoice more than three days past due: in the customer portal bell and by email to the project contact and to contacts invited to the portal. Off by default."
   },
   "charges": {
     "title": "Quote charge items",

@@ -6852,6 +6852,94 @@ msgstr "Price valid until"
 msgid "Исправьте поля, отмеченные в карточке."
 msgstr "Fix the fields marked in the card."
 
+# ── emails/portal_notice.* — уведомления кабинета контакту (NOTIFY-2) ──────────────────────────────────────────
+msgid "Новое коммерческое предложение %(number)s"
+msgstr "New commercial offer %(number)s"
+
+msgid "Выставлен счёт %(number)s"
+msgstr "Invoice %(number)s issued"
+
+msgid "Срок оплаты счёта %(number)s прошёл"
+msgstr "Invoice %(number)s is overdue"
+
+msgid "Напоминание: акт %(number)s ждёт приёмки"
+msgstr "Reminder: act %(number)s is awaiting acceptance"
+
+msgid "Акт %(number)s ждёт приёмки"
+msgstr "Act %(number)s is awaiting acceptance"
+
+msgid "Изменился статус поставки по сделке %(deal)s"
+msgstr "Delivery status changed for deal %(deal)s"
+
+msgid "Изменился срок поставки по сделке %(deal)s"
+msgstr "Delivery date changed for deal %(deal)s"
+
+msgid "Менеджер ответил вам в чате"
+msgstr "Your manager replied in the chat"
+
+msgid "Карточка товара %(number)s возвращена на доработку"
+msgstr "Product card %(number)s was returned for revision"
+
+msgid "Новое уведомление в личном кабинете"
+msgstr "New notification in your client portal"
+
+msgid "Вам отправлено коммерческое предложение %(number)s. Откройте его в личном кабинете, чтобы принять или отклонить."
+msgstr "Commercial offer %(number)s has been sent to you. Open it in the client portal to accept or decline it."
+
+msgid "Выставлен счёт %(number)s на сумму %(amount)s."
+msgstr "Invoice %(number)s has been issued for %(amount)s."
+
+msgid "Срок оплаты счёта %(number)s прошёл. Остаток к оплате — %(amount)s."
+msgstr "Invoice %(number)s is overdue. Balance due: %(amount)s."
+
+msgid "Акт %(number)s ждёт вашей приёмки: примите его или верните с причиной."
+msgstr "Act %(number)s is awaiting your acceptance: accept it or return it with a reason."
+
+msgid "Статус поставки по сделке %(deal)s изменился."
+msgstr "The delivery status for deal %(deal)s has changed."
+
+msgid "Ожидаемая дата поставки по сделке %(deal)s — %(eta)s."
+msgstr "The expected delivery date for deal %(deal)s is %(eta)s."
+
+msgid "Прежняя дата — %(previous_eta)s."
+msgstr "The previous date was %(previous_eta)s."
+
+msgid "Менеджер ответил на ваше сообщение в чате личного кабинета."
+msgstr "Your manager replied to your message in the client portal chat."
+
+msgid "Карточка товара %(number)s возвращена на доработку."
+msgstr "Product card %(number)s was returned for revision."
+
+msgid "Причина: %(reason)s"
+msgstr "Reason: %(reason)s"
+
+msgid "В личном кабинете есть новое уведомление."
+msgstr "There is a new notification in your client portal."
+
+msgid "Открыть в личном кабинете:"
+msgstr "Open in the client portal:"
+
+msgid "Вы получили это письмо как контакт компании «%(company)s»."
+msgstr "You received this email as a contact of «%(company)s»."
+
+msgid "Настроить уведомления:"
+msgstr "Notification settings:"
+
+msgid "Личный кабинет"
+msgstr "Client portal"
+
+msgid "Открыть в личном кабинете"
+msgstr "Open in the client portal"
+
+msgid "Настроить уведомления"
+msgstr "Notification settings"
+
+msgid "Карточка товара %(number)s опубликована"
+msgstr "Product card %(number)s has been published"
+
+msgid "Карточка товара %(number)s опубликована в каталоге — клиенты её видят."
+msgstr "Product card %(number)s has been published in the catalogue — customers can see it."
+
 msgid "Получать мгновенно в Telegram"
 msgstr "Get it instantly in Telegram"
 

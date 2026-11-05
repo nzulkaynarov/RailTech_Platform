@@ -59,6 +59,7 @@
 | Карта интеграции: экран → BFF → домены, разрывы | [`architecture/integration-map.md`](architecture/integration-map.md) | действует | архитектор |
 | Система: назначение, запуск, команды | `systems/<crm\|erp\|cabinet\|platform\|eds\|infra\|contracts\|ui-tokens>/README.md`; пакеты `rt-bus` и `rt-docs` — их документы в `architecture/` | действует | лид |
 | Система: правила кода | `systems/<crm\|erp\|cabinet\|platform\|eds>/CONVENTIONS.md` | действует | лид |
+| Уведомления контрагента: колокольчик кабинета, канал по контакту, событие → бот / ERP / письмо | [`systems/erp/notifications.md`](systems/erp/notifications.md) | действует (NOTIFY-2, ADR-0023 п. 2) | лид ERP |
 | CRM: техническое задание, бизнес-требования, разметка evals | [`systems/crm/SPEC.md`](systems/crm/SPEC.md), [`systems/crm/BUSINESS.md`](systems/crm/BUSINESS.md), [`systems/crm/evals-labeling.md`](systems/crm/evals-labeling.md) | действует для бэкенда CRM; при расхождении права `product/` | лид |
 | Архитектурные решения CRM | [`adr/crm/`](adr/crm/) (обозначение «ADR CRM-00NN») | действует | архитектор |
 | Эксплуатация: симптом → диагностика → действие | [`runbooks/README.md`](runbooks/README.md) (ансамбль), [`runbooks/crm/`](runbooks/crm/README.md), [`runbooks/erp/`](runbooks/erp/README.md) | действует | лид |

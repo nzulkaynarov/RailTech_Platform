@@ -1,0 +1,21 @@
+{
+  "specversion": "1.0",
+  "id": "2f6c9b84-1d3e-5a70-8c42-7b0e5d9a1c63",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.partner.client_rejected.v1",
+  "time": "2026-11-04T09:15:10Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/partner.client_rejected/v1",
+  "tenant": "railtech",
+  "correlationid": "0c4b6f1e-2d8a-5f3b-8a77-61e5d9b2c3f4",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 214,
+    "crm_client_id": 58,
+    "reason": "client_mapped_to_other_company",
+    "other_erp_company_id": 301,
+    "actor": {
+      "type": "system"
+    }
+  }
+}

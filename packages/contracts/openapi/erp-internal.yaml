@@ -746,7 +746,8 @@ paths:
       description: The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and
         its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency
         are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days`
-        is the invoice payment term in days (0..32767, null = platform default).
+        is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily
+        overdue-invoice reminders to client contacts (default off).
       summary: Read / update company КП defaults + numbering
       parameters:
       - in: path
@@ -768,7 +769,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -788,7 +789,8 @@ paths:
       description: The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and
         its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency
         are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days`
-        is the invoice payment term in days (0..32767, null = platform default).
+        is the invoice payment term in days (0..32767, null = platform default). `remind_overdue_invoices` turns on daily
+        overdue-invoice reminders to client contacts (default off).
       summary: Read / update company КП defaults + numbering
       parameters:
       - in: path
@@ -821,7 +823,7 @@ paths:
           description: ''
         '400':
           description: BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS
-            / DOC_PREFIX_TAKEN
+            / BAD_BOOLEAN / DOC_PREFIX_TAKEN
           content:
             application/json:
               schema:
@@ -6811,6 +6813,96 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/crm-client/confirm/:
+    post:
+      operationId: catalog_supplier_access_crm_client_confirm
+      description: 'Needs `supply.manage`. Сопоставление компании с клиентом CRM создала передача по совпадению ИНН и не проверено
+        (PART-CRM): «Да, это та же компания» делает его проверенным, открывает компании клиентские модули кабинета и выпускает
+        отложенные заявки партнёра. Проверять нечего — 409 `NOTHING_TO_VERIFY`.'
+      summary: Confirm the CRM client found by TIN
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/supplier-access/{id}/crm-client/reject/:
+    post:
+      operationId: catalog_supplier_access_crm_client_reject
+      description: 'Needs `supply.manage`. «Нет, другая компания»: сопоставление снимается, контакты, пришедшие с передачей
+        клиента, уходят в архив, CRM получает `partner.client_rejected` и снимает привязку у клиента; затем компания запрашивается
+        в CRM обычным путём. Проверять нечего — 409 `NOTHING_TO_VERIFY`.'
+      summary: Reject the CRM client found by TIN
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierAccess'
+          description: ''
         '403':
           description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
           content:
@@ -21520,6 +21612,11 @@ components:
           title: Срок оплаты счёта (дней)
           description: Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От
             этого срока считается напоминание об оплате.
+        remind_overdue_invoices:
+          type: boolean
+          title: Напоминать клиентам о просроченных счетах
+          description: 'Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента:
+            колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks).'
         default_payment_terms:
           type: string
           title: Условия оплаты по умолчанию
@@ -23934,6 +24031,10 @@ components:
           items:
             type: string
           description: Разделы, которые откроются сессии компании.
+        crm_client:
+          allOf:
+          - $ref: '#/components/schemas/DeskSupplierAccessCrmClient'
+          description: 'Клиент партнёра в CRM (PART-CRM): партнёр становится клиентом CRM при приглашении.'
         can_manage:
           type: boolean
           description: 'У сотрудника есть `supply.manage`: контакты, приглашение, приостановка.'
@@ -23944,6 +24045,7 @@ components:
       - company_id
       - company_name
       - contacts
+      - crm_client
       - partner_modules
       - relationship
     DeskSupplierAccessContact:
@@ -24001,6 +24103,55 @@ components:
       required:
       - email
       - name
+    DeskSupplierAccessCrmClient:
+      type: object
+      properties:
+        status:
+          allOf:
+          - $ref: '#/components/schemas/DeskSupplierAccessCrmClientStatusEnum'
+          description: |-
+            Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `unverified` — сопоставление создала передача по совпадению ИНН и оно не проверено: сотрудник подтверждает («Да»/«Нет») здесь же, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+
+            * `none` - none
+            * `requested` - requested
+            * `pending_confirmation` - pending_confirmation
+            * `held` - held
+            * `unverified` - unverified
+            * `linked` - linked
+            * `conflict` - conflict
+        crm_client_id:
+          type: integer
+          nullable: true
+          description: 'Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента».'
+        crm_client_name:
+          type: string
+          nullable: true
+          description: '`unverified`: как клиент назван в передаче из CRM.'
+        inn:
+          type: string
+          nullable: true
+          description: '`unverified`: ИНН, по которому компания связана с клиентом.'
+      required:
+      - crm_client_id
+      - status
+    DeskSupplierAccessCrmClientStatusEnum:
+      enum:
+      - none
+      - requested
+      - pending_confirmation
+      - held
+      - unverified
+      - linked
+      - conflict
+      type: string
+      description: |-
+        * `none` - none
+        * `requested` - requested
+        * `pending_confirmation` - pending_confirmation
+        * `held` - held
+        * `unverified` - unverified
+        * `linked` - linked
+        * `conflict` - conflict
     DeskSupplierAccessInviteInRequest:
       type: object
       properties:
@@ -28170,6 +28321,7 @@ components:
         `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
         читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
         `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
+        `remind_overdue_invoices` — напоминать клиентам о просроченных счетах (по умолчанию выключено; NOTIFY-2).
       properties:
         default_cost_currency:
           type: string
@@ -28220,6 +28372,11 @@ components:
           title: Срок оплаты счёта (дней)
           description: Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От
             этого срока считается напоминание об оплате.
+        remind_overdue_invoices:
+          type: boolean
+          title: Напоминать клиентам о просроченных счетах
+          description: 'Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента:
+            колокольчик кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks).'
         default_payment_terms:
           type: string
           title: Условия оплаты по умолчанию

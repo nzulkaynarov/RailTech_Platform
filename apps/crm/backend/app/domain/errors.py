@@ -78,6 +78,9 @@ class Reason(StrEnum):
     CLIENT_NOT_IN_ERP = "client_not_in_erp"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
+    # Передача клиента (PART-CRM): компания с таким ИНН — партнёр кабинета без подтверждённой связи,
+    # ERP удержала передачу (409 PARTNER_VERIFICATION_REQUIRED): сначала сверка ИНН и подтверждение.
+    ERP_PARTNER_VERIFICATION = "erp_partner_verification"
     # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже
     # использован; ERP старой версии без операции сопряжения.
     ERP_PAIRING_CODE_INVALID = "erp_pairing_code_invalid"

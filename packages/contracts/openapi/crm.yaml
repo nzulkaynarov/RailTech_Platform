@@ -1325,6 +1325,12 @@ components:
           - type: integer
           - type: 'null'
           title: Owner User Id
+        partner_requests:
+          default: []
+          items:
+            $ref: '#/components/schemas/PartnerRequestOut'
+          title: Partner Requests
+          type: array
         segment:
           anyOf:
           - type: string
@@ -7184,6 +7190,57 @@ components:
       - secrets_enabled
       title: OffsiteStatusOut
       type: object
+    PartnerRequestContact:
+      properties:
+        email:
+          title: Email
+          type: string
+        full_name:
+          title: Full Name
+          type: string
+      required:
+      - full_name
+      - email
+      title: PartnerRequestContact
+      type: object
+    PartnerRequestOut:
+      description: 'Партнёр из ERP, похожий на этого клиента: ждёт решения менеджера (PART-CRM).
+
+
+        Совпадение по ИНН или паре «страна + рег. номер» не привязывает клиента само: менеджер
+
+        подтверждает («Это та же компания») или заводит нового клиента.'
+      properties:
+        company_name:
+          title: Company Name
+          type: string
+        contacts:
+          items:
+            $ref: '#/components/schemas/PartnerRequestContact'
+          title: Contacts
+          type: array
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        erp_company_id:
+          title: Erp Company Id
+          type: integer
+        id:
+          title: Id
+          type: integer
+        matched_by:
+          title: Matched By
+          type: string
+      required:
+      - id
+      - erp_company_id
+      - company_name
+      - matched_by
+      - contacts
+      - created_at
+      title: PartnerRequestOut
+      type: object
     PasswordReset:
       properties:
         temporary_password:
@@ -7810,6 +7867,7 @@ components:
       - erp_rate_limited
       - client_not_in_erp
       - erp_inn_conflict
+      - erp_partner_verification
       - erp_pairing_code_invalid
       - erp_pairing_code_expired
       - erp_pairing_code_used
@@ -10151,7 +10209,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.20.0
+  version: 0.21.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -11475,6 +11533,83 @@ paths:
       security:
       - HTTPBearer: []
       summary: Resend Invitation
+      tags:
+      - clients
+  /api/v1/clients/{client_id}/partner-requests/{request_id}/confirm:
+    post:
+      description: '«Это та же компания» (PART-CRM): клиент сопоставляется компании ERP партнёра, контакты
+
+        запроса добавляются, ERP получает `partner.client_resolved` со статусом `linked`.
+
+
+        404 — заявки нет или она уже решена; 409 — клиент или компания ERP уже сопоставлены.'
+      operationId: confirm_partner_request
+      parameters:
+      - in: path
+        name: client_id
+        required: true
+        schema:
+          title: Client Id
+          type: integer
+      - in: path
+        name: request_id
+        required: true
+        schema:
+          title: Request Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Confirm Partner Request
+      tags:
+      - clients
+  /api/v1/clients/{client_id}/partner-requests/{request_id}/decline:
+    post:
+      description: '«Нет — завести нового клиента» (PART-CRM): найденный клиент не меняется, для партнёра
+
+        создаётся новый клиент, ERP получает `linked`. Ответ — id нового клиента.'
+      operationId: decline_partner_request
+      parameters:
+      - in: path
+        name: client_id
+        required: true
+        schema:
+          title: Client Id
+          type: integer
+      - in: path
+        name: request_id
+        required: true
+        schema:
+          title: Request Id
+          type: integer
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Created'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Decline Partner Request
       tags:
       - clients
   /api/v1/clients/{client_id}/telegram:

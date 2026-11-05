@@ -385,6 +385,7 @@ class QuoteDefaults(BaseModel):
     target_margin_percent: str | None = None
     default_offer_validity_days: int | None
     payment_terms_days: int | None
+    remind_overdue_invoices: bool
     default_payment_terms: str
     default_warranty_months: int | None
     catalog_price_visibility: Literal["cabinet", "on_request"]
@@ -413,6 +414,7 @@ class QuoteDefaultsUpdate(Patch):
     target_margin_percent: str | None = Field(default=None, pattern=r"^-?[0-9]+(\.[0-9]+)?$")
     default_offer_validity_days: int | None = Field(default=None, ge=0)
     payment_terms_days: int | None = Field(default=None, ge=0)
+    remind_overdue_invoices: bool | None = None
     default_payment_terms: str | None = None
     default_warranty_months: int | None = Field(default=None, ge=0)
     catalog_price_visibility: Literal["cabinet", "on_request"] | None = None
@@ -429,6 +431,7 @@ def to_quote_defaults(raw: Mapping[str, Any], visible_groups: Collection[str]) -
         "default_vat_rate": dec(raw.get("default_vat_rate")),
         "default_offer_validity_days": maybe_int(raw.get("default_offer_validity_days")),
         "payment_terms_days": maybe_int(raw.get("payment_terms_days")),
+        "remind_overdue_invoices": raw.get("remind_overdue_invoices") is True,
         "default_payment_terms": text(raw.get("default_payment_terms")),
         "default_warranty_months": maybe_int(raw.get("default_warranty_months")),
         "catalog_price_visibility": visibility if visibility == "cabinet" else "on_request",

@@ -141,6 +141,12 @@ export const labelsRu = {
     "deal.erp_request_failed": "Ошибка передачи заявки в ERP",
     "deal.erp_request_retry": "Повторил отправку заявки в ERP",
     "client.erp_handoff_failed": "Передача клиента в бэк-офис (ERP) не удалась",
+    "client.partner_linked": "Партнёр стал клиентом (сопоставлен с компанией ERP)",
+    "client.partner_conflict": "Клиент партнёра: конфликт сопоставления с ERP",
+    "client.partner_pending": "Партнёр ERP совпал с клиентом: ждёт подтверждения менеджера",
+    "client.partner_released": "Снята привязка клиента к компании ERP партнёра",
+    "client.partner_request_closed":
+      "Закрыта заявка партнёра ERP: компания уже сопоставлена с клиентом",
     "client.unlink_telegram": "Отвязал Telegram",
     "client.contact_telegram_self_link": "Контакт сам подключил Telegram из кабинета",
     "client.contact_telegram_self_unlink": "Контакт сам отключил Telegram в кабинете",

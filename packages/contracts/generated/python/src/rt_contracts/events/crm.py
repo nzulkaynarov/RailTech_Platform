@@ -209,6 +209,14 @@ class Contact(BaseModel):
     updated_at: AwareDatetime
 
 
+class Contact1(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    crm_contact_id: int
+
+
 class ContactCreatedV1(BaseModel):
     """
     Тип uz.railtech.crm.contact.created.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Снимок контакта. Подписчик ERP создаёт или обновляет проекцию контакта по crm_contact_id.
@@ -541,6 +549,52 @@ class MailSentV1(BaseModel):
     """
 
 
+class MatchedBy(StrEnum):
+    """
+    Как найден клиент: уже сопоставлен с этой компанией, по ИНН, по паре «страна + регистрационный номер» (оба сравниваются по нормализованному ключу) или создан новый (created, только при linked)
+    """
+
+    erp_company_id = "erp_company_id"
+    inn = "inn"
+    registration_number = "registration_number"
+    created = "created"
+
+
+class PartnerClientResolvedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.partner.client_resolved.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Ответ CRM на uz.railtech.erp.partner.client_requested.v1 (PART-CRM). Три исхода. linked — клиент CRM создан либо уже сопоставлен этой компании (по erp_company_id), либо найденного по ИНН или паре «страна + регистрационный номер» менеджер подтвердил как ту же компанию, либо менеджер решил завести нового клиента. pending_confirmation — по ИНН или паре найден существующий клиент, не сопоставленный ни одной компании ERP: CRM ничего не меняет и просит менеджера подтвердить («Это та же компания» или «Нет — завести нового»; совпадение по ключу — предложение слияния человеку, не автопривязка, как правила дублей Salesforce и HubSpot); после решения придёт linked. conflict — найденный клиент уже сопоставлен другой компании ERP, CRM ничего не перезаписывает, пишет в журнал и уведомляет ответственного. По linked ERP ставит сопоставление клиента, тип компании CLIENT, сопоставляет контакты и публикует заявки партнёра, ожидавшие сопоставления; по pending_confirmation и conflict — показывает сотруднику состояние и ссылку на клиента CRM, заявки остаются отложенными. Ответов может быть несколько на один запрос (pending_confirmation, затем linked), каждый безопасен при повторе (ERP идемпотентна по erp_company_id). Только идентификаторы, данных людей нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания партнёра в ERP (из запроса)
+    """
+    status: Status
+    """
+    linked — клиент CRM сопоставлен компании ERP; pending_confirmation — найден существующий клиент, нужно подтверждение менеджера CRM, ничего не изменено; conflict — найденный клиент уже сопоставлен другой компании, ничего не изменено
+    """
+    crm_client_id: int
+    """
+    Клиент CRM: сопоставленный (linked), найденный и ждущий подтверждения (pending_confirmation) или найденный и занятый другой компанией (conflict)
+    """
+    matched_by: MatchedBy | None = None
+    """
+    Как найден клиент: уже сопоставлен с этой компанией, по ИНН, по паре «страна + регистрационный номер» (оба сравниваются по нормализованному ключу) или создан новый (created, только при linked)
+    """
+    conflict_erp_company_id: int | None = None
+    """
+    Другая компания ERP, с которой клиент CRM уже сопоставлен (только при conflict)
+    """
+    contacts: Annotated[list[Contact1] | None, Field(max_length=50)] = None
+    """
+    Сопоставление контактов запроса с контактами CRM (только при linked); контакт без e-mail в запросе не приходит
+    """
+    actor: Actor
+
+
 class Phone(RootModel[str]):
     root: Annotated[str, Field(pattern="^\\+[1-9][0-9]{6,14}$")]
     """
@@ -578,6 +632,16 @@ class Ref(BaseModel):
 class Scope(StrEnum):
     authors = "authors"
     company = "company"
+
+
+class Status(StrEnum):
+    """
+    linked — клиент CRM сопоставлен компании ERP; pending_confirmation — найден существующий клиент, нужно подтверждение менеджера CRM, ничего не изменено; conflict — найденный клиент уже сопоставлен другой компании, ничего не изменено
+    """
+
+    linked = "linked"
+    pending_confirmation = "pending_confirmation"
+    conflict = "conflict"
 
 
 class Type(StrEnum):

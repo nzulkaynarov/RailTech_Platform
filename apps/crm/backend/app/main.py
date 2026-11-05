@@ -103,6 +103,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
+        # 0.21.0 (PART-CRM): новый подкод Reason `erp_partner_verification` (передача клиента
+        # удержана: компания партнёра кабинета требует сверки) — oasdiff считает новое значение
+        # enum ответа ломающим; плюс добавляющее: `partner_requests` в карточке клиента и
+        # `POST /clients/{id}/partner-requests/{id}/confirm|decline`.
         # 0.20.0 (MAIL-TYPES): типы входящих писем — справочник `/dictionaries`, правила
         # отправителя, итог `price`, новые подкоды Reason (`mail_type_*`, `mail_rule_exists`,
         # `mail_no_handover_target`) — oasdiff считает новое значение enum ответа ломающим.
@@ -126,7 +130,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.20.0",
+        version="0.21.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,

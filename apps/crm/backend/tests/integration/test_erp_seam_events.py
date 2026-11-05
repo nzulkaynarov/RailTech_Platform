@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus.erp_event import INLINE_TYPES, NOT_FOR_CRM, OWN_HANDLER
+from app.bus.erp_event import INLINE_TYPES, NOT_FOR_CRM, OWN_HANDLER, PARTNER_REQUEST
 from app.models.clients import Client, Document
 from app.models.leads import LeadNote
 from tests.bus_events import event_types, example_envelope
@@ -31,10 +31,15 @@ pytestmark = pytest.mark.integration
 
 #: Код акцепта и приглашение в кабинет не проходят очередь, как остальные: отдельные наборы тестов.
 #: Запрос письма (`mail.requested`, W18A-P1) — не событие сделки: `test_mail_bus.py`.
+#: Запрос клиента партнёра (`partner.client_*`, PART-CRM) — свой сервис
+#: `partner_clients.py`: `test_partner_clients.py`.
 ALL_TYPES = [
     t
     for t in event_types("erp")
-    if t not in INLINE_TYPES and t not in NOT_FOR_CRM and t not in OWN_HANDLER
+    if t not in INLINE_TYPES
+    and t not in NOT_FOR_CRM
+    and t not in OWN_HANDLER
+    and t not in PARTNER_REQUEST
 ]
 COMPANY = 118  # erp_company_id в примерах контракта
 #: События, по которым бот пишет клиенту (`client_message` в erp_bot_messages); по остальным молчит.

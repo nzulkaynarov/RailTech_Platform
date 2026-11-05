@@ -29,6 +29,9 @@ for (const width of WIDTHS) {
     await block.getByRole("button", { name: "Пригласить: Нодира Рахимова" }).click();
     await expect(block.getByText("Приглашён", { exact: true })).toBeVisible();
     await expect(block.getByText("В кабинете: Партнёр")).toBeVisible();
+    // PART-CRM: приглашение просит CRM завести клиента — «Ожидает»
+    await expect(block.getByText("Клиент в CRM")).toBeVisible();
+    await expect(block.getByText("Ожидает", { exact: true })).toBeVisible();
     await expectNoViolations(page, `Поставщик · доступ в кабинет`);
     await block.scrollIntoViewIfNeeded();
     await settledScreenshot(page, "supplier-cabinet-access");

@@ -16,7 +16,7 @@ import uuid
 
 from django.core.files import File
 from django.db import transaction
-from integration.services import events
+from integration.services import events, partner_client
 from portal.exceptions import PortalValidationError
 from portal.models import PortalRequestLine, PortalRequestSummary, PortalUpload
 
@@ -67,6 +67,9 @@ def create_client_request(company, contact, *, summary: str, lines: list[dict], 
     """Создаёт запрос клиента; вернуть сделку. Данные уже прошли `ClientRequestCreateSerializer`."""
     draft_stage = DealStage.objects.filter(code=DealStageCode.DRAFT).first()
     with transaction.atomic():
+        # Партнёр: ответ CRM «клиент заведён» (`partner.client_resolved`) и эта заявка идут по очереди — иначе заявка, созданная
+        # между проверкой сопоставления и записью отложенного события, осталась бы неопубликованной навсегда.
+        partner_client.lock_if_partner(company)
         uploads = _lock_uploads(company, attachments)
         deal = Deal(
             company=company,
@@ -106,9 +109,10 @@ PARTNER_REQUEST_NOTIFY_EVENT = "portal.partner_request_unrouted"
 
 
 def _notify_unrouted_partner_request(company, deal: Deal, summary: str) -> None:
-    """Заявка партнёра, чья компания не сопоставлена клиенту CRM, в CRM не попадает (`request.created` несёт только
-    привязанных клиентов, CONTRACTS §3): уведомляем ответственного сотрудника отношения, чтобы она не потерялась.
-    Ответственного нет — уведомление получают администраторы платформы. Новый контракт события не нужен."""
+    """Заявка партнёра, чья компания ещё не сопоставлена клиенту CRM, в CRM не попала (`request.created` несёт только
+    привязанных клиентов, CONTRACTS §3): уведомляем ответственного сотрудника отношения, чтобы она не потерялась, и
+    откладываем событие (`DeferredRequestEvent`) — как только CRM заведёт клиента (`partner.client_resolved`, PART-CRM),
+    ERP опубликует его сама. Ответственного нет — уведомление получают администраторы платформы."""
     from parties.models import CompanyRelationship, RelationshipRole
 
     from notifications.services import notify_platform_admins, notify_user
@@ -120,11 +124,15 @@ def _notify_unrouted_partner_request(company, deal: Deal, summary: str) -> None:
     )
     if relationship is None:
         return  # не партнёр: прежнее поведение (клиента без сопоставления CRM заводит передача из CRM)
+    from integration.models import DeferredRequestEvent
+
+    DeferredRequestEvent.objects.get_or_create(deal=deal)
     params = {"company": company.name, "deal_id": deal.pk}
-    title = f"Заявка партнёра «{company.name}» не попала в CRM"
+    title = f"Заявка партнёра «{company.name}» ждёт клиента в CRM"
     message = (
-        f"Партнёр создал заявку из кабинета: {summary[:300]}. Компания не сопоставлена клиенту CRM, поэтому заявка "
-        "осталась только в ERP: разберите её здесь или заведите клиента в CRM."
+        f"Партнёр создал заявку из кабинета: {summary[:300]}. Компания ещё не стала клиентом CRM, поэтому заявка пока "
+        "только в ERP: как только CRM заведёт клиента, заявка уйдёт менеджеру сама. Не дождались — откройте карточку "
+        "поставщика, блок «Доступ в кабинет»: там видно, заведён ли клиент в CRM или есть конфликт."
     )
     if relationship.responsible_id:
         notify_user(

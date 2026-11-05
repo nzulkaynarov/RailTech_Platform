@@ -202,6 +202,54 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента уведомлений контакта (колокольчик)
+     * @description Уведомления контакта сессии по убыванию `id` (новые сверху): без `before_id` — последние `limit`, с ним — более
+     *     ранние (кнопка «Показать ещё»). Строка ленты — на контакт: прочитанность у каждого контакта своя. В ленте только
+     *     уведомления, чей объект открыт модулям сессии (счёт — `invoices`, акт — `acts`, КП — `quotes`, поставка —
+     *     `deliveries`, ответ менеджера — `messages`, карточка партнёра — `my_products`); выключили модуль — его уведомления
+     *     пропадают из ленты и из `Me.notifications_unread`. Текст рендерит Cabinet на языке контакта по `text_key` и `params`.
+     *     Эндпоинт открыт любой сессии кабинета (модуль `profile`). Компания и контакт — только из сессии.
+     */
+    get: operations["listNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отметить уведомления прочитанными
+     * @description `ids` — отметить эти уведомления контакта сессии; `all: true` — «Прочитать все» (всё видимое модулям сессии).
+     *     Ровно одно из двух, иначе 422 `VALIDATION_ERROR`. Чужие и несуществующие `id` не отмечаются и не раскрываются:
+     *     ответ тот же, что без них. Повторная отметка ничего не меняет. Прочтение гасит отложенное письмо по уведомлению
+     *     (ответ менеджера в чате). `can_act` не нужен (чтение).
+     */
+    post: operations["markNotificationsRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/requests": {
     parameters: {
       query?: never;
@@ -1216,6 +1264,8 @@ export interface components {
       can_act: boolean;
       /** @enum {string} */
       auth_method: "telegram" | "magic_link";
+      /** @description Непрочитанные контактом уведомления колокольчика (только видимые модулям сессии); 0 — нет */
+      notifications_unread: number;
       /** @description Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются. */
       roles: components["schemas"]["PortalRole"][];
       /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
@@ -1263,6 +1313,91 @@ export interface components {
       | "profile"
       | "my_products"
       | "messages";
+    /**
+     * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
+     *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
+     *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
+     *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+     *     Незнакомый вид Cabinet показывает общим текстом.
+     * @enum {string}
+     */
+    NotificationKind:
+      | "quote_sent"
+      | "invoice_issued"
+      | "payment_overdue"
+      | "act_issued"
+      | "delivery_status_changed"
+      | "delivery_eta_changed"
+      | "manager_replied"
+      | "partner_card_returned"
+      | "partner_card_published";
+    /**
+     * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
+     * @enum {string}
+     */
+    NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products";
+    /** @enum {string} */
+    NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product";
+    /**
+     * @description Что произошло с объектом или чего ждут от контакта
+     * @enum {string}
+     */
+    NotificationAction:
+      | "awaiting_decision"
+      | "issued"
+      | "overdue"
+      | "awaiting_acceptance"
+      | "status_changed"
+      | "eta_changed"
+      | "replied"
+      | "returned"
+      | "published";
+    /**
+     * @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
+     *     id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).
+     */
+    NotificationObject: {
+      type: components["schemas"]["NotificationObjectType"];
+      /** Format: int64 */
+      id: number;
+      number: string | null;
+    };
+    PortalNotification: {
+      /** Format: int64 */
+      id: number;
+      kind: components["schemas"]["NotificationKind"];
+      group: components["schemas"]["NotificationGroup"];
+      object: components["schemas"]["NotificationObject"];
+      action: components["schemas"]["NotificationAction"];
+      /** @description Ключ текста в словарях Cabinet (`notifications.text.<text_key>`); текст на языке контакта рендерит Cabinet */
+      text_key: string;
+      /** @description Параметры текста (номер, сумма, дата, статус) — строки */
+      params: {
+        [key: string]: string;
+      };
+      /** @description Адрес объекта в кабинете (путь от корня Cabinet, например `/quotes/42`) */
+      link: string;
+      /** Format: date-time */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Когда контакт прочитал; `null` — не прочитано
+       */
+      read_at: string | null;
+    };
+    NotificationPage: {
+      items: components["schemas"]["PortalNotification"][];
+      /** @description Есть более ранние уведомления — следующая страница с `before_id` = `id` последнего элемента */
+      has_more: boolean;
+    };
+    /** @description Ровно одно из двух — `ids` или `all: true` */
+    NotificationReadMark: {
+      ids?: number[];
+      all?: boolean;
+    };
+    NotificationUnread: {
+      unread: number;
+    };
     /** @enum {string} */
     RequestStatus: "new" | "in_progress" | "quoted" | "closed";
     RequestLineIn: {
@@ -2192,6 +2327,70 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  listNotifications: {
+    parameters: {
+      query?: {
+        before_id?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница ленты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  markNotificationsRead: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotificationReadMark"];
+      };
+    };
+    responses: {
+      /** @description Отметка сохранена, число непрочитанных после неё */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationUnread"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
   };
   listRequests: {
