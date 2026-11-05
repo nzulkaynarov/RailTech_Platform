@@ -11076,7 +11076,7 @@ export interface components {
       mail: "none" | "sending" | "sent" | "failed";
       /** @description Причина словами, если `mail = failed` */
       mail_reason: string | null;
-      /** @description Карточка ИСХ: `/eds/documents?scope=all&doc={id}`; своя заготовка — `/eds/new?draft={id}` */
+      /** @description Карточка ИСХ: `/eds/documents?scope=all&doc={id}&panel=open` (черновик автора экран открывает формой «Продолжить» — `/eds/new?draft={id}`) */
       path: string;
       /** Format: date-time */
       created_at: string;

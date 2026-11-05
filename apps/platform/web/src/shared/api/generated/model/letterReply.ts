@@ -27,7 +27,7 @@ export interface LetterReply {
    * @nullable
    */
   mail_reason: string | null;
-  /** Карточка ИСХ: `/eds/documents?scope=all&doc={id}`; своя заготовка — `/eds/new?draft={id}` */
+  /** Карточка ИСХ: `/eds/documents?scope=all&doc={id}&panel=open` (черновик автора экран открывает формой «Продолжить» — `/eds/new?draft={id}`) */
   path: string;
   created_at: string;
 }
