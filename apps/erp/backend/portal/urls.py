@@ -4,6 +4,7 @@ Strictly matches packages/contracts/openapi/erp-portal.yaml plus Q-14..Q-17 reso
 """
 
 from django.urls import path
+from portal.messages_views import MessageListView, MessageReadView
 from portal.views import (
     ActAcceptView,
     ActListView,
@@ -49,6 +50,7 @@ from portal.views_partner import (
     PartnerProductListView,
     PartnerSubmitView,
 )
+from portal.views_telegram import TelegramLinkView, TelegramStatusView, TelegramTestView
 
 urlpatterns = [
     # Auth
@@ -65,6 +67,13 @@ urlpatterns = [
     # Me
     path("me", MeView.as_view(), name="portal-me"),
     path("me/", MeView.as_view(), name="portal-me-slash"),
+    # Telegram контакта (NOTIFY-1, ADR-0023 п. 3)
+    path("me/telegram", TelegramStatusView.as_view(), name="portal-me-telegram"),
+    path("me/telegram/", TelegramStatusView.as_view(), name="portal-me-telegram-slash"),
+    path("me/telegram/test", TelegramTestView.as_view(), name="portal-me-telegram-test"),
+    path("me/telegram/test/", TelegramTestView.as_view(), name="portal-me-telegram-test-slash"),
+    path("me/telegram-link", TelegramLinkView.as_view(), name="portal-me-telegram-link"),
+    path("me/telegram-link/", TelegramLinkView.as_view(), name="portal-me-telegram-link-slash"),
     # Requests (Запросы клиента)
     path("requests", RequestListView.as_view(), name="portal-requests"),
     path("requests/", RequestListView.as_view(), name="portal-requests-slash"),
@@ -157,4 +166,9 @@ urlpatterns = [
     path("team/", TeamListView.as_view(), name="portal-team-slash"),
     path("team/invite", TeamInviteView.as_view(), name="portal-team-invite"),
     path("team/invite/", TeamInviteView.as_view(), name="portal-team-invite-slash"),
+    # Messages (Чат кабинета, CHAT-1)
+    path("messages", MessageListView.as_view(), name="portal-messages"),
+    path("messages/", MessageListView.as_view(), name="portal-messages-slash"),
+    path("messages/read", MessageReadView.as_view(), name="portal-messages-read"),
+    path("messages/read/", MessageReadView.as_view(), name="portal-messages-read-slash"),
 ]

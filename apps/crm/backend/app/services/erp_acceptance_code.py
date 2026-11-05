@@ -110,7 +110,10 @@ async def contact_telegram(
     """Telegram контакта: его собственная привязка; у основного контакта — ещё и клиента (как при
     передаче в ERP, `erp_handoff._telegram_of`). Заблокировавший бота аккаунт не подходит.
     """
-    conditions: list[ColumnElement[bool]] = [TelegramIdentity.is_blocked.is_(False)]
+    conditions: list[ColumnElement[bool]] = [
+        TelegramIdentity.is_blocked.is_(False),
+        TelegramIdentity.notifications_off_at.is_(None),  # отключил в кабинете (NOTIFY-1)
+    ]
     if contact.telegram_identity_id is not None:
         conditions.append(TelegramIdentity.id == contact.telegram_identity_id)
     elif contact.is_primary:

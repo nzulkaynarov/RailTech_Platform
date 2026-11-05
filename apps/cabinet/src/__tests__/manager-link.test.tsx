@@ -1,122 +1,126 @@
-import { within } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import { botLink, managerLink } from '@/app/links';
-import { asMiniApp, renderApp, signedIn } from '@/test/render';
+import { botLink } from '@/app/links';
+import { CLIENT_ACCESS } from '@/mocks/fixtures';
+import { chatLink, contextFromSearch } from '@/lib/messages';
+import { renderApp, signedIn } from '@/test/render';
 import { expectNoAxeViolations, heading } from '@/test/screens';
 
 /**
- * «Написать менеджеру» (M2-CAB-03): `t.me/<бот>?start=deal_<id>`. DoD — ссылка содержит контекст
- * сделки. Имя бота в тестах — `railtech_test_bot` (vitest.config.ts).
+ * «Написать менеджеру» (CHAT-1, ADR-0023): чат кабинета с меткой документа, а не бот — общение в кабинете не уводит в
+ * Telegram. Бот — второй канал: ссылка на экране чата, вход и «Я новый клиент». Имя бота в тестах — `railtech_test_bot`.
  */
 const BOT = 'https://t.me/railtech_test_bot';
 /** Экран сделки собирается из семи списков портала — под параллельной нагрузкой дольше 1 с. */
 const LOADED = { timeout: 5000 };
-/**
- * Содержимое экрана: роль ищется внутри `<main>`, а не по всему документу с меню и шапкой (CONVENTIONS, «Правило тестов»):
- * поиск по документу на экране проекта из семи списков на раннере CI не укладывался в таймаут теста.
- */
+/** Содержимое экрана: роль ищется внутри `<main>` (CONVENTIONS, «Правило тестов»). */
 const page = () => document.querySelector('main') as HTMLElement;
+const chat = (kind: string, id: number, number: string) => chatLink({ kind: kind as 'deal', id, number });
 
 afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-describe('ссылки на бота', () => {
-  it('managerLink: контекст сделки в параметре start', () => {
-    expect(managerLink(42)).toBe(`${BOT}?start=deal_42`);
-    expect(new URL(managerLink(7)!).searchParams.get('start')).toBe('deal_7');
+describe('ссылки', () => {
+  it('chatLink: метка документа в адресе чата; без метки — просто чат', () => {
+    expect(chatLink(null)).toBe('/messages');
+    expect(chat('quote', 301, 'KP-2026-0042')).toBe('/messages?about=quote&id=301&number=KP-2026-0042');
   });
 
-  it('без сделки — чат с ботом без контекста, а не битый deal_undefined', () => {
-    expect(managerLink(undefined)).toBe(BOT);
-    expect(managerLink(null)).toBe(BOT);
-    expect(managerLink(Number.NaN)).toBe(BOT);
+  it('contextFromSearch: неполная или чужая метка не принимается', () => {
+    const parse = (query: string) => contextFromSearch(new URLSearchParams(query));
+    expect(parse('about=act&id=701&number=A-2026-0090')).toEqual({ kind: 'act', id: 701, number: 'A-2026-0090' });
+    expect(parse('about=contract&id=1&number=X')).toBeNull();
+    expect(parse('about=quote&id=abc&number=X')).toBeNull();
+    expect(parse('about=quote&id=301')).toBeNull();
   });
 
-  it('имя бота с @ принимается; пустое имя — ссылок нет', () => {
+  it('бот — второй канал: имя с @ принимается, пустое — ссылок нет', () => {
     vi.stubEnv('VITE_BOT_USERNAME', '@railtech_test_bot');
     expect(botLink('web')).toBe(`${BOT}?start=web`);
     vi.stubEnv('VITE_BOT_USERNAME', '');
     expect(botLink('web')).toBeNull();
-    expect(managerLink(42)).toBeNull();
   });
 });
 
 describe('«Написать менеджеру» на экранах', () => {
-  it('сделка: кнопка в шапке ведёт в бота с deal_<id>, в вебе — новая вкладка', async () => {
+  it('сделка: кнопка в шапке ведёт в чат кабинета с меткой проекта, не в Telegram', async () => {
     signedIn();
     renderApp('/deals/35');
     await heading('Проект D-35');
-    const link = await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED);
-    expect(link).toHaveAttribute('href', `${BOT}?start=deal_35`);
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    const link = await within(page()).findByRole('link', { name: 'Написать менеджеру о проекте D-35' }, LOADED);
+    expect(link).toHaveAttribute('href', chat('deal', 35, 'D-35'));
+    expect(link).not.toHaveAttribute('target');
+    expect(link).toHaveTextContent('Написать менеджеру');
     await expectNoAxeViolations();
   });
 
-  it('карточка КП: сделка этого КП', async () => {
+  it('карточка КП: метка этого КП', async () => {
     signedIn();
     renderApp('/quotes/301');
     await heading(/KP-2026-0042/);
     const link = within(page()).getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' });
-    expect(link).toHaveAttribute('href', `${BOT}?start=deal_42`);
-    expect(link).toHaveTextContent('Написать менеджеру');
+    expect(link).toHaveAttribute('href', chat('quote', 301, 'KP-2026-0042'));
   });
 
   it.each([
-    ['/contracts', 'Договоры', 'Написать менеджеру о договоре D-2026-0048', 48],
-    ['/invoices', 'Счета', 'Написать менеджеру о счёте S-2026-0124', 29],
-    ['/acts', 'Акты', 'Написать менеджеру об акте A-2026-0090', 35],
-  ])('%s: в строке документа — сделка документа', async (path, title, name, dealId) => {
+    ['/contracts', 'Договоры', 'Написать менеджеру о договоре D-2026-0048', chat('deal', 48, 'D-48')],
+    ['/invoices', 'Счета', 'Написать менеджеру о счёте S-2026-0124', chat('invoice', 603, 'S-2026-0124')],
+    ['/acts', 'Акты', 'Написать менеджеру об акте A-2026-0090', chat('act', 701, 'A-2026-0090')],
+  ])('%s: в строке — метка документа (договор — его проекта)', async (path, title, name, href) => {
     signedIn();
     renderApp(path);
     await heading(title);
-    expect(await within(page()).findByRole('link', { name })).toHaveAttribute('href', `${BOT}?start=deal_${dealId}`);
+    expect(await within(page()).findByRole('link', { name })).toHaveAttribute('href', href);
     await expectNoAxeViolations();
   });
 
-  it('поставки: в шапке каждой сделки своя ссылка', async () => {
+  it('поставки: в шапке каждого проекта своя метка', async () => {
     signedIn();
     renderApp('/deliveries');
     await heading('Поставки');
     const links = await within(page()).findAllByRole('link', { name: /^Написать менеджеру о проекте D-\d+$/ });
     expect(links.length).toBeGreaterThan(1);
     for (const link of links) {
-      const id = link.getAttribute('aria-label')!.match(/D-(\d+)/)![1];
-      expect(link).toHaveAttribute('href', `${BOT}?start=deal_${id}`);
+      const number = link.getAttribute('aria-label')!.match(/(D-\d+)$/)![1];
+      expect(link).toHaveAttribute('href', chat('deal', Number(number.slice(2)), number));
     }
     await expectNoAxeViolations();
   });
 
-  it('имя бота не задано — кнопок нет (не битая ссылка)', async () => {
-    vi.stubEnv('VITE_BOT_USERNAME', '');
+  it('клик открывает чат с плашкой документа', async () => {
     signedIn();
+    const user = userEvent.setup();
+    const { router } = renderApp('/quotes/301');
+    await heading(/KP-2026-0042/);
+    await user.click(within(page()).getByRole('link', { name: 'Написать менеджеру о КП KP-2026-0042' }));
+    await heading('Сообщения');
+    expect(router.state.location.search).toBe('?about=quote&id=301&number=KP-2026-0042');
+    expect(within(page()).getByRole('group', { name: 'Документ, о котором вопрос' })).toHaveTextContent(
+      'О документе: КП KP-2026-0042',
+    );
+  });
+
+  it('модуля «Сообщения» нет у сессии — кнопки нет', async () => {
+    signedIn('actor', 'demo', { roles: ['client'], modules: CLIENT_ACCESS.modules.filter((m) => m !== 'messages') });
     renderApp('/deals/35');
     await heading('Проект D-35');
     await within(page()).findByRole('region', { name: 'Счета' }, LOADED);
     expect(within(page()).queryByRole('link', { name: /Написать менеджеру/ })).not.toBeInTheDocument();
-    expect(document.querySelector('a[href^="https://t.me"]')).toBeNull();
   });
 
-  it('Mini App: ссылка открывается через Telegram.WebApp.openTelegramLink', async () => {
-    const webApp = asMiniApp({ startParam: 'deal_35' });
-    const user = userEvent.setup();
-    renderApp('/');
-    await heading('Проект D-35');
-    await user.click(await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED));
-    expect(webApp.openTelegramLink).toHaveBeenCalledWith(`${BOT}?start=deal_35`);
-  });
-
-  it('веб: клик не перехватывается SDK — работает обычная ссылка', async () => {
-    const openTelegramLink = vi.fn();
-    // SDK загружен и в браузере, но без initData это не Mini App.
-    window.Telegram = { WebApp: { ...asMiniApp(), initData: '', openTelegramLink } };
+  it('экран чата: бот — вторая ссылка «Написать в Telegram»; без имени бота её нет', async () => {
     signedIn();
-    const user = userEvent.setup();
-    renderApp('/deals/35');
-    await heading('Проект D-35');
-    await user.click(await within(page()).findByRole('link', { name: 'Написать менеджеру' }, LOADED));
-    expect(openTelegramLink).not.toHaveBeenCalled();
+    const first = renderApp('/messages');
+    await heading('Сообщения');
+    expect(within(page()).getByRole('link', { name: 'Написать в Telegram' })).toHaveAttribute('href', BOT);
+    first.unmount();
+
+    vi.stubEnv('VITE_BOT_USERNAME', '');
+    renderApp('/messages');
+    await heading('Сообщения');
+    expect(within(page()).queryByRole('link', { name: 'Написать в Telegram' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /t\.me/ })).toBeNull();
   });
 });

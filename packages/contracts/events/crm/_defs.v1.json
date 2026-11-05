@@ -196,6 +196,22 @@
           ],
           "description": "Telegram контакта (вход в Cabinet, доставка кода акцепта ботом CRM); null — Telegram не привязан"
         },
+        "telegram_username": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64,
+          "description": "Имя пользователя Telegram без @ (NOTIFY-1): кабинет показывает контакту, какой аккаунт привязан; null — нет имени или Telegram не привязан"
+        },
+        "telegram_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 255,
+          "description": "Имя в профиле Telegram (NOTIFY-1), когда нет имени пользователя; null — неизвестно или Telegram не привязан"
+        },
         "is_primary": {
           "type": "boolean",
           "description": "Основной контакт клиента (не более одного)"
@@ -316,6 +332,14 @@
         "updated_at": {
           "type": "string",
           "format": "date-time"
+        },
+        "source_detail": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-z][a-z_]{0,15}$",
+          "description": "Точный источник лида в CRM, если его нет в перечне LeadSource v1 (CHAT-1: cabinet — лид-якорь беседы чата кабинета; в source тогда web — веб-канал). Перечень source расширяется только в lead.*.v2 (ADR-0016)"
         }
       },
       "additionalProperties": false

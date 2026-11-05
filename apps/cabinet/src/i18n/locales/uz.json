@@ -15,6 +15,7 @@
     "invoices": "Hisob-fakturalar",
     "acts": "Dalolatnomalar",
     "deliveries": "Yetkazib berish",
+    "messages": "Xabarlar",
     "documents": "Hujjatlar",
     "catalog": "Katalog",
     "company": "Kompaniya",
@@ -22,12 +23,13 @@
     "profile": "Profil",
     "more": "Yana",
     "moreTitle": "Boshqa boʻlimlar",
-    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, kompaniya va profil",
+    "moreDescription": "Shartnomalar, hisob-fakturalar, dalolatnomalar, yetkazib berish, xabarlar, kompaniya va profil",
     "billingTabs": "Moliyaviy boʻlimlar",
     "expandSidebar": "Menyuni ochish",
     "collapseSidebar": "Menyuni yigʻish",
     "sectionMain": "Asosiy",
     "sectionDocumentsAndTeam": "Hujjatlar va kompaniya",
+    "unread": "O‘qilmagan xabarlar: {{count}}",
     "myProducts": "Mening tovarlarim",
     "groups": {
       "buy": "Xarid qilaman",
@@ -305,7 +307,38 @@
     "viewOnly": "Faqat koʻrish",
     "language": "Kabinet tili",
     "logout": "Kabinetdan chiqish",
-    "name": "Ism"
+    "name": "Ism",
+    "notifications": {
+      "title": "Bildirishnomalar",
+      "linked": "Telegram ulangan",
+      "linkedText": "Tijorat takliflari, hisoblar, dalolatnomalar va menejer javoblari haqidagi bildirishnomalar darhol Telegramga keladi. Kabinet xatsiz, toʻgʻridan-toʻgʻri botda ochiladi.",
+      "notLinked": "Telegram ulanmagan",
+      "notLinkedText": "Telegramni ulang — bildirishnomalar darhol keladi, kabinet esa toʻgʻridan-toʻgʻri botda ochiladi. Hozircha bildirishnomalar xat orqali keladi.",
+      "connect": "Telegramni ulash",
+      "preparing": "Havola tayyorlanmoqda…",
+      "scanQr": "QR-kodni telefon kamerasi bilan skanerlang yoki tugmani bosing — bot ochiladi. Botda «Start» tugmasini bosing.",
+      "pressStart": "Tugmani bosing — bot ochiladi. Botda «Start» tugmasini bosing.",
+      "openTelegram": "Telegramni ochish",
+      "qrLabel": "Botga havolaning QR-kodi",
+      "validUntil": "Havola {{time}} gacha amal qiladi va bir marta ishlatiladi.",
+      "waiting": "Telegramdan tasdiq kutilmoqda…",
+      "expired": "Havola muddati tugadi.",
+      "newLink": "Yangi havola olish",
+      "done": "Tayyor, Telegram ulandi",
+      "unavailable": "Telegramni menejer sizni tizimga qoʻshgandan keyin ulash mumkin — unga yozing.",
+      "confirmTitle": "Telegram uzilsinmi?",
+      "consequence": "Bildirishnomalar Telegramga kelmay qoʻyadi — xatlar va kabinet qoladi. Telegramdan kabinetga kirish yopiladi. Qayta ulash shu yerda mumkin.",
+      "confirm": "Telegramni uzish",
+      "disconnecting": "Uzilmoqda…",
+      "disconnected": "Telegram uzildi",
+      "boundLine": "Telegram ulangan",
+      "boundAccount": "Telegram ulangan: {{account}}",
+      "unbind": "Uzish",
+      "sendTest": "Tekshiruv xabarini yuborish",
+      "sendingTest": "Yuborilmoqda…",
+      "testSent": "Xabar yuborildi — Telegramni tekshiring",
+      "testRetry": "{{seconds}} soniyadan keyin qayta urinish mumkin"
+    }
   },
   "pages": {
     "requests": {
@@ -756,6 +789,43 @@
           "current": "joriy bosqich"
         }
       }
+    },
+    "messages": {
+      "title": "Xabarlar",
+      "subtitle": "Kompaniyangizning menejer bilan yozishmasi",
+      "telegram": "Telegramda yozish",
+      "feed": "Menejer bilan yozishma",
+      "emptyTitle": "Bu yerda menejer bilan yozishma bo‘ladi",
+      "emptyText": "Savolingizni yozing — menejer shu yerda javob beradi. TK, hisob yoki dalolatnoma sahifasidan yuborilgan savol hujjat raqami bilan boradi.",
+      "you": "Siz",
+      "manager": "Menejer",
+      "managerNamed": "{{name}}, menejer",
+      "colleague": "Hamkasb",
+      "sending": "Yuborilmoqda…",
+      "failed": "Yuborilmadi",
+      "context": {
+        "deal": "Loyiha {{number}}",
+        "quote": "TK {{number}}",
+        "invoice": "Hisob {{number}}",
+        "act": "Dalolatnoma {{number}}"
+      },
+      "aboutLabel": "Savol qaysi hujjat haqida",
+      "about": "Hujjat: {{what}}",
+      "removeAbout": "Hujjat belgisini olib tashlash",
+      "field": "Menejerga xabar",
+      "placeholder": "Savolingiz yoki aniqlik kiritish",
+      "hintWeb": "Enter — yuborish, Shift+Enter — yangi qator",
+      "hint": "Menejer shu yerda javob beradi",
+      "viewOnly": "Menejerga tasdiqlash huquqi bor kontakt yoza oladi — sizda faqat ko‘rish",
+      "send": "Yuborish",
+      "infoLabel": "Yozishma haqida",
+      "responder": "{{name}}, menejeringiz javob beradi",
+      "responderTeam": "RailTech jamoasi javob beradi",
+      "visibleToCompany": "Yozishmani kompaniyangizning kabinetdagi barcha xodimlari ko‘radi",
+      "attachHint": "Hozircha chatga fayl biriktirilmaydi — uni so‘rovga biriktiring.",
+      "attachLink": "So‘rovlarga o‘tish",
+      "deletedUser": "O‘chirilgan foydalanuvchi",
+      "deletedText": "Xabar muallif so‘rovi bilan o‘chirildi"
     }
   },
   "apiErrors": {
@@ -793,6 +863,10 @@
     "TEXT_REQUIRED": "Izoh matnini yozing.",
     "LOGIN_CODE_INVALID": "Kod notoʻgʻri yoki eskirgan. Xatni tekshiring yoki yangi kod yuboring.",
     "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing.",
+    "CONTACT_NOT_IN_CRM": "Telegramni hozircha ulab boʻlmaydi: menejer sizni tizimga hali qoʻshmagan. Unga yozing.",
+    "TELEGRAM_LINK_UNAVAILABLE": "Telegramni ulash hozir mavjud emas. Keyinroq urinib koʻring.",
+    "TELEGRAM_NOT_LINKED": "Telegram ulanmagan. Uni qaytadan ulang.",
+    "TELEGRAM_ALREADY_LINKED": "Bu Telegram allaqachon ulangan. Boshqasini ulash uchun avval buni uzing.",
     "XLSX_REQUIRED": "Excel fayli (.xlsx) kerak. Shablonni yuklab oling va toʻldiring.",
     "VALID_DATE_INVALID": "Sana notoʻgʻri koʻrsatilgan — KK.OO.YYYY koʻrinishida kiriting.",
     "OFFER_VALIDITY_RANGE_INVALID": "“Gacha” muddati “dan” muddatidan oldin boʻlishi mumkin emas.",
@@ -831,6 +905,12 @@
     "text": "Formadagi oʻzgarishlar saqlanmagan va yoʻqoladi.",
     "leave": "Saqlamasdan chiqish",
     "stay": "Qolish"
+  },
+  "telegramBanner": {
+    "label": "Telegramdagi bildirishnomalar",
+    "text": "Telegramni ulang — bildirishnomalar darhol keladi",
+    "connect": "Ulash",
+    "later": "Keyinroq"
   },
   "partner": {
     "title": "Mening tovarlarim",

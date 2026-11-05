@@ -38,12 +38,15 @@ if TYPE_CHECKING:
     from app.services.auth import AuthService
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
+    from app.services.cabinet_chat import CabinetChatService
     from app.services.cabinet_url import CabinetUrlService
     from app.services.client_contacts import ClientContactService
     from app.services.client_notices import ClientNoticeService
     from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.company_articles import CompanyArticleService
+    from app.services.contact_telegram import ContactTelegramService
+    from app.services.contact_telegram_test import TelegramTestDelivery
     from app.services.documents import DocumentService
     from app.services.eds_notices import EdsNoticeService
     from app.services.erp_access import ErpAccessService
@@ -589,6 +592,14 @@ class Container:
         ERP или EDS попросили отправить (W18A-P1) — в очередь."""
         await self.erp_notices.deliver(event_id)
         await self.mail_requests.dispatch(event_id)
+        await self.cabinet_chat.dispatch(event_id)
+
+    @cached_property
+    def cabinet_chat(self) -> "CabinetChatService":
+        """Чат кабинета (CHAT-1, ADR-0023): сообщение из кабинета — беседа `cabinet` и очередь."""
+        from app.services.cabinet_chat import CabinetChatService
+
+        return CabinetChatService(self.settings_service, _cabinet_escalation)
 
     @cached_property
     def mail_requests(self) -> "MailRequestService":
@@ -784,6 +795,30 @@ class Container:
             self.user_service,
             self.storage,
             self.settings.s3_bucket_documents,
+        )
+
+    @cached_property
+    def contact_telegram(self) -> "ContactTelegramService":
+        """Telegram контакта без подтверждения менеджера (NOTIFY-1): ссылка из кабинета и
+        отключение по запросу ERP."""
+        from app.services.contact_telegram import ContactTelegramService
+
+        async def erp_pair_secrets() -> list[str]:
+            bus = self.bus
+            await bus.secret_cache.refresh()
+            return list(bus.config.secrets("erp", "crm"))
+
+        return ContactTelegramService(
+            self.session_factory, erp_pair_secrets, on_chats_changed=_chats_changed
+        )
+
+    @cached_property
+    def contact_telegram_test(self) -> "TelegramTestDelivery":
+        """Проверочное сообщение контакту по запросу ERP (NOTIFY-1), inline."""
+        from app.services.contact_telegram_test import TelegramTestDelivery
+
+        return TelegramTestDelivery(
+            self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
 
     @cached_property
@@ -1001,6 +1036,13 @@ async def _escalation_changed(escalation_id: int) -> None:
     from app.tasks.notify import enqueue_escalation
 
     await enqueue_escalation(escalation_id, new=False)
+
+
+async def _cabinet_escalation(escalation_id: int, is_new: bool) -> None:
+    """Передача по сообщению кабинета: пост в канале команды; новой — ещё и проверка SLA."""
+    from app.tasks.notify import enqueue_escalation
+
+    await enqueue_escalation(escalation_id, new=is_new)
 
 
 async def _escalation_reopened(escalation_id: int) -> None:

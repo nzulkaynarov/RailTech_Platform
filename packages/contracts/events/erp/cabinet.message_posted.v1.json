@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/cabinet.message_posted.v1.json",
+  "title": "Контакт написал в чат кабинета",
+  "description": "Тип uz.railtech.erp.cabinet.message_posted.v1, источник rt://erp (CHAT-1, ADR-0023). Поле data конверта (envelope.v1.json). Контакт компании-контрагента отправил сообщение в чат кабинета (POST /messages портала): ERP пишет строку ленты кабинета и это событие одной транзакцией. Подписчик — CRM: сообщение ложится в беседу канала cabinet клиента (одна беседа на компанию) и в очередь «Сообщения» Платформы; бот-ИИ на него не отвечает. Текст на шине — по ADR-0023; стирание ПД клиента чистит и проекцию ERP (crm.lead.erased.v1, cabinet_erp_company_id). Компания без сопоставления с клиентом CRM тоже публикует событие (crm_client_id: null) — сообщение не теряется. Повтор с тем же client_message_id в пределах компании — тот же эффект (идемпотентность приёмника).",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания-контрагент в ERP (компания сессии кабинета)"
+    },
+    "crm_client_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Клиент CRM по сопоставлению ERP; null — сопоставления ещё нет (CRM ищет клиента по erp_company_id)"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/ClientActor"
+    },
+    "payload": {
+      "type": "object",
+      "required": [
+        "erp_message_id",
+        "client_message_id",
+        "author",
+        "company_name",
+        "text",
+        "posted_at"
+      ],
+      "properties": {
+        "erp_message_id": {
+          "type": "integer",
+          "description": "Строка ленты кабинета в ERP"
+        },
+        "client_message_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{8,64}$",
+          "description": "Ключ повтора, выданный Cabinet; уникален в пределах компании"
+        },
+        "author": {
+          "type": "object",
+          "required": [
+            "erp_contact_id",
+            "crm_contact_id",
+            "name"
+          ],
+          "properties": {
+            "erp_contact_id": {
+              "type": "integer"
+            },
+            "crm_contact_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Контакт CRM по сопоставлению ERP; null — сопоставления нет"
+            },
+            "name": {
+              "type": "string",
+              "maxLength": 255,
+              "description": "Имя контакта для подписи сообщения"
+            }
+          },
+          "additionalProperties": false
+        },
+        "company_name": {
+          "type": "string",
+          "maxLength": 255,
+          "description": "Название компании — подпись беседы, если клиента в CRM ещё нет"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4000
+        },
+        "context": {
+          "type": "object",
+          "description": "Метка документа, со страницы которого написали («Написать менеджеру»); нет — общее сообщение",
+          "required": [
+            "kind",
+            "erp_id",
+            "number"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "deal",
+                "quote",
+                "invoice",
+                "act"
+              ]
+            },
+            "erp_id": {
+              "type": "integer"
+            },
+            "number": {
+              "type": "string",
+              "maxLength": 64
+            }
+          },
+          "additionalProperties": false
+        },
+        "posted_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Время записи строки ленты в ERP"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

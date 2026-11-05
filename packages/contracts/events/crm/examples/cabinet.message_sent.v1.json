@@ -1,0 +1,25 @@
+{
+  "specversion": "1.0",
+  "id": "8e1a4c7d-2b6f-4a0e-9c3d-5f7a1b2c3d44",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.cabinet.message_sent.v1",
+  "time": "2026-11-04T07:52:00Z",
+  "subject": "lead/501",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/cabinet.message_sent/v1",
+  "tenant": "railtech",
+  "correlationid": "4a7b9c1d-3e5f-4a6b-8c9d-0e1f2a3b4c55",
+  "data": {
+    "message_id": 90415,
+    "crm_lead_id": 501,
+    "crm_client_id": 42,
+    "erp_company_id": 118,
+    "text": "Здравствуйте! Счёт выставим сегодня до 17:00.",
+    "manager_name": "Илья Смирнов",
+    "sent_at": "2026-11-04T07:52:00Z",
+    "actor": {
+      "type": "staff",
+      "crm_user_id": 7
+    }
+  }
+}

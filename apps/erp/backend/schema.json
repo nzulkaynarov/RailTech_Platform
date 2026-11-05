@@ -1215,6 +1215,194 @@
                 }
             }
         },
+        "/api/portal/v1/me/telegram": {
+            "get": {
+                "operationId": "api_portal_v1_me_telegram_retrieve",
+                "description": "GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "api_portal_v1_me_telegram_destroy",
+                "description": "GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram/": {
+            "get": {
+                "operationId": "api_portal_v1_me_telegram_retrieve_2",
+                "description": "GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "delete": {
+                "operationId": "api_portal_v1_me_telegram_destroy_2",
+                "description": "GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram-link": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_link_create",
+                "description": "POST /me/telegram-link — одноразовая ссылка `t.me/<бот>?start=<токен>` на 15 минут.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram-link/": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_link_create_2",
+                "description": "POST /me/telegram-link — одноразовая ссылка `t.me/<бот>?start=<токен>` на 15 минут.",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram/test": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_test_create",
+                "description": "POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/me/telegram/test/": {
+            "post": {
+                "operationId": "api_portal_v1_me_telegram_test_create_2",
+                "description": "POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages": {
+            "get": {
+                "operationId": "api_portal_v1_messages_retrieve",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_messages_create",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/": {
+            "get": {
+                "operationId": "api_portal_v1_messages_retrieve_2",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "api_portal_v1_messages_create_2",
+                "description": "GET /messages — лента компании (с `after_id` — новые); POST /messages — написать менеджеру (`can_act`).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/read": {
+            "post": {
+                "operationId": "api_portal_v1_messages_read_create",
+                "description": "POST /messages/read — отметка «прочитано» контактом сессии; `can_act` не нужен (это чтение).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/messages/read/": {
+            "post": {
+                "operationId": "api_portal_v1_messages_read_create_2",
+                "description": "POST /messages/read — отметка «прочитано» контактом сессии; `can_act` не нужен (это чтение).",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/portal/v1/partner/offers/confirm": {
             "post": {
                 "operationId": "api_portal_v1_partner_offers_confirm_create",

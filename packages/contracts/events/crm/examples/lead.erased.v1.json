@@ -15,6 +15,13 @@
     "erased_at": "2026-10-22T08:30:00Z",
     "actor": {
       "type": "bot"
+    },
+    "cabinet": {
+      "erp_company_id": 118,
+      "scope": "authors",
+      "erp_contact_ids": [
+        310
+      ]
     }
   }
 }

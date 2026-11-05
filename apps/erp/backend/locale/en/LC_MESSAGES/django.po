@@ -6834,3 +6834,12 @@ msgstr "Price valid until"
 
 msgid "Исправьте поля, отмеченные в карточке."
 msgstr "Fix the fields marked in the card."
+
+msgid "Получать мгновенно в Telegram"
+msgstr "Get it instantly in Telegram"
+
+msgid "подключается в личном кабинете: Профиль → «Уведомления»."
+msgstr "set it up in your account: Profile → “Notifications”."
+
+msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу."
+msgstr "after signing in, connect the bot in Profile → “Notifications”: invoices, acts and your manager’s replies will arrive instantly."

@@ -99,7 +99,11 @@ async def telegram_of_contact(
     return await session.scalar(
         select(TelegramIdentity.tg_user_id)
         .join(Lead, Lead.id == TelegramIdentity.lead_id)
-        .where(Lead.client_id == client.id, TelegramIdentity.is_blocked.is_(False))
+        .where(
+            Lead.client_id == client.id,
+            TelegramIdentity.is_blocked.is_(False),
+            TelegramIdentity.notifications_off_at.is_(None),  # отключил в кабинете (NOTIFY-1)
+        )
         .order_by(TelegramIdentity.id)
         .limit(1)
     )

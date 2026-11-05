@@ -18,6 +18,7 @@ export interface MessageInboxItem {
   name: string;
   group: MessageInboxItemGroup;
   language: Language;
+  /** Канал последнего сообщения клиента (туда уйдёт ответ), без переписки — источник лида */
   channel: MessageChannel;
   /** Клиент написал после последнего ответа сотрудника */
   unread: boolean;

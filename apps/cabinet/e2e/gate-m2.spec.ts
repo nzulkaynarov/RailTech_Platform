@@ -11,7 +11,7 @@
  *   npm run test:e2e
  *
  * Необязательно: E2E_RESUME=1 — продолжить с первого непройденного шага (состояние — node_modules/.cache/gate-m2/state.json),
- * E2E_BOT_USERNAME — имя бота: проверить кнопки «Написать менеджеру» (на стенде без бота их нет), E2E_SCREENS_DIR.
+ * E2E_BOT_USERNAME — имя бота (кнопки входа и «Написать в Telegram»; «Написать менеджеру» — чат кабинета, CHAT-1), E2E_SCREENS_DIR.
  *
  * Что делает: переход «В бэк-офис (ERP)» из CRM в чистом браузере 10 раз подряд (без обходов) → лид из формы «Я новый клиент»
  * → CRM «Передать в бэк-офис» → приглашение в Cabinet (токен — из логов ERP, только в браузер) → бэк-офис выпускает КП →
@@ -828,14 +828,11 @@ test.describe('I. Права, изоляция, выход и повторный
     await other.close();
   });
 
-  step('I4. «Написать менеджеру» (если на стенде задан бот)', async () => {
+  step('I4. «Написать менеджеру» — чат кабинета с меткой проекта (CHAT-1)', async () => {
     await open(`/deals/${state.dealA}`);
     const link = client.getByRole('link', { name: /Написать менеджеру/ }).first();
-    if ((await link.count()) === 0) {
-      test.info().annotations.push({ type: 'не проверено', description: 'на стенде не задано имя бота (TELEGRAM_BOT_USERNAME): кнопки «Написать менеджеру» нет — проверка на телефоне владельцем' });
-      return;
-    }
-    await expect(link).toHaveAttribute('href', new RegExp(`^https://t\\.me/${process.env.E2E_BOT_USERNAME ?? '[^?]+'}\\?start=deal_${state.dealA}$`));
+    // ADR-0023: со страницы документа — чат кабинета с меткой, а не бот; бот остаётся вторым каналом на экране чата
+    await expect(link).toHaveAttribute('href', new RegExp(`^/messages\\?about=deal&id=${state.dealA}&number=`));
     await snap(client, 'deal-manager-button');
   });
 });

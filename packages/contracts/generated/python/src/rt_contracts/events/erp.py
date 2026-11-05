@@ -121,10 +121,45 @@ class Attachment(BaseModel):
     """
 
 
+class Author(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    crm_contact_id: int | None
+    """
+    Контакт CRM по сопоставлению ERP; null — сопоставления нет
+    """
+    name: Annotated[str, Field(max_length=255)]
+    """
+    Имя контакта для подписи сообщения
+    """
+
+
 class By(StrEnum):
     client = "client"
     company = "company"
     both = "both"
+
+
+class CabinetMessagePostedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.cabinet.message_posted.v1, источник rt://erp (CHAT-1, ADR-0023). Поле data конверта (envelope.v1.json). Контакт компании-контрагента отправил сообщение в чат кабинета (POST /messages портала): ERP пишет строку ленты кабинета и это событие одной транзакцией. Подписчик — CRM: сообщение ложится в беседу канала cabinet клиента (одна беседа на компанию) и в очередь «Сообщения» Платформы; бот-ИИ на него не отвечает. Текст на шине — по ADR-0023; стирание ПД клиента чистит и проекцию ERP (crm.lead.erased.v1, cabinet_erp_company_id). Компания без сопоставления с клиентом CRM тоже публикует событие (crm_client_id: null) — сообщение не теряется. Повтор с тем же client_message_id в пределах компании — тот же эффект (идемпотентность приёмника).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания-контрагент в ERP (компания сессии кабинета)
+    """
+    crm_client_id: int | None
+    """
+    Клиент CRM по сопоставлению ERP; null — сопоставления ещё нет (CRM ищет клиента по erp_company_id)
+    """
+    actor: ClientActor
+    payload: Payload
 
 
 class CalcZone(StrEnum):
@@ -171,6 +206,86 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class ContactTelegramTestRequested(BaseModel):
+    """
+    Кому прислать проверочное сообщение (NOTIFY-1)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
+    """
+    language: Language1 | None = None
+    """
+    Язык контакта в ERP; на нём бот пишет сообщение
+    """
+
+
+class ContactTelegramTestRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_test_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») нажал «Отправить проверочное сообщение»: ERP в Telegram не пишет (бот принадлежит CRM) — публикует запрос, бот CRM присылает контакту короткое сообщение на его языке на привязанный Telegram. ERP прореживает запросы (не чаще раза в минуту на контакт) и публикует только контакту с привязанным Telegram и сопоставлением с CRM (NOTIFY-1, ADR-0023 п. 3). Итог доставки не возвращается; секретов и персональных данных нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramTestRequested
+
+
+class ContactTelegramUnlinkRequested(BaseModel):
+    """
+    Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): чей Telegram отвязать
+    """
+
+
+class ContactTelegramUnlinkRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_unlink_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») отключил Telegram. Привязка Telegram принадлежит CRM (ADR-0015, один владелец у поля; ADR-0023 п. 3), поэтому ERP поле не меняет, а просит: CRM отвязывает Telegram от контакта и клиента и публикует uz.railtech.crm.contact.updated.v1 без telegram_user_id — по нему ERP обновляет проекцию, и вход в Mini App закрывается. Повтор и запрос для уже отвязанного контакта — без действий. Секретов и персональных данных в событии нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramUnlinkRequested
+
+
 class Content(BaseModel):
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
@@ -187,6 +302,19 @@ class ContentType(StrEnum):
     image_png = "image/png"
     image_jpeg = "image/jpeg"
     image_webp = "image/webp"
+
+
+class Context(BaseModel):
+    """
+    Метка документа, со страницы которого написали («Написать менеджеру»); нет — общее сообщение
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Kind1
+    erp_id: int
+    number: Annotated[str, Field(max_length=64)]
 
 
 class ContractSigned(BaseModel):
@@ -683,9 +811,26 @@ class Kind(StrEnum):
     other = "other"
 
 
+class Kind1(StrEnum):
+    deal = "deal"
+    quote = "quote"
+    invoice = "invoice"
+    act = "act"
+
+
 class Language(StrEnum):
     """
     Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
+class Language1(StrEnum):
+    """
+    Язык контакта в ERP; на нём бот пишет сообщение
     """
 
     ru = "ru"
@@ -823,6 +968,34 @@ class MailRequestedV1(BaseModel):
     content: Content
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
+    """
+
+
+class Payload(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_message_id: int
+    """
+    Строка ленты кабинета в ERP
+    """
+    client_message_id: Annotated[str, Field(pattern="^[A-Za-z0-9_-]{8,64}$")]
+    """
+    Ключ повтора, выданный Cabinet; уникален в пределах компании
+    """
+    author: Author
+    company_name: Annotated[str, Field(max_length=255)]
+    """
+    Название компании — подпись беседы, если клиента в CRM ещё нет
+    """
+    text: Annotated[str, Field(max_length=4000, min_length=1)]
+    context: Context | None = None
+    """
+    Метка документа, со страницы которого написали («Написать менеджеру»); нет — общее сообщение
+    """
+    posted_at: AwareDatetime
+    """
+    Время записи строки ленты в ERP
     """
 
 

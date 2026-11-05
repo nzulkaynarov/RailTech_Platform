@@ -14,11 +14,14 @@
   кабинета может написать кто угодно);
 * `lead_<…>` — подписанная ссылка из письма-подтверждения, выданная системой: Telegram-карточка
   склеивается с
-  запросом с сайта (одноразово: если у запроса уже есть Telegram, ссылка не срабатывает).
+  запросом с сайта (одноразово: если у запроса уже есть Telegram, ссылка не срабатывает);
+* `tg_<…>` — ссылка привязки Telegram контактом из кабинета (NOTIFY-1):
+  `ContactTelegramService.bind`.
 """
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy import select
@@ -33,6 +36,9 @@ from app.repositories import leads as repo
 from app.security import audit
 from app.services.lead_merge import merge_with_lead
 
+if TYPE_CHECKING:
+    from app.services.contact_telegram import ContactTelegramService
+
 logger = structlog.get_logger(__name__)
 
 __all__ = ["StartLinkResult", "StartLinkService"]
@@ -46,9 +52,15 @@ class StartLinkResult:
 
 
 class StartLinkService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession], key: bytes) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        key: bytes,
+        contacts: "ContactTelegramService | None" = None,
+    ) -> None:
         self._sessions = sessions
         self._key = key
+        self._contacts = contacts
 
     async def apply(
         self, tg_user_id: int, payload: str | None, now: datetime | None = None
@@ -57,6 +69,11 @@ class StartLinkService:
         if link.kind in ("none", "unknown"):
             return StartLinkResult()
         moment = now or datetime.now(UTC)
+        if link.kind == "contact":
+            # Привязка Telegram контактом из кабинета (NOTIFY-1): своя транзакция и свой ответ.
+            if self._contacts is None:
+                return StartLinkResult()
+            return StartLinkResult(await self._contacts.bind(tg_user_id, link.raw or "", moment))
         async with self._sessions() as session, session.begin():
             identity = await repo.get_identity(session, tg_user_id)
             if identity is None or identity.lead_id is None:

@@ -18,7 +18,8 @@
       "text": "The bot replies on its own until the client asks for a person.",
       "action": "Open leads"
     },
-    "handedTo": "Handed to {{name}}"
+    "handedTo": "Handed to {{name}}",
+    "channel": "Channel: {{channel}}"
   },
   "sla": {
     "waiting": "waiting {{duration}}",
@@ -54,7 +55,8 @@
     "agent_unavailable": "Bot could not reply",
     "stop_word": "Stop word in the message",
     "other": "Other reason",
-    "handed_over": "Handed over by the office clerk"
+    "handed_over": "Handed over by the office clerk",
+    "cabinet_message": "Wrote in the cabinet"
   },
   "channels": {
     "telegram": "Telegram",
@@ -62,6 +64,7 @@
     "email": "Email",
     "phone": "Phone call",
     "referral": "Referral",
+    "cabinet": "Cabinet",
     "other": "Other channel"
   },
   "timeline": {
@@ -138,7 +141,15 @@
       "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
     },
     "toRequest": "To request",
-    "toRequestLabel": "To request: {{name}} as the director letter"
+    "toRequestLabel": "To request: {{name}} as the director letter",
+    "channelCabinet": "Cabinet",
+    "context": {
+      "deal": "Deal {{number}}",
+      "quote": "Quote {{number}}",
+      "invoice": "Invoice {{number}}",
+      "act": "Act {{number}}"
+    },
+    "contextLabel": "Wrote from the document page: {{label}}"
   },
   "composer": {
     "mode": "Who we write to",
@@ -166,7 +177,8 @@
     "takeFirst": "Take the lead to reply",
     "readOnly": "View only: managers reply",
     "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered",
-    "managerReplies": "A manager replies to the client. Triage the lead and press “Hand over to a manager” with a note on what the client needs."
+    "managerReplies": "A manager replies to the client. Triage the lead and press “Hand over to a manager” with a note on what the client needs.",
+    "selfHintCabinet": "Will be sent to the client in the cabinet"
   },
   "card": {
     "title": "Lead card",
@@ -180,6 +192,7 @@
     "consent": "Data consent",
     "consentGiven": "given {{date}}",
     "consentMissing": "no — writing to the client is not allowed",
+    "consentMissingCabinet": "no — replying in the cabinet is allowed, in Telegram it is not",
     "client": "Client in ERP",
     "clientYes": "yes",
     "clientNo": "not yet",

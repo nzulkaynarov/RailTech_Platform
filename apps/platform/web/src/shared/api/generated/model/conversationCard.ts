@@ -16,6 +16,8 @@ export interface ConversationCard {
   name: string;
   language: Language;
   channel: MessageChannel;
+  /** Куда уйдёт ответ менеджера — канал последнего сообщения клиента (`telegram` или `cabinet`, CHAT-1); `null` — клиент ещё не писал */
+  reply_channel: MessageChannel | null;
   owner_mode: LeadOwnerMode;
   assigned: PersonRef | null;
   /**

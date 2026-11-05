@@ -123,6 +123,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Привязан ли Telegram контакта (уведомления и вход в Mini App)
+         * @description Статус — по проекции контакта в ERP (`telegram_user_id`), поле принадлежит CRM (ADR-0015, ADR-0023 п. 3): после
+         *     привязки ботом или отключения статус меняется, когда CRM опубликует `crm.contact.updated` (обычно за секунды).
+         *     Cabinet опрашивает этот путь, пока открыт экран с выпущенной ссылкой, до привязки или истечения её срока.
+         */
+        get: operations["getTelegramStatus"];
+        put?: never;
+        post?: never;
+        /**
+         * Отключить Telegram контакта
+         * @description Привязка принадлежит CRM, поэтому ERP публикует запрос `uz.railtech.erp.contact.telegram_unlink_requested.v1`, а
+         *     CRM отвязывает Telegram и публикует `crm.contact.updated` без `telegram_user_id`. Ответ 202 — запрос принят;
+         *     `linked` станет `false`, когда придёт проекция (Cabinet опрашивает `GET /me/telegram`). Telegram не привязан — 202
+         *     без события (повтор безопасен). Право «действовать» не нужно: это настройка самого контакта.
+         */
+        delete: operations["unlinkTelegram"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/telegram/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Прислать проверочное сообщение в привязанный Telegram
+         * @description Контакт проверяет, что уведомления доходят (NOTIFY-1). ERP в Telegram не пишет: публикует запрос
+         *     `uz.railtech.erp.contact.telegram_test_requested.v1`, бот CRM присылает короткое сообщение на языке контакта. Ответ
+         *     202 — запрос принят (итог доставки не возвращается). Не чаще раза в минуту на контакт: иначе 429 `TOO_MANY_REQUESTS`
+         *     с `Retry-After`. Telegram не привязан — 409 `TELEGRAM_NOT_LINKED`. Право «действовать» не нужно.
+         */
+        post: operations["sendTelegramTest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/telegram-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Выпустить одноразовую ссылку привязки Telegram (бот, параметр start)
+         * @description ADR-0023 п. 3. Ссылка `https://t.me/<бот>?start=<токен>` открывает бот CRM; бот проверяет подпись и срок,
+         *     гасит токен (одноразовый) и привязывает Telegram этого человека к контакту сессии без подтверждения менеджера.
+         *     Токен — `tg_` + base64url (без `=`) от 21 байта данных и 15 байт усечённого HMAC-SHA256: версия, язык контакта,
+         *     `crm_contact_id`, срок (15 минут), случайный nonce; ключ — производный от секрета пары шины `erp → crm` с отдельной
+         *     меткой (`rt-telegram-link/v1`), не ключ почты. 51 символ из алфавита `[A-Za-z0-9_-]` — укладывается в лимит
+         *     параметра `start` Telegram (64). QR рисует Cabinet из `url` сам, без внешних сервисов. Право «действовать» не
+         *     нужно. Повтор с тем же `Idempotency-Key` возвращает ту же ссылку; новый ключ — новый токен (прежний действует
+         *     до своего срока).
+         */
+        post: operations["createTelegramLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/requests": {
         parameters: {
             query?: never;
@@ -789,6 +868,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Лента чата кабинета компании
+         * @description Сообщения компании сессии по возрастанию `id`: с `after_id` — новые после него (опрос раз в 10 с, пока экран
+         *     открыт), без него — последние `limit`. Опрос отмечает присутствие контакта в кабинете (`last_seen`, с
+         *     прореживанием) — по нему уведомления решают, слать ли ответ менеджера во внешний канал. Модуль `messages`.
+         */
+        get: operations["listMessages"];
+        put?: never;
+        /**
+         * Написать менеджеру в чат кабинета
+         * @description Сообщение контакта сессии в ленту его компании; запись и событие `uz.railtech.erp.cabinet.message_posted.v1`
+         *     — одной транзакцией. Повтор с тем же `client_message_id` в пределах компании возвращает прежнее сообщение (200),
+         *     второго не создаёт. `context` — метка документа, со страницы которого написали: сделка, КП, счёт или акт компании
+         *     сессии (номер подставляет ERP); чужой или невидимый клиенту документ — 404. Требует `can_act`.
+         */
+        post: operations["postMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messages/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Контакт прочитал ленту до сообщения
+         * @description Отметка «прочитано» контактом сессии: ответы менеджера с `id` не больше `last_id` перестают считаться в
+         *     `Me.unread`. Отметка не уходит назад; `last_id` — сообщение ленты своей компании, иначе 404. Модуль `messages`;
+         *     `can_act` не нужен (чтение).
+         */
+        post: operations["markMessagesRead"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -798,10 +928,12 @@ export interface components {
             detail: components["schemas"]["ErrorCode"] | string;
         };
         /**
-         * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
-         * @enum {string}
+         * @description Коды ошибок портала (Q-17) — **открытое множество** (решение архитектора 2026-11-04, CONTRACTS §7.2; эталон —
+         *     Zalando RESTful API Guidelines, `x-extensible-enum`): перечень ниже — известные на сегодня коды, новый код
+         *     добавляется без смены версии и не ломает контракт. Клиент обрабатывает незнакомый код как общую ошибку по
+         *     HTTP-статусу (Cabinet — `apiErrorKey`). Поэтому здесь `x-extensible-enum`, а не `enum`.
          */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "XLSX_REQUIRED" | "VALID_DATE_INVALID" | "OFFER_VALIDITY_RANGE_INVALID" | "PRODUCT_NOT_SUBMITTABLE" | "OFFER_EXPIRED" | "IMPORT_FAILED";
+        ErrorCode: string;
         /**
          * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
          *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
@@ -1060,6 +1192,28 @@ export interface components {
             roles: components["schemas"]["PortalRole"][];
             /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
             modules: components["schemas"]["ModuleCode"][];
+            /** @description Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет */
+            unread: number;
+        };
+        TelegramStatus: {
+            /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
+            linked: boolean;
+            /** @description Какой аккаунт привязан — `@имя_пользователя` или имя профиля Telegram (из проекции CRM); `null` — Telegram не привязан или CRM не прислала имени. Защита от пересланной ссылки: человек видит, чей Telegram получает коды акцепта и входит в Mini App */
+            account?: string | null;
+            /** @description Можно ли выпустить ссылку привязки: бот настроен и контакт сопоставлен с CRM. `false` — Cabinet не предлагает «Подключить» (плашку не показывает, в Профиле — подсказка написать менеджеру) */
+            available: boolean;
+        };
+        TelegramLink: {
+            /**
+             * Format: uri
+             * @description `https://t.me/<бот>?start=<токен>`; её же Cabinet кодирует в QR
+             */
+            url: string;
+            /**
+             * Format: date-time
+             * @description Когда ссылка перестанет действовать (15 минут от выпуска)
+             */
+            expires_at: string;
         };
         /** @enum {string} */
         PortalRole: "client" | "partner";
@@ -1068,7 +1222,7 @@ export interface components {
          *     незнакомый пропускает.
          * @enum {string}
          */
-        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products";
+        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products" | "messages";
         /** @enum {string} */
         RequestStatus: "new" | "in_progress" | "quoted" | "closed";
         RequestLineIn: {
@@ -1432,6 +1586,64 @@ export interface components {
             mime_type?: string;
             size_bytes?: number;
         };
+        /**
+         * @description Вид документа метки сообщения
+         * @enum {string}
+         */
+        MessageContextKind: "deal" | "quote" | "invoice" | "act";
+        /** @description Метка документа в новом сообщении — вид и id; номер подставляет ERP */
+        MessageContextRef: {
+            kind: components["schemas"]["MessageContextKind"];
+            /** Format: int64 */
+            id: number;
+        };
+        /** @description Метка документа у сообщения — вид, id и номер («КП KP-2026-0042») */
+        MessageContext: {
+            kind: components["schemas"]["MessageContextKind"];
+            /** Format: int64 */
+            id: number;
+            number: string;
+        };
+        PortalMessageCreate: {
+            /** @description Текст как есть; Cabinet показывает его текстом, не HTML */
+            text: string;
+            /** @description Ключ повтора, выданный Cabinet при первой попытке; повтор отправки — тот же ключ */
+            client_message_id: string;
+            context?: components["schemas"]["MessageContextRef"] | null;
+        };
+        PortalMessage: {
+            /** Format: int64 */
+            id: number;
+            /**
+             * @description `client` — написал контакт компании, `manager` — ответ менеджера
+             * @enum {string}
+             */
+            direction: "client" | "manager";
+            /** @description Имя контакта или менеджера; `null` — имени нет */
+            author_name: string | null;
+            /** @description Сообщение написал контакт этой сессии */
+            mine: boolean;
+            text: string;
+            context: components["schemas"]["MessageContext"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** @description Ключ повтора сообщения контакта (у ответа менеджера — `null`) */
+            client_message_id: string | null;
+            /** @description Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется */
+            erased: boolean;
+        };
+        PortalMessagePage: {
+            items: components["schemas"]["PortalMessage"][];
+            /** @description С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние */
+            has_more: boolean;
+        };
+        PortalMessageReadMark: {
+            /** Format: int64 */
+            last_id: number;
+        };
+        PortalMessageUnread: {
+            unread: number;
+        };
     };
     responses: {
         /** @description Нет сессии портала */
@@ -1763,6 +1975,166 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getTelegramStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Статус привязки */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    unlinkTelegram: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос отключения принят (или Telegram уже не привязан) */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) — отключить может менеджер */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    sendTelegramTest: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Запрос проверочного сообщения принят */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramStatus"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Telegram не привязан (`TELEGRAM_NOT_LINKED`) — сначала «Подключить» */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    createTelegramLink: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Ссылка выпущена */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TelegramLink"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Telegram уже привязан (`TELEGRAM_ALREADY_LINKED`): сначала «Отвязать» — иначе прежний аккаунт остался бы подтверждённым Telegram клиента */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Контакт ещё не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`): привязать Telegram сейчас нельзя, поможет менеджер */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            /** @description Бот не настроен или нет сопряжения с CRM (`TELEGRAM_LINK_UNAVAILABLE`): подключить Telegram сейчас нельзя */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     listRequests: {
@@ -3098,6 +3470,125 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+        };
+    };
+    listMessages: {
+        parameters: {
+            query?: {
+                after_id?: number;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Сообщения ленты */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalMessagePage"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    postMessage: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalMessageCreate"];
+            };
+        };
+        responses: {
+            /** @description Сообщение с этим `client_message_id` уже было — прежнее */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalMessage"];
+                };
+            };
+            /** @description Сообщение принято */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalMessage"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            415: components["responses"]["UnsupportedMediaType"];
+            /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 4000 символов, ключ повтора не по формату (`VALIDATION_ERROR`) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    markMessagesRead: {
+        parameters: {
+            query?: never;
+            header: {
+                /**
+                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+                 */
+                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalMessageReadMark"];
+            };
+        };
+        responses: {
+            /** @description Отметка сохранена, число непрочитанных после неё */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalMessageUnread"];
+                };
+            };
+            400: components["responses"]["IdempotencyKeyRequired"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationError"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
 }

@@ -8,7 +8,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('parties', '0011_part2_offer_confirm_days'),
+        ('parties', '0012_contact_telegram_name'),
     ]
 
     operations = [

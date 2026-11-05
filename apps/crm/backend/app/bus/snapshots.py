@@ -54,6 +54,10 @@ _LEAD_STAGES: Final = frozenset(
     }
 )
 _LEAD_SOURCES: Final = frozenset({"telegram", "web", "phone", "email", "referral", "sandbox"})
+#: Источники CRM вне перечня `LeadSource` v1 (ADR-0016: новое значение — только `lead.*.v2`):
+#: в `source` — ближайший канал перечня, точный источник — в `source_detail` (CHAT-1: лид-якорь
+#: чата кабинета — веб-канал `web`).
+_LEAD_SOURCE_DETAIL: Final = {"cabinet": "web"}
 _TEMPLATE_PREFIX: Final = "tpl:"
 
 
@@ -140,17 +144,33 @@ async def client_snapshot(session: AsyncSession, client: Client) -> dict[str, An
     }
 
 
-async def _telegram_user_id(session: AsyncSession, identity_id: int | None) -> int | None:
+async def _telegram(
+    session: AsyncSession, identity_id: int | None
+) -> tuple[int | None, str | None, str | None]:
+    """Telegram контакта: id, имя пользователя без @ и имя профиля (NOTIFY-1: кабинет показывает,
+    какой аккаунт привязан)."""
     if identity_id is None:
-        return None
-    return await session.scalar(
-        select(TelegramIdentity.tg_user_id).where(TelegramIdentity.id == identity_id)
-    )
+        return None, None, None
+    row = (
+        await session.execute(
+            select(
+                TelegramIdentity.tg_user_id,
+                TelegramIdentity.tg_username,
+                TelegramIdentity.tg_first_name,
+            ).where(TelegramIdentity.id == identity_id)
+        )
+    ).first()
+    if row is None:
+        return None, None, None
+    return int(row[0]), clip((row[1] or "").lstrip("@"), 64), clip(row[2], 255)
 
 
 async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dict[str, Any]:
     erp_company_id = await session.scalar(
         select(Client.erp_company_id).where(Client.id == contact.client_id)
+    )
+    telegram_user_id, telegram_username, telegram_name = await _telegram(
+        session, contact.telegram_identity_id
     )
     snapshot: dict[str, Any] = {
         "crm_contact_id": contact.id,
@@ -160,10 +180,15 @@ async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dic
         "position": clip(contact.position, 255),
         "phone_e164": clean_phone(contact.phone_e164),
         "email": clean_email(contact.email),
-        "telegram_user_id": await _telegram_user_id(session, contact.telegram_identity_id),
+        "telegram_user_id": telegram_user_id,
         "is_primary": bool(contact.is_primary),
         "updated_at": utc(await fresh_updated_at(session, ClientContact, contact.id)),
     }
+    # Какой аккаунт привязан (NOTIFY-1): кабинет показывает контакту; без значения поле не шлём.
+    if telegram_username:
+        snapshot["telegram_username"] = telegram_username
+    if telegram_name:
+        snapshot["telegram_name"] = telegram_name
     if contact.preferred_channel:
         # Предпочитаемый канал (D1-9): ERP берёт его при приглашении в кабинет; без выбора поле не
         # шлём.
@@ -179,13 +204,22 @@ async def lead_snapshot(session: AsyncSession, lead: Lead) -> dict[str, Any]:
         "display_name": (lead.display_name or "").strip()[:255],
         "company_name": clip(lead.company_name, 255),
         "stage": lead.stage if lead.stage in _LEAD_STAGES else "new",
-        "source": lead.source if lead.source in _LEAD_SOURCES else "telegram",
+        **_lead_source(lead.source),
         "language": lead.language if lead.language in _LANGUAGES else "ru",
         "score": min(100, max(0, int(lead.score or 0))),
         "assigned_user": await user_ref(session, lead.assigned_user_id),
         "erp_request_id": lead.erp_request_id,
         "updated_at": utc(await fresh_updated_at(session, Lead, lead.id)),
     }
+
+
+def _lead_source(source: str | None) -> dict[str, Any]:
+    """`source` по перечню v1 и, если точного значения в перечне нет, `source_detail` (CHAT-1)."""
+    if source in _LEAD_SOURCES:
+        return {"source": source}
+    if source in _LEAD_SOURCE_DETAIL:
+        return {"source": _LEAD_SOURCE_DETAIL[source], "source_detail": source}
+    return {"source": "telegram"}
 
 
 def role_code(role: PlatformRole) -> str | None:

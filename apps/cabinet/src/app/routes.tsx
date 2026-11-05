@@ -8,6 +8,7 @@ import { CatalogItemPage, CatalogPage } from '@/pages/catalog';
 import { CompanyPage, TeamPage } from '@/pages/company';
 import { DealPage } from '@/pages/deal';
 import { DeliveriesPage, DocumentsPage } from '@/pages/deliveries';
+import { MessagesPage } from '@/pages/messages';
 import { MyProductsPage } from '@/pages/myProducts';
 import { QuoteDetailPage, QuotesPage } from '@/pages/quotes';
 import { RequestDetailPage, RequestNewPage, RequestsPage } from '@/pages/requests';
@@ -63,6 +64,7 @@ export const routes: RouteObject[] = [
                   { path: '/documents', element: <DocumentsPage /> },
                   { path: '/catalog', element: <CatalogPage /> },
                   { path: '/catalog/:id', element: <CatalogItemPage /> },
+                  { path: '/messages', element: <MessagesPage /> },
                   { path: '/company', element: <CompanyPage /> },
                   { path: '/team', element: <TeamPage /> },
                   { path: '/deals/:id', element: <DealPage /> },
