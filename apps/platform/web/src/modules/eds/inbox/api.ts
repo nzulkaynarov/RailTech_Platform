@@ -64,6 +64,7 @@ export type Reason =
   | "not_resolution_author"
   | "no_pending_extension"
   | "report_required"
+  | "outgoing_linked_elsewhere"
   | "not_found"
   | "forbidden"
   | "unavailable"
@@ -85,6 +86,7 @@ const KNOWN: ReadonlySet<string> = new Set<Reason>([
   "not_resolution_author",
   "no_pending_extension",
   "report_required",
+  "outgoing_linked_elsewhere",
   "not_found",
 ]);
 

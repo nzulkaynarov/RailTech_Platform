@@ -160,3 +160,31 @@ async def test_unknown_field_is_accepted_and_kind_sets_the_tab(stand: Stand) -> 
     assert (row.kind, row.tab, row.subtitle) == ("eds.letter_executed", "system", None)
     assert tab_of("extension_requested") == "decisions"
     assert tab_of("extension_decided") == "system"
+
+
+async def test_reply_notice_points_to_the_outgoing_document(stand: Stand) -> None:
+    """EDS-REPLY-1: уведомление про ответ на ВХ (`document`) ведёт в карточку исходящего."""
+    registrar, _ = await make_user(stand.h.sessions, "regs@x.uz", ["manager"])
+    await _link(stand.h.sessions, registrar.id, 8103)
+    doc_id = "50000000-0000-4000-8000-000000000201"
+    data = notice(
+        [registrar.id],
+        title="Зарегистрируйте ответ на ВХ-112/26",
+        subtitle="Пояснения · Алия Каримова",
+        document={"eds_document_id": doc_id, "number": None, "subject": "Пояснения"},
+    )
+
+    event_id = await stand.receive(data)
+    assert await stand.h.process(event_id) == "processed"
+
+    [row] = await stand.bell()
+    assert (row.object_kind, row.object_id, row.object_number) == ("document", doc_id, "ВХ-112/26")
+    [(_, text)] = stand.h.bot.sent
+    assert text.endswith(f"https://platform.example.com/eds/documents?doc={doc_id}&panel=open")
+
+    registered = notice(
+        [registrar.id],
+        document={"eds_document_id": doc_id, "number": "ИСХ-014/26", "subject": "Пояснения"},
+    )
+    assert await stand.h.process(await stand.receive(registered)) == "processed"
+    assert (await stand.bell())[-1].object_number == "ИСХ-014/26"

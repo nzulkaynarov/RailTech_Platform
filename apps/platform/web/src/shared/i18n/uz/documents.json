@@ -191,7 +191,9 @@
       "handover": "Ro‘yxatga olishga topshirish",
       "handoverDone": "Ro‘yxatga olish uchun ish yurituvchiga topshirildi.",
       "actionFailed": "Bajarilmadi: {{reason}}"
-    }
+    },
+    "replyTo": "Javob:",
+    "mailFailed": "Yuborilmadi"
   },
   "form": {
     "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Mening hujjatlarim»da davom ettirish mumkin.",
@@ -378,7 +380,9 @@
     "letterhead": {
       "missing": "Kompaniya blanki berilmagan — xat PDF ini qurib bo‘lmaydi. Administrator «Sozlamalar · Rekvizitlar va blanka»ni saqlaydi.",
       "open": "«Rekvizitlar va blanka»ni ochish"
-    }
+    },
+    "replySubject": "{{number}} ({{date}}) ga javob",
+    "replyPrefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring."
   },
   "preview": {
     "title": "Blankdagi PDF",

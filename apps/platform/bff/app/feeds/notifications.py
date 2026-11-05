@@ -23,6 +23,7 @@ from app.feeds.numbers import (
     lead_id_of,
     lead_ref,
     letter_task_ref,
+    outgoing_document_path,
     supplier_order_ref,
 )
 from app.feeds.snapshot import Snapshot
@@ -160,6 +161,12 @@ def _crm_object(row: dict[str, Any]) -> ObjectRef | None:
         if not isinstance(letter_id, str) or not letter_id:
             return None
         return letter_task_ref(letter_id, number, None)
+    if row.get("object_kind") == "document":
+        # EDS-REPLY-1: ответ на входящее (передан на регистрацию, не ушёл) — карточка исходящего
+        document_id = row.get("object_id")
+        if not isinstance(document_id, str) or not document_id:
+            return None
+        return ObjectRef(kind="memo", number=number, path=outgoing_document_path(document_id))
     if row.get("object_kind") != "ticket":
         return None
     segment = quote(number, safe="")

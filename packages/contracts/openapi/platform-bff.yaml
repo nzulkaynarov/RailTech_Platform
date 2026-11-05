@@ -19682,7 +19682,7 @@ components:
         mail_reason: {type: [string, 'null'], description: 'Причина словами, если `mail = failed`'}
         path:
           type: string
-          description: 'Карточка ИСХ: `/eds/documents?scope=all&doc={id}`; своя заготовка — `/eds/new?draft={id}`'
+          description: 'Карточка ИСХ: `/eds/documents?scope=all&doc={id}&panel=open` (черновик автора экран открывает формой «Продолжить» — `/eds/new?draft={id}`)'
         created_at: {type: string, format: date-time}
 
     LetterDuplicateOf:

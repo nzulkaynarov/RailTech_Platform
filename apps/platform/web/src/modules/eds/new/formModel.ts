@@ -4,6 +4,7 @@ import type {
   EdsDocumentIn,
   EdsDocumentKind,
   EdsDocumentUpdateIn,
+  LetterCard,
 } from "../../../shared/api/generated/model";
 import { COMPANY_TIME_ZONE } from "../../../shared/lib/format";
 import { HOME_CURRENCY } from "../../../shared/lib/money";
@@ -112,6 +113,28 @@ export function parseAmount(text: string): { ok: true; value: string | null } | 
   const fraction = (match[2] ?? "").padEnd(2, "0");
   if (/^0+$/.test(whole) && /^0+$/.test(fraction)) return { ok: false };
   return { ok: true, value: `${whole}.${fraction}` };
+}
+
+/** Почта в строке «контактное лицо» входящего (`a@b.uz` или `Имя <a@b.uz>`); нет — пусто. */
+export function emailIn(text: string | null | undefined): string {
+  const found = /[^\s@<>,;()]+@[^\s@<>,;()]+\.[^\s@<>,;()]+/.exec(text ?? "");
+  return found ? found[0] : "";
+}
+
+/**
+ * Заготовка ответа на входящее (EDS-REPLY-1): корреспондент, ИНН, почта адресата — только то, что уже есть в письме, и тема
+ * «На ВХ-… от …: тема письма» (не длиннее 300 знаков). Остальное — пусто.
+ */
+export function replyPrefill(
+  letter: Pick<LetterCard, "subject" | "sender">,
+  subjectPrefix: string,
+): Pick<FormValues, "subject" | "recipientName" | "recipientInn" | "recipientEmail"> {
+  return {
+    subject: `${subjectPrefix}: ${letter.subject}`.slice(0, 300),
+    recipientName: letter.sender.name ?? "",
+    recipientInn: letter.sender.inn ?? "",
+    recipientEmail: emailIn(letter.sender.contact),
+  };
 }
 
 export type FormErrors = Partial<Record<FieldKey, true>>;

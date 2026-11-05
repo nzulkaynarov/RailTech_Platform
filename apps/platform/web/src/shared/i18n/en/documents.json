@@ -191,7 +191,9 @@
       "handover": "Hand over for registration",
       "handoverDone": "Handed over to the records clerk for registration.",
       "actionFailed": "Not done: {{reason}}"
-    }
+    },
+    "replyTo": "In reply to",
+    "mailFailed": "Not sent"
   },
   "form": {
     "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “My documents”.",
@@ -378,7 +380,9 @@
     "letterhead": {
       "missing": "The company letterhead is not set — the letter PDF cannot be built. An administrator saves “Settings · Details & letterhead”.",
       "open": "Open “Details & letterhead”"
-    }
+    },
+    "replySubject": "Re {{number}} dated {{date}}",
+    "replyPrefilled": "Filled in from {{number}}: check the correspondent, email and subject."
   },
   "preview": {
     "title": "Letterhead PDF",

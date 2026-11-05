@@ -26,8 +26,14 @@ import {
   readEds,
   writeEds,
 } from "./fixtures/edsDocuments";
-import { closeReplyInstructions } from "./edsInstructions";
+import {
+  closeReplyInstructions,
+  noticeMailFailed,
+  noticeRegistrationRequested,
+  noticeReplyRegistered,
+} from "./edsInstructions";
 import letterSampleUrl from "./fixtures/letter-sample.pdf?url";
+import { readLetters } from "./fixtures/letters";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -216,7 +222,24 @@ function detail(doc: MockDocument, state: EdsMock, me: string): EdsDocument {
     can_edit: editable,
     created_at: doc.created_at,
     updated_at: doc.updated_at,
+    in_reply_to: replyToOf(doc),
     ...letterFields(doc, me),
+  };
+}
+
+/** «В ответ на ВХ-…» (EDS-REPLY-1): номер, тема и ссылка входящего — карточка во «Входящих» или экран поручения. */
+function replyToOf(doc: MockDocument): EdsDocument["in_reply_to"] {
+  if (doc.kind !== "letter_out" || !doc.replyTo) return null;
+  const letter = readLetters().find((l) => l.number === doc.replyTo);
+  const held = resources();
+  const inbox = Boolean(held && (held["eds.inbox"] || held["eds.inbox.register"]));
+  return {
+    number: doc.replyTo,
+    subject: letter?.subject ?? "",
+    path:
+      inbox || !letter
+        ? `/eds/inbox/${encodeURIComponent(doc.replyTo)}`
+        : `/eds/tasks/${letter.id}`,
   };
 }
 
@@ -288,6 +311,9 @@ function advance(doc: MockDocument): boolean {
     }
     return mailing;
   });
+  // EDS-REPLY-1: письмо не ушло — автору и делопроизводителям уведомление (один раз, при переходе в «не отправлено»)
+  const failedNow = letter.mailings.find((m) => m.status === "failed" && m.finished_at === now);
+  if (failedNow) noticeMailFailed(doc, failedNow.reason);
   return changed;
 }
 
@@ -415,7 +441,10 @@ function submitDocument(doc: MockDocument, state: EdsMock, send = false): void {
       requestPdf(doc.letter, true);
       if (send) queueMailing(doc.letter);
     }
-    if (doc.replyTo) closeReplyInstructions(doc.replyTo, doc.number);
+    if (doc.replyTo) {
+      const closed = closeReplyInstructions(doc.replyTo, doc.number);
+      noticeReplyRegistered(doc, closed);
+    }
   } else {
     if (doc.status === "returned") doc.version += 1;
     doc.status = "on_approval";
@@ -703,7 +732,10 @@ export const edsDocumentsHandlers = [
     if (!doc.letter?.body) {
       return fail(409, "CONFLICT", "У письма нет текста на бланке.", { reason: "no_body" });
     }
-    doc.letter.registration_requested ??= { ownerId: ownerId(), at: new Date().toISOString() };
+    if (!doc.letter.registration_requested) {
+      doc.letter.registration_requested = { ownerId: ownerId(), at: new Date().toISOString() };
+      noticeRegistrationRequested(doc);
+    }
     writeEds(state);
     return HttpResponse.json(detail(doc, state, ownerId()));
   }),

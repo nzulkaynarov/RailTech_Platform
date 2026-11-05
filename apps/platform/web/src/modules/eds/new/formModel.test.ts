@@ -4,9 +4,11 @@ import {
   EMPTY_FORM,
   type FormValues,
   consequenceKey,
+  emailIn,
   fromDocument,
   kindFromParam,
   parseAmount,
+  replyPrefill,
   routeKind,
   todayInCompanyZone,
   toCreateBody,
@@ -219,5 +221,42 @@ describe("formModel", () => {
     expect(values.attachments).toEqual([
       { key: "f-1", name: "schet.pdf", size: 10, status: "done", id: "f-1", existing: true },
     ]);
+  });
+});
+
+describe("ответ на входящее: заготовка формы (EDS-REPLY-1)", () => {
+  it("почта — только та, что есть в контакте письма; имя без почты не подставляется как адрес", () => {
+    expect(emailIn("Алия Демо <aliya@client.example>")).toBe("aliya@client.example");
+    expect(emailIn("zakaz@rail-client-demo.example, +998 90 000 00 00")).toBe(
+      "zakaz@rail-client-demo.example",
+    );
+    expect(emailIn("Алия Демо")).toBe("");
+    expect(emailIn(null)).toBe("");
+  });
+
+  it("корреспондент, ИНН, почта и тема из письма; чего нет в письме — пусто", () => {
+    const filled = replyPrefill(
+      {
+        subject: "Запрос коммерческого предложения",
+        sender: { name: "ООО «Демо-Рейл»", inn: "300123456", contact: "a@demo-rail.example" },
+      },
+      "На ВХ-104/26 от 24.10.2026",
+    );
+    expect(filled).toEqual({
+      subject: "На ВХ-104/26 от 24.10.2026: Запрос коммерческого предложения",
+      recipientName: "ООО «Демо-Рейл»",
+      recipientInn: "300123456",
+      recipientEmail: "a@demo-rail.example",
+    });
+    const bare = replyPrefill(
+      { subject: "Т", sender: { name: null, inn: null, contact: null } },
+      "На ВХ-1/26 от 01.01.2026",
+    );
+    expect(bare.recipientName).toBe("");
+    expect(bare.recipientInn).toBe("");
+    expect(bare.recipientEmail).toBe("");
+    expect(
+      replyPrefill({ subject: "я".repeat(400), sender: bare as never }, "На ВХ").subject,
+    ).toHaveLength(300);
   });
 });

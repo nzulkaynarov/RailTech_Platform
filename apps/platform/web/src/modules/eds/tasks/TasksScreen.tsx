@@ -18,6 +18,7 @@ import { letterPath, letterRef } from "../inbox/api";
 import { InstructionsCard, OfficeDecision } from "../inbox/Instructions";
 import { useStateLabels } from "../inbox/labels";
 import { Attachments } from "../inbox/Parts";
+import { ReplyCard } from "./ReplyBlock";
 import { AcquaintAction, MyInstruction } from "./TaskActions";
 
 import "../inbox/inbox.css";
@@ -63,6 +64,7 @@ function Content({ letter }: { letter: LetterCard }) {
               text={t("tasks.noTask.text")}
             />
           ) : null}
+          <ReplyCard letter={letter} />
           <InstructionsCard letter={letter} />
           <OfficeDecision letter={letter} />
         </div>

@@ -1,5 +1,6 @@
 import { Alert, Button, Skeleton } from "antd";
 import { useState, type ReactNode } from "react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 
 import { ApiError } from "../../../shared/api/errors";
@@ -18,6 +19,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { History, type HistoryItem } from "../../../shared/ui/History";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { MoneyText } from "../../../shared/ui/MoneyText";
+import { StatusTag } from "../../../shared/ui/StatusTag";
 import { reasonText } from "./errors";
 import { LetterSection } from "./LetterSection";
 import { DocumentStatusTag } from "./status";
@@ -165,6 +167,20 @@ function Details({ doc }: { doc: EdsDocument }) {
       items={[
         { label: t("panel.fields.kind"), value: t(`kinds.${doc.kind}`) },
         { label: t("panel.fields.author"), value: doc.author.full_name },
+        // EDS-REPLY-1: ИСХ знает, на какое входящее отвечает, и ведёт к нему
+        ...(doc.in_reply_to
+          ? [
+              {
+                label: t("panel.replyTo"),
+                value: (
+                  <Link to={doc.in_reply_to.path}>
+                    {doc.in_reply_to.number}
+                    {doc.in_reply_to.subject ? ` · ${doc.in_reply_to.subject}` : ""}
+                  </Link>
+                ),
+              },
+            ]
+          : []),
         ...optional
           .filter((item) => !hidden.includes(item.key) && !isEmpty(item.value))
           .map(({ label, value }) => ({ label, value })),
@@ -199,6 +215,8 @@ function Text({ doc }: { doc: EdsDocument }) {
 function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClose: () => void }) {
   const { t } = useTranslation("documents");
   const isLetter = doc.kind === "letter_out";
+  // EDS-REPLY-1: последняя отправка адресату не удалась — метка рядом со статусом («Отправить ещё раз» — в разделе письма)
+  const mailFailed = doc.status === "sent" && doc.letter?.mailings.at(-1)?.status === "failed";
   return (
     <div className="pf-fp-stack">
       <div className="pf-fp-stack" style={{ gap: 8 }}>
@@ -210,6 +228,7 @@ function Body({ doc, sheet, onClose }: { doc: EdsDocument; sheet: boolean; onClo
             <span className="pf-hint">{t("list.noNumber")}</span>
           )}
           <DocumentStatusTag kind={doc.kind} status={doc.status} />
+          {mailFailed ? <StatusTag tone="red">{t("panel.mailFailed")}</StatusTag> : null}
         </div>
       </div>
       <Details doc={doc} />

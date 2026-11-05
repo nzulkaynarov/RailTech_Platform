@@ -876,3 +876,30 @@ async def test_deal_options_are_closed_to_roles_without_requests_or_projects(
     response = await web.client.get(f"{BASE}/deal-options")
 
     assert response.status_code == 403
+
+
+async def test_document_card_says_which_incoming_letter_it_answers(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """EDS-REPLY-1: «В ответ на ВХ-…» — номер, тема, ссылка (без «Входящих» — на экран поручения)"""
+    reply_to = {"id": REPLY_TO_ID, "number": "ВХ-112/26", "subject": "Требование ГНК о пояснениях"}
+    eds.answer("GET", f"documents/{DOC_ID}", body=document(kind="letter_out", reply_to=reply_to))
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+
+    assert response.status_code == 200, response.text
+    check(response, "/eds/documents/{id}", "get")
+    assert response.json()["in_reply_to"] == {
+        "number": "ВХ-112/26",
+        "subject": "Требование ГНК о пояснениях",
+        "path": "/eds/inbox/%D0%92%D0%A5-112%2F26",
+    }
+
+    await web.login(["SUPPLY"])
+    other = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    assert other.json()["in_reply_to"]["path"] == f"/eds/tasks/{REPLY_TO_ID}"
+
+    eds.answer("GET", f"documents/{DOC_ID}", body=document(kind="letter_out"))
+    plain = await web.client.get(f"{BASE}/documents/{DOC_ID}")
+    assert plain.json()["in_reply_to"] is None

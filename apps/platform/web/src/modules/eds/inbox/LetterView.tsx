@@ -22,6 +22,7 @@ import { SourceBanner } from "../../../shared/ui/SourceBanner";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { letterRef } from "./api";
 import { useStateLabels } from "./labels";
+import { ReplyCard } from "../tasks/ReplyBlock";
 import { InstructionsCard, OfficeDecision } from "./Instructions";
 import { DuplicateBanner, MarkDuplicateAction } from "./MarkDuplicate";
 import { Attachments } from "./Parts";
@@ -309,6 +310,7 @@ function Content({
           <Decision letter={letter} />
           <OfficeDecision letter={letter} />
           <InstructionsCard letter={letter} />
+          <ReplyCard letter={letter} />
           <Journal letter={letter} />
         </div>
         <aside className="pf-letters-side" aria-label={t("card.links")}>

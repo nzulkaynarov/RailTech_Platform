@@ -291,7 +291,8 @@
       "not_resolution_author": "uzaytirishni rezolyutsiya muallifi hal qiladi",
       "no_pending_extension": "uzaytirish so‘rovi endi yo‘q, kartochkani yangilang",
       "report_required": "hisobot, fayl yoki chiquvchi xat raqami kerak",
-      "not_found": "bunday raqamli hujjat topilmadi"
+      "not_found": "bunday raqamli hujjat topilmadi",
+      "outgoing_linked_elsewhere": "bu CHIQ boshqa kiruvchi xatga javob — shu xatning CHIQ raqamini kiriting yoki hisobot yozing"
     },
     "done": {
       "resolve": "Rezolyutsiya qo'yildi: topshiriq ijrochilarga yuborildi",
@@ -1159,5 +1160,21 @@
   "listKind": {
     "label": "Hujjat turi",
     "all": "Barcha turlar"
+  },
+  "reply": {
+    "title": "Xatga javob",
+    "draft": "Javob qoralamasi — hali ro‘yxatdan o‘tkazishga topshirilmagan.",
+    "handed": "Qoralama ish yurituvchiga ro‘yxatdan o‘tkazish uchun topshirildi.",
+    "registered": "{{number}} ro‘yxatdan o‘tkazildi.",
+    "noMail": "Tizimdan tashqarida yuborilgan yoki pochta orqali yuborilmagan.",
+    "sending": "{{number}} ro‘yxatdan o‘tkazildi, xat manzilga yuborilmoqda.",
+    "sent": "{{number}} manzilga yuborildi.",
+    "failedTag": "Yuborilmadi",
+    "failed": "{{number}} manzilga yetib bormadi: {{reason}}.",
+    "failedNoReason": "{{number}} manzilga yetib bormadi.",
+    "failedHint": "Xatni oching va «Manzilga yana yuborish» tugmasini bosing.",
+    "open": "Ochish",
+    "prefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
+    "continue": "Javobni davom ettirish"
   }
 }

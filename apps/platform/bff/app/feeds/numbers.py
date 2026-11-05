@@ -172,6 +172,11 @@ def letter_task_path(letter_id: str) -> str:
     return f"/eds/tasks/{segment(letter_id)}"
 
 
+def outgoing_document_path(document_id: str) -> str:
+    """Наш ИСХ (и черновик, переданный на регистрацию) — «Все документы» с открытой карточкой."""
+    return f"/eds/documents?scope=all&doc={segment(document_id)}&panel=open"
+
+
 def memo_ref(number: str, title: str | None) -> ObjectRef:
     """Служебная записка, заявление, отчёт — «На согласовании», вкладка «Согласование»."""
     return ObjectRef(

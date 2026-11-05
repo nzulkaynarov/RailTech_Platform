@@ -128,7 +128,7 @@ def wants_memos(view: View) -> bool:
 
 
 # Виды работы по входящим делопроизводства (P8b): поручение, перенос срока, ознакомление.
-LETTER_TASK_KINDS = ("instruction", "instruction_extension", "acquaint")
+LETTER_TASK_KINDS = ("instruction", "instruction_extension", "acquaint", "register_reply")
 LETTER_TASKS_PATH = "/api/v1/letter-tasks"
 
 
@@ -286,7 +286,7 @@ async def load_snapshot(
             if isinstance(payload, dict):
                 snap.letter_tasks = {
                     key: rows(payload.get(key))
-                    for key in ("instructions", "extensions", "acquaintances")
+                    for key in ("instructions", "extensions", "acquaintances", "registrations")
                 }
 
     async def load_deals() -> None:

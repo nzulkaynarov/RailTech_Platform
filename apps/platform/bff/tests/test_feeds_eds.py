@@ -636,3 +636,80 @@ async def test_eds_down_leaves_the_rest_of_the_queue(web: Web, fb: FeedBackends)
     assert response.status_code == 200
     assert not [i for i in response.json()["items"] if i["kind"] == "instruction"]
     assert response.json()["sources"]["eds"] == "unavailable"
+
+
+# --- EDS-REPLY-1: «Зарегистрировать ИСХ» ---------------------------------------------------------
+
+REG_DOC = "70000000-0000-4000-8000-000000000071"
+
+
+def registration_task(**over: Any) -> dict[str, Any]:
+    return {
+        "document_id": REG_DOC,
+        "subject": "Пояснения по требованию",
+        "in_reply_to": {
+            "id": "40000000-0000-4000-8000-000000000112",
+            "number": "ВХ-112/26",
+            "subject": "Требование ГНК о пояснениях",
+        },
+        "requested_by": {"crm_user_id": 7, "full_name": "Иван Исполнитель"},
+        "requested_at": "2027-01-14T05:00:00Z",
+        **over,
+    }
+
+
+async def test_registrar_sees_register_reply_row_and_others_do_not(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    fb.state["letter_tasks"] = {
+        "instructions": [],
+        "extensions": [],
+        "acquaintances": [],
+        "registrations": [registration_task(), registration_task()],  # повтор EDS — одна строка
+    }
+    await web.login(["REGISTRAR"])
+
+    response = await web.client.get("/api/v1/queue")
+
+    check(response, "/queue", "get")
+    [row] = [i for i in response.json()["items"] if i["kind"] == "register_reply"]
+    assert row["id"] == f"register_reply:{REG_DOC}"
+    assert row["title"] == "Зарегистрировать ИСХ: ответ на ВХ-112/26"
+    assert row["subtitle"] == "Пояснения по требованию · Иван Исполнитель"
+    assert row["due_label"] == "today"
+    assert row["role_id"] == rid("REGISTRAR")
+    assert row["object"] == {
+        "kind": "memo",
+        "number": "ВХ-112/26",
+        "title": "Пояснения по требованию",
+        "path": f"/eds/documents?scope=all&doc={REG_DOC}&panel=open",
+    }
+
+    # строка — только держателю раздела регистрации; исполнитель её не видит
+    await web.login(["SUPPLY"])
+    kinds = {i["kind"] for i in (await web.client.get("/api/v1/queue")).json()["items"]}
+    assert "register_reply" not in kinds
+
+
+async def test_register_reply_row_without_letter_and_old_eds_without_the_key(
+    web: Web, fb: FeedBackends
+) -> None:
+    fb.state["letter_tasks"] = {
+        "instructions": [],
+        "extensions": [],
+        "acquaintances": [],
+        "registrations": [registration_task(in_reply_to=None)],
+    }
+    await web.login(["REGISTRAR"])
+    [row] = [
+        i
+        for i in (await web.client.get("/api/v1/queue")).json()["items"]
+        if i["kind"] == "register_reply"
+    ]
+    assert row["title"] == "Зарегистрировать ИСХ"
+    assert row["object"]["number"] == "Пояснения по требованию"
+
+    # EDS прежней версии ключа `registrations` не присылает — очередь собирается без этих строк
+    fb.state["letter_tasks"] = {"instructions": [], "extensions": [], "acquaintances": []}
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
+    assert [i for i in items if i["kind"] == "register_reply"] == []
