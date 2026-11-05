@@ -8,7 +8,7 @@
 Downgrade снимает раздел `eds.signing.manage` и тоже поднимает версию.
 
 Revision ID: 44c4ccb1a36d
-Revises: 5d5089811bac
+Revises: fefcc20f861d
 Create Date: 2026-11-05 12:00:00+00:00
 """
 
@@ -18,7 +18,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "44c4ccb1a36d"
-down_revision: str | None = "5d5089811bac"
+down_revision: str | None = "fefcc20f861d"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
