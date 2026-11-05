@@ -248,3 +248,38 @@
   text-align: left;
   padding-block: 4px;
 }
+
+/* «Проверить почту» (MAIL-NOW): строка «Проверено N мин назад», кнопка и итог в слоте фиксированной высоты. */
+.pf-mail-check {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.pf-mail-check-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pf-mail-check-result {
+  min-height: 22px;
+  max-width: 100%;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+@container (max-width: 520px) {
+  .pf-mail-check {
+    align-items: flex-start;
+  }
+
+  .pf-mail-check-text {
+    display: none;
+  }
+
+  .pf-mail-check-result {
+    text-align: left;
+  }
+}

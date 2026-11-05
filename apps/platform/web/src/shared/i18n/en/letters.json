@@ -1007,6 +1007,27 @@
         "unverified": "The sender is not verified: the SPF/DKIM/DMARC check failed, the address may be forged. The rule type was not set.",
         "unknown": "The sender cannot be verified: the letter has no mark from the mail server. The rule type was not set."
       }
+    },
+    "check": {
+      "button": "Check mail",
+      "busy": "Checking…",
+      "never": "Not checked yet",
+      "justNow": "Checked just now",
+      "minutes": "Checked {{count}} min ago",
+      "hours": "Checked {{count}} h ago",
+      "date": "Checked {{date}}",
+      "found": "New letters: {{count}}",
+      "none": "No new letters",
+      "off": "Mail is not set up —",
+      "settings": "Settings · Mail",
+      "checking": "Checking — letters will appear in the list on their own",
+      "tooSoon": "You can check again in {{count}} s",
+      "error": {
+        "default": "Could not connect to the mail server",
+        "auth_failed": "The mail server did not accept the login or password",
+        "mailbox_missing": "There is no such folder on the mail server"
+      },
+      "resultLabel": "Mail check result"
     }
   },
   "settings": {

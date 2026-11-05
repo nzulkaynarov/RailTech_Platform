@@ -1,11 +1,13 @@
 """Опрос общего ящика (W18A-P2, B-INB-5): раз в 2 минуты, одна задача одновременно.
 
-`queueing_lock` + `lock`: письма не забираются дважды параллельно (дубль ловит ещё и UNIQUE
-`message_id`). Подсказку помощника задача не запрашивает — только кнопка «Подсказать» в карточке
-письма (решение юриста 2026-11-02).
+Блокировка `POLL_LOCK` общая с «Проверить почту» (`services/inbound_mail_check.py`): идёт опрос по
+кнопке — плановый пропускается (`busy`). `queueing_lock` + `lock`: письма не забираются дважды
+параллельно (дубль ловит ещё и UNIQUE `message_id`). Подсказку помощника задача не запрашивает —
+только кнопка «Подсказать» в карточке письма (решение юриста 2026-11-02).
 """
 
 from app.container import get_container
+from app.services.inbound_mail_ingest import PollOutcome
 from app.tasks.queue import queue
 
 
@@ -17,7 +19,8 @@ from app.tasks.queue import queue
     lock="inbound_mail_poll",
 )
 async def inbound_mail_poll(timestamp: int) -> str:
-    return (await get_container().inbound_mail_ingest.poll()).status
+    outcome = await get_container().inbound_mail_ingest.poll_exclusive()
+    return outcome.status if isinstance(outcome, PollOutcome) else "busy"
 
 
 @queue.task(
