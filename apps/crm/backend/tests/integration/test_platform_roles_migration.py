@@ -135,14 +135,16 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert director[0]["eds.inbox.register"] == "full"
         assert director[1] == 4
         # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1);
-        # «Делопроизводитель» — 2 (D17G-1: разбор и передача лидов вместо `crm.leads: full`).
+        # «Делопроизводитель» — 2 (D17G-1: разбор и передача лидов вместо `crm.leads: full`);
+        # «Администратор» — 2 (SIGN-2: реестр полномочий подписи `eds.signing.manage: full`).
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles "
-            "WHERE code NOT IN ('DIRECTOR', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
+            "WHERE code NOT IN ('DIRECTOR', 'ADMIN', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
         ).fetchall() == [(1,)]
         assert conn.execute(
-            "SELECT version FROM platform_roles WHERE code IN ('tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
-        ).fetchall() == [(2,), (2,)]
+            "SELECT version FROM platform_roles "
+            "WHERE code IN ('ADMIN', 'tpl:ACCOUNTANT', 'tpl:REGISTRAR')"
+        ).fetchall() == [(2,), (2,), (2,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -418,3 +420,37 @@ def test_registrar_template_triages_leads_and_downgrade_returns_full(
         edited, _ = role(conn, "tpl:REGISTRAR")
         assert edited["crm.leads"] == "read"
         assert "crm.leads.triage" not in edited
+
+
+def test_admin_signing_manage_and_downgrade_removes(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """44c4ccb1a36d (SIGN-2, ADR-0024 п. 1): у «Администратора» `eds.signing.manage` — `full`,
+    версия растёт."""
+
+    def admin() -> tuple[str | None, int]:
+        with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+            row = conn.execute(
+                "SELECT access->>'eds.signing.manage', version FROM platform_roles "
+                "WHERE code = 'ADMIN'"
+            ).fetchone()
+        assert row is not None
+        return row[0], int(row[1])
+
+    with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+        conn.execute(
+            "INSERT INTO platform_roles (code, name, is_system, access) VALUES "
+            "('ADMIN', 'Администратор', true, '{\"admin\": \"full\"}'::jsonb) "
+            "ON CONFLICT (code) DO NOTHING"
+        )
+
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "5d5089811bac")
+    level, version = admin()
+    assert level is None
+
+    command.upgrade(alembic_config, "44c4ccb1a36d")
+    assert admin() == ("full", version + 1)
+
+    command.upgrade(alembic_config, "head")  # повтор — без изменений
+    assert admin()[0] == "full"
