@@ -38,6 +38,8 @@ export interface SettingEntry {
 
 const ADMIN: AccessRule = { resource: "admin" };
 const COMPANY: AccessRule = { resource: "company.settings" };
+/** SIGN-2 (ADR-0024 п. 1): реестр полномочий подписи ведёт держатель раздела `eds.signing.manage` (системная роль администратора). */
+const SIGNING: AccessRule = { resource: "eds.signing.manage" };
 
 /** Порядок — порядок групп и пунктов в подменю и на индексе. */
 export const SETTINGS: readonly SettingEntry[] = [
@@ -73,6 +75,41 @@ export const SETTINGS: readonly SettingEntry[] = [
       ru: ["доступ", "матрица", "права", "роль"],
       uz: ["kirish", "huquq", "rol"],
       en: ["access", "matrix", "permission", "role"],
+    },
+  },
+  {
+    key: "signing",
+    group: "people",
+    path: "/admin/signing",
+    access: SIGNING,
+    name: { ru: "Права подписи", uz: "Imzo huquqlari", en: "Signing authority" },
+    description: {
+      ru: "Кто и что подписывает: основание, лимит и срок",
+      uz: "Kim nimani imzolaydi: asos, limit va muddat",
+      en: "Who signs what: basis, limit and term",
+    },
+    keywords: {
+      ru: [
+        "подпись",
+        "подписант",
+        "доверенность",
+        "приказ",
+        "устав",
+        "полномочия",
+        "замещение",
+        "директор",
+        "лимит",
+      ],
+      uz: ["imzo", "imzolovchi", "ishonchnoma", "buyruq", "nizom", "vakolat", "o‘rinbosar"],
+      en: [
+        "signature",
+        "signatory",
+        "power of attorney",
+        "order",
+        "charter",
+        "authority",
+        "deputy",
+      ],
     },
   },
   {

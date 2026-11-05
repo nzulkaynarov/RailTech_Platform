@@ -210,6 +210,8 @@ export const STATUS_TONE = {
   ticket: { new: GO, in_progress: GO, resolved: OK },
   /** Шаг первого запуска */
   setupStep: { done: OK, todo: W, unknown: NONE },
+  /** Полномочие подписи (SIGN-2): действует, скоро истекает, ещё не началось, срок вышел, отозвано */
+  signingAuthority: { active: OK, expiring: W, scheduled: GO, expired: NO, revoked: OFF },
   /** Статья компании */
   article: { draft: DR, published: OK },
   /** Уровень здоровья интеграции и важность пункта «Требует внимания» */

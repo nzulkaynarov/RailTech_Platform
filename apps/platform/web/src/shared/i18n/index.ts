@@ -27,6 +27,7 @@ import enPayments from "./en/payments.json";
 import enModules from "./en/modules.json";
 import enProfile from "./en/profile.json";
 import enShell from "./en/shell.json";
+import enSigning from "./en/signing.json";
 import enStock from "./en/stock.json";
 import enUi from "./en/ui.json";
 import ruArticles from "./ru/articles.json";
@@ -55,6 +56,7 @@ import ruPayments from "./ru/payments.json";
 import ruModules from "./ru/modules.json";
 import ruProfile from "./ru/profile.json";
 import ruShell from "./ru/shell.json";
+import ruSigning from "./ru/signing.json";
 import ruStock from "./ru/stock.json";
 import ruUi from "./ru/ui.json";
 import uzArticles from "./uz/articles.json";
@@ -83,6 +85,7 @@ import uzPayments from "./uz/payments.json";
 import uzModules from "./uz/modules.json";
 import uzProfile from "./uz/profile.json";
 import uzShell from "./uz/shell.json";
+import uzSigning from "./uz/signing.json";
 import uzStock from "./uz/stock.json";
 import uzUi from "./uz/ui.json";
 
@@ -97,6 +100,7 @@ export const resources = {
     bridge: ruBridge,
     calc: ruCalc,
     shell: ruShell,
+    signing: ruSigning,
     stock: ruStock,
     modules: ruModules,
     dictionary: ruDictionary,
@@ -127,6 +131,7 @@ export const resources = {
     bridge: uzBridge,
     calc: uzCalc,
     shell: uzShell,
+    signing: uzSigning,
     stock: uzStock,
     modules: uzModules,
     dictionary: uzDictionary,
@@ -157,6 +162,7 @@ export const resources = {
     bridge: enBridge,
     calc: enCalc,
     shell: enShell,
+    signing: enSigning,
     stock: enStock,
     modules: enModules,
     dictionary: enDictionary,
@@ -203,7 +209,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), projects (EDS · Проекты: договор, акт, сканы, D2-5), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7), articles (Admin · Статьи компании и раздел «Как у нас принято» в Помощи, W18A-P5). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), projects (EDS · Проекты: договор, акт, сканы, D2-5), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7), articles (Admin · Статьи компании и раздел «Как у нас принято» в Помощи, W18A-P5), signing (Admin · Права подписи, SIGN-2). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -236,6 +242,7 @@ void i18n.use(initReactI18next).init({
     "payments",
     "help",
     "articles",
+    "signing",
   ],
   interpolation: { escapeValue: false },
 });

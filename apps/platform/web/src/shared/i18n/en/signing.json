@@ -1,0 +1,179 @@
+{
+  "subtitle": "Who may sign company documents, on what basis and until when",
+  "add": "Grant authority",
+  "filter": {
+    "label": "Show",
+    "active": "Current",
+    "all": "All"
+  },
+  "list": {
+    "label": "Signing authorities"
+  },
+  "unavailable": "Could not load signing authorities. Refresh the page.",
+  "hint": {
+    "title": "Nobody may sign documents yet",
+    "withDirector": "The company letterhead names {{name}} as the signatory. Add them under the charter for all document types?",
+    "noDirector": "Say who signs documents on behalf of the company: the head under the charter, others by order or power of attorney.",
+    "addDirector": "Add {{name}}",
+    "other": "Choose someone else"
+  },
+  "empty": {
+    "title": "No authorities",
+    "text": "Add the people who sign letters, contracts, invoices and acts.",
+    "activeText": "No current authorities. Show “All” to see revoked and expired ones."
+  },
+  "col": {
+    "holder": "Employee",
+    "kinds": "Signs",
+    "limit": "Amount limit",
+    "basis": "Basis",
+    "term": "Term",
+    "status": "Status",
+    "actions": "Actions"
+  },
+  "limit": {
+    "none": "No limit",
+    "upTo": "up to {{amount}}"
+  },
+  "kinds": {
+    "more": "and {{count}} more",
+    "unknown": "{{code}}"
+  },
+  "basis": {
+    "charter": "Charter",
+    "order": "Order",
+    "power_of_attorney": "Power of attorney",
+    "numbered": "{{basis}} No. {{number}} of {{date}}",
+    "hint": {
+      "charter": "The head acts without a power of attorney",
+      "order": "Order number and date",
+      "power_of_attorney": "Number, date and term are required; the term is at most 3 years"
+    }
+  },
+  "term": {
+    "from": "from {{date}}",
+    "until": "until {{date}}",
+    "open": "no end date",
+    "expires_one": "expires in {{count}} day",
+    "expires_few": "expires in {{count}} days",
+    "expires_many": "expires in {{count}} days",
+    "expires_other": "expires in {{count}} days",
+    "today": "expires today"
+  },
+  "status": {
+    "active": "Valid",
+    "expiring": "Expiring soon",
+    "scheduled": "Not started",
+    "expired": "Expired",
+    "revoked": "Revoked"
+  },
+  "inactiveHolder": "employee deactivated",
+  "open": "Open",
+  "openNamed": "Open authority: {{name}}",
+  "drawer": {
+    "addTitle": "Grant signing authority",
+    "editTitle": "Authority: {{name}}",
+    "revokedTitle": "Revoked authority: {{name}}",
+    "close": "Close"
+  },
+  "form": {
+    "holder": "Employee",
+    "holderPlaceholder": "Choose an employee",
+    "kinds": "Signs",
+    "kindsPlaceholder": "Choose document types",
+    "kindsHint": "The administrator keeps the types in “Lists”",
+    "basis": "Basis",
+    "basisNumber": "Number",
+    "basisDate": "Issue date",
+    "validFrom": "Valid from",
+    "validTo": "Valid until",
+    "validToPower": "No later than {{date}}",
+    "limit": "Amount limit",
+    "limitAmount": "Amount",
+    "limitCurrency": "Currency",
+    "limitHint": "Empty means no limit",
+    "vakolat": "Vakolat.uz link",
+    "vakolatHint": "Optional: the entry in the register of powers of attorney",
+    "note": "Note",
+    "file": "Basis file",
+    "fileHint": "Scan or photo, PDF or image up to 25 MB",
+    "fileChoose": "Choose file",
+    "fileReplace": "Replace file",
+    "fileNone": "No file attached",
+    "fileDownload": "Download: {{name}}",
+    "fileVersion": "version {{version}}",
+    "required": "Fill in the field",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Saved",
+    "savedFileFailed": "The authority was saved but the file was not attached. Choose it again.",
+    "revoke": "Revoke"
+  },
+  "errors": {
+    "DEFAULT": "Could not save. Try again.",
+    "revoked": "The authority is already revoked.",
+    "invalid": "Check the highlighted fields.",
+    "PAYLOAD_TOO_LARGE": "The file is larger than 25 MB.",
+    "UNSUPPORTED_MEDIA_TYPE": "A PDF or an image is required.",
+    "field": {
+      "crm_user_id": "The employee was not found or is deactivated.",
+      "kinds": "Choose document types from the list.",
+      "basis_number": "Enter the basis number.",
+      "basis_date": "Enter the basis date.",
+      "valid_from": "Check the start date.",
+      "valid_to": "Check the term: a power of attorney lasts at most 3 years from its issue date.",
+      "limit_amount": "Enter the limit amount.",
+      "limit_currency": "Choose the limit currency.",
+      "vakolat_url": "The link must point to vakolat.uz."
+    }
+  },
+  "revoke": {
+    "title": "Revoke authority: {{name}}",
+    "reason": "Reason",
+    "reasonHint": "It will be shown in the log",
+    "reasonRequired": "Give a reason (3 characters or more)",
+    "ok": "Revoke",
+    "will": "What will happen",
+    "consequence1": "The employee stops being a signatory: new documents will not be sent to them for signing.",
+    "consequence2": "The authority stays in the list and the log marked “Revoked”.",
+    "consequence3": "It cannot be restored; grant a new one.",
+    "done": "Authority revoked"
+  },
+  "journal": {
+    "title": "Log",
+    "issued": "Granted",
+    "updated": "Changed",
+    "revoked": "Revoked",
+    "file_replaced": "File attached",
+    "expiry_reminded": "Expiry reminder sent",
+    "system": "system",
+    "change": "{{field}}: {{before}} → {{after}}",
+    "empty": "—"
+  },
+  "fields": {
+    "kinds": "Types",
+    "limit_amount": "Limit",
+    "limit_currency": "Limit currency",
+    "basis": "Basis",
+    "basis_number": "Number",
+    "basis_date": "Issue date",
+    "valid_from": "Valid from",
+    "valid_to": "Valid until",
+    "vakolat_url": "Vakolat.uz",
+    "note": "Note"
+  },
+  "check": {
+    "title": "Who may sign",
+    "hint": "Check the rules: document type, amount and date, and see who signs and why.",
+    "kind": "Document type",
+    "amount": "Amount",
+    "currency": "Currency",
+    "date": "Date",
+    "run": "Check",
+    "result": "Signs",
+    "none": "Nobody may sign",
+    "actingFor": "acting for: {{names}}",
+    "why": "Why",
+    "rejected": "May not sign"
+  }
+}

@@ -37,6 +37,7 @@ from app.api import (
     eds_payments,
     eds_projects,
     eds_resolution_templates,
+    eds_signing,
     erp_calc,
     erp_catalog,
     erp_docs,
@@ -141,6 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(eds_letter_intake.router, prefix=API_PREFIX)
     app.include_router(eds_resolution_templates.router, prefix=API_PREFIX)
+    app.include_router(eds_signing.router, prefix=API_PREFIX)
     app.include_router(dictionaries.router, prefix=API_PREFIX)
     # раньше inbound_mail: `/inbound-mail/handover-targets` не совпадёт с `/inbound-mail/{id}`
     app.include_router(mail_types.router, prefix=API_PREFIX)

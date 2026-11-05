@@ -245,6 +245,13 @@ exports[`карты статусов > снимок карты: изменени
     "todo": "gold",
     "unknown": "default",
   },
+  "signingAuthority": {
+    "active": "green",
+    "expired": "red",
+    "expiring": "gold",
+    "revoked": "default",
+    "scheduled": "blue",
+  },
   "stage": {
     "CALCULATION": "blue",
     "CONTRACT": "blue",

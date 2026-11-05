@@ -261,6 +261,7 @@ import type {
   ListPaymentMemosParams,
   ListPaymentsParams,
   ListQuoteApprovalsParams,
+  ListSigningAuthoritiesParams,
   ListStockBalancesParams,
   ListStockReservationsParams,
   ListStockShipmentsParams,
@@ -360,6 +361,7 @@ import type {
   ResolutionTemplate,
   ResolutionTemplateIn,
   ResolutionTemplateList,
+  ResolveSignersParams,
   ReturnToBotIn,
   Role,
   RoleCreate,
@@ -390,6 +392,13 @@ import type {
   SetupCompanyCreated,
   SetupCompanyIn,
   SetupState,
+  SigningAuthorityDetail,
+  SigningAuthorityIn,
+  SigningAuthorityList,
+  SigningAuthorityPatch,
+  SigningResolution,
+  SigningRevokeIn,
+  SigningSetupHint,
   SmtpCheck,
   SmtpConnector,
   SmtpSettingsIn,
@@ -35310,7 +35319,7 @@ export const getListEdsStaffUrl = () => {
 };
 
 /**
- * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+ * EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
  * @summary EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
  */
 export const listEdsStaff = async (options?: Parameters<typeof http>[1]): Promise<EdsStaffList> => {
@@ -35411,6 +35420,1268 @@ export function useListEdsStaff<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getListEdsStaffQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListSigningAuthoritiesUrl = (params?: ListSigningAuthoritiesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/signing/authorities?${stringifiedParams}`
+    : `/api/v1/eds/signing/authorities`;
+};
+
+/**
+ * EDS `GET /signing/authorities`. Кто, какие виды документов, до какой суммы, на каком основании и до какого срока вправе подписывать. `status`: `active` — действующие (в ответе `active` и `expiring`), `expiring` — окончатся в ближайшие 30 дней, `inactive` — отозванные, истёкшие и ещё не начавшиеся, `all` — все (по умолчанию). Раздел `eds.signing.manage` — полный.
+ * @summary EDS · Права подписи — реестр полномочий (SIGN-2)
+ */
+export const listSigningAuthorities = async (
+  params?: ListSigningAuthoritiesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityList> => {
+  return http<SigningAuthorityList>(getListSigningAuthoritiesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSigningAuthoritiesQueryKey = (params?: ListSigningAuthoritiesParams) => {
+  return [`/api/v1/eds/signing/authorities`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSigningAuthoritiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSigningAuthorities>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSigningAuthoritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningAuthorities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSigningAuthoritiesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSigningAuthorities>>> = ({ signal }) =>
+    listSigningAuthorities(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSigningAuthorities>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSigningAuthoritiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSigningAuthorities>>
+>;
+export type ListSigningAuthoritiesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListSigningAuthorities<
+  TData = Awaited<ReturnType<typeof listSigningAuthorities>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListSigningAuthoritiesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningAuthorities>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSigningAuthorities>>,
+          TError,
+          Awaited<ReturnType<typeof listSigningAuthorities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSigningAuthorities<
+  TData = Awaited<ReturnType<typeof listSigningAuthorities>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSigningAuthoritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningAuthorities>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSigningAuthorities>>,
+          TError,
+          Awaited<ReturnType<typeof listSigningAuthorities>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSigningAuthorities<
+  TData = Awaited<ReturnType<typeof listSigningAuthorities>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSigningAuthoritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningAuthorities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Права подписи — реестр полномочий (SIGN-2)
+ */
+
+export function useListSigningAuthorities<
+  TData = Awaited<ReturnType<typeof listSigningAuthorities>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListSigningAuthoritiesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSigningAuthorities>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListSigningAuthoritiesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateSigningAuthorityUrl = () => {
+  return `/api/v1/eds/signing/authorities`;
+};
+
+/**
+ * EDS `POST /signing/authorities`. Доверенность — номер, дата и срок обязательны, срок не позже даты выдачи плюс 3 года (ГК, ст. 139); приказ — номер и дата; устав — без номера. Лимит — сумма и валюта вместе. Пересечения допустимы. Нарушение — 422 с полем в `details.fields`. Раздел `eds.signing.manage` — полный.
+ * @summary EDS · Выдать полномочие подписи
+ */
+export const createSigningAuthority = async (
+  signingAuthorityIn: SigningAuthorityIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SigningAuthorityDetail>(getCreateSigningAuthorityUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(signingAuthorityIn),
+  });
+};
+
+export const getCreateSigningAuthorityMutationKey = () => ["createSigningAuthority"] as const;
+
+export const getCreateSigningAuthorityMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSigningAuthority>>,
+    TError,
+    CreateSigningAuthorityMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSigningAuthority>>,
+  TError,
+  CreateSigningAuthorityMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSigningAuthorityMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSigningAuthority>>,
+    CreateSigningAuthorityMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSigningAuthority(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSigningAuthorityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSigningAuthority>>
+>;
+export type CreateSigningAuthorityMutationBody = SigningAuthorityIn;
+export type CreateSigningAuthorityMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreateSigningAuthorityMutationVariables = { data: SigningAuthorityIn };
+
+/**
+ * @summary EDS · Выдать полномочие подписи
+ */
+export const useCreateSigningAuthority = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSigningAuthority>>,
+      TError,
+      CreateSigningAuthorityMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSigningAuthority>>,
+  TError,
+  CreateSigningAuthorityMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSigningAuthorityMutationOptions(options), queryClient);
+};
+
+export const getGetSigningAuthorityUrl = (id: string) => {
+  return `/api/v1/eds/signing/authorities/${id}`;
+};
+
+/**
+ * @summary EDS · Полномочие подписи с журналом
+ */
+export const getSigningAuthority = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityDetail> => {
+  return http<SigningAuthorityDetail>(getGetSigningAuthorityUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSigningAuthorityQueryKey = (id: string) => {
+  return [`/api/v1/eds/signing/authorities/${id}`] as const;
+};
+
+export const getGetSigningAuthorityQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSigningAuthority>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSigningAuthorityQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSigningAuthority>>> = ({ signal }) =>
+    getSigningAuthority(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSigningAuthorityQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSigningAuthority>>
+>;
+export type GetSigningAuthorityQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSigningAuthority<
+  TData = Awaited<ReturnType<typeof getSigningAuthority>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSigningAuthority>>,
+          TError,
+          Awaited<ReturnType<typeof getSigningAuthority>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSigningAuthority<
+  TData = Awaited<ReturnType<typeof getSigningAuthority>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSigningAuthority>>,
+          TError,
+          Awaited<ReturnType<typeof getSigningAuthority>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSigningAuthority<
+  TData = Awaited<ReturnType<typeof getSigningAuthority>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Полномочие подписи с журналом
+ */
+
+export function useGetSigningAuthority<
+  TData = Awaited<ReturnType<typeof getSigningAuthority>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningAuthority>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSigningAuthorityQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateSigningAuthorityUrl = (id: string) => {
+  return `/api/v1/eds/signing/authorities/${id}`;
+};
+
+/**
+ * EDS `PATCH /signing/authorities/{id}`. Переданные поля меняются, непереданные остаются; `null` очищает необязательное. Держателя не меняют. Отозванное менять нельзя — 409 `revoked`.
+ * @summary EDS · Изменить полномочие подписи
+ */
+export const updateSigningAuthority = async (
+  id: string,
+  signingAuthorityPatch: SigningAuthorityPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SigningAuthorityDetail>(getUpdateSigningAuthorityUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(signingAuthorityPatch),
+  });
+};
+
+export const getUpdateSigningAuthorityMutationKey = () => ["updateSigningAuthority"] as const;
+
+export const getUpdateSigningAuthorityMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSigningAuthority>>,
+    TError,
+    UpdateSigningAuthorityMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSigningAuthority>>,
+  TError,
+  UpdateSigningAuthorityMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSigningAuthorityMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSigningAuthority>>,
+    UpdateSigningAuthorityMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateSigningAuthority(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSigningAuthorityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSigningAuthority>>
+>;
+export type UpdateSigningAuthorityMutationBody = SigningAuthorityPatch;
+export type UpdateSigningAuthorityMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateSigningAuthorityMutationVariables = { id: string; data: SigningAuthorityPatch };
+
+/**
+ * @summary EDS · Изменить полномочие подписи
+ */
+export const useUpdateSigningAuthority = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSigningAuthority>>,
+      TError,
+      UpdateSigningAuthorityMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSigningAuthority>>,
+  TError,
+  UpdateSigningAuthorityMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSigningAuthorityMutationOptions(options), queryClient);
+};
+
+export const getRevokeSigningAuthorityUrl = (id: string) => {
+  return `/api/v1/eds/signing/authorities/${id}/revoke`;
+};
+
+/**
+ * EDS `POST /signing/authorities/{id}/revoke`. Причина обязательна; отозванное остаётся в реестре и журнале, подбор подписанта его больше не учитывает. Повторный отзыв — 409 `revoked`.
+ * @summary EDS · Отозвать полномочие подписи
+ */
+export const revokeSigningAuthority = async (
+  id: string,
+  signingRevokeIn: SigningRevokeIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SigningAuthorityDetail>(getRevokeSigningAuthorityUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(signingRevokeIn),
+  });
+};
+
+export const getRevokeSigningAuthorityMutationKey = () => ["revokeSigningAuthority"] as const;
+
+export const getRevokeSigningAuthorityMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof revokeSigningAuthority>>,
+    TError,
+    RevokeSigningAuthorityMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof revokeSigningAuthority>>,
+  TError,
+  RevokeSigningAuthorityMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRevokeSigningAuthorityMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof revokeSigningAuthority>>,
+    RevokeSigningAuthorityMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return revokeSigningAuthority(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RevokeSigningAuthorityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof revokeSigningAuthority>>
+>;
+export type RevokeSigningAuthorityMutationBody = SigningRevokeIn;
+export type RevokeSigningAuthorityMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RevokeSigningAuthorityMutationVariables = { id: string; data: SigningRevokeIn };
+
+/**
+ * @summary EDS · Отозвать полномочие подписи
+ */
+export const useRevokeSigningAuthority = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof revokeSigningAuthority>>,
+      TError,
+      RevokeSigningAuthorityMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof revokeSigningAuthority>>,
+  TError,
+  RevokeSigningAuthorityMutationVariables,
+  TContext
+> => {
+  return useMutation(getRevokeSigningAuthorityMutationOptions(options), queryClient);
+};
+
+export const getUploadSigningBasisFileUrl = (id: string) => {
+  return `/api/v1/eds/signing/authorities/${id}/basis-file`;
+};
+
+/**
+ * EDS `POST /signing/authorities/{id}/basis-file` (multipart). BFF читает тело потоком до предела (25 МБ и поля формы), multipart не разбирает. Файл хранится приватно; повторная загрузка добавляет версию. Больше 25 МБ — 413; не PDF и не изображение — 415.
+ * @summary EDS · Приложить файл основания (скан доверенности, приказа)
+ */
+export const uploadSigningBasisFile = async (
+  id: string,
+  edsFileUpload: EdsFileUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningAuthorityDetail> => {
+  const formData = new FormData();
+  formData.append(`file`, edsFileUpload.file);
+
+  return http<SigningAuthorityDetail>(getUploadSigningBasisFileUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadSigningBasisFileMutationKey = () => ["uploadSigningBasisFile"] as const;
+
+export const getUploadSigningBasisFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadSigningBasisFile>>,
+    TError,
+    UploadSigningBasisFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadSigningBasisFile>>,
+  TError,
+  UploadSigningBasisFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadSigningBasisFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadSigningBasisFile>>,
+    UploadSigningBasisFileMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return uploadSigningBasisFile(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadSigningBasisFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadSigningBasisFile>>
+>;
+export type UploadSigningBasisFileMutationBody = EdsFileUpload;
+export type UploadSigningBasisFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | BackendUnavailableResponse
+>;
+export type UploadSigningBasisFileMutationVariables = { id: string; data: EdsFileUpload };
+
+/**
+ * @summary EDS · Приложить файл основания (скан доверенности, приказа)
+ */
+export const useUploadSigningBasisFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadSigningBasisFile>>,
+      TError,
+      UploadSigningBasisFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadSigningBasisFile>>,
+  TError,
+  UploadSigningBasisFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadSigningBasisFileMutationOptions(options), queryClient);
+};
+
+export const getDownloadSigningBasisFileUrl = (id: string) => {
+  return `/api/v1/eds/signing/authorities/${id}/basis-file`;
+};
+
+/**
+ * EDS `GET /signing/authorities/{id}/basis-file`. Поток, в памяти BFF не накапливается; только вложением.
+ * @summary EDS · Скачать файл основания
+ */
+export const downloadSigningBasisFile = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadSigningBasisFileUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadSigningBasisFileQueryKey = (id: string) => {
+  return [`/api/v1/eds/signing/authorities/${id}/basis-file`] as const;
+};
+
+export const getDownloadSigningBasisFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadSigningBasisFileQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadSigningBasisFile>>> = ({
+    signal,
+  }) => downloadSigningBasisFile(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadSigningBasisFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadSigningBasisFile>>
+>;
+export type DownloadSigningBasisFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadSigningBasisFile<
+  TData = Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadSigningBasisFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadSigningBasisFile<
+  TData = Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadSigningBasisFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadSigningBasisFile<
+  TData = Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Скачать файл основания
+ */
+
+export function useDownloadSigningBasisFile<
+  TData = Awaited<ReturnType<typeof downloadSigningBasisFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadSigningBasisFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadSigningBasisFileQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getResolveSignersUrl = (params: ResolveSignersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/signing/resolve?${stringifiedParams}`
+    : `/api/v1/eds/signing/resolve`;
+};
+
+/**
+ * EDS `GET /signing/resolve`. Подбор по реестру с учётом лимита, срока, отзыва и замещения: замещение переводит задачу заместителю, но прав не даёт — он вправе подписать только при своём полномочии. Ответ: кандидаты, отклонённые с причиной и объяснение по-русски. `amount` и `currency` — вместе.
+ * @summary EDS · Кто вправе подписать вид X на сумму Y на дату D
+ */
+export const resolveSigners = async (
+  params: ResolveSignersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SigningResolution> => {
+  return http<SigningResolution>(getResolveSignersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getResolveSignersQueryKey = (params?: ResolveSignersParams) => {
+  return [`/api/v1/eds/signing/resolve`, ...(params ? [params] : [])] as const;
+};
+
+export const getResolveSignersQueryOptions = <
+  TData = Awaited<ReturnType<typeof resolveSigners>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: ResolveSignersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof resolveSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getResolveSignersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof resolveSigners>>> = ({ signal }) =>
+    resolveSigners(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof resolveSigners>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ResolveSignersQueryResult = NonNullable<Awaited<ReturnType<typeof resolveSigners>>>;
+export type ResolveSignersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useResolveSigners<
+  TData = Awaited<ReturnType<typeof resolveSigners>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: ResolveSignersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof resolveSigners>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof resolveSigners>>,
+          TError,
+          Awaited<ReturnType<typeof resolveSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useResolveSigners<
+  TData = Awaited<ReturnType<typeof resolveSigners>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: ResolveSignersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof resolveSigners>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof resolveSigners>>,
+          TError,
+          Awaited<ReturnType<typeof resolveSigners>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useResolveSigners<
+  TData = Awaited<ReturnType<typeof resolveSigners>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: ResolveSignersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof resolveSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Кто вправе подписать вид X на сумму Y на дату D
+ */
+
+export function useResolveSigners<
+  TData = Awaited<ReturnType<typeof resolveSigners>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: ResolveSignersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof resolveSigners>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getResolveSignersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetSigningSetupHintUrl = () => {
+  return `/api/v1/eds/signing/setup-hint`;
+};
+
+/**
+ * EDS `GET /signing/setup-hint`. Есть ли в реестре полномочия, кто назван подписантом в бланке компании и (если по ФИО он один среди активных сотрудников) — `director`. Совпадения нет — `director = null`, человека выбирает администратор.
+ * @summary EDS · Подсказка первого запуска — кто подписывает по уставу
+ */
+export const getSigningSetupHint = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SigningSetupHint> => {
+  return http<SigningSetupHint>(getGetSigningSetupHintUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSigningSetupHintQueryKey = () => {
+  return [`/api/v1/eds/signing/setup-hint`] as const;
+};
+
+export const getGetSigningSetupHintQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSigningSetupHint>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSigningSetupHint>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSigningSetupHintQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSigningSetupHint>>> = ({ signal }) =>
+    getSigningSetupHint({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSigningSetupHint>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetSigningSetupHintQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSigningSetupHint>>
+>;
+export type GetSigningSetupHintQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetSigningSetupHint<
+  TData = Awaited<ReturnType<typeof getSigningSetupHint>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningSetupHint>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSigningSetupHint>>,
+          TError,
+          Awaited<ReturnType<typeof getSigningSetupHint>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSigningSetupHint<
+  TData = Awaited<ReturnType<typeof getSigningSetupHint>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningSetupHint>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSigningSetupHint>>,
+          TError,
+          Awaited<ReturnType<typeof getSigningSetupHint>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSigningSetupHint<
+  TData = Awaited<ReturnType<typeof getSigningSetupHint>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningSetupHint>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Подсказка первого запуска — кто подписывает по уставу
+ */
+
+export function useGetSigningSetupHint<
+  TData = Awaited<ReturnType<typeof getSigningSetupHint>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getSigningSetupHint>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSigningSetupHintQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
