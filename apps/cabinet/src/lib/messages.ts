@@ -89,6 +89,17 @@ export function mergeMessages(current: readonly PortalMessage[], incoming: reado
   return [...byId.values()].sort((a, b) => a.id - b.id);
 }
 
+/** Стёртые по запросу автора (CHAT-1b, `erased_ids` опроса): текст, автор и метка убираются, «моё» — тоже. */
+export function markErased(messages: PortalMessage[], erasedIds: readonly number[] | undefined): PortalMessage[] {
+  if (!erasedIds || erasedIds.length === 0) return messages;
+  const erased = new Set(erasedIds);
+  return messages.map((message) =>
+    erased.has(message.id) && !message.erased
+      ? { ...message, erased: true, text: '', author_name: null, context: null, mine: false }
+      : message,
+  );
+}
+
 /** Последний id ленты (для `after_id` и «прочитано»); пустая лента — `null`. */
 export function lastMessageId(messages: readonly PortalMessage[]): number | null {
   return messages.length > 0 ? messages[messages.length - 1].id : null;
