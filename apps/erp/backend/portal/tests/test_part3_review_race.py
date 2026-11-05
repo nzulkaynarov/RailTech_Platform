@@ -19,7 +19,7 @@ from django.core import mail
 from django.db import connection
 from parties.models import Company, CompanyRelationship, Contact
 from portal.tests.conftest import LOCMEM_BACKEND
-from portal.tests.partner_world import make_card, make_partner
+from portal.tests.partner_world import make_card, make_partner, status_row
 
 from accounts.models import CustomUser
 from accounts.testing import make_own_company
@@ -49,6 +49,8 @@ def test_parallel_publish_and_return_give_exactly_one_decision(
 
 
 def _build(settings) -> dict:
+    for code in ("DRAFT", "REVIEW", "RETURNED", "PUBLISHED"):
+        status_row(code)
     own = make_own_company(Company.objects.create(name=f"{TAG} own", inn="410000001"))
     settings.OWN_COMPANY_ID = own.pk
     staff = CustomUser.objects.create_user(email=f"{TAG}@staff.example", username=TAG, password="x", is_superuser=True)
