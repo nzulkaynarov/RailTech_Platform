@@ -289,7 +289,10 @@ async def list_my_letter_tasks(employee: Anyone, session: Session) -> LetterTask
 
 
 # Администратору (`bus.manage`) — для людей общих шаблонов резолюций (EDS-REG).
-StaffReader = Annotated[Employee, Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE))]
+StaffReader = Annotated[
+    Employee,
+    Depends(require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.BUS_MANAGE, P.SIGNING_MANAGE)),
+]
 
 
 @router.get("/employees", response_model=EmployeeList, operation_id="listActiveEmployees")

@@ -6,7 +6,7 @@
 Лишние поля игнорируются; неверный тип или нет обязательного поля — ошибка обработчика (автоповтор, затем `failed`).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
@@ -18,6 +18,17 @@ class Permissions(BaseModel):
     eds: list[str] = Field(default_factory=list)
     # Разделы каталога сотрудника и уровень (`full`/`read`), D1-8: нужны проверке зоны исполнителя резолюции.
     sections: dict[str, str] = Field(default_factory=dict)
+
+
+class Deputy(BaseModel):
+    """`user.deputy` (аддитивно, SIGN-2): замещение на период. Заместитель получает задачи подписи, прав не получает.
+    `crm_user_id = null` — период задан, заместителя нет (его отключили): держатель остаётся на месте."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    crm_user_id: int | None = None
+    date_from: date
+    date_to: date
 
 
 class UserSnapshot(BaseModel):
@@ -32,6 +43,8 @@ class UserSnapshot(BaseModel):
     language: Literal["ru", "uz", "en"] = "ru"
     is_active: bool
     permissions: Permissions | None = None
+    # Нет поля или `null` — замещения нет (CRM до SIGN-2 поле не публикует).
+    deputy: Deputy | None = None
     updated_at: AwareDatetime
 
     @property

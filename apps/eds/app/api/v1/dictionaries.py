@@ -27,7 +27,9 @@ from app.services import dictionaries
 
 router = APIRouter(prefix="/api/v1/dictionaries", tags=["dictionaries"])
 
-Reader = Annotated[Employee, Depends(require_permission(P.LETTERS_READ, P.LETTERS_REGISTER, P.BUS_MANAGE))]
+Reader = Annotated[
+    Employee, Depends(require_permission(P.LETTERS_READ, P.LETTERS_REGISTER, P.BUS_MANAGE, P.SIGNING_MANAGE))
+]
 Admin = Annotated[Employee, Depends(require_permission(P.BUS_MANAGE))]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Kind = Annotated[str, Path(pattern=DICTIONARY_KIND)]

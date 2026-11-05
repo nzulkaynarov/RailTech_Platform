@@ -43,6 +43,7 @@ describe("i18n", () => {
     "payments",
     "help",
     "articles",
+    "signing",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
       expect(keys(resources[lng][ns]).sort()).toEqual(keys(resources.ru[ns]).sort());
@@ -82,6 +83,7 @@ describe("i18n", () => {
         "payments",
         "help",
         "articles",
+        "signing",
       ] as const) {
         for (const key of keys(resources[lng][ns])) {
           const value = key
@@ -115,6 +117,7 @@ const SETTINGS_SUBTITLES = [
   "articles:admin.subtitle",
   "audit:page.subtitle",
   "letters:settings.subtitle",
+  "signing:subtitle",
 ] as const;
 const CARD_PURPOSES = [
   "erp",

@@ -79,6 +79,8 @@ import {
   SetupCompanyBlocker,
   SetupStepKey,
   SetupStepState,
+  SigningAuthorityStatus,
+  SigningBasis,
   SourceState,
   StepCode,
   SupplierOrderStatus,
@@ -309,6 +311,12 @@ import type {
   SetupCompanyCreated,
   SetupCompanyStatus,
   SetupState,
+  SigningAuthorityDetail,
+  SigningAuthorityList,
+  SigningFile,
+  SigningResolution,
+  SigningRevoked,
+  SigningSetupHint,
   SmtpCheck,
   SmtpConnector,
   SpendReport,
@@ -17927,6 +17935,920 @@ export const getListEdsStaffResponseMock = (
   ...overrideResponse,
 });
 
+export const getListSigningAuthoritiesResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getListSigningAuthoritiesResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getListSigningAuthoritiesResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListSigningAuthoritiesResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityList, object>> = {},
+): SigningAuthorityList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    holder: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    holder_position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    holder_active: faker.datatype.boolean(),
+    kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+      faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+    ),
+    limit: faker.helpers.arrayElement([
+      { ...getListSigningAuthoritiesResponseEdsMoneyMock() },
+      null,
+    ]),
+    basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+    basis_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    valid_from: faker.date.past().toISOString().slice(0, 10),
+    valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    vakolat_url: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    file: faker.helpers.arrayElement([
+      { ...getListSigningAuthoritiesResponseSigningFileMock() },
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+    expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    revoked: faker.helpers.arrayElement([
+      { ...getListSigningAuthoritiesResponseSigningRevokedMock() },
+      null,
+    ]),
+    created_by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateSigningAuthorityResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSigningAuthorityResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSigningAuthorityResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSigningAuthorityResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSigningAuthorityResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityDetail, object>> = {},
+): SigningAuthorityDetail => ({
+  id: faker.string.uuid(),
+  holder: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  holder_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  holder_active: faker.datatype.boolean(),
+  kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  ),
+  limit: faker.helpers.arrayElement([{ ...getCreateSigningAuthorityResponseEdsMoneyMock() }, null]),
+  basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+  basis_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_from: faker.date.past().toISOString().slice(0, 10),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  vakolat_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([
+    { ...getCreateSigningAuthorityResponseSigningFileMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+  expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  revoked: faker.helpers.arrayElement([
+    { ...getCreateSigningAuthorityResponseSigningRevokedMock() },
+    null,
+  ]),
+  created_by: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.helpers.arrayElement([
+        "issued",
+        "updated",
+        "revoked",
+        "file_replaced",
+        "expiry_reminded",
+      ] as const),
+      by: faker.helpers.arrayElement([
+        { ...getCreateSigningAuthorityResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      changes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          before: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          after: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+      file_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getGetSigningAuthorityResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSigningAuthorityResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getGetSigningAuthorityResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSigningAuthorityResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSigningAuthorityResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityDetail, object>> = {},
+): SigningAuthorityDetail => ({
+  id: faker.string.uuid(),
+  holder: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  holder_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  holder_active: faker.datatype.boolean(),
+  kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  ),
+  limit: faker.helpers.arrayElement([{ ...getGetSigningAuthorityResponseEdsMoneyMock() }, null]),
+  basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+  basis_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_from: faker.date.past().toISOString().slice(0, 10),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  vakolat_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([{ ...getGetSigningAuthorityResponseSigningFileMock() }, null]),
+  status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+  expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  revoked: faker.helpers.arrayElement([
+    { ...getGetSigningAuthorityResponseSigningRevokedMock() },
+    null,
+  ]),
+  created_by: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.helpers.arrayElement([
+        "issued",
+        "updated",
+        "revoked",
+        "file_replaced",
+        "expiry_reminded",
+      ] as const),
+      by: faker.helpers.arrayElement([{ ...getGetSigningAuthorityResponsePersonRefMock() }, null]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      changes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          before: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          after: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+      file_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getUpdateSigningAuthorityResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSigningAuthorityResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSigningAuthorityResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSigningAuthorityResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSigningAuthorityResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityDetail, object>> = {},
+): SigningAuthorityDetail => ({
+  id: faker.string.uuid(),
+  holder: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  holder_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  holder_active: faker.datatype.boolean(),
+  kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  ),
+  limit: faker.helpers.arrayElement([{ ...getUpdateSigningAuthorityResponseEdsMoneyMock() }, null]),
+  basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+  basis_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_from: faker.date.past().toISOString().slice(0, 10),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  vakolat_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([
+    { ...getUpdateSigningAuthorityResponseSigningFileMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+  expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  revoked: faker.helpers.arrayElement([
+    { ...getUpdateSigningAuthorityResponseSigningRevokedMock() },
+    null,
+  ]),
+  created_by: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.helpers.arrayElement([
+        "issued",
+        "updated",
+        "revoked",
+        "file_replaced",
+        "expiry_reminded",
+      ] as const),
+      by: faker.helpers.arrayElement([
+        { ...getUpdateSigningAuthorityResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      changes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          before: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          after: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+      file_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getRevokeSigningAuthorityResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeSigningAuthorityResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeSigningAuthorityResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeSigningAuthorityResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getRevokeSigningAuthorityResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityDetail, object>> = {},
+): SigningAuthorityDetail => ({
+  id: faker.string.uuid(),
+  holder: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  holder_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  holder_active: faker.datatype.boolean(),
+  kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  ),
+  limit: faker.helpers.arrayElement([{ ...getRevokeSigningAuthorityResponseEdsMoneyMock() }, null]),
+  basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+  basis_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_from: faker.date.past().toISOString().slice(0, 10),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  vakolat_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([
+    { ...getRevokeSigningAuthorityResponseSigningFileMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+  expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  revoked: faker.helpers.arrayElement([
+    { ...getRevokeSigningAuthorityResponseSigningRevokedMock() },
+    null,
+  ]),
+  created_by: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.helpers.arrayElement([
+        "issued",
+        "updated",
+        "revoked",
+        "file_replaced",
+        "expiry_reminded",
+      ] as const),
+      by: faker.helpers.arrayElement([
+        { ...getRevokeSigningAuthorityResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      changes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          before: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          after: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+      file_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getUploadSigningBasisFileResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadSigningBasisFileResponseSigningFileMock = (
+  overrideResponse: Partial<SigningFile> = {},
+): SigningFile => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+    version: faker.number.int({ min: 1 }),
+    uploaded_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getUploadSigningBasisFileResponseSigningRevokedMock = (
+  overrideResponse: Partial<SigningRevoked> = {},
+): SigningRevoked => ({
+  ...{
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: {
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    },
+    reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadSigningBasisFileResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadSigningBasisFileResponseMock = (
+  overrideResponse: Partial<Extract<SigningAuthorityDetail, object>> = {},
+): SigningAuthorityDetail => ({
+  id: faker.string.uuid(),
+  holder: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  holder_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  holder_active: faker.datatype.boolean(),
+  kinds: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+    faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  ),
+  limit: faker.helpers.arrayElement([{ ...getUploadSigningBasisFileResponseEdsMoneyMock() }, null]),
+  basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+  basis_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  basis_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_from: faker.date.past().toISOString().slice(0, 10),
+  valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  vakolat_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  file: faker.helpers.arrayElement([
+    { ...getUploadSigningBasisFileResponseSigningFileMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(SigningAuthorityStatus)),
+  expires_in_days: faker.helpers.arrayElement([faker.number.int(), null]),
+  revoked: faker.helpers.arrayElement([
+    { ...getUploadSigningBasisFileResponseSigningRevokedMock() },
+    null,
+  ]),
+  created_by: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      action: faker.helpers.arrayElement([
+        "issued",
+        "updated",
+        "revoked",
+        "file_replaced",
+        "expiry_reminded",
+      ] as const),
+      by: faker.helpers.arrayElement([
+        { ...getUploadSigningBasisFileResponsePersonRefMock() },
+        null,
+      ]),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      changes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          field: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          before: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          after: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+      file_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getDownloadSigningBasisFileResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getResolveSignersResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getResolveSignersResponseMock = (
+  overrideResponse: Partial<Extract<SigningResolution, object>> = {},
+): SigningResolution => ({
+  kind: faker.helpers.fromRegExp("^[a-z][a-z_]{0,31}$"),
+  amount: faker.helpers.arrayElement([{ ...getResolveSignersResponseEdsMoneyMock() }, null]),
+  on_date: faker.date.past().toISOString().slice(0, 10),
+  resolved: faker.datatype.boolean(),
+  candidates: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      signer: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      position: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      acting_for: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      })),
+      authority: {
+        id: faker.string.uuid(),
+        basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+        basis_number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        basis_date: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+        limit: faker.helpers.arrayElement([{ ...getResolveSignersResponseEdsMoneyMock() }, null]),
+      },
+      authorities: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        id: faker.string.uuid(),
+        basis: faker.helpers.arrayElement(Object.values(SigningBasis)),
+        basis_number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        basis_date: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 10),
+          null,
+        ]),
+        valid_to: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+        limit: faker.helpers.arrayElement([{ ...getResolveSignersResponseEdsMoneyMock() }, null]),
+      })),
+      basis_text: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  rejected: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      signer: {
+        id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+      },
+      authority_id: faker.helpers.arrayElement([faker.string.uuid(), null]),
+      reason: faker.helpers.arrayElement([
+        "revoked",
+        "not_started",
+        "expired",
+        "limit_exceeded",
+        "currency_mismatch",
+        "holder_inactive",
+        "absent",
+        "deputy_without_authority",
+        "deputy_loop",
+      ] as const),
+      message: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  explanation: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      person_id: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getGetSigningSetupHintResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSigningSetupHintResponseMock = (
+  overrideResponse: Partial<Extract<SigningSetupHint, object>> = {},
+): SigningSetupHint => ({
+  has_authorities: faker.datatype.boolean(),
+  signatory_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  signatory_position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  director: faker.helpers.arrayElement([
+    { ...getGetSigningSetupHintResponsePersonRefMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
 export const getListCrmMessagesResponsePersonRefMock = (
   overrideResponse: Partial<PersonRef> = {},
 ): PersonRef => ({
@@ -33150,6 +34072,221 @@ export const getListEdsStaffMockHandler = (
   );
 };
 
+export const getListSigningAuthoritiesMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SigningAuthorityList> | SigningAuthorityList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signing/authorities",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListSigningAuthoritiesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateSigningAuthorityMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SigningAuthorityDetail> | SigningAuthorityDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/signing/authorities",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateSigningAuthorityResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSigningAuthorityMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SigningAuthorityDetail> | SigningAuthorityDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signing/authorities/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSigningAuthorityResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateSigningAuthorityMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityDetail
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<SigningAuthorityDetail> | SigningAuthorityDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/eds/signing/authorities/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateSigningAuthorityResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRevokeSigningAuthorityMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SigningAuthorityDetail> | SigningAuthorityDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/signing/authorities/:id/revoke",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRevokeSigningAuthorityResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUploadSigningBasisFileMockHandler = (
+  overrideResponse?:
+    | SigningAuthorityDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SigningAuthorityDetail> | SigningAuthorityDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/signing/authorities/:id/basis-file",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadSigningBasisFileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadSigningBasisFileMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signing/authorities/:id/basis-file",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadSigningBasisFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getResolveSignersMockHandler = (
+  overrideResponse?:
+    | SigningResolution
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SigningResolution> | SigningResolution),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signing/resolve",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getResolveSignersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSigningSetupHintMockHandler = (
+  overrideResponse?:
+    | SigningSetupHint
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SigningSetupHint> | SigningSetupHint),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/signing/setup-hint",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSigningSetupHintResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCrmMessagesMockHandler = (
   overrideResponse?:
     | MessageInbox
@@ -36048,6 +37185,15 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetDocflowSettingsMockHandler(),
   getUpdateDocflowSettingsMockHandler(),
   getListEdsStaffMockHandler(),
+  getListSigningAuthoritiesMockHandler(),
+  getCreateSigningAuthorityMockHandler(),
+  getGetSigningAuthorityMockHandler(),
+  getUpdateSigningAuthorityMockHandler(),
+  getRevokeSigningAuthorityMockHandler(),
+  getUploadSigningBasisFileMockHandler(),
+  getDownloadSigningBasisFileMockHandler(),
+  getResolveSignersMockHandler(),
+  getGetSigningSetupHintMockHandler(),
   getListCrmMessagesMockHandler(),
   getGetCrmConversationMockHandler(),
   getGetCrmThreadMockHandler(),

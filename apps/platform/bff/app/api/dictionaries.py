@@ -50,7 +50,10 @@ _DOCUMENTS = Owner(
 )
 # Типы писем читает первая линия (она ставит и меняет тип), правит администратор.
 _MAIL = Owner("crm", "mail", (("crm.leads.triage", "read"), ("admin", "read")))
+# Виды документов полномочий подписи (SIGN-2): читает держатель реестра, правит администратор.
+_SIGNING = Owner("eds", "documents", (("eds.signing.manage", "full"), ("admin", "read")))
 OWNERS: Final[dict[str, Owner]] = {
+    "signing-kinds": _SIGNING,
     "letter-kinds": _DOCUMENTS,
     "receipt-methods": _DOCUMENTS,
     "resolution-kinds": _DOCUMENTS,

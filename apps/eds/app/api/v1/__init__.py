@@ -15,6 +15,7 @@ from app.api.v1 import (
     me,
     registry,
     resolution_templates,
+    signing,
 )
 
 ROUTERS: tuple[APIRouter, ...] = (
@@ -29,5 +30,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     bus.router,
     dictionaries.router,
     resolution_templates.router,
+    signing.router,
+    signing.upload_router,
     ai.router,
 )

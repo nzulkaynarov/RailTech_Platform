@@ -20,7 +20,8 @@ import { buildMe, readSession } from "./mockSession";
  */
 const KEY = "rt-pf-mock-dictionaries";
 
-type Kind = "letter-kinds" | "receipt-methods" | "resolution-kinds" | "mail-types";
+type Kind =
+  "letter-kinds" | "receipt-methods" | "resolution-kinds" | "mail-types" | "signing-kinds";
 const CLOSED: ReadonlySet<Kind> = new Set<Kind>(["resolution-kinds"]);
 type State = Record<Kind, DictionaryItem[]>;
 
@@ -162,6 +163,15 @@ function seed(): State {
       ),
       methodItem("courier", names("Курьер", "Kuryer", "Courier"), 40),
       methodItem("email", names("E-mail", "E-mail", "Email"), 50),
+    ],
+    // Виды документов для подписи (SIGN-2): как засевает миграция EDS.
+    "signing-kinds": [
+      methodItem("letter_out", names("Исходящее письмо", "Chiquvchi xat", "Outgoing letter"), 10),
+      methodItem("quote", names("Коммерческое предложение", "Tijorat taklifi", "Quotation"), 20),
+      methodItem("contract", names("Договор", "Shartnoma", "Contract"), 30),
+      methodItem("invoice", names("Счёт", "Hisob", "Invoice"), 40),
+      methodItem("act", names("Акт", "Dalolatnoma", "Act"), 50),
+      methodItem("memo", names("Служебная записка", "Xizmat xati", "Memo"), 60),
     ],
     // Типы входящих писем (MAIL-TYPES): как засевает миграция CRM.
     "mail-types": [
@@ -319,6 +329,18 @@ const CATALOG: Dictionary[] = [
     attrs: [],
   },
   {
+    kind: "signing-kinds",
+    owner: "eds",
+    area: "documents",
+    name: names(
+      "Виды документов для подписи",
+      "Imzolanadigan hujjat turlari",
+      "Document types for signing",
+    ),
+    closed: false,
+    attrs: [],
+  },
+  {
     kind: "resolution-kinds",
     owner: "eds",
     area: "documents",
@@ -398,8 +420,15 @@ export function setMailTypeUsage(fn: () => Set<string>): void {
   mailTypeUsage = fn;
 }
 
+/** Виды, уже стоящие в полномочиях подписи (подставляет мок «Прав подписи»): использованный вид только скрывается. */
+let signingKindUsage: () => Set<string> = () => new Set();
+export function setSigningKindUsage(fn: () => Set<string>): void {
+  signingKindUsage = fn;
+}
+
 function usedCodes(kind: Kind): Set<string> {
   if (kind === "mail-types") return mailTypeUsage();
+  if (kind === "signing-kinds") return signingKindUsage();
   return new Set(
     readLetters().flatMap((letter) => {
       const code =
@@ -429,6 +458,7 @@ function canRead(): boolean {
     allows(r, "eds.inbox", "read") ||
     allows(r, "eds.inbox.register", "full") ||
     allows(r, "crm.leads.triage", "read") ||
+    allows(r, "eds.signing.manage", "full") ||
     allows(r, "admin", "read")
   );
 }
@@ -443,7 +473,8 @@ const isKind = (value: unknown): value is Kind =>
   value === "letter-kinds" ||
   value === "receipt-methods" ||
   value === "resolution-kinds" ||
-  value === "mail-types";
+  value === "mail-types" ||
+  value === "signing-kinds";
 
 const closedFailure = () =>
   failure(

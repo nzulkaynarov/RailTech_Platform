@@ -60,6 +60,8 @@ const ORACLE: Record<string, string> = {
   "eds.payments": "HRRHHFHF",
   "eds.memo.create": "FFFFFFFF",
   "eds.memo.approve": "HFHHHHHH",
+  // SIGN-2: реестр полномочий подписи ведёт администратор
+  "eds.signing.manage": "FHHHHHHH",
   "erp.calc": "HFHFFRHF",
   "erp.calc.goods": "HFHFHHHF",
   "erp.calc.services": "HFHHFHHF",

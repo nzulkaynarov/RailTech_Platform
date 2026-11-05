@@ -240,6 +240,7 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
     ("eds.memo.approve", "full"): NOTHING,
+    ("eds.signing.manage", "full"): NOTHING,
     ("erp.calc", "read"): NOTHING,
     ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
     ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing", "quote.visa_goods"}),
@@ -410,13 +411,15 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
         "dashboard.queue": "full",
         "chats.internal": "full",
         "eds.memo.create": "full",
+        "eds.signing.manage": "full",  # SIGN-2: реестр полномочий подписи ведёт администратор
     }
     director = dict(make_role("DIRECTOR").access)
     # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
     # D2-4: «Счета и оплаты» тоже чтение — оплату подтверждает бухгалтер.
     read_only = {"admin", "crm.leads", "chats.external", "eds.payments"}
     # D17G-1: разбор и передачу лидов (первая линия) директор не ведёт — раздела у него нет.
-    hidden = {"crm.leads.triage"}
+    # SIGN-2: реестр полномочий подписи ведёт администратор — у директора раздела нет.
+    hidden = {"crm.leads.triage", "eds.signing.manage"}
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
         k: "full" for k in generated.RESOURCE_KEYS if k not in read_only | hidden

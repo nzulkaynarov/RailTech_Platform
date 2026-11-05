@@ -28,6 +28,9 @@ from app.services import staff_notifications
 logger = structlog.get_logger(__name__)
 
 NOTICE_TYPE: Final = "uz.railtech.eds.notice.requested.v1"
+# SIGN-2 (ADR-0024 п. 1): полномочие подписи скоро истекает — тот же путь доставки, своя схема.
+SIGNING_EXPIRING_TYPE: Final = "uz.railtech.eds.signing_authority.expiring.v1"
+SIGNING_EXPIRING_KIND: Final = "signing_authority_expiring"
 # Вкладка колокольчика: от сотрудника ждут действия — «Решения»; остальное — «Система».
 _DECISIONS: Final = frozenset(
     {
@@ -58,6 +61,10 @@ class EdsNoticeService:
     def __init__(self, notices: ErpEventNotices, platform_url: str | None = None) -> None:
         self._notices = notices
         self._platform_url = (platform_url or "").rstrip("/") or None
+
+    def _signing_link(self) -> str | None:
+        """Страница Настроек «Права подписи»."""
+        return None if self._platform_url is None else f"{self._platform_url}/admin/signing"
 
     def _link(self, letter_id: str, document_id: str | None = None) -> str | None:
         """Рабочий экран письма по UUID: реестра (поиск по номеру) у исполнителя может не быть.
@@ -124,5 +131,36 @@ class EdsNoticeService:
             notice_key=data.get("notice_key"),
             recipients=len(recipients),
             skipped=skipped,
+        )
+        return len(recipients)
+
+    async def accept_signing_expiring(self, session: AsyncSession, event: Event) -> int:
+        """Окончание полномочия подписи: колокольчик («Решения», без объекта) и Telegram."""
+        data: dict[str, Any] = dict(event.data)
+        title = str(data["title"])
+        subtitle = data.get("subtitle")
+        subtitle = str(subtitle) if subtitle else None
+        recipients = await self._active(session, data.get("recipients") or [])
+        if not recipients:
+            logger.info("eds_signing_notice_no_recipients", notice_key=data.get("notice_key"))
+            return 0
+        staff_notifications.add_in(
+            session,
+            recipients,
+            kind=f"eds.{SIGNING_EXPIRING_KIND}"[:40],
+            tab="decisions",
+            title=title,
+            subtitle=subtitle,
+        )
+        text = telegram_text(title, subtitle, self._signing_link())
+        self._notices.add(
+            session,
+            str(event.id),
+            [{"kind": "staff", "user_id": uid, "text": text} for uid in recipients],
+        )
+        logger.info(
+            "eds_signing_notice_accepted",
+            notice_key=data.get("notice_key"),
+            recipients=len(recipients),
         )
         return len(recipients)

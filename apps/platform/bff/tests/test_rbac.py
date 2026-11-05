@@ -38,9 +38,10 @@ def roles(*codes: str | dict[str, Any]) -> list[SessionRole]:
 
 
 def test_catalog_has_twenty_sections_in_oracle_order() -> None:
-    # P8: + `eds.inbox.register`; D17G-1: + `crm.leads.triage`; восемь ролей каталога
+    # P8: + `eds.inbox.register`; D17G-1: + `crm.leads.triage`;
+    # SIGN-2: + `eds.signing.manage`; восемь ролей каталога
     assert list(RESOURCE_MODULE) == list(MATRIX)
-    assert len(CELLS) == 20 * 8
+    assert len(CELLS) == len(MATRIX) * 8
     assert {k: RESOURCE_MODULE[k] for k in MATRIX} == MODULE_OF
 
 
@@ -224,6 +225,7 @@ SETTINGS_MENU = [
     "overview",
     "org",
     "roles",
+    "signing",
     "company",
     "numbering",
     "taxes",
@@ -253,8 +255,9 @@ def test_menu_examples() -> None:
     assert rbac.menu_for(admin)["crm"] == []
     assert "crm" not in rbac.modules_for(admin)
     director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
-    # директор видит те же пункты на чтение; «Обмен между системами» прячет web (`level: full`)
-    assert director["admin"] == SETTINGS_MENU
+    # директор видит те же пункты на чтение; «Обмен между системами» прячет web (`level: full`);
+    # SIGN-2: полномочия подписи (`signing`) скрыты от директора — ведёт только администратор
+    assert director["admin"] == [s for s in SETTINGS_MENU if s != "signing"]
     assert "kb" in director["crm"]
     assert "telegram" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
     assert "kb" in rbac.menu_for(rbac.merge(roles("MANAGER")))["crm"]

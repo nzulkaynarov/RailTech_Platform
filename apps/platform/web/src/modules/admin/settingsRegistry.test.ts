@@ -63,11 +63,11 @@ describe("реестр настроек (SET-IA)", () => {
     expect(Object.keys(MENU.admin)).toEqual(["overview", ...SETTINGS.map((s) => s.key)]);
   });
 
-  it("новых разделов каталога нет: пункты открываются прежними `admin` и `company.settings`", () => {
+  it("разделы пунктов: `admin`, `company.settings` и (SIGN-2) `eds.signing.manage` для «Прав подписи»", () => {
     const resourcesOf = (entry: SettingEntry) =>
       "resource" in entry.access ? [entry.access.resource] : [...entry.access.anyOf];
     const used = new Set(SETTINGS.flatMap(resourcesOf));
-    expect([...used].sort()).toEqual(["admin", "company.settings"]);
+    expect([...used].sort()).toEqual(["admin", "company.settings", "eds.signing.manage"]);
   });
 });
 

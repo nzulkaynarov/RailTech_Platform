@@ -15,6 +15,7 @@ from app.models.letters import Letter
 from app.models.numbering import NumberCounter
 from app.models.project_documents import ProjectDocument
 from app.models.resolution_templates import ResolutionTemplate
+from app.models.signing import SigningAuthority, SigningAuthorityEvent
 
 __all__ = [
     "Acquaintance",
@@ -41,6 +42,8 @@ __all__ = [
     "NumberCounter",
     "ProjectDocument",
     "ResolutionTemplate",
+    "SigningAuthority",
+    "SigningAuthorityEvent",
     "SsoJti",
     "StoredFile",
 ]

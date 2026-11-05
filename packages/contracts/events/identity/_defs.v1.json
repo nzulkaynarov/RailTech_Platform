@@ -154,6 +154,36 @@
           },
           "additionalProperties": false
         },
+        "deputy": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "description": "Необязательно (v1, аддитивно с SIGN-2, ADR-0024 п. 2): замещение сотрудника на период отсутствия (`users.deputy_*` CRM). Заместитель получает задачи подписи отсутствующего, но права на подпись замещение не даёт: подписать он может только по собственному полномочию из реестра EDS. `null` или нет поля — замещения нет. Подписчик заменяет замещение целиком по снимку; дни периода — календарные, включительно",
+          "required": [
+            "crm_user_id",
+            "date_from",
+            "date_to"
+          ],
+          "properties": {
+            "crm_user_id": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "description": "Заместитель; `null` — период задан, а заместителя нет (его отключили): замещающего нет"
+            },
+            "date_from": {
+              "type": "string",
+              "format": "date"
+            },
+            "date_to": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          "additionalProperties": false
+        },
         "updated_at": {
           "type": "string",
           "format": "date-time"

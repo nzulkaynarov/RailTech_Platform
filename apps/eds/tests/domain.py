@@ -70,7 +70,7 @@ ROSTER: dict[str, Person] = {
         12, "Ильдар Инженеров", ["registry.read", "memos.create"], {"erp.calc": "full", "erp.calc.services": "full"}
     ),
     # «Администратор» каталога: служебные записки и журнал шины (`admin: full` → `bus.manage`, W13-A2).
-    "admin": Person(9, "Админ Админов", ["memos.create", "bus.manage"]),
+    "admin": Person(9, "Админ Админов", ["memos.create", "bus.manage", "signing.manage"]),
     "nobody": Person(10, "Без Прав", []),
 }
 

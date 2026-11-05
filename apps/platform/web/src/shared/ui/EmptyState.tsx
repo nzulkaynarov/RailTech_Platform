@@ -32,7 +32,15 @@ export function EmptyState({ title, text, action, level = 2, compact = false }: 
         padding: compact ? "32px 16px" : "56px 24px",
       }}
     >
-      <Heading style={{ margin: 0, fontSize: 16, lineHeight: "24px", fontWeight: 600 }}>
+      <Heading
+        style={{
+          margin: 0,
+          fontSize: 16,
+          lineHeight: "24px",
+          fontWeight: 600,
+          color: token.colorText,
+        }}
+      >
         {title}
       </Heading>
       <p

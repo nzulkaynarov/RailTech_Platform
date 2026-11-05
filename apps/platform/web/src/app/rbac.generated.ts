@@ -141,6 +141,16 @@ export const RESOURCES = {
       en: "Documents · Memo · approve",
     },
   },
+  "eds.signing.manage": {
+    module: "eds",
+    levels: ["full"],
+    backends: [],
+    label: {
+      ru: "Документы · Права подписи · вести реестр полномочий",
+      uz: "Hujjatlar · Imzo huquqlari · vakolatlar reyestrini yuritish",
+      en: "Documents · Signing authority · manage the register",
+    },
+  },
   "erp.calc": {
     module: "erp",
     levels: ["read", "full"],
@@ -276,6 +286,7 @@ export const MENU = {
     overview: ["admin"],
     org: ["admin"],
     roles: ["admin"],
+    signing: ["eds.signing.manage"],
     company: ["company.settings"],
     numbering: ["company.settings"],
     taxes: ["company.settings"],
@@ -447,6 +458,7 @@ export const SYSTEM_ROLES = {
     access: {
       "dashboard.queue": "full",
       "eds.memo.create": "full",
+      "eds.signing.manage": "full",
       "chats.internal": "full",
       admin: "full",
       "company.settings": "full",

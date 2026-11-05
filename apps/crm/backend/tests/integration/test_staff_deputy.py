@@ -2,12 +2,15 @@
 
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import delete, update
+from sqlalchemy import delete, text, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import runtime, snapshots
+from app.bus.runtime import build_bus
 from app.config import Settings
 from app.domain.errors import ForbiddenError, ValidationFailedError
 from app.main import create_app
@@ -239,3 +242,98 @@ async def test_deleting_the_deputy_record_leaves_no_cover_and_no_error(
     assert user is not None
     assert user.deputy_from is None
     assert user.deputy_to is None
+
+
+async def _user_updates(sessions: async_sessionmaker[AsyncSession]) -> list[dict[str, Any]]:
+    async with sessions() as session:
+        rows = await session.execute(
+            text(
+                "SELECT envelope FROM rt_bus_outbox "
+                "WHERE type = 'uz.railtech.identity.user.updated.v1' ORDER BY created_at, id"
+            )
+        )
+        return [row[0]["data"] for row in rows.all()]
+
+
+@pytest.fixture
+def bus(sessions: async_sessionmaker[AsyncSession]) -> Iterator[Any]:
+    stand = build_bus(sessions, None)
+    runtime.set_bus(stand)
+    yield stand
+    runtime.set_bus(None)
+
+
+async def test_deputy_is_published_in_the_user_snapshot_for_eds(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """SIGN-2 (ADR-0024 п. 2): EDS переводит задачу подписи заместителю по снимку сотрудника."""
+    me, _ = await make_user(sessions, "me@railtech.uz", ["manager"])
+    deputy, _ = await make_user(sessions, "deputy@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("DELETE FROM rt_bus_outbox")
+        )  # создание сотрудников тоже публикует
+    service = svc(sessions)
+
+    await service.set(Actor(me.id), me.id, deputy.id, TODAY, TODAY + timedelta(days=7))
+    [set_event] = await _user_updates(sessions)
+    assert set_event["user"]["crm_user_id"] == me.id
+    assert set_event["user"]["deputy"] == {
+        "crm_user_id": deputy.id,
+        "date_from": TODAY.isoformat(),
+        "date_to": (TODAY + timedelta(days=7)).isoformat(),
+    }
+    assert set_event["changed_fields"] == ["deputy"]
+
+    await service.clear(Actor(me.id), me.id)
+    cleared = (await _user_updates(sessions))[-1]
+    assert cleared["user"]["deputy"] is None
+    assert cleared["changed_fields"] == ["deputy"]
+
+
+async def test_clearing_nothing_publishes_nothing(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    me, _ = await make_user(sessions, "me2@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+    await svc(sessions).clear(Actor(me.id), me.id)
+    assert await _user_updates(sessions) == []
+
+
+async def test_period_without_a_deputy_is_published_with_a_null_deputy_id(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Заместителя убрали из базы (FK `ON DELETE SET NULL`): период остаётся, замещающего нет."""
+    me, _ = await make_user(sessions, "me3@railtech.uz", ["manager"])
+    colleague, _ = await make_user(sessions, "colleague3@railtech.uz", ["manager"])
+    await svc(sessions).set(Actor(me.id), me.id, colleague.id, TODAY, TODAY + timedelta(days=3))
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == me.id).values(deputy_user_id=None))
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+        found = await session.get(User, me.id)
+        assert found is not None
+        assert snapshots.deputy_of(found) == {
+            "crm_user_id": None,
+            "date_from": TODAY.isoformat(),
+            "date_to": (TODAY + timedelta(days=3)).isoformat(),
+        }
+
+
+async def test_failed_publication_rolls_the_deputy_back(
+    sessions: async_sessionmaker[AsyncSession], bus: Any, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Событие и замещение — одна транзакция: нет события — нет и замещения (откат)."""
+    me, _ = await make_user(sessions, "me4@railtech.uz", ["manager"])
+    deputy, _ = await make_user(sessions, "deputy4@railtech.uz", ["manager"])
+
+    async def broken(*_args: Any, **_kwargs: Any) -> None:
+        raise RuntimeError("шина недоступна")
+
+    monkeypatch.setattr("app.services.staff_deputy.bus_events.user_updated", broken)
+    with pytest.raises(RuntimeError):
+        await svc(sessions).set(Actor(me.id), me.id, deputy.id, TODAY, TODAY + timedelta(days=2))
+    async with sessions() as session:
+        saved = await session.get(User, me.id)
+    assert saved is not None
+    assert (saved.deputy_user_id, saved.deputy_from, saved.deputy_to) == (None, None, None)
