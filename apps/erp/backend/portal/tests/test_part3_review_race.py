@@ -15,7 +15,6 @@ from __future__ import annotations
 import threading
 import time
 
-import pytest
 from django.core import mail
 from django.db import connection
 from parties.models import Company, CompanyRelationship, Contact
