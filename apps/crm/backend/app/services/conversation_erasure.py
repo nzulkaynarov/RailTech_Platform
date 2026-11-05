@@ -13,7 +13,7 @@ from app.domain.triggers import TriggerSignals
 from app.models.leads import TelegramIdentity
 from app.repositories import leads as repo
 from app.security.audit import Actor
-from app.services import cabinet_chat
+from app.services import cabinet_erasure
 from app.services.contact_telegram import unlink_erased
 from app.services.conversation_support import current_lead, lang_of, report_failure
 from app.services.conversation_types import AttachmentsEraser, Outgoing
@@ -57,6 +57,7 @@ class ErasureMixin:
         cfg = await self._settings.get()
         keys: list[str] = []
         closed: list[int] = []
+        moved: list[tuple[int, int]] = []
         async with self._sessions() as session, session.begin():
             lead, _ = await current_lead(session, tg_user_id)
             language = lang_of(lead) if lead else "ru"
@@ -64,7 +65,13 @@ class ErasureMixin:
             if lead is not None:
                 now = datetime.now(UTC)
                 keys = await repo.attachment_keys(session, lead.id)
+                # Кабинет (CHAT-1, CHAT-1b): только сообщения этого человека; беседа и неотвеченная
+                # передача `cabinet_message` переходят на новый якорь — до закрытия передач лида.
+                cabinet = await cabinet_erasure.erase_for_lead(session, lead, cfg)
+                moved = cabinet.moved_escalations
                 closed = await repo.close_escalations(session, lead.id, now)
+                # Контакты клиента ищутся по `telegram_identity_id` — стираем кабинет и берём
+                # идентичности до `erase_lead` и отвязки.
                 identity_ids = list(
                     (
                         await session.scalars(
@@ -72,18 +79,20 @@ class ErasureMixin:
                         )
                     ).all()
                 )
-                # Кабинет (CHAT-1): только сообщения этого человека; беседа остаётся клиенту.
-                cabinet = await cabinet_chat.erase_for_lead(session, lead)
                 count = await repo.erase_lead(session, lead, now)
                 # Telegram отвязывается от контактов (решение архитектора 2026-11-04, NOTIFY-1): ERP
                 # получает контакт без Telegram и имён, Mini App закрывается.
                 await unlink_erased(session, identity_ids, now, Actor(None, "bot"))
                 # Подписчики обязаны стереть у себя копии ПДн лида: событие без данных, только id
                 # и — для ленты кабинета — чьи сообщения стереть.
-                await bus_events.lead_erased(session, lead, Actor(None, "bot"), cabinet=cabinet)
+                await bus_events.lead_erased(
+                    session, lead, Actor(None, "bot"), cabinet=cabinet.event
+                )
                 logger.info("lead_erased", lead_id=lead.id, messages=count, files=len(keys))
         if lead_id is not None:
             await self._forget(lead_id, keys, closed)
+        for escalation_id, anchor_id in moved:  # перенесённая передача — пост и SLA у нового якоря
+            await self._fire(None, escalation_id, escalated_lead=anchor_id)
         return [Outgoing(cfg.texts.erased.get(language))]
 
     async def _forget(self, lead_id: int, keys: list[str], escalations: list[int]) -> None:
