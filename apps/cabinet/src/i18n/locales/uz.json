@@ -307,7 +307,38 @@
     "viewOnly": "Faqat koʻrish",
     "language": "Kabinet tili",
     "logout": "Kabinetdan chiqish",
-    "name": "Ism"
+    "name": "Ism",
+    "notifications": {
+      "title": "Bildirishnomalar",
+      "linked": "Telegram ulangan",
+      "linkedText": "Tijorat takliflari, hisoblar, dalolatnomalar va menejer javoblari haqidagi bildirishnomalar darhol Telegramga keladi. Kabinet xatsiz, toʻgʻridan-toʻgʻri botda ochiladi.",
+      "notLinked": "Telegram ulanmagan",
+      "notLinkedText": "Telegramni ulang — bildirishnomalar darhol keladi, kabinet esa toʻgʻridan-toʻgʻri botda ochiladi. Hozircha bildirishnomalar xat orqali keladi.",
+      "connect": "Telegramni ulash",
+      "preparing": "Havola tayyorlanmoqda…",
+      "scanQr": "QR-kodni telefon kamerasi bilan skanerlang yoki tugmani bosing — bot ochiladi. Botda «Start» tugmasini bosing.",
+      "pressStart": "Tugmani bosing — bot ochiladi. Botda «Start» tugmasini bosing.",
+      "openTelegram": "Telegramni ochish",
+      "qrLabel": "Botga havolaning QR-kodi",
+      "validUntil": "Havola {{time}} gacha amal qiladi va bir marta ishlatiladi.",
+      "waiting": "Telegramdan tasdiq kutilmoqda…",
+      "expired": "Havola muddati tugadi.",
+      "newLink": "Yangi havola olish",
+      "done": "Tayyor, Telegram ulandi",
+      "unavailable": "Telegramni menejer sizni tizimga qoʻshgandan keyin ulash mumkin — unga yozing.",
+      "confirmTitle": "Telegram uzilsinmi?",
+      "consequence": "Bildirishnomalar Telegramga kelmay qoʻyadi — xatlar va kabinet qoladi. Telegramdan kabinetga kirish yopiladi. Qayta ulash shu yerda mumkin.",
+      "confirm": "Telegramni uzish",
+      "disconnecting": "Uzilmoqda…",
+      "disconnected": "Telegram uzildi",
+      "boundLine": "Telegram ulangan",
+      "boundAccount": "Telegram ulangan: {{account}}",
+      "unbind": "Uzish",
+      "sendTest": "Tekshiruv xabarini yuborish",
+      "sendingTest": "Yuborilmoqda…",
+      "testSent": "Xabar yuborildi — Telegramni tekshiring",
+      "testRetry": "{{seconds}} soniyadan keyin qayta urinish mumkin"
+    }
   },
   "pages": {
     "requests": {
@@ -832,6 +863,10 @@
     "TEXT_REQUIRED": "Izoh matnini yozing.",
     "LOGIN_CODE_INVALID": "Kod notoʻgʻri yoki eskirgan. Xatni tekshiring yoki yangi kod yuboring.",
     "LOGIN_CODE_LOCKED": "Ketma-ket beshta notoʻgʻri kod — bu kod endi ishlamaydi. Yangisini olish uchun «Qayta yuborish»ni bosing.",
+    "CONTACT_NOT_IN_CRM": "Telegramni hozircha ulab boʻlmaydi: menejer sizni tizimga hali qoʻshmagan. Unga yozing.",
+    "TELEGRAM_LINK_UNAVAILABLE": "Telegramni ulash hozir mavjud emas. Keyinroq urinib koʻring.",
+    "TELEGRAM_NOT_LINKED": "Telegram ulanmagan. Uni qaytadan ulang.",
+    "TELEGRAM_ALREADY_LINKED": "Bu Telegram allaqachon ulangan. Boshqasini ulash uchun avval buni uzing.",
     "XLSX_REQUIRED": "Excel fayli (.xlsx) kerak. Shablonni yuklab oling va toʻldiring.",
     "VALID_DATE_INVALID": "Sana notoʻgʻri koʻrsatilgan — KK.OO.YYYY koʻrinishida kiriting.",
     "OFFER_VALIDITY_RANGE_INVALID": "“Gacha” muddati “dan” muddatidan oldin boʻlishi mumkin emas.",
@@ -870,6 +905,12 @@
     "text": "Formadagi oʻzgarishlar saqlanmagan va yoʻqoladi.",
     "leave": "Saqlamasdan chiqish",
     "stay": "Qolish"
+  },
+  "telegramBanner": {
+    "label": "Telegramdagi bildirishnomalar",
+    "text": "Telegramni ulang — bildirishnomalar darhol keladi",
+    "connect": "Ulash",
+    "later": "Keyinroq"
   },
   "partner": {
     "title": "Mening tovarlarim",

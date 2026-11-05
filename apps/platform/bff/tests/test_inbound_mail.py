@@ -1165,3 +1165,88 @@ async def test_repeat_registration_after_waiting_returns_the_same_letter_not_a_s
     assert again.json()["number"] == first.json()["number"]
     sent = [json.loads(c.content)["source"] for c in eds.made("POST", "letters")]
     assert sent == [{"crm_inbound_mail_id": 17}] * 2
+
+
+# --- «Проверить почту» (MAIL-NOW) ----------------------------------------------------------------
+
+
+async def test_check_mail_returns_the_outcome_of_the_immediate_poll(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    poll = be.router.post(f"{CRM}/poll").mock(
+        return_value=httpx.Response(
+            200, json={"status": "ok", "created": 3, "checked_at": "2026-11-05T06:00:00Z"}
+        )
+    )
+    await web.login(["REGISTRAR"])
+
+    done = await web.client.post("/api/v1/inbound-mail/poll", headers={CSRF_HEADER: web.csrf})
+
+    check(done, "/inbound-mail/poll", "post")
+    assert done.json() == {
+        "status": "ok",
+        "created": 3,
+        "error_kind": None,
+        "checked_at": "2026-11-05T06:00:00Z",
+        "retry_after_s": None,
+    }
+    assert poll.calls[0].request.headers["authorization"].startswith("Bearer ")
+
+
+@pytest.mark.parametrize(
+    ("crm_body", "expected"),
+    [
+        ({"status": "off"}, ("off", None)),
+        ({"status": "checking"}, ("checking", None)),
+        ({"status": "error", "error_kind": "auth_failed"}, ("error", "auth_failed")),
+    ],
+)
+async def test_check_mail_passes_off_checking_and_error_kind(
+    web: Web,
+    be: Backends,
+    check: ContractChecker,
+    crm_body: dict[str, Any],
+    expected: tuple[str, str | None],
+) -> None:
+    be.router.post(f"{CRM}/poll").mock(return_value=httpx.Response(200, json=crm_body))
+    await web.login(["REGISTRAR"])
+
+    done = await web.client.post("/api/v1/inbound-mail/poll", headers={CSRF_HEADER: web.csrf})
+
+    check(done, "/inbound-mail/poll", "post")
+    assert (done.json()["status"], done.json()["error_kind"]) == expected
+
+
+async def test_check_mail_too_soon_is_a_status_with_seconds_not_an_error(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    be.router.post(f"{CRM}/poll").mock(
+        return_value=httpx.Response(
+            429,
+            headers={"Retry-After": "14"},
+            json={"code": "rate_limited", "message": "x", "details": {"retry_after_s": 14}},
+        )
+    )
+    await web.login(["REGISTRAR"])
+
+    done = await web.client.post("/api/v1/inbound-mail/poll", headers={CSRF_HEADER: web.csrf})
+
+    check(done, "/inbound-mail/poll", "post")
+    assert done.status_code == 200
+    assert (done.json()["status"], done.json()["retry_after_s"]) == ("too_soon", 14)
+
+
+async def test_check_mail_needs_session_and_csrf_and_survives_crm_outage(
+    web: Web, be: Backends
+) -> None:
+    anonymous = await web.client.post("/api/v1/inbound-mail/poll")
+    assert anonymous.status_code in (401, 403)
+    be.router.post(f"{CRM}/poll").mock(return_value=httpx.Response(503))
+    await web.login(["REGISTRAR"])
+
+    no_csrf = await web.client.post("/api/v1/inbound-mail/poll")
+    down = await web.client.post("/api/v1/inbound-mail/poll", headers={CSRF_HEADER: web.csrf})
+
+    assert no_csrf.status_code == 403
+    assert down.status_code == 503
+    assert down.json()["code"] == "BACKEND_UNAVAILABLE"

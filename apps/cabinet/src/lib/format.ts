@@ -122,6 +122,21 @@ export function formatDateTime(value: string | null | undefined, language?: stri
   return formatInstant(date, BUSINESS_TIME_ZONE, true, language);
 }
 
+/** Время `ЧЧ:ММ` момента `date-time` в Asia/Tashkent (срок короткой ссылки — «действует до 14:35»), одинаково во всех языках. */
+export function formatTime(value: string | null | undefined): string {
+  if (!value) return EMPTY;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return EMPTY;
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+    timeZone: BUSINESS_TIME_ZONE,
+  }).formatToParts(date);
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('hour')}:${get('minute')}`;
+}
+
 const DATE_STYLE: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' };
 
 /** Размер файла: «180 КБ» по-русски, «180 kB» по-английски — единицы через `Intl` (unit). */

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ChevronRight, Copy, Eye, PanelLeft, PanelLeftClose, UserRound } from 'lucide-react';
 import { toast } from '@/lib/toast';
 
+import { TelegramBanner } from '@/components/TelegramBanner';
 import { Button } from '@/components/ui/button';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { isSidebarToggle, shortcutLabel } from '@/lib/keyboard';
@@ -267,6 +268,7 @@ export function AppShell() {
           </div>
         </div>
 
+        {me ? <TelegramBanner onProfile={location.pathname === '/profile'} /> : null}
         <BottomNav />
       </div>
     </SetCrumbContext.Provider>

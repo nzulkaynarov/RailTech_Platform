@@ -187,6 +187,7 @@ import type {
   InboundMailAssist,
   InboundMailBulkArchiveIn,
   InboundMailBulkArchiveResult,
+  InboundMailCheck,
   InboundMailConflictResponse,
   InboundMailHandoverIn,
   InboundMailHandoverTargets,
@@ -16467,6 +16468,80 @@ export const useBulkArchiveInboundMail = <
   TContext
 > => {
   return useMutation(getBulkArchiveInboundMailMutationOptions(options), queryClient);
+};
+
+export const getCheckInboundMailUrl = () => {
+  return `/api/v1/inbound-mail/poll`;
+};
+
+/**
+ * CRM `POST /inbound-mail/poll` (MAIL-NOW): общий ящик читается сразу — тем же опросом и под той же блокировкой, что плановый (раз в 2 минуты); любому сотруднику, как просмотр очереди. Не чаще раза в 20 секунд на установку: раньше — `200` со `status = too_soon` и `retry_after_s` (не ошибка). Ждёт до 30 секунд; опрос уже идёт или продолжается в фоне — `checking`, письма появятся в списке сами. `ok` — `created` новых писем; `off` — приём не настроен («Настройки · Подключения · Почта»); `error` — `error_kind` без деталей почтового сервера. Журнал не ведётся.
+ * @summary Входящая почта: проверить почту сейчас
+ */
+export const checkInboundMail = async (
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailCheck> => {
+  return http<InboundMailCheck>(getCheckInboundMailUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckInboundMailMutationKey = () => ["checkInboundMail"] as const;
+
+export const getCheckInboundMailMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkInboundMail>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkInboundMail>>, TError, void, TContext> => {
+  const mutationKey = getCheckInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkInboundMail>>, void> = () => {
+    return checkInboundMail(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkInboundMail>>
+>;
+
+export type CheckInboundMailMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Входящая почта: проверить почту сейчас
+ */
+export const useCheckInboundMail = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkInboundMail>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkInboundMail>>, TError, void, TContext> => {
+  return useMutation(getCheckInboundMailMutationOptions(options), queryClient);
 };
 
 export const getDownloadInboundMailAttachmentUrl = (id: number, index: number) => {

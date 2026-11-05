@@ -307,7 +307,38 @@
     "viewOnly": "View only",
     "language": "Cabinet language",
     "logout": "Sign out of the cabinet",
-    "name": "Name"
+    "name": "Name",
+    "notifications": {
+      "title": "Notifications",
+      "linked": "Telegram connected",
+      "linkedText": "Notifications about quotes, invoices, acts and manager replies arrive in Telegram right away. The account opens right in the bot, no email needed.",
+      "notLinked": "Telegram not connected",
+      "notLinkedText": "Connect Telegram to get notifications instantly and open the account right in the bot. Until then, notifications arrive by email.",
+      "connect": "Connect Telegram",
+      "preparing": "Preparing the link…",
+      "scanQr": "Scan the QR code with your phone camera or press the button — the bot will open. Press “Start” in the bot.",
+      "pressStart": "Press the button — the bot will open. Press “Start” in the bot.",
+      "openTelegram": "Open Telegram",
+      "qrLabel": "QR code of the bot link",
+      "validUntil": "The link is valid until {{time}} and works once.",
+      "waiting": "Waiting for confirmation from Telegram…",
+      "expired": "The link has expired.",
+      "newLink": "Get a new link",
+      "done": "Done, Telegram is connected",
+      "unavailable": "You can connect Telegram once your manager adds you to the system — please write to them.",
+      "confirmTitle": "Disconnect Telegram?",
+      "consequence": "Notifications will stop arriving in Telegram — email and the account remain. Signing in to the account from Telegram will be closed. You can connect again right here.",
+      "confirm": "Disconnect Telegram",
+      "disconnecting": "Disconnecting…",
+      "disconnected": "Telegram disconnected",
+      "boundLine": "Telegram is linked",
+      "boundAccount": "Telegram connected: {{account}}",
+      "unbind": "Unlink",
+      "sendTest": "Send a test message",
+      "sendingTest": "Sending…",
+      "testSent": "Message sent — check Telegram",
+      "testRetry": "You can retry in {{seconds}} s"
+    }
   },
   "pages": {
     "requests": {
@@ -832,6 +863,10 @@
     "TEXT_REQUIRED": "Write the comment text.",
     "LOGIN_CODE_INVALID": "The code is wrong or expired. Check the email or send a new code.",
     "LOGIN_CODE_LOCKED": "Five wrong codes in a row — this code no longer works. Press “Send again” to get a new one.",
+    "CONTACT_NOT_IN_CRM": "Telegram cannot be connected yet: your manager has not added you to the system. Please write to them.",
+    "TELEGRAM_LINK_UNAVAILABLE": "Connecting Telegram is not available right now. Please try again later.",
+    "TELEGRAM_NOT_LINKED": "Telegram is not linked. Please connect it again.",
+    "TELEGRAM_ALREADY_LINKED": "Telegram is already connected. To connect another account, unlink this one first.",
     "XLSX_REQUIRED": "An Excel file (.xlsx) is required. Download the template and fill it in.",
     "VALID_DATE_INVALID": "The date is invalid — use DD.MM.YYYY.",
     "OFFER_VALIDITY_RANGE_INVALID": "The “to” date cannot be earlier than the “from” date.",
@@ -870,6 +905,12 @@
     "text": "Changes in the form are not saved and will be lost.",
     "leave": "Leave without saving",
     "stay": "Stay"
+  },
+  "telegramBanner": {
+    "label": "Telegram notifications",
+    "text": "Connect Telegram to get notifications instantly",
+    "connect": "Connect",
+    "later": "Later"
   },
   "partner": {
     "title": "My products",

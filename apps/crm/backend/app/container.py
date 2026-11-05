@@ -45,6 +45,8 @@ if TYPE_CHECKING:
     from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.company_articles import CompanyArticleService
+    from app.services.contact_telegram import ContactTelegramService
+    from app.services.contact_telegram_test import TelegramTestDelivery
     from app.services.documents import DocumentService
     from app.services.eds_notices import EdsNoticeService
     from app.services.erp_access import ErpAccessService
@@ -61,6 +63,7 @@ if TYPE_CHECKING:
     from app.services.inbound_mail import InboundMailService
     from app.services.inbound_mail_actions import InboundMailActions
     from app.services.inbound_mail_assist import InboundMailAssist
+    from app.services.inbound_mail_check import InboundMailCheck
     from app.services.inbound_mail_history import InboundMailHistory
     from app.services.inbound_mail_ingest import InboundMailIngest
     from app.services.kb.admin import KbAdminService
@@ -688,6 +691,13 @@ class Container:
         )
 
     @cached_property
+    def inbound_mail_check(self) -> "InboundMailCheck":
+        """«Проверить почту»: опрос по кнопке под блокировкой плановой задачи."""
+        from app.services.inbound_mail_check import InboundMailCheck
+
+        return InboundMailCheck(self.inbound_mail_ingest)
+
+    @cached_property
     def inbound_mail_history(self) -> "InboundMailHistory":
         """«Загрузить письма за период» (W18A-P2-2): тот же разбор, что у опроса, фоном."""
         from app.integrations.imap import ImaplibClient
@@ -793,6 +803,30 @@ class Container:
             self.user_service,
             self.storage,
             self.settings.s3_bucket_documents,
+        )
+
+    @cached_property
+    def contact_telegram(self) -> "ContactTelegramService":
+        """Telegram контакта без подтверждения менеджера (NOTIFY-1): ссылка из кабинета и
+        отключение по запросу ERP."""
+        from app.services.contact_telegram import ContactTelegramService
+
+        async def erp_pair_secrets() -> list[str]:
+            bus = self.bus
+            await bus.secret_cache.refresh()
+            return list(bus.config.secrets("erp", "crm"))
+
+        return ContactTelegramService(
+            self.session_factory, erp_pair_secrets, on_chats_changed=_chats_changed
+        )
+
+    @cached_property
+    def contact_telegram_test(self) -> "TelegramTestDelivery":
+        """Проверочное сообщение контакту по запросу ERP (NOTIFY-1), inline."""
+        from app.services.contact_telegram_test import TelegramTestDelivery
+
+        return TelegramTestDelivery(
+            self.session_factory, self.telegram_bot, dry_run=self.settings.telegram_dry_run
         )
 
     @cached_property

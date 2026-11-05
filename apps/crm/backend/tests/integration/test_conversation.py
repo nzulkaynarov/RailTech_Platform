@@ -16,6 +16,7 @@ from app.config import Settings
 from app.container import Container
 from app.mcp import crm_server, kb_server
 from app.mcp.common import build_app
+from app.models.clients import Client, ClientContact
 from app.models.kb import KbGap
 from app.models.leads import Lead, Message, TelegramIdentity
 from app.models.qualification import Escalation, StageTransition
@@ -236,6 +237,88 @@ async def test_delete_asks_for_confirmation_first(stack: Stack) -> None:
     out = await stack.service.erase_prompt(USER)
     assert [o.keyboard for o in out] == ["erase_confirm"]
     assert (await lead_row(stack.sessions)).erased_at is None
+
+
+async def test_delete_unlinks_telegram_from_the_contact_and_names_never_reach_erp_again(
+    stack: Stack,
+) -> None:
+    """Решение архитектора 2026-11-04 (NOTIFY-1): `/delete` отвязывает Telegram от контакта — ERP
+    получает контакт без Telegram и имён (Mini App закрыт). Новое сообщение того же человека —
+    новое анонимное обращение: имена в ERP не уходят, пока контакт сам не привяжет Telegram."""
+    await consented(stack)
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        identity.verified_at = func.now()
+        client = Client(name="ООО Альфа", erp_company_id=118)
+        session.add(client)
+        await session.flush()
+        identity.client_id = client.id
+        session.add(
+            ClientContact(client_id=client.id, full_name="Азиз", telegram_identity_id=identity.id)
+        )
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+
+    await stack.service.erase(USER)
+    again = Incoming(
+        tg_user_id=USER, chat_id=USER, text="/start", first_name="Азиз", username="aziz"
+    )
+    await stack.service.start(again)
+
+    async with stack.sessions() as session:
+        snapshots = (
+            await session.scalars(
+                text(
+                    "SELECT envelope->'data'->'contact' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.contact.updated.v1'"
+                )
+            )
+        ).all()
+        released = (await session.scalars(select(TelegramIdentity))).one()
+        contact = (await session.scalars(select(ClientContact))).one()
+    assert len(snapshots) == 1, "после нового сообщения контакт больше не публикуется"
+    assert snapshots[0]["telegram_user_id"] is None
+    assert "telegram_name" not in snapshots[0]
+    assert "telegram_username" not in snapshots[0]
+    assert contact.telegram_identity_id is None
+    assert (released.client_id, released.verified_at) == (None, None)
+    assert released.notifications_off_at is not None
+
+
+async def test_changed_telegram_name_republishes_the_linked_contact_once(stack: Stack) -> None:
+    """NOTIFY-1: кабинет показывает `@аккаунт` — смена ника или имени у привязанного Telegram даёт
+    новый снимок контакта, а сообщение с прежними именами — нет."""
+    await consented(stack)
+    async with stack.sessions() as session, session.begin():
+        identity = (await session.scalars(select(TelegramIdentity))).one()
+        client = Client(name="ООО Альфа", erp_company_id=118)
+        session.add(client)
+        await session.flush()
+        session.add(
+            ClientContact(client_id=client.id, full_name="Азиз", telegram_identity_id=identity.id)
+        )
+        await session.execute(text("DELETE FROM rt_bus_outbox"))
+
+    await stack.service.start(msg("/start"))  # те же имена — снимка нет
+    renamed = Incoming(
+        tg_user_id=USER, chat_id=USER, text="/start", first_name="Азиз Н.", username="aziz_new"
+    )
+    await stack.service.start(renamed)
+    await stack.service.start(renamed)  # повтор — снова без снимка
+
+    async with stack.sessions() as session:
+        snapshots = (
+            await session.scalars(
+                text(
+                    "SELECT envelope->'data'->'contact' FROM rt_bus_outbox "
+                    "WHERE type = 'uz.railtech.crm.contact.updated.v1'"
+                )
+            )
+        ).all()
+    assert len(snapshots) == 1
+    assert (snapshots[0]["telegram_username"], snapshots[0]["telegram_name"]) == (
+        "aziz_new",
+        "Азиз Н.",
+    )
 
 
 async def test_delete_erases_messages_and_unlinks_identity(stack: Stack) -> None:

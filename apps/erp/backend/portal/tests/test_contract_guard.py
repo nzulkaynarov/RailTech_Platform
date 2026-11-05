@@ -65,6 +65,7 @@ GET_CASES = {
     ],
     "/company": lambda w: ["/company"],
     "/team": lambda w: ["/team"],
+    "/me/telegram": lambda w: ["/me/telegram"],  # NOTIFY-1: статус привязки по проекции CRM
     "/messages": lambda w: ["/messages"],
 }
 

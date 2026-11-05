@@ -8,3 +8,4 @@
 
 {% translate "С уважением," %}
 {% blocktranslate with platform=platform_name|default:'ERP' %}команда {{ platform }}{% endblocktranslate %}
+{% include "emails/_telegram_footer.txt" %}

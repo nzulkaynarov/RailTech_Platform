@@ -1,0 +1,86 @@
+[
+  {
+    "screen": "banner-requests",
+    "width": 1440,
+    "rulesPassed": 24,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-not-linked",
+    "width": 1440,
+    "rulesPassed": 25,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-qr",
+    "width": 1440,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-linked",
+    "width": 1440,
+    "rulesPassed": 25,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-test-sent",
+    "width": 1440,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-unlink-confirm",
+    "width": 1440,
+    "rulesPassed": 25,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "banner-requests",
+    "width": 390,
+    "rulesPassed": 23,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-not-linked",
+    "width": 390,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-qr",
+    "width": 390,
+    "rulesPassed": 27,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-linked",
+    "width": 390,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-test-sent",
+    "width": 390,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  },
+  {
+    "screen": "profile-unlink-confirm",
+    "width": 390,
+    "rulesPassed": 26,
+    "violations": [],
+    "overflowPx": 0
+  }
+]

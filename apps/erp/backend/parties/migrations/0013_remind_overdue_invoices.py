@@ -23,7 +23,7 @@ def drop_reminders_beat(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('parties', '0011_part2_offer_confirm_days'),
+        ('parties', '0012_contact_telegram_name'),
         ('django_celery_beat', '0019_alter_periodictasks_options'),
     ]
 

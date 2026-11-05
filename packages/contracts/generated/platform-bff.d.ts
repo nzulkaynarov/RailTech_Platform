@@ -2368,6 +2368,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/inbound-mail/poll": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Входящая почта: проверить почту сейчас
+     * @description CRM `POST /inbound-mail/poll` (MAIL-NOW): общий ящик читается сразу — тем же опросом и под той же блокировкой, что плановый (раз в 2 минуты); любому сотруднику, как просмотр очереди. Не чаще раза в 20 секунд на установку: раньше — `200` со `status = too_soon` и `retry_after_s` (не ошибка). Ждёт до 30 секунд; опрос уже идёт или продолжается в фоне — `checking`, письма появятся в списке сами. `ok` — `created` новых писем; `off` — приём не настроен («Настройки · Подключения · Почта»); `error` — `error_kind` без деталей почтового сервера. Журнал не ведётся.
+     */
+    post: operations["checkInboundMail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/inbound-mail/{id}/attachments/{index}": {
     parameters: {
       query?: never;
@@ -11768,6 +11788,25 @@ export interface components {
       /** @description Пометка «адресовано лично» из настроек приёма */
       personal_label: string;
     };
+    /** @description Итог «Проверить почту» (MAIL-NOW) */
+    InboundMailCheck: {
+      /**
+       * @description ok — ящик прочитан; off — приём не настроен; error — не удалось (error_kind); checking — проверка уже идёт или продолжается в фоне; too_soon — проверяли только что (retry_after_s)
+       * @enum {string}
+       */
+      status: "ok" | "off" | "error" | "checking" | "too_soon";
+      /** @description Новых писем в очереди после проверки */
+      created: number;
+      /** @description Вид ошибки без деталей сервера: auth_failed, unavailable, tls_failed, invalid_host, mailbox_missing, internal */
+      error_kind: string | null;
+      /**
+       * Format: date-time
+       * @description Когда проверка закончилась; у checking и too_soon — пусто
+       */
+      checked_at: string | null;
+      /** @description Через сколько секунд можно проверить снова (too_soon) */
+      retry_after_s: number | null;
+    };
     InboundMailPage: {
       items: components["schemas"]["InboundMailItem"][];
       total: number;
@@ -18564,6 +18603,32 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkInboundMail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Итог проверки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InboundMailCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

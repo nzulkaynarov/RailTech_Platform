@@ -107,8 +107,26 @@ class TelegramIdentity(TimestampMixin, Base):
     )
     verified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     is_blocked: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    # Контакт отключил Telegram в кабинете (NOTIFY-1): клиентские рассылки (уведомления,
+    # отслеживание запроса, приглашения) этот аккаунт не берут, пока контакт не подключит его снова.
+    notifications_off_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     lead: Mapped[Lead | None] = relationship(back_populates="identities")
+
+
+class TelegramLinkNonce(Base):
+    """Погашенный токен привязки Telegram контактом (NOTIFY-1, ADR-0023 п. 3): nonce уникален —
+    повтор и параллельный повтор
+    ссылки отклоняются базой. Токен в базе не хранится, только его nonce (без подписи токен не
+    собрать)."""
+
+    __tablename__ = "telegram_link_nonces"
+
+    nonce: Mapped[str] = mapped_column(String(18), primary_key=True)
+    crm_contact_id: Mapped[int] = mapped_column(BigInteger)
+    tg_user_id: Mapped[int] = mapped_column(BigInteger)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class Conversation(TimestampMixin, Base):

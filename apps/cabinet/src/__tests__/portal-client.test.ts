@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 
-import { apiErrorKey } from '@/api/errors';
+import { apiErrorKey, rowErrorKey } from '@/api/errors';
 import { PortalApiError, getMe, requestMagicLink } from '@/api/portal';
 import { portalServer } from '@/mocks/server';
 import { signedIn } from '@/test/render';
@@ -36,5 +36,12 @@ describe('клиент портального API', () => {
     portalServer.use(http.get('*/api/portal/v1/me', () => HttpResponse.error()));
     const error = await getMe().catch((e: unknown) => e);
     expect(apiErrorKey(error)).toBe('apiErrors.NETWORK');
+  });
+
+  it('ErrorCode — открытое множество (CONTRACTS §7.2): незнакомый код — общая ошибка, а не ключ перевода', () => {
+    expect(apiErrorKey(new PortalApiError(409, 'CODE_FROM_THE_FUTURE'))).toBe('apiErrors.UNKNOWN');
+    expect(apiErrorKey(new PortalApiError(422, 'CODE_FROM_THE_FUTURE'))).toBe('apiErrors.VALIDATION_ERROR');
+    expect(rowErrorKey('partner.submitted.code', 'NOT_FOUND')).toBe('partner.submitted.code.NOT_FOUND');
+    expect(rowErrorKey('partner.submitted.code', 'CODE_FROM_THE_FUTURE')).toBe('apiErrors.UNKNOWN');
   });
 });

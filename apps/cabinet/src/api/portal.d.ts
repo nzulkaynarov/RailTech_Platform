@@ -4,3511 +4,3847 @@
  */
 
 export interface paths {
-    "/auth/telegram": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Вход из Telegram Mini App
-         * @description ERP проверяет подпись `initData` токеном клиентского бота CRM (срок ≤ 5 мин), ищет контакт по `telegram_user_id`, выдаёт сессию портала.
-         */
-        post: operations["authTelegram"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/auth/telegram": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/magic-link": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Запросить ссылку для входа по e-mail
-         * @description Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
-         */
-        post: operations["requestMagicLink"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Вход из Telegram Mini App
+     * @description ERP проверяет подпись `initData` токеном клиентского бота CRM (срок ≤ 5 мин), ищет контакт по `telegram_user_id`, выдаёт сессию портала.
+     */
+    post: operations["authTelegram"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/magic-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/magic": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Обмен токена из ссылки входа на сессию
-         * @description Cabinet берёт токен из фрагмента ссылки `/auth/magic#token=…` и шлёт его в теле: токен не появляется ни в пути,
-         *     ни в журналах. Токен одноразовый и живёт 60 минут (ссылка-приглашение — 24 часа, B-MAIL-1). Заменяет `GET /auth/magic/{token}`.
-         */
-        post: operations["exchangeMagicLinkToken"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Запросить ссылку для входа по e-mail
+     * @description Письмо со ссылкой и 6-значным кодом входа на 60 минут, одноразовыми (B-MAIL-1). Новый запрос гасит прежние ссылку и код входа (приглашение остаётся). Ответ всегда 200, чтобы не раскрывать наличие адреса.
+     */
+    post: operations["requestMagicLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/magic": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Вход по коду из письма
-         * @description B-MAIL-1. Клиент вводит адрес и 6-значный код из письма входа или приглашения. Код одноразовый, живёт столько же,
-         *     сколько ссылка того же письма (60 минут, приглашение — 24 часа), в базе — только хеш, сравнение за постоянное
-         *     время. Неверный, просроченный, использованный код и неизвестный адрес дают один ответ — 422 `LOGIN_CODE_INVALID`
-         *     (наличие адреса не раскрывается). Пятая неверная попытка подряд и дальше — 429 `LOGIN_CODE_LOCKED` до нового
-         *     запроса `POST /auth/magic-link`. Верный код гасит и ссылку того же письма.
-         */
-        post: operations["exchangeLoginCode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Обмен токена из ссылки входа на сессию
+     * @description Cabinet берёт токен из фрагмента ссылки `/auth/magic#token=…` и шлёт его в теле: токен не появляется ни в пути,
+     *     ни в журналах. Токен одноразовый и живёт 60 минут (ссылка-приглашение — 24 часа, B-MAIL-1). Заменяет `GET /auth/magic/{token}`.
+     */
+    post: operations["exchangeMagicLinkToken"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/code": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/auth/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Завершить сессию портала */
-        post: operations["logout"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Вход по коду из письма
+     * @description B-MAIL-1. Клиент вводит адрес и 6-значный код из письма входа или приглашения. Код одноразовый, живёт столько же,
+     *     сколько ссылка того же письма (60 минут, приглашение — 24 часа), в базе — только хеш, сравнение за постоянное
+     *     время. Неверный, просроченный, использованный код и неизвестный адрес дают один ответ — 422 `LOGIN_CODE_INVALID`
+     *     (наличие адреса не раскрывается). Пятая неверная попытка подряд и дальше — 429 `LOGIN_CODE_LOCKED` до нового
+     *     запроса `POST /auth/magic-link`. Верный код гасит и ссылку того же письма.
+     */
+    post: operations["exchangeLoginCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/me": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Сессия, контакт, компания, права */
-        get: operations["getMe"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Завершить сессию портала */
+    post: operations["logout"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/notifications": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Лента уведомлений контакта (колокольчик)
-         * @description Уведомления контакта сессии по убыванию `id` (новые сверху): без `before_id` — последние `limit`, с ним — более
-         *     ранние (кнопка «Показать ещё»). Строка ленты — на контакт: прочитанность у каждого контакта своя. В ленте только
-         *     уведомления, чей объект открыт модулям сессии (счёт — `invoices`, акт — `acts`, КП — `quotes`, поставка —
-         *     `deliveries`, ответ менеджера — `messages`, карточка партнёра — `my_products`); выключили модуль — его уведомления
-         *     пропадают из ленты и из `Me.notifications_unread`. Текст рендерит Cabinet на языке контакта по `text_key` и `params`.
-         *     Эндпоинт открыт любой сессии кабинета (модуль `profile`). Компания и контакт — только из сессии.
-         */
-        get: operations["listNotifications"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Сессия, контакт, компания, права */
+    get: operations["getMe"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/notifications/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Отметить уведомления прочитанными
-         * @description `ids` — отметить эти уведомления контакта сессии; `all: true` — «Прочитать все» (всё видимое модулям сессии).
-         *     Ровно одно из двух, иначе 422 `VALIDATION_ERROR`. Чужие и несуществующие `id` не отмечаются и не раскрываются:
-         *     ответ тот же, что без них. Повторная отметка ничего не меняет. Прочтение гасит отложенное письмо по уведомлению
-         *     (ответ менеджера в чате). `can_act` не нужен (чтение).
-         */
-        post: operations["markNotificationsRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Привязан ли Telegram контакта (уведомления и вход в Mini App)
+     * @description Статус — по проекции контакта в ERP (`telegram_user_id`), поле принадлежит CRM (ADR-0015, ADR-0023 п. 3): после
+     *     привязки ботом или отключения статус меняется, когда CRM опубликует `crm.contact.updated` (обычно за секунды).
+     *     Cabinet опрашивает этот путь, пока открыт экран с выпущенной ссылкой, до привязки или истечения её срока.
+     */
+    get: operations["getTelegramStatus"];
+    put?: never;
+    post?: never;
+    /**
+     * Отключить Telegram контакта
+     * @description Привязка принадлежит CRM, поэтому ERP публикует запрос `uz.railtech.erp.contact.telegram_unlink_requested.v1`, а
+     *     CRM отвязывает Telegram и публикует `crm.contact.updated` без `telegram_user_id`. Ответ 202 — запрос принят;
+     *     `linked` станет `false`, когда придёт проекция (Cabinet опрашивает `GET /me/telegram`). Telegram не привязан — 202
+     *     без события (повтор безопасен). Право «действовать» не нужно: это настройка самого контакта.
+     */
+    delete: operations["unlinkTelegram"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram/test": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/requests": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Мои запросы */
-        get: operations["listRequests"];
-        put?: never;
-        /**
-         * Новый запрос
-         * @description Строки свободным текстом и вложения. Создаёт заявку в ERP минуя CRM; CRM получает событие `request.created(source=cabinet)`.
-         */
-        post: operations["createRequest"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Прислать проверочное сообщение в привязанный Telegram
+     * @description Контакт проверяет, что уведомления доходят (NOTIFY-1). ERP в Telegram не пишет: публикует запрос
+     *     `uz.railtech.erp.contact.telegram_test_requested.v1`, бот CRM присылает короткое сообщение на языке контакта. Ответ
+     *     202 — запрос принят (итог доставки не возвращается). Не чаще раза в минуту на контакт: иначе 429 `TOO_MANY_REQUESTS`
+     *     с `Retry-After`. Telegram не привязан — 409 `TELEGRAM_NOT_LINKED`. Право «действовать» не нужно.
+     */
+    post: operations["sendTelegramTest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/requests/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Запрос клиента со строками (Q-16) */
-        get: operations["getRequest"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Выпустить одноразовую ссылку привязки Telegram (бот, параметр start)
+     * @description ADR-0023 п. 3. Ссылка `https://t.me/<бот>?start=<токен>` открывает бот CRM; бот проверяет подпись и срок,
+     *     гасит токен (одноразовый) и привязывает Telegram этого человека к контакту сессии без подтверждения менеджера.
+     *     Токен — `tg_` + base64url (без `=`) от 21 байта данных и 15 байт усечённого HMAC-SHA256: версия, язык контакта,
+     *     `crm_contact_id`, срок (15 минут), случайный nonce; ключ — производный от секрета пары шины `erp → crm` с отдельной
+     *     меткой (`rt-telegram-link/v1`), не ключ почты. 51 символ из алфавита `[A-Za-z0-9_-]` — укладывается в лимит
+     *     параметра `start` Telegram (64). QR рисует Cabinet из `url` сам, без внешних сервисов. Право «действовать» не
+     *     нужно. Повтор с тем же `Idempotency-Key` возвращает ту же ссылку; новый ключ — новый токен (прежний действует
+     *     до своего срока).
+     */
+    post: operations["createTelegramLink"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Коммерческие предложения */
-        get: operations["listQuotes"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Лента уведомлений контакта (колокольчик)
+     * @description Уведомления контакта сессии по убыванию `id` (новые сверху): без `before_id` — последние `limit`, с ним — более
+     *     ранние (кнопка «Показать ещё»). Строка ленты — на контакт: прочитанность у каждого контакта своя. В ленте только
+     *     уведомления, чей объект открыт модулям сессии (счёт — `invoices`, акт — `acts`, КП — `quotes`, поставка —
+     *     `deliveries`, ответ менеджера — `messages`, карточка партнёра — `my_products`); выключили модуль — его уведомления
+     *     пропадают из ленты и из `Me.notifications_unread`. Текст рендерит Cabinet на языке контакта по `text_key` и `params`.
+     *     Эндпоинт открыт любой сессии кабинета (модуль `profile`). Компания и контакт — только из сессии.
+     */
+    get: operations["listNotifications"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/notifications/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** КП со строками */
-        get: operations["getQuote"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Отметить уведомления прочитанными
+     * @description `ids` — отметить эти уведомления контакта сессии; `all: true` — «Прочитать все» (всё видимое модулям сессии).
+     *     Ровно одно из двух, иначе 422 `VALIDATION_ERROR`. Чужие и несуществующие `id` не отмечаются и не раскрываются:
+     *     ответ тот же, что без них. Повторная отметка ничего не меняет. Прочтение гасит отложенное письмо по уведомлению
+     *     (ответ менеджера в чате). `can_act` не нужен (чтение).
+     */
+    post: operations["markNotificationsRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes/{id}/request-code": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Запросить код акцепта КП
-         * @description Код акцепта (6 цифр, 15 минут, 5 попыток) ERP отправляет контакту сессии по его каналу — в Telegram через бота CRM
-         *     или на e-mail; мастер-кода нет (FIX-02). Cabinet зовёт перед вводом кода на экране КП. Повторный запрос гасит
-         *     прежний код. Требует права `can_act`; лимит — `portal_accept` (10 в минуту на сессию).
-         */
-        post: operations["requestQuoteAcceptanceCode"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Мои запросы */
+    get: operations["listRequests"];
+    put?: never;
+    /**
+     * Новый запрос
+     * @description Строки свободным текстом и вложения. Создаёт заявку в ERP минуя CRM; CRM получает событие `request.created(source=cabinet)`.
+     */
+    post: operations["createRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/requests/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes/{id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Принять КП по коду акцепта
-         * @description Код — из `POST /quotes/{id}/request-code`. Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
-         */
-        post: operations["acceptQuote"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Запрос клиента со строками (Q-16) */
+    get: operations["getRequest"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes/{id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Отклонить КП с причиной */
-        post: operations["rejectQuote"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Коммерческие предложения */
+    get: operations["listQuotes"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/quotes/{id}/comments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Комментарий клиента к КП
-         * @description Вопрос или замечание по КП, пока оно ждёт решения (`sent`, `viewed`, срок не вышел). Комментарий попадает в ленту
-         *     `Quote.comments`, в журнал сделки и уведомлением — ответственному менеджеру; КП не меняется. Ответ менеджер даёт
-         *     в канале клиента (бот, почта) или новой версией КП. Требует `can_act`.
-         */
-        post: operations["addQuoteComment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** КП со строками */
+    get: operations["getQuote"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes/{id}/request-code": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/contracts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Договоры */
-        get: operations["listContracts"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Запросить код акцепта КП
+     * @description Код акцепта (6 цифр, 15 минут, 5 попыток) ERP отправляет контакту сессии по его каналу — в Telegram через бота CRM
+     *     или на e-mail; мастер-кода нет (FIX-02). Cabinet зовёт перед вводом кода на экране КП. Повторный запрос гасит
+     *     прежний код. Требует права `can_act`; лимит — `portal_accept` (10 в минуту на сессию).
+     */
+    post: operations["requestQuoteAcceptanceCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes/{id}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/contracts/{id}/sign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Подписать договор со стороны клиента
-         * @description Простая подпись подтверждением (E-IMZO отложен до пилота, DECISIONS 2026-10-13).
-         */
-        post: operations["signContract"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Принять КП по коду акцепта
+     * @description Код — из `POST /quotes/{id}/request-code`. Договор создаётся автоматически (BUSINESS §4, шаг 6). Требует права `can_act`.
+     */
+    post: operations["acceptQuote"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/invoices": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Счета */
-        get: operations["listInvoices"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Отклонить КП с причиной */
+    post: operations["rejectQuote"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/quotes/{id}/comments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/invoices/{id}/proofs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * «Я оплатил» — платёжное поручение к счёту
-         * @description Клиент прикладывает платёжное поручение (SPEC-v3 §3.1 шаг 8, §8). Файл сначала грузится в `POST /uploads`
-         *     (PDF или изображение, ≤ 10 МБ; тело здесь — JSON, единственный multipart портала — `/uploads`), сюда — его
-         *     `upload_id`, а дата и сумма платежа и комментарий — по желанию. Платёжка деньгами не считается: она попадает
-         *     менеджеру в «Счета и оплаты» на вкладку «Платёжки на подтверждение» (источник — кабинет клиента), он сверяет
-         *     поступление с выпиской банка и подтверждает оплату — тогда меняется статус счёта. До этого платёжка в
-         *     `Invoice.proofs` — `pending`. Требует `can_act`. Счёт другой компании — 404.
-         */
-        post: operations["submitPaymentProof"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Комментарий клиента к КП
+     * @description Вопрос или замечание по КП, пока оно ждёт решения (`sent`, `viewed`, срок не вышел). Комментарий попадает в ленту
+     *     `Quote.comments`, в журнал сделки и уведомлением — ответственному менеджеру; КП не меняется. Ответ менеджер даёт
+     *     в канале клиента (бот, почта) или новой версией КП. Требует `can_act`.
+     */
+    post: operations["addQuoteComment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/contracts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/acts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Акты */
-        get: operations["listActs"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Договоры */
+    get: operations["listContracts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/contracts/{id}/sign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/acts/{id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Принять акт (при желании — со сканом подписанного экземпляра)
-         * @description Тело необязательно. `upload_id` из `POST /uploads` привязывает скан к акту: ERP сохраняет его как подписанный
-         *     экземпляр (`Act.signed_file`) и отдаёт в `GET /documents` видом `act` с `scan_document_id` в акте. Требует `can_act`.
-         */
-        post: operations["acceptAct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Подписать договор со стороны клиента
+     * @description Простая подпись подтверждением (E-IMZO отложен до пилота, DECISIONS 2026-10-13).
+     */
+    post: operations["signContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/invoices": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/acts/{id}/return": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Вернуть акт с причиной */
-        post: operations["returnAct"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Счета */
+    get: operations["listInvoices"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/invoices/{id}/proofs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/deliveries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Поставки по строкам (проекция клиента) */
-        get: operations["listDeliveries"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * «Я оплатил» — платёжное поручение к счёту
+     * @description Клиент прикладывает платёжное поручение (SPEC-v3 §3.1 шаг 8, §8). Файл сначала грузится в `POST /uploads`
+     *     (PDF или изображение, ≤ 10 МБ; тело здесь — JSON, единственный multipart портала — `/uploads`), сюда — его
+     *     `upload_id`, а дата и сумма платежа и комментарий — по желанию. Платёжка деньгами не считается: она попадает
+     *     менеджеру в «Счета и оплаты» на вкладку «Платёжки на подтверждение» (источник — кабинет клиента), он сверяет
+     *     поступление с выпиской банка и подтверждает оплату — тогда меняется статус счёта. До этого платёжка в
+     *     `Invoice.proofs` — `pending`. Требует `can_act`. Счёт другой компании — 404.
+     */
+    post: operations["submitPaymentProof"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/acts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/deliveries/{id}/accept": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Принять строку поставки (BUSINESS §9, шаг 9)
-         * @description Строка переходит в `accepted`; принять можно только `delivered`. Требует `can_act`. Событие `delivery.line_accepted` → CRM.
-         */
-        post: operations["acceptDeliveryLine"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Акты */
+    get: operations["listActs"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/acts/{id}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/deliveries/{id}/dispute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Замечание по строке поставки
-         * @description Строка переходит в `disputed` с причиной; менеджер получает задачу, клиент — ответ через бота. Требует `can_act`.
-         */
-        post: operations["disputeDeliveryLine"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Принять акт (при желании — со сканом подписанного экземпляра)
+     * @description Тело необязательно. `upload_id` из `POST /uploads` привязывает скан к акту: ERP сохраняет его как подписанный
+     *     экземпляр (`Act.signed_file`) и отдаёт в `GET /documents` видом `act` с `scan_document_id` в акте. Требует `can_act`.
+     */
+    post: operations["acceptAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/acts/{id}/return": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/documents": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Документы компании */
-        get: operations["listDocuments"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Вернуть акт с причиной */
+    post: operations["returnAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/documents/{id}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Файл документа (поток, аудит выдачи) */
-        get: operations["getDocumentFile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Поставки по строкам (проекция клиента) */
+    get: operations["listDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/deliveries/{id}/accept": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/uploads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Загрузка файлов клиентом (Q-14, multipart, <= 10MB) */
-        post: operations["uploadFile"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Принять строку поставки (BUSINESS §9, шаг 9)
+     * @description Строка переходит в `accepted`; принять можно только `delivered`. Требует `can_act`. Событие `delivery.line_accepted` → CRM.
+     */
+    post: operations["acceptDeliveryLine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/deliveries/{id}/dispute": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/catalog/categories": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Категории каталога с количеством опубликованных позиций (Q-15) */
-        get: operations["listCatalogCategories"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Замечание по строке поставки
+     * @description Строка переходит в `disputed` с причиной; менеджер получает задачу, клиент — ответ через бота. Требует `can_act`.
+     */
+    post: operations["disputeDeliveryLine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/catalog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Опубликованный каталог с ценой и наличием */
-        get: operations["listCatalog"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Документы компании */
+    get: operations["listDocuments"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/documents/{id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/catalog/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Карточка опубликованного слоя */
-        get: operations["getCatalogItem"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Файл документа (поток, аудит выдачи) */
+    get: operations["getDocumentFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/uploads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/catalog/{id}/documents/{doc_id}/file": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Файл документа карточки (поток, аудит выдачи)
-         * @description Документ карточки из `CatalogItem.documents` (CAT-CARD-2): только опубликованная карточка, только документ этой
-         *     карточки, видимый клиенту и действующий (срок «действует до» не прошёл). Иначе — 404, одинаково для скрытого,
-         *     просроченного, чужого и несуществующего документа и для неопубликованной карточки (причины не различаются).
-         *     Имя файла в `Content-Disposition` — из названия документа (`title`) и расширения, имя загруженного файла не
-         *     отдаётся. Каждая выдача пишется в журнал ERP (кто, что, когда). Доступно при модуле `catalog_requests`.
-         */
-        get: operations["getCatalogItemDocumentFile"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Загрузка файлов клиентом (Q-14, multipart, <= 10MB) */
+    post: operations["uploadFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog/categories": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/products": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Мои товары — свои карточки и свои цены (модуль `my_products`)
-         * @description Карточки, где компания сессии — источник данных, или у неё есть цена. Цена — только этой компании. Чужие цены,
-         *     другие поставщики и наши цены продажи и закупки не отдаются. Чужая неопубликованная карточка — `matched`: только присланное
-         *     партнёром (название строки, бренд, артикул, цена). `page` вне 1…10000 и `page_size` вне 1…100 — 422 `VALIDATION_ERROR`.
-         */
-        get: operations["listPartnerProducts"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Категории каталога с количеством опубликованных позиций (Q-15) */
+    get: operations["listCatalogCategories"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/products/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Моя карточка с историей проверок */
-        get: operations["getPartnerProduct"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Опубликованный каталог с ценой и наличием */
+    get: operations["listCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/products/submit": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Отправить карточки на проверку
-         * @description Черновики и возвращённые карточки компании → `review`; сотрудникам уходит уведомление. Ответ 200 всегда
-         *     построчный: по каждому id либо отправлено, либо ошибка (`NOT_FOUND` — чужая или несуществующая карточка,
-         *     `PRODUCT_NOT_SUBMITTABLE` — своя, но уже на проверке или опубликована).
-         */
-        post: operations["submitPartnerProducts"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Карточка опубликованного слоя */
+    get: operations["getCatalogItem"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/catalog/{id}/documents/{doc_id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/offers/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Подтвердить актуальность цен
-         * @description Без модерации. `ids` — id карточек, цены компании по которым подтверждаются, или `all: true` — все цены компании.
-         *     Цена с истёкшим сроком не подтверждается (`OFFER_EXPIRED` — нужен новый прайс); карточка без цены компании — `NOT_FOUND`.
-         */
-        post: operations["confirmPartnerOffers"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Файл документа карточки (поток, аудит выдачи)
+     * @description Документ карточки из `CatalogItem.documents` (CAT-CARD-2): только опубликованная карточка, только документ этой
+     *     карточки, видимый клиенту и действующий (срок «действует до» не прошёл). Иначе — 404, одинаково для скрытого,
+     *     просроченного, чужого и несуществующего документа и для неопубликованной карточки (причины не различаются).
+     *     Имя файла в `Content-Disposition` — из названия документа (`title`) и расширения, имя загруженного файла не
+     *     отдаётся. Каждая выдача пишется в журнал ERP (кто, что, когда). Доступно при модуле `catalog_requests`.
+     */
+    get: operations["getCatalogItemDocumentFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/products": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/price-template": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Шаблон прайса (.xlsx) — тот же, что у сотрудника */
-        get: operations["getPartnerPriceTemplate"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Мои товары — свои карточки и свои цены (модуль `my_products`)
+     * @description Карточки, где компания сессии — источник данных, или у неё есть цена. Цена — только этой компании. Чужие цены,
+     *     другие поставщики и наши цены продажи и закупки не отдаются. Чужая неопубликованная карточка — `matched`: только присланное
+     *     партнёром (название строки, бренд, артикул, цена). `page` вне 1…10000 и `page_size` вне 1…100 — 422 `VALIDATION_ERROR`.
+     */
+    get: operations["listPartnerProducts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/products/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/price-list": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Загрузить прайс по шаблону
-         * @description `multipart/form-data` (как `/uploads`): файл `.xlsx` до 20 МБ. Поставщик — компания сессии, выбрать другого нельзя.
-         *     `dry_run=true` — предпросмотр: те же проверки и отчёт, ничего не записывается. Срок действия цен на весь файл —
-         *     `valid_from` / `valid_until` (колонки «Действует с / до» строки главнее). Загруженные цены считаются подтверждёнными.
-         *     Новые карточки — черновики; карточки, которыми владеем мы или которые опубликованы, прайс не переписывает —
-         *     расхождения уходят в предложения по полям. Обработка асинхронная: 202 и `task_id`.
-         */
-        post: operations["uploadPartnerPriceList"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Моя карточка с историей проверок */
+    get: operations["getPartnerProduct"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/products/submit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/partner/price-list/{task_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Состояние и отчёт загрузки прайса */
-        get: operations["getPartnerPriceListTask"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Отправить карточки на проверку
+     * @description Черновики и возвращённые карточки компании → `review`; сотрудникам уходит уведомление. Ответ 200 всегда
+     *     построчный: по каждому id либо отправлено, либо ошибка (`NOT_FOUND` — чужая или несуществующая карточка,
+     *     `PRODUCT_NOT_SUBMITTABLE` — своя, но уже на проверке или опубликована).
+     */
+    post: operations["submitPartnerProducts"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/offers/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/company": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Профиль компании клиента */
-        get: operations["getCompany"];
-        /**
-         * Обновить профиль компании
-         * @description Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
-         *     `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
-         */
-        put: operations["updateCompany"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Подтвердить актуальность цен
+     * @description Без модерации. `ids` — id карточек, цены компании по которым подтверждаются, или `all: true` — все цены компании.
+     *     Цена с истёкшим сроком не подтверждается (`OFFER_EXPIRED` — нужен новый прайс); карточка без цены компании — `NOT_FOUND`.
+     */
+    post: operations["confirmPartnerOffers"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-template": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/team": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Команда клиента (контакты компании) */
-        get: operations["listTeam"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Шаблон прайса (.xlsx) — тот же, что у сотрудника */
+    get: operations["getPartnerPriceTemplate"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-list": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/team/invite": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Пригласить коллегу в кабинет */
-        post: operations["inviteTeamMember"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Загрузить прайс по шаблону
+     * @description `multipart/form-data` (как `/uploads`): файл `.xlsx` до 20 МБ. Поставщик — компания сессии, выбрать другого нельзя.
+     *     `dry_run=true` — предпросмотр: те же проверки и отчёт, ничего не записывается. Срок действия цен на весь файл —
+     *     `valid_from` / `valid_until` (колонки «Действует с / до» строки главнее). Загруженные цены считаются подтверждёнными.
+     *     Новые карточки — черновики; карточки, которыми владеем мы или которые опубликованы, прайс не переписывает —
+     *     расхождения уходят в предложения по полям. Обработка асинхронная: 202 и `task_id`.
+     */
+    post: operations["uploadPartnerPriceList"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/partner/price-list/{task_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/messages": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Лента чата кабинета компании
-         * @description Сообщения компании сессии по возрастанию `id`: с `after_id` — новые после него (опрос раз в 10 с, пока экран
-         *     открыт), без него — последние `limit`. Опрос отмечает присутствие контакта в кабинете (`last_seen`, с
-         *     прореживанием) — по нему уведомления решают, слать ли ответ менеджера во внешний канал. Модуль `messages`.
-         */
-        get: operations["listMessages"];
-        put?: never;
-        /**
-         * Написать менеджеру в чат кабинета
-         * @description Сообщение контакта сессии в ленту его компании; запись и событие `uz.railtech.erp.cabinet.message_posted.v1`
-         *     — одной транзакцией. Повтор с тем же `client_message_id` в пределах компании возвращает прежнее сообщение (200),
-         *     второго не создаёт. `context` — метка документа, со страницы которого написали: сделка, КП, счёт или акт компании
-         *     сессии (номер подставляет ERP); чужой или невидимый клиенту документ — 404. Требует `can_act`.
-         */
-        post: operations["postMessage"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Состояние и отчёт загрузки прайса */
+    get: operations["getPartnerPriceListTask"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/company": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/messages/read": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Контакт прочитал ленту до сообщения
-         * @description Отметка «прочитано» контактом сессии: ответы менеджера с `id` не больше `last_id` перестают считаться в
-         *     `Me.unread`. Отметка не уходит назад; `last_id` — сообщение ленты своей компании, иначе 404. Модуль `messages`;
-         *     `can_act` не нужен (чтение).
-         */
-        post: operations["markMessagesRead"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Профиль компании клиента */
+    get: operations["getCompany"];
+    /**
+     * Обновить профиль компании
+     * @description Название и ИНН компании, связанной с клиентом CRM, ведёт CRM (ORCHESTRATOR §3 п. 16): их правка — 422
+     *     `REQUISITES_MANAGED_BY_CRM`. Остальные поля правятся здесь.
+     */
+    put: operations["updateCompany"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/team": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    /** Команда клиента (контакты компании) */
+    get: operations["listTeam"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/team/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Пригласить коллегу в кабинет */
+    post: operations["inviteTeamMember"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента чата кабинета компании
+     * @description Сообщения компании сессии по возрастанию `id`: с `after_id` — новые после него (опрос раз в 10 с, пока экран
+     *     открыт), без него — последние `limit`. Опрос отмечает присутствие контакта в кабинете (`last_seen`, с
+     *     прореживанием) — по нему уведомления решают, слать ли ответ менеджера во внешний канал. Модуль `messages`.
+     */
+    get: operations["listMessages"];
+    put?: never;
+    /**
+     * Написать менеджеру в чат кабинета
+     * @description Сообщение контакта сессии в ленту его компании; запись и событие `uz.railtech.erp.cabinet.message_posted.v1`
+     *     — одной транзакцией. Повтор с тем же `client_message_id` в пределах компании возвращает прежнее сообщение (200),
+     *     второго не создаёт. `context` — метка документа, со страницы которого написали: сделка, КП, счёт или акт компании
+     *     сессии (номер подставляет ERP); чужой или невидимый клиенту документ — 404. Требует `can_act`.
+     */
+    post: operations["postMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/messages/read": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Контакт прочитал ленту до сообщения
+     * @description Отметка «прочитано» контактом сессии: ответы менеджера с `id` не больше `last_id` перестают считаться в
+     *     `Me.unread`. Отметка не уходит назад; `last_id` — сообщение ленты своей компании, иначе 404. Модуль `messages`;
+     *     `can_act` не нужен (чтение).
+     */
+    post: operations["markMessagesRead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        Error: {
-            /** @description Код из `ErrorCode`; новые коды добавляются в перечень в том же PR, что и код ERP */
-            detail: components["schemas"]["ErrorCode"] | string;
-        };
-        /**
-         * @description Коды `detail` портала (Q-17). Cabinet показывает текст по коду, незнакомый — по HTTP-статусу.
-         * @enum {string}
-         */
-        ErrorCode: "UNAUTHORIZED" | "INVALID_INIT_DATA" | "FORBIDDEN" | "MODULE_REQUIRED" | "NOT_FOUND" | "MAGIC_LINK_EXPIRED" | "LOGIN_CODE_INVALID" | "LOGIN_CODE_LOCKED" | "IDEMPOTENCY_KEY_REQUIRED" | "UNSUPPORTED_MEDIA_TYPE" | "TOO_MANY_REQUESTS" | "VALIDATION_ERROR" | "REASON_REQUIRED" | "INN_INVALID" | "REQUISITES_MANAGED_BY_CRM" | "TEAM_MEMBER_EXISTS" | "CONTACT_EMAIL_REQUIRED" | "CONTACT_CHANNEL_REQUIRED" | "INVALID_CHANNEL" | "FILE_REQUIRED" | "FILE_TOO_LARGE" | "UPLOAD_NOT_FOUND" | "QUOTE_FINALIZED" | "QUOTE_EXPIRED" | "QUOTE_CODE_INVALID" | "CONTRACT_FINALIZED" | "ACT_FINALIZED" | "DELIVERY_LINE_NOT_ACCEPTABLE" | "DOCUMENT_PENDING" | "DELIVERY_FAILED" | "INVOICE_NOT_OPEN" | "TEXT_REQUIRED" | "CONFLICT" | "XLSX_REQUIRED" | "VALID_DATE_INVALID" | "OFFER_VALIDITY_RANGE_INVALID" | "PRODUCT_NOT_SUBMITTABLE" | "OFFER_EXPIRED" | "IMPORT_FAILED";
-        /**
-         * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
-         *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
-         *     неопубликованной карточке, и ему показано только присланное им самим (его название строки, бренд, артикул
-         *     изготовителя, цена) — ни названия, ни категории, ни полноты, ни хода и истории чужой карточки.
-         * @enum {string}
-         */
-        PartnerCardStatus: "draft" | "review" | "returned" | "published" | "matched";
-        /**
-         * @description Свежесть цены: `expired` — срок действия истёк (подтвердить нельзя, нужен новый прайс); `stale` — не подтверждена
-         *     дольше N дней (настройка компании, по умолчанию 30); `expiring` — срок кончается в ближайшие 7 дней; иначе `fresh`.
-         * @enum {string}
-         */
-        OfferFreshness: "fresh" | "expiring" | "stale" | "expired";
-        /** @description Цена этой компании по карточке. Цен других поставщиков в ответах нет. */
-        PartnerOffer: {
-            price: components["schemas"]["Money"] | null;
-            /** Format: date */
-            valid_from: string | null;
-            /** Format: date */
-            valid_until: string | null;
-            /** @description Код Incoterms (FCA, DAP, EXW…) */
-            delivery_basis: string | null;
-            min_order_qty: number;
-            /** Format: date-time */
-            confirmed_at: string | null;
-            freshness: components["schemas"]["OfferFreshness"];
-        };
-        /**
-         * @description Поле карточки, к которому сотрудник привязал замечание при возврате; `other` — замечание не к одному полю
-         * @enum {string}
-         */
-        PartnerIssueField: "name" | "description" | "brand" | "manufacturer_part_number" | "gost_drawing" | "category" | "uom" | "hs_code" | "price" | "valid_until" | "other";
-        PartnerIssue: {
-            field: components["schemas"]["PartnerIssueField"];
-            comment: string;
-        };
-        PartnerMissingField: {
-            /** @description Поле, которого не хватает для публикации (name, uom, category, hs_code, identity) */
-            code: string;
-            label: string;
-        };
-        PartnerProduct: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            brand: string | null;
-            manufacturer_part_number: string;
-            category: string | null;
-            status: components["schemas"]["PartnerCardStatus"];
-            /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
-            return_reason: string | null;
-            /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
-            return_issues: components["schemas"]["PartnerIssue"][];
-            /** @description Полнота по полям, которые партнёр заполняет прайсом */
-            completeness: number;
-            offer: components["schemas"]["PartnerOffer"] | null;
-            /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
-            has_pending_change: boolean;
-            /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
-            is_own: boolean;
-            /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
-            can_submit: boolean;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        PartnerStatusCounts: {
-            all: number;
-            draft: number;
-            review: number;
-            returned: number;
-            published: number;
-            matched: number;
-        };
-        /** @description Сколько цен компании требуют внимания (по всем ценам, а не по странице); для плашки «подтвердите актуальность» */
-        PartnerAttention: {
-            expired: number;
-            stale: number;
-            expiring: number;
-        };
-        PartnerProductPage: {
-            items: components["schemas"]["PartnerProduct"][];
-            page: number;
-            page_size: number;
-            total: number;
-            counts: components["schemas"]["PartnerStatusCounts"];
-            attention: components["schemas"]["PartnerAttention"];
-        };
-        PartnerReviewEntry: {
-            /** Format: date-time */
-            submitted_at: string;
-            /**
-             * @description `cancelled` — проверка закрыта без решения (карточку сняли с публикации, архивировали или отправили заново)
-             * @enum {string}
-             */
-            decision: "pending" | "published" | "returned" | "cancelled";
-            /** @description Общий комментарий возврата */
-            reason: string;
-            issues: components["schemas"]["PartnerIssue"][];
-            /** Format: date-time */
-            decided_at: string | null;
-        };
-        /** @description Карточка списка (`PartnerProduct`) и подробности; поля списка повторены, чтобы схема была закрытой */
-        PartnerProductDetail: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            brand: string | null;
-            manufacturer_part_number: string;
-            category: string | null;
-            status: components["schemas"]["PartnerCardStatus"];
-            /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
-            return_reason: string | null;
-            /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
-            return_issues: components["schemas"]["PartnerIssue"][];
-            /** @description Полнота по полям, которые партнёр заполняет прайсом */
-            completeness: number;
-            offer: components["schemas"]["PartnerOffer"] | null;
-            /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
-            has_pending_change: boolean;
-            /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
-            is_own: boolean;
-            /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
-            can_submit: boolean;
-            /** Format: date-time */
-            updated_at: string;
-            description: string;
-            hs_code: string;
-            uom: string | null;
-            missing: components["schemas"]["PartnerMissingField"][];
-            /** @description Отправки на проверку и решения, новые сверху; только у своей карточки */
-            history: components["schemas"]["PartnerReviewEntry"][];
-        };
-        PartnerSubmitRequest: {
-            ids: number[];
-        };
-        PartnerItemError: {
-            /** Format: int64 */
-            id: number;
-            code: components["schemas"]["ErrorCode"];
-        };
-        PartnerSubmitResult: {
-            submitted: number[];
-            errors: components["schemas"]["PartnerItemError"][];
-        };
-        /** @description Либо `ids`, либо `all: true` */
-        PartnerConfirmRequest: {
-            ids?: number[];
-            all?: boolean;
-        };
-        PartnerConfirmResult: {
-            confirmed: number;
-            /** @description Сколько цен не подтверждено из-за истёкшего срока (по `ids` те же цены перечислены в `errors`) */
-            expired: number;
-            errors: components["schemas"]["PartnerItemError"][];
-        };
-        PriceListAccepted: {
-            task_id: string;
-        };
-        /**
-         * @description Колонка шаблона, в которой проблема строки
-         * @enum {string}
-         */
-        PriceListField: "name" | "brand" | "manufacturer_part_number" | "gost_drawing" | "supplier_sku" | "description" | "category" | "hs_code" | "domain_type" | "uom" | "price" | "currency" | "stock" | "lead" | "moq" | "valid_from" | "valid_until";
-        /** @description Что исправить в строке файла. Cabinet показывает текст по `code` и `field`, незнакомый код — общим «строка не загружена» */
-        PriceListRowIssue: {
-            /** @description Номер строки файла (с учётом строки заголовков) */
-            row: number;
-            field: components["schemas"]["PriceListField"] | null;
-            /** @description Код проблемы: `PRICE_NOT_A_NUMBER`, `PRICE_NOT_POSITIVE`, `UNKNOWN_CATEGORY`, `UNKNOWN_DOMAIN`, `UNKNOWN_CURRENCY`, `UNKNOWN_STOCK_STATUS`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`, `HS_CODE_TOO_LONG`, `HS_CODE_NOT_IN_CLASSIFIER`, `HS_CODE_RETIRED`, `ROW_FAILED` */
-            code: string;
-            /** @description Значение из файла, которое не подошло (категория, валюта, код ТН ВЭД…) */
-            value: string | null;
-        };
-        PriceListProposal: {
-            row: number;
-            /** @description Поле карточки, по которому отправлено предложение изменения */
-            field: string;
-        };
-        PriceListMissing: {
-            code: string;
-            label: string;
-            count: number;
-        };
-        PriceListReport: {
-            dry_run: boolean;
-            /** @description Новых карточек */
-            created: number;
-            /** @description Строк по уже известным карточкам */
-            updated: number;
-            offers_created: number;
-            offers_updated: number;
-            /** @description Предложений изменить поля чужой, опубликованной или находящейся на проверке карточки */
-            proposal_count: number;
-            proposals: components["schemas"]["PriceListProposal"][];
-            /** @description Строк с ошибкой — они не загружены */
-            error_count: number;
-            /** @description Первые 200 строк с ошибкой */
-            errors: components["schemas"]["PriceListRowIssue"][];
-            warning_count: number;
-            warnings: components["schemas"]["PriceListRowIssue"][];
-            /** @description Сколько строк файла не прочитано из-за предела размера */
-            rows_truncated: number;
-            /** @description Сколько карточек файла не наберут полноты для публикации */
-            unpublishable: number;
-            missing_breakdown: components["schemas"]["PriceListMissing"][];
-        };
-        PriceListTask: {
-            task_id: string;
-            /** @enum {string} */
-            status: "pending" | "running" | "completed" | "failed";
-            /** @description Код ошибки уровня файла при `failed` (`NAME_COLUMN_NOT_FOUND` — нет колонки наименования) */
-            error: string | null;
-            report: components["schemas"]["PriceListReport"] | null;
-        };
-        Reason: {
-            reason: string;
-        };
-        /** @enum {string} */
-        Language: "ru" | "uz" | "en";
-        /** @enum {string} */
-        PreferredChannel: "telegram" | "email" | "both";
-        Currency: string;
-        Amount: string;
-        Money: {
-            amount: components["schemas"]["Amount"];
-            currency: components["schemas"]["Currency"];
-        };
-        /** @description Сделка глазами клиента (Q-16) — номер и название вместо внутреннего id */
-        DealRef: {
-            /** Format: int64 */
-            id: number;
-            number: string;
-            title?: string | null;
-        };
-        AcceptanceCodeSent: {
-            /** @enum {string} */
-            channel: "telegram" | "email";
-            /** @description Куда ушёл код, в замаскированном виде: `i***@example.com`, `@u***` или `Telegram` */
-            sent_to: string;
-            /** @description Срок действия кода, секунд */
-            expires_in: number;
-        };
-        ActAccept: {
-            /** @description Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
-            upload_id?: string;
-        };
-        Me: {
-            contact: components["schemas"]["TeamMember"];
-            company: components["schemas"]["Company"];
-            /** @description Право «действовать» (принимать КП, подписывать, принимать акты); иначе — только смотреть */
-            can_act: boolean;
-            /** @enum {string} */
-            auth_method: "telegram" | "magic_link";
-            /** @description Непрочитанные контактом уведомления колокольчика (только видимые модулям сессии); 0 — нет */
-            notifications_unread: number;
-            /** @description Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются. */
-            roles: components["schemas"]["PortalRole"][];
-            /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
-            modules: components["schemas"]["ModuleCode"][];
-            /** @description Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет */
-            unread: number;
-        };
-        /** @enum {string} */
-        PortalRole: "client" | "partner";
-        /**
-         * @description Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
-         *     незнакомый пропускает.
-         * @enum {string}
-         */
-        ModuleCode: "catalog_requests" | "quotes" | "documents" | "contracts" | "invoices" | "acts" | "deliveries" | "company" | "team" | "profile" | "my_products" | "messages";
-        /**
-         * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
-         *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
-         *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
-         *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
-         *     Незнакомый вид Cabinet показывает общим текстом.
-         * @enum {string}
-         */
-        NotificationKind: "quote_sent" | "invoice_issued" | "payment_overdue" | "act_issued" | "delivery_status_changed" | "delivery_eta_changed" | "manager_replied" | "partner_card_returned" | "partner_card_published";
-        /**
-         * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
-         * @enum {string}
-         */
-        NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products";
-        /** @enum {string} */
-        NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product";
-        /**
-         * @description Что произошло с объектом или чего ждут от контакта
-         * @enum {string}
-         */
-        NotificationAction: "awaiting_decision" | "issued" | "overdue" | "awaiting_acceptance" | "status_changed" | "eta_changed" | "replied" | "returned" | "published";
-        /**
-         * @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
-         *     id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).
-         */
-        NotificationObject: {
-            type: components["schemas"]["NotificationObjectType"];
-            /** Format: int64 */
-            id: number;
-            number: string | null;
-        };
-        PortalNotification: {
-            /** Format: int64 */
-            id: number;
-            kind: components["schemas"]["NotificationKind"];
-            group: components["schemas"]["NotificationGroup"];
-            object: components["schemas"]["NotificationObject"];
-            action: components["schemas"]["NotificationAction"];
-            /** @description Ключ текста в словарях Cabinet (`notifications.text.<text_key>`); текст на языке контакта рендерит Cabinet */
-            text_key: string;
-            /** @description Параметры текста (номер, сумма, дата, статус) — строки */
-            params: {
-                [key: string]: string;
-            };
-            /** @description Адрес объекта в кабинете (путь от корня Cabinet, например `/quotes/42`) */
-            link: string;
-            /** Format: date-time */
-            created_at: string;
-            /**
-             * Format: date-time
-             * @description Когда контакт прочитал; `null` — не прочитано
-             */
-            read_at: string | null;
-        };
-        NotificationPage: {
-            items: components["schemas"]["PortalNotification"][];
-            /** @description Есть более ранние уведомления — следующая страница с `before_id` = `id` последнего элемента */
-            has_more: boolean;
-        };
-        /** @description Ровно одно из двух — `ids` или `all: true` */
-        NotificationReadMark: {
-            ids?: number[];
-            all?: boolean;
-        };
-        NotificationUnread: {
-            unread: number;
-        };
-        /** @enum {string} */
-        RequestStatus: "new" | "in_progress" | "quoted" | "closed";
-        RequestLineIn: {
-            text: string;
-            /** @description Количество как десятичная строка, если известно */
-            quantity?: string | null;
-            unit?: string | null;
-        };
-        /** @description Файл, загруженный через `POST /uploads` (`upload_id` из ответа). Лишних полей нет — размер ERP знает сам */
-        AttachmentRef: {
-            upload_id: string;
-            name: string;
-        };
-        ClientRequestCreate: {
-            summary: string;
-            /** @description Нет поля или пустой список — запрос словами, без строк (Q-FIX23-4) */
-            lines?: components["schemas"]["RequestLineIn"][];
-            attachments?: components["schemas"]["AttachmentRef"][];
-        };
-        ClientRequest: {
-            /** Format: int64 */
-            id: number;
-            number: string;
-            status: components["schemas"]["RequestStatus"];
-            summary: string;
-            /** @enum {string} */
-            source?: "crm" | "cabinet" | "erp";
-            /** @description Сделка, в которую вырос запрос (Q-16); `null`, пока запрос не стал сделкой */
-            deal?: components["schemas"]["DealRef"] | null;
-            /** Format: date-time */
-            created_at: string;
-            lines?: components["schemas"]["RequestLineIn"][];
-            attachments?: components["schemas"]["AttachmentRef"][];
-        };
-        /** @enum {string} */
-        QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired";
-        QuoteListItem: {
-            /** Format: int64 */
-            id: number;
-            deal: components["schemas"]["DealRef"];
-            number: string;
-            version: number;
-            status: components["schemas"]["QuoteStatus"];
-            total: components["schemas"]["Money"];
-            /** Format: date */
-            valid_until?: string | null;
-            /** Format: date-time */
-            sent_at: string;
-        };
-        /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
-        QuoteLine: {
-            line_no: number;
-            /** @enum {string} */
-            kind: "item" | "section" | "note" | "stage";
-            title: string;
-            description?: string;
-            quantity?: string | null;
-            unit?: string | null;
-            unit_price?: components["schemas"]["Money"] | null;
-            total?: components["schemas"]["Money"] | null;
-            /** Format: date */
-            promised_date?: string | null;
-        };
-        Quote: components["schemas"]["QuoteListItem"] & {
-            /** @description Итого без НДС — сумма `total` строк (Q-FIX21-2) */
-            subtotal: components["schemas"]["Money"];
-            /** @description НДС; `subtotal + vat = total`, как в PDF КП */
-            vat: components["schemas"]["Money"];
-            lines: components["schemas"]["QuoteLine"][];
-            /** Format: uri */
-            public_url: string;
-            /** Format: int64 */
-            pdf_document_id?: number | null;
-            rejected_reason?: string | null;
-            /** @description Комментарии к КП, старые первыми (`POST /quotes/{id}/comments`) */
-            comments: components["schemas"]["QuoteComment"][];
-        };
-        QuoteCommentCreate: {
-            text: string;
-        };
-        QuoteComment: {
-            /** Format: int64 */
-            id: number;
-            /**
-             * @description Кто написал — сотрудник компании клиента или менеджер продавца
-             * @enum {string}
-             */
-            author: "client" | "manager";
-            /** @description Имя автора; `null`, если его нет в карточке */
-            author_name?: string | null;
-            text: string;
-            /** Format: date-time */
-            created_at: string;
-        };
-        /** @enum {string} */
-        ContractStatus: "sent" | "signed_by_client" | "signed_by_company" | "signed" | "cancelled";
-        Contract: {
-            /** Format: int64 */
-            id: number;
-            deal: components["schemas"]["DealRef"];
-            number: string;
-            status: components["schemas"]["ContractStatus"];
-            /** Format: date-time */
-            signed_by_client_at?: string | null;
-            /** Format: date-time */
-            signed_by_company_at?: string | null;
-            /** Format: int64 */
-            document_id?: number | null;
-        };
-        /** @enum {string} */
-        InvoiceStatus: "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
-        Invoice: {
-            /** Format: int64 */
-            id: number;
-            deal: components["schemas"]["DealRef"];
-            number: string;
-            status: components["schemas"]["InvoiceStatus"];
-            total: components["schemas"]["Money"];
-            paid: components["schemas"]["Money"];
-            /** Format: date */
-            due_date: string;
-            /** Format: int64 */
-            document_id?: number | null;
-            /** @description Платёжки по счёту, старые первыми — из кабинета и те, что приложил менеджер */
-            proofs: components["schemas"]["PaymentProof"][];
-        };
-        /**
-         * @description `pending` — менеджер ещё не сверил платёжку с выпиской; `confirmed` — оплата по ней подтверждена; `rejected` — отклонена с причиной `reject_reason` (ERP пока не отклоняет платёжки — BACKLOG B-D24-7)
-         * @enum {string}
-         */
-        PaymentProofStatus: "pending" | "confirmed" | "rejected";
-        PaymentProofCreate: {
-            /** @description Файл платёжного поручения из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
-            upload_id: string;
-            /**
-             * Format: date
-             * @description Дата платежа по словам клиента (не позже сегодняшней)
-             */
-            paid_on?: string | null;
-            /** @description Сумма платежа по словам клиента в валюте счёта, больше нуля */
-            amount?: components["schemas"]["Amount"] | null;
-            comment?: string | null;
-        };
-        PaymentProof: {
-            /** Format: int64 */
-            id: number;
-            status: components["schemas"]["PaymentProofStatus"];
-            /**
-             * @description Откуда платёжка — кабинет клиента, бот, почта или её приложил менеджер
-             * @enum {string}
-             */
-            source: "cabinet" | "bot" | "email" | "manager";
-            file_name: string;
-            /** Format: date-time */
-            submitted_at: string;
-            /**
-             * Format: date
-             * @description Дата платежа, которую указал клиент; не проверена
-             */
-            paid_on?: string | null;
-            /** @description Сумма, которую указал клиент; не проверена — сумму подтверждает менеджер по выписке */
-            amount?: components["schemas"]["Money"] | null;
-            /** @description Комментарий клиента (только у платёжек из кабинета) */
-            comment?: string | null;
-            /** Format: date-time */
-            confirmed_at?: string | null;
-            reject_reason?: string | null;
-        };
-        /** @enum {string} */
-        ActStatus: "issued" | "accepted" | "returned";
-        Act: {
-            /** Format: int64 */
-            id: number;
-            deal: components["schemas"]["DealRef"];
-            number: string;
-            status: components["schemas"]["ActStatus"];
-            /** Format: date-time */
-            issued_at: string;
-            returned_reason?: string | null;
-            /**
-             * Format: int64
-             * @description Выпущенный акт (PDF ERP)
-             */
-            document_id?: number | null;
-            /**
-             * Format: int64
-             * @description Скан подписанного клиентом экземпляра, если загружен при приёмке
-             */
-            scan_document_id?: number | null;
-        };
-        /**
-         * @description `accepted` и `disputed` ставит клиент (`/deliveries/{id}/accept|dispute`); остальное — ERP (M4 — со склада)
-         * @enum {string}
-         */
-        DeliveryStatus: "assembling" | "in_transit" | "ready_to_ship" | "shipped" | "delivered" | "accepted" | "disputed";
-        /** @description Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки */
-        DeliveryLine: {
-            /** Format: int64 */
-            id: number;
-            deal: components["schemas"]["DealRef"];
-            line_no: number;
-            title: string;
-            quantity?: string | null;
-            unit?: string | null;
-            status: components["schemas"]["DeliveryStatus"];
-            /** Format: date */
-            eta?: string | null;
-            tracking?: string | null;
-            /** Format: date-time */
-            shipped_at?: string | null;
-            /**
-             * Format: date-time
-             * @description Когда клиент принял или оспорил строку
-             */
-            accepted_at?: string | null;
-            /** @description Замечание клиента при `disputed` */
-            remark?: string | null;
-        };
-        /** @enum {string} */
-        DocumentKind: "quote" | "contract" | "invoice" | "act" | "specification" | "waybill" | "receipt" | "other";
-        Document: {
-            /** Format: int64 */
-            id: number;
-            deal?: components["schemas"]["DealRef"] | null;
-            kind: components["schemas"]["DocumentKind"];
-            number: string;
-            /** Format: date */
-            date: string;
-            title: string;
-            file_name?: string;
-            size_bytes?: number;
-        };
-        /** @enum {string} */
-        Availability: "in_stock" | "on_order" | "expected";
-        CatalogItem: {
-            /** Format: int64 */
-            id: number;
-            /** @enum {string} */
-            kind: "goods" | "service";
-            name: string;
-            description?: string;
-            unit: string;
-            /** @description Название категории; справочник с id — `GET /catalog/categories` (Q-15) */
-            category?: string | null;
-            /**
-             * Format: int64
-             * @description Id категории для фильтра `GET /catalog?category_id=`
-             */
-            category_id?: number | null;
-            /** @description `null` — «цена по запросу» */
-            price: components["schemas"]["Money"] | null;
-            availability: components["schemas"]["Availability"];
-            lead_time_days?: number | null;
-            /** @description Ссылки на фото; главное фото — первым (CAT-CARD-2) */
-            images?: string[];
-            attributes?: {
-                name: string;
-                value: string;
-            }[];
-            /** @description Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2) */
-            manufacturer?: components["schemas"]["CatalogManufacturer"] | null;
-            /** @description Артикул изготовителя (MPN); `null` — не указан. Артикул продавца или поставщика сюда не попадает */
-            manufacturer_part_number?: string | null;
-            /** @description Название страны происхождения — своя у карточки, иначе страна изготовителя; `null` — нигде не указана */
-            country_of_origin?: string | null;
-            /** @description Гарантия — своя у карточки, иначе срок по умолчанию у компании; `null`, если нигде не задана или равна нулю */
-            warranty?: components["schemas"]["CatalogWarranty"] | null;
-            /**
-             * @description Только в карточке `GET /catalog/{id}`; в списке `GET /catalog`, в `erp-integration` и MCP документов нет. Только
-             *     документы, отмеченные «видно клиенту», и только действующие (срок «действует до» не прошёл; пусто — бессрочно).
-             *     Файл — `GET /catalog/{id}/documents/{doc_id}/file`.
-             */
-            documents?: components["schemas"]["CatalogItemDocument"][];
-        };
-        CatalogManufacturer: {
-            name: string;
-            /** @description Название страны изготовителя */
-            country: string | null;
-        };
-        CatalogWarranty: {
-            months: number;
-            /** @description Условия гарантии; пустая строка — не заданы */
-            terms: string;
-        };
-        CatalogItemDocument: {
-            /** Format: int64 */
-            id: number;
-            /** @description Название вида документа (справочник, ведёт администратор) */
-            kind_name: string;
-            title: string;
-            /** @description Пустая строка — номера нет */
-            number: string;
-            /** @description Кем выдан; пустая строка — не указано */
-            issued_by: string;
-            /** Format: date */
-            issued_at: string | null;
-            /**
-             * Format: date
-             * @description Действует до; `null` — бессрочно
-             */
-            valid_until: string | null;
-        };
-        CatalogPage: {
-            items: components["schemas"]["CatalogItem"][];
-            page: number;
-            page_size: number;
-            total: number;
-        };
-        Company: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            inn?: string | null;
-            legal_address?: string | null;
-            bank_details?: string | null;
-            language: components["schemas"]["Language"];
-        };
-        CompanyUpdate: {
-            name?: string;
-            inn?: string;
-            legal_address?: string;
-            bank_details?: string;
-            language?: components["schemas"]["Language"];
-        };
-        TeamMember: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            /** Format: email */
-            email?: string | null;
-            phone?: string | null;
-            has_telegram?: boolean;
-            language: components["schemas"]["Language"];
-            preferred_channel: components["schemas"]["PreferredChannel"];
-            can_act: boolean;
-            is_primary: boolean;
-            /** Format: date-time */
-            invited_at?: string | null;
-            /** Format: date-time */
-            last_login_at?: string | null;
-        };
-        TeamInvite: {
-            name: string;
-            /** Format: email */
-            email?: string;
-            phone?: string;
-            language: components["schemas"]["Language"];
-            /** @default false */
-            can_act: boolean;
-            channels: ("email" | "telegram")[];
-        };
-        CatalogCategory: {
-            /** Format: int64 */
-            id: number;
-            name: string;
-            count: number;
-        };
-        PortalUploadResponse: {
-            upload_id: string;
-            name: string;
-            mime_type?: string;
-            size_bytes?: number;
-        };
-        /**
-         * @description Вид документа метки сообщения
-         * @enum {string}
-         */
-        MessageContextKind: "deal" | "quote" | "invoice" | "act";
-        /** @description Метка документа в новом сообщении — вид и id; номер подставляет ERP */
-        MessageContextRef: {
-            kind: components["schemas"]["MessageContextKind"];
-            /** Format: int64 */
-            id: number;
-        };
-        /** @description Метка документа у сообщения — вид, id и номер («КП KP-2026-0042») */
-        MessageContext: {
-            kind: components["schemas"]["MessageContextKind"];
-            /** Format: int64 */
-            id: number;
-            number: string;
-        };
-        PortalMessageCreate: {
-            /** @description Текст как есть; Cabinet показывает его текстом, не HTML */
-            text: string;
-            /** @description Ключ повтора, выданный Cabinet при первой попытке; повтор отправки — тот же ключ */
-            client_message_id: string;
-            context?: components["schemas"]["MessageContextRef"] | null;
-        };
-        PortalMessage: {
-            /** Format: int64 */
-            id: number;
-            /**
-             * @description `client` — написал контакт компании, `manager` — ответ менеджера
-             * @enum {string}
-             */
-            direction: "client" | "manager";
-            /** @description Имя контакта или менеджера; `null` — имени нет */
-            author_name: string | null;
-            /** @description Сообщение написал контакт этой сессии */
-            mine: boolean;
-            text: string;
-            context: components["schemas"]["MessageContext"] | null;
-            /** Format: date-time */
-            created_at: string;
-            /** @description Ключ повтора сообщения контакта (у ответа менеджера — `null`) */
-            client_message_id: string | null;
-            /** @description Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется */
-            erased: boolean;
-        };
-        PortalMessagePage: {
-            items: components["schemas"]["PortalMessage"][];
-            /** @description С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние */
-            has_more: boolean;
-        };
-        PortalMessageReadMark: {
-            /** Format: int64 */
-            last_id: number;
-        };
-        PortalMessageUnread: {
-            unread: number;
-        };
+  schemas: {
+    Error: {
+      /** @description Код из `ErrorCode`; новые коды добавляются в перечень в том же PR, что и код ERP */
+      detail: components["schemas"]["ErrorCode"] | string;
     };
-    responses: {
-        /** @description Нет сессии портала */
-        Unauthorized: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description У контакта нет права действовать (`can_act = false`; `FORBIDDEN`) или у сессии нет модуля эндпоинта (`MODULE_REQUIRED`) */
-        Forbidden: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Компания контакта архивна — вход закрыт любым каналом (`FORBIDDEN`, Q-18) */
-        CompanyArchived: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Объект не найден или принадлежит другой компании */
-        NotFound: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Тело запроса не прошло проверку */
-        ValidationError: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Нет заголовка `Idempotency-Key` (`{"detail": "IDEMPOTENCY_KEY_REQUIRED"}`); запрос не выполнялся */
-        IdempotencyKeyRequired: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Тело не `application/json` (`{"detail": "UNSUPPORTED_MEDIA_TYPE"}`); запрос не выполнялся */
-        UnsupportedMediaType: {
-            headers: {
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
-        /** @description Лимит частоты исчерпан (`{"detail": "TOO_MANY_REQUESTS"}`); повторить через `Retry-After` секунд */
-        TooManyRequests: {
-            headers: {
-                /** @description Через сколько секунд можно повторить */
-                "Retry-After"?: number;
-                [name: string]: unknown;
-            };
-            content: {
-                "application/json": components["schemas"]["Error"];
-            };
-        };
+    /**
+     * @description Коды ошибок портала (Q-17) — **открытое множество** (решение архитектора 2026-11-04, CONTRACTS §7.2; эталон —
+     *     Zalando RESTful API Guidelines, `x-extensible-enum`): перечень ниже — известные на сегодня коды, новый код
+     *     добавляется без смены версии и не ломает контракт. Клиент обрабатывает незнакомый код как общую ошибку по
+     *     HTTP-статусу (Cabinet — `apiErrorKey`). Поэтому здесь `x-extensible-enum`, а не `enum`.
+     */
+    ErrorCode: string;
+    /**
+     * @description Статус карточки глазами партнёра: `draft` — черновик, `review` — на проверке, `returned` — возвращена с причиной,
+     *     `published` — опубликована; `matched` — «сопоставлено с карточкой каталога»: цена партнёра привязалась к чужой
+     *     неопубликованной карточке, и ему показано только присланное им самим (его название строки, бренд, артикул
+     *     изготовителя, цена) — ни названия, ни категории, ни полноты, ни хода и истории чужой карточки.
+     * @enum {string}
+     */
+    PartnerCardStatus: "draft" | "review" | "returned" | "published" | "matched";
+    /**
+     * @description Свежесть цены: `expired` — срок действия истёк (подтвердить нельзя, нужен новый прайс); `stale` — не подтверждена
+     *     дольше N дней (настройка компании, по умолчанию 30); `expiring` — срок кончается в ближайшие 7 дней; иначе `fresh`.
+     * @enum {string}
+     */
+    OfferFreshness: "fresh" | "expiring" | "stale" | "expired";
+    /** @description Цена этой компании по карточке. Цен других поставщиков в ответах нет. */
+    PartnerOffer: {
+      price: components["schemas"]["Money"] | null;
+      /** Format: date */
+      valid_from: string | null;
+      /** Format: date */
+      valid_until: string | null;
+      /** @description Код Incoterms (FCA, DAP, EXW…) */
+      delivery_basis: string | null;
+      min_order_qty: number;
+      /** Format: date-time */
+      confirmed_at: string | null;
+      freshness: components["schemas"]["OfferFreshness"];
     };
+    /**
+     * @description Поле карточки, к которому сотрудник привязал замечание при возврате; `other` — замечание не к одному полю
+     * @enum {string}
+     */
+    PartnerIssueField:
+      | "name"
+      | "description"
+      | "brand"
+      | "manufacturer_part_number"
+      | "gost_drawing"
+      | "category"
+      | "uom"
+      | "hs_code"
+      | "price"
+      | "valid_until"
+      | "other";
+    PartnerIssue: {
+      field: components["schemas"]["PartnerIssueField"];
+      comment: string;
+    };
+    PartnerMissingField: {
+      /** @description Поле, которого не хватает для публикации (name, uom, category, hs_code, identity) */
+      code: string;
+      label: string;
+    };
+    PartnerProduct: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      brand: string | null;
+      manufacturer_part_number: string;
+      category: string | null;
+      status: components["schemas"]["PartnerCardStatus"];
+      /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
+      return_reason: string | null;
+      /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
+      return_issues: components["schemas"]["PartnerIssue"][];
+      /** @description Полнота по полям, которые партнёр заполняет прайсом */
+      completeness: number;
+      offer: components["schemas"]["PartnerOffer"] | null;
+      /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
+      has_pending_change: boolean;
+      /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
+      is_own: boolean;
+      /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
+      can_submit: boolean;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    PartnerStatusCounts: {
+      all: number;
+      draft: number;
+      review: number;
+      returned: number;
+      published: number;
+      matched: number;
+    };
+    /** @description Сколько цен компании требуют внимания (по всем ценам, а не по странице); для плашки «подтвердите актуальность» */
+    PartnerAttention: {
+      expired: number;
+      stale: number;
+      expiring: number;
+    };
+    PartnerProductPage: {
+      items: components["schemas"]["PartnerProduct"][];
+      page: number;
+      page_size: number;
+      total: number;
+      counts: components["schemas"]["PartnerStatusCounts"];
+      attention: components["schemas"]["PartnerAttention"];
+    };
+    PartnerReviewEntry: {
+      /** Format: date-time */
+      submitted_at: string;
+      /**
+       * @description `cancelled` — проверка закрыта без решения (карточку сняли с публикации, архивировали или отправили заново)
+       * @enum {string}
+       */
+      decision: "pending" | "published" | "returned" | "cancelled";
+      /** @description Общий комментарий возврата */
+      reason: string;
+      issues: components["schemas"]["PartnerIssue"][];
+      /** Format: date-time */
+      decided_at: string | null;
+    };
+    /** @description Карточка списка (`PartnerProduct`) и подробности; поля списка повторены, чтобы схема была закрытой */
+    PartnerProductDetail: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      brand: string | null;
+      manufacturer_part_number: string;
+      category: string | null;
+      status: components["schemas"]["PartnerCardStatus"];
+      /** @description Общий комментарий последнего возврата — только у своей карточки в статусе `returned` */
+      return_reason: string | null;
+      /** @description Замечания по полям последнего возврата (поле подсвечивается рядом с комментарием); пусто вне `returned` */
+      return_issues: components["schemas"]["PartnerIssue"][];
+      /** @description Полнота по полям, которые партнёр заполняет прайсом */
+      completeness: number;
+      offer: components["schemas"]["PartnerOffer"] | null;
+      /** @description У карточки есть правка этой компании, ожидающая решения сотрудника */
+      has_pending_change: boolean;
+      /** @description Карточка заведена из данных этой компании; чужую партнёр не отправляет на проверку */
+      is_own: boolean;
+      /** @description Можно отправить на проверку (своя карточка в статусе `draft` или `returned`) */
+      can_submit: boolean;
+      /** Format: date-time */
+      updated_at: string;
+      description: string;
+      hs_code: string;
+      uom: string | null;
+      missing: components["schemas"]["PartnerMissingField"][];
+      /** @description Отправки на проверку и решения, новые сверху; только у своей карточки */
+      history: components["schemas"]["PartnerReviewEntry"][];
+    };
+    PartnerSubmitRequest: {
+      ids: number[];
+    };
+    PartnerItemError: {
+      /** Format: int64 */
+      id: number;
+      code: components["schemas"]["ErrorCode"];
+    };
+    PartnerSubmitResult: {
+      submitted: number[];
+      errors: components["schemas"]["PartnerItemError"][];
+    };
+    /** @description Либо `ids`, либо `all: true` */
+    PartnerConfirmRequest: {
+      ids?: number[];
+      all?: boolean;
+    };
+    PartnerConfirmResult: {
+      confirmed: number;
+      /** @description Сколько цен не подтверждено из-за истёкшего срока (по `ids` те же цены перечислены в `errors`) */
+      expired: number;
+      errors: components["schemas"]["PartnerItemError"][];
+    };
+    PriceListAccepted: {
+      task_id: string;
+    };
+    /**
+     * @description Колонка шаблона, в которой проблема строки
+     * @enum {string}
+     */
+    PriceListField:
+      | "name"
+      | "brand"
+      | "manufacturer_part_number"
+      | "gost_drawing"
+      | "supplier_sku"
+      | "description"
+      | "category"
+      | "hs_code"
+      | "domain_type"
+      | "uom"
+      | "price"
+      | "currency"
+      | "stock"
+      | "lead"
+      | "moq"
+      | "valid_from"
+      | "valid_until";
+    /** @description Что исправить в строке файла. Cabinet показывает текст по `code` и `field`, незнакомый код — общим «строка не загружена» */
+    PriceListRowIssue: {
+      /** @description Номер строки файла (с учётом строки заголовков) */
+      row: number;
+      field: components["schemas"]["PriceListField"] | null;
+      /** @description Код проблемы: `PRICE_NOT_A_NUMBER`, `PRICE_NOT_POSITIVE`, `UNKNOWN_CATEGORY`, `UNKNOWN_DOMAIN`, `UNKNOWN_CURRENCY`, `UNKNOWN_STOCK_STATUS`, `VALID_DATE_INVALID`, `OFFER_VALIDITY_RANGE_INVALID`, `HS_CODE_TOO_LONG`, `HS_CODE_NOT_IN_CLASSIFIER`, `HS_CODE_RETIRED`, `ROW_FAILED` */
+      code: string;
+      /** @description Значение из файла, которое не подошло (категория, валюта, код ТН ВЭД…) */
+      value: string | null;
+    };
+    PriceListProposal: {
+      row: number;
+      /** @description Поле карточки, по которому отправлено предложение изменения */
+      field: string;
+    };
+    PriceListMissing: {
+      code: string;
+      label: string;
+      count: number;
+    };
+    PriceListReport: {
+      dry_run: boolean;
+      /** @description Новых карточек */
+      created: number;
+      /** @description Строк по уже известным карточкам */
+      updated: number;
+      offers_created: number;
+      offers_updated: number;
+      /** @description Предложений изменить поля чужой, опубликованной или находящейся на проверке карточки */
+      proposal_count: number;
+      proposals: components["schemas"]["PriceListProposal"][];
+      /** @description Строк с ошибкой — они не загружены */
+      error_count: number;
+      /** @description Первые 200 строк с ошибкой */
+      errors: components["schemas"]["PriceListRowIssue"][];
+      warning_count: number;
+      warnings: components["schemas"]["PriceListRowIssue"][];
+      /** @description Сколько строк файла не прочитано из-за предела размера */
+      rows_truncated: number;
+      /** @description Сколько карточек файла не наберут полноты для публикации */
+      unpublishable: number;
+      missing_breakdown: components["schemas"]["PriceListMissing"][];
+    };
+    PriceListTask: {
+      task_id: string;
+      /** @enum {string} */
+      status: "pending" | "running" | "completed" | "failed";
+      /** @description Код ошибки уровня файла при `failed` (`NAME_COLUMN_NOT_FOUND` — нет колонки наименования) */
+      error: string | null;
+      report: components["schemas"]["PriceListReport"] | null;
+    };
+    Reason: {
+      reason: string;
+    };
+    /** @enum {string} */
+    Language: "ru" | "uz" | "en";
+    /** @enum {string} */
+    PreferredChannel: "telegram" | "email" | "both";
+    Currency: string;
+    Amount: string;
+    Money: {
+      amount: components["schemas"]["Amount"];
+      currency: components["schemas"]["Currency"];
+    };
+    /** @description Сделка глазами клиента (Q-16) — номер и название вместо внутреннего id */
+    DealRef: {
+      /** Format: int64 */
+      id: number;
+      number: string;
+      title?: string | null;
+    };
+    AcceptanceCodeSent: {
+      /** @enum {string} */
+      channel: "telegram" | "email";
+      /** @description Куда ушёл код, в замаскированном виде: `i***@example.com`, `@u***` или `Telegram` */
+      sent_to: string;
+      /** @description Срок действия кода, секунд */
+      expires_in: number;
+    };
+    ActAccept: {
+      /** @description Скан подписанного акта из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
+      upload_id?: string;
+    };
+    Me: {
+      contact: components["schemas"]["TeamMember"];
+      company: components["schemas"]["Company"];
+      /** @description Право «действовать» (принимать КП, подписывать, принимать акты); иначе — только смотреть */
+      can_act: boolean;
+      /** @enum {string} */
+      auth_method: "telegram" | "magic_link";
+      /** @description Непрочитанные контактом уведомления колокольчика (только видимые модулям сессии); 0 — нет */
+      notifications_unread: number;
+      /** @description Роли компании сессии в кабинете. Клиент — по типу компании CLIENT, партнёр — по действующему отношению `partner`; роли складываются. */
+      roles: components["schemas"]["PortalRole"][];
+      /** @description Разделы кабинета для этих ролей по шаблону `x-role-modules`, в порядке меню. Пусто — разделы ещё не настроены. */
+      modules: components["schemas"]["ModuleCode"][];
+      /** @description Непрочитанные контактом ответы менеджера в чате кабинета (бейдж «Сообщения»); 0 — нет или модуля нет */
+      unread: number;
+    };
+    TelegramStatus: {
+      /** @description Telegram привязан к контакту (по проекции CRM) — уведомления приходят в бот, Mini App входит без письма */
+      linked: boolean;
+      /** @description Какой аккаунт привязан — `@имя_пользователя` или имя профиля Telegram (из проекции CRM); `null` — Telegram не привязан или CRM не прислала имени. Защита от пересланной ссылки: человек видит, чей Telegram получает коды акцепта и входит в Mini App */
+      account?: string | null;
+      /** @description Можно ли выпустить ссылку привязки: бот настроен и контакт сопоставлен с CRM. `false` — Cabinet не предлагает «Подключить» (плашку не показывает, в Профиле — подсказка написать менеджеру) */
+      available: boolean;
+    };
+    TelegramLink: {
+      /**
+       * Format: uri
+       * @description `https://t.me/<бот>?start=<токен>`; её же Cabinet кодирует в QR
+       */
+      url: string;
+      /**
+       * Format: date-time
+       * @description Когда ссылка перестанет действовать (15 минут от выпуска)
+       */
+      expires_at: string;
+    };
+    /** @enum {string} */
+    PortalRole: "client" | "partner";
+    /**
+     * @description Раздел кабинета. `catalog_requests` — каталог и заявки (два пункта меню). Cabinet рисует только известные ему коды,
+     *     незнакомый пропускает.
+     * @enum {string}
+     */
+    ModuleCode:
+      | "catalog_requests"
+      | "quotes"
+      | "documents"
+      | "contracts"
+      | "invoices"
+      | "acts"
+      | "deliveries"
+      | "company"
+      | "team"
+      | "profile"
+      | "my_products"
+      | "messages";
+    /**
+     * @description Вид уведомления (событие для контрагента): `quote_sent` — КП ждёт решения, `invoice_issued` — выставлен счёт,
+     *     `payment_overdue` — срок оплаты счёта прошёл, `act_issued` — акт ждёт приёмки, `delivery_status_changed` — статус
+     *     поставки, `delivery_eta_changed` — сдвиг срока поставки, `manager_replied` — ответ менеджера в чате кабинета,
+     *     `partner_card_returned` — карточка партнёра возвращена на доработку, `partner_card_published` — опубликована.
+     *     Незнакомый вид Cabinet показывает общим текстом.
+     * @enum {string}
+     */
+    NotificationKind:
+      | "quote_sent"
+      | "invoice_issued"
+      | "payment_overdue"
+      | "act_issued"
+      | "delivery_status_changed"
+      | "delivery_eta_changed"
+      | "manager_replied"
+      | "partner_card_returned"
+      | "partner_card_published";
+    /**
+     * @description Группа событий — основа настройки «группа × канал» в профиле контакта (J3)
+     * @enum {string}
+     */
+    NotificationGroup: "documents" | "money" | "deliveries" | "messages" | "partner_products";
+    /** @enum {string} */
+    NotificationObjectType: "quote" | "invoice" | "act" | "delivery" | "chat" | "partner_product";
+    /**
+     * @description Что произошло с объектом или чего ждут от контакта
+     * @enum {string}
+     */
+    NotificationAction:
+      | "awaiting_decision"
+      | "issued"
+      | "overdue"
+      | "awaiting_acceptance"
+      | "status_changed"
+      | "eta_changed"
+      | "replied"
+      | "returned"
+      | "published";
+    /**
+     * @description Объект уведомления — тип, id в ERP и номер для человека (`null` — номера нет, например у чата). У поставки `id` —
+     *     id сделки (поставка одна на сделку и открывается в кабинете внутри проекта; тот же id в `start_param=delivery_<id>`).
+     */
+    NotificationObject: {
+      type: components["schemas"]["NotificationObjectType"];
+      /** Format: int64 */
+      id: number;
+      number: string | null;
+    };
+    PortalNotification: {
+      /** Format: int64 */
+      id: number;
+      kind: components["schemas"]["NotificationKind"];
+      group: components["schemas"]["NotificationGroup"];
+      object: components["schemas"]["NotificationObject"];
+      action: components["schemas"]["NotificationAction"];
+      /** @description Ключ текста в словарях Cabinet (`notifications.text.<text_key>`); текст на языке контакта рендерит Cabinet */
+      text_key: string;
+      /** @description Параметры текста (номер, сумма, дата, статус) — строки */
+      params: {
+        [key: string]: string;
+      };
+      /** @description Адрес объекта в кабинете (путь от корня Cabinet, например `/quotes/42`) */
+      link: string;
+      /** Format: date-time */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Когда контакт прочитал; `null` — не прочитано
+       */
+      read_at: string | null;
+    };
+    NotificationPage: {
+      items: components["schemas"]["PortalNotification"][];
+      /** @description Есть более ранние уведомления — следующая страница с `before_id` = `id` последнего элемента */
+      has_more: boolean;
+    };
+    /** @description Ровно одно из двух — `ids` или `all: true` */
+    NotificationReadMark: {
+      ids?: number[];
+      all?: boolean;
+    };
+    NotificationUnread: {
+      unread: number;
+    };
+    /** @enum {string} */
+    RequestStatus: "new" | "in_progress" | "quoted" | "closed";
+    RequestLineIn: {
+      text: string;
+      /** @description Количество как десятичная строка, если известно */
+      quantity?: string | null;
+      unit?: string | null;
+    };
+    /** @description Файл, загруженный через `POST /uploads` (`upload_id` из ответа). Лишних полей нет — размер ERP знает сам */
+    AttachmentRef: {
+      upload_id: string;
+      name: string;
+    };
+    ClientRequestCreate: {
+      summary: string;
+      /** @description Нет поля или пустой список — запрос словами, без строк (Q-FIX23-4) */
+      lines?: components["schemas"]["RequestLineIn"][];
+      attachments?: components["schemas"]["AttachmentRef"][];
+    };
+    ClientRequest: {
+      /** Format: int64 */
+      id: number;
+      number: string;
+      status: components["schemas"]["RequestStatus"];
+      summary: string;
+      /** @enum {string} */
+      source?: "crm" | "cabinet" | "erp";
+      /** @description Сделка, в которую вырос запрос (Q-16); `null`, пока запрос не стал сделкой */
+      deal?: components["schemas"]["DealRef"] | null;
+      /** Format: date-time */
+      created_at: string;
+      lines?: components["schemas"]["RequestLineIn"][];
+      attachments?: components["schemas"]["AttachmentRef"][];
+    };
+    /** @enum {string} */
+    QuoteStatus: "sent" | "viewed" | "accepted" | "rejected" | "expired";
+    QuoteListItem: {
+      /** Format: int64 */
+      id: number;
+      deal: components["schemas"]["DealRef"];
+      number: string;
+      version: number;
+      status: components["schemas"]["QuoteStatus"];
+      total: components["schemas"]["Money"];
+      /** Format: date */
+      valid_until?: string | null;
+      /** Format: date-time */
+      sent_at: string;
+    };
+    /** @description Строка КП для клиента — цена продажи без себестоимости и наценки; `unit_price` и `total` без НДС (Q-FIX21-2) */
+    QuoteLine: {
+      line_no: number;
+      /** @enum {string} */
+      kind: "item" | "section" | "note" | "stage";
+      title: string;
+      description?: string;
+      quantity?: string | null;
+      unit?: string | null;
+      unit_price?: components["schemas"]["Money"] | null;
+      total?: components["schemas"]["Money"] | null;
+      /** Format: date */
+      promised_date?: string | null;
+    };
+    Quote: components["schemas"]["QuoteListItem"] & {
+      /** @description Итого без НДС — сумма `total` строк (Q-FIX21-2) */
+      subtotal: components["schemas"]["Money"];
+      /** @description НДС; `subtotal + vat = total`, как в PDF КП */
+      vat: components["schemas"]["Money"];
+      lines: components["schemas"]["QuoteLine"][];
+      /** Format: uri */
+      public_url: string;
+      /** Format: int64 */
+      pdf_document_id?: number | null;
+      rejected_reason?: string | null;
+      /** @description Комментарии к КП, старые первыми (`POST /quotes/{id}/comments`) */
+      comments: components["schemas"]["QuoteComment"][];
+    };
+    QuoteCommentCreate: {
+      text: string;
+    };
+    QuoteComment: {
+      /** Format: int64 */
+      id: number;
+      /**
+       * @description Кто написал — сотрудник компании клиента или менеджер продавца
+       * @enum {string}
+       */
+      author: "client" | "manager";
+      /** @description Имя автора; `null`, если его нет в карточке */
+      author_name?: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    /** @enum {string} */
+    ContractStatus: "sent" | "signed_by_client" | "signed_by_company" | "signed" | "cancelled";
+    Contract: {
+      /** Format: int64 */
+      id: number;
+      deal: components["schemas"]["DealRef"];
+      number: string;
+      status: components["schemas"]["ContractStatus"];
+      /** Format: date-time */
+      signed_by_client_at?: string | null;
+      /** Format: date-time */
+      signed_by_company_at?: string | null;
+      /** Format: int64 */
+      document_id?: number | null;
+    };
+    /** @enum {string} */
+    InvoiceStatus: "issued" | "partially_paid" | "paid" | "overdue" | "cancelled";
+    Invoice: {
+      /** Format: int64 */
+      id: number;
+      deal: components["schemas"]["DealRef"];
+      number: string;
+      status: components["schemas"]["InvoiceStatus"];
+      total: components["schemas"]["Money"];
+      paid: components["schemas"]["Money"];
+      /** Format: date */
+      due_date: string;
+      /** Format: int64 */
+      document_id?: number | null;
+      /** @description Платёжки по счёту, старые первыми — из кабинета и те, что приложил менеджер */
+      proofs: components["schemas"]["PaymentProof"][];
+    };
+    /**
+     * @description `pending` — менеджер ещё не сверил платёжку с выпиской; `confirmed` — оплата по ней подтверждена; `rejected` — отклонена с причиной `reject_reason` (ERP пока не отклоняет платёжки — BACKLOG B-D24-7)
+     * @enum {string}
+     */
+    PaymentProofStatus: "pending" | "confirmed" | "rejected";
+    PaymentProofCreate: {
+      /** @description Файл платёжного поручения из `POST /uploads` (PDF или изображение, ≤ 10 МБ) */
+      upload_id: string;
+      /**
+       * Format: date
+       * @description Дата платежа по словам клиента (не позже сегодняшней)
+       */
+      paid_on?: string | null;
+      /** @description Сумма платежа по словам клиента в валюте счёта, больше нуля */
+      amount?: components["schemas"]["Amount"] | null;
+      comment?: string | null;
+    };
+    PaymentProof: {
+      /** Format: int64 */
+      id: number;
+      status: components["schemas"]["PaymentProofStatus"];
+      /**
+       * @description Откуда платёжка — кабинет клиента, бот, почта или её приложил менеджер
+       * @enum {string}
+       */
+      source: "cabinet" | "bot" | "email" | "manager";
+      file_name: string;
+      /** Format: date-time */
+      submitted_at: string;
+      /**
+       * Format: date
+       * @description Дата платежа, которую указал клиент; не проверена
+       */
+      paid_on?: string | null;
+      /** @description Сумма, которую указал клиент; не проверена — сумму подтверждает менеджер по выписке */
+      amount?: components["schemas"]["Money"] | null;
+      /** @description Комментарий клиента (только у платёжек из кабинета) */
+      comment?: string | null;
+      /** Format: date-time */
+      confirmed_at?: string | null;
+      reject_reason?: string | null;
+    };
+    /** @enum {string} */
+    ActStatus: "issued" | "accepted" | "returned";
+    Act: {
+      /** Format: int64 */
+      id: number;
+      deal: components["schemas"]["DealRef"];
+      number: string;
+      status: components["schemas"]["ActStatus"];
+      /** Format: date-time */
+      issued_at: string;
+      returned_reason?: string | null;
+      /**
+       * Format: int64
+       * @description Выпущенный акт (PDF ERP)
+       */
+      document_id?: number | null;
+      /**
+       * Format: int64
+       * @description Скан подписанного клиентом экземпляра, если загружен при приёмке
+       */
+      scan_document_id?: number | null;
+    };
+    /**
+     * @description `accepted` и `disputed` ставит клиент (`/deliveries/{id}/accept|dispute`); остальное — ERP (M4 — со склада)
+     * @enum {string}
+     */
+    DeliveryStatus:
+      | "assembling"
+      | "in_transit"
+      | "ready_to_ship"
+      | "shipped"
+      | "delivered"
+      | "accepted"
+      | "disputed";
+    /** @description Строка поставки = строка подтверждённого заказа клиента; `id` — её идентификатор для приёмки */
+    DeliveryLine: {
+      /** Format: int64 */
+      id: number;
+      deal: components["schemas"]["DealRef"];
+      line_no: number;
+      title: string;
+      quantity?: string | null;
+      unit?: string | null;
+      status: components["schemas"]["DeliveryStatus"];
+      /** Format: date */
+      eta?: string | null;
+      tracking?: string | null;
+      /** Format: date-time */
+      shipped_at?: string | null;
+      /**
+       * Format: date-time
+       * @description Когда клиент принял или оспорил строку
+       */
+      accepted_at?: string | null;
+      /** @description Замечание клиента при `disputed` */
+      remark?: string | null;
+    };
+    /** @enum {string} */
+    DocumentKind:
+      | "quote"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "specification"
+      | "waybill"
+      | "receipt"
+      | "other";
+    Document: {
+      /** Format: int64 */
+      id: number;
+      deal?: components["schemas"]["DealRef"] | null;
+      kind: components["schemas"]["DocumentKind"];
+      number: string;
+      /** Format: date */
+      date: string;
+      title: string;
+      file_name?: string;
+      size_bytes?: number;
+    };
+    /** @enum {string} */
+    Availability: "in_stock" | "on_order" | "expected";
+    CatalogItem: {
+      /** Format: int64 */
+      id: number;
+      /** @enum {string} */
+      kind: "goods" | "service";
+      name: string;
+      description?: string;
+      unit: string;
+      /** @description Название категории; справочник с id — `GET /catalog/categories` (Q-15) */
+      category?: string | null;
+      /**
+       * Format: int64
+       * @description Id категории для фильтра `GET /catalog?category_id=`
+       */
+      category_id?: number | null;
+      /** @description `null` — «цена по запросу» */
+      price: components["schemas"]["Money"] | null;
+      availability: components["schemas"]["Availability"];
+      lead_time_days?: number | null;
+      /** @description Ссылки на фото; главное фото — первым (CAT-CARD-2) */
+      images?: string[];
+      attributes?: {
+        name: string;
+        value: string;
+      }[];
+      /** @description Изготовитель (бренд) карточки; `null` — не указан (CAT-CARD-2) */
+      manufacturer?: components["schemas"]["CatalogManufacturer"] | null;
+      /** @description Артикул изготовителя (MPN); `null` — не указан. Артикул продавца или поставщика сюда не попадает */
+      manufacturer_part_number?: string | null;
+      /** @description Название страны происхождения — своя у карточки, иначе страна изготовителя; `null` — нигде не указана */
+      country_of_origin?: string | null;
+      /** @description Гарантия — своя у карточки, иначе срок по умолчанию у компании; `null`, если нигде не задана или равна нулю */
+      warranty?: components["schemas"]["CatalogWarranty"] | null;
+      /**
+       * @description Только в карточке `GET /catalog/{id}`; в списке `GET /catalog`, в `erp-integration` и MCP документов нет. Только
+       *     документы, отмеченные «видно клиенту», и только действующие (срок «действует до» не прошёл; пусто — бессрочно).
+       *     Файл — `GET /catalog/{id}/documents/{doc_id}/file`.
+       */
+      documents?: components["schemas"]["CatalogItemDocument"][];
+    };
+    CatalogManufacturer: {
+      name: string;
+      /** @description Название страны изготовителя */
+      country: string | null;
+    };
+    CatalogWarranty: {
+      months: number;
+      /** @description Условия гарантии; пустая строка — не заданы */
+      terms: string;
+    };
+    CatalogItemDocument: {
+      /** Format: int64 */
+      id: number;
+      /** @description Название вида документа (справочник, ведёт администратор) */
+      kind_name: string;
+      title: string;
+      /** @description Пустая строка — номера нет */
+      number: string;
+      /** @description Кем выдан; пустая строка — не указано */
+      issued_by: string;
+      /** Format: date */
+      issued_at: string | null;
+      /**
+       * Format: date
+       * @description Действует до; `null` — бессрочно
+       */
+      valid_until: string | null;
+    };
+    CatalogPage: {
+      items: components["schemas"]["CatalogItem"][];
+      page: number;
+      page_size: number;
+      total: number;
+    };
+    Company: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      inn?: string | null;
+      legal_address?: string | null;
+      bank_details?: string | null;
+      language: components["schemas"]["Language"];
+    };
+    CompanyUpdate: {
+      name?: string;
+      inn?: string;
+      legal_address?: string;
+      bank_details?: string;
+      language?: components["schemas"]["Language"];
+    };
+    TeamMember: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      /** Format: email */
+      email?: string | null;
+      phone?: string | null;
+      has_telegram?: boolean;
+      language: components["schemas"]["Language"];
+      preferred_channel: components["schemas"]["PreferredChannel"];
+      can_act: boolean;
+      is_primary: boolean;
+      /** Format: date-time */
+      invited_at?: string | null;
+      /** Format: date-time */
+      last_login_at?: string | null;
+    };
+    TeamInvite: {
+      name: string;
+      /** Format: email */
+      email?: string;
+      phone?: string;
+      language: components["schemas"]["Language"];
+      /** @default false */
+      can_act: boolean;
+      channels: ("email" | "telegram")[];
+    };
+    CatalogCategory: {
+      /** Format: int64 */
+      id: number;
+      name: string;
+      count: number;
+    };
+    PortalUploadResponse: {
+      upload_id: string;
+      name: string;
+      mime_type?: string;
+      size_bytes?: number;
+    };
+    /**
+     * @description Вид документа метки сообщения
+     * @enum {string}
+     */
+    MessageContextKind: "deal" | "quote" | "invoice" | "act";
+    /** @description Метка документа в новом сообщении — вид и id; номер подставляет ERP */
+    MessageContextRef: {
+      kind: components["schemas"]["MessageContextKind"];
+      /** Format: int64 */
+      id: number;
+    };
+    /** @description Метка документа у сообщения — вид, id и номер («КП KP-2026-0042») */
+    MessageContext: {
+      kind: components["schemas"]["MessageContextKind"];
+      /** Format: int64 */
+      id: number;
+      number: string;
+    };
+    PortalMessageCreate: {
+      /** @description Текст как есть; Cabinet показывает его текстом, не HTML */
+      text: string;
+      /** @description Ключ повтора, выданный Cabinet при первой попытке; повтор отправки — тот же ключ */
+      client_message_id: string;
+      context?: components["schemas"]["MessageContextRef"] | null;
+    };
+    PortalMessage: {
+      /** Format: int64 */
+      id: number;
+      /**
+       * @description `client` — написал контакт компании, `manager` — ответ менеджера
+       * @enum {string}
+       */
+      direction: "client" | "manager";
+      /** @description Имя контакта или менеджера; `null` — имени нет */
+      author_name: string | null;
+      /** @description Сообщение написал контакт этой сессии */
+      mine: boolean;
+      text: string;
+      context: components["schemas"]["MessageContext"] | null;
+      /** Format: date-time */
+      created_at: string;
+      /** @description Ключ повтора сообщения контакта (у ответа менеджера — `null`) */
+      client_message_id: string | null;
+      /** @description Автор стёр свои персональные данные: текст удалён (`text` пуст), автора нет (`author_name` — `null`), Cabinet показывает «Удалённый пользователь · сообщение удалено». Остальная лента компании не меняется */
+      erased: boolean;
+    };
+    PortalMessagePage: {
+      items: components["schemas"]["PortalMessage"][];
+      /** @description С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние */
+      has_more: boolean;
+      /** @description С `after_id` — сообщения ленты не новее `after_id`, стёртые по запросу автора (CHAT-1b): опрос приносит только новые сообщения, по этому списку Cabinet заменяет уже показанные на «Удалённый пользователь» без перезагрузки. Без `after_id` — пусто (стёртые и так приходят с `erased: true`) */
+      erased_ids: number[];
+    };
+    PortalMessageReadMark: {
+      /** Format: int64 */
+      last_id: number;
+    };
+    PortalMessageUnread: {
+      unread: number;
+    };
+  };
+  responses: {
+    /** @description Нет сессии портала */
+    Unauthorized: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description У контакта нет права действовать (`can_act = false`; `FORBIDDEN`) или у сессии нет модуля эндпоинта (`MODULE_REQUIRED`) */
+    Forbidden: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Компания контакта архивна — вход закрыт любым каналом (`FORBIDDEN`, Q-18) */
+    CompanyArchived: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Объект не найден или принадлежит другой компании */
+    NotFound: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Тело запроса не прошло проверку */
+    ValidationError: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Нет заголовка `Idempotency-Key` (`{"detail": "IDEMPOTENCY_KEY_REQUIRED"}`); запрос не выполнялся */
+    IdempotencyKeyRequired: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Тело не `application/json` (`{"detail": "UNSUPPORTED_MEDIA_TYPE"}`); запрос не выполнялся */
+    UnsupportedMediaType: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description Лимит частоты исчерпан (`{"detail": "TOO_MANY_REQUESTS"}`); повторить через `Retry-After` секунд */
+    TooManyRequests: {
+      headers: {
+        /** @description Через сколько секунд можно повторить */
+        "Retry-After"?: number;
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+  };
+  parameters: {
+    Id: number;
+    /**
+     * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+     *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+     *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+     */
+    IdempotencyKey: string;
+  };
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
+}
+export type $defs = Record<string, never>;
+export interface operations {
+  authTelegram: {
     parameters: {
-        Id: number;
+      query?: never;
+      header: {
         /**
          * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
          *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
          *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
          */
-        IdempotencyKey: string;
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
-}
-export type $defs = Record<string, never>;
-export interface operations {
-    authTelegram: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          /** @description Строка `window.Telegram.WebApp.initData` как есть */
+          init_data: string;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Строка `window.Telegram.WebApp.initData` как есть */
-                    init_data: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Сессия выдана (cookie `Set-Cookie`) */
-            200: {
-                headers: {
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            /** @description Подпись неверна, срок истёк или контакт не найден (`INVALID_INIT_DATA`) */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            403: components["responses"]["CompanyArchived"];
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
     };
-    requestMagicLink: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Сессия выдана (cookie `Set-Cookie`) */
+      200: {
+        headers: {
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["Me"];
         };
-        responses: {
-            /** @description Принято */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      /** @description Подпись неверна, срок истёк или контакт не найден (`INVALID_INIT_DATA`) */
+      401: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      403: components["responses"]["CompanyArchived"];
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
-    exchangeMagicLinkToken: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    token: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Сессия выдана (cookie `Set-Cookie`) */
-            200: {
-                headers: {
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            403: components["responses"]["CompanyArchived"];
-            /** @description Токен просрочен, уже использован или неизвестен (`MAGIC_LINK_EXPIRED`) */
-            410: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  requestMagicLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    exchangeLoginCode: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: email */
+          email: string;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** Format: email */
-                    email: string;
-                    code: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Сессия выдана (cookie `Set-Cookie`) */
-            200: {
-                headers: {
-                    "Set-Cookie"?: string;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            403: components["responses"]["CompanyArchived"];
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description `LOGIN_CODE_INVALID` — код неверный, устарел или уже использован (и для неизвестного адреса); `VALIDATION_ERROR` — тело не по схеме */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP (заголовок `Retry-After`) */
-            429: {
-                headers: {
-                    /** @description Через сколько секунд можно повторить (только у `TOO_MANY_REQUESTS`) */
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
+      };
     };
-    logout: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Сессия завершена */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            429: components["responses"]["TooManyRequests"];
-        };
+        content?: never;
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
-    getMe: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Текущий контакт и его компания */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  exchangeMagicLinkToken: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    listNotifications: {
-        parameters: {
-            query?: {
-                before_id?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          token: string;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Страница ленты */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
     };
-    markNotificationsRead: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Сессия выдана (cookie `Set-Cookie`) */
+      200: {
+        headers: {
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["NotificationReadMark"];
-            };
+        content: {
+          "application/json": components["schemas"]["Me"];
         };
-        responses: {
-            /** @description Отметка сохранена, число непрочитанных после неё */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NotificationUnread"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      403: components["responses"]["CompanyArchived"];
+      /** @description Токен просрочен, уже использован или неизвестен (`MAGIC_LINK_EXPIRED`) */
+      410: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
-    listRequests: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Запросы компании */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientRequest"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  exchangeLoginCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    createRequest: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          /** Format: email */
+          email: string;
+          code: string;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ClientRequestCreate"];
-            };
-        };
-        responses: {
-            /** @description Запрос принят */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientRequest"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
     };
-    getRequest: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    responses: {
+      /** @description Сессия выдана (cookie `Set-Cookie`) */
+      200: {
+        headers: {
+          "Set-Cookie"?: string;
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Запрос клиента */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ClientRequest"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["Me"];
         };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      403: components["responses"]["CompanyArchived"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `LOGIN_CODE_INVALID` — код неверный, устарел или уже использован (и для неизвестного адреса); `VALIDATION_ERROR` — тело не по схеме */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `LOGIN_CODE_LOCKED` — 5 неверных кодов подряд, нужен новый код; `TOO_MANY_REQUESTS` — лимит частоты по IP (заголовок `Retry-After`) */
+      429: {
+        headers: {
+          /** @description Через сколько секунд можно повторить (только у `TOO_MANY_REQUESTS`) */
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
-    listQuotes: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description КП компании (все версии, отправленные клиенту) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteListItem"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  logout: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    getQuote: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Сессия завершена */
+      204: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description КП */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
-        };
+        content?: never;
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
-    requestQuoteAcceptanceCode: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Код отправлен */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AcceptanceCodeSent"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description КП не в статусе ожидания ответа (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            /** @description У контакта нет ни одного канала для кода (`CONTACT_CHANNEL_REQUIRED`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  getMe: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    acceptQuote: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Текущий контакт и его компания */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    code: string;
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["Me"];
         };
-        responses: {
-            /** @description КП принято */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description КП уже принято/отклонено или срок истёк (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`); код неверен или не запрошен (`QUOTE_CODE_INVALID`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
-    rejectQuote: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reason"];
-            };
-        };
-        responses: {
-            /** @description КП отклонено */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Quote"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description КП уже в конечном статусе */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  getTelegramStatus: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    addQuoteComment: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Статус привязки */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["QuoteCommentCreate"];
-            };
+        content: {
+          "application/json": components["schemas"]["TelegramStatus"];
         };
-        responses: {
-            /** @description Комментарий принят */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["QuoteComment"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description КП уже принято или отклонено (`QUOTE_FINALIZED`) либо срок вышел (`QUOTE_EXPIRED`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 2000 символов (`VALIDATION_ERROR`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
+      401: components["responses"]["Unauthorized"];
+      429: components["responses"]["TooManyRequests"];
     };
-    listContracts: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Договоры компании */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Contract"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  unlinkTelegram: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    signContract: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Запрос отключения принят (или Telegram уже не привязан) */
+      202: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Подписано клиентом */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Contract"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Договор уже подписан или отменён */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["TelegramStatus"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
+      /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) — отключить может менеджер */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
     };
-    listInvoices: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Счета компании */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Invoice"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  sendTelegramTest: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    submitPaymentProof: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Запрос проверочного сообщения принят */
+      202: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PaymentProofCreate"];
-            };
+        content: {
+          "application/json": components["schemas"]["TelegramStatus"];
         };
-        responses: {
-            /** @description Платёжка принята и ждёт проверки менеджером */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PaymentProof"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Счёт уже оплачен или отменён (`INVOICE_NOT_OPEN`) — платёжка не нужна */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Загрузки нет у компании или она уже вложена в другую сделку (`UPLOAD_NOT_FOUND`); файл не PDF и не изображение, больше 10 МБ, сумма не больше нуля, дата платежа в будущем или комментарий длиннее 500 символов (`VALIDATION_ERROR`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      /** @description Telegram не привязан (`TELEGRAM_NOT_LINKED`) — сначала «Подключить» */
+      409: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Контакт не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
     };
-    listActs: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Акты компании */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  createTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    acceptAct: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Ссылка выпущена */
+      201: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["ActAccept"];
-            };
+        content: {
+          "application/json": components["schemas"]["TelegramLink"];
         };
-        responses: {
-            /** @description Акт принят заказчиком */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Акт уже в конечном статусе (`ACT_FINALIZED`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description `upload_id` неизвестен или файл не PDF/изображение (`UPLOAD_NOT_FOUND`, `VALIDATION_ERROR`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      /** @description Telegram уже привязан (`TELEGRAM_ALREADY_LINKED`): сначала «Отвязать» — иначе прежний аккаунт остался бы подтверждённым Telegram клиента */
+      409: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Контакт ещё не сопоставлен с контактом CRM (`CONTACT_NOT_IN_CRM`): привязать Telegram сейчас нельзя, поможет менеджер */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+      /** @description Бот не настроен или нет сопряжения с CRM (`TELEGRAM_LINK_UNAVAILABLE`): подключить Telegram сейчас нельзя */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
-    returnAct: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reason"];
-            };
-        };
-        responses: {
-            /** @description Акт возвращён исполнителю */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Act"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Акт уже в конечном статусе */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  listNotifications: {
+    parameters: {
+      query?: {
+        before_id?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    listDeliveries: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Страница ленты */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Строки с статусом, ожидаемой датой и треком — без поставщика и цен */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryLine"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["NotificationPage"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
-    acceptDeliveryLine: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Строка принята */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryLine"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  markNotificationsRead: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    disputeDeliveryLine: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["Reason"];
-            };
-        };
-        responses: {
-            /** @description Замечание принято */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeliveryLine"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            /** @description Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Причина пуста (`REASON_REQUIRED`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotificationReadMark"];
+      };
     };
-    listDocuments: {
-        parameters: {
-            query?: {
-                kind?: components["schemas"]["DocumentKind"];
-                deal_id?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Отметка сохранена, число непрочитанных после неё */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Документы без файлов */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Document"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["NotificationUnread"];
         };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
-    getDocumentFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Файл */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/pdf": string;
-                    "application/octet-stream": string;
-                };
-            };
-            /** @description PDF ещё рендерится (M2-ERP-03) — повторить через `Retry-After` */
-            202: {
-                headers: {
-                    "Retry-After"?: number;
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  listRequests: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    uploadFile: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Запросы компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description Файл до 10 МБ
-                     */
-                    file: string;
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["ClientRequest"][];
         };
-        responses: {
-            /** @description Файл успешно загружен */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalUploadResponse"];
-                };
-            };
-            /** @description Нет заголовка `Idempotency-Key` (`IDEMPOTENCY_KEY_REQUIRED`) или файл не передан */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Файл больше 10 МБ (`FILE_TOO_LARGE`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
     };
-    listCatalogCategories: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Список опубликованных категорий */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CatalogCategory"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  createRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
     };
-    listCatalog: {
-        parameters: {
-            query?: {
-                q?: string;
-                category_id?: number;
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Страница каталога */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CatalogPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClientRequestCreate"];
+      };
     };
-    getCatalogItem: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
+    responses: {
+      /** @description Запрос принят */
+      201: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Карточка без внутреннего слоя (поставщики, себестоимость, остатки по количеству) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CatalogItem"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["ClientRequest"];
         };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
     };
-    getCatalogItemDocumentFile: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-                /** @description `CatalogItemDocument.id` */
-                doc_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Файл (вложение) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/pdf": string;
-                    "image/png": string;
-                    "image/jpeg": string;
-                    "application/octet-stream": string;
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  getRequest: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
-    listPartnerProducts: {
-        parameters: {
-            query?: {
-                status?: components["schemas"]["PartnerCardStatus"];
-                q?: string;
-                page?: number;
-                page_size?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Запрос клиента */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Страница карточек и количество по статусам (для вкладок) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PartnerProductPage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["ClientRequest"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
-    getPartnerProduct: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Карточка; чужая или несуществующая — 404 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PartnerProductDetail"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  listQuotes: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    submitPartnerProducts: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description КП компании (все версии, отправленные клиенту) */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PartnerSubmitRequest"];
-            };
+        content: {
+          "application/json": components["schemas"]["QuoteListItem"][];
         };
-        responses: {
-            /** @description Итог по каждой карточке */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PartnerSubmitResult"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
     };
-    confirmPartnerOffers: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PartnerConfirmRequest"];
-            };
-        };
-        responses: {
-            /** @description Сколько цен подтверждено и что не подтверждено */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PartnerConfirmResult"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  getQuote: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
-    getPartnerPriceTemplate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description КП */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Файл шаблона со справочниками допустимых значений */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["Quote"];
         };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
     };
-    uploadPartnerPriceList: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "multipart/form-data": {
-                    /** Format: binary */
-                    file: string;
-                    /** @default false */
-                    dry_run?: boolean;
-                    /** Format: date */
-                    valid_from?: string;
-                    /** Format: date */
-                    valid_until?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Загрузка принята */
-            202: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PriceListAccepted"];
-                };
-            };
-            /** @description Нет заголовка `Idempotency-Key`, файл не передан (`FILE_REQUIRED`) или это не `.xlsx` (`XLSX_REQUIRED`) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Файл больше 20 МБ (`FILE_TOO_LARGE`), дата не `ГГГГ-ММ-ДД` (`VALID_DATE_INVALID`) или «до» раньше «с» (`OFFER_VALIDITY_RANGE_INVALID`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
-            /** @description Очередь обработки недоступна (`IMPORT_FAILED`) */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
+  };
+  requestQuoteAcceptanceCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
-    getPartnerPriceListTask: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                task_id: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Код отправлен */
+      202: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Состояние; отчёт — когда `status` = `completed`. Задача другой компании или несуществующая — 404 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PriceListTask"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["AcceptanceCodeSent"];
         };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП не в статусе ожидания ответа (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description У контакта нет ни одного канала для кода (`CONTACT_CHANNEL_REQUIRED`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
     };
-    getCompany: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Профиль */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  acceptQuote: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
-    updateCompany: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody: {
+      content: {
+        "application/json": {
+          code: string;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CompanyUpdate"];
-            };
-        };
-        responses: {
-            /** @description Обновлено */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+      };
     };
-    listTeam: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description КП принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Контакты компании */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamMember"][];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
+        content: {
+          "application/json": components["schemas"]["Quote"];
         };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП уже принято/отклонено или срок истёк (`QUOTE_FINALIZED`, `QUOTE_EXPIRED`); код неверен или не запрошен (`QUOTE_CODE_INVALID`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
-    inviteTeamMember: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TeamInvite"];
-            };
-        };
-        responses: {
-            /** @description Приглашение отправлено */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TeamMember"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-            /** @description Письмо не ушло (`DELIVERY_FAILED`): коллега в команду не добавлен, повторить можно сразу */
-            503: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-        };
+  };
+  rejectQuote: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
-    listMessages: {
-        parameters: {
-            query?: {
-                after_id?: number;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Сообщения ленты */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalMessagePage"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            429: components["responses"]["TooManyRequests"];
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Reason"];
+      };
     };
-    postMessage: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description КП отклонено */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PortalMessageCreate"];
-            };
+        content: {
+          "application/json": components["schemas"]["Quote"];
         };
-        responses: {
-            /** @description Сообщение с этим `client_message_id` уже было — прежнее */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalMessage"];
-                };
-            };
-            /** @description Сообщение принято */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalMessage"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            415: components["responses"]["UnsupportedMediaType"];
-            /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 4000 символов, ключ повтора не по формату (`VALIDATION_ERROR`) */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Error"];
-                };
-            };
-            429: components["responses"]["TooManyRequests"];
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП уже в конечном статусе */
+      409: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
     };
-    markMessagesRead: {
-        parameters: {
-            query?: never;
-            header: {
-                /**
-                 * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
-                 *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
-                 *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
-                 */
-                "Idempotency-Key": components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PortalMessageReadMark"];
-            };
-        };
-        responses: {
-            /** @description Отметка сохранена, число непрочитанных после неё */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PortalMessageUnread"];
-                };
-            };
-            400: components["responses"]["IdempotencyKeyRequired"];
-            401: components["responses"]["Unauthorized"];
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            415: components["responses"]["UnsupportedMediaType"];
-            422: components["responses"]["ValidationError"];
-            429: components["responses"]["TooManyRequests"];
-        };
+  };
+  addQuoteComment: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
     };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteCommentCreate"];
+      };
+    };
+    responses: {
+      /** @description Комментарий принят */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteComment"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description КП уже принято или отклонено (`QUOTE_FINALIZED`) либо срок вышел (`QUOTE_EXPIRED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 2000 символов (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listContracts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Договоры компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  signContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подписано клиентом */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Contract"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Договор уже подписан или отменён */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listInvoices: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Счета компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Invoice"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  submitPaymentProof: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PaymentProofCreate"];
+      };
+    };
+    responses: {
+      /** @description Платёжка принята и ждёт проверки менеджером */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentProof"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Счёт уже оплачен или отменён (`INVOICE_NOT_OPEN`) — платёжка не нужна */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Загрузки нет у компании или она уже вложена в другую сделку (`UPLOAD_NOT_FOUND`); файл не PDF и не изображение, больше 10 МБ, сумма не больше нуля, дата платежа в будущем или комментарий длиннее 500 символов (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listActs: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Акты компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Act"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  acceptAct: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ActAccept"];
+      };
+    };
+    responses: {
+      /** @description Акт принят заказчиком */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Act"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Акт уже в конечном статусе (`ACT_FINALIZED`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description `upload_id` неизвестен или файл не PDF/изображение (`UPLOAD_NOT_FOUND`, `VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  returnAct: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Reason"];
+      };
+    };
+    responses: {
+      /** @description Акт возвращён исполнителю */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Act"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Акт уже в конечном статусе */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listDeliveries: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Строки с статусом, ожидаемой датой и треком — без поставщика и цен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryLine"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  acceptDeliveryLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Строка принята */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryLine"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  disputeDeliveryLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Reason"];
+      };
+    };
+    responses: {
+      /** @description Замечание принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["DeliveryLine"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description Строка не доставлена или уже принята/оспорена (`DELIVERY_LINE_NOT_ACCEPTABLE`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Причина пуста (`REASON_REQUIRED`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listDocuments: {
+    parameters: {
+      query?: {
+        kind?: components["schemas"]["DocumentKind"];
+        deal_id?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Документы без файлов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getDocumentFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+          "application/octet-stream": string;
+        };
+      };
+      /** @description PDF ещё рендерится (M2-ERP-03) — повторить через `Retry-After` */
+      202: {
+        headers: {
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  uploadFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /**
+           * Format: binary
+           * @description Файл до 10 МБ
+           */
+          file: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Файл успешно загружен */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalUploadResponse"];
+        };
+      };
+      /** @description Нет заголовка `Idempotency-Key` (`IDEMPOTENCY_KEY_REQUIRED`) или файл не передан */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Файл больше 10 МБ (`FILE_TOO_LARGE`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listCatalogCategories: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Список опубликованных категорий */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogCategory"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listCatalog: {
+    parameters: {
+      query?: {
+        q?: string;
+        category_id?: number;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница каталога */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCatalogItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка без внутреннего слоя (поставщики, себестоимость, остатки по количеству) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItem"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCatalogItemDocumentFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+        /** @description `CatalogItemDocument.id` */
+        doc_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл (вложение) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+          "image/png": string;
+          "image/jpeg": string;
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listPartnerProducts: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["PartnerCardStatus"];
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница карточек и количество по статусам (для вкладок) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerProductPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getPartnerProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["Id"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка; чужая или несуществующая — 404 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerProductDetail"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  submitPartnerProducts: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerSubmitRequest"];
+      };
+    };
+    responses: {
+      /** @description Итог по каждой карточке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerSubmitResult"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  confirmPartnerOffers: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PartnerConfirmRequest"];
+      };
+    };
+    responses: {
+      /** @description Сколько цен подтверждено и что не подтверждено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PartnerConfirmResult"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getPartnerPriceTemplate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл шаблона со справочниками допустимых значений */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": string;
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  uploadPartnerPriceList: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": {
+          /** Format: binary */
+          file: string;
+          /** @default false */
+          dry_run?: boolean;
+          /** Format: date */
+          valid_from?: string;
+          /** Format: date */
+          valid_until?: string;
+        };
+      };
+    };
+    responses: {
+      /** @description Загрузка принята */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceListAccepted"];
+        };
+      };
+      /** @description Нет заголовка `Idempotency-Key`, файл не передан (`FILE_REQUIRED`) или это не `.xlsx` (`XLSX_REQUIRED`) */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Файл больше 20 МБ (`FILE_TOO_LARGE`), дата не `ГГГГ-ММ-ДД` (`VALID_DATE_INVALID`) или «до» раньше «с» (`OFFER_VALIDITY_RANGE_INVALID`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+      /** @description Очередь обработки недоступна (`IMPORT_FAILED`) */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  getPartnerPriceListTask: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        task_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние; отчёт — когда `status` = `completed`. Задача другой компании или несуществующая — 404 */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceListTask"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  getCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Профиль */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  updateCompany: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Обновлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Company"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  listTeam: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Контакты компании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeamMember"][];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  inviteTeamMember: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamInvite"];
+      };
+    };
+    responses: {
+      /** @description Приглашение отправлено */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TeamMember"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+      /** @description Письмо не ушло (`DELIVERY_FAILED`): коллега в команду не добавлен, повторить можно сразу */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  listMessages: {
+    parameters: {
+      query?: {
+        after_id?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сообщения ленты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalMessagePage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  postMessage: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalMessageCreate"];
+      };
+    };
+    responses: {
+      /** @description Сообщение с этим `client_message_id` уже было — прежнее */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalMessage"];
+        };
+      };
+      /** @description Сообщение принято */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalMessage"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      415: components["responses"]["UnsupportedMediaType"];
+      /** @description Текст пуст (`TEXT_REQUIRED`) или длиннее 4000 символов, ключ повтора не по формату (`VALIDATION_ERROR`) */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  markMessagesRead: {
+    parameters: {
+      query?: never;
+      header: {
+        /**
+         * @description Произвольный уникальный ключ попытки (CONTRACTS §0; Cabinet шлёт UUID). Обязателен на `POST` и `PATCH` —
+         *     заодно это защита от CSRF: заголовок делает запрос «непростым», и междоменный запрос идёт только через
+         *     CORS-preflight (разрешён лишь origin Cabinet). Повтор с тем же ключом возвращает прежний ответ.
+         */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PortalMessageReadMark"];
+      };
+    };
+    responses: {
+      /** @description Отметка сохранена, число непрочитанных после неё */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PortalMessageUnread"];
+        };
+      };
+      400: components["responses"]["IdempotencyKeyRequired"];
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      415: components["responses"]["UnsupportedMediaType"];
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
 }

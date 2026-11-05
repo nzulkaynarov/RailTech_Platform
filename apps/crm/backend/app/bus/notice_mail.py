@@ -32,7 +32,12 @@ async def client_chats(session: AsyncSession, client_id: int, *, with_leads: boo
         condition = condition | TelegramIdentity.lead_id.in_(lead_ids)
     rows = await session.scalars(
         select(TelegramIdentity.tg_user_id)
-        .where(condition, TelegramIdentity.is_blocked.is_(False))
+        .where(
+            condition,
+            TelegramIdentity.is_blocked.is_(False),
+            # Отключил уведомления в кабинете (NOTIFY-1) — не берём и через лида клиента.
+            TelegramIdentity.notifications_off_at.is_(None),
+        )
         .order_by(TelegramIdentity.id)
     )
     return list(dict.fromkeys(rows.all()))

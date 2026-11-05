@@ -229,6 +229,8 @@
       "update": "Изменил клиента",
       "link_telegram": "Привязал Telegram клиента",
       "unlink_telegram": "Отвязал Telegram клиента",
+      "contact_telegram_self_link": "Контакт сам подключил Telegram из кабинета",
+      "contact_telegram_self_unlink": "Контакт сам отключил Telegram в кабинете",
       "erp_handoff": "Запросил повторную передачу клиента в ERP",
       "erp_handoff_done": "Клиент передан в ERP",
       "erp_handoff_failed": "Передача клиента в ERP не удалась",

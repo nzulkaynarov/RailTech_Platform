@@ -174,3 +174,57 @@ def start_lead_bound(language: str | None) -> str:
 
 def start_link_stale(language: str | None) -> str:
     return _pick(_START_LINK_STALE, language)
+
+
+# ── Привязка Telegram контактом из кабинета (NOTIFY-1, ADR-0023 п. 3) ────────────────────────────────
+
+_CONTACT_LINK_BOUND: Final = {
+    "ru": "Готово, Telegram подключён к кабинету «{company}». Уведомления о предложениях, счетах, актах и ответы "
+    "менеджера будут приходить сюда сразу. Кабинет открывается кнопкой меню бота.",
+    "uz": "Tayyor, Telegram «{company}» kabinetiga ulandi. Takliflar, hisob-fakturalar, dalolatnomalar haqidagi "
+    "bildirishnomalar va menejer javoblari shu yerga darhol keladi. Kabinet bot menyusidagi tugma orqali ochiladi.",
+    "en": "Done, Telegram is connected to the «{company}» account. Notifications about quotes, invoices, acts and your "
+    "manager's replies will arrive here right away. Open the account with the bot's menu button.",
+}
+#: Один нейтральный отказ на любой непригодный токен: повтор, чужой, подделанный, просроченный, несуществующий контакт.
+_CONTACT_LINK_REFUSED: Final = {
+    "ru": "Эта ссылка не подходит: она устарела или уже использована. Откройте в кабинете Профиль → «Уведомления» и "
+    "нажмите «Подключить» ещё раз.",
+    "uz": "Bu havola mos emas: u eskirgan yoki allaqachon ishlatilgan. Kabinetda Profil → «Bildirishnomalar» boʻlimini "
+    "oching va «Ulash» tugmasini yana bosing.",
+    "en": "This link does not work: it has expired or has already been used. Open Profile → “Notifications” in your "
+    "account and press “Connect” again.",
+}
+_CONTACT_LINK_TAKEN: Final = {
+    "ru": "Этот Telegram уже связан с другим контактом, поэтому подключить его здесь нельзя. Напишите менеджеру — он "
+    "поможет.",
+    "uz": "Bu Telegram allaqachon boshqa kontakt bilan bogʻlangan, shuning uchun uni bu yerda ulab boʻlmaydi. "
+    "Menejerga yozing — yordam beradi.",
+    "en": "This Telegram account is already linked to another contact, so it cannot be connected here. Write to your "
+    "manager and they will help.",
+}
+
+
+_CONTACT_LINK_TEST: Final = {
+    "ru": "Проверка связи: уведомления кабинета «{company}» приходят сюда. Всё работает.",
+    "uz": "Aloqa tekshiruvi: «{company}» kabineti bildirishnomalari shu yerga keladi. Hammasi ishlayapti.",
+    "en": "Connection check: notifications from the «{company}» account arrive here. Everything works.",
+}
+
+
+def contact_link_test(language: str | None, company: str | None) -> str:
+    clean = " ".join((company or "").split())
+    return _pick(_CONTACT_LINK_TEST, language).format(company=clean).replace(" «»", "")
+
+
+def contact_link_bound(language: str | None, company: str | None) -> str:
+    clean = " ".join((company or "").split())
+    return _pick(_CONTACT_LINK_BOUND, language).format(company=clean).replace(" «»", "")
+
+
+def contact_link_refused(language: str | None) -> str:
+    return _pick(_CONTACT_LINK_REFUSED, language)
+
+
+def contact_link_taken(language: str | None) -> str:
+    return _pick(_CONTACT_LINK_TAKEN, language)

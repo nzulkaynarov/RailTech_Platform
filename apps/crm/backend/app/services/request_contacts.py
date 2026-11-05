@@ -21,7 +21,11 @@ async def _lead_identity(session: AsyncSession, lead: Lead | None) -> TelegramId
         return None
     return await session.scalar(
         select(TelegramIdentity)
-        .where(TelegramIdentity.lead_id == lead.id)
+        .where(
+            TelegramIdentity.lead_id == lead.id,
+            # Отключил Telegram в кабинете (NOTIFY-1): новый контакт заявки его попутно не получает.
+            TelegramIdentity.notifications_off_at.is_(None),
+        )
         .order_by(TelegramIdentity.id)
         .limit(1)
     )

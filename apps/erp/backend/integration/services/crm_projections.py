@@ -156,7 +156,7 @@ def _telegram_fields(snapshot: Mapping[str, Any], contact: Optional[Contact]) ->
     """Telegram контакта; чужой уже занятый `telegram_user_id` (уникален в ERP) не отбирается — запись в журнал."""
     telegram_id = snapshot.get("telegram_user_id")
     if telegram_id is None:
-        return {"telegram_user_id": None, "telegram_username": ""} if contact is not None else {}
+        return {"telegram_user_id": None, "telegram_username": "", "telegram_name": ""} if contact is not None else {}
     clash = Contact.objects.filter(telegram_user_id=telegram_id)
     if contact is not None:
         clash = clash.exclude(pk=contact.pk)
@@ -167,7 +167,12 @@ def _telegram_fields(snapshot: Mapping[str, Any], contact: Optional[Contact]) ->
             snapshot.get("crm_contact_id"),
         )
         return {}
-    return {"telegram_user_id": telegram_id}
+    # Какой аккаунт привязан (NOTIFY-1): имя пользователя и имя профиля, если CRM их прислала.
+    return {
+        "telegram_user_id": telegram_id,
+        "telegram_username": (snapshot.get("telegram_username") or "").lstrip("@")[:255],
+        "telegram_name": (snapshot.get("telegram_name") or "")[:255],
+    }
 
 
 @transaction.atomic
@@ -265,7 +270,10 @@ def archive_contact(contact: Contact, at: datetime) -> None:
     contact.can_act = False
     contact.telegram_user_id = None
     contact.telegram_username = ""
-    contact.save(update_fields=["archived_at", "can_act", "telegram_user_id", "telegram_username", "updated_at"])
+    contact.telegram_name = ""
+    contact.save(
+        update_fields=["archived_at", "can_act", "telegram_user_id", "telegram_username", "telegram_name", "updated_at"]
+    )
     PortalSession.objects.filter(contact=contact).delete()
     MagicLinkToken.objects.filter(contact=contact).delete()
 

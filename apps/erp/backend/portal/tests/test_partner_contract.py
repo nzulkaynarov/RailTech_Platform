@@ -72,7 +72,7 @@ def test_submit_and_confirm_match_the_contract(partner_world):
     confirm = w["client_a"].post(f"{PREFIX}/offers/confirm", {"ids": [c["draft"].pk, c["b_only"].pk]}, format="json")
     assert_matches(confirm.json(), "/partner/offers/confirm", "post")
     assert {e["code"] for e in submit.json()["errors"] + confirm.json()["errors"]} <= set(
-        component("ErrorCode")["enum"]
+        component("ErrorCode")["x-extensible-enum"]
     )
 
 

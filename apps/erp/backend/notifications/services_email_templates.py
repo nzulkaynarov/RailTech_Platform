@@ -55,7 +55,7 @@ SAMPLE_CONTEXTS: dict[str, dict] = {
         "company_name": "ООО «Покупатель»",
         "invite_url": "https://cabinet.example.com/auth/magic#token=sample-token",
         "login_code": "123456",
-        "telegram_url": "https://t.me/sample_bot",
+        "telegram_notifications_url": "https://cabinet.example.com/profile#notifications",
     },
     "portal_magic_link": {
         "contact_name": "Алиса",

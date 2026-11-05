@@ -92,6 +92,16 @@ def feed(company: Company, *, after_id: Optional[int], limit: int) -> tuple[list
     return list(reversed(page[:limit])), len(page) > limit
 
 
+def erased_ids(company: Company, *, up_to: int) -> list[int]:
+    """Стёртые по запросу автора сообщения ленты не новее `up_to` (CHAT-1b): опрос с `after_id` приносит только новые,
+    а показанные Cabinet заменяет по этому списку. Стирают редко — список короткий; индекс `(company, id)`."""
+    return list(
+        PortalMessage.objects.filter(company=company, erased=True, id__lte=up_to)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+
+
 def touch_presence(company: Company, contact, now=None) -> None:
     """Контакт смотрит ленту: `last_seen_at`, не чаще `PRESENCE_STEP`."""
     now = now or timezone.now()

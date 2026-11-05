@@ -114,6 +114,7 @@ import type {
   InboundMailAssist,
   InboundMailBulkArchiveIn,
   InboundMailBulkArchiveOut,
+  InboundMailCheckOut,
   InboundMailHandoverIn,
   InboundMailHandoverTargets,
   InboundMailHandoverTargetsParams,
@@ -7997,6 +7998,79 @@ export function useInboundMailHandoverTargets<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getPollInboundMailUrl = () => {
+  return `/api/v1/inbound-mail/poll`;
+};
+
+/**
+ * «Проверить почту»: опрос общего ящика сразу, тем же кодом и под той же блокировкой, что
+ * плановый (раз в 2 минуты). Право — как на просмотр очереди. Не чаще раза в 20 секунд на
+ * установку: раньше — 429 `rate_limited` (`Retry-After`, `details.retry_after_s`). Ждёт до 30
+ * секунд; опрос уже идёт или дольше — `status = checking`, письма появятся в списке сами. Итог:
+ * `ok` (`created`), `off` (приём не настроен), `error` (`error_kind` без деталей сервера).
+ * @summary Poll Inbound Mail
+ */
+export const pollInboundMail = async (
+  options?: Parameters<typeof http>[1],
+): Promise<InboundMailCheckOut> => {
+  return http<InboundMailCheckOut>(getPollInboundMailUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPollInboundMailMutationKey = () => ["pollInboundMail"] as const;
+
+export const getPollInboundMailMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof pollInboundMail>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof pollInboundMail>>, TError, void, TContext> => {
+  const mutationKey = getPollInboundMailMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof pollInboundMail>>, void> = () => {
+    return pollInboundMail(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PollInboundMailMutationResult = NonNullable<
+  Awaited<ReturnType<typeof pollInboundMail>>
+>;
+
+export type PollInboundMailMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Poll Inbound Mail
+ */
+export const usePollInboundMail = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof pollInboundMail>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof pollInboundMail>>, TError, void, TContext> => {
+  return useMutation(getPollInboundMailMutationOptions(options), queryClient);
+};
 
 export const getGetInboundMailUrl = (mailId: number) => {
   return `/api/v1/inbound-mail/${mailId}`;

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -8,6 +9,7 @@ import { StatusScreen } from '@/components/StatusScreen';
 import { Button } from '@/components/ui/button';
 import { useAppMode } from '@/session/mode';
 import { useMe } from '@/session/useMe';
+import { clearReturnTo, readReturnTo, rememberReturnTo } from '@/session/returnTo';
 import { useNav } from '@/session/useNav';
 import { navItemFor } from './nav';
 import { getTelegramWebApp } from '@/telegram/webapp';
@@ -21,6 +23,12 @@ export function RequireSession() {
   const mode = useAppMode();
   const location = useLocation();
   const session = useMe();
+  const signedOut = mode === 'web' && !session.isPending && !session.isError && !session.data;
+  const here = `${location.pathname}${location.search}${location.hash}`;
+  // Без сессии — запомнить адрес (ссылка из письма), после входа `HomeRedirect` вернёт сюда.
+  useEffect(() => {
+    if (signedOut) rememberReturnTo(here);
+  }, [signedOut, here]);
 
   if (session.isPending) {
     return <StatusScreen title={mode === 'miniapp' ? t('auth.telegram.signingIn') : t('app.loading')} loading />;
@@ -67,9 +75,18 @@ export function WebOnly() {
   return useAppMode() === 'miniapp' ? <Navigate to="/" replace /> : <Outlet />;
 }
 
-/** Корень `/` → первый раздел сессии (у клиента «Запросы»; deep-link Mini App разрешается раньше — `initialPath`). */
+/**
+ * Корень `/` → адрес, с которого отправили на вход (ссылка из письма, `session/returnTo.ts`), иначе первый раздел сессии
+ * (у клиента «Запросы»; deep-link Mini App разрешается раньше — `initialPath`).
+ */
 export function HomeRedirect() {
   const { work } = useNav();
+  // Адрес, с которого отправили на вход (`RequireSession`), — один раз; потом обычный первый раздел.
+  const [back] = useState(() => readReturnTo());
+  useEffect(() => {
+    if (back) clearReturnTo();
+  }, [back]);
+  if (back) return <Navigate to={back} replace />;
   // Нет рабочих разделов — остаёмся на «/»: оболочка показывает «Доступ открыт» и «Профиль» в меню
   if (work.length === 0) return null;
   return <Navigate to={work[0]?.to ?? '/requests'} replace />;
