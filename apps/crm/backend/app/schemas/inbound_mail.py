@@ -208,6 +208,23 @@ class InboundMailbox(BaseModel):
     )
 
 
+class InboundMailCheckOut(BaseModel):
+    """Итог «Проверить почту»: `ok` — ящик прочитан (`created` — сколько новых писем), `off` — приём
+    не настроен, `error` — не удалось (`error_kind` — вид без деталей сервера), `checking` —
+    проверка уже идёт или продолжается в фоне: письма появятся в списке сами."""
+
+    status: Literal["ok", "off", "error", "checking"]
+    created: int = Field(default=0, ge=0, description="Новых писем в очереди после проверки")
+    error_kind: str | None = Field(
+        default=None,
+        description="Вид ошибки: auth_failed, unavailable, tls_failed, invalid_host, "
+        "mailbox_missing, internal",
+    )
+    checked_at: datetime | None = Field(
+        default=None, description="Когда проверка закончилась; у `checking` — пусто"
+    )
+
+
 class InboundMailCounts(BaseModel):
     """Числа вкладок в рамках прав сотрудника: новые (из них «из истории»), мои в работе, все в
     работе, разобранные, подозрительные, все."""

@@ -383,6 +383,38 @@ class InboundMailBulkArchiveResult(_Out):
     skipped: list[InboundMailSkippedItem]
 
 
+class InboundMailCheck(_Out):
+    """Итог «Проверить почту» (MAIL-NOW): `ok` — ящик прочитан (`created` новых писем), `off` —
+    приём не настроен, `error` — не удалось (`error_kind` без деталей сервера), `checking` —
+    проверка уже идёт или продолжается в фоне, `too_soon` — проверяли только что."""
+
+    status: Literal["ok", "off", "error", "checking", "too_soon"]
+    created: int
+    error_kind: str | None
+    checked_at: datetime | None
+    retry_after_s: int | None
+
+
+def to_check(src: crm.InboundMailCheckOut) -> InboundMailCheck:
+    return InboundMailCheck(
+        status=src.status,
+        created=src.created or 0,
+        error_kind=src.error_kind,
+        checked_at=src.checked_at,
+        retry_after_s=None,
+    )
+
+
+def check_too_soon(retry_after_s: int) -> InboundMailCheck:
+    return InboundMailCheck(
+        status="too_soon",
+        created=0,
+        error_kind=None,
+        checked_at=None,
+        retry_after_s=retry_after_s,
+    )
+
+
 def _lead(link: crm.InboundMailLink | None) -> InboundMailLink | None:
     if link is None:
         return None

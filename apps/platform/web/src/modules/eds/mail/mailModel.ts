@@ -138,6 +138,12 @@ export function prefillFromMail(
   };
 }
 
+/** Сколько целых минут прошло с `iso` (не меньше нуля; не дата — 0). */
+export function minutesSince(iso: string, now: number): number {
+  const at = Date.parse(iso);
+  return Number.isNaN(at) ? 0 : Math.max(0, Math.floor((now - at) / 60_000));
+}
+
 /** После действия по письму — свежие очередь, бейджи «Моих задач» и меню. */
 export function useRefreshMail(): () => Promise<void> {
   const client = useQueryClient();
