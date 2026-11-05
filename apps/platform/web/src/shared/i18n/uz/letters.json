@@ -1172,7 +1172,7 @@
     "failedTag": "Yuborilmadi",
     "failed": "{{number}} manzilga yetib bormadi: {{reason}}.",
     "failedNoReason": "{{number}} manzilga yetib bormadi.",
-    "failedHint": "Xatni oching va «Manzilga yana yuborish» tugmasini bosing.",
+    "failedHint": "Ish yurituvchi CHIQ kartochkasidan yana yuboradi.",
     "open": "Ochish",
     "prefilled": "{{number}} dan to‘ldirildi: muxbir, pochta va mavzuni tekshiring.",
     "continue": "Javobni davom ettirish"

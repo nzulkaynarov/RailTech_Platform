@@ -1172,7 +1172,7 @@
     "failedTag": "Not sent",
     "failed": "{{number}} did not reach the addressee: {{reason}}.",
     "failedNoReason": "{{number}} did not reach the addressee.",
-    "failedHint": "Open the letter and press “Send to the addressee again”.",
+    "failedHint": "The records clerk will send it again from the outgoing letter card.",
     "open": "Open",
     "prefilled": "Filled in from {{number}}: check the correspondent, email and subject.",
     "continue": "Continue the reply"
