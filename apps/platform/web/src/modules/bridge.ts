@@ -134,6 +134,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.overview",
   "admin.org",
   "admin.roles",
+  "admin.signing",
   "admin.company",
   "admin.numbering",
   "admin.taxes",

@@ -37,6 +37,8 @@ MATRIX: Final[dict[str, str]] = {
     "eds.payments": "HRRHHFHF",
     "eds.memo.create": "FFFFFFFF",
     "eds.memo.approve": "HFHHHHHH",
+    # SIGN-2: реестр полномочий подписи ведёт администратор (ADR-0024 п. 1).
+    "eds.signing.manage": "FHHHHHHH",
     "erp.calc": "HFHFFRHF",
     "erp.calc.goods": "HFHFHHHF",
     "erp.calc.services": "HFHHFHHF",

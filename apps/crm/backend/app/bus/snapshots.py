@@ -275,6 +275,20 @@ def user_fields(user: User, roles: Sequence[PlatformRole]) -> dict[str, Any]:
             "eds": eds_permissions(roles, is_active=is_active),
             "sections": catalog_sections(roles, is_active=is_active),
         },
+        "deputy": deputy_of(user),
+    }
+
+
+def deputy_of(user: User) -> dict[str, Any] | None:
+    """Замещение на период (`user.deputy`, SIGN-2, ADR-0024 п. 2): заместитель получает задачи
+    подписи отсутствующего, прав замещение не даёт. Нет периода — `None`; период без заместителя
+    (его отключили) — `crm_user_id = null`."""
+    if user.deputy_from is None or user.deputy_to is None:
+        return None
+    return {
+        "crm_user_id": user.deputy_user_id,
+        "date_from": user.deputy_from.isoformat(),
+        "date_to": user.deputy_to.isoformat(),
     }
 
 

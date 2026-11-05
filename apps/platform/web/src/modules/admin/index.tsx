@@ -12,6 +12,7 @@ import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { OrgPage } from "./org/OrgPage";
 import { legacySettingsPath } from "./redirects";
 import { RolesPage } from "./roles/RolesPage";
+import { SigningPage } from "./signing/SigningPage";
 import { DictionariesPage } from "./settings/DictionariesPage";
 import {
   AiSpendPage,
@@ -34,6 +35,7 @@ import { TicketsPage } from "./tickets/TicketsPage";
 const PAGES: Readonly<Record<string, ComponentType>> = {
   overview: SettingsHome,
   roles: RolesPage,
+  signing: SigningPage,
   company: CompanyPage,
   numbering: NumberingPage,
   taxes: TaxesPage,

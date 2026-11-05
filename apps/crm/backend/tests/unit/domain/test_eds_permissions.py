@@ -39,6 +39,8 @@ EXPECTED: dict[tuple[str, str], set[str]] = {
     ("eds.memo.create", "full"): {"memos.create"},
     ("eds.memo.approve", "read"): set(),
     ("eds.memo.approve", "full"): {"memos.approve"},
+    # SIGN-2 (ADR-0024 п. 1): реестр полномочий подписи — только `full`.
+    ("eds.signing.manage", "full"): {"signing.manage"},
 }
 ACCOUNTANT = {
     "letters.read",
@@ -51,10 +53,12 @@ ACCOUNTANT = {
 BUS = "bus.manage"
 #: Свой файл в EDS (письмо директору к «Создать заявку», D1-2b): раздел `crm.clients` уровня `full`.
 UPLOAD = "files.upload"
+#: Реестр полномочий подписи (SIGN-2): системная роль администратора, директору — лишь по роли.
+SIGNING = "signing.manage"
 ROLE_EDS: dict[str, set[str]] = {
-    "ADMIN": {"memos.create", BUS},
+    "ADMIN": {"memos.create", BUS, SIGNING},
     # D2-4: «Счета и оплаты» у директора — read: оплату подтверждает бухгалтер
-    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, "payments.confirm"},
+    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, SIGNING, "payments.confirm"},
     "MANAGER": {"letters.read", "registry.read", "memos.create", UPLOAD},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
@@ -121,11 +125,11 @@ def test_every_system_role_and_template_gives_the_expected_eds_codes(legacy: str
 def test_director_exports_the_registry_but_does_not_confirm_payments() -> None:
     """D2-4 (Q-D2-4-1 п. 1): директор читает счета и выгружает реестр, оплату ведёт бухгалтер."""
     codes = set(eds_permissions_of([make_grant("DIRECTOR")]))
-    assert codes == set(EDS_PERMISSIONS) - {BUS, "payments.confirm"}
+    assert codes == set(EDS_PERMISSIONS) - {BUS, SIGNING, "payments.confirm"}
     assert {"registry.read", "registry.export"} <= codes
     # бухгалтер сохраняет всё, что имел
     assert set(eds_permissions_of([make_grant("ACCOUNTANT")])) == ACCOUNTANT
-    assert eds_permissions_of([make_grant("ADMIN")]) == (BUS, "memos.create")
+    assert eds_permissions_of([make_grant("ADMIN")]) == (BUS, "memos.create", SIGNING)
 
 
 def test_manager_and_accountant_is_the_union_including_payment_confirmation() -> None:

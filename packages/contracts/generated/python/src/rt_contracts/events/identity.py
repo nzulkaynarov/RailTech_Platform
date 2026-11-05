@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from enum import StrEnum
 from typing import Annotated
 
@@ -25,6 +26,22 @@ class Actor(BaseModel):
 
 class ChangedField(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")]
+
+
+class Deputy(BaseModel):
+    """
+    Необязательно (v1, аддитивно с SIGN-2, ADR-0024 п. 2): замещение сотрудника на период отсутствия (`users.deputy_*` CRM). Заместитель получает задачи подписи отсутствующего, но права на подпись замещение не даёт: подписать он может только по собственному полномочию из реестра EDS. `null` или нет поля — замещения нет. Подписчик заменяет замещение целиком по снимку; дни периода — календарные, включительно
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int | None
+    """
+    Заместитель; `null` — период задан, а заместителя нет (его отключили): замещающего нет
+    """
+    date_from: date
+    date_to: date
 
 
 class EdsPermission(RootModel[str]):
@@ -127,6 +144,10 @@ class User(BaseModel):
     permissions: Permissions | None = None
     """
     Необязательно (v1, аддитивно с волны 12): права сотрудника в сервисах, которые сами ролей не ведут; CRM вычисляет их из ролей Платформы по каталогу platform-rbac.yaml (backend.<сервис>). eds — коды прав EDS. Нет поля permissions, нет permissions.eds или пустой список — доступа к EDS нет (CRM до задачи E4 публикует снимок без поля). Подписчик заменяет права целиком по снимку
+    """
+    deputy: Deputy | None = None
+    """
+    Необязательно (v1, аддитивно с SIGN-2, ADR-0024 п. 2): замещение сотрудника на период отсутствия (`users.deputy_*` CRM). Заместитель получает задачи подписи отсутствующего, но права на подпись замещение не даёт: подписать он может только по собственному полномочию из реестра EDS. `null` или нет поля — замещения нет. Подписчик заменяет замещение целиком по снимку; дни периода — календарные, включительно
     """
     updated_at: AwareDatetime
 

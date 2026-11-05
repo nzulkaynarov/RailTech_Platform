@@ -3,7 +3,7 @@
 
 from app import clock
 from app.container import get_container
-from app.services import idempotency, instructions
+from app.services import idempotency, instructions, signing_reminders
 from app.services.sso import purge_expired_jti
 from app.tasks.queue import queue
 
@@ -31,3 +31,13 @@ async def instruction_reminders(timestamp: int) -> int:
     container = get_container()
     async with container.session_factory() as session, session.begin():
         return await instructions.send_reminders(session, container.bus, now=clock.now())
+
+
+@queue.periodic(cron="*/30 * * * *", periodic_id="signing_expiry_reminders")
+@queue.task(name="signing_expiry_reminders", queue="maintenance", queueing_lock="signing_expiry_reminders")
+async def signing_expiry_reminders(timestamp: int) -> int:
+    """Раз в 30 минут: напомнить держателям `signing.manage` о полномочиях подписи, которые кончаются через 14 дней
+    (с 9:00 по Ташкенту; одно напоминание на полномочие и дату окончания)."""
+    container = get_container()
+    async with container.session_factory() as session, session.begin():
+        return await signing_reminders.send_expiry_reminders(session, container.bus, now=clock.now())

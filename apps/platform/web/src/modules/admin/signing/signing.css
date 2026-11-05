@@ -1,0 +1,94 @@
+/* Настройки · Права подписи (SIGN-2): страница, боковое окно, проверка правил. Токены Платформы: #f0f0f0 разделитель,
+   #595959 вторичный текст, #6e6e6e подсказки. */
+.pf-sign {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-sign-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.pf-sign-hint-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-sign-expires {
+  color: #8c5a00;
+}
+.pf-sign-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+@media (max-width: 480px) {
+  .pf-sign-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pf-sign-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-sign-footer-main {
+  display: inline-flex;
+  gap: 8px;
+}
+.pf-sign-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.pf-sign-file {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pf-sign-journal {
+  border-top: 1px solid #f0f0f0;
+  margin-top: 8px;
+  padding-top: 16px;
+}
+.pf-sign-h3 {
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.pf-sign-check-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0 12px;
+  align-items: end;
+}
+.pf-sign-result {
+  border-top: 1px solid #f0f0f0;
+  margin-top: 8px;
+  padding-top: 12px;
+}
+.pf-sign-result ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+/* До 992 px таблица не растёт вширь: вид, основание, лимит и срок уходят строкой под имя, остаются состояние и «Открыть». */
+.pf-sign-compact {
+  display: none;
+}
+@media (max-width: 991px) {
+  .pf-sign .pf-sign-col-wide {
+    display: none;
+  }
+  .pf-sign .pf-sign-compact {
+    display: block;
+  }
+}

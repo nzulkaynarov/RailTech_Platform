@@ -143,6 +143,24 @@ class Attachment(BaseModel):
     """
 
 
+class Authority(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    eds_authority_id: Uuid
+    holder: Holder
+    basis: Basis
+    basis_number: Annotated[str | None, Field(max_length=64)] = None
+    valid_to: date
+    days_left: Annotated[int, Field(ge=0)]
+
+
+class Basis(StrEnum):
+    charter = "charter"
+    order = "order"
+    power_of_attorney = "power_of_attorney"
+
+
 class Content(BaseModel):
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «eds → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
@@ -261,6 +279,14 @@ class ErpLinks(BaseModel):
     """
     crm_client_id: int | None = None
     erp_company_id: int | None = None
+
+
+class Holder(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_user_id: int
+    full_name: Annotated[str, Field(max_length=255, min_length=1)]
 
 
 class Kind(StrEnum):
@@ -575,6 +601,34 @@ class Sender(BaseModel):
     """
     Контактное лицо отправителя (для письма по заявке — из payload.contact_name события erp.request.created). Необязательное, с 2026-10-26 (C1-G-7)
     """
+
+
+class SigningAuthorityExpiringV1(BaseModel):
+    """
+    Тип uz.railtech.eds.signing_authority.expiring.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Напоминание (SIGN-2, ADR-0024 п. 1): до окончания срока полномочия подписи (доверенность, приказ со сроком) осталось не больше 14 дней — держателям права `signing.manage` (раздел `eds.signing.manage` каталога ролей). Текст (RU) готовит EDS, доставляет CRM тем же путём, что `notice.requested`: строка колокольчика (`staff_notifications`) и сообщение в Telegram, где он привязан. Одно напоминание на полномочие и дату окончания (перенос срока разрешает новое); повтор доставки того же события — один эффект (inbox CRM). Подписчики v1: crm (доставка).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    notice_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ отправителя: EDS публикует напоминание с этим ключом один раз (полномочие и дата окончания)
+    """
+    recipients: Annotated[list[int], Field(max_length=50, min_length=1)]
+    """
+    crm_user_id держателей права `signing.manage`
+    """
+    title: Annotated[str, Field(max_length=200, min_length=1)]
+    """
+    Заголовок уведомления (RU): чья доверенность и когда заканчивается
+    """
+    subtitle: Annotated[str | None, Field(max_length=200)] = None
+    """
+    Вторая строка: что сделать
+    """
+    authority: Authority
+    actor: Actor
 
 
 class Source(BaseModel):

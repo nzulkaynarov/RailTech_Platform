@@ -15,12 +15,13 @@ from dataclasses import dataclass
 from typing import Any, Final, Literal
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from app import clock
 from app.errors import conflict, invalid_fields, not_found
-from app.models import DictionaryItem, Letter
+from app.models import DictionaryItem, Letter, SigningAuthority
 from app.schemas.dictionaries import (
     AttrValue,
     Dictionary,
@@ -37,6 +38,7 @@ from app.services import journal
 LETTER_KINDS: Final = "letter-kinds"
 RECEIPT_METHODS: Final = "receipt-methods"
 RESOLUTION_KINDS: Final = "resolution-kinds"
+SIGNING_KINDS: Final = "signing-kinds"
 POSITION_STEP = 10
 
 
@@ -100,6 +102,13 @@ SPECS: Final[dict[str, Spec]] = {
             Letter.resolution_kind,
             closed=True,
         ),
+        # Виды документов, которые подписывают по полномочию (SIGN-2, ADR-0024 п. 1): открытый каталог — вид добавляет
+        # администратор; использованный в полномочии вид не удаляется, а скрывается.
+        Spec(
+            SIGNING_KINDS,
+            ("Виды документов для подписи", "Imzolanadigan hujjat turlari", "Document types for signing"),
+            SigningAuthority.kinds,
+        ),
     )
 }
 
@@ -153,6 +162,9 @@ async def _rows(session: AsyncSession, kind: str, *, include_hidden: bool) -> li
 
 async def _used_codes(session: AsyncSession, spec: Spec) -> set[str]:
     column = spec.usage
+    if isinstance(column.type, ARRAY):  # поле-массив кодов (виды документов полномочия подписи)
+        rows = await session.execute(select(func.unnest(column)).distinct())
+        return {code for code in rows.scalars() if code}
     rows = await session.execute(select(column).where(column.is_not(None)).group_by(column))
     return {code for code in rows.scalars() if code}
 

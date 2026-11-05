@@ -29,7 +29,7 @@ describe("Настройки · индекс «Все настройки» (SET-
     expect(groupTitles()).toEqual(
       expect.arrayContaining(["Люди и доступ", "Компания", "Каналы связи", "Процессы", "Система"]),
     );
-    expect(cardsOf("Люди и доступ")).toEqual(["Сотрудники", "Роли и права"]);
+    expect(cardsOf("Люди и доступ")).toEqual(["Сотрудники", "Роли и права", "Права подписи"]);
     expect(cardsOf("Каналы связи")).toEqual(["Telegram", "Почта", "Формы сайта"]);
     expect(cardsOf("Система")).toContain("Обмен между системами");
     const mail = within(screen.getByRole("region", { name: "Каналы связи" })).getByRole("link", {

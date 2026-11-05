@@ -406,10 +406,18 @@ async def decide_instruction_extension(
     return await _card(authed, raw)
 
 
-# EDS-REG: администратору — люди общих шаблонов резолюций.
+# EDS-REG: администратору — люди общих шаблонов резолюций; держателю `eds.signing.manage` — владелец
+# полномочия подписи (SIGN-2).
 StaffReader = Annotated[
     Authed,
-    Depends(require_any(("eds.inbox.register", "full"), ("eds.inbox", "full"), ("admin", "full"))),
+    Depends(
+        require_any(
+            ("eds.inbox.register", "full"),
+            ("eds.inbox", "full"),
+            ("admin", "full"),
+            ("eds.signing.manage", "full"),
+        )
+    ),
 ]
 
 
