@@ -430,6 +430,32 @@ def test_erasing_a_person_erases_only_their_messages(
     assert reply(client_company, 502, "Новый ответ") is not None  # лента живёт дальше
 
 
+def test_polling_reports_messages_erased_after_they_were_shown(
+    portal_client, other_portal_client, client_company, client_contact, other_company, other_contact
+):
+    """CHAT-1b: опрос с `after_id` приносит только новые сообщения — стёртое по запросу автора уже показанное
+    сообщение Cabinet узнаёт из `erased_ids` (своей компании и не новее `after_id`)."""
+    # чужое стёртое сообщение — раньше своих (id меньше after_id): отсечь его может только фильтр компании
+    foreign = send(other_portal_client, text="Чужая компания", key="cm_poll_o_001").json()
+    first = send(portal_client, text="Пишет А", key="cm_poll_a_001").json()
+    reply(client_company, 501, "Ответ")
+    erased(client_company, "authors", [client_contact.pk])
+    erased(other_company, "authors", [other_contact.pk])
+    last = PortalMessage.objects.filter(company=client_company).order_by("-id").first().pk
+    assert foreign["id"] < last
+
+    polled = portal_client.get(f"{API}/messages", {"after_id": last}).json()
+    assert polled["items"] == []
+    assert polled["erased_ids"] == [first["id"]]
+    assert foreign["id"] not in polled["erased_ids"]
+    assert other_portal_client.get(f"{API}/messages", {"after_id": last}).json()["erased_ids"] == [foreign["id"]]
+    assert check_response(polled, response_schema("/messages", "get")) == []
+    earlier = portal_client.get(f"{API}/messages", {"after_id": first["id"] - 1}).json()
+    assert earlier["erased_ids"] == []  # новее after_id — придёт в items с erased: true
+    assert earlier["items"][0]["erased"] is True
+    assert portal_client.get(f"{API}/messages").json()["erased_ids"] == []
+
+
 def test_erasing_the_client_wipes_the_whole_feed_and_a_late_reply_does_not_bring_it_back(portal_client, client_company):
     before = timezone.now() - datetime.timedelta(minutes=5)
     send(portal_client)

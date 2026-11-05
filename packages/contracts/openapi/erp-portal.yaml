@@ -3490,7 +3490,7 @@ components:
 
     PortalMessagePage:
       type: object
-      required: [items, has_more]
+      required: [items, has_more, erased_ids]
       properties:
         items:
           type: array
@@ -3499,6 +3499,15 @@ components:
         has_more:
           type: boolean
           description: С `after_id` — после последнего сообщения страницы есть ещё; без него — есть более ранние
+        erased_ids:
+          type: array
+          description: >-
+            С `after_id` — сообщения ленты не новее `after_id`, стёртые по запросу автора (CHAT-1b): опрос приносит только
+            новые сообщения, по этому списку Cabinet заменяет уже показанные на «Удалённый пользователь» без перезагрузки.
+            Без `after_id` — пусто (стёртые и так приходят с `erased: true`)
+          items:
+            type: integer
+            format: int64
       additionalProperties: false
 
     PortalMessageReadMark:
