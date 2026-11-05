@@ -1006,6 +1006,31 @@ export const handlers = [
     }),
   ),
 
+  // Публичная проверка официальных документов (ADR-0024 §6, SIGN-VERIFY-1)
+  http.get<{ code: string }>(`${API}/verify/:code`, ({ params }) => {
+    const code = String(params.code);
+    if (code === 'unknown' || code === 'not-found' || code === 'unknown-code-999') {
+      return HttpResponse.json({ detail: 'NOT_FOUND' }, { status: 404 });
+    }
+    if (code === 'rate-limited') {
+      return HttpResponse.json({ detail: 'TOO_MANY_REQUESTS' }, { status: 429, headers: { 'Retry-After': '60' } });
+    }
+    if (code === 'revoked') {
+      return HttpResponse.json({
+        ...fixtures.mockDocumentVerification,
+        code: 'revoked',
+        status: 'revoked',
+        revoked_at: '2026-11-05T14:00:00Z',
+        revocation_reason: 'Отозван в связи с отменой доверенности',
+      });
+    }
+    return HttpResponse.json({
+      ...fixtures.mockDocumentVerification,
+      code,
+    });
+  }),
+
   // Публичная форма CRM «Запрос» со страницы «Я новый клиент» (M2-CAB-03) — src/mocks/crmForm.ts.
+
   ...crmFormHandlers,
 ];

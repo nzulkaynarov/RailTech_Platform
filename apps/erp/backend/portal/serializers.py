@@ -692,3 +692,27 @@ def portal_message_data(message, contact_id: int) -> dict:
         "client_message_id": message.client_message_id,
         "erased": message.erased,
     }
+
+
+class DocumentVerificationSerializer(serializers.ModelSerializer):
+    """`DocumentVerification` контракта (ADR-0024 §6, SIGN-VERIFY-1)."""
+
+    class Meta:
+        from portal.models import PortalDocumentVerification
+
+        model = PortalDocumentVerification
+        fields = [
+            "code",
+            "kind",
+            "number",
+            "date",
+            "company_name",
+            "signatory_name",
+            "signatory_position",
+            "signatory_basis",
+            "status",
+            "sha256_hash",
+            "signed_at",
+            "revoked_at",
+            "revocation_reason",
+        ]

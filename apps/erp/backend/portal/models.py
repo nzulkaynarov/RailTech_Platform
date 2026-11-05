@@ -376,3 +376,97 @@ class PortalChatErasure(models.Model):
     class Meta:
         verbose_name = _("Стирание чата кабинета")
         verbose_name_plural = _("Стирания чата кабинета")
+
+
+class PortalDocumentVerification(models.Model):
+    """Проекция официального документа для публичной проверки подлинности по /v/<код> (ADR-0024 §6, SIGN-VERIFY-1).
+
+    Заполняется по событию шины `uz.railtech.eds.document.signed.v1` из EDS.
+    Отдаётся без аутентификации через `GET /api/portal/v1/verify/{code}` с ограничением частоты.
+    """
+
+    code = models.CharField(
+        max_length=64,
+        unique=True,
+        db_index=True,
+        verbose_name=_("Код проверки"),
+        help_text=_("Случайный код с QR-кода на бланке или колонтитула"),
+    )
+    kind = models.CharField(
+        max_length=32,
+        verbose_name=_("Вид документа"),
+        help_text=_("letter_out, quote, contract, invoice, act, memo, other"),
+    )
+    number = models.CharField(
+        max_length=128,
+        verbose_name=_("Номер документа"),
+        help_text=_("Регистрационный номер, например ИСХ-042/26"),
+    )
+    date = models.DateField(
+        verbose_name=_("Дата документа"),
+    )
+    company_name = models.CharField(
+        max_length=255,
+        verbose_name=_("Организация"),
+        help_text=_("Наименование организации-эмитента"),
+    )
+    signatory_name = models.CharField(
+        max_length=255,
+        verbose_name=_("ФИО подписанта"),
+    )
+    signatory_position = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Должность подписанта"),
+    )
+    signatory_basis = models.TextField(
+        blank=True,
+        default="",
+        verbose_name=_("Основание подписи"),
+        help_text=_("на основании Устава / по доверенности № ..."),
+    )
+    status = models.CharField(
+        max_length=16,
+        default="valid",
+        choices=[("valid", _("Действует")), ("revoked", _("Отозван"))],
+        verbose_name=_("Статус"),
+    )
+    sha256_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        null=True,
+        verbose_name=_("SHA-256 хеш файла"),
+        help_text=_("Контрольная сумма итогового PDF файла"),
+    )
+    signed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Время подписания"),
+    )
+    eds_document_id = models.UUIDField(
+        null=True,
+        blank=True,
+        unique=True,
+        verbose_name=_("ID документа в EDS"),
+    )
+    revoked_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name=_("Время отзыва"),
+    )
+    revocation_reason = models.TextField(
+        blank=True,
+        null=True,
+        verbose_name=_("Причина отзыва"),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _("Проверка официального документа")
+        verbose_name_plural = _("Проверки официальных документов")
+        ordering = ["-signed_at", "-id"]
+
+    def __str__(self):
+        return f"PortalDocumentVerification(code={self.code}, {self.kind} #{self.number}, {self.status})"

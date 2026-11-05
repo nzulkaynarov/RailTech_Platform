@@ -2147,6 +2147,54 @@
                 }
             }
         },
+        "/api/portal/v1/verify/{code}": {
+            "get": {
+                "operationId": "api_portal_v1_verify_retrieve",
+                "description": "GET /verify/{code} — Публичная проверка официального документа по коду (ADR-0024 §6, SIGN-VERIFY-1).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/portal/v1/verify/{code}/": {
+            "get": {
+                "operationId": "api_portal_v1_verify_retrieve_2",
+                "description": "GET /verify/{code} — Публичная проверка официального документа по коду (ADR-0024 §6, SIGN-VERIFY-1).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "code",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/v1/accounts/companies/": {
             "get": {
                 "operationId": "accounts_companies_list",

@@ -69,6 +69,9 @@ REST_FRAMEWORK = {
             "PORTAL_LOGIN_RATE", "10/minute"
         ),  # вход без сессии, на IP (magic-link, initData)
         "portal_accept": os.environ.get("PORTAL_ACCEPT_RATE", "10/minute"),  # акцепт КП с кодом, на сессию
+        "portal_verify": os.environ.get(
+            "PORTAL_VERIFY_RATE", "30/minute"
+        ),  # проверка документа по коду (/verify/<код>, SIGN-VERIFY-1)
     },
     # SEC-04: number of trusted reverse proxies that set X-Forwarded-For before Django.
     # Prod/staging = 1 (host Caddy OVERWRITES XFF with the client IP — see

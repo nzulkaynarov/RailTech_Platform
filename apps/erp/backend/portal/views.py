@@ -16,7 +16,7 @@ from integration.services.requisites import REQUISITES_MANAGED_BY_CRM, changed_c
 from parties.models import Contact, active_contact_q
 from portal.authentication import PortalAuthentication
 from portal.exceptions import PortalBadRequest, PortalConflict, PortalValidationError, portal_exception_handler
-from portal.models import PortalUpload
+from portal.models import PortalDocumentVerification, PortalUpload
 from portal.permissions import ANY_MODULE, CanAct, HasPortalModule, IsPortalAuthenticated
 from portal.projections import (
     annotate_request_sources,
@@ -38,6 +38,7 @@ from portal.serializers import (
     CompanyUpdateSerializer,
     ContractSerializer,
     DeliveryLineSerializer,
+    DocumentVerificationSerializer,
     InvoiceSerializer,
     LoginCodeSerializer,
     MagicLinkRequestSerializer,
@@ -70,7 +71,12 @@ from portal.services.magic_link import exchange_magic_link, request_magic_link
 from portal.services.messages import unread_count
 from portal.services.requests import create_client_request
 from portal.services.telegram_auth import authenticate_telegram_user
-from portal.throttles import PortalAcceptRateThrottle, PortalLoginRateThrottle, PortalSessionRateThrottle
+from portal.throttles import (
+    PortalAcceptRateThrottle,
+    PortalLoginRateThrottle,
+    PortalSessionRateThrottle,
+    PortalVerifyRateThrottle,
+)
 from rest_framework import exceptions, status
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
@@ -303,6 +309,24 @@ class LogoutView(APIView):
             session.delete()
         res = Response(status=status.HTTP_204_NO_CONTENT)
         return _delete_portal_cookie(res)
+
+
+class DocumentVerificationView(APIView):
+    """GET /verify/{code} — Публичная проверка официального документа по коду (ADR-0024 §6, SIGN-VERIFY-1)."""
+
+    authentication_classes = []
+    permission_classes = []
+    throttle_classes = [PortalVerifyRateThrottle]
+
+    def get_exception_handler(self):
+        return portal_exception_handler
+
+    def get(self, request, code: str):
+        cleaned_code = code.strip()
+        verification = PortalDocumentVerification.objects.filter(code=cleaned_code).first()
+        if not verification:
+            raise exceptions.NotFound(detail="NOT_FOUND")
+        return Response(DocumentVerificationSerializer(verification).data, status=status.HTTP_200_OK)
 
 
 # ── 2. Me ───────────────────────────────────────────────────────────────────

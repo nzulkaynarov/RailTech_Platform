@@ -16,6 +16,7 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { LoginSentPage } from '@/pages/auth/LoginSentPage';
 import { MagicLinkPage } from '@/pages/auth/MagicLinkPage';
 import { NewClientPage } from '@/pages/auth/NewClientPage';
+import { VerifyPage } from '@/pages/verify/VerifyPage';
 import { HomeRedirect, RequireModule, RequireSession, WebOnly } from './guards';
 import { RootErrorPage } from './RootErrorPage';
 
@@ -40,6 +41,7 @@ export const routes: RouteObject[] = [
         ],
       },
       { path: '/auth/magic', element: <MagicLinkPage /> },
+      { path: '/v/:code', element: <VerifyPage /> },
       {
         element: <RequireSession />,
         children: [

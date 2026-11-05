@@ -21,6 +21,7 @@ from portal.views import (
     DeliveryListView,
     DocumentFileView,
     DocumentListView,
+    DocumentVerificationView,
     InvoiceListView,
     InvoiceProofView,
     LoginCodeExchangeView,
@@ -127,6 +128,9 @@ urlpatterns = [
     path("documents/", DocumentListView.as_view(), name="portal-documents-slash"),
     path("documents/<int:pk>/file", DocumentFileView.as_view(), name="portal-document-file"),
     path("documents/<int:pk>/file/", DocumentFileView.as_view(), name="portal-document-file-slash"),
+    # Verify (Проверка официального документа по коду, ADR-0024 §6, SIGN-VERIFY-1)
+    path("verify/<str:code>", DocumentVerificationView.as_view(), name="portal-verify"),
+    path("verify/<str:code>/", DocumentVerificationView.as_view(), name="portal-verify-slash"),
     # Uploads (Загрузка файлов, Q-14)
     path("uploads", UploadView.as_view(), name="portal-uploads"),
     path("uploads/", UploadView.as_view(), name="portal-uploads-slash"),
