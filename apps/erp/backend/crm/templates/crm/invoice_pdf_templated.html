@@ -11,8 +11,10 @@
   структурный выбор, что в код-шаблоне invoice_pdf.html.
 {% endcomment %}
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{% blocktranslate with number=invoice.number %}Счёт № {{ number }}{% endblocktranslate %}</div>
   {% if invoice.issued_at %}{% with issued=invoice.issued_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% else %}{% with issued=invoice.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% endif %}
+  {% endif %}
   {% if invoice.due_date %}<div>{% blocktranslate with due=invoice.due_date|date:"d.m.Y" %}оплата до {{ due }}{% endblocktranslate %}</div>{% endif %}
   {% if invoice.contract %}<div>{% blocktranslate with contract_number=invoice.contract.number %}по договору № {{ contract_number }}{% endblocktranslate %}</div>{% endif %}
 {% endblock %}

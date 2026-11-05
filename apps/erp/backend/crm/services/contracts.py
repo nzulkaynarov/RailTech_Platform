@@ -195,9 +195,18 @@ def _render_contract_pdf(contract) -> None:
     # document profile (shared document_brand_context, mirroring the КП PDF). NEVER a hardcoded
     # platform identity: a contract is a legal document and must name the real counterparty.
     from ..document_wording import document_wording_context
-    from .documents import brand_context_for_pdf, document_brand_context, document_totals
+    from .documents import (
+        brand_context_for_pdf,
+        contract_is_draft,
+        document_brand_context,
+        document_totals,
+        draft_context,
+        remember_pdf_state,
+    )
     from .quotes import _quote_seller_company
 
+    # SIGN-1: договор в DRAFT — проект («ПРОЕКТ», без номера и даты); с отправкой клиенту — документ как прежде.
+    is_draft = contract_is_draft(contract)
     supplier = _quote_seller_company(contract.quote)
     brand = document_brand_context(supplier)
 
@@ -235,13 +244,16 @@ def _render_contract_pdf(contract) -> None:
                     seller=brand.get("seller"),
                     seller_profile=brand.get("seller_profile"),
                     body_html=frozen_body or None,
+                    draft=is_draft,
                 ),
                 **brand_context_for_pdf(brand),
+                **draft_context(is_draft),
             },
         )
         buf = BytesIO()
         HTML(string=html_string).write_pdf(buf)
         save_rendered_pdf(contract, f"Contract_{contract.number}.pdf", ContentFile(buf.getvalue()))
+        remember_pdf_state("contract", contract.pk, is_draft)
         return
 
     html_string = render_to_string(
@@ -258,6 +270,7 @@ def _render_contract_pdf(contract) -> None:
             # rows would misstate what the buyer contracted to pay. billable() = the single filter.
             "items": items,
             **brand_context_for_pdf(brand),
+            **draft_context(is_draft),
             # Формулировки договора: компании либо платформенные (spec-documents-editable).
             **document_wording_context(brand.get("seller_profile")),
         },

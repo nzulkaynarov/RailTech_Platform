@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .labels import PAGE_OF
+from .labels import DRAFT_FOOTER, PAGE_OF
 from .model import Density, Lang, Layout, Letterhead, Orientation, Tuning
 
 #: Плотность: кегль основного текста (pt) и межстрочный (исследование §3.2).
@@ -43,6 +43,8 @@ FONT_FILES: dict[str, tuple[tuple[str, int, str], ...]] = {
     ),
 }
 FAMILY = {"sans": "RT Doc Sans", "serif": "RT Doc Serif"}
+#: Цвет знака «ПРОЕКТ» и надписи в колонтитуле проекта (не из бланка: знак должен читаться на любом бланке).
+DRAFT_COLOR = "#b42318"
 
 
 @dataclass(frozen=True)
@@ -85,7 +87,7 @@ def _font_faces() -> str:
     return "\n".join(rules)
 
 
-def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_numbers: bool) -> str:
+def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_numbers: bool, draft: bool = False) -> str:
     top, right, bottom, left = setup.margins_mm
     size = "A4 landscape" if setup.orientation is Orientation.LANDSCAPE else "A4"
     family = FAMILY[letterhead.font]
@@ -99,6 +101,14 @@ def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_num
         Layout.INTERNAL: "content: element(rtexec);",
         Layout.COMMERCIAL: "content: element(rtfooter);",
     }[setup.layout]
+    draft_note = (
+        f"""  @top-left {{ content: "{DRAFT_FOOTER[lang]}"; vertical-align: bottom; padding-bottom: 3mm;
+               font-family: "{family}"; font-size: 7.5pt; font-weight: 700; color: {DRAFT_COLOR};
+               white-space: nowrap; }}
+"""
+        if draft
+        else ""
+    )
     return f"""
 {_font_faces()}
 @page {{
@@ -109,7 +119,7 @@ def stylesheet(setup: PageSetup, letterhead: Letterhead, lang: Lang, *, page_num
                    color: #7a828f; white-space: nowrap; }}
   @top-right {{ content: string(rtdocref); vertical-align: bottom; padding-bottom: 3mm; font-family: "{family}";
                 font-size: 7.5pt; color: #7a828f; }}
-}}
+{draft_note}}}
 @page :first {{ @top-right {{ content: none; }} }}
 {BASE_CSS}
 html {{ font-family: "{family}"; font-size: {setup.font_pt:g}pt; line-height: {setup.line_height:g}; }}
@@ -176,6 +186,12 @@ table.rt-signature td + td { padding: 0 0 0 16pt; }
 .rt-sign-line { border-bottom: 0.75pt solid #6b7280; height: 2.2em; margin-bottom: 1pt; }
 .rt-sign-caption { font-size: 0.72em; color: #7a828f; }
 .rt-stamp { font-size: 0.8em; color: #7a828f; margin-top: 0.35em; }
+
+/* Проект (ADR-0024 п. 4): знак по диагонали на каждой странице — fixed повторяется WeasyPrint на всех страницах. */
+.rt-draft-mark { position: fixed; top: 40%; left: -10%; right: -10%; text-align: center; white-space: nowrap;
+                 transform: rotate(-35deg); transform-origin: center; font-size: 96pt; font-weight: 700;
+                 letter-spacing: 6pt; color: #b42318; opacity: 0.13; }
+.rt-docno-draft { font-weight: 700; font-size: 1.05em; color: #b42318; }
 
 /* Шапка бланка (только первая страница — она в потоке) и реквизиты. */
 table.rt-brand { width: 100%; border-collapse: collapse; margin-bottom: 6pt; }

@@ -575,7 +575,9 @@ class GeneratedDocumentViewSet(
         # A cancelled document is not a deliverable — never (re-)render or serve its PDF (A4/m7).
         if document.status_code == "CANCELLED":
             return Response({"detail": "DOCUMENT_CANCELLED"}, status=409)
-        if not document.pdf_file:
+        from crm.services.documents import generated_is_draft, pdf_is_stale
+
+        if not document.pdf_file or pdf_is_stale("generated", document.pk, document.pdf_file, generated_is_draft(document)):  # SIGN-1
             from crm.views._pdf import pdf_generating_response
 
             return pdf_generating_response("generated", document.id)

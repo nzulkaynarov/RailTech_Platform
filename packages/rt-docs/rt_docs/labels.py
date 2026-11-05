@@ -21,6 +21,17 @@ MISSING_BLOCK: dict[Lang, str] = {
 }
 
 
+#: Проект (ADR-0024 п. 4): знак на каждой странице, замена номера, надпись в колонтитуле — по языку документа.
+DRAFT_MARK: dict[Lang, str] = {"ru": "ПРОЕКТ", "uz": "LOYIHA", "en": "DRAFT"}
+DRAFT_FOOTER: dict[Lang, str] = {
+    "ru": "Проект — не является официальным документом",
+    "uz": "Loyiha — rasmiy hujjat emas",
+    "en": "Draft — not an official document",
+}
+NO_NUMBER: dict[Lang, str] = {"ru": "без номера", "uz": "raqamsiz", "en": "no number"}
+NO_DATE = "—"
+
+
 def number_line(lang: Lang, number: str | None, date_text: str | None) -> str:
     """Регистрационный номер и дата письма: «№ ИСХ-015/26 от 28.10.2026»."""
     if number and date_text:
