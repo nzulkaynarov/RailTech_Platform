@@ -80,9 +80,11 @@ class QuoteLifecycleService:
             client_optional_items,
             client_projection_items,
             document_brand_context,
+            draft_context,
             public_quote_qr,
             public_quote_url,
             quote_document_extras,
+            quote_is_draft,
         )
 
         projected_items = client_projection_items(quote)
@@ -99,9 +101,10 @@ class QuoteLifecycleService:
                 "cover_text": extras["cover_text"],
                 "quote_terms": extras["quote_terms"],
                 # Governance: a КП is an OFFER only once frozen on send. Until then (draft or
-                # internally-approved-but-unsent) the PDF carries a «ЧЕРНОВИК» stamp, so a copy
-                # leaked out-of-band cannot pass as a binding offer (matches send_to_client policy).
-                "is_draft": quote.frozen_at is None,
+                # internally-approved-but-unsent) the PDF carries the «ПРОЕКТ» mark (SIGN-1: the one
+                # mechanism for every blank document, `draft_context`) with «не является офертой»,
+                # so a copy leaked out-of-band cannot pass as a binding offer (matches send_to_client).
+                **draft_context(quote_is_draft(quote), offer=True),
                 # Only surface the per-line «Срок» column when at least one line actually carries a
                 # lead time — otherwise it prints a column of «—» that duplicates the single КП-level
                 # «Срок поставки» in the terms block (client confusion).

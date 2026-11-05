@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 from .contracts import Catalog, load_catalog, normalize_blocks, normalize_body, validate_blocks, validate_body
@@ -16,6 +16,7 @@ from .css import PageSetup, page_setup
 from .errors import ContractsNotFoundError
 from .fonts import missing_glyphs
 from .html import HtmlOptions, build_html
+from .labels import NO_DATE, NO_NUMBER
 from .model import Density, DocumentMeta, Lang, Layout, Letterhead, Orientation, Tuning, Value
 from .resolve import Node, plain_text, resolve
 
@@ -34,6 +35,7 @@ class Prepared:
     tuning: Tuning
     warnings: tuple[str, ...]
     highlight_missing: bool
+    draft: bool = False  # проект: знак «ПРОЕКТ», без номера и даты, подпись без печати (ADR-0024 п. 4)
 
     def setup(self, tuning: Tuning | None = None) -> PageSetup:
         return page_setup(self.layout, self.orientation, self.density, tuning if tuning is not None else self.tuning)
@@ -78,9 +80,16 @@ def prepare(
     catalog: Catalog | None = None,
     highlight_missing: bool = True,
     contracts_dir: str | None = None,
+    draft: bool = False,
 ) -> Prepared:
     clean_body, clean_blocks, catalog = checked_input(body, blocks, catalog, contracts_dir)
-    resolved = resolve(clean_body, values=values or {}, blocks=clean_blocks, catalog=catalog)
+    given: Mapping[str, Value] = values or {}
+    if draft:
+        # Номер и дата проекта не печатаются, даже если вызывающий передал их переменными.
+        lang: Lang = clean_body["lang"]
+        given = {**given, "document.number": NO_NUMBER[lang], "document.date": NO_DATE}
+        meta = replace(meta or DocumentMeta(), number=None, date=None)
+    resolved = resolve(clean_body, values=given, blocks=clean_blocks, catalog=catalog)
     page: Mapping[str, Any] = clean_body.get("page") or {}
     meta = meta or DocumentMeta()
     text = "\n".join(
@@ -111,6 +120,7 @@ def prepare(
         tuning=body_tuning(page),
         warnings=tuple(warnings),
         highlight_missing=highlight_missing,
+        draft=draft,
     )
 
 
@@ -122,5 +132,7 @@ def document_html(prepared: Prepared, tuning: Tuning | None = None, *, page_numb
         letterhead=prepared.letterhead,
         meta=prepared.meta,
         setup=prepared.setup(tuning),
-        options=HtmlOptions(page_numbers=page_numbers, highlight_missing=prepared.highlight_missing),
+        options=HtmlOptions(
+            page_numbers=page_numbers, highlight_missing=prepared.highlight_missing, draft=prepared.draft
+        ),
     )

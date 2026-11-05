@@ -9,8 +9,10 @@
   line_total (price × qty). Currency = contract.currency (default UZS).
 {% endcomment %}
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{% blocktranslate with number=contract.number %}Договор № {{ number }}{% endblocktranslate %}</div>
   {% with issued=contract.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+  {% endif %}
 {% endblock %}
 
 {% block doc_title %}{% translate "Договор поставки" %}{% endblock %}
@@ -55,7 +57,7 @@
     остальной юр-бойлерплейт договора (§7 — право Республики Узбекистан), не бизнес-данные.
   {% endcomment %}
   <p style="margin:0 0 12pt 0; font-size:9pt; color:var(--ink-soft);">
-    г. Ташкент<span style="float:right;">{{ contract.created_at|date:"d.m.Y" }} г.</span>
+    г. Ташкент{% if not document_draft %}<span style="float:right;">{{ contract.created_at|date:"d.m.Y" }} г.</span>{% endif %}
   </p>
   <div class="legal-article">
     <h2>1. Предмет договора</h2>
