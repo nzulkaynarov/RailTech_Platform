@@ -257,13 +257,14 @@ async def test_eds_refusals_keep_reason_and_fields(web: Web, eds: EdsFake) -> No
 
 async def test_form_errors_do_not_reach_eds(web: Web, eds: EdsFake) -> None:
     assert (await web.login(["ADMIN"])).status_code == 200
-    for patch in (
+    bad: list[dict[str, Any]] = [
         {"holder_id": "Иванов"},
         {"kinds": []},
         {"basis": "verbal"},
         {"limit": {"amount": "0.00", "currency": "UZS"}},
         {"valid_from": "01.03.2026"},
-    ):
+    ]
+    for patch in bad:
         response = await web.send("POST", f"{BASE}/authorities", json={**FORM, **patch})
         assert response.status_code == 422, patch
     assert eds.made("POST", "signing/authorities") == []
