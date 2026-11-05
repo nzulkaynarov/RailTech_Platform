@@ -4519,6 +4519,33 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /inbound-mail/poll:
+    post:
+      tags: [inbound-mail]
+      operationId: checkInboundMail
+      summary: 'Входящая почта: проверить почту сейчас'
+      description: >-
+        CRM `POST /inbound-mail/poll` (MAIL-NOW): общий ящик читается сразу — тем же опросом и под той же блокировкой,
+        что плановый (раз в 2 минуты); любому сотруднику, как просмотр очереди. Не чаще раза в 20 секунд на установку:
+        раньше — `200` со `status = too_soon` и `retry_after_s` (не ошибка). Ждёт до 30 секунд; опрос уже идёт или
+        продолжается в фоне — `checking`, письма появятся в списке сами. `ok` — `created` новых писем; `off` — приём не
+        настроен («Настройки · Подключения · Почта»); `error` — `error_kind` без деталей почтового сервера. Журнал не ведётся.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Итог проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InboundMailCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /inbound-mail/{id}/attachments/{index}:
     get:
       tags: [inbound-mail]
@@ -21120,6 +21147,22 @@ components:
         last_ok_at: {type: [string, 'null'], format: date-time}
         last_error_kind: {type: [string, 'null']}
         personal_label: {type: string, description: 'Пометка «адресовано лично» из настроек приёма'}
+    InboundMailCheck:
+      type: object
+      additionalProperties: false
+      required: [status, created, error_kind, checked_at, retry_after_s]
+      description: Итог «Проверить почту» (MAIL-NOW)
+      properties:
+        status:
+          type: string
+          enum: [ok, 'off', error, checking, too_soon]
+          description: 'ok — ящик прочитан; off — приём не настроен; error — не удалось (error_kind); checking — проверка уже идёт или продолжается в фоне; too_soon — проверяли только что (retry_after_s)'
+        created: {type: integer, minimum: 0, description: 'Новых писем в очереди после проверки'}
+        error_kind:
+          type: [string, 'null']
+          description: 'Вид ошибки без деталей сервера: auth_failed, unavailable, tls_failed, invalid_host, mailbox_missing, internal'
+        checked_at: {type: [string, 'null'], format: date-time, description: 'Когда проверка закончилась; у checking и too_soon — пусто'}
+        retry_after_s: {type: [integer, 'null'], minimum: 1, description: 'Через сколько секунд можно проверить снова (too_soon)'}
     InboundMailPage:
       type: object
       additionalProperties: false

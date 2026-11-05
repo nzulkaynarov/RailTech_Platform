@@ -30,7 +30,13 @@ from fastapi import APIRouter, Depends, Path, Query, Response
 from app.clients import crm_models as crm
 from app.deps import Authed, require, require_any_section
 from app.eds_documents import EdsProxy
-from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
+from app.errors import (
+    PlatformError,
+    backend_reason,
+    backend_unavailable,
+    from_backend,
+    retry_after_seconds,
+)
 from app.feeds.numbers import lead_number
 from app.schemas_eds_documents import EdsFile
 from app.schemas_inbound_mail import (
@@ -46,13 +52,16 @@ from app.schemas_inbound_mail import (
     InboundMailAssist,
     InboundMailBulkArchiveIn,
     InboundMailBulkArchiveResult,
+    InboundMailCheck,
     InboundMailLeadResult,
     InboundMailPage,
     InboundMailReply,
     InboundMailReplyIn,
     InboundMailTakeIn,
     MailView,
+    check_too_soon,
     to_bulk,
+    to_check,
     to_connector,
     to_folders,
     to_history,
@@ -82,6 +91,7 @@ _MESSAGES = {
     "mail_rule_exists": "Такое правило уже есть.",
     "mail_no_handover_target": "Передать можно только тому, кто подтверждает оплату.",
 }
+_CHECK_WAIT_S = 35.0  # CRM ждёт опрос до 30 секунд, потом отвечает «checking»
 _HANDLED = "Письмо уже обработано: обновите очередь."
 _TZ = ZoneInfo("Asia/Tashkent")
 _NOT_CONFIGURED = "Сначала настройте приём почты: сервер, логин и пароль приложения."
@@ -153,6 +163,22 @@ async def list_inbound_mail(
         params["q"] = q.strip()
     raw = await _json(authed, "GET", CRM, params=params)
     return to_page(crm.InboundMailPage.model_validate(raw))
+
+
+@router.post("/inbound-mail/poll", response_model=InboundMailCheck, operation_id="checkInboundMail")
+async def check_inbound_mail(authed: Member) -> InboundMailCheck:
+    """«Проверить почту» (MAIL-NOW): CRM читает общий ящик сразу, под блокировкой планового опроса;
+    любой сотрудник, как просмотр очереди. Проверяли меньше 20 секунд назад — `too_soon` с
+    `retry_after_s` (не ошибка). Ждёт до 30 секунд; идёт или продолжается в фоне — `checking`."""
+    response = await authed.call("crm", "POST", f"{CRM}/poll", wait_seconds=_CHECK_WAIT_S)
+    if response.status_code == 429:
+        return check_too_soon(retry_after_seconds(response))
+    if response.status_code >= 300:
+        raise error_of(response)
+    try:
+        return to_check(crm.InboundMailCheckOut.model_validate(response.json()))
+    except ValueError as exc:
+        raise backend_unavailable("crm", "bad_response") from exc
 
 
 @router.get("/inbound-mail/{id}", response_model=InboundMail, operation_id="getInboundMail")
