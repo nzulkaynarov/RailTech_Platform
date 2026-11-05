@@ -78,3 +78,74 @@ def test_a_partner_request_made_during_the_answer_is_published_once(monkeypatch)
     published = bus_support.published("request.created")
     assert len(published) == 1, "заявка потеряна: ответ CRM прошёл между проверкой и записью отложенного события"
     assert DeferredRequestEvent.objects.get().published_at is not None
+
+
+def test_a_handoff_and_the_first_invite_by_tin_go_in_turn(monkeypatch, settings):
+    """Передача клиента по ИНН и первое приглашение партнёра: обе берут блокировку по компании ДО проверки «партнёр ли она».
+
+    Приглашение (отдельная транзакция) держит блокировку и паузой после отправки запроса растягивает окно: без общей
+    блокировки передача не видит ещё не зафиксированное отношение партнёра и создаёт сопоставление; с блокировкой она ждёт
+    коммита приглашения, видит партнёра и удерживается (409, сопоставления нет).
+    """
+    from integration.exceptions import IntegrationConflict
+    from integration.services.handoff import process_client_handoff
+    from integration.tests.test_handoff import payload
+    from portal.desk import service as desk_service
+    from portal.tests.conftest import LOCMEM_BACKEND
+
+    from accounts.models import CustomUser
+
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
+    settings.CABINET_URL = "http://cabinet.localhost"
+    company = Company.objects.create(name="OOO Race Two", inn="300000888")
+    company.types.add(CompanyType.objects.get_or_create(code="SUPPLIER", defaults={"name": "Поставщик"})[0])
+    contact = Contact.objects.create(company=company, name="Race", email="race2@supplier.example.uz", can_act=True)
+    staff = CustomUser.objects.create_user(email="race-staff@d2-3.test", username="race-staff", password="pw")
+    bus_support.reset()
+
+    original = desk_service.request_client_in_crm
+    in_invite = threading.Event()
+    handed_off = threading.Event()
+
+    def slow(*args, **kwargs):
+        result = original(*args, **kwargs)
+        in_invite.set()  # приглашение ещё не зафиксировано; пауза: передача успевает (или ждёт блокировку)
+        handed_off.wait(1.5)
+        return result
+
+    monkeypatch.setattr(desk_service, "request_client_in_crm", slow)
+    results: dict = {}
+
+    def run_invite():
+        try:
+            desk_service.invite(company, contact.pk, staff)
+        except BaseException as exc:  # noqa: BLE001
+            results["invite"] = exc
+        finally:
+            connection.close()
+
+    def run_handoff():
+        try:
+            assert in_invite.wait(5)
+            process_client_handoff(
+                payload(crm_client_id=4201, inn=company.inn, create_request=False, email="y@o.example.uz")
+            )
+            results["handoff"] = "created"
+        except IntegrationConflict as exc:
+            results["handoff"] = exc.detail
+        except BaseException as exc:  # noqa: BLE001
+            results["handoff"] = exc
+        finally:
+            handed_off.set()
+            connection.close()
+
+    first = threading.Thread(target=run_invite, name="invite")
+    second = threading.Thread(target=run_handoff, name="handoff")
+    first.start()
+    second.start()
+    first.join(15)
+    second.join(15)
+
+    assert "invite" not in results, results
+    assert str(results["handoff"]) == "PARTNER_VERIFICATION_REQUIRED", results
+    assert not CrmClientMapping.objects.exists(), "передача не создала сопоставление партнёру"

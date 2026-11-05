@@ -25,6 +25,7 @@ from app.domain.errors import ConflictError, NotFoundError
 from app.integrations.erp import HandoffResult
 from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact, PartnerClientRequest
+from app.models.leads import Lead
 from app.models.staff_tickets import StaffNotification
 from app.security.principal import Principal
 from app.services import partner_clients
@@ -571,6 +572,107 @@ async def test_confirm_is_not_found_when_the_request_was_retargeted_while_waitin
     [row] = await stand.requests()
     assert (row.status, row.client_id) == ("pending", y)
     assert all(c.erp_company_id is None for c in await stand.clients())
+
+
+async def _held_client(
+    stand: "Stand", *, with_lead: bool = True, error: str = "erp_partner_verification"
+) -> int:
+    """Клиент X: передача удержана (`failed` + `erp_partner_verification`), у X есть лид."""
+    client_id = await make_client(
+        stand.h.sessions,
+        inn="301234567",
+        erp_handoff_status="failed",
+        erp_handoff_error=error,
+        erp_handoff_request=True,
+    )
+    if with_lead:
+        async with stand.h.sessions() as session, session.begin():
+            session.add(Lead(display_name="Лид X", stage="customer", client_id=client_id))
+    return client_id
+
+
+async def test_confirm_resumes_a_held_handoff_once_after_the_commit(stand: Stand) -> None:
+    """Выход из удержания: после подтверждения связи передача повторяется сама («передаётся»)."""
+    manager = await manager_of(stand)
+    client_id = await _held_client(stand)
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    calls: list[tuple[int, int, int]] = []
+    states: list[str | None] = []
+
+    async def enqueue(client: int, lead: int, user: int) -> object:
+        async with stand.h.sessions() as session:  # постановка — уже ПОСЛЕ коммита подтверждения
+            row = await session.get(Client, client)
+            assert row is not None
+            states.append(f"{row.erp_company_id}:{row.erp_handoff_status}:{row.erp_handoff_error}")
+        calls.append((client, lead, user))
+        return object()
+
+    service = PartnerClientService(stand.h.sessions, enqueue)
+    await service.confirm(manager, client_id, pending.id)
+
+    assert len(calls) == 1
+    assert calls[0][0] == client_id
+    assert calls[0][2] == manager.user_id
+    assert states == [f"{ERP_COMPANY}:pending:None"], (
+        "связь сохранена, статус «передаётся», ошибка снята"
+    )
+    with pytest.raises(NotFoundError):  # повторное подтверждение не ставит передачу второй раз
+        await service.confirm(manager, client_id, pending.id)
+    assert len(calls) == 1
+
+
+async def test_confirm_does_not_touch_a_handoff_failed_for_another_reason(stand: Stand) -> None:
+    manager = await manager_of(stand)
+    client_id = await _held_client(stand, error="erp_unavailable")
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    calls: list[int] = []
+
+    async def enqueue(client: int, lead: int, user: int) -> object:
+        calls.append(client)
+        return object()
+
+    await PartnerClientService(stand.h.sessions, enqueue).confirm(manager, client_id, pending.id)
+
+    assert calls == []
+    [client] = await stand.clients()
+    assert (client.erp_handoff_status, client.erp_handoff_error) == ("failed", "erp_unavailable")
+
+
+async def test_confirm_without_a_lead_does_not_resume_the_handoff(stand: Stand) -> None:
+    manager = await manager_of(stand)
+    client_id = await _held_client(stand, with_lead=False)
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+    calls: list[int] = []
+
+    async def enqueue(client: int, lead: int, user: int) -> object:
+        calls.append(client)
+        return object()
+
+    await PartnerClientService(stand.h.sessions, enqueue).confirm(manager, client_id, pending.id)
+
+    assert calls == []
+
+
+async def test_a_failed_queue_leaves_a_visible_error_not_a_lost_handoff(stand: Stand) -> None:
+    manager = await manager_of(stand)
+    client_id = await _held_client(stand)
+    await stand.request(request_data())
+    [pending] = await stand.requests()
+
+    async def broken(client: int, lead: int, user: int) -> object:
+        raise RuntimeError("очередь недоступна")
+
+    await PartnerClientService(stand.h.sessions, broken).confirm(manager, client_id, pending.id)
+
+    [client] = await stand.clients()
+    assert client.erp_company_id == ERP_COMPANY, "связь подтверждена"
+    assert (client.erp_handoff_status, client.erp_handoff_error) == (
+        "failed",
+        "handoff_enqueue_failed",
+    )
 
 
 async def test_foreign_company_by_the_pair_goes_to_confirmation_too(stand: Stand) -> None:

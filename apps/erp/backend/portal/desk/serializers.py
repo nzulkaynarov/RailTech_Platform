@@ -43,15 +43,21 @@ class DeskSupplierAccessModules(serializers.Serializer):
 
 class DeskSupplierAccessCrmClient(serializers.Serializer):
     status = serializers.ChoiceField(
-        choices=["none", "requested", "pending_confirmation", "held", "linked", "conflict"],
+        choices=["none", "requested", "pending_confirmation", "held", "unverified", "linked", "conflict"],
         help_text=(
-            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, "
+            "Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `unverified` — сопоставление создала передача по совпадению ИНН и оно не проверено: сотрудник подтверждает («Да»/«Нет») здесь же, "
             "`linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP."
         ),
     )
     crm_client_id = serializers.IntegerField(
         allow_null=True,
         help_text="Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента».",
+    )
+    crm_client_name = serializers.CharField(
+        required=False, allow_null=True, help_text="`unverified`: как клиент назван в передаче из CRM."
+    )
+    inn = serializers.CharField(
+        required=False, allow_null=True, help_text="`unverified`: ИНН, по которому компания связана с клиентом."
     )
 
 

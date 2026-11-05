@@ -29,6 +29,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from django.conf import settings
 from django.db import IntegrityError, connection, transaction
+from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
@@ -223,6 +224,19 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
     return deal
 
 
+def _create_missing_request(mapping: CrmClientMapping, data: Dict[str, Any], crm_client_id: int) -> Optional[Deal]:
+    """Заявка лида для сопоставления, у которого её ещё нет: один раз, под блокировкой по строке сопоставления."""
+    locked = CrmClientMapping.objects.select_for_update().select_related("company").get(pk=mapping.pk)
+    if locked.handoff_deal_id is not None:
+        return locked.handoff_deal
+    company = locked.company
+    primary = company.contacts.filter(is_primary=True).first() or company.contacts.first()
+    deal = _create_request(company, primary, data, crm_client_id)
+    locked.handoff_deal = deal
+    locked.save(update_fields=["handoff_deal", "updated_at"])
+    return deal
+
+
 def _invite(contact: Optional[Contact], channels: List[str]) -> dict:
     """Приглашение в Cabinet — блок `invite` ответа без `cabinet_url`: каналы, по которым оно РЕАЛЬНО ушло, код причины,
     если не ушло ничего, и ключ письма в почте CRM (B-MAIL-1). Сбой передачу не роняет."""
@@ -275,23 +289,36 @@ def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
 def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], bool]:
     _advisory_lock("client", crm_client_id)
 
-    mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
-    if mapping is not None:
-        return _repeat_response(mapping, _requested_channels(data)), False
-
-    company, linked_by_inn = _get_or_create_company(data, crm_client_id)
     from . import partner_client  # здесь, а не наверху: partner_client берёт `_advisory_lock` отсюда
 
+    mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
+    if mapping is not None:
+        response = _repeat_response(mapping, _requested_channels(data))
+        if data.get("create_request") and mapping.handoff_deal_id is None:
+            # Выход из удержания (PART-CRM): сопоставление появилось ответом CRM, а заявка лида при первой передаче не
+            # заводилась — повтор с `create_request` заводит её один раз (дальше `handoff_deal` отвечает за идемпотентность).
+            deal = _create_missing_request(mapping, data, crm_client_id)
+            response["erp_request_id"] = deal.pk if deal is not None else None
+        return response, False
+
+    company, linked_by_inn = _get_or_create_company(data, crm_client_id)
+    # Общая блокировка по компании берётся ДО проверки «партнёр ли она»: иначе первое приглашение, отдельная транзакция,
+    # успеет между проверкой и созданием сопоставления (PART-CRM).
+    partner_client.lock_company(company.pk)
     if partner_client.is_partner(company):
         # Инвариант PART-CRM: у компании с отношением partner сопоставление появляется только после подтверждённой связи
         # (ответ CRM на запрос после «Пригласить» либо подтверждение менеджера в CRM). Передача по ИНН его не создаёт и
         # заявок не выпускает: иначе ИНН чужого клиента отдал бы ему заявки и документы партнёра.
-        partner_client.lock_company(company.pk)
         partner_client.hold_for_verification(company, crm_client_id)
         return _HELD, False
-    partner_client.lock_company(company.pk)  # по очереди с заявками партнёра и ответом CRM (PART-CRM)
-    # Сопоставление — ДО сделки и приглашения: события строятся по нему.
-    mapping = CrmClientMapping.objects.create(crm_client_id=crm_client_id, company=company)
+    # Сопоставление — ДО сделки и приглашения: события строятся по нему. Найденная по ИНН компания — НЕПРОВЕРЕННОЕ
+    # сопоставление (`verified_at` пусто): если её потом пригласят партнёром, сотрудник сначала подтвердит, та ли это компания.
+    mapping = CrmClientMapping.objects.create(
+        crm_client_id=crm_client_id,
+        company=company,
+        verified_at=None if linked_by_inn else timezone.now(),
+        crm_name=str(data["company"].get("name") or "").strip()[:255],
+    )
     _consent(company, data["consent"])
 
     _contacts, primary = _create_contacts(company, data, can_act=not linked_by_inn)

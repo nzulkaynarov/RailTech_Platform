@@ -43,6 +43,32 @@ class CrmClientMapping(models.Model):
         verbose_name=_("Заявка передачи"),
         help_text=_("Заявка, созданная при передаче клиента из CRM"),
     )
+    # Проверка сопоставления человеком (PART-CRM). Сопоставление, созданное передачей из CRM по совпадению ИНН с уже
+    # существующей компанией (FIX-31: журнал `company.linked_by_inn`), — НЕПРОВЕРЕННОЕ (`verified_at` пусто): опечатка в ИНН
+    # связала бы компанию с чужим клиентом. Для новой компании, ответа CRM `linked` и подтверждённое сотрудником — проверенное
+    # (по умолчанию «сейчас»: прежние сопоставления и все прочие места создания остаются проверенными).
+    verified_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        default=timezone.now,
+        verbose_name=_("Проверено"),
+        help_text=_("Пусто — связано по совпадению ИНН и ещё не подтверждено человеком"),
+    )
+    verified_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Кто подтвердил"),
+    )
+    crm_name = models.CharField(
+        max_length=255,
+        blank=True,
+        default="",
+        verbose_name=_("Название клиента в CRM"),
+        help_text=_("Как клиент назван в передаче из CRM: показывается сотруднику при проверке сопоставления"),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

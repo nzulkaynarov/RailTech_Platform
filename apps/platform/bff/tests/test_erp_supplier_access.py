@@ -89,6 +89,8 @@ WRITES = (
     ("PATCH", f"{BASE}/relationship"),
     ("POST", f"{BASE}/invite"),
     ("POST", f"{BASE}/suspend"),
+    ("POST", f"{BASE}/crm-client/confirm"),
+    ("POST", f"{BASE}/crm-client/reject"),
 )
 
 
@@ -197,7 +199,7 @@ async def test_crm_client_of_the_partner_is_shown_with_a_string_id(
     response = await call(web, "GET", BASE)
 
     check(response, "/erp/catalog/suppliers/{id}/cabinet-access", "get")
-    assert response.json()["crm_client"] == expected
+    assert response.json()["crm_client"] == {"crm_client_name": None, "inn": None, **expected}
 
 
 async def test_contact_create_and_update_forward_only_sent_fields(
@@ -290,6 +292,65 @@ async def test_rights_update_and_suspend(web: Web, be: Any, check: ContractCheck
     assert two.json()["relationship"]["status"] == "suspended"
     assert suspend.called
     check(two, "/erp/catalog/suppliers/{id}/cabinet-access/suspend", "post")
+
+
+UNVERIFIED = {
+    "status": "unverified",
+    "crm_client_id": 4001,
+    "crm_client_name": "ООО Чужой Клиент",
+    "inn": "300000555",
+}
+
+
+async def test_unverified_crm_client_is_shown_and_decided_through_erp(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    """PART-CRM: «Найден клиент CRM по ИНН. Это та же компания?» — «Да» и «Нет» уходят в ERP."""
+    await web.login(["SUPPLY"])
+    router = mock(be)
+    router.get(f"{API}/catalog/supplier-access/9/").mock(
+        return_value=httpx.Response(200, json={**STATE, "crm_client": UNVERIFIED})
+    )
+    yes = router.post(f"{API}/catalog/supplier-access/9/crm-client/confirm/").mock(
+        return_value=httpx.Response(
+            200, json={**STATE, "crm_client": {"status": "linked", "crm_client_id": 4001}}
+        )
+    )
+    no = router.post(f"{API}/catalog/supplier-access/9/crm-client/reject/").mock(
+        return_value=httpx.Response(
+            200, json={**STATE, "crm_client": {"status": "requested", "crm_client_id": None}}
+        )
+    )
+
+    state = await call(web, "GET", BASE)
+    one = await call(web, "POST", f"{BASE}/crm-client/confirm")
+    two = await call(web, "POST", f"{BASE}/crm-client/reject")
+
+    check(state, "/erp/catalog/suppliers/{id}/cabinet-access", "get")
+    assert state.json()["crm_client"] == {**UNVERIFIED, "crm_client_id": "4001"}
+    check(one, "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm", "post")
+    assert one.json()["crm_client"] == {
+        "status": "linked",
+        "crm_client_id": "4001",
+        "crm_client_name": None,
+        "inn": None,
+    }
+    check(two, "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/reject", "post")
+    assert two.json()["crm_client"]["status"] == "requested"
+    assert yes.called
+    assert no.called
+
+
+async def test_nothing_to_verify_keeps_the_erp_reason(
+    web: Web, be: Any, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    mock(be).post(f"{API}/catalog/supplier-access/9/crm-client/confirm/").mock(
+        return_value=httpx.Response(409, json={"detail": "NOTHING_TO_VERIFY"})
+    )
+    response = await call(web, "POST", f"{BASE}/crm-client/confirm")
+    check(response, "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm", "post")
+    assert response.status_code == 409
 
 
 async def test_module_outside_the_template_is_refused_before_erp(web: Web, be: Any) -> None:

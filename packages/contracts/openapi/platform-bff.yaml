@@ -11948,6 +11948,60 @@ paths:
           $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm:
+    post:
+      tags: [erp-catalog]
+      operationId: confirmSupplierCrmClient
+      summary: 'Расчёт · Поставщик: найден клиент CRM по ИНН — «Да, это та же компания»'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/crm-client/confirm/` — право `supply.manage`. Сопоставление, созданное передачей из CRM по совпадению ИНН, становится проверенным: компании открываются клиентские модули кабинета, отложенные заявки партнёра уходят менеджеру. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/cabinet-access/crm-client/reject:
+    post:
+      tags: [erp-catalog]
+      operationId: rejectSupplierCrmClient
+      summary: 'Расчёт · Поставщик: найден клиент CRM по ИНН — «Нет, другая компания»'
+      description: >-
+        ERP `POST catalog/supplier-access/{id}/crm-client/reject/` — право `supply.manage`. Сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM снимает привязку у клиента, партнёр запрашивается в CRM заново. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierCabinetAccess'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/RequestConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
   /erp/catalog/suppliers/{id}/offers/{offer_id}:
     patch:
       tags: [erp-catalog]
@@ -23522,13 +23576,18 @@ components:
       properties:
         status:
           type: string
-          enum: [none, requested, pending_confirmation, held, linked, conflict]
+          enum: [none, requested, pending_confirmation, held, unverified, linked, conflict]
           description: >-
             `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего
             клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не
             привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не
-            создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
+            создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `unverified` — сопоставление создала
+            передача по совпадению ИНН до приглашения партнёра, оно не проверено: «Найден клиент CRM «X», ИНН …. Это та же
+            компания?» — «Да» (проверено, заявки уходят, открывается кабинет клиента) или «Нет» (сопоставление снято, CRM
+            получает отказ и обычный запрос); `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый)
             и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+        crm_client_name: {type: [string, 'null'], description: '`unverified`: как клиент назван в передаче из CRM'}
+        inn: {type: [string, 'null'], description: '`unverified`: ИНН, по которому компания связана с клиентом'}
         crm_client_id:
           oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]
           description: 'Клиент CRM (`pending_confirmation`, `held`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку'

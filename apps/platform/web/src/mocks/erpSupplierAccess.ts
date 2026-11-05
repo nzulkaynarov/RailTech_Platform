@@ -318,6 +318,37 @@ export const erpSupplierAccessHandlers = [
     if (found[1].crm.status === "none") found[1].crm = { status: "requested", crm_client_id: null };
     return HttpResponse.json(view(...found));
   }),
+  // PART-CRM: «Найден клиент CRM по ИНН. Это та же компания?» — «Да» / «Нет»
+  http.post("*/erp/catalog/suppliers/:id/cabinet-access/crm-client/confirm", ({ params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const found = find(params["id"]);
+    if (!found) return missing();
+    if (found[1].crm.status !== "unverified") {
+      return failure(409, "CONFLICT", "Проверять нечего.", "nothing_to_verify");
+    }
+    found[1].crm = { status: "linked", crm_client_id: found[1].crm.crm_client_id };
+    found[1].client = true;
+    return HttpResponse.json(view(...found));
+  }),
+  http.post("*/erp/catalog/suppliers/:id/cabinet-access/crm-client/reject", ({ params }) => {
+    const who = guard("full");
+    if (isResponse(who)) return who;
+    const found = find(params["id"]);
+    if (!found) return missing();
+    if (found[1].crm.status !== "unverified") {
+      return failure(409, "CONFLICT", "Проверять нечего.", "nothing_to_verify");
+    }
+    found[1].crm = { status: "requested", crm_client_id: null };
+    return HttpResponse.json(view(...found));
+  }),
+  // Только для e2e: поставить блоку «Клиент в CRM» нужное состояние (удержано, непроверенное) без цепочки событий ERP и CRM.
+  http.put("*/__mock/supplier-access/:id", async ({ params, request }) => {
+    const found = find(params["id"]);
+    if (!found) return missing();
+    found[1].crm = await body<SupplierCabinetCrmClient>(request);
+    return HttpResponse.json({ ok: true });
+  }),
   http.post("*/erp/catalog/suppliers/:id/cabinet-access/suspend", ({ params }) => {
     const who = guard("full");
     if (isResponse(who)) return who;

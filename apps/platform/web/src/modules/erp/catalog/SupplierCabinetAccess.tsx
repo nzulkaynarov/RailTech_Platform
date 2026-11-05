@@ -13,6 +13,8 @@ import type {
 } from "../../../shared/api/generated/model";
 import {
   getGetSupplierCabinetAccessQueryKey,
+  useConfirmSupplierCrmClient,
+  useRejectSupplierCrmClient,
   useCreateSupplierCabinetContact,
   useGetSupplierCabinetAccess,
   useInviteSupplierToCabinet,
@@ -111,7 +113,12 @@ function AccessBody({ supplierId, data }: { supplierId: string; data: AccessData
           {roles ? t("cabinetAccess.rolesLine", { roles }) : t("cabinetAccess.closed")}
         </span>
       </div>
-      <CrmClientLine crmClient={data.crm_client} />
+      <CrmClientLine
+        supplierId={supplierId}
+        crmClient={data.crm_client}
+        canDecide={editable}
+        onDone={refresh}
+      />
       {relationship ? (
         <DefinitionList
           items={[
@@ -527,9 +534,76 @@ function SuspendModal({
  * «Клиент в CRM» (PART-CRM): приглашённый партнёр становится клиентом CRM — заведён / ожидает / конфликт, и ссылка на
  * карточку клиента. CRM — источник правды по клиентам; конфликт значит «найденный клиент привязан к другой компании ERP».
  */
-function CrmClientLine({ crmClient }: { crmClient: AccessData["crm_client"] }) {
+function CrmClientLine({
+  supplierId,
+  crmClient,
+  canDecide,
+  onDone,
+}: {
+  supplierId: string;
+  crmClient: AccessData["crm_client"];
+  canDecide: boolean;
+  onDone: (next: AccessData) => void;
+}) {
   const { t } = useTranslation("catalog");
+  const confirm = useConfirmSupplierCrmClient({ mutation: { onSuccess: onDone } });
+  const reject = useRejectSupplierCrmClient({ mutation: { onSuccess: onDone } });
   if (crmClient.status === "none") return null;
+  if (crmClient.status === "unverified") {
+    // Сопоставление создала передача клиента по совпадению ИНН: сотрудник подтверждает, та ли это компания (PART-CRM).
+    const busy = confirm.isPending || reject.isPending;
+    const error = confirm.error ?? reject.error;
+    return (
+      <div className="pf-cat-crm-verify" role="group" aria-labelledby={`crm-verify-${supplierId}`}>
+        <div className="pf-cat-actions">
+          <span className="pf-cat-note">{t("cabinetAccess.crmClient.label")}</span>
+          <StatusTag kind="crmClient" status="unverified">
+            {t("cabinetAccess.crmClient.unverified")}
+          </StatusTag>
+        </div>
+        <p id={`crm-verify-${supplierId}`} className="pf-cat-note">
+          {t("cabinetAccess.crmClient.verify.found", {
+            name: crmClient.crm_client_name ?? `№${crmClient.crm_client_id ?? ""}`,
+            inn: crmClient.inn ?? "—",
+          })}
+        </p>
+        {crmClient.crm_client_id ? (
+          <div className="pf-cat-actions">
+            <Link className="pf-focusable" to={`/crm/clients/${crmClient.crm_client_id}`}>
+              {t("cabinetAccess.crmClient.open")}
+            </Link>
+          </div>
+        ) : null}
+        <p className="pf-cat-note">{t("cabinetAccess.crmClient.verify.question")}</p>
+        {canDecide ? (
+          <div className="pf-cat-actions">
+            <Button
+              type="primary"
+              loading={confirm.isPending}
+              disabled={busy}
+              onClick={() => {
+                confirm.mutate({ id: supplierId });
+              }}
+            >
+              {t("cabinetAccess.crmClient.verify.yes")}
+            </Button>
+            <Button
+              loading={reject.isPending}
+              disabled={busy}
+              onClick={() => {
+                reject.mutate({ id: supplierId });
+              }}
+            >
+              {t("cabinetAccess.crmClient.verify.no")}
+            </Button>
+          </div>
+        ) : (
+          <p className="pf-cat-note">{t("cabinetAccess.crmClient.verify.readOnly")}</p>
+        )}
+        <ErrorNote message={error ? catalogErrorText(t, error) : null} />
+      </div>
+    );
+  }
   return (
     <div className="pf-cat-actions" aria-live="polite">
       <span className="pf-cat-note">{t("cabinetAccess.crmClient.label")}</span>

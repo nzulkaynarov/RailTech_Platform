@@ -37,6 +37,7 @@ CRM — источник правды по клиентам и контакта�
 
 import hashlib
 import re
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any, Final
@@ -49,10 +50,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus import events as bus_events
 from app.bus import snapshots
-from app.domain.erp_handoff import DONE
-from app.domain.errors import ConflictError, NotFoundError
+from app.domain.erp_handoff import DONE, ENQUEUE_FAILED
+from app.domain.erp_handoff import FAILED as HANDOFF_FAILED
+from app.domain.erp_handoff import PENDING as HANDOFF_PENDING
+from app.domain.errors import ConflictError, NotFoundError, Reason
 from app.models.auth import User
 from app.models.clients import Client, ClientContact, PartnerClientRequest
+from app.models.leads import Lead
 from app.security import audit
 from app.security.principal import Principal
 from app.services import staff_notifications
@@ -209,9 +213,18 @@ def _note(company: Any) -> str:
     return "\n".join(lines)
 
 
+#: Поставить передачу клиента в очередь: (client_id, lead_id, user_id).
+HandoffEnqueue = Callable[[int, int, int], Awaitable[object]]
+
+
 class PartnerClientService:
-    def __init__(self, sessions: async_sessionmaker[AsyncSession]) -> None:
+    def __init__(
+        self,
+        sessions: async_sessionmaker[AsyncSession],
+        handoff_enqueue: HandoffEnqueue | None = None,
+    ) -> None:
         self._sessions = sessions
+        self._handoff_enqueue = handoff_enqueue
 
     # --- события шины (транзакция inbox) -------------------------------------------------------
 
@@ -276,12 +289,21 @@ class PartnerClientService:
             },
         )
         await bus_events.client_updated(session, client, audit.Actor.system(), ["erp_company_id"])
+        by_staff = str(getattr(data.reason, "value", data.reason)) == "rejected_by_staff"
         await self._notify(
             session,
             client,
             kind="partner_client_released",
-            title=f"Привязка партнёра к «{client.name}» снята: в ERP клиент у другой компании",
-            subtitle="Проверьте ИНН или рег. номер у партнёра и у клиента, исправьте ошибочный",
+            title=(
+                f"Бэк-офис отклонил связь партнёра с клиентом «{client.name}»: это другая компания"
+                if by_staff
+                else f"Привязка партнёра к «{client.name}» снята: в ERP клиент у другой компании"
+            ),
+            subtitle=(
+                "Совпадение ИНН оказалось случайным; партнёр запрашивается в CRM заново"
+                if by_staff
+                else "Проверьте ИНН или рег. номер у партнёра и у клиента, исправьте ошибочный"
+            ),
         )
         return True
 
@@ -315,6 +337,7 @@ class PartnerClientService:
     async def confirm(self, who: Principal, client_id: int, request_id: int) -> None:
         """«Это та же компания»: клиент сопоставляется компании ERP, контакты добавляются."""
         obsolete = False
+        retry_lead_id: int | None = None
         async with self._sessions() as session, session.begin():
             decided = await self._decidable(session, client_id, request_id)
             if decided is None:
@@ -334,8 +357,47 @@ class PartnerClientService:
                 await self._link(
                     session, client, data, row.matched_by, None, announce=True, who=who.actor
                 )
+                retry_lead_id = await self._resume_held_handoff(session, client)
         if obsolete:
             raise NotFoundError("partner request not found")
+        if retry_lead_id is not None:
+            await self._enqueue_resume(client_id, retry_lead_id, who.user_id)
+
+    @staticmethod
+    async def _resume_held_handoff(session: AsyncSession, client: Client) -> int | None:
+        """Передачу удержала ERP из-за партнёра (`erp_partner_verification`), связь подтверждена.
+
+        Передача повторяется один раз тем же путём, что ручная (статус «передаётся»).
+        Возвращает лид для постановки в очередь.
+        """
+        if (
+            client.erp_handoff_status != HANDOFF_FAILED
+            or client.erp_handoff_error != Reason.ERP_PARTNER_VERIFICATION.value
+        ):
+            return None
+        lead_id = await session.scalar(
+            select(Lead.id).where(Lead.client_id == client.id).order_by(Lead.id.desc()).limit(1)
+        )
+        if lead_id is None:
+            return None
+        client.erp_handoff_status, client.erp_handoff_error = HANDOFF_PENDING, None
+        return int(lead_id)
+
+    async def _enqueue_resume(self, client_id: int, lead_id: int, user_id: int | None) -> None:
+        """Повтор передачи — в очередь ПОСЛЕ коммита подтверждения; не вышло — ошибка в карточке."""
+        try:
+            if self._handoff_enqueue is None:
+                raise RuntimeError("no queue")
+            await self._handoff_enqueue(client_id, lead_id, user_id or 0)
+        except Exception:
+            logger.exception("partner_client_handoff_resume_failed", client_id=client_id)
+            async with self._sessions() as session, session.begin():
+                client = await session.get(Client, client_id)
+                if client is not None:
+                    client.erp_handoff_status, client.erp_handoff_error = (
+                        HANDOFF_FAILED,
+                        ENQUEUE_FAILED,
+                    )
 
     async def decline(self, who: Principal, client_id: int, request_id: int) -> int:
         """«Нет — завести нового клиента»: найденный не тронут. Возвращает id нового клиента."""

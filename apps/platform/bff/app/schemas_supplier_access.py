@@ -18,7 +18,9 @@ RelationshipStatus = Literal["invited", "active", "suspended"]
 PartnerKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 PartnerModule = Literal["my_products", "catalog_requests"]
 Language = Literal["ru", "uz", "en"]
-CrmClientStatus = Literal["none", "requested", "pending_confirmation", "held", "linked", "conflict"]
+CrmClientStatus = Literal[
+    "none", "requested", "pending_confirmation", "held", "unverified", "linked", "conflict"
+]
 
 
 class Out(BaseModel):
@@ -61,6 +63,8 @@ class SupplierCabinetModules(Out):
 class SupplierCabinetCrmClient(Out):
     status: CrmClientStatus
     crm_client_id: str | None
+    crm_client_name: str | None = None
+    inn: str | None = None
 
 
 class SupplierCabinetAccess(Out):
@@ -129,11 +133,19 @@ def _crm_client(raw: Any) -> dict[str, Any]:
         "requested",
         "pending_confirmation",
         "held",
+        "unverified",
         "linked",
         "conflict",
     ):
         return {"status": "none", "crm_client_id": None}
-    return {"status": raw["status"], "crm_client_id": opt_ident(raw.get("crm_client_id"))}
+    out: dict[str, Any] = {
+        "status": raw["status"],
+        "crm_client_id": opt_ident(raw.get("crm_client_id")),
+    }
+    if raw["status"] == "unverified":
+        out["crm_client_name"] = raw.get("crm_client_name") or None
+        out["inn"] = raw.get("inn") or None
+    return out
 
 
 def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:

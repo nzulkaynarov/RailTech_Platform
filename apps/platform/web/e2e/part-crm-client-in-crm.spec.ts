@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto } from "./support/app";
 import { expectNoViolations } from "./support/axe";
@@ -63,3 +63,72 @@ for (const width of WIDTHS) {
     await expect(partner).toBeHidden();
   });
 }
+
+// «Удержано» (передача клиента по ИНН нашла компанию партнёра) и «Найден клиент CRM по ИНН: это та же компания?» с ответами
+// «Да» и «Нет». Состояние блока ставит служебный запрос мока (в боевой цепочке его создают события ERP и CRM).
+async function stage(page: Page, supplier: number, crm: Record<string, unknown>) {
+  await page.evaluate(
+    async ([id, body]) => {
+      await fetch(`/api/v1/__mock/supplier-access/${String(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+    },
+    [supplier, crm] as const,
+  );
+}
+
+for (const width of WIDTHS) {
+  test(`карточка поставщика: удержано и непроверенное сопоставление, ${String(width)} px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+    await loginAndWait(page, "supply@demo.example");
+    // Состояния ставятся до первого открытия карточки: данные карточки кэшируются.
+    await stage(page, 2, { status: "held", crm_client_id: "4001" });
+    await stage(page, 3, {
+      status: "unverified",
+      crm_client_id: "4001",
+      crm_client_name: "ООО Чужой Клиент",
+      inn: "300000999",
+    });
+    await spaGoto(page, "/erp/catalog?part=suppliers&supplier=2");
+    let block = page.getByRole("region", { name: "Доступ в кабинет" });
+    await expect(block.getByText("Удержано до сверки", { exact: true })).toBeVisible();
+    await expect(block.getByText(/Удержано после передачи клиента/)).toBeVisible();
+    await expectNoViolations(page, "Поставщик · удержано до сверки");
+    await block.scrollIntoViewIfNeeded();
+    await settledScreenshot(page, "supplier-crm-client-held");
+
+    await spaGoto(page, "/erp/catalog?part=suppliers&supplier=3");
+    block = page.getByRole("region", { name: "Доступ в кабинет" });
+    await expect(
+      block.getByText(/Найден клиент CRM «ООО Чужой Клиент», ИНН 300000999/),
+    ).toBeVisible();
+    await expect(block.getByText(/Это та же компания\?/)).toBeVisible();
+    await expectNoViolations(page, "Поставщик · непроверенное сопоставление");
+    await block.scrollIntoViewIfNeeded();
+    await settledScreenshot(page, "supplier-crm-client-unverified");
+
+    await block.getByRole("button", { name: "Да, та же компания" }).click();
+    await expect(block.getByText("Заведён", { exact: true })).toBeVisible();
+    await expect(block.getByRole("button", { name: "Да, та же компания" })).toBeHidden();
+  });
+}
+
+test("карточка поставщика: «Нет, другая компания» снимает сопоставление и запрашивает клиента заново", async ({
+  page,
+}) => {
+  await loginAndWait(page, "supply@demo.example");
+  await stage(page, 1, {
+    status: "unverified",
+    crm_client_id: "4002",
+    crm_client_name: "ООО Чужой Клиент",
+    inn: "300000777",
+  });
+  await spaGoto(page, "/erp/catalog?part=suppliers&supplier=1");
+  const block = page.getByRole("region", { name: "Доступ в кабинет" });
+  await block.getByRole("button", { name: "Нет, другая компания" }).click();
+  await expect(block.getByText("Ожидает", { exact: true })).toBeVisible();
+  await expect(block.getByRole("button", { name: "Нет, другая компания" })).toBeHidden();
+});

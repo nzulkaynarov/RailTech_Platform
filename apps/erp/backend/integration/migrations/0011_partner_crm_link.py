@@ -2,18 +2,35 @@
 
 import django.db.models.deletion
 import django.utils.timezone
+from django.conf import settings
 from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
 
     dependencies = [
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
         ('integration', '0010_prune_snapshot_quote_final_approval'),
         ('parties', '0010_company_relationship'),
         ('sales', '0014_fulfillment_delivery_proof'),
     ]
 
     operations = [
+        migrations.AddField(
+            model_name='crmclientmapping',
+            name='verified_at',
+            field=models.DateTimeField(blank=True, default=django.utils.timezone.now, help_text='Пусто — связано по совпадению ИНН и ещё не подтверждено человеком', null=True, verbose_name='Проверено'),
+        ),
+        migrations.AddField(
+            model_name='crmclientmapping',
+            name='verified_by',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL, verbose_name='Кто подтвердил'),
+        ),
+        migrations.AddField(
+            model_name='crmclientmapping',
+            name='crm_name',
+            field=models.CharField(blank=True, default='', help_text='Как клиент назван в передаче из CRM: показывается сотруднику при проверке сопоставления', max_length=255, verbose_name='Название клиента в CRM'),
+        ),
         migrations.CreateModel(
             name='PartnerCrmLink',
             fields=[

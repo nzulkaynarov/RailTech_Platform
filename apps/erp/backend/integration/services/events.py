@@ -103,6 +103,8 @@ def publish_request_created(
     company_id = deal.company_id if hasattr(deal, "company_id") else deal["company_id"]
     if not company_id:
         return None  # сделка без компании (черновик калькулятора) клиенту CRM не принадлежит
+    if source == "cabinet" and _held_for_verification(company_id):
+        return None  # заявка партнёра по непроверенному сопоставлению откладывается (PART-CRM), см. `partner_client`
     payload: Dict[str, Any] = {"source": source}
     if erp_request_id is not None:
         payload["erp_request_id"] = erp_request_id
@@ -123,6 +125,16 @@ def publish_request_created(
         deal=deal,
         actor=actor,
         crm_client_id=crm_client_id,
+    )
+
+
+def _held_for_verification(company_id: int) -> bool:
+    """Компания — партнёр, а её сопоставление с клиентом CRM создано передачей по совпадению ИНН и не проверено человеком."""
+    from parties.models import CompanyRelationship, RelationshipRole
+
+    return (
+        CrmClientMapping.objects.filter(company_id=company_id, verified_at__isnull=True).exists()
+        and CompanyRelationship.objects.filter(company_id=company_id, role=RelationshipRole.PARTNER).exists()
     )
 
 

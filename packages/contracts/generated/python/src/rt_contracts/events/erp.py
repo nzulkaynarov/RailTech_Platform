@@ -899,7 +899,7 @@ class MailRequestedV1(BaseModel):
 
 class PartnerClientRejectedV1(BaseModel):
     """
-    Тип uz.railtech.erp.partner.client_rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP не приняла ответ CRM uz.railtech.crm.partner.client_resolved.v1 со status = linked: клиент CRM crm_client_id в ERP уже сопоставлен другой компании (other_erp_company_id), либо эта компания уже сопоставлена другому клиенту CRM, а ERP ничего не перепривязывает. CRM снимает со своего клиента erp_company_id, записывает это в журнал аудита и уведомляет ответственного; сотрудник исправляет ИНН или рег. номер и приглашает партнёра ещё раз. Только идентификаторы.
+    Тип uz.railtech.erp.partner.client_rejected.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP не приняла ответ CRM uz.railtech.crm.partner.client_resolved.v1 со status = linked: клиент CRM crm_client_id в ERP уже сопоставлен другой компании (other_erp_company_id), либо эта компания уже сопоставлена другому клиенту CRM, а ERP ничего не перепривязывает; либо сотрудник бэк-офиса отклонил непроверенное сопоставление, созданное передачей клиента по совпадению ИНН. CRM снимает со своего клиента erp_company_id, записывает это в журнал аудита и уведомляет ответственного; сотрудник исправляет ИНН или рег. номер и приглашает партнёра ещё раз. Только идентификаторы.
     """
 
     model_config = ConfigDict(
@@ -915,7 +915,7 @@ class PartnerClientRejectedV1(BaseModel):
     """
     reason: Reason
     """
-    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client)
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client); либо сотрудник бэк-офиса решил, что найденный по ИНН клиент CRM — другая компания (rejected_by_staff)
     """
     other_erp_company_id: int | None = None
     """
@@ -1296,11 +1296,12 @@ class QuoteVisaAuthor(BaseModel):
 
 class Reason(StrEnum):
     """
-    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client)
+    Почему: клиент CRM уже сопоставлен в ERP другой компании (client_mapped_to_other_company) либо эта компания уже сопоставлена другому клиенту CRM (company_mapped_to_other_client); либо сотрудник бэк-офиса решил, что найденный по ИНН клиент CRM — другая компания (rejected_by_staff)
     """
 
     client_mapped_to_other_company = "client_mapped_to_other_company"
     company_mapped_to_other_client = "company_mapped_to_other_client"
+    rejected_by_staff = "rejected_by_staff"
 
 
 class RecordedByStaff(BaseModel):

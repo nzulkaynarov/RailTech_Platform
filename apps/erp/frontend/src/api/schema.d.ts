@@ -4698,6 +4698,46 @@ export interface paths {
         patch: operations["catalog_supplier_access_contact_update"];
         trace?: never;
     };
+    "/api/v1/catalog/supplier-access/{id}/crm-client/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the CRM client found by TIN
+         * @description Needs `supply.manage`. Сопоставление компании с клиентом CRM создала передача по совпадению ИНН и не проверено (PART-CRM): «Да, это та же компания» делает его проверенным, открывает компании клиентские модули кабинета и выпускает отложенные заявки партнёра. Проверять нечего — 409 `NOTHING_TO_VERIFY`.
+         */
+        post: operations["catalog_supplier_access_crm_client_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/supplier-access/{id}/crm-client/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject the CRM client found by TIN
+         * @description Needs `supply.manage`. «Нет, другая компания»: сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM получает `partner.client_rejected` и снимает привязку у клиента; затем компания запрашивается в CRM обычным путём. Проверять нечего — 409 `NOTHING_TO_VERIFY`.
+         */
+        post: operations["catalog_supplier_access_crm_client_reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/supplier-access/{id}/invite/": {
         parameters: {
             query?: never;
@@ -12469,29 +12509,35 @@ export interface components {
         };
         DeskSupplierAccessCrmClient: {
             /**
-             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
+             * @description Клиент партнёра в CRM: `none` — не просили (партнёра ещё не приглашали), `requested` — ждём ответ CRM, `pending_confirmation` — CRM нашла похожего клиента и ждёт решения менеджера CRM, `held` — передача клиента из CRM нашла компанию по ИНН, заявки удержаны до сверки и повторного приглашения, `unverified` — сопоставление создала передача по совпадению ИНН и оно не проверено: сотрудник подтверждает («Да»/«Нет») здесь же, `linked` — заведён и сопоставлен, `conflict` — найденный клиент CRM занят другой компанией ERP.
              *
              *     * `none` - none
              *     * `requested` - requested
              *     * `pending_confirmation` - pending_confirmation
              *     * `held` - held
+             *     * `unverified` - unverified
              *     * `linked` - linked
              *     * `conflict` - conflict
              */
             status: components["schemas"]["DeskSupplierAccessCrmClientStatusEnum"];
             /** @description Клиент CRM (`linked`, `conflict`): по нему Платформа строит ссылку «открыть клиента». */
             crm_client_id: number | null;
+            /** @description `unverified`: как клиент назван в передаче из CRM. */
+            crm_client_name?: string | null;
+            /** @description `unverified`: ИНН, по которому компания связана с клиентом. */
+            inn?: string | null;
         };
         /**
          * @description * `none` - none
          *     * `requested` - requested
          *     * `pending_confirmation` - pending_confirmation
          *     * `held` - held
+         *     * `unverified` - unverified
          *     * `linked` - linked
          *     * `conflict` - conflict
          * @enum {string}
          */
-        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "pending_confirmation" | "held" | "linked" | "conflict";
+        DeskSupplierAccessCrmClientStatusEnum: "none" | "requested" | "pending_confirmation" | "held" | "unverified" | "linked" | "conflict";
         DeskSupplierAccessInviteInRequest: {
             /** @description Контакт компании, которому уходит письмо с кодом входа. */
             contact_id: number;
@@ -27028,6 +27074,104 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_crm_client_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_supplier_access_crm_client_reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierAccess"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];

@@ -622,3 +622,193 @@ class TestBusHandler:
         assert default_registry.match("uz.railtech.crm.partner.client_resolved.v1")
         bus_handlers.on_partner_client_resolved(SimpleNamespace(data=resolved(supplier, contact)))
         assert CrmClientMapping.objects.filter(company=supplier, crm_client_id=77).exists()
+
+
+# ── Непроверенное сопоставление: передача по ИНН до приглашения партнёром (решение архитектора по #397) ────────────────
+
+
+class TestUnverifiedMapping:
+    """Обход через FIX-31: компания ещё не партнёр, передача по ИНН создаёт сопоставление, потом её приглашают партнёром.
+
+    Сопоставление, созданное передачей по совпадению ИНН с существующей компанией, — непроверенное. Приглашение партнёра при
+    нём не просит CRM, а показывает «Найден клиент CRM… Это та же компания?»; до решения заявки партнёра откладываются.
+    """
+
+    def handoff(self, supplier, settings, crm_client_id=4001, **extra):
+        from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+        body = payload(crm_client_id=crm_client_id, inn=supplier.inn, create_request=False, email="x@other.example.uz")
+        body["company"]["name"] = "ООО Чужой Клиент"
+        body.update(extra)
+        return handoff(api, body)
+
+    def portal(self, supplier, contact):
+        from django.conf import settings as dj_settings
+        from portal.tests.conftest import PortalAPIClient, make_portal_session
+
+        session = make_portal_session(contact, supplier, "magic_link")
+        client = PortalAPIClient()
+        client.cookies[dj_settings.PORTAL_SESSION_COOKIE_NAME] = session.raw_token
+        client.credentials(HTTP_X_PORTAL_SESSION=session.raw_token)
+        return client
+
+    def request(self, api, text="Нужен кабель"):
+        response = api.post(f"{PORTAL}/requests", {"summary": text, "lines": [{"text": "Кабель"}]}, format="json")
+        assert response.status_code == 201, response.content
+
+    def cabinet_events(self):
+        return [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "cabinet"]
+
+    def verify(self, world, supplier, action, who="supply"):
+        return world["clients"][who].post(
+            f"/api/v1/catalog/supplier-access/{supplier.pk}/crm-client/{action}/", {}, format="json"
+        )
+
+    def staged(self, world, supplier, contact, settings):
+        """Поставщик, не партнёр → передача по ИНН (сопоставление) → приглашение → заявка партнёра."""
+        assert self.handoff(supplier, settings).status_code == 201
+        mapping = CrmClientMapping.objects.get(company=supplier)
+        assert mapping.verified_at is None and mapping.crm_name == "ООО Чужой Клиент"
+        bus_support.reset()
+        assert invite(world, contact).status_code == 200
+        api = self.portal(supplier, contact)
+        self.request(api)
+        return mapping
+
+    def test_invite_after_the_handoff_asks_for_confirmation_and_holds_the_requests(
+        self, world, supplier, contact, settings
+    ):
+        self.staged(world, supplier, contact, settings)
+
+        assert bus_support.published("partner.client_requested") == [], "CRM не просим: клиент уже найден по ИНН"
+        state = world["clients"]["supply"].get(f"/api/v1/catalog/supplier-access/{supplier.pk}/").json()["crm_client"]
+        assert state == {
+            "status": "unverified",
+            "crm_client_id": 4001,
+            "crm_client_name": "ООО Чужой Клиент",
+            "inn": supplier.inn,
+        }
+        assert self.cabinet_events() == [], "заявка партнёра не уходит чужому клиенту (проба ревьюера давала LEAK)"
+        assert DeferredRequestEvent.objects.get().published_at is None
+        assert not supplier.types.filter(code="CLIENT").exists()
+
+    def test_yes_verifies_opens_client_modules_and_releases_the_requests(self, world, supplier, contact, settings):
+        self.staged(world, supplier, contact, settings)
+
+        response = self.verify(world, supplier, "confirm")
+
+        assert response.status_code == 200 and response.json()["crm_client"]["status"] == "linked"
+        mapping = CrmClientMapping.objects.get(company=supplier)
+        assert mapping.verified_at is not None and mapping.verified_by_id == world["users"]["supply"].pk
+        assert supplier.types.filter(code="CLIENT").exists()
+        released = self.cabinet_events()
+        assert len(released) == 1 and released[0]["data"]["crm_client_id"] == 4001
+        assert self.verify(world, supplier, "confirm").status_code == 409, "повторно проверять нечего"
+        assert len(self.cabinet_events()) == 1
+
+    def test_no_removes_the_mapping_tells_crm_and_asks_it_the_usual_way(self, world, supplier, contact, settings):
+        self.staged(world, supplier, contact, settings)
+        stranger = Contact.objects.get(company=supplier, email="x@other.example.uz")  # пришёл с передачей из CRM
+        assert CrmContactMapping.objects.filter(contact=stranger).exists()
+        bus_support.reset()
+
+        response = self.verify(world, supplier, "reject")
+
+        assert response.status_code == 200
+        assert response.json()["crm_client"]["status"] == "requested"
+        assert not CrmClientMapping.objects.exists() and not CrmContactMapping.objects.exists()
+        stranger.refresh_from_db()
+        contact.refresh_from_db()
+        assert stranger.archived_at is not None and contact.archived_at is None
+        rejected = bus_support.only("partner.client_rejected")
+        bus_support.assert_matches_contract(rejected)
+        assert rejected["data"] == {
+            "erp_company_id": supplier.pk,
+            "crm_client_id": 4001,
+            "reason": "rejected_by_staff",
+            "other_erp_company_id": None,
+            "actor": rejected["data"]["actor"],
+        }
+        assert rejected["data"]["actor"]["type"] == "staff"
+        request = bus_support.only("partner.client_requested")
+        assert [c["email"] for c in request["data"]["contacts"]] == [contact.email]
+        assert self.cabinet_events() == [] and DeferredRequestEvent.objects.get().published_at is None
+
+    @pytest.mark.parametrize("action", ["confirm", "reject"])
+    def test_deciding_needs_supply_manage(self, world, supplier, contact, settings, action):
+        self.staged(world, supplier, contact, settings)
+        for who in ("manager", "accountant", "viewer"):
+            assert self.verify(world, supplier, action, who).status_code == 403, who
+        assert CrmClientMapping.objects.get(company=supplier).verified_at is None
+
+    def test_nothing_to_verify_for_a_verified_mapping(self, world, supplier, contact):
+        CrmClientMapping.objects.create(crm_client_id=55, company=supplier)  # проверенное по умолчанию
+        CompanyRelationship.objects.create(company=supplier, role="partner", status="active")
+        for action in ("confirm", "reject"):
+            response = self.verify(world, supplier, action)
+            assert response.status_code == 409 and response.json() == {"detail": "NOTHING_TO_VERIFY"}
+
+    def test_a_handoff_of_a_new_company_is_verified(self, settings):
+        from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+        assert handoff(api, payload(crm_client_id=4100, inn="300000321")).status_code == 201
+        assert CrmClientMapping.objects.get().verified_at is not None
+
+    def test_the_hold_notification_says_what_to_do(self, world, supplier, contact, settings):
+        from notifications.models import Notification
+
+        CompanyRelationship.objects.create(
+            company=supplier, role="partner", status="invited", responsible=world["users"]["supply"], modules=[]
+        )
+        assert self.handoff(supplier, settings).status_code == 409
+        note = Notification.objects.get(user=world["users"]["supply"], event_code="partner.crm_unverified")
+        assert "Пригласить ещё раз" in note.message and "менеджер CRM" in note.message
+        assert "это подтверждение" not in note.message
+
+
+class TestHeldExit:
+    """Выход из удержания не теряет заявку лида: повтор передачи с `create_request` заводит её один раз."""
+
+    def test_the_lead_request_is_created_once_after_the_link_is_confirmed(self, world, supplier, contact, settings):
+        from integration.tests.test_handoff import SERVICE_TOKEN, handoff, payload
+        from rest_framework.test import APIClient
+
+        settings.SERVICE_TOKEN_CRM_TO_ERP = [SERVICE_TOKEN]
+        api = APIClient()
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {SERVICE_TOKEN}")
+        body = payload(crm_client_id=4001, inn=supplier.inn, create_request=True, email="x@other.example.uz")
+        CompanyRelationship.objects.create(company=supplier, role="partner", status="invited", modules=[])
+        assert handoff(api, body).status_code == 409  # удержано: сопоставления и заявки нет
+        assert not CrmClientMapping.objects.exists()
+        assert invite(world, contact).status_code == 200  # сотрудник сверил ИНН
+        partner_client.apply_client_resolved(
+            {
+                "erp_company_id": supplier.pk,
+                "status": "pending_confirmation",
+                "crm_client_id": 4001,
+                "actor": {"type": "system"},
+            }
+        )
+        partner_client.apply_client_resolved(resolved(supplier, contact, crm_client_id=4001))  # менеджер CRM подтвердил
+        assert CrmClientMapping.objects.get().handoff_deal_id is None
+
+        first = handoff(api, body)  # CRM повторила передачу сама
+
+        assert first.status_code == 200, first.content
+        deal_id = first.json()["erp_request_id"]
+        assert deal_id is not None, "заявка лида заведена, а не 200 с пустой заявкой"
+        crm_requests = [e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "crm"]
+        assert len(crm_requests) == 1 and crm_requests[0]["data"]["crm_client_id"] == 4001
+        second = handoff(api, body)
+        assert second.status_code == 200 and second.json()["erp_request_id"] == deal_id
+        assert (
+            len([e for e in bus_support.published("request.created") if e["data"]["payload"]["source"] == "crm"]) == 1
+        )

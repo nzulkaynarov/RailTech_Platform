@@ -54,6 +54,7 @@ PENDING_CONFIRMATION = "pending_confirmation"
 CONFLICT = "conflict"
 NONE = "none"
 HELD = "held"
+UNVERIFIED = "unverified"
 
 APPLIED = "applied"
 SKIPPED_UNKNOWN_COMPANY = "skipped_unknown_company"
@@ -271,11 +272,12 @@ def _notify_unverified(company: Company, crm_client_id: int) -> None:
         .select_related("responsible")
         .first()
     )
-    title = f"Партнёр «{company.name}»: связан с клиентом CRM по ИНН, заявки удержаны"
+    title = f"Партнёр «{company.name}»: передача клиента из CRM удержана до сверки"
     message = (
-        f"Передача клиента из CRM сопоставила компанию партнёра с клиентом #{crm_client_id} по ИНН. Заявки партнёра не "
-        "уйдут этому клиенту, пока вы не проверите, что это та же компания: сверьте ИНН в карточке поставщика и у клиента "
-        "в CRM, затем нажмите «Пригласить ещё раз» — это подтверждение."
+        f"Передача клиента #{crm_client_id} из CRM нашла компанию партнёра по ИНН и была удержана: сопоставление не "
+        "создано, заявки партнёра остаются в ERP и клиенту не уходят. Сверьте ИНН в карточке поставщика и у клиента в "
+        "CRM, затем нажмите «Пригласить ещё раз»: запрос уйдёт в CRM, и связь подтвердит менеджер CRM. Заявка лида из "
+        "передачи заведётся в ERP после подтверждения."
     )
     params = {"company": company.name, "crm_client_id": crm_client_id}
     code = "partner.crm_unverified"
@@ -486,6 +488,14 @@ def crm_client_state(company: Company) -> Dict[str, Any]:
     """Что показать сотруднику: `linked` (сопоставление есть), `requested` (ждём CRM), `pending_confirmation` (ждём менеджера
     CRM), `conflict`, `none` (не просили)."""
     mapping = CrmClientMapping.objects.filter(company=company).first()
+    if mapping is not None and mapping.verified_at is None and is_partner(company):
+        # Сопоставление создала передача по совпадению ИНН: сотрудник подтверждает, та ли это компания.
+        return {
+            "status": UNVERIFIED,
+            "crm_client_id": mapping.crm_client_id,
+            "crm_client_name": mapping.crm_name or None,
+            "inn": company.inn or None,
+        }
     if mapping is not None:  # сопоставление партнёра появляется только после подтверждённой связи (PART-CRM)
         return {"status": LINKED, "crm_client_id": mapping.crm_client_id}
     link = PartnerCrmLink.objects.filter(company=company).first()
@@ -498,3 +508,85 @@ def crm_client_state(company: Company) -> Dict[str, Any]:
     if link.status == PartnerCrmStatus.CONFLICT:
         return {"status": CONFLICT, "crm_client_id": link.crm_client_id}
     return {"status": REQUESTED, "crm_client_id": None}
+
+
+# ── Проверка сопоставления человеком ────────────────────────────────────────────────────────────────────────────────────
+
+
+class NothingToVerify(Exception):
+    """У компании нет непроверенного сопоставления (уже решили или не было)."""
+
+
+def _unverified_mapping(company: Company) -> CrmClientMapping:
+    mapping = CrmClientMapping.objects.select_for_update().filter(company=company, verified_at__isnull=True).first()
+    if mapping is None:
+        raise NothingToVerify()
+    return mapping
+
+
+@transaction.atomic
+def confirm_unverified(company: Company, user: Any = None) -> int:
+    """«Да, это та же компания»: сопоставление становится проверенным, заявки партнёра выпускаются, открывается CLIENT.
+
+    Возвращает число выпущенных заявок. Право — как у приглашения (`supply.manage`, проверяет представление).
+    """
+    lock_company(company.pk)
+    mapping = _unverified_mapping(company)
+    mapping.verified_at = timezone.now()
+    mapping.verified_by = user if getattr(user, "pk", None) else None
+    mapping.save(update_fields=["verified_at", "verified_by", "updated_at"])
+    client_type = CompanyType.objects.get_or_create(code="CLIENT", defaults={"name": "Клиент"})[0]
+    company.types.add(client_type)
+    released = release_deferred_requests(company, mapping.crm_client_id)
+    PartnerCrmLink.objects.filter(company=company).delete()
+    _log(
+        company,
+        "partner.crm_verified",
+        "Партнёр стал клиентом CRM: сопоставление подтверждено сотрудником",
+        f"Клиент CRM #{mapping.crm_client_id} подтверждён как та же компания; заявок опубликовано: {released}.",
+        crm_client_id=mapping.crm_client_id,
+        released_requests=released,
+    )
+    return released
+
+
+@transaction.atomic
+def reject_unverified(company: Company, user: Any = None) -> None:
+    """«Нет, другая компания»: сопоставление снимается, CRM снимает `erp_company_id` у клиента, уходит обычный запрос.
+
+    Контакты, созданные передачей из CRM в этой компании (они принадлежали клиенту CRM), уходят в архив, остальные только
+    теряют сопоставление; ERP публикует `partner.client_rejected` (`rejected_by_staff`), затем — обычный запрос в CRM
+    (`partner.client_requested`), и найденного клиента CRM подтверждает или отклоняет её менеджер.
+    """
+    from .crm_projections import archive_contact
+
+    lock_company(company.pk)
+    mapping = _unverified_mapping(company)
+    crm_client_id = mapping.crm_client_id
+    now = timezone.now()
+    for link in CrmContactMapping.objects.select_related("contact").filter(contact__company=company):
+        if link.contact.created_at >= mapping.created_at and link.contact.archived_at is None:
+            archive_contact(link.contact, now)  # создан передачей: чужой человек в этой компании
+        link.delete()
+    mapping.delete()
+    _log(
+        company,
+        "partner.crm_rejected",
+        "Сопоставление с клиентом CRM отклонено сотрудником",
+        f"Сотрудник решил, что клиент CRM #{crm_client_id} — другая компания: сопоставление снято, контакты передачи "
+        "убраны, CRM снимет привязку. Партнёр запрашивается в CRM заново.",
+        "WARNING",
+        crm_client_id=crm_client_id,
+    )
+    get_bus().publish(
+        event_type_name("partner.client_rejected"),
+        {
+            "erp_company_id": company.pk,
+            "crm_client_id": crm_client_id,
+            "reason": "rejected_by_staff",
+            "other_erp_company_id": None,
+            "actor": build_actor(user=user, actor_type="staff" if user is not None else "system"),
+        },
+        subject=f"company/{company.pk}",
+    )
+    request_client_in_crm(company, user)

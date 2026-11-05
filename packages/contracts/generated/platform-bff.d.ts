@@ -6532,6 +6532,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: найден клиент CRM по ИНН — «Да, это та же компания»
+     * @description ERP `POST catalog/supplier-access/{id}/crm-client/confirm/` — право `supply.manage`. Сопоставление, созданное передачей из CRM по совпадению ИНН, становится проверенным: компании открываются клиентские модули кабинета, отложенные заявки партнёра уходят менеджеру. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+     */
+    post: operations["confirmSupplierCrmClient"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/cabinet-access/crm-client/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Поставщик: найден клиент CRM по ИНН — «Нет, другая компания»
+     * @description ERP `POST catalog/supplier-access/{id}/crm-client/reject/` — право `supply.manage`. Сопоставление снимается, контакты, пришедшие с передачей клиента, уходят в архив, CRM снимает привязку у клиента, партнёр запрашивается в CRM заново. Проверять нечего — 409 `NOTHING_TO_VERIFY`. Раздел `erp.stock` — полный.
+     */
+    post: operations["rejectSupplierCrmClient"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/erp/catalog/suppliers/{id}/offers/{offer_id}": {
     parameters: {
       query?: never;
@@ -13969,10 +14009,21 @@ export interface components {
     /** @description Клиент партнёра в CRM (PART-CRM): при приглашении партнёр становится клиентом CRM (CRM — источник правды по клиентам), заявки партнёра идут менеджеру как заявки клиента. Платформа показывает состояние и ссылку на клиента CRM. */
     SupplierCabinetCrmClient: {
       /**
-       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
+       * @description `none` — партнёра ещё не приглашали; `requested` — ждём ответ CRM; `pending_confirmation` — CRM нашла похожего клиента без сопоставления и ждёт решения менеджера CRM («Это та же компания» или «Нет — завести нового»), ничего не привязано, заявки партнёра отложены; `held` — передача клиента из CRM нашла компанию партнёра по ИНН: сопоставление не создано, заявки удержаны, сотрудник сверяет ИНН и жмёт «Пригласить ещё раз»; `unverified` — сопоставление создала передача по совпадению ИНН до приглашения партнёра, оно не проверено: «Найден клиент CRM «X», ИНН …. Это та же компания?» — «Да» (проверено, заявки уходят, открывается кабинет клиента) или «Нет» (сопоставление снято, CRM получает отказ и обычный запрос); `linked` — клиент заведён (новый, найденный по сопоставлению или подтверждённый) и сопоставлен; `conflict` — найденный клиент CRM уже сопоставлен другой компании ERP, ничего не изменено
        * @enum {string}
        */
-      status: "none" | "requested" | "pending_confirmation" | "held" | "linked" | "conflict";
+      status:
+        | "none"
+        | "requested"
+        | "pending_confirmation"
+        | "held"
+        | "unverified"
+        | "linked"
+        | "conflict";
+      /** @description `unverified`: как клиент назван в передаче из CRM */
+      crm_client_name?: string | null;
+      /** @description `unverified`: ИНН, по которому компания связана с клиентом */
+      inn?: string | null;
       /** @description Клиент CRM (`pending_confirmation`, `held`, `linked`, `conflict`): ссылка «открыть клиента» ведёт на его карточку */
       crm_client_id: components["schemas"]["CompanyItemRef"] | null;
     };
@@ -26392,6 +26443,68 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  confirmSupplierCrmClient: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rejectSupplierCrmClient: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierCabinetAccess"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
