@@ -79,6 +79,7 @@ exports[`карты статусов > снимок карты: изменени
     "linked": "green",
     "pending_confirmation": "gold",
     "requested": "gold",
+    "unverified": "gold",
   },
   "due": {
     "later": "default",
