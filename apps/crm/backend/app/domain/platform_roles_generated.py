@@ -37,6 +37,7 @@ RESOURCE_KEYS: Final[tuple[str, ...]] = (
     "eds.payments",
     "eds.memo.create",
     "eds.memo.approve",
+    "eds.signing.manage",
     "erp.calc",
     "erp.calc.goods",
     "erp.calc.services",
@@ -91,6 +92,7 @@ RESOURCE_LEVELS: Final[dict[str, tuple[str, ...]]] = {
         "read",
         "full",
     ),
+    "eds.signing.manage": ("full",),
     "erp.calc": (
         "read",
         "full",
@@ -184,6 +186,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "eds.memo.create": {},
     "eds.memo.approve": {},
+    "eds.signing.manage": {},
     "erp.calc": {},
     "erp.calc.goods": {},
     "erp.calc.services": {},
@@ -285,6 +288,7 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "eds.memo.create": {},
     "eds.memo.approve": {},
+    "eds.signing.manage": {},
     "erp.calc": {
         "full": (
             "deal.manage",
@@ -376,6 +380,9 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.memo.approve": {
         "full": ("memos.approve",),
     },
+    "eds.signing.manage": {
+        "full": ("signing.manage",),
+    },
     "erp.calc": {},
     "erp.calc.goods": {},
     "erp.calc.services": {},
@@ -447,6 +454,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "dashboard.queue": "full",
         "chats.internal": "full",
         "eds.memo.create": "full",
+        "eds.signing.manage": "full",
     },
     "DIRECTOR": {
         "dashboard.queue": "full",

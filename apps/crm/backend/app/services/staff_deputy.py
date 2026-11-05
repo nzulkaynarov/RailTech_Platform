@@ -13,6 +13,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.domain import staff_profile as rules
 from app.domain.errors import ForbiddenError, NotFoundError, Reason, ValidationFailedError
 from app.domain.lead_access import WORK_ROLES
@@ -92,6 +93,8 @@ class StaffDeputyService:
                 session, actor, "user.deputy_set", "user", user_id,
                 before=before, after=_audit_of(user),
             )  # fmt: skip
+            # EDS переводит задачи подписи заместителю по проекции (SIGN-2, ADR-0024 п. 2).
+            await bus_events.user_updated(session, user, actor, ["deputy"])
 
     async def clear(self, actor: Actor, user_id: int) -> None:
         async with self._sessions() as session, session.begin():
@@ -104,6 +107,7 @@ class StaffDeputyService:
                 await audit.record(
                     session, actor, "user.deputy_cleared", "user", user_id, before=before
                 )
+                await bus_events.user_updated(session, user, actor, ["deputy"])
 
     async def deputy_name(self, user_id: int | None) -> str | None:
         if user_id is None:

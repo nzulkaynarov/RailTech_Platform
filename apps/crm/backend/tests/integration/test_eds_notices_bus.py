@@ -17,7 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import runtime
 from app.models.auth import User
 from app.models.staff_tickets import StaffNotification
-from app.services.eds_notices import NOTICE_TYPE, EdsNoticeService, tab_of
+from app.services.eds_notices import (
+    NOTICE_TYPE,
+    SIGNING_EXPIRING_TYPE,
+    EdsNoticeService,
+    tab_of,
+)
 from tests.bus_events import envelope_for, signed_request
 from tests.integration.bus_harness import FakeContainer, Harness
 from tests.integration.crm_helpers import make_user
@@ -40,8 +45,10 @@ class Stand:
         self.notices = EdsNoticeService(harness.notices, "https://platform.example.com")
         runtime.install(cast(Any, EdsContainer(harness, self.notices)))
 
-    async def receive(self, data: dict[str, Any], *, event_id: str | None = None) -> str:
-        envelope = envelope_for(NOTICE_TYPE, data, source="rt://eds", event_id=event_id)
+    async def receive(
+        self, data: dict[str, Any], *, event_id: str | None = None, event_type: str = NOTICE_TYPE
+    ) -> str:
+        envelope = envelope_for(event_type, data, source="rt://eds", event_id=event_id)
         headers, body = signed_request(envelope, PAIR_EDS, publisher="eds")
         result = await self.h.bus.receive(headers, body)
         assert result.status_code == 200, result.body
@@ -160,3 +167,59 @@ async def test_unknown_field_is_accepted_and_kind_sets_the_tab(stand: Stand) -> 
     assert (row.kind, row.tab, row.subtitle) == ("eds.letter_executed", "system", None)
     assert tab_of("extension_requested") == "decisions"
     assert tab_of("extension_decided") == "system"
+
+
+def expiring(recipients: list[int], **over: Any) -> dict[str, Any]:
+    """Тело `signing_authority.expiring` (SIGN-2): как пример контракта, получатели — свои."""
+    return {
+        "notice_key": "signing-authority:6f1b2c3d:expiring:2026-11-19",
+        "recipients": recipients,
+        "title": "Доверенность Алии Каримовой заканчивается 19.11.2026",
+        "subtitle": "Осталось 14 дней. Настройки → Права подписи: продлите или выдайте новую",
+        "authority": {
+            "eds_authority_id": "6f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+            "holder": {"crm_user_id": 7, "full_name": "Алия Каримова"},
+            "basis": "power_of_attorney",
+            "basis_number": "17",
+            "valid_to": "2026-11-19",
+            "days_left": 14,
+        },
+        "actor": {"type": "system"},
+        **over,
+    }
+
+
+async def test_signing_authority_reminder_reaches_the_register_keepers(stand: Stand) -> None:
+    sessions = stand.h.sessions
+    keeper, _ = await make_user(sessions, "keeper@x.uz", ["admin"])
+    other, _ = await make_user(sessions, "other@x.uz", ["admin"])
+    await _link(sessions, keeper.id, 8201)
+
+    event_id = await stand.receive(
+        expiring([keeper.id, other.id, 999_999], future_field=1), event_type=SIGNING_EXPIRING_TYPE
+    )
+    assert await stand.h.process(event_id) == "processed"
+
+    rows = await stand.bell()
+    assert [(r.user_id, r.kind, r.tab) for r in rows] == [
+        (keeper.id, "eds.signing_authority_expiring", "decisions"),
+        (other.id, "eds.signing_authority_expiring", "decisions"),
+    ]
+    assert (rows[0].object_kind, rows[0].object_id, rows[0].object_number) == (None, None, None)
+    assert rows[0].title.startswith("Доверенность Алии Каримовой заканчивается")
+    [(chat, text)] = stand.h.bot.sent
+    assert chat == 8201
+    assert text.endswith("https://platform.example.com/admin/signing")
+
+
+async def test_signing_authority_reminder_repeated_delivery_gives_one_notification(
+    stand: Stand,
+) -> None:
+    keeper, _ = await make_user(stand.h.sessions, "keeper2@x.uz", ["admin"])
+    event_id = str(uuid.uuid4())
+    data = expiring([keeper.id])
+    await stand.receive(data, event_id=event_id, event_type=SIGNING_EXPIRING_TYPE)
+    await stand.receive(data, event_id=event_id, event_type=SIGNING_EXPIRING_TYPE)
+    assert await stand.h.process(event_id) == "processed"
+    await stand.h.process(event_id)
+    assert len(await stand.bell()) == 1

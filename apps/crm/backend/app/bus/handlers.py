@@ -34,7 +34,7 @@ from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, TEST_TYPE, erp_types
 from app.bus.runtime import current_container
 from app.services.cabinet_chat import POSTED_TYPE
 from app.services.contact_telegram import UNLINK_REQUESTED
-from app.services.eds_notices import NOTICE_TYPE
+from app.services.eds_notices import NOTICE_TYPE, SIGNING_EXPIRING_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED
 from app.services.mail_requests import MAIL_REQUEST_TYPES
 
@@ -73,6 +73,11 @@ for _mail_type in MAIL_REQUEST_TYPES:
 @subscribe(NOTICE_TYPE)
 async def on_eds_notice(event: Event, session: AsyncSession) -> None:
     await current_container().eds_notices.accept(session, event)
+
+
+@subscribe(SIGNING_EXPIRING_TYPE)
+async def on_signing_authority_expiring(event: Event, session: AsyncSession) -> None:
+    await current_container().eds_notices.accept_signing_expiring(session, event)
 
 
 @subscribe(LETTER_REGISTERED)
