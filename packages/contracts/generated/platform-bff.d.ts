@@ -4957,9 +4957,138 @@ export interface paths {
     };
     /**
      * EDS · Активные сотрудники: адресат, исполнитель, «ознакомить» (P8b)
-     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
+     * @description EDS `GET /employees` (права `letters.register` или `letters.resolve`): активные сотрудники по имени. Раздел `eds.inbox.register` или `eds.inbox` — полный, или `admin` — полный (общие шаблоны резолюций, EDS-REG), или `eds.signing.manage` — полный (выбрать сотрудника для полномочия подписи, SIGN-2). Исполнитель резолюции делопроизводства — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2).
      */
     get: operations["listEdsStaff"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing/authorities": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Права подписи — реестр полномочий (SIGN-2)
+     * @description EDS `GET /signing/authorities`. Кто, какие виды документов, до какой суммы, на каком основании и до какого срока вправе подписывать. `status`: `active` — действующие (в ответе `active` и `expiring`), `expiring` — окончатся в ближайшие 30 дней, `inactive` — отозванные, истёкшие и ещё не начавшиеся, `all` — все (по умолчанию). Раздел `eds.signing.manage` — полный.
+     */
+    get: operations["listSigningAuthorities"];
+    put?: never;
+    /**
+     * EDS · Выдать полномочие подписи
+     * @description EDS `POST /signing/authorities`. Доверенность — номер, дата и срок обязательны, срок не позже даты выдачи плюс 3 года (ГК, ст. 139); приказ — номер и дата; устав — без номера. Лимит — сумма и валюта вместе. Пересечения допустимы. Нарушение — 422 с полем в `details.fields`. Раздел `eds.signing.manage` — полный.
+     */
+    post: operations["createSigningAuthority"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing/authorities/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** EDS · Полномочие подписи с журналом */
+    get: operations["getSigningAuthority"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * EDS · Изменить полномочие подписи
+     * @description EDS `PATCH /signing/authorities/{id}`. Переданные поля меняются, непереданные остаются; `null` очищает необязательное. Держателя не меняют. Отозванное менять нельзя — 409 `revoked`.
+     */
+    patch: operations["updateSigningAuthority"];
+    trace?: never;
+  };
+  "/eds/signing/authorities/{id}/revoke": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Отозвать полномочие подписи
+     * @description EDS `POST /signing/authorities/{id}/revoke`. Причина обязательна; отозванное остаётся в реестре и журнале, подбор подписанта его больше не учитывает. Повторный отзыв — 409 `revoked`.
+     */
+    post: operations["revokeSigningAuthority"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing/authorities/{id}/basis-file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Скачать файл основания
+     * @description EDS `GET /signing/authorities/{id}/basis-file`. Поток, в памяти BFF не накапливается; только вложением.
+     */
+    get: operations["downloadSigningBasisFile"];
+    put?: never;
+    /**
+     * EDS · Приложить файл основания (скан доверенности, приказа)
+     * @description EDS `POST /signing/authorities/{id}/basis-file` (multipart). BFF читает тело потоком до предела (25 МБ и поля формы), multipart не разбирает. Файл хранится приватно; повторная загрузка добавляет версию. Больше 25 МБ — 413; не PDF и не изображение — 415.
+     */
+    post: operations["uploadSigningBasisFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Кто вправе подписать вид X на сумму Y на дату D
+     * @description EDS `GET /signing/resolve`. Подбор по реестру с учётом лимита, срока, отзыва и замещения: замещение переводит задачу заместителю, но прав не даёт — он вправе подписать только при своём полномочии. Ответ: кандидаты, отклонённые с причиной и объяснение по-русски. `amount` и `currency` — вместе.
+     */
+    get: operations["resolveSigners"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/signing/setup-hint": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Подсказка первого запуска — кто подписывает по уставу
+     * @description EDS `GET /signing/setup-hint`. Есть ли в реестре полномочия, кто назван подписантом в бланке компании и (если по ФИО он один среди активных сотрудников) — `director`. Совпадения нет — `director = null`, человека выбирает администратор.
+     */
+    get: operations["getSigningSetupHint"];
     put?: never;
     post?: never;
     delete?: never;
@@ -11270,6 +11399,208 @@ export interface components {
       name: string;
       position: string | null;
     };
+    /**
+     * @description Устав (без номера), приказ (номер и дата), доверенность (номер, дата, срок — не более 3 лет, ГК, ст. 139)
+     * @enum {string}
+     */
+    SigningBasis: "charter" | "order" | "power_of_attorney";
+    /** @enum {string} */
+    SigningAuthorityStatus: "active" | "expiring" | "scheduled" | "expired" | "revoked";
+    /** @description Код значения справочника `signing-kinds` («Настройки · Справочники») */
+    SigningKindCode: string;
+    SigningAuthorityIn: {
+      /** @description `crm_user_id` держателя */
+      holder_id: string;
+      kinds: components["schemas"]["SigningKindCode"][];
+      /** @description Лимит суммы; `null` — без лимита */
+      limit?: components["schemas"]["EdsMoney"] | null;
+      basis: components["schemas"]["SigningBasis"];
+      basis_number?: string | null;
+      /** Format: date */
+      basis_date?: string | null;
+      /** Format: date */
+      valid_from: string;
+      /** Format: date */
+      valid_to?: string | null;
+      /** @description Ссылка на реестр доверенностей Vakolat.uz (https) */
+      vakolat_url?: string | null;
+      note?: string | null;
+    };
+    /** @description Все поля необязательны; `kinds`, `basis`, `valid_from` очистить нельзя */
+    SigningAuthorityPatch: {
+      kinds?: components["schemas"]["SigningKindCode"][];
+      limit?: components["schemas"]["EdsMoney"] | null;
+      basis?: components["schemas"]["SigningBasis"];
+      basis_number?: string | null;
+      /** Format: date */
+      basis_date?: string | null;
+      /** Format: date */
+      valid_from?: string;
+      /** Format: date */
+      valid_to?: string | null;
+      vakolat_url?: string | null;
+      note?: string | null;
+    };
+    SigningRevokeIn: {
+      reason: string;
+    };
+    SigningFile: {
+      name: string;
+      content_type: string;
+      size: number;
+      version: number;
+      /** Format: date-time */
+      uploaded_at: string;
+    };
+    SigningRevoked: {
+      /** Format: date-time */
+      at: string;
+      by: components["schemas"]["PersonRef"];
+      reason: string;
+    };
+    SigningAuthority: {
+      /** Format: uuid */
+      id: string;
+      holder: components["schemas"]["PersonRef"];
+      holder_position: string | null;
+      /** @description Держатель отключён — полномочие не действует, пока он не включён */
+      holder_active: boolean;
+      kinds: components["schemas"]["SigningKindCode"][];
+      limit: components["schemas"]["EdsMoney"] | null;
+      basis: components["schemas"]["SigningBasis"];
+      basis_number: string | null;
+      /** Format: date */
+      basis_date: string | null;
+      /** Format: date */
+      valid_from: string;
+      /** Format: date */
+      valid_to: string | null;
+      vakolat_url: string | null;
+      note: string | null;
+      file: components["schemas"]["SigningFile"] | null;
+      status: components["schemas"]["SigningAuthorityStatus"];
+      /** @description Дней до окончания срока (0 — последний день); `null` — срока нет, отозвано или уже истекло */
+      expires_in_days: number | null;
+      revoked: components["schemas"]["SigningRevoked"] | null;
+      created_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    SigningChange: {
+      /** @description Имя поля полномочия (`limit_amount`, `valid_to`, …) */
+      field: string;
+      before: string | null;
+      after: string | null;
+    };
+    SigningJournalEntry: {
+      /** Format: date-time */
+      at: string;
+      /** @enum {string} */
+      action: "issued" | "updated" | "revoked" | "file_replaced" | "expiry_reminded";
+      /** @description `null` — система (напоминание) */
+      by: components["schemas"]["PersonRef"] | null;
+      /** @description Причина отзыва */
+      comment: string | null;
+      /** @description Что изменилось (`updated`) */
+      changes: components["schemas"]["SigningChange"][];
+      /** @description Имя приложенного файла (`file_replaced`) */
+      file_name: string | null;
+    };
+    SigningAuthorityDetail: {
+      /** Format: uuid */
+      id: string;
+      holder: components["schemas"]["PersonRef"];
+      holder_position: string | null;
+      holder_active: boolean;
+      kinds: components["schemas"]["SigningKindCode"][];
+      limit: components["schemas"]["EdsMoney"] | null;
+      basis: components["schemas"]["SigningBasis"];
+      basis_number: string | null;
+      /** Format: date */
+      basis_date: string | null;
+      /** Format: date */
+      valid_from: string;
+      /** Format: date */
+      valid_to: string | null;
+      vakolat_url: string | null;
+      note: string | null;
+      file: components["schemas"]["SigningFile"] | null;
+      status: components["schemas"]["SigningAuthorityStatus"];
+      expires_in_days: number | null;
+      revoked: components["schemas"]["SigningRevoked"] | null;
+      created_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      journal: components["schemas"]["SigningJournalEntry"][];
+    };
+    SigningAuthorityList: {
+      items: components["schemas"]["SigningAuthority"][];
+    };
+    SigningSetupHint: {
+      has_authorities: boolean;
+      /** @description Подписант из бланка компании */
+      signatory_name: string | null;
+      signatory_position: string | null;
+      /** @description Единственный активный сотрудник с таким ФИО; иначе `null` */
+      director: components["schemas"]["PersonRef"] | null;
+    };
+    SigningResolvedAuthority: {
+      /** Format: uuid */
+      id: string;
+      basis: components["schemas"]["SigningBasis"];
+      basis_number: string | null;
+      /** Format: date */
+      basis_date: string | null;
+      /** Format: date */
+      valid_to: string | null;
+      limit: components["schemas"]["EdsMoney"] | null;
+    };
+    SignerCandidate: {
+      signer: components["schemas"]["PersonRef"];
+      position: string | null;
+      /** @description Отсутствующие держатели, чья задача подписи пришла по замещению; пусто — подписывает как держатель */
+      acting_for: components["schemas"]["PersonRef"][];
+      authority: components["schemas"]["SigningResolvedAuthority"];
+      authorities: components["schemas"]["SigningResolvedAuthority"][];
+      /** @description Основание для отметки на документе; у устава `null` */
+      basis_text: string | null;
+    };
+    SigningRejected: {
+      signer: components["schemas"]["PersonRef"];
+      /** Format: uuid */
+      authority_id: string | null;
+      /** @enum {string} */
+      reason:
+        | "revoked"
+        | "not_started"
+        | "expired"
+        | "limit_exceeded"
+        | "currency_mismatch"
+        | "holder_inactive"
+        | "absent"
+        | "deputy_without_authority"
+        | "deputy_loop";
+      message: string;
+    };
+    SigningResolveStep: {
+      code: string;
+      person_id: string | null;
+      text: string;
+    };
+    SigningResolution: {
+      kind: components["schemas"]["SigningKindCode"];
+      amount: components["schemas"]["EdsMoney"] | null;
+      /** Format: date */
+      on_date: string;
+      resolved: boolean;
+      candidates: components["schemas"]["SignerCandidate"][];
+      rejected: components["schemas"]["SigningRejected"][];
+      explanation: components["schemas"]["SigningResolveStep"][];
+    };
     EdsStaffList: {
       items: components["schemas"]["EdsStaffMember"][];
     };
@@ -14554,6 +14885,7 @@ export interface components {
     EdsDocumentId: string;
     /** @description Id счёта ERP (из строки `GET /eds/payments`) */
     PaymentInvoiceId: number;
+    SigningAuthorityId: string;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
     /** @description Id документа базы знаний (CRM) */
@@ -23567,6 +23899,276 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["EdsStaffList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listSigningAuthorities: {
+    parameters: {
+      query?: {
+        status?: "active" | "expiring" | "inactive" | "all";
+        holder_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Полномочия по имени держателя */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createSigningAuthority: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SigningAuthorityIn"];
+      };
+    };
+    responses: {
+      /** @description Выдано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSigningAuthority: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["SigningAuthorityId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Полномочие и его журнал */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateSigningAuthority: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["parameters"]["SigningAuthorityId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SigningAuthorityPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  revokeSigningAuthority: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["parameters"]["SigningAuthorityId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SigningRevokeIn"];
+      };
+    };
+    responses: {
+      /** @description Отозвано */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadSigningBasisFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: components["parameters"]["SigningAuthorityId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadSigningBasisFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        id: components["parameters"]["SigningAuthorityId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["EdsFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл приложен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningAuthorityDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resolveSigners: {
+    parameters: {
+      query: {
+        kind: string;
+        amount?: string;
+        currency?: string;
+        on_date?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Кто вправе подписать и почему */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningResolution"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSigningSetupHint: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Подсказка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SigningSetupHint"];
         };
       };
       401: components["responses"]["SessionExpired"];

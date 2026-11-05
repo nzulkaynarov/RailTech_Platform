@@ -40,11 +40,17 @@
           "erp.calc.goods": "full"
         }
       },
+      "deputy": {
+        "crm_user_id": 8,
+        "date_from": "2026-11-09",
+        "date_to": "2026-11-20"
+      },
       "updated_at": "2026-10-22T07:00:00Z"
     },
     "changed_fields": [
       "systems",
-      "erp_role_codes"
+      "erp_role_codes",
+      "deputy"
     ],
     "actor": {
       "type": "staff",

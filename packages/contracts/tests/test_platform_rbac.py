@@ -28,11 +28,14 @@ EDS_CODES = {
     "payments.confirm",
     "bus.manage",
     "files.upload",
+    "signing.manage",
 }
 #: Код журнала шины (W13-A2): только раздел `admin` уровня `full` — у директора (`admin: read`) его нет.
 BUS = "bus.manage"
 #: Свой файл в EDS (письмо директору к «Создать заявку», D1-2b): раздел `crm.clients` уровня `full`.
 UPLOAD = "files.upload"
+#: Реестр полномочий подписи (SIGN-2): раздел `eds.signing.manage`, системная роль администратора.
+SIGNING = "signing.manage"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
 # Любой активный сотрудник, сужение — внутри операции (P8b, SPEC-v3 §3.2a «Права»: исполнитель видит письмо своего
@@ -79,7 +82,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        ("DIRECTOR", EDS_CODES - {BUS, "payments.confirm"}),
+        ("DIRECTOR", EDS_CODES - {BUS, SIGNING, "payments.confirm"}),
         ("MANAGER", {"letters.read", "registry.read", "memos.create", UPLOAD}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
@@ -119,8 +122,8 @@ def test_rework_row_belongs_to_the_author_of_documents_not_to_the_approver() -> 
 
 def test_director_gets_every_eds_code_except_the_bus_journal_and_the_payment_confirmation() -> None:
     """D2-4 (Q-D2-4-1 п. 1): «Счета и оплаты» у директора — `read`; оплату подтверждает бухгалтер."""
-    assert len(EDS_CODES) == 11
-    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, "payments.confirm"}
+    assert len(EDS_CODES) == 12
+    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, SIGNING, "payments.confirm"}
 
 
 def test_bus_journal_is_admin_full_only() -> None:
@@ -174,8 +177,8 @@ def test_administrator_sees_no_business_documents() -> None:
     участник) — и `bus.manage` (журнал шины, W13-A2): метаданные доставок без тел событий.
     """
     got = eds_permissions(role("ADMIN"))
-    assert got == {"memos.create", BUS}
-    assert not got & (EDS_CODES - {"memos.create", BUS})
+    assert got == {"memos.create", BUS, SIGNING}
+    assert not got & (EDS_CODES - {"memos.create", BUS, SIGNING})
 
 
 @pytest.mark.parametrize(
@@ -242,12 +245,13 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
+    # 0.11.0 — код signing.manage в перечне ответов EdsPermission и ресурс /signing (SIGN-2);
     # 0.10.0 — статусы «Дубль» письма и «Отменено» поручения (EDS-DUP);
     # 0.9.0 — способ получения кодом справочника (EDS-REG);
     # 0.8.0 — статусы пути делопроизводства и поручения (P8b); 0.7.0 — договоры, счета, акты в реестре (D2-5);
     # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
     # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.10.0"
+    assert EDS_YAML["info"]["version"] == "0.11.0"
 
 
 # Коды справочников (EDS-REG) — слаги `^[a-z][a-z_-]…$` без «/», поэтому могут быть в пути.

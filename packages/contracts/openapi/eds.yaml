@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.10.0
+  version: 0.11.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/history/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -18,6 +18,12 @@ info:
     `sub=crm_user_id`, срок 60 с, одноразовый `jti`) и обменивает его здесь: `POST /api/v1/auth/sso/exchange` → собственный
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
+
+    **0.11.0 (SIGN-2, реестр полномочий подписи; по oasdiff ломающее — новое значение `signing.manage` в `EdsPermission` ответа
+    `GET /me`, до 1.0 допустимо).** Ресурс `/signing/…` (тег `signing`): полномочия подписи с основанием (устав, приказ,
+    доверенность до 3 лет, ГК РУз ст. 139), лимитом суммы и валюты, сроком, файлом основания и ссылкой Vakolat.uz; выдача,
+    изменение, отзыв с журналом; подбор подписанта `GET /signing/resolve` с учётом замещения из CRM (замещение переводит
+    задачу, но прав не даёт) и подсказка первого запуска. Справочник `signing-kinds` — открытый каталог видов документов.
 
     **0.10.0 (EDS-DUP, одно письмо — один входящий номер; по oasdiff ломающее — новые значения `LetterStatus.duplicate` и `InstructionStatus.cancelled` в ответах, до 1.0 допустимо).** Ручная регистрация проверяет дубль на
     сервере: то же письмо (корреспондент по ИНН, иначе по названию без регистра, кавычек и формы собственности; исходящий
@@ -144,6 +150,12 @@ tags:
       «Настройки · Документооборот · Справочники». Читают — те, кто работает с письмами, и администратор; меняет —
       администратор (`bus.manage`: код раздела `admin` каталога Платформы в EDS, нового права нет). Удалить можно только
       неиспользованное значение; использованное скрывают (`active = false`): старые письма хранят код и показывают название.
+  - name: signing
+    description: |
+      Реестр полномочий подписи (SIGN-2, ADR-0024 п. 1–2, 8): кто вправе подписывать какие виды документов, на какую сумму,
+      на каком основании (устав, приказ, доверенность) и до какого срока; выдача, изменение, отзыв, файл основания, журнал и
+      подбор «кто вправе подписать» с учётом замещения. Право `signing.manage` (раздел `eds.signing.manage` каталога ролей).
+      Виды документов — открытый справочник `signing-kinds` (`/dictionaries/signing-kinds`).
   - name: bus
     description: |
       «Журнал интеграций» шины `rt_bus` (W13-A2, `docs/architecture/rt-bus.md`, «Журнал в Admin»): сводка подписчиков,
@@ -266,7 +278,7 @@ paths:
       description: |
         Виды справочников EDS: код вида, название, `closed` (значения — закрытый список поведения кода: добавить и удалить
         нельзя, только переименовать и переставить) и описание дополнительных полей значения (`attrs`).
-      x-rt-permissions: [letters.read, letters.register, bus.manage]
+      x-rt-permissions: [letters.read, letters.register, bus.manage, signing.manage]
       responses:
         '200':
           description: Каталог
@@ -287,7 +299,7 @@ paths:
       description: |
         Значения в порядке показа. По умолчанию — только действующие (для форм); `include_hidden=true` — все, со
         скрытыми и признаком `used` (экран администратора, названия у старых писем). Неизвестный вид — 404.
-      x-rt-permissions: [letters.read, letters.register, bus.manage]
+      x-rt-permissions: [letters.read, letters.register, bus.manage, signing.manage]
       parameters:
         - $ref: '#/components/parameters/DictionaryKind'
         - name: include_hidden
@@ -1170,6 +1182,312 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/signing/authorities:
+    get:
+      tags: [signing]
+      operationId: listSigningAuthorities
+      summary: Реестр полномочий подписи (SIGN-2)
+      description: |
+        Полномочия подписи (ADR-0024 п. 1): кто, какие виды документов, до какой суммы, на каком основании и до какого срока.
+        `status`: `active` — действующие (`active` и `expiring` в ответе), `expiring` — действуют, но окончатся в ближайшие
+        30 дней, `inactive` — отозванные, истёкшие и ещё не начавшиеся, `all` (по умолчанию) — все. Состояние считается
+        на сегодняшний день компании (`Asia/Tashkent`).
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, expiring, inactive, all]
+            default: all
+        - name: crm_user_id
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Полномочия по имени держателя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+    post:
+      tags: [signing]
+      operationId: createSigningAuthority
+      summary: Выдать полномочие подписи
+      description: |
+        Инварианты основания (ГК РУз ст. 134, 138, 139): доверенность — номер, дата и срок обязательны, срок не позже даты
+        выдачи плюс 3 года, действует не ранее выдачи; приказ — номер и дата; устав — без номера. Лимит — сумма и валюта
+        вместе (пусто — без лимита). Пересечения полномочий допустимы. Держатель — активный сотрудник; виды — действующие
+        значения справочника `signing-kinds`; ссылка Vakolat.uz — `https://…vakolat.uz/…`. Нарушение — 422 с полем в
+        `details.fields`. Выдача пишется в журнал полномочия.
+      x-rt-permissions: [signing.manage]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningAuthorityIn'
+      responses:
+        '201':
+          description: Выдано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/signing/authorities/{authority_id}:
+    get:
+      tags: [signing]
+      operationId: getSigningAuthority
+      summary: Полномочие с журналом
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - $ref: '#/components/parameters/AuthorityId'
+      responses:
+        '200':
+          description: Полномочие и его журнал (выдано, изменено, отозвано, основание заменено)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [signing]
+      operationId: updateSigningAuthority
+      summary: Изменить полномочие
+      description: |
+        Переданные поля меняются, непереданные остаются; `null` очищает необязательное поле. Держателя не меняют —
+        другому человеку выдают новое полномочие. Результат проверяется теми же инвариантами, что и выдача. Отозванное
+        менять нельзя — 409 `revoked`. Перенос срока снова разрешает напоминание об окончании. Каждое изменение — строка
+        журнала с «было / стало».
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - $ref: '#/components/parameters/AuthorityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningAuthorityPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/signing/authorities/{authority_id}/revoke:
+    post:
+      tags: [signing]
+      operationId: revokeSigningAuthority
+      summary: Отозвать полномочие
+      description: |
+        Причина обязательна. Отозванное полномочие остаётся в реестре и журнале (кто, когда, почему); подбор подписанта его
+        больше не учитывает. Повторный отзыв — 409 `revoked`.
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - $ref: '#/components/parameters/AuthorityId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningRevokeIn'
+      responses:
+        '200':
+          description: Отозвано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/signing/authorities/{authority_id}/basis-file:
+    post:
+      tags: [signing]
+      operationId: uploadSigningBasisFile
+      summary: Приложить файл основания (скан доверенности, приказа)
+      description: |
+        `multipart/form-data`: `file` (PDF или изображение, как у файлов документов, до 25 МБ). Файл хранится приватно в
+        хранилище EDS; повторная загрузка добавляет версию, прежние остаются. Скачивает только держатель `signing.manage`.
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - $ref: '#/components/parameters/AuthorityId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SigningBasisFileIn'
+      responses:
+        '200':
+          description: Файл приложен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningAuthorityDetail'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '415':
+          description: '`UNSUPPORTED_MEDIA_TYPE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    get:
+      tags: [signing]
+      operationId: downloadSigningBasisFile
+      summary: Скачать файл основания (поток)
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - $ref: '#/components/parameters/AuthorityId'
+        - name: version
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: Содержимое последней версии (или `version`)
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                contentMediaType: application/octet-stream
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/signing/resolve:
+    get:
+      tags: [signing]
+      operationId: resolveSigners
+      summary: Кто вправе подписать вид X на сумму Y на дату D
+      description: |
+        Подбор подписанта по реестру (ADR-0024 п. 2–3); модель не участвует. Подходит полномочие: не отозвано, действует на
+        дату, вид в списке, сумма не больше лимита в той же валюте (другая валюта не пересчитывается — `currency_mismatch`;
+        документ без суммы лимит не проверяет), владелец активен. **Замещение переводит задачу, но не права**: если держатель
+        на дату отсутствует (период замещения из CRM), задачу получает заместитель, но подписать он вправе только при своём
+        действующем полномочии (иначе `deputy_without_authority`). Ответ — кандидаты по порядку (устав, приказ, доверенность),
+        отклонённые с причиной и пошаговое объяснение по-русски. `amount` и `currency` — вместе. Шаг «Подписать» маршрута
+        вызывает тот же сервис внутри EDS (`signing_resolve.resolve`, `check_signer`).
+      x-rt-permissions: [signing.manage]
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z][a-z_]{0,31}$'
+        - name: amount
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Amount'
+        - name: currency
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Currency'
+        - name: on_date
+          in: query
+          required: false
+          description: По умолчанию — сегодня по часовому поясу компании
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Кто вправе подписать и почему
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningResolution'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /api/v1/signing/setup-hint:
+    get:
+      tags: [signing]
+      operationId: getSigningSetupHint
+      summary: Подсказка первого запуска — кто подписывает по уставу
+      description: |
+        Есть ли в реестре хоть одно полномочие, кто назван подписантом в бланке компании и, если он ровно один среди
+        активных сотрудников по ФИО, — кто это (`director`). Код человека не угадывает: нет совпадения — `director = null`,
+        выбирает администратор.
+      x-rt-permissions: [signing.manage]
+      responses:
+        '200':
+          description: Подсказка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SigningSetupHint'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/letter-intake:
     post:
       tags: [letters]
@@ -1322,8 +1640,9 @@ paths:
       description: |
         Активные сотрудники проекции (без «надгробий»), по имени. Для выбора адресата при регистрации и людей резолюции
         пути делопроизводства: исполнитель — любой активный сотрудник, без проверки зоны (SPEC-v3 §3.2a п. 2). Администратору
-        (`bus.manage`) — для общих шаблонов резолюций (EDS-REG).
-      x-rt-permissions: [letters.register, letters.resolve, bus.manage]
+        (`bus.manage`) — для общих шаблонов резолюций (EDS-REG); держателю `signing.manage` — выбрать сотрудника для
+        полномочия подписи (SIGN-2).
+      x-rt-permissions: [letters.register, letters.resolve, bus.manage, signing.manage]
       responses:
         '200':
           description: Сотрудники
@@ -2275,6 +2594,12 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/Uuid'
+    AuthorityId:
+      name: authority_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Uuid'
     DictionaryKind:
       name: kind
       in: path
@@ -2602,11 +2927,13 @@ components:
         - payments.confirm
         - bus.manage
         - files.upload
+        - signing.manage
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
         маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
         раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
-        (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+        (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. `signing.manage` (0.11.0, SIGN-2) — вести
+        реестр полномочий подписи: раздел `eds.signing.manage`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:
@@ -3743,6 +4070,267 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/ResolutionTemplate' }
+    SigningBasis:
+      type: string
+      enum: [charter, order, power_of_attorney]
+      description: Устав (без номера), приказ (номер и дата), доверенность (номер, дата, срок — не больше 3 лет, ГК РУз ст. 139)
+    SigningKindCode:
+      type: string
+      pattern: '^[a-z][a-z_]{0,31}$'
+      description: Код значения справочника `signing-kinds` (открытый каталог видов; стартовые — letter_out, quote, contract, invoice, act, memo)
+    SigningAuthorityStatus:
+      type: string
+      enum: [active, expiring, scheduled, expired, revoked]
+    SigningAuthorityIn:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, kinds, basis, valid_from]
+      properties:
+        crm_user_id:
+          type: integer
+        kinds:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items: { $ref: '#/components/schemas/SigningKindCode' }
+        limit_amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        limit_currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+        basis: { $ref: '#/components/schemas/SigningBasis' }
+        basis_number: { type: [string, 'null'], maxLength: 64 }
+        basis_date: { type: [string, 'null'], format: date }
+        valid_from: { type: string, format: date }
+        valid_to: { type: [string, 'null'], format: date }
+        vakolat_url: { type: [string, 'null'], maxLength: 500 }
+        note: { type: [string, 'null'], maxLength: 2000 }
+    SigningAuthorityPatch:
+      type: object
+      additionalProperties: false
+      description: Все поля необязательны; обязательные (`kinds`, `basis`, `valid_from`) очистить нельзя
+      properties:
+        kinds:
+          type: array
+          minItems: 1
+          maxItems: 30
+          items: { $ref: '#/components/schemas/SigningKindCode' }
+        limit_amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        limit_currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+        basis: { $ref: '#/components/schemas/SigningBasis' }
+        basis_number: { type: [string, 'null'], maxLength: 64 }
+        basis_date: { type: [string, 'null'], format: date }
+        valid_from: { type: string, format: date }
+        valid_to: { type: [string, 'null'], format: date }
+        vakolat_url: { type: [string, 'null'], maxLength: 500 }
+        note: { type: [string, 'null'], maxLength: 2000 }
+    SigningRevokeIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+    SigningBasisFileIn:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+    SigningRevoked:
+      type: object
+      additionalProperties: false
+      required: [at, by, reason]
+      properties:
+        at: { type: string, format: date-time }
+        by: { $ref: '#/components/schemas/PersonRef' }
+        reason: { type: string }
+    SigningAuthority:
+      type: object
+      additionalProperties: false
+      required: [id, holder, holder_position, holder_active, kinds, limit_amount, limit_currency, basis, basis_number, basis_date, valid_from, valid_to, vakolat_url, note, file, status, expires_in_days, revoked, created_by, created_at, updated_at]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        holder: { $ref: '#/components/schemas/PersonRef' }
+        holder_position: { type: [string, 'null'] }
+        holder_active: { type: boolean }
+        kinds:
+          type: array
+          items: { $ref: '#/components/schemas/SigningKindCode' }
+        limit_amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        limit_currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+        basis: { $ref: '#/components/schemas/SigningBasis' }
+        basis_number: { type: [string, 'null'] }
+        basis_date: { type: [string, 'null'], format: date }
+        valid_from: { type: string, format: date }
+        valid_to: { type: [string, 'null'], format: date }
+        vakolat_url: { type: [string, 'null'] }
+        note: { type: [string, 'null'] }
+        file:
+          oneOf: [{ $ref: '#/components/schemas/FileRef' }, { type: 'null' }]
+        status: { $ref: '#/components/schemas/SigningAuthorityStatus' }
+        expires_in_days:
+          type: [integer, 'null']
+          description: Дней до окончания срока (0 — последний день); `null` — срока нет, отозвано или уже истекло
+        revoked:
+          oneOf: [{ $ref: '#/components/schemas/SigningRevoked' }, { type: 'null' }]
+        created_by: { $ref: '#/components/schemas/PersonRef' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    SigningAuthorityEvent:
+      type: object
+      additionalProperties: false
+      required: [at, action, by, comment, details]
+      properties:
+        at: { type: string, format: date-time }
+        action:
+          type: string
+          enum: [issued, updated, revoked, file_replaced, expiry_reminded]
+        by:
+          oneOf: [{ $ref: '#/components/schemas/PersonRef' }, { type: 'null' }]
+        comment: { type: [string, 'null'] }
+        details:
+          type: object
+          additionalProperties: true
+          description: 'Что изменилось (`changed`: поле → [было, стало]), снимок выданного (`after`), имя файла; секретов нет'
+    SigningAuthorityDetail:
+      type: object
+      additionalProperties: false
+      required: [id, holder, holder_position, holder_active, kinds, limit_amount, limit_currency, basis, basis_number, basis_date, valid_from, valid_to, vakolat_url, note, file, status, expires_in_days, revoked, created_by, created_at, updated_at, journal]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        holder: { $ref: '#/components/schemas/PersonRef' }
+        holder_position: { type: [string, 'null'] }
+        holder_active: { type: boolean }
+        kinds:
+          type: array
+          items: { $ref: '#/components/schemas/SigningKindCode' }
+        limit_amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        limit_currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+        basis: { $ref: '#/components/schemas/SigningBasis' }
+        basis_number: { type: [string, 'null'] }
+        basis_date: { type: [string, 'null'], format: date }
+        valid_from: { type: string, format: date }
+        valid_to: { type: [string, 'null'], format: date }
+        vakolat_url: { type: [string, 'null'] }
+        note: { type: [string, 'null'] }
+        file:
+          oneOf: [{ $ref: '#/components/schemas/FileRef' }, { type: 'null' }]
+        status: { $ref: '#/components/schemas/SigningAuthorityStatus' }
+        expires_in_days:
+          type: [integer, 'null']
+          description: Дней до окончания срока (0 — последний день); `null` — срока нет, отозвано или уже истекло
+        revoked:
+          oneOf: [{ $ref: '#/components/schemas/SigningRevoked' }, { type: 'null' }]
+        created_by: { $ref: '#/components/schemas/PersonRef' }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+        journal:
+          type: array
+          items: { $ref: '#/components/schemas/SigningAuthorityEvent' }
+    SigningAuthorityList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/SigningAuthority' }
+    SigningSetupHint:
+      type: object
+      additionalProperties: false
+      required: [has_authorities, signatory_name, signatory_position, director]
+      properties:
+        has_authorities: { type: boolean }
+        signatory_name: { type: [string, 'null'] }
+        signatory_position: { type: [string, 'null'] }
+        director:
+          oneOf: [{ $ref: '#/components/schemas/PersonRef' }, { type: 'null' }]
+    SigningResolvedAuthority:
+      type: object
+      additionalProperties: false
+      required: [id, basis, basis_number, basis_date, valid_to, limit_amount, limit_currency]
+      properties:
+        id: { $ref: '#/components/schemas/Uuid' }
+        basis: { $ref: '#/components/schemas/SigningBasis' }
+        basis_number: { type: [string, 'null'] }
+        basis_date: { type: [string, 'null'], format: date }
+        valid_to: { type: [string, 'null'], format: date }
+        limit_amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        limit_currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+    SignerCandidate:
+      type: object
+      additionalProperties: false
+      required: [signer, position, acting_for, authority, authorities, basis_text]
+      description: Кто вправе подписать; полномочие всегда своё, замещение прав не даёт
+      properties:
+        signer: { $ref: '#/components/schemas/PersonRef' }
+        position: { type: [string, 'null'] }
+        acting_for:
+          type: array
+          description: Отсутствующие держатели, чья задача подписи пришла этому человеку по замещению; пусто — подписывает как держатель
+          items: { $ref: '#/components/schemas/PersonRef' }
+        authority:
+          $ref: '#/components/schemas/SigningResolvedAuthority'
+        authorities:
+          type: array
+          description: Все подходящие полномочия; первое — основное (устав, затем приказ, затем доверенность)
+          items: { $ref: '#/components/schemas/SigningResolvedAuthority' }
+        basis_text:
+          type: [string, 'null']
+          description: 'Основание для отметки на документе («Действует по доверенности № … от … (до …)»); у устава — `null`. Формулу уточняет юрист (Q-SIGN-1)'
+    SigningRejectReason:
+      type: string
+      enum: [revoked, not_started, expired, limit_exceeded, currency_mismatch, holder_inactive, absent, deputy_without_authority, deputy_loop]
+    SigningRejected:
+      type: object
+      additionalProperties: false
+      required: [signer, authority_id, reason, message]
+      properties:
+        signer: { $ref: '#/components/schemas/PersonRef' }
+        authority_id:
+          oneOf: [{ $ref: '#/components/schemas/Uuid' }, { type: 'null' }]
+        reason: { $ref: '#/components/schemas/SigningRejectReason' }
+        message: { type: string }
+    SigningResolveStep:
+      type: object
+      additionalProperties: false
+      required: [code, crm_user_id, text]
+      properties:
+        code:
+          type: string
+          description: Причина из `SigningRejectReason`, `candidate`, `candidate_deputy`, `no_authority` (никому не выдано) или `no_signer`
+        crm_user_id: { type: [integer, 'null'] }
+        text: { type: string }
+    SigningResolution:
+      type: object
+      additionalProperties: false
+      required: [kind, amount, currency, on_date, resolved, candidates, rejected, explanation]
+      properties:
+        kind: { $ref: '#/components/schemas/SigningKindCode' }
+        amount:
+          oneOf: [{ $ref: '#/components/schemas/Amount' }, { type: 'null' }]
+        currency:
+          oneOf: [{ $ref: '#/components/schemas/Currency' }, { type: 'null' }]
+        on_date: { type: string, format: date }
+        resolved: { type: boolean }
+        candidates:
+          type: array
+          items: { $ref: '#/components/schemas/SignerCandidate' }
+        rejected:
+          type: array
+          items: { $ref: '#/components/schemas/SigningRejected' }
+        explanation:
+          type: array
+          description: Пошаговое объяснение по-русски — для экрана и будущего помощника
+          items: { $ref: '#/components/schemas/SigningResolveStep' }
     ResolutionDraftIn:
       type: object
       additionalProperties: false

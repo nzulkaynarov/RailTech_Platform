@@ -1,0 +1,34 @@
+{
+  "specversion": "1.0",
+  "id": "9c4d6e1a-3b7f-5a28-8d0e-4f1a2b3c5d60",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.signing_authority.expiring.v1",
+  "time": "2026-11-05T04:10:00Z",
+  "subject": "signing-authority/6f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/signing_authority.expiring/v1",
+  "tenant": "railtech",
+  "correlationid": "3a5c7e9f-1b2d-5c4e-9a6b-8d0f2e4a6c81",
+  "data": {
+    "notice_key": "signing-authority:6f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d:expiring:2026-11-19",
+    "recipients": [
+      9
+    ],
+    "title": "Доверенность Алии Каримовой заканчивается 19.11.2026",
+    "subtitle": "Осталось 14 дней. Настройки → Права подписи: продлите или выдайте новую",
+    "authority": {
+      "eds_authority_id": "6f1b2c3d-4e5f-4a6b-8c7d-9e0f1a2b3c4d",
+      "holder": {
+        "crm_user_id": 7,
+        "full_name": "Алия Каримова"
+      },
+      "basis": "power_of_attorney",
+      "basis_number": "17",
+      "valid_to": "2026-11-19",
+      "days_left": 14
+    },
+    "actor": {
+      "type": "system"
+    }
+  }
+}

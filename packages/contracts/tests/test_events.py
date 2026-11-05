@@ -194,6 +194,8 @@ EDS_EVENTS = {
     "mail.requested",
     # P8b: уведомления сотрудникам по поручениям входящих доставляет CRM (колокольчик и Telegram).
     "notice.requested",
+    # SIGN-2: напоминание об окончании полномочия подписи доставляет CRM тем же путём.
+    "signing_authority.expiring",
 }
 
 
@@ -437,6 +439,7 @@ def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
     assert _gets(crm) - erp_got == {
         "uz.railtech.eds.mail.requested.v1",
         "uz.railtech.eds.notice.requested.v1",
+        "uz.railtech.eds.signing_authority.expiring.v1",  # SIGN-2: полномочие подписи скоро истекает
         "uz.railtech.eds.letter.registered.v1",
     }
 

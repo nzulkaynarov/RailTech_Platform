@@ -22,7 +22,8 @@ version: 2
 system_roles:
   ADMIN:
     name: { ru: Администратор, uz: Administrator, en: Administrator }
-    access: { admin: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full }
+    # SIGN-2 (ADR-0024 п. 1): администратор ведёт реестр полномочий подписи — раздел `eds.signing.manage`.
+    access: { admin: full, company.settings: full, dashboard.queue: full, chats.internal: full, eds.memo.create: full, eds.signing.manage: full }
     restricted_fields: []
   DIRECTOR:
     name: { ru: Директор, uz: Direktor, en: Director }
@@ -269,6 +270,14 @@ resources:
     label: { ru: "Документы · Служебная записка · согласовать", uz: "Hujjatlar · Xizmat xati · kelishish", en: "Documents · Memo · approve" }
     backend:
       eds: { full: [memos.approve] }
+  # SIGN-2 (ADR-0024 п. 1, ADR-0012): вести реестр полномочий подписи — Настройки · «Права подписи». У ролей из шаблонов
+  # раздела нет; администратор получает его системной ролью, остальным его выдаёт администратор в «Ролях и правах».
+  - key: eds.signing.manage
+    module: eds
+    levels: [full]
+    label: { ru: "Документы · Права подписи · вести реестр полномочий", uz: "Hujjatlar · Imzo huquqlari · vakolatlar reyestrini yuritish", en: "Documents · Signing authority · manage the register" }
+    backend:
+      eds: { full: [signing.manage] }
   - key: erp.calc
     module: erp
     label: { ru: "Расчёт · Заявки в расчёте, Мои расчёты", uz: "Hisob-kitob · Hisobdagi arizalar, mening hisob-kitoblarim", en: "Costing · Requests in costing, my costings" }
@@ -402,6 +411,8 @@ menu:
     overview: [admin]
     org: [admin]
     roles: [admin]
+    # SIGN-2: «Права подписи» — реестр полномочий подписи (ADR-0024); открывает раздел `eds.signing.manage`.
+    signing: [eds.signing.manage]
     company: [company.settings]
     numbering: [company.settings]
     taxes: [company.settings]
