@@ -64,7 +64,7 @@ class ErasureMixin:
                 keys = await repo.attachment_keys(session, lead.id)
                 # Кабинет (CHAT-1, CHAT-1b): только сообщения этого человека; беседа и неотвеченная
                 # передача `cabinet_message` переходят на новый якорь — до закрытия передач лида.
-                cabinet = await cabinet_erasure.erase_for_lead(session, lead)
+                cabinet = await cabinet_erasure.erase_for_lead(session, lead, cfg)
                 moved = cabinet.moved_escalations
                 closed = await repo.close_escalations(session, lead.id, now)
                 count = await repo.erase_lead(session, lead, now)

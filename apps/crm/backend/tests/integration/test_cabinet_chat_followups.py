@@ -252,6 +252,107 @@ async def test_an_anchor_held_by_a_manager_gets_the_message_in_mine_without_a_ha
     assert anchor.last_human_msg_at is None or anchor.last_lead_msg_at > anchor.last_human_msg_at
 
 
+def service_for(sessions: async_sessionmaker[AsyncSession]) -> LeadService:
+    return LeadService(sessions, SettingsService(sessions), LeadMessenger(sessions, Sender()))
+
+
+async def waits_in_mine(sessions: async_sessionmaker[AsyncSession], lead_id: int) -> bool:
+    """«Ждёт ответа» так, как её считает очередь «Мои» (`repositories/crm._waits_for_reply`)."""
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+    assert lead is not None
+    if lead.owner_mode != "human" or lead.last_lead_msg_at is None:
+        return False
+    return lead.last_lead_msg_at > (lead.last_human_msg_at or lead.created_at)
+
+
+async def test_an_anchor_manager_who_answered_his_own_lead_still_gets_the_cabinet_message(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Ревью #403, сценарий 1: якорь ведёт менеджер Б и ответил своему лиду уже после сообщения
+    кабинета. Отметка по времени сообщения не дала бы «ждёт ответа»; неотвеченность считается по
+    беседе кабинета, поэтому сообщение в «Мои» у Б."""
+    client_id, _, _, _ = await person_with_colleague(sessions, 7409)
+    other_id = await client_lead_in_telegram(sessions, client_id, 7419)
+    manager_b = await manager_takes(sessions, other_id, "chat1b-b3@railtech.example")
+    await service_for(sessions).reply(manager_b, other_id, "Добрый день, Б на связи")
+    async with sessions() as session:
+        replied = await session.get(Lead, other_id)
+    assert replied is not None
+    assert replied.last_human_msg_at is not None
+    assert not await waits_in_mine(sessions, other_id)
+
+    await FiringEraser(sessions).erase(7409)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id == other_id
+    anchor, rows, escalated, mine = await anchor_state(sessions, other_id, manager_b)
+    assert (anchor.owner_mode, anchor.assigned_user_id) == ("human", manager_b.user_id)
+    assert [r for r in rows if r.status in ("open", "snoozed")] == []
+    assert other_id not in escalated
+    assert other_id in mine
+    assert await waits_in_mine(sessions, other_id)
+
+
+async def test_a_message_waiting_in_mine_of_the_erased_anchor_gets_a_handoff_at_the_new_one(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Ревью #403, сценарий 2: стираемый якорь ведёт менеджер, передачи кабинета нет — сообщение
+    ждало ответа в «Мои». После /delete новый якорь у бота: сообщение не пропадает, оно в «Требуют
+    внимания» открытой передачей со сроком от настроек."""
+    _, lead_id, _, _ = await person_with_colleague(sessions, 7410)
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE escalations SET status = 'closed' WHERE lead_id = :id"), {"id": lead_id}
+        )
+    manager = await manager_takes(sessions, lead_id, "chat1b-a3@railtech.example")
+    await colleague_writes_again(sessions, await _client_of(sessions, lead_id))
+    assert await cabinet_escalation(sessions, lead_id) is None
+    assert await waits_in_mine(sessions, lead_id)
+    eraser = FiringEraser(sessions)
+
+    await eraser.erase(7410)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id != lead_id
+    anchor, rows, escalated, _ = await anchor_state(sessions, conversation.lead_id, manager)
+    assert anchor.owner_mode == "paused"
+    (row,) = rows
+    assert (row.status, row.reason_codes) == ("open", ["cabinet_message"])
+    assert row.sla_due_at is not None
+    assert conversation.lead_id in escalated
+    assert (None, row.id, conversation.lead_id) in eraser.fired
+
+
+async def _client_of(sessions: async_sessionmaker[AsyncSession], lead_id: int) -> int:
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+    assert lead is not None
+    assert lead.client_id is not None
+    return lead.client_id
+
+
+async def test_an_answered_conversation_moves_without_a_handoff(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Менеджер забрал передачу и ответил в кабинет: передача остаётся `taken`, но беседа
+    отвечена — новому якорю не переносится ни передача, ни «ждёт ответа». Отвеченность — по
+    беседе, а не по тому, что у лида есть передача."""
+    _, lead_id, _, _ = await person_with_colleague(sessions, 7411)
+    manager = await manager_takes(sessions, lead_id, "chat1b-a4@railtech.example")
+    await service_for(sessions).reply(manager, lead_id, "Ответ в кабинет")
+    assert await cabinet_escalation(sessions, lead_id) is not None
+
+    await FiringEraser(sessions).erase(7411)
+
+    (conversation,) = await cabinet_conversations(sessions)
+    assert conversation.lead_id != lead_id
+    anchor, rows, escalated, _ = await anchor_state(sessions, conversation.lead_id, manager)
+    assert rows == []
+    assert conversation.lead_id not in escalated
+    assert anchor.owner_mode == "bot"
+
+
 async def test_both_handoffs_taken_leave_one_taken_and_keep_the_anchors_manager(
     sessions: async_sessionmaker[AsyncSession], bus: Any
 ) -> None:
@@ -295,20 +396,6 @@ async def test_an_anchor_with_the_bot_gets_one_open_handoff(
     moved = await cabinet_escalation(sessions, other_id)
     assert moved is not None
     assert (moved.status, moved.reason_codes) == ("open", ["cabinet_message"])
-
-
-async def test_an_answered_conversation_moves_without_a_handoff(
-    sessions: async_sessionmaker[AsyncSession], bus: Any
-) -> None:
-    """Передачи `cabinet_message` нет (ответили) — новому якорю ничего не переносится."""
-    _, lead_id, _, _ = await person_with_colleague(sessions, 7402)
-    async with sessions() as session, session.begin():
-        await session.execute(
-            text("UPDATE escalations SET status = 'closed' WHERE lead_id = :id"), {"id": lead_id}
-        )
-    await FiringEraser(sessions).erase(7402)
-    (conversation,) = await cabinet_conversations(sessions)
-    assert await cabinet_escalation(sessions, conversation.lead_id) is None
 
 
 async def test_sample_dialogs_for_evals_take_the_telegram_conversation_only(

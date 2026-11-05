@@ -5,7 +5,6 @@
 """
 
 from collections.abc import Sequence
-from datetime import datetime
 from typing import Final
 
 from sqlalchemy import func, select
@@ -128,14 +127,20 @@ async def anchor_lead(
     return found
 
 
-async def last_inbound_at(session: AsyncSession, conversation_id: int) -> datetime | None:
-    """Время последнего сообщения клиента в беседе (для «ждёт ответа» у нового якоря)."""
-    value: datetime | None = await session.scalar(
-        select(func.max(Message.created_at)).where(
-            Message.conversation_id == conversation_id, Message.role == "lead"
+async def waits_for_reply(session: AsyncSession, conversation_id: int) -> bool:
+    """Беседа кабинета ждёт ответа: последнее сообщение клиента позже последнего ответа менеджера
+    в эту же беседу. Считается по самой беседе, а не по отметкам лида: у лида они общие для всех
+    его бесед и переписки в Telegram (ответ менеджера своему лиду в Telegram кабинету не ответ)."""
+    row = (
+        await session.execute(
+            select(
+                func.max(Message.id).filter(Message.role == "lead"),
+                func.max(Message.id).filter(Message.role == "manager"),
+            ).where(Message.conversation_id == conversation_id)
         )
-    )
-    return value
+    ).one()
+    last_in, last_reply = row
+    return last_in is not None and (last_reply is None or last_in > last_reply)
 
 
 async def inbound_by_key(

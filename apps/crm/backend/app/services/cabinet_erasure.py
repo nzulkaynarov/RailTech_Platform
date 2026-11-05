@@ -3,24 +3,30 @@
 `/delete` (`ErasureMixin.erase`) стирает в кабинете только сообщения этого человека (его контакты
 клиента): автор — «Удалённый пользователь», текст удалён. Беседа кабинета живёт на клиенте: якорь
 переходит на другой лид клиента или новый по правилу якоря. Неотвеченное сообщение кабинета не
-пропадает: якорь ведёт менеджер — лид «ждёт ответа» в «Мои» у ответственного; иначе передача
-`cabinet_message` переходит на новый якорь открытой, с исходным временем и сроком SLA (перенос, а
-не «закрыть и забыть»). Вызывать в транзакции обезличивания до `close_escalations` и `erase_lead`.
+пропадает. «Неотвечено» определяется по самой беседе (последнее сообщение клиента позже последнего
+ответа менеджера в неё), а не по наличию передачи у стираемого лида: сообщение могло ждать ответа
+в «Мои» у менеджера стираемого якоря, передачи при этом нет. Дальше — по новому якорю: ведёт
+менеджер — лид «ждёт ответа» в «Мои» у ответственного; иначе открытая передача `cabinet_message`
+(исходная переносится с временем и сроком SLA, если исходной не было — новая со сроком от
+настроек). Вызывать в транзакции обезличивания до `close_escalations` и `erase_lead`.
 """
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any, Final
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.business_hours import add_business_minutes
 from app.domain.stages import OwnerMode
 from app.domain.triggers import PRIORITY, TriggerCode
 from app.models.clients import Client
 from app.models.leads import Conversation, Lead
 from app.models.qualification import Escalation
 from app.repositories import cabinet_chat as repo
+from app.schemas.settings import AppSettings
 from app.services.cabinet_chat import new_lead
 from app.services.escalation import OPEN_STATUSES
 
@@ -42,7 +48,7 @@ class CabinetErasure:
     moved_escalations: list[tuple[int, int]] = field(default_factory=list)
 
 
-async def erase_for_lead(session: AsyncSession, lead: Lead) -> CabinetErasure:
+async def erase_for_lead(session: AsyncSession, lead: Lead, cfg: AppSettings) -> CabinetErasure:
     conversations = await repo.cabinet_conversations_of(session, lead)
     contacts = await repo.person_contacts(session, lead.id)
     erp_contacts = await repo.erase_authors(session, [c.id for c in conversations], contacts)
@@ -52,11 +58,12 @@ async def erase_for_lead(session: AsyncSession, lead: Lead) -> CabinetErasure:
         if conversation.lead_id != lead.id:
             continue
         anchor = await _reanchor(session, conversation, lead)
-        if pending is not None:
-            moved = await _carry(session, pending, anchor, conversation)
-            if moved is not None:
-                result.moved_escalations.append((moved, anchor.id))
-            pending = None  # одна передача — на одну беседу
+        if not await repo.waits_for_reply(session, conversation.id):
+            continue  # ответили — переносить нечего
+        moved = await _carry(session, pending, anchor, cfg)
+        pending = None  # исходная передача — одна, на первую неотвеченную беседу
+        if moved is not None:
+            result.moved_escalations.append((moved, anchor.id))
     await session.flush()
     companies = {c.erp_company_id for c in conversations if c.erp_company_id is not None}
     if erp_contacts and len(companies) == 1:
@@ -106,36 +113,44 @@ async def _cabinet_escalation(session: AsyncSession, lead_id: int) -> Escalation
 
 
 async def _carry(
-    session: AsyncSession, source: Escalation, anchor: Lead, conversation: Conversation
+    session: AsyncSession, source: Escalation | None, anchor: Lead, cfg: AppSettings
 ) -> int | None:
-    """Неотвеченное сообщение кабинета — новому якорю, по тому же правилу, что и входящее
-    (`CabinetChatService._escalate`):
+    """Неотвеченную беседу кабинета делаем видимой у нового якоря — по тому же правилу, что и
+    входящее сообщение (`CabinetChatService._escalate`):
 
     * якорь ведёт менеджер (`human` с ответственным) — передачу не заводим и не переназначаем:
-      лид «ждёт ответа» в «Мои» у ответственного (`last_lead_msg_at` — время последнего входящего
-      беседы кабинета). Иначе была бы открытая передача, которую держатель не закроет, или вторая
-      «забранная»;
-    * иначе — открытая передача с исходным временем и сроком SLA; у якоря уже есть ждущая — причина
-      дописывается к ней, срок — более ранний. Причины Telegram стёртого лида и тексты записки
-      (могут нести его ПД) не переносятся; исходная закрывается вместе с лидом.
+      иначе была бы открытая передача, которую держатель не закроет (ответ в беседу передачи не
+      закрывает, «Забрать» своё — ничего не делает), или вторая «забранная». Лид «ждёт ответа» в
+      «Мои» у ответственного: `last_lead_msg_at` якоря сдвигается на «сейчас». Отметка общая для
+      всех бесед лида и Telegram, поэтому время именно этого сообщения в ней выразить нельзя —
+      ответ менеджера своему лиду или создание якоря после сообщения иначе перекрыли бы его. Само
+      сообщение, его время и порядок в беседе не меняются; у лида `human` срока SLA нет. Ответ
+      менеджера в беседу (`LeadService.reply` → `last_human_msg_at`) снимает «ждёт ответа»;
+    * иначе — открытая передача: исходная переносится с временем и сроком SLA, исходной нет (беседа
+      ждала в «Мои» стираемого лида) — новая со сроком от настроек; у якоря уже есть ждущая —
+      причина дописывается к ней, срок — более ранний. Причины Telegram стёртого лида и тексты
+      записки (могут нести его ПД) не переносятся; исходная закрывается вместе с лидом.
 
     Возвращает передачу для поста в канале команды (None — передачи нет)."""
+    now = datetime.now(UTC)
     if anchor.owner_mode == OwnerMode.HUMAN.value and anchor.assigned_user_id is not None:
-        last_in = await repo.last_inbound_at(session, conversation.id)
-        if last_in is not None and (
-            anchor.last_lead_msg_at is None or last_in > anchor.last_lead_msg_at
-        ):
-            anchor.last_lead_msg_at = last_in
-        logger.info("cabinet_message_to_mine", from_lead=source.lead_id, to_lead=anchor.id)
+        anchor.last_lead_msg_at = now
+        logger.info("cabinet_message_to_mine", to_lead=anchor.id)
         return None
+    sla_due_at = source.sla_due_at if source is not None else None
+    if source is None:
+        sla_due_at = add_business_minutes(
+            now, cfg.escalation.sla_minutes, cfg.business_hours.domain()
+        )
     current = await _active(session, anchor.id)
     if current is not None:
         if CABINET_REASON not in current.reason_codes:
             current.reason_codes = [*current.reason_codes, CABINET_REASON]
-        if source.sla_due_at is not None and (
-            current.sla_due_at is None or source.sla_due_at < current.sla_due_at
+        if sla_due_at is not None and (
+            current.sla_due_at is None or sla_due_at < current.sla_due_at
         ):
-            current.sla_due_at, current.sla_notified_at = source.sla_due_at, source.sla_notified_at
+            current.sla_due_at = sla_due_at
+            current.sla_notified_at = source.sla_notified_at if source is not None else None
         moved = current
     else:
         moved = Escalation(
@@ -143,16 +158,20 @@ async def _carry(
             reason_codes=[CABINET_REASON],
             priority=PRIORITY[TriggerCode.CABINET_MESSAGE].value,
             status="open",
-            sla_due_at=source.sla_due_at,
-            sla_notified_at=source.sla_notified_at,
+            sla_due_at=sla_due_at,
+            sla_notified_at=source.sla_notified_at if source is not None else None,
         )
-        moved.created_at = source.created_at
+        if source is not None:
+            moved.created_at = source.created_at
         session.add(moved)
     if anchor.owner_mode == OwnerMode.BOT.value:
         anchor.owner_mode = OwnerMode.PAUSED.value  # ждёт человека, как при передаче
     await session.flush()
     logger.info(
-        "cabinet_escalation_moved", from_lead=source.lead_id, to_lead=anchor.id, escalation=moved.id
+        "cabinet_escalation_moved",
+        from_lead=source.lead_id if source is not None else None,
+        to_lead=anchor.id,
+        escalation=moved.id,
     )
     return moved.id
 
