@@ -563,7 +563,9 @@ test.describe("Компания: axe и снимки", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "director@demo.example");
       await openCompany(page, "quote");
-      const toggle = page.getByRole("switch", { name: "Напоминать клиентам о просроченных счетах" });
+      const toggle = page.getByRole("switch", {
+        name: "Напоминать клиентам о просроченных счетах",
+      });
       await toggle.scrollIntoViewIfNeeded();
       await expect(toggle).not.toBeChecked();
       await toggle.click();
