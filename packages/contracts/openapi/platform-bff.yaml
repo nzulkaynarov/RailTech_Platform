@@ -11570,6 +11570,11 @@ paths:
           required: false
           description: '`pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1)'
           schema: {type: string, enum: [pending]}
+        - name: review
+          in: query
+          required: false
+          description: '`waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`'
+          schema: {type: string, enum: [waiting]}
       responses:
         '200':
           description: Готово
@@ -11840,6 +11845,41 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}/return:
+    post:
+      tags: [erp-catalog]
+      operationId: returnCatalogItem
+      summary: 'Расчёт · Номенклатура: вернуть карточку партнёру'
+      description: >-
+        ERP `POST catalog/items/{id}/return/` — право `catalog.publish`. Карточка партнёра «на проверке» становится «возвращена»: общий комментарий и замечания по полям (поле из перечня карточки и текст); нужна хотя бы одна причина — иначе 422. Проверка закрывается решением «возвращена», контактам партнёра уходит письмо со ссылкой на карточку в «Мои товары». Карточка уже не на проверке (решена или не отправлялась) — 409 `CONFLICT` с `details.reason = product_not_on_review`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogItemReturn'
+      responses:
+        '200':
+          description: Возвращена партнёру
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/CatalogConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
         '503':
@@ -23800,11 +23840,15 @@ components:
           description: Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана
         category:
           oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
-        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, PUBLISHED'}
+        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, REVIEW, RETURNED, PUBLISHED'}
         offers_count: {type: integer, minimum: 0}
         nearest_valid_until: {type: [string, 'null'], format: date}
         docs_count: {type: integer, minimum: 0}
         proposals_count: {type: integer, minimum: 0, description: Изменений от поставщиков на одобрении}
+        review:
+          oneOf: [{$ref: '#/components/schemas/CatalogReviewInfo'}, {type: 'null'}]
+          description: 'Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки'
+        completeness: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Полнота карточки, % — в списке `review=waiting` и в карточке'}
     CatalogItemPage:
       type: object
       additionalProperties: false
@@ -23919,7 +23963,7 @@ components:
     CatalogItemDetail:
       type: object
       additionalProperties: false
-      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish]
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, proposals_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, brand_id, source_supplier, offers, prices_visible, tech_docs, images, origin, warranty, proposals, publish, catalog_price]
       properties:
         id: {$ref: '#/components/schemas/CompanyItemRef'}
         sku: {type: string}
@@ -23935,7 +23979,7 @@ components:
           description: Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана
         category:
           oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
-        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, PUBLISHED'}
+        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, REVIEW, RETURNED, PUBLISHED'}
         offers_count: {type: integer, minimum: 0}
         nearest_valid_until: {type: [string, 'null'], format: date}
         docs_count: {type: integer, minimum: 0}
@@ -23957,6 +24001,49 @@ components:
         warranty: {$ref: '#/components/schemas/CatalogWarranty'}
         proposals: {type: array, items: {$ref: '#/components/schemas/CatalogProposal'}, description: Изменения от поставщиков на одобрении}
         publish: {$ref: '#/components/schemas/CatalogPublishState'}
+        review:
+          oneOf: [{$ref: '#/components/schemas/CatalogReviewInfo'}, {type: 'null'}]
+          description: 'Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки'
+        completeness: {type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Полнота карточки, % — в списке `review=waiting` и в карточке'}
+        catalog_price: {$ref: '#/components/schemas/CatalogPrice'}
+    CatalogReviewInfo:
+      type: object
+      additionalProperties: false
+      description: 'Карточка ждёт решения (PART-3): кто прислал, когда и до какого срока ответить'
+      required: [kind, partner, submitted_at, due_at, overdue]
+      properties:
+        kind: {type: string, enum: [card, changes], description: '`card` — карточка на проверке; `changes` — предложения партнёра к опубликованной'}
+        partner: {oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}], description: 'Партнёр: источник данных карточки или приславший предложение'}
+        submitted_at: {type: string, format: date-time, description: Когда отправлено}
+        due_at: {type: string, format: date-time, description: 'Срок ответа: 24 часа без субботы и воскресенья'}
+        overdue: {type: boolean, description: Срок прошёл}
+    CatalogPrice:
+      type: object
+      additionalProperties: false
+      description: 'Что покажет каталог клиенту: видимость цены (карточка → договорённость с партнёром → компания) и цена-витрина'
+      required: [visibility, source, price]
+      properties:
+        visibility: {type: string, enum: [cabinet, on_request], description: '`cabinet` — цену видно, `on_request` — «по запросу»'}
+        source: {type: string, enum: [item, partner, company], description: Откуда взята видимость}
+        price: {oneOf: [{$ref: '#/components/schemas/CatalogMoney'}, {type: 'null'}], description: 'Цена-витрина; `null` — по запросу или цена не задана'}
+    CatalogIssueField:
+      type: string
+      enum: [name, description, brand, manufacturer_part_number, gost_drawing, category, uom, hs_code, price, valid_until, other]
+      description: 'Поле карточки, к которому замечание (`other` — не к одному полю)'
+    CatalogReturnIssue:
+      type: object
+      additionalProperties: false
+      required: [field, comment]
+      properties:
+        field: {$ref: '#/components/schemas/CatalogIssueField'}
+        comment: {type: string, minLength: 1, maxLength: 500}
+    CatalogItemReturn:
+      type: object
+      additionalProperties: false
+      description: 'Возврат карточки партнёру: хотя бы одна причина — общий комментарий или замечание по полю'
+      properties:
+        reason: {type: [string, 'null'], maxLength: 2000, description: Общий комментарий}
+        issues: {type: [array, 'null'], maxItems: 30, items: {$ref: '#/components/schemas/CatalogReturnIssue'}}
     CatalogOfferSource:
       type: string
       enum: [price_list, rfq_reply, manual]
@@ -24160,7 +24247,7 @@ components:
     SupplierCabinetRelationship:
       type: object
       additionalProperties: false
-      required: [role, kind, modules, status, invited_at, activated_at, suspended_at, responsible, invited_by]
+      required: [role, kind, modules, catalog_price_visibility, status, invited_at, activated_at, suspended_at, responsible, invited_by]
       properties:
         role: {type: string, enum: [partner]}
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other], description: 'Вид партнёра — метка, на права не влияет'}
@@ -24168,6 +24255,7 @@ components:
           type: array
           items: {type: string, enum: [my_products, catalog_requests]}
           description: Включённые партнёру модули кабинета
+        catalog_price_visibility: {type: string, enum: ['', cabinet, on_request], description: 'Цены товаров партнёра в каталоге клиентов (PART-3): пусто — как у компании, `cabinet` — показывать, `on_request` — по запросу; своя политика карточки сильнее'}
         status: {type: string, enum: [invited, active, suspended]}
         invited_at: {type: [string, 'null'], format: date-time}
         activated_at: {type: [string, 'null'], format: date-time, description: Первый вход}
@@ -24263,6 +24351,7 @@ components:
           type: array
           items: {type: string, enum: [my_products, catalog_requests]}
         kind: {type: string, enum: ['', manufacturer, supplier, principal, other]}
+        catalog_price_visibility: {type: string, enum: ['', cabinet, on_request], description: 'Цены товаров партнёра в каталоге: пусто — как у компании'}
     SupplierCabinetInvite:
       type: object
       additionalProperties: false

@@ -58,6 +58,11 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
     "PROPOSAL_DECIDED": ("proposal_decided", "Изменение уже решено. Обновите карточку."),
     "PROPOSAL_STALE": ("proposal_stale", "Значения больше нет в справочнике. Отклоните изменение."),
     "PRODUCT_INCOMPLETE": ("product_incomplete", "Заполните недостающие поля, затем опубликуйте."),
+    # PART-3: очередь проверки партнёров
+    "PRODUCT_NOT_ON_REVIEW": (
+        "product_not_on_review",
+        "Карточка уже не на проверке: её решили или партнёр не отправлял. Обновите страницу.",
+    ),
     "CATEGORY_REQUEST_ALREADY_PENDING": (
         "already_pending",
         "Запрос на такую категорию уже на рассмотрении.",
@@ -128,6 +133,10 @@ _FIELD_OF: dict[str, str] = {
     "TECH_DOC_KIND_INVALID": "kind",
     "PRODUCT_NOT_FOUND": "product_id",
     "DEAL_NOT_FOUND": "deal_id",
+    # PART-3
+    "REVIEW_REASON_REQUIRED": "reason",
+    "REVIEW_REASON_TOO_LONG": "reason",
+    "REVIEW_ISSUES_INVALID": "issues",
     # PART-1
     "CONTACT_NAME_REQUIRED": "name",
     "CONTACT_EMAIL_REQUIRED": "email",

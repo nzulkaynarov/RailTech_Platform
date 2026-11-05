@@ -102,7 +102,8 @@ def requirements_for(product, ctx: "CompletenessContext | None" = None) -> tuple
     from .policy import effective_price_visibility
 
     policy = ctx.policy_for(product) if ctx is not None else None
-    if effective_price_visibility(product, policy) == PriceVisibility.CABINET:
+    partners = ctx.partner_visibility if ctx is not None else None
+    if effective_price_visibility(product, policy, partners) == PriceVisibility.CABINET:
         requirements = (*requirements, _LIST_PRICE)
     if ctx is not None and getattr(product, "category_id", None) in ctx.conformity_categories:
         requirements = (*requirements, _CONFORMITY)
@@ -124,6 +125,12 @@ class CompletenessContext:
         from .policy import load_policies
 
         self._policies = load_policies(getattr(product, "owner_company_id", None) for product in products)
+        # PART-3: договорённости о цене с партнёрами-источниками карточек — тоже один запрос на пачку
+        from .policy import load_partner_price_visibility
+
+        self.partner_visibility = load_partner_price_visibility(
+            getattr(product, "source_supplier_id", None) for product in products
+        )
 
         self._load_conformity(products)
 

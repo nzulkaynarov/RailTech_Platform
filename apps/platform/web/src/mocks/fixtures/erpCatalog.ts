@@ -57,6 +57,14 @@ export interface MockProposal {
   proposed: string;
   supplierId: string;
   created_at: string;
+  /** Предложение прислал партнёр из кабинета (PART-3): такие предложения попадают в очередь проверки. */
+  partner?: boolean;
+}
+
+/** Открытая проверка карточки партнёра (PART-3): когда отправлена; просрочена ли — задаёт сид, часов у мока нет. */
+export interface MockReview {
+  submitted_at: string;
+  overdue: boolean;
 }
 
 /** Фото позиции в моке: байты хранятся как есть, порядок — порядок в массиве `images`. */
@@ -76,7 +84,11 @@ export interface MockItem {
   unitId: string | null;
   vat_rate: string | null;
   categoryId: string | null;
-  status: "DRAFT" | "PUBLISHED";
+  status: "DRAFT" | "REVIEW" | "RETURNED" | "PUBLISHED";
+  /** Открытая проверка (PART-3); у карточки не на проверке — `null`. */
+  review: MockReview | null;
+  /** Цена-витрина, сум (PART-3); `null` — не задана. */
+  list_price: string | null;
   description: string;
   gost_drawing: string;
   hs_code: string;
@@ -287,7 +299,9 @@ function photo(id: string, alt: string, isMain: boolean, sample: number): MockIm
 
 function seedItems(): MockItem[] {
   const base = {
-    status: "PUBLISHED" as const,
+    status: "PUBLISHED" as MockItem["status"],
+    review: null as MockReview | null,
+    list_price: null as string | null,
     description: "",
     gost_drawing: "",
     hs_code: "",
@@ -371,6 +385,69 @@ function seedItems(): MockItem[] {
       vat_rate: "0.00",
       categoryId: null,
       status: "DRAFT",
+    },
+    // PART-3: карточки партнёра «Южный Металл» (поставщик 2) в очереди проверки
+    {
+      ...base,
+      id: "6",
+      sku: "RT-0006",
+      name: "Болт М20×80 оцинкованный",
+      kind: "on_order",
+      unitId: "1",
+      vat_rate: null,
+      categoryId: "1",
+      status: "REVIEW",
+      review: { submitted_at: "2026-10-26T09:30:00+05:00", overdue: true },
+      description: "Болт с шестигранной головкой, класс прочности 8.8",
+      brand: "Рельс-Сталь",
+      brandId: "2",
+      mpn: "BM20-80",
+      sourceSupplierId: "2",
+    },
+    {
+      ...base,
+      id: "7",
+      sku: "RT-0007",
+      name: "Шайба пружинная 20",
+      kind: "on_order",
+      unitId: "1",
+      vat_rate: null,
+      categoryId: "1",
+      status: "REVIEW",
+      review: { submitted_at: "2026-10-28T08:00:00+05:00", overdue: false },
+      hs_code: "7318",
+      brand: "Рельс-Сталь",
+      brandId: "2",
+      mpn: "SH-20",
+      sourceSupplierId: "2",
+      list_price: "1500.00",
+    },
+    {
+      ...base,
+      id: "8",
+      sku: "RT-0008",
+      name: "Хомут кабельный 200 мм",
+      kind: "on_order",
+      unitId: "1",
+      vat_rate: null,
+      categoryId: "5",
+      hs_code: "3926",
+      brand: "Электрокабель-Тест",
+      brandId: "1",
+      mpn: "HK-200",
+      sourceSupplierId: "2",
+      list_price: "800.00",
+      proposals: [
+        {
+          id: "9001",
+          field: "description",
+          current: "",
+          proposed: "Нейлоновый хомут, стойкий к ультрафиолету, упаковка 100 шт.",
+          supplierId: "2",
+          created_at: "2026-10-27T10:00:00+05:00",
+          partner: true,
+        },
+      ],
     },
   ];
 }

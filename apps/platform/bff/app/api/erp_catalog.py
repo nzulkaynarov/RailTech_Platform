@@ -45,6 +45,7 @@ from app.schemas_erp_catalog import (
     ItemCreate,
     ItemDetail,
     ItemPage,
+    ItemReturn,
     ItemUpdate,
     LookupCategory,
     LookupCurrency,
@@ -186,6 +187,7 @@ async def list_items(
     kind: ItemKindQuery = None,
     category_id: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
     proposals: Annotated[str | None, Query(pattern=r"^pending$")] = None,
+    review: Annotated[str | None, Query(pattern=r"^waiting$")] = None,
     page: Page = 1,
     page_size: PageSize = 25,
 ) -> ItemPage:
@@ -197,6 +199,7 @@ async def list_items(
             kind=kind,
             category=category_id,
             proposals=proposals,
+            review=review,
             page=page,
             page_size=page_size,
         ),
@@ -246,6 +249,16 @@ async def publish_item(id: ItemId, authed: Writer) -> ItemDetail:
 )
 async def unpublish_item(id: ItemId, authed: Writer) -> ItemDetail:
     raw = await _erp(authed).data("POST", f"catalog/items/{id}/unpublish/")
+    return to_item_detail(raw, show_prices=show_prices(authed))
+
+
+@router.post(
+    "/erp/catalog/items/{id}/return",
+    response_model=ItemDetail,
+    operation_id="returnCatalogItem",
+)
+async def return_item(id: ItemId, body: ItemReturn, authed: Writer) -> ItemDetail:
+    raw = await _erp(authed).data("POST", f"catalog/items/{id}/return/", json=body.sent())
     return to_item_detail(raw, show_prices=show_prices(authed))
 
 

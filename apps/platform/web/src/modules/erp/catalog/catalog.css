@@ -345,3 +345,42 @@
   align-items: center;
   font-size: 13px;
 }
+
+/* PART-3: очередь проверки — замечания по полям в окне возврата */
+.pf-cat-issues {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-cat-issues legend {
+  font-weight: 600;
+  padding: 0;
+  margin-bottom: 8px;
+}
+
+.pf-cat-issue {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+@media (max-width: 600px) {
+  .pf-cat-issue {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pf-cat-issue > :first-child,
+  .pf-cat-issue > :nth-child(2) {
+    grid-column: 1 / -1;
+  }
+
+  .pf-cat-issue > button {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}

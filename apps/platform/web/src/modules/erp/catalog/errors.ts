@@ -73,6 +73,11 @@ const REASONS = new Set([
   "warranty_months_invalid",
   "tech_doc_date_invalid",
   "tech_doc_validity_range_invalid",
+  // PART-3: очередь проверки партнёров
+  "product_not_on_review",
+  "review_reason_required",
+  "review_issues_invalid",
+  "review_reason_too_long",
 ]);
 
 /**

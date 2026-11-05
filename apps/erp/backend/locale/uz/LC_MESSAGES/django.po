@@ -132,6 +132,76 @@ msgstr "Hamkor kabineti"
 msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
 msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartochkalarni siz to'ldirasiz, biz tekshirib e'lon qilamiz."
 
+# ── PART-3: письма партнёру о решении по карточке ──
+msgid "Карточка «%(name)s» опубликована"
+msgstr "Kartochka «%(name)s» e'lon qilindi"
+
+msgid "Карточка «%(name)s» проверена и опубликована в каталоге."
+msgstr "«%(name)s» kartochkasi tekshirildi va katalogda e'lon qilindi."
+
+msgid "Открыть в разделе «Мои товары»:"
+msgstr "«Mening mahsulotlarim» boʻlimida ochish:"
+
+msgid "Открыть в разделе «Мои товары»"
+msgstr "«Mening mahsulotlarim» boʻlimida ochish"
+
+msgid "Карточка «%(name)s» возвращена на доработку"
+msgstr "«%(name)s» kartochkasi qayta ishlashga qaytarildi"
+
+msgid "Карточка «%(name)s» возвращена на доработку."
+msgstr "«%(name)s» kartochkasi qayta ishlashga qaytarildi."
+
+msgid "Причина:"
+msgstr "Sabab:"
+
+msgid "Что исправить:"
+msgstr "Nimani tuzatish kerak:"
+
+msgid "Исправьте карточку и отправьте её на проверку снова:"
+msgstr "Kartochkani tuzating va uni qayta tekshiruvga yuboring:"
+
+msgid "Исправьте карточку и отправьте её на проверку снова."
+msgstr "Kartochkani tuzating va uni qayta tekshiruvga yuboring."
+
+msgid "Открыть карточку"
+msgstr "Kartochkani ochish"
+
+msgid "Наименование"
+msgstr "Nomi"
+
+msgid "Описание"
+msgstr "Tavsif"
+
+msgid "Бренд"
+msgstr "Brend"
+
+msgid "Артикул изготовителя"
+msgstr "Ishlab chiqaruvchi artikuli"
+
+msgid "ГОСТ / чертёж"
+msgstr "GOST / chizma"
+
+msgid "Категория"
+msgstr "Kategoriya"
+
+msgid "Единица измерения"
+msgstr "Oʻlchov birligi"
+
+msgid "Код ТН ВЭД"
+msgstr "TIF TN kodi"
+
+msgid "Цена"
+msgstr "Narx"
+
+msgid "Цена действует до"
+msgstr "Narx amal qilish muddati"
+
+msgid "Другое"
+msgstr "Boshqa"
+
+msgid "Исправьте поля, отмеченные в карточке."
+msgstr "Kartochkada belgilangan maydonlarni tuzating."
+
 # ── emails/portal_notice.* — уведомления кабинета контакту (NOTIFY-2) ──────────────────────────────────────────
 msgid "Новое коммерческое предложение %(number)s"
 msgstr "Yangi tijorat taklifi %(number)s"

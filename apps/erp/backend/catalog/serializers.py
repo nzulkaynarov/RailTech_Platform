@@ -312,11 +312,22 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
             cache[obj.owner_company_id] = policy_for(obj.owner_company_id)
         return cache[obj.owner_company_id]
 
+    def _partners(self, obj) -> dict:
+        """Договорённость о цене с партнёром-источником карточки (PART-3), с кэшем на сериализатор."""
+        from catalog.policy import load_partner_price_visibility
+
+        cache = self.__dict__.setdefault("_partner_cache", {})
+        supplier_id = obj.source_supplier_id
+        if supplier_id and supplier_id not in cache:
+            cache.update(load_partner_price_visibility([supplier_id]))
+            cache.setdefault(supplier_id, "")
+        return {key: value for key, value in cache.items() if value}
+
     def get_price_visibility_effective(self, obj) -> str:
-        """Видимость цены с учётом политики компании — то, что реально увидит клиент."""
+        """Видимость цены с учётом политики компании и партнёра — то, что реально увидит клиент."""
         from catalog.policy import effective_price_visibility
 
-        return effective_price_visibility(obj, self._policy(obj))
+        return effective_price_visibility(obj, self._policy(obj), self._partners(obj))
 
     def get_price_visibility_default(self, obj) -> str:
         """Политика каталога компании — подпись варианта «как в политике каталога» в форме."""
@@ -332,7 +343,13 @@ class ProductSerializer(_CostGateMixin, serializers.ModelSerializer):
         from catalog.constants import MODE_CLIENT
         from catalog.published import project
 
-        return project(obj, mode=MODE_CLIENT, policy=self._policy(obj), request=self.context.get("request"))
+        return project(
+            obj,
+            mode=MODE_CLIENT,
+            policy=self._policy(obj),
+            request=self.context.get("request"),
+            partners=self._partners(obj),
+        )
 
     class Meta:
         model = Product
