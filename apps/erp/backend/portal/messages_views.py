@@ -43,7 +43,10 @@ class MessageListView(BasePortalView):
         items, has_more = chat.feed(request.portal_company, after_id=after_id, limit=limit)
         chat.touch_presence(request.portal_company, request.portal_contact)
         me = request.portal_contact.pk
-        return Response({"items": [portal_message_data(m, me) for m in items], "has_more": has_more})
+        erased = chat.erased_ids(request.portal_company, up_to=after_id) if after_id is not None else []
+        return Response(
+            {"items": [portal_message_data(m, me) for m in items], "has_more": has_more, "erased_ids": erased}
+        )
 
     def post(self, request):
         serializer = PortalMessageCreateSerializer(data=request.data)

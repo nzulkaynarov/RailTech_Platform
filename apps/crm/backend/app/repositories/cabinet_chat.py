@@ -55,7 +55,12 @@ async def cabinet_conversations_of(session: AsyncSession, lead: Lead) -> list[Co
     match = Conversation.lead_id == lead.id
     if lead.client_id is not None:
         match = match | (Conversation.client_id == lead.client_id)
-    stmt = select(Conversation).where(Conversation.channel == CABINET, match).with_for_update()
+    stmt = (
+        select(Conversation)
+        .where(Conversation.channel == CABINET, match)
+        .order_by(Conversation.id)
+        .with_for_update()
+    )
     return list((await session.scalars(stmt)).all())
 
 
@@ -120,6 +125,22 @@ async def anchor_lead(
     )
     found: Lead | None = (await session.scalars(stmt)).first()
     return found
+
+
+async def waits_for_reply(session: AsyncSession, conversation_id: int) -> bool:
+    """Беседа кабинета ждёт ответа: последнее сообщение клиента позже последнего ответа менеджера
+    в эту же беседу. Считается по самой беседе, а не по отметкам лида: у лида они общие для всех
+    его бесед и переписки в Telegram (ответ менеджера своему лиду в Telegram кабинету не ответ)."""
+    row = (
+        await session.execute(
+            select(
+                func.max(Message.id).filter(Message.role == "lead"),
+                func.max(Message.id).filter(Message.role == "manager"),
+            ).where(Message.conversation_id == conversation_id)
+        )
+    ).one()
+    last_in, last_reply = row
+    return last_in is not None and (last_reply is None or last_in > last_reply)
 
 
 async def inbound_by_key(

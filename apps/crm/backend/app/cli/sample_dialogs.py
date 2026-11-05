@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.container import get_container
 from app.models.leads import Conversation, Lead, Message
 from app.models.qualification import Escalation
+from app.repositories.cabinet_chat import TELEGRAM
 from app.security.pii import mask_text
 
 LABEL_TEMPLATE = {
@@ -59,7 +60,11 @@ async def sample(
             await session.scalars(
                 select(Conversation.lead_id)
                 .join(Message, Message.conversation_id == Conversation.id)
-                .where(Message.role == "bot", Message.created_at >= since)
+                .where(
+                    Message.role == "bot",
+                    Message.created_at >= since,
+                    Conversation.channel == TELEGRAM,
+                )
                 .distinct()
             )
         ).all()
@@ -75,7 +80,7 @@ async def sample(
         await session.execute(
             select(Conversation.lead_id, Message)
             .join(Message, Message.conversation_id == Conversation.id)
-            .where(Conversation.lead_id.in_(chosen))
+            .where(Conversation.lead_id.in_(chosen), Conversation.channel == TELEGRAM)
             .order_by(Message.id)
         )
     ).all()
