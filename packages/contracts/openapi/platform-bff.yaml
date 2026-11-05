@@ -18193,6 +18193,7 @@ components:
         - default_vat_rate
         - default_offer_validity_days
         - payment_terms_days
+        - remind_overdue_invoices
         - default_payment_terms
         - default_warranty_months
         - catalog_price_visibility
@@ -18237,6 +18238,11 @@ components:
             - 'null'
           minimum: 0
           description: Отсрочка платежа, дней
+        remind_overdue_invoices:
+          type: boolean
+          description: >-
+            Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам
+            клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04)
         default_payment_terms:
           type: string
           description: Условия оплаты текстом
@@ -18306,6 +18312,11 @@ components:
             - 'null'
           minimum: 0
           description: Отсрочка платежа, дней
+        remind_overdue_invoices:
+          type: boolean
+          description: >-
+            Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам
+            клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04)
         default_payment_terms:
           type: string
           description: Условия оплаты текстом

@@ -566,6 +566,7 @@ def test_me_form(client_contact, client_company):
             "company": CompanySerializer(client_company).data,
             "can_act": True,
             "auth_method": "telegram",
+            "notifications_unread": 2,
             "roles": ["client", "partner"],
             "modules": ["catalog_requests", "my_products"],
             "unread": 0,

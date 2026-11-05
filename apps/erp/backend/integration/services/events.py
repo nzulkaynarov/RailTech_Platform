@@ -12,6 +12,8 @@
 исключение — `quote.ready_for_approval` (адресат EDS, `crm_client_id: null`).
 Корреляция — `X-Request-ID` входящего запроса (`core.logging.RequestIDMiddleware`), вне запроса (Celery) — новый UUID.
 Сигналов Django здесь нет: что считать изменением, решает сервис. Событие `document.created` — `document_events.py`.
+Событие для контрагента (КП, счёт, просрочка, акт, поставка) публикатор записывает и в колокольчик кабинета — той же
+транзакцией (`portal/services/notice_sources.py`, NOTIFY-2): уведомление есть ровно тогда, когда есть событие.
 """
 
 from __future__ import annotations
@@ -22,6 +24,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from django.utils import timezone
 from portal import projections
+from portal.services import notice_sources
 from rt_bus import Event
 
 from ..bus import get_bus
@@ -240,7 +243,9 @@ def publish_quote_sent(
     if channels is not None:
         payload["channels"] = list(dict.fromkeys(channels))
 
-    return publish_event("quote.sent", erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    event = publish_event("quote.sent", erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    notice_sources.quote_sent(quote, channels=channels, bot_reaches=event is not None)
+    return event
 
 
 def publish_quote_outcome(
@@ -403,7 +408,12 @@ def publish_invoice_event(
     if erp_document_id:
         payload["erp_document_id"] = erp_document_id
 
-    return publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    event = publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    if event_type == "invoice.issued":
+        notice_sources.invoice_issued(invoice, bot_reaches=event is not None)
+    elif event_type == "invoice.overdue":
+        notice_sources.payment_overdue(invoice, bot_reaches=event is not None)
+    return event
 
 
 #: Статусы исполнения сделки в `DeliveryEvent.status` контракта. Принято и оспорено клиентом — физически «доставлено»:
@@ -454,7 +464,12 @@ def publish_delivery_event(
     if prev_eta_str:
         payload["previous_eta"] = prev_eta_str
 
-    return publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    event = publish_event(event_type, erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
+    if event_type == "delivery.status_changed":
+        notice_sources.delivery_status_changed(fulfillment, status_str, bot_reaches=event is not None)
+    else:
+        notice_sources.delivery_eta_changed(fulfillment, previous_eta, bot_reaches=event is not None)
+    return event
 
 
 def publish_act_event(
@@ -477,7 +492,10 @@ def publish_act_event(
     if erp_document_id:
         payload["erp_document_id"] = erp_document_id
 
-    return publish_event(event_type, erp_company_id=deal.company_id, payload=payload, deal=deal, actor=actor)
+    event = publish_event(event_type, erp_company_id=deal.company_id, payload=payload, deal=deal, actor=actor)
+    if event_type == "act.issued":
+        notice_sources.act_issued(act, bot_reaches=event is not None)
+    return event
 
 
 def publish_invite_sent(contact: Any, channels: List[str], actor: Optional[Dict[str, Any]] = None) -> Optional[Event]:

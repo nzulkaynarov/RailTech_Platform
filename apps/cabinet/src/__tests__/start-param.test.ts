@@ -7,7 +7,16 @@ describe('start_param → маршрут', () => {
     ['web', null],
     ['deal_', null],
     ['deal_42/../admin', null],
-    ['invoice_5', null],
+    ['invoice_5', '/invoices?focus=5'],
+    ['act_7', '/acts?focus=7'],
+    ['delivery_35', '/deals/35'],
+    ['product_12', '/my-products?card=12'],
+    ['products', '/my-products'],
+    ['chat', '/messages'],
+    ['chat_1', null],
+    ['constructor', null],
+    ['toString_1', null],
+    ['invoice_5x', null],
     [undefined, null],
   ])('%s → %s', (param, route) => {
     expect(routeForStartParam(param)).toBe(route);
@@ -19,5 +28,6 @@ describe('начальный адрес Mini App', () => {
     expect(initialPath('/', 'deal_42')).toBe('/deals/42');
     expect(initialPath('/', 'web')).toBe('/');
     expect(initialPath('/profile', 'deal_42')).toBe('/profile');
+    expect(initialPath('/', 'invoice_603')).toBe('/invoices?focus=603');
   });
 });

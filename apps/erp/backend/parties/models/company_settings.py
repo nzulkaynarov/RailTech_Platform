@@ -76,6 +76,14 @@ class CompanySettings(models.Model):
             "Пусто — платформенное умолчание. От этого срока считается напоминание об оплате."
         ),
     )
+    remind_overdue_invoices = models.BooleanField(
+        default=False,
+        verbose_name=_("Напоминать клиентам о просроченных счетах"),
+        help_text=_(
+            "Раз в сутки (10:00 по Ташкенту) — одно напоминание по каждому просроченному счёту контактам клиента: колокольчик "
+            "кабинета и письмо. По умолчанию выключено (DECISIONS 2026-11-04, эталон Stripe и QuickBooks)."
+        ),
+    )
     default_payment_terms = models.CharField(
         max_length=255,
         blank=True,

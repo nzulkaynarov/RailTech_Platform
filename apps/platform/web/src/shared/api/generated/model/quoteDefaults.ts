@@ -39,6 +39,8 @@ export interface QuoteDefaults {
    * @nullable
    */
   payment_terms_days: number | null;
+  /** Напоминать клиентам о просроченных счетах — раз в сутки в 10:00 по Ташкенту, одно напоминание на счёт контактам клиента (колокольчик кабинета и письмо); по умолчанию выключено (NOTIFY-2, DECISIONS 2026-11-04) */
+  remind_overdue_invoices: boolean;
   /** Условия оплаты текстом */
   default_payment_terms: string;
   /**

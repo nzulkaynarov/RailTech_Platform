@@ -415,4 +415,14 @@ def contract_world(db, client_company, other_company, client_contact, other_cont
         )
     ]
     world.update(build_document_fixtures(world))
+
+    # ── Колокольчик (NOTIFY-2): уведомления видов, открытых клиенту, — для сторожа `GET /notifications` ────────
+    from portal.services import notice_sources
+
+    notice_sources.quote_sent(quotes["sent"])
+    notice_sources.invoice_issued(invoices["issued"])
+    notice_sources.payment_overdue(invoices["overdue"])
+    notice_sources.act_issued(acts["issued"])
+    notice_sources.delivery_status_changed(deliveries["shipped"], "shipped")
+    notice_sources.delivery_eta_changed(deliveries["shipped"], past)
     return world
