@@ -72,6 +72,8 @@ async def start(
     email = (document.recipient_email or "").strip()
     if not email:
         raise invalid_fields("Укажите почту адресата.", recipient_email="required")
+    if not render.final:  # адресату уходит только итоговый PDF, не проект (SIGN-1, ADR-0024 п. 4)
+        raise conflict("pdf_not_final", "Адресату отправляется только итоговый PDF зарегистрированного письма.")
     if await _in_progress(session, document.id):
         raise conflict("mail_in_progress", "Письмо уже отправляется — дождитесь итога.")
     now = clock.now()

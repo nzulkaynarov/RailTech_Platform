@@ -1,7 +1,8 @@
 """PDF письма на бланке (P4): ввод рендера, кэш по хешу, фоновая задача, состояние для экрана (B-094).
 
 - **Ввод** (`payload`) — тело письма с подписью, реквизиты письма (номер и дата — только у зарегистрированного),
-бланк из
+  `draft: true` у всякого PDF, который не итоговый (SIGN-1, ADR-0024 п. 4: «ПРОЕКТ» на каждой странице, без номера и
+  даты; у итогового ключа нет — хеш выпущенных PDF не меняется), бланк из
   проекции ERP и хеш логотипа. Хеш SHA-256 канонического JSON ввода — ключ кэша и имя файла: тот же ввод второй раз не
   рендерится, а строка `document_renders` с вводом — снимок выпущенного письма (ADR-0020 п. 7).
 - **В запросе рендера нет**: `request` пишет строку `pending`, а задачу ставит вызывающий **после коммита**
@@ -132,6 +133,8 @@ async def build_payload(session: AsyncSession, document: Document) -> tuple[dict
         },
         "logo_sha256": head.logo_sha256,
     }
+    if not final:
+        payload["draft"] = True  # ключ только у проекта: у итогового ввод и хеш прежние (SIGN-1)
     return payload, head.logo_sha256
 
 
@@ -173,6 +176,16 @@ async def request(session: AsyncSession, document: Document) -> DocumentRender:
     document.pdf_hash = render_hash
     await session.flush()
     return row
+
+
+def is_draft_render(row: DocumentRender) -> bool:
+    """Проект: рендер не итоговый и ввод помечен `draft` (SIGN-1)."""
+    return not row.final and bool(row.payload.get("draft"))
+
+
+def is_unmarked_draft(row: DocumentRender) -> bool:
+    """Не итоговый PDF без знака «ПРОЕКТ»: построен до SIGN-1 — не выдаётся, нужно запросить заново."""
+    return not row.final and not row.payload.get("draft")
 
 
 def present(row: DocumentRender) -> DocumentPdf:
@@ -258,7 +271,9 @@ __all__ = [
     "LETTERHEAD_MISSING",
     "build_payload",
     "digest",
+    "is_draft_render",
     "is_final",
+    "is_unmarked_draft",
     "present",
     "request",
     "run",

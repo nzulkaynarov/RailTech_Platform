@@ -16,7 +16,7 @@ from typing import Any
 from .contracts import clean_text
 from .css import PageSetup, stylesheet
 from .formatters import format_date
-from .labels import EXECUTOR, MISSING_BLOCK, REPLY_TO, SIGN, STAMP, number_line
+from .labels import DRAFT_MARK, EXECUTOR, MISSING_BLOCK, NO_NUMBER, REPLY_TO, SIGN, STAMP, number_line
 from .model import DocumentMeta, Lang, Layout, Letterhead
 from .resolve import Node
 
@@ -40,6 +40,7 @@ def e(text: str) -> str:
 class HtmlOptions:
     page_numbers: bool
     highlight_missing: bool = True
+    draft: bool = False  # проект (ADR-0024 п. 4): знак, «без номера», подпись без печати
 
 
 class _Writer:
@@ -190,7 +191,7 @@ class _Writer:
                 self.w('<div class="rt-sign-line"></div>')
                 name = self.field(party["name"]) if party.get("name") else ""
                 self.w(f'<div class="rt-sign-caption">{e(SIGN[self.lang])}{" · " + name if name else ""}</div>')
-                if node.get("stamp"):
+                if node.get("stamp") and not self.options.draft:
                     self.w(f'<div class="rt-stamp">{e(STAMP[self.lang])}</div>')
             self.w("</td>")
         self.w("</tr></table>")
@@ -234,7 +235,9 @@ def _letterhead(w: _Writer, letterhead: Letterhead, meta: DocumentMeta, layout: 
     if letterhead.requisites:
         w.w(f'<div class="rt-req">{"<br>".join(e(line) for line in letterhead.requisites)}</div>')
     w.w("</td>")
-    if layout is Layout.COMMERCIAL and (meta.number or meta.date):
+    if layout is Layout.COMMERCIAL and w.options.draft:
+        w.w(f'<td class="rt-docid"><div class="rt-docno-draft">{e(NO_NUMBER[lang])}</div></td>')
+    elif layout is Layout.COMMERCIAL and (meta.number or meta.date):
         w.w('<td class="rt-docid">')
         if meta.number:
             w.w(f'<div class="rt-docno">{e(meta.number)}</div>')
@@ -248,13 +251,20 @@ def _letter_meta(w: _Writer, meta: DocumentMeta, layout: Layout) -> None:
     if layout is Layout.COMMERCIAL:
         return
     lang = w.lang
-    left = number_line(lang, meta.number, format_date(meta.date, lang, long=False) if meta.date else None)
+    draft = w.options.draft
+    left = (
+        NO_NUMBER[lang]
+        if draft
+        else number_line(lang, meta.number, format_date(meta.date, lang, long=False) if meta.date else None)
+    )
     if not (left or meta.reply_to or meta.addressee):
         return
     w.w('<table class="rt-letter-meta"><tr><td>')
     if left:
         number_html = e(left)
-        if meta.number:
+        if draft:
+            number_html = f'<span class="rt-docno-draft">{number_html}</span>'
+        elif meta.number:
             # Номер документа — бегущий колонтитул со 2-й страницы (string-set на .rt-docno)
             number_html = number_html.replace(
                 e(meta.number), f'<span class="rt-docno-inline">{e(meta.number)}</span>', 1
@@ -281,9 +291,12 @@ def build_html(
     layout = setup.layout
     title = meta.title or letterhead.company_name
     w.w(f'<!DOCTYPE html><html lang="{_LANG_ATTR[lang]}"><head><meta charset="utf-8"><title>{e(title)}</title>')
-    w.w(f"<style>{stylesheet(setup, letterhead, lang, page_numbers=options.page_numbers)}")
+    w.w(f"<style>{stylesheet(setup, letterhead, lang, page_numbers=options.page_numbers, draft=options.draft)}")
     w.w(".rt-docno-inline { string-set: rtdocref content(); }</style></head>")
     w.w(f'<body class="{_LAYOUT_CLASS[layout]}">')
+    if options.draft:
+        # position: fixed — WeasyPrint повторяет знак на каждой странице.
+        w.w(f'<div class="rt-draft-mark">{e(DRAFT_MARK[lang])}</div>')
     if layout is Layout.COMMERCIAL and letterhead.footer:
         # Бегущий подвал — в начале потока: значение действует с первой страницы до последней.
         w.w(f'<div class="rt-footer">{"<br>".join(e(line) for line in letterhead.footer)}</div>')

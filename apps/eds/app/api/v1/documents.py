@@ -120,8 +120,11 @@ async def submit_document(
 async def _render_of(session: AsyncSession, employee: Employee, document_id: uuid.UUID) -> DocumentRender:
     document = await documents_read.get_visible(session, employee, document_id)
     render = await session.get(DocumentRender, document.pdf_hash) if document.pdf_hash else None
-    if render is None:
+    # PDF без знака «ПРОЕКТ», построенный до SIGN-1, не выдаётся: для экрана «не запрашивался» — он запросит заново.
+    if render is None or renders.is_unmarked_draft(render):
         raise not_found("PDF письма не запрашивался.")
+    if not render.final and not documents.may_open_pdf(employee, document):
+        raise not_found("Документ не найден.")  # проект — только автору и делопроизводителю переданного (SIGN-1)
     return render
 
 

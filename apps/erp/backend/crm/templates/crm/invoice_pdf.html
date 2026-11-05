@@ -8,8 +8,10 @@
   (default UZS). Payment requisites + purpose-of-payment make the invoice actually payable (F-06).
 {% endcomment %}
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{% blocktranslate with number=invoice.number %}Счёт № {{ number }}{% endblocktranslate %}</div>
   {% if invoice.issued_at %}{% with issued=invoice.issued_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% else %}{% with issued=invoice.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}{% endif %}
+  {% endif %}
   {% if invoice.due_date %}<div>{% blocktranslate with due=invoice.due_date|date:"d.m.Y" %}оплата до {{ due }}{% endblocktranslate %}</div>{% endif %}
   {% if invoice.contract %}<div>{% blocktranslate with contract_number=invoice.contract.number %}по договору № {{ contract_number }}{% endblocktranslate %}</div>{% endif %}
 {% endblock %}
@@ -82,7 +84,7 @@
     {% elif seller.bank_account %}
     <p><span class="k">{% translate "Р/с:" %}</span> {{ seller.bank_account }}{% if seller.mfo %} · <span class="k">{% translate "МФО:" %}</span> {{ seller.mfo }}{% endif %}</p>
     {% endif %}
-    <p><span class="k">{% translate "Назначение платежа:" %}</span> {% if invoice.issued_at %}{% blocktranslate with number=invoice.number doc_date=invoice.issued_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% else %}{% blocktranslate with number=invoice.number doc_date=invoice.created_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% endif %}{% if invoice.contract %}{% blocktranslate with contract_number=invoice.contract.number %}, договор № {{ contract_number }}{% endblocktranslate %}{% endif %}{% blocktranslate with vat_amount=invoice.vat_amount|money:ccy %}, в т.ч. НДС {{ vat_amount }}.{% endblocktranslate %}</p>
+    <p><span class="k">{% translate "Назначение платежа:" %}</span> {% if document_draft %}{% translate "Оплата по счёту" %}{% elif invoice.issued_at %}{% blocktranslate with number=invoice.number doc_date=invoice.issued_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% else %}{% blocktranslate with number=invoice.number doc_date=invoice.created_at|date:"d.m.Y" %}Оплата по счёту № {{ number }} от {{ doc_date }}{% endblocktranslate %}{% endif %}{% if invoice.contract %}{% blocktranslate with contract_number=invoice.contract.number %}, договор № {{ contract_number }}{% endblocktranslate %}{% endif %}{% blocktranslate with vat_amount=invoice.vat_amount|money:ccy %}, в т.ч. НДС {{ vat_amount }}.{% endblocktranslate %}</p>
   </div>
 
   {% if invoice.notes %}

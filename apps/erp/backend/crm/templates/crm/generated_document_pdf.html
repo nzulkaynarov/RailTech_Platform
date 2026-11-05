@@ -8,8 +8,10 @@
   реквизиты, подвал) comes from document_brand_context, like every seller PDF.
 {% endcomment %}
 {% block doc_meta %}
+  {% if document_draft %}<div class="doc-no-draft">{% translate "без номера" %}</div>{% else %}
   <div class="doc-no">{{ document.number }}</div>
   {% with issued=document.created_at|date:"d.m.Y" %}<div>{% blocktranslate %}от {{ issued }}{% endblocktranslate %}</div>{% endwith %}
+  {% endif %}
 {% endblock %}
 
 {% block doc_title %}{{ document.title|default:_("Документ") }}{% endblock %}

@@ -687,8 +687,10 @@ def _render_generated_pdf(document) -> None:
     from django.template.loader import render_to_string
     from weasyprint import HTML
 
-    from .documents import brand_context_for_pdf
+    from .documents import brand_context_for_pdf, draft_context, generated_is_draft, remember_pdf_state
 
+    # SIGN-1: документ-черновик (ещё не выпущен) — проект: «ПРОЕКТ», без номера и даты.
+    is_draft = generated_is_draft(document)
     # document_render_brand: frozen letterhead snapshot (J-a) for ISSUED, live brand for DRAFT.
     # brand_context_for_pdf: inline the logo as a data: URI (WeasyPrint can't resolve the relative
     # /media/… URL prod storage yields — broken-image box otherwise).
@@ -698,8 +700,10 @@ def _render_generated_pdf(document) -> None:
             "document": document,
             "company": document.company,
             **brand_context_for_pdf(document_render_brand(document)),
+            **draft_context(is_draft),
         },
     )
     buffer = BytesIO()
     HTML(string=html_string).write_pdf(buffer)
     save_rendered_pdf(document, f"Document_{document.number}.pdf", ContentFile(buffer.getvalue()))
+    remember_pdf_state("generated", document.pk, is_draft)
