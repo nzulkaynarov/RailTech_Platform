@@ -17,6 +17,7 @@ from sqlalchemy import (
     String,
     Text,
     Uuid,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
@@ -37,6 +38,13 @@ class Document(Base):
         Index("ix_documents_created_at_id", "created_at", "id"),
         Index("ix_documents_author", "author_crm_user_id"),
         Index("ix_documents_erp_deal_id", "erp_deal_id"),
+        Index("ix_documents_signed_by", "signed_by_crm_user_id"),
+        Index(
+            "uq_documents_verification_code",
+            "verification_code",
+            unique=True,
+            postgresql_where=text("verification_code IS NOT NULL"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
@@ -72,12 +80,12 @@ class Document(Base):
     signed_by_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
     signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     signing_authority_id: Mapped[uuid.UUID | None] = mapped_column(
-        Uuid, ForeignKey("signing_authorities.id", ondelete="SET NULL")
+        Uuid, ForeignKey("signing_authorities.id", ondelete="SET NULL", use_alter=True)
     )
     signatory_basis: Mapped[str | None] = mapped_column(String(24))
     signatory_basis_text: Mapped[str | None] = mapped_column(Text)
     acting_for_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
-    verification_code: Mapped[str | None] = mapped_column(String(32), unique=True)
+    verification_code: Mapped[str | None] = mapped_column(String(32))
     dispatch_method: Mapped[str | None] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

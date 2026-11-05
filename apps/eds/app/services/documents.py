@@ -380,15 +380,15 @@ async def submit(
     if changes.file_ids:
         await files.attach(session, changes.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
     if kind is DocumentKind.LETTER_OUT:
-        return await sign(
-            session,
-            bus,
-            employee=employee,
-            document_id=document.id,
-            dispatch_method=changes.dispatch_method or "email",
-            send=changes.send,
-            storage=storage,
-        )
+        if changes.send and not (document.recipient_email and document.body is not None):
+            raise invalid_fields("Укажите почту адресата и текст письма на бланке.", recipient_email="required")
+        await _send_letter(session, bus, document, employee)
+        if document.body is not None:
+            render = await renders.request(session, document)
+            if changes.send:
+                await letter_mail.start(
+                    session, bus, _storage(storage), document=document, render=render, actor_id=employee.crm_user_id
+                )
     else:
         await _open_approval(session, bus, document, employee, kind)
     return document
