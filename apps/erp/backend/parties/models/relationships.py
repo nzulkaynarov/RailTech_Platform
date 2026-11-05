@@ -14,6 +14,8 @@ from django.conf import settings
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from catalog.constants import PriceVisibility
+
 
 class RelationshipRole(models.TextChoices):
     """Роль компании в кабинете: клиент и партнёр (ADR-0022 п. 1; решение владельца 2026-11-04)."""
@@ -69,6 +71,16 @@ class CompanyRelationship(models.Model):
         choices=RelationshipStatus.choices,
         default=RelationshipStatus.INVITED,
         verbose_name=_("Статус"),
+    )
+    #: PART-3: показывать ли клиентам цены товаров этого партнёра в каталоге — по договорённости с ним. Пусто — как у
+    #: компании (`CompanySettings.catalog_price_visibility`); своя политика карточки сильнее (`catalog.policy`).
+    catalog_price_visibility = models.CharField(
+        max_length=16,
+        choices=PriceVisibility.choices,
+        blank=True,
+        default="",
+        verbose_name=_("Цены товаров партнёра в каталоге"),
+        help_text=_("Пусто — как у компании; иначе показывать или «по запросу». Своя политика карточки сильнее."),
     )
     responsible = models.ForeignKey(
         settings.AUTH_USER_MODEL,

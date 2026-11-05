@@ -5,6 +5,7 @@
 import type { CatalogItemKind } from "./catalogItemKind";
 import type { CompanyItemRef } from "./companyItemRef";
 import type { ListCatalogItemsProposals } from "./listCatalogItemsProposals";
+import type { ListCatalogItemsReview } from "./listCatalogItemsReview";
 
 export type ListCatalogItemsParams = {
   /**
@@ -33,4 +34,8 @@ export type ListCatalogItemsParams = {
    * `pending` — только позиции с изменениями от поставщиков на одобрении (CAT-1)
    */
   proposals?: ListCatalogItemsProposals;
+  /**
+   * `waiting` — очередь проверки партнёров (PART-3): карточки на проверке и с открытыми предложениями партнёров, старые отправки сверху; в строке — `review` (срок) и `completeness`
+   */
+  review?: ListCatalogItemsReview;
 };

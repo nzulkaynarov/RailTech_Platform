@@ -6803,6 +6803,55 @@ msgstr "Partner portal"
 msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
 msgstr "In the portal — your products and prices: you fill in the cards, we review and publish them."
 
+# ── PART-3: письма партнёру о решении по карточке ──
+msgid "Карточка «%(name)s» опубликована"
+msgstr "Card «%(name)s» has been published"
+
+msgid "Карточка «%(name)s» проверена и опубликована в каталоге."
+msgstr "Card «%(name)s» has been reviewed and published in the catalog."
+
+msgid "Открыть в разделе «Мои товары»:"
+msgstr "Open in “My products”:"
+
+msgid "Открыть в разделе «Мои товары»"
+msgstr "Open in “My products”"
+
+msgid "Карточка «%(name)s» возвращена на доработку"
+msgstr "Card «%(name)s» was returned for rework"
+
+msgid "Карточка «%(name)s» возвращена на доработку."
+msgstr "Card «%(name)s» was returned for rework."
+
+msgid "Причина:"
+msgstr "Reason:"
+
+msgid "Что исправить:"
+msgstr "What to fix:"
+
+msgid "Исправьте карточку и отправьте её на проверку снова:"
+msgstr "Fix the card and send it for review again:"
+
+msgid "Исправьте карточку и отправьте её на проверку снова."
+msgstr "Fix the card and send it for review again."
+
+msgid "Открыть карточку"
+msgstr "Open the card"
+
+msgid "Бренд"
+msgstr "Brand"
+
+msgid "Артикул изготовителя"
+msgstr "Manufacturer part number"
+
+msgid "Цена"
+msgstr "Price"
+
+msgid "Цена действует до"
+msgstr "Price valid until"
+
+msgid "Исправьте поля, отмеченные в карточке."
+msgstr "Fix the fields marked in the card."
+
 # ── emails/portal_notice.* — уведомления кабинета контакту (NOTIFY-2) ──────────────────────────────────────────
 msgid "Новое коммерческое предложение %(number)s"
 msgstr "New commercial offer %(number)s"

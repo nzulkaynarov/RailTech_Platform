@@ -7,8 +7,10 @@ import type { CatalogItemKind } from "./catalogItemKind";
 import type { CatalogNamedRef } from "./catalogNamedRef";
 import type { CatalogOffer } from "./catalogOffer";
 import type { CatalogOrigin } from "./catalogOrigin";
+import type { CatalogPrice } from "./catalogPrice";
 import type { CatalogProposal } from "./catalogProposal";
 import type { CatalogPublishState } from "./catalogPublishState";
+import type { CatalogReviewInfo } from "./catalogReviewInfo";
 import type { CatalogTechDocRef } from "./catalogTechDocRef";
 import type { CatalogUnit } from "./catalogUnit";
 import type { CatalogWarranty } from "./catalogWarranty";
@@ -27,7 +29,7 @@ export interface CatalogItemDetail {
   vat_effective: DecimalString | null;
   category: CatalogNamedRef | null;
   /**
-   * Код статуса карточки: DRAFT, PUBLISHED
+   * Код статуса карточки: DRAFT, REVIEW, RETURNED, PUBLISHED
    * @nullable
    */
   status: string | null;
@@ -62,4 +64,14 @@ export interface CatalogItemDetail {
   /** Изменения от поставщиков на одобрении */
   proposals: CatalogProposal[];
   publish: CatalogPublishState;
+  /** Ожидание решения: в списке `review=waiting` и в карточке; `null` — карточка не ждёт проверки */
+  review?: CatalogReviewInfo | null;
+  /**
+   * Полнота карточки, % — в списке `review=waiting` и в карточке
+   * @minimum 0
+   * @maximum 100
+   * @nullable
+   */
+  completeness?: number | null;
+  catalog_price: CatalogPrice;
 }

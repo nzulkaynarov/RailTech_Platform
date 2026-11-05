@@ -128,6 +128,7 @@ import type {
   CatalogNamedRef,
   CatalogOffer,
   CatalogProductRef,
+  CatalogReviewInfo,
   CatalogUnit,
   CategoryRequest,
   CategoryRequestList,
@@ -24146,6 +24147,22 @@ export const getListCatalogItemsResponseCatalogNamedRefMock = (
   ...overrideResponse,
 });
 
+export const getListCatalogItemsResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getListCatalogItemsResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
 export const getListCatalogItemsResponseMock = (
   overrideResponse: Partial<Extract<CatalogItemPage, object>> = {},
 ): CatalogItemPage => ({
@@ -24178,6 +24195,11 @@ export const getListCatalogItemsResponseMock = (
     ]),
     docs_count: faker.number.int({ min: 0 }),
     proposals_count: faker.number.int({ min: 0 }),
+    review: faker.helpers.arrayElement([
+      { ...getListCatalogItemsResponseCatalogReviewInfoMock() },
+      null,
+    ]),
+    completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
   })),
   total: faker.number.int({ min: 0 }),
   page: faker.number.int({ min: 1 }),
@@ -24215,6 +24237,22 @@ export const getCreateCatalogItemResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -24359,6 +24397,19 @@ export const getCreateCatalogItemResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getCreateCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getCreateCatalogItemResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -24392,6 +24443,22 @@ export const getGetCatalogItemResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getGetCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -24530,6 +24597,16 @@ export const getGetCatalogItemResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getGetCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogMoneyMock() }, null]),
+  },
   ...overrideResponse,
 });
 
@@ -24563,6 +24640,22 @@ export const getUpdateCatalogItemResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -24707,6 +24800,19 @@ export const getUpdateCatalogItemResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getUpdateCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getUpdateCatalogItemResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -24763,6 +24869,22 @@ export const getPublishCatalogItemResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getPublishCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getPublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -24907,6 +25029,19 @@ export const getPublishCatalogItemResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getPublishCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getPublishCatalogItemResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -24940,6 +25075,22 @@ export const getUnpublishCatalogItemResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUnpublishCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getUnpublishCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -25084,6 +25235,225 @@ export const getUnpublishCatalogItemResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getUnpublishCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getUnpublishCatalogItemResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnCatalogItemResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnCatalogItemResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnCatalogItemResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnCatalogItemResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getReturnCatalogItemResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemDetail, object>> = {},
+): CatalogItemDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+  unit: faker.helpers.arrayElement([{ ...getReturnCatalogItemResponseCatalogUnitMock() }, null]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  vat_effective: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  category: faker.helpers.arrayElement([
+    { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  docs_count: faker.number.int({ min: 0 }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  brand_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  source_supplier: faker.helpers.arrayElement([
+    { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  proposals_count: faker.number.int({ min: 0 }),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([
+        { ...getReturnCatalogItemResponseCatalogMoneyMock() },
+        null,
+      ]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      delivery_basis: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lead_time: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      source: faker.helpers.arrayElement(Object.values(CatalogOfferSource)),
+      updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  tech_docs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.fromRegExp("^[a-z0-9_-]{1,32}$"),
+      kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_expired: faker.datatype.boolean(),
+      client_visible: faker.datatype.boolean(),
+      original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      size_bytes: faker.number.int({ min: 0 }),
+      previewable: faker.datatype.boolean(),
+    }),
+  ),
+  images: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      is_main: faker.datatype.boolean(),
+      sort_order: faker.number.int({ min: 0 }),
+      alt: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  origin: {
+    brand: faker.helpers.arrayElement([
+      { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    own: faker.helpers.arrayElement([
+      { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    effective: faker.helpers.arrayElement([
+      { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    source: faker.helpers.arrayElement(["item", "brand", "none"] as const),
+  },
+  warranty: {
+    company_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    terms: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    effective_months: faker.helpers.arrayElement([faker.number.int({ min: 0 }), null]),
+    source: faker.helpers.arrayElement(["item", "company", "none"] as const),
+  },
+  proposals: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      field: faker.helpers.arrayElement(Object.values(CatalogProposalField)),
+      current: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      proposed: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      supplier: faker.helpers.arrayElement([
+        { ...getReturnCatalogItemResponseCatalogNamedRefMock() },
+        null,
+      ]),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  publish: {
+    publishable: faker.datatype.boolean(),
+    missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+  },
+  review: faker.helpers.arrayElement([
+    { ...getReturnCatalogItemResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getReturnCatalogItemResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -25117,6 +25487,22 @@ export const getAcceptCatalogProposalResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getAcceptCatalogProposalResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getAcceptCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -25264,6 +25650,19 @@ export const getAcceptCatalogProposalResponseMock = (
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
   },
+  review: faker.helpers.arrayElement([
+    { ...getAcceptCatalogProposalResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getAcceptCatalogProposalResponseCatalogMoneyMock() },
+      null,
+    ]),
+  },
   ...overrideResponse,
 });
 
@@ -25297,6 +25696,22 @@ export const getRejectCatalogProposalResponseCatalogMoneyMock = (
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       null,
     ]),
+  },
+  ...overrideResponse,
+});
+
+export const getRejectCatalogProposalResponseCatalogReviewInfoMock = (
+  overrideResponse: Partial<CatalogReviewInfo> = {},
+): CatalogReviewInfo => ({
+  ...{
+    kind: faker.helpers.arrayElement(["card", "changes"] as const),
+    partner: faker.helpers.arrayElement([
+      { ...getRejectCatalogProposalResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    submitted_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    due_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    overdue: faker.datatype.boolean(),
   },
   ...overrideResponse,
 });
@@ -25443,6 +25858,19 @@ export const getRejectCatalogProposalResponseMock = (
     missing: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => faker.string.alpha({ length: { min: 10, max: 20 } }),
     ),
+  },
+  review: faker.helpers.arrayElement([
+    { ...getRejectCatalogProposalResponseCatalogReviewInfoMock() },
+    null,
+  ]),
+  completeness: faker.helpers.arrayElement([faker.number.int({ min: 0, max: 100 }), null]),
+  catalog_price: {
+    visibility: faker.helpers.arrayElement(["cabinet", "on_request"] as const),
+    source: faker.helpers.arrayElement(["item", "partner", "company"] as const),
+    price: faker.helpers.arrayElement([
+      { ...getRejectCatalogProposalResponseCatalogMoneyMock() },
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -25871,6 +26299,7 @@ export const getGetSupplierCabinetAccessResponseSupplierCabinetRelationshipMock 
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -26016,6 +26445,7 @@ export const getUpdateSupplierCabinetRightsResponseSupplierCabinetRelationshipMo
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -26121,6 +26551,7 @@ export const getInviteSupplierToCabinetResponseSupplierCabinetRelationshipMock =
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -26226,6 +26657,7 @@ export const getSuspendSupplierCabinetAccessResponseSupplierCabinetRelationshipM
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -26331,6 +26763,7 @@ export const getConfirmSupplierCrmClientResponseSupplierCabinetRelationshipMock 
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -26436,6 +26869,7 @@ export const getRejectSupplierCrmClientResponseSupplierCabinetRelationshipMock =
       "other",
     ] as const),
     modules: faker.helpers.arrayElements(["my_products", "catalog_requests"] as const),
+    catalog_price_visibility: faker.helpers.arrayElement(["", "cabinet", "on_request"] as const),
     status: faker.helpers.arrayElement(["invited", "active", "suspended"] as const),
     invited_at: faker.helpers.arrayElement([
       faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -35625,6 +36059,30 @@ export const getUnpublishCatalogItemMockHandler = (
   );
 };
 
+export const getReturnCatalogItemMockHandler = (
+  overrideResponse?:
+    | CatalogItemDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CatalogItemDetail> | CatalogItemDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/items/:id/return",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReturnCatalogItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getAcceptCatalogProposalMockHandler = (
   overrideResponse?:
     | CatalogItemDetail
@@ -36906,6 +37364,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetCatalogItemImageContentMockHandler(),
   getPublishCatalogItemMockHandler(),
   getUnpublishCatalogItemMockHandler(),
+  getReturnCatalogItemMockHandler(),
   getAcceptCatalogProposalMockHandler(),
   getRejectCatalogProposalMockHandler(),
   getListCatalogSuppliersMockHandler(),

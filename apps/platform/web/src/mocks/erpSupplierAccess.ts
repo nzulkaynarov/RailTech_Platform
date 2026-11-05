@@ -56,6 +56,7 @@ function seed(): Record<string, Entry> {
         role: "partner",
         kind: "manufacturer",
         modules: ["my_products"],
+        catalog_price_visibility: "",
         status: "active",
         invited_at: "2026-10-30T09:00:00+05:00",
         activated_at: "2026-10-30T11:20:00+05:00",
@@ -85,6 +86,7 @@ function seed(): Record<string, Entry> {
         role: "partner",
         kind: "supplier",
         modules: ["my_products", "catalog_requests"],
+        catalog_price_visibility: "",
         status: "invited",
         invited_at: "2026-11-04T09:00:00+05:00",
         activated_at: null,
@@ -110,6 +112,13 @@ function seed(): Record<string, Entry> {
 
 let state = seed();
 let nextContact = 600;
+
+/** Договорённость о ценах партнёра в каталоге (PART-3) — читает мок номенклатуры для «Цена в каталоге». */
+export function partnerPriceVisibility(
+  supplierId: string,
+): SupplierCabinetRelationship["catalog_price_visibility"] {
+  return state[supplierId]?.relationship?.catalog_price_visibility ?? "";
+}
 
 export function resetSupplierAccess(): void {
   state = seed();
@@ -273,9 +282,27 @@ export const erpSupplierAccessHandlers = [
       if (isResponse(who)) return who;
       const found = find(params["id"]);
       if (!found || !found[1].relationship) return missing();
-      const data = await body<{ modules?: unknown; kind?: SupplierCabinetRelationship["kind"] }>(
-        request,
-      );
+      const data = await body<{
+        modules?: unknown;
+        kind?: SupplierCabinetRelationship["kind"];
+        catalog_price_visibility?: SupplierCabinetRelationship["catalog_price_visibility"];
+      }>(request);
+      if (
+        data.catalog_price_visibility !== undefined &&
+        !["", "cabinet", "on_request"].includes(data.catalog_price_visibility)
+      )
+        return failure(
+          422,
+          "VALIDATION_FAILED",
+          "Проверьте заполнение полей.",
+          "validation_error",
+          "catalog_price_visibility",
+        );
+      if (data.catalog_price_visibility !== undefined)
+        found[1].relationship = {
+          ...found[1].relationship,
+          catalog_price_visibility: data.catalog_price_visibility,
+        };
       if (data.modules !== undefined) {
         const modules = cleanModules(data.modules);
         if (modules instanceof Response) return modules;
@@ -306,6 +333,7 @@ export const erpSupplierAccessHandlers = [
       role: "partner",
       kind: data.kind ?? current?.kind ?? "",
       modules: modules ?? current?.modules ?? [...ALLOWED],
+      catalog_price_visibility: current?.catalog_price_visibility ?? "",
       status: current?.activated_at ? "active" : "invited",
       invited_at: MOCK_NOW,
       activated_at: current?.activated_at ?? null,

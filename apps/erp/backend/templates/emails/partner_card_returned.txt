@@ -1,0 +1,13 @@
+{% load i18n %}{% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
+
+{% blocktranslate with name=product_name %}Карточка «{{ name }}» возвращена на доработку.{% endblocktranslate %}
+
+{% translate "Причина:" %} {{ reason }}
+{% if issues %}
+{% translate "Что исправить:" %}
+{% for issue in issues %}- {{ issue.label }}: {{ issue.comment }}
+{% endfor %}{% endif %}
+{% translate "Исправьте карточку и отправьте её на проверку снова:" %}
+{{ card_url }}
+
+— {% blocktranslate with platform=platform_name|default:'ERP' %}Команда {{ platform }}{% endblocktranslate %}

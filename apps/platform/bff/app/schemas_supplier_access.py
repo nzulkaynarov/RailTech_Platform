@@ -17,6 +17,8 @@ CabinetRole = Literal["client", "partner"]
 RelationshipStatus = Literal["invited", "active", "suspended"]
 PartnerKind = Literal["", "manufacturer", "supplier", "principal", "other"]
 PartnerModule = Literal["my_products", "catalog_requests"]
+# PART-3: цены товаров партнёра в каталоге — пусто «как у компании», показывать, по запросу
+PartnerPriceVisibility = Literal["", "cabinet", "on_request"]
 Language = Literal["ru", "uz", "en"]
 CrmClientStatus = Literal[
     "none", "requested", "pending_confirmation", "held", "unverified", "linked", "conflict"
@@ -47,6 +49,7 @@ class SupplierCabinetRelationship(Out):
     role: Literal["partner"]
     kind: PartnerKind
     modules: list[PartnerModule]
+    catalog_price_visibility: PartnerPriceVisibility
     status: RelationshipStatus
     invited_at: str | None
     activated_at: str | None
@@ -98,6 +101,7 @@ class SupplierCabinetContactUpdate(Patch):
 class SupplierCabinetRightsUpdate(Patch):
     modules: list[PartnerModule] | None = None
     kind: PartnerKind | None = None
+    catalog_price_visibility: PartnerPriceVisibility | None = None
 
 
 class SupplierCabinetInvite(Body):
@@ -161,6 +165,7 @@ def to_access(raw: Mapping[str, Any]) -> SupplierCabinetAccess:
                 "role": "partner",
                 "kind": text(relationship.get("kind")),
                 "modules": list(relationship.get("modules") or []),
+                "catalog_price_visibility": text(relationship.get("catalog_price_visibility")),
                 "status": relationship.get("status"),
                 "invited_at": relationship.get("invited_at"),
                 "activated_at": relationship.get("activated_at"),

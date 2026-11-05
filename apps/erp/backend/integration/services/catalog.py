@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
-from catalog.published import project, published_products
+from catalog.published import project_many, published_products
 
 
 def search_published_catalog(query: str, mode: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -19,8 +19,7 @@ def search_published_catalog(query: str, mode: str, limit: int = 10) -> List[Dic
 
     qs = published_products().filter(name__icontains=clean_q)[:safe_limit]
     items = []
-    for p in qs:
-        proj = project(p, mode=mode)
+    for proj in project_many(qs, mode=mode):
         item: Dict[str, Any] = {
             "erp_product_id": proj["id"],
             "kind": proj["kind"],
