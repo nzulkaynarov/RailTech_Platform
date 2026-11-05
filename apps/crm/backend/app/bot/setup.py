@@ -179,6 +179,7 @@ async def bot_lifespan(
                 start_links=StartLinkService(
                     container.session_factory,
                     link_key(container.settings.jwt_secret.get_secret_value().encode("utf-8")),
+                    contacts=container.contact_telegram,
                 ),
                 staff_link=container.staff_telegram_link,
             )

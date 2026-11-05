@@ -47,7 +47,8 @@ def component(name: str) -> dict:
 
 
 def error_codes() -> list[str]:
-    return list(load_contract()["components"]["schemas"]["ErrorCode"]["enum"])
+    # ErrorCode — открытое множество (CONTRACTS §7.2): известные коды — `x-extensible-enum`, не `enum`.
+    return list(load_contract()["components"]["schemas"]["ErrorCode"]["x-extensible-enum"])
 
 
 def response_schema(path: str, method: str, status: str = "200") -> dict:

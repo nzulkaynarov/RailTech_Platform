@@ -21,7 +21,10 @@ CODE_TYPE: Final = "uz.railtech.erp.quote.acceptance_code_requested.v1"
 #: Приглашение в кабинет через Telegram (D1-9): ERP в Telegram не пишет — доставляет бот CRM,
 #: inline.
 INVITE_TYPE: Final = "uz.railtech.erp.invite.requested.v1"
-INLINE_TYPES: Final = frozenset({CODE_TYPE, INVITE_TYPE})
+#: Проверочное сообщение контакту (NOTIFY-1): разовое, inline —
+#: `app/services/contact_telegram_test.py`.
+TEST_TYPE: Final = "uz.railtech.erp.contact.telegram_test_requested.v1"
+INLINE_TYPES: Final = frozenset({CODE_TYPE, INVITE_TYPE, TEST_TYPE})
 #: Типы ERP не для CRM: КП на одобрение директором адресовано EDS (EDS-03), в нём
 #: себестоимость и маржа; статусы договора (D2-5) — проекция реестра EDS. CRM на них не подписана
 #: (`packages/contracts/bus/subscriptions.yaml`) и обработчика не регистрирует.
@@ -38,6 +41,8 @@ NOT_FOR_CRM: Final = frozenset(
 OWN_HANDLER: Final = frozenset(
     {
         "uz.railtech.erp.mail.requested.v1",
+        # NOTIFY-1: контакт отключил Telegram в кабинете — `app/services/contact_telegram.py`.
+        "uz.railtech.erp.contact.telegram_unlink_requested.v1",
         # CHAT-1: сообщение в чат кабинета — беседа `cabinet` (`app/services/cabinet_chat.py`).
         "uz.railtech.erp.cabinet.message_posted.v1",
     }

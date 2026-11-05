@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Download, PackageOpen, Search, SearchX, Upload, X } from 'lucide-react';
 
-import { apiErrorKey } from '@/api/errors';
+import { apiErrorKey, rowErrorKey } from '@/api/errors';
 import {
   listPartnerProducts,
   type PartnerConfirmResult,
@@ -468,7 +468,7 @@ function NoticeBanner({ notice, names, onClose }: { notice: Notice; names: Reado
             <ul className="list-disc pl-5">
               {failed.slice(0, 5).map((error) => (
                 <li key={`${error.id}-${error.code}`}>
-                  {names.get(error.id) ?? t('partner.cardNumber', { id: error.id })}: {t(`${notice.kind === 'submitted' ? 'partner.submitted.code' : 'partner.confirmed.code'}.${error.code}`)}
+                  {names.get(error.id) ?? t('partner.cardNumber', { id: error.id })}: {t(rowErrorKey(notice.kind === 'submitted' ? 'partner.submitted.code' : 'partner.confirmed.code', error.code))}
                 </li>
               ))}
             </ul>

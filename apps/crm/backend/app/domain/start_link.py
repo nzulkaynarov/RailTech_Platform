@@ -10,7 +10,10 @@
 * `lead_<id>_<срок>_<подпись>` — ссылка из письма-подтверждения, выданная самой системой (id и
   срок в base36, подпись HMAC на отдельном ключе `link_key`), живёт `LEAD_LINK_TTL`. Склеивает
   чат с запросом с сайта. Одноразовость — состоянием: если у запроса уже есть Telegram-аккаунт,
-  он обезличен, а чат принадлежит клиенту (`client_id`), ссылка не срабатывает.
+  он обезличен, а чат принадлежит клиенту (`client_id`), ссылка не срабатывает;
+* `tg_<48 символов base64url>` — ссылка привязки Telegram контактом из кабинета (NOTIFY-1,
+  ADR-0023 п. 3): подписана
+  секретом пары `erp → crm`, 15 минут, одноразовая; разбор и подпись — `domain/contact_link.py`.
 
 Всё остальное — `unknown`: бот просто здоровается. Чистые функции без I/O.
 """
@@ -22,13 +25,15 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Final, Literal
 
+from app.domain.contact_link import looks_like as looks_like_contact_link
+
 LEAD_LINK_TTL: Final = timedelta(days=14)
 _SIG_LEN: Final = 16
 _DEAL: Final = re.compile(r"^deal_(\d{1,12})$")
 _LEAD: Final = re.compile(r"^lead_([0-9a-z]{1,12})_([0-9a-z]{1,12})_([0-9a-f]{16})$")
 _INFO: Final = b"rt-crm/start-link/v1"
 
-Kind = Literal["none", "web", "deal", "lead", "unknown"]
+Kind = Literal["none", "web", "deal", "lead", "contact", "unknown"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,6 +57,8 @@ def parse_start_payload(raw: str | None) -> StartLink:
         return StartLink("deal", deal_id=int(deal.group(1)))
     if _LEAD.match(text):
         return StartLink("lead", raw=text)
+    if looks_like_contact_link(text):
+        return StartLink("contact", raw=text)
     return StartLink("unknown")
 
 
