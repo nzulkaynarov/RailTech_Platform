@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from io import BytesIO
+
 import pytest
 from pypdf import PdfReader
 

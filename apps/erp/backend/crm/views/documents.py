@@ -577,7 +577,9 @@ class GeneratedDocumentViewSet(
             return Response({"detail": "DOCUMENT_CANCELLED"}, status=409)
         from crm.services.documents import generated_is_draft, pdf_is_stale
 
-        if not document.pdf_file or pdf_is_stale("generated", document.pk, document.pdf_file, generated_is_draft(document)):  # SIGN-1
+        if not document.pdf_file or pdf_is_stale(
+            "generated", document.pk, document.pdf_file, generated_is_draft(document)
+        ):  # SIGN-1
             from crm.views._pdf import pdf_generating_response
 
             return pdf_generating_response("generated", document.id)

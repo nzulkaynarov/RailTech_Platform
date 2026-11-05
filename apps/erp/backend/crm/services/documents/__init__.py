@@ -19,11 +19,11 @@ from .draft import (
     act_is_draft,
     contract_is_draft,
     draft_context,
-    remember_pdf_state,
     generated_is_draft,
     invoice_is_draft,
     pdf_is_stale,
     quote_is_draft,
+    remember_pdf_state,
 )
 from .preview import PREVIEW_DOC_TYPES, render_document_profile_preview_html
 from .projection import client_optional_items, client_projection_items

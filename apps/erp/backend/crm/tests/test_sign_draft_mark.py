@@ -256,8 +256,9 @@ def test_quote_uses_the_common_mark_until_frozen(world):
     quote.save(update_fields=["number", "frozen_at"])
     from crm.services import QuoteLifecycleService
 
-    with patch("weasyprint.HTML", _FakeHTML), patch(
-        "crm.services.quotes.lifecycle.assert_renderable", return_value=world["seller"]
+    with (
+        patch("weasyprint.HTML", _FakeHTML),
+        patch("crm.services.quotes.lifecycle.assert_renderable", return_value=world["seller"]),
     ):
         QuoteLifecycleService.generate_pdf(quote.pk)
     html = _FakeHTML.last
@@ -266,8 +267,9 @@ def test_quote_uses_the_common_mark_until_frozen(world):
     quote.refresh_from_db()
     quote.frozen_at = timezone.now()
     quote.save(update_fields=["frozen_at"])
-    with patch("weasyprint.HTML", _FakeHTML), patch(
-        "crm.services.quotes.lifecycle.assert_renderable", return_value=world["seller"]
+    with (
+        patch("weasyprint.HTML", _FakeHTML),
+        patch("crm.services.quotes.lifecycle.assert_renderable", return_value=world["seller"]),
     ):
         QuoteLifecycleService.generate_pdf(quote.pk)
     assert MARK not in _FakeHTML.last and "КП-SIGN1-0001" in _FakeHTML.last
@@ -305,9 +307,7 @@ def api(world):
 
 
 @pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("kind", "route"), [("contract", "contracts"), ("invoice", "invoices"), ("act", "acts")]
-)
+@pytest.mark.parametrize(("kind", "route"), [("contract", "contracts"), ("invoice", "invoices"), ("act", "acts")])
 def test_download_does_not_serve_a_draft_pdf_without_the_mark(world, api, kind, route):
     make, draft_status, issued_status, _, _ = CASES[kind]
     doc = make(world, draft_status)

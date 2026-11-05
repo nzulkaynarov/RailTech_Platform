@@ -17,7 +17,6 @@ from typing import Any
 from crm.constants import ActStatusCode, ContractStatusCode, GeneratedDocumentStatusCode, InvoiceStatusCode
 
 
-
 def draft_context(is_draft: bool, *, offer: bool = False) -> dict[str, Any]:
     """Поля контекста шаблона `_document_base.html`; для выпущенного документа — без знака.
 
