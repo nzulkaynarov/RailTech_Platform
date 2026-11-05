@@ -279,6 +279,7 @@ def _render_contract_pdf(contract) -> None:
     HTML(string=html_string).write_pdf(buf)
     filename = f"Contract_{contract.number}.pdf"
     save_rendered_pdf(contract, filename, ContentFile(buf.getvalue()))
+    remember_pdf_state("contract", contract.pk, is_draft)
 
 
 def viewer_can_sign_client(user, contract) -> bool:

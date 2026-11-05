@@ -332,3 +332,16 @@ def test_download_does_not_serve_a_draft_pdf_without_the_mark(world, api, kind, 
     with patch(RENDER_DELAY) as delay:
         assert api.get(url).status_code == 202
     delay.assert_called_once_with(kind, doc.pk)
+
+
+@pytest.mark.django_db
+def test_contract_draft_code_path_remembers_state(world, api):
+    """Путь договора без шаблона компании запоминает состояние проекта и не зацикливает скачивание."""
+    DocumentTemplate.objects.filter(company__isnull=True).delete()
+    doc = _contract(world, "DRAFT")
+    _render(_contract_renderer(), doc)
+    assert not pdf_is_stale("contract", doc.pk, doc.pdf_file, True)
+    with patch(RENDER_DELAY) as delay:
+        res = api.get(f"/api/v1/crm/contracts/{doc.pk}/download-pdf/")
+    assert res.status_code == 200
+    delay.assert_not_called()
