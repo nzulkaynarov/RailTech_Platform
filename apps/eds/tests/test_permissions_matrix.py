@@ -39,6 +39,7 @@ def concrete(path: str) -> str:
         .replace("{file_id}", GHOST)
         .replace("{event_id}", GHOST)
         .replace("{instruction_id}", GHOST)
+        .replace("{authority_id}", GHOST)
         .replace("{delivery_id}", "1")
         .replace("{subscriber}", "erp")
     )

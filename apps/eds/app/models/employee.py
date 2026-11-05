@@ -1,13 +1,14 @@
 """Проекция сотрудников из событий `uz.railtech.identity.user.*.v1` (источник истины — CRM, ADR-0015)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     ARRAY,
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     String,
     Text,
@@ -40,6 +41,11 @@ class Employee(Base):
     permissions_eds: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))
     # Разделы каталога (`erp.calc.goods` -> `full`) из `user.permissions.sections` (D1-8): зона исполнителя.
     sections: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
+    # Замещение на время отсутствия из `user.deputy` (SIGN-2, ADR-0024 п. 2): заместитель получает задачи подписи, но
+    # прав на подпись замещение не даёт. Нет замещения — все три поля пусты. Пишет только обработчик шины.
+    deputy_crm_user_id: Mapped[int | None] = mapped_column(BigInteger)
+    deputy_from: Mapped[date | None] = mapped_column(Date)
+    deputy_to: Mapped[date | None] = mapped_column(Date)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_event_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))

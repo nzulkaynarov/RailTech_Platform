@@ -22,6 +22,8 @@ class EdsPermission(StrEnum):
     BUS_MANAGE = "bus.manage"  # admin full: журнал шины и повторы (W13-A2)
     # crm.clients full: загрузить свой файл (письмо директору к «Создать заявку») и читать только свои файлы (D1-2b).
     FILES_UPLOAD = "files.upload"
+    # eds.signing.manage (SIGN-2, ADR-0024): реестр полномочий подписи — выдать, изменить, отозвать.
+    SIGNING_MANAGE = "signing.manage"
 
 
 KNOWN = frozenset(p.value for p in EdsPermission)
