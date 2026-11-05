@@ -2684,6 +2684,43 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/documents/{id}/sign:
+    post:
+      tags: [eds-documents]
+      operationId: signEdsDocument
+      summary: 'EDS · Подписать документ уполномоченным лицом'
+      description: >-
+        EDS `POST /documents/{id}/sign`: подписание исходящего письма или официального документа уполномоченным
+        лицом из реестра полномочий подписи (SIGN-3, ADR-0024).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdsDocumentSignIn'
+      responses:
+        '200':
+          description: Документ успешно подписан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /eds/letterhead:
     get:
       tags: [eds-documents]
@@ -17207,6 +17244,51 @@ components:
         can_request_registration:
           type: boolean
           description: Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю
+        signed_at:
+          type: [string, 'null']
+          format: date-time
+          description: Дата и время подписания документа
+        signed_by:
+          oneOf:
+            - $ref: '#/components/schemas/EdsPerson'
+            - type: 'null'
+        signing_authority_id:
+          type: [string, 'null']
+          format: uuid
+        signatory_basis:
+          type: [string, 'null']
+          enum: [charter, order, power_of_attorney, null]
+        signatory_basis_text:
+          type: [string, 'null']
+        acting_for:
+          oneOf:
+            - $ref: '#/components/schemas/EdsPerson'
+            - type: 'null'
+        verification_code:
+          type: [string, 'null']
+        verification_url:
+          type: [string, 'null']
+        dispatch_method:
+          type: [string, 'null']
+          enum: [email, paper, courier, edo, other, null]
+        can_sign:
+          type: boolean
+          description: Пользователь может подписать документ (черновик, уполномоченное лицо)
+    EdsDocumentSignIn:
+      type: object
+      additionalProperties: false
+      description: Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024)
+      properties:
+        authority_id:
+          type: [string, 'null']
+          format: uuid
+        dispatch_method:
+          type: string
+          enum: [email, paper, courier, edo, other]
+          default: email
+        send:
+          type: boolean
+          default: true
     EdsReplyTo:
       type: object
       additionalProperties: false

@@ -47,6 +47,7 @@ class Settings(BaseSettings):
     # Задач очереди одновременно в одном воркере: pump шины держит воркер до 20 с, пока подписчик не отвечает.
     worker_concurrency: int = Field(default=4, ge=1, le=32)
     health_timeout_s: float = Field(default=2.0, gt=0, le=10)
+    cabinet_domain: str = Field(default="cabinet.railtech.uz", validation_alias="CABINET_DOMAIN")
     version: str = Field(default="dev", validation_alias="EDS_VERSION")
 
     @field_validator("platform_sso_secret")

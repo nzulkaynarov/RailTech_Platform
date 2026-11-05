@@ -48,6 +48,7 @@ from app.schemas_eds_documents import (
     EdsDocumentIn,
     EdsDocumentPage,
     EdsDocumentPdf,
+    EdsDocumentSignIn,
     EdsDocumentUpdateIn,
     EdsFile,
     EdsLetterhead,
@@ -341,6 +342,22 @@ async def send_document(id: DocumentId, authed: Registrar) -> EdsDocument:
     proxy = _proxy(authed)
     body = await proxy.request("POST", f"{API}/documents/{id}/send")
     return await _present(proxy, body, authed, registrar=True)
+
+
+@router.post(
+    "/eds/documents/{id}/sign",
+    response_model=EdsDocument,
+    operation_id="signEdsDocument",
+)
+async def sign_document(
+    id: DocumentId,
+    authed: Reader,
+    body: EdsDocumentSignIn | None = None,
+) -> EdsDocument:
+    proxy = _proxy(authed)
+    payload = body.model_dump(exclude_none=True) if body else {}
+    data = await proxy.request("POST", f"{API}/documents/{id}/sign", json=payload)
+    return await _present(proxy, data, authed)
 
 
 @router.get("/eds/letterhead", response_model=EdsLetterhead, operation_id="getEdsLetterhead")

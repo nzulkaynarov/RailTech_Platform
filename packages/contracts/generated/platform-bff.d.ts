@@ -1312,6 +1312,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/documents/{id}/sign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Подписать документ уполномоченным лицом
+     * @description EDS `POST /documents/{id}/sign`: подписание исходящего письма или официального документа уполномоченным лицом из реестра полномочий подписи (SIGN-3, ADR-0024).
+     */
+    post: operations["signEdsDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/letterhead": {
     parameters: {
       query?: never;
@@ -9398,6 +9418,36 @@ export interface components {
       can_register?: boolean;
       /** @description Автор черновика письма без права регистрировать — может «Передать на регистрацию» делопроизводителю */
       can_request_registration?: boolean;
+      /**
+       * Format: date-time
+       * @description Дата и время подписания документа
+       */
+      signed_at?: string | null;
+      signed_by?: components["schemas"]["EdsPerson"] | null;
+      /** Format: uuid */
+      signing_authority_id?: string | null;
+      /** @enum {string|null} */
+      signatory_basis?: "charter" | "order" | "power_of_attorney" | null;
+      signatory_basis_text?: string | null;
+      acting_for?: components["schemas"]["EdsPerson"] | null;
+      verification_code?: string | null;
+      verification_url?: string | null;
+      /** @enum {string|null} */
+      dispatch_method?: "email" | "paper" | "courier" | "edo" | "other" | null;
+      /** @description Пользователь может подписать документ (черновик, уполномоченное лицо) */
+      can_sign?: boolean;
+    };
+    /** @description Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024) */
+    EdsDocumentSignIn: {
+      /** Format: uuid */
+      authority_id?: string | null;
+      /**
+       * @default email
+       * @enum {string}
+       */
+      dispatch_method: "email" | "paper" | "courier" | "edo" | "other";
+      /** @default true */
+      send: boolean;
     };
     /** @description Входящее письмо, на которое отвечает ИСХ (EDS-REPLY-1) */
     EdsReplyTo: {
@@ -17508,6 +17558,42 @@ export interface operations {
     requestBody?: never;
     responses: {
       /** @description Отправка запрошена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  signEdsDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["EdsDocumentSignIn"];
+      };
+    };
+    responses: {
+      /** @description Документ успешно подписан */
       200: {
         headers: {
           [name: string]: unknown;

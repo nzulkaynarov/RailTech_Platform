@@ -986,6 +986,33 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/{document_id}/sign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подписать исходящее письмо или документ уполномоченным лицом (SIGN-3, ADR-0024)
+     * @description Подписание официального документа уполномоченным лицом из реестра полномочий (`signing_authorities`).
+     *     Подписант проверяется через `signing_resolve` (вид документа, сумма, валюта, дата, срок полномочия, замещение).
+     *     По правилу «автор ≠ подписант» автор черновика не вправе подписать исходящее письмо сам, если в организации
+     *     есть другие уполномоченные лица. При подписании документу присваивается регистрационный номер `ИСХ-NNN/ГГ`
+     *     (для исходящих писем), генерируется криптографический код проверки подлинности (`verification_code`),
+     *     статус переходит в `sent`, рендерится итоговый PDF/A без плашки «ПРОЕКТ», закрываются связанные поручения
+     *     по входящему письму, публикуется событие `uz.railtech.eds.document.signed.v1`, и при `dispatch_method = email`
+     *     и `send = true` запускается отправка адресату.
+     */
+    post: operations["signDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/documents/{document_id}/payment": {
     parameters: {
       query?: never;
@@ -2713,6 +2740,37 @@ export interface components {
        * @default false
        */
       send: boolean;
+      /**
+       * @description Способ отправки документа адресату (EDS-REPLY-2, ADR-0024)
+       * @default email
+       */
+      dispatch_method: components["schemas"]["DispatchMethod"] | null;
+    };
+    /**
+     * @description Способ отправки исходящего документа адресату (EDS-REPLY-2, ADR-0024):
+     *     `email` — электронная почта через CRM;
+     *     `paper` — выдача на бумаге на руки;
+     *     `courier` — отправка курьерской службой;
+     *     `edo` — отправка через электронный документооборот (E-IMZO / Didox);
+     *     `other` — иной способ.
+     * @enum {string}
+     */
+    DispatchMethod: "email" | "paper" | "courier" | "edo" | "other";
+    /** @description Параметры подписания документа уполномоченным лицом (SIGN-3, ADR-0024) */
+    DocumentSignIn: {
+      /**
+       * @description Идентификатор полномочия из реестра `signing_authorities`. Если не передан (`null`), система
+       *     автоматически подбирает действующее полномочие текущего пользователя по виду документа и сумме.
+       */
+      authority_id?: components["schemas"]["Uuid"] | null;
+      /** @default email */
+      dispatch_method: components["schemas"]["DispatchMethod"];
+      /**
+       * @description Только при `dispatch_method = email`: отправить письмо адресату по электронной почте сразу
+       *     после подготовки итогового подписанного PDF.
+       * @default true
+       */
+      send: boolean;
     };
     /** @description «Оплачено» — дата и сумма платежа, платёжка бухгалтера */
     DocumentPaymentIn: {
@@ -2825,6 +2883,30 @@ export interface components {
        * @description Маршрут завершён окончательно — документ в архиве (`document.archived`)
        */
       archived_at: string | null;
+      /**
+       * Format: date-time
+       * @description Дата и время подписания документа уполномоченным лицом (SIGN-3, ADR-0024)
+       */
+      signed_at?: string | null;
+      /** @description Фактический подписант документа */
+      signed_by?: components["schemas"]["PersonRef"] | null;
+      /** @description Полномочие из реестра `signing_authorities`, по которому подписан документ */
+      signing_authority_id?: components["schemas"]["Uuid"] | null;
+      /**
+       * @description Основание подписи (устав, приказ, доверенность)
+       * @enum {string|null}
+       */
+      signatory_basis?: "charter" | "order" | "power_of_attorney" | null;
+      /** @description Текст отметки основания для печатной формы */
+      signatory_basis_text?: string | null;
+      /** @description За кого действовал подписант в случае замещения */
+      acting_for?: components["schemas"]["PersonRef"] | null;
+      /** @description Код проверки подлинности (ADR-0024 п. 5) */
+      verification_code?: string | null;
+      /** @description Ссылка публичной проверки подлинности (/v/<код>) */
+      verification_url?: string | null;
+      /** @description Способ отправки документа адресату */
+      dispatch_method?: components["schemas"]["DispatchMethod"] | null;
     };
     /** @enum {string} */
     ApprovalTemplate: "memo" | "application" | "report" | "quote";
@@ -4535,6 +4617,37 @@ export interface operations {
     };
     responses: {
       /** @description Отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  signDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["DocumentSignIn"];
+      };
+    };
+    responses: {
+      /** @description Документ успешно подписан */
       200: {
         headers: {
           [name: string]: unknown;

@@ -13,16 +13,38 @@ from dataclasses import dataclass
 from html import escape
 from typing import Any
 
+import qrcode
+import qrcode.image.svg
+
 from .contracts import clean_text
 from .css import PageSetup, stylesheet
 from .formatters import format_date
-from .labels import DRAFT_MARK, EXECUTOR, MISSING_BLOCK, NO_NUMBER, REPLY_TO, SIGN, STAMP, number_line
+from .labels import (
+    DRAFT_MARK,
+    EXECUTOR,
+    MISSING_BLOCK,
+    NO_NUMBER,
+    REPLY_TO,
+    SIGN,
+    STAMP,
+    VERIFY_CODE,
+    VERIFY_QR_NOTE,
+    number_line,
+)
 from .model import DocumentMeta, Lang, Layout, Letterhead
 from .resolve import Node
 
 LOGO_URL = "rtdocs:logo"
 _SAFE_HREF = re.compile(r"^(https?://|mailto:|tel:)[^\s<>\"']+$")
 _BLANK = "_______________"
+
+
+def generate_qr_svg(url: str) -> str:
+    """Генерация чистого векторного SVG QR-кода для встраивания в HTML печатной формы."""
+    img = qrcode.make(url, image_factory=qrcode.image.svg.SvgPathImage, box_size=6)
+    return img.to_string().decode("utf-8")
+
+
 _LAYOUT_CLASS = {
     Layout.LETTER: "rt-layout-letter",
     Layout.INTERNAL: "rt-layout-internal",
@@ -44,9 +66,10 @@ class HtmlOptions:
 
 
 class _Writer:
-    def __init__(self, lang: Lang, options: HtmlOptions) -> None:
+    def __init__(self, lang: Lang, options: HtmlOptions, meta: DocumentMeta | None = None) -> None:
         self.lang = lang
         self.options = options
+        self.meta = meta or DocumentMeta()
         self.out: list[str] = []
 
     def w(self, *parts: str) -> None:
@@ -181,13 +204,18 @@ class _Writer:
     def signature(self, node: Mapping[str, Any]) -> None:
         parties: list[Mapping[str, Any]] = list(node["parties"])
         self.w('<table class="rt-signature"><tr>')
-        for party in [*parties, *([{}] if len(parties) == 1 else [])]:
+        for i, party in enumerate([*parties, *([{}] if len(parties) == 1 else [])]):
             self.w("<td>")
             if party:
                 if party.get("role"):
                     self.w(f'<div class="rt-sign-role">{self.field(party["role"])}</div>')
                 if party.get("position"):
                     self.w(f"<div>{self.field(party['position'])}</div>")
+                # Основание полномочия подписи (SIGN-3, ADR-0024 п. 5): устав — без отметки
+                basis = party.get("basis") or (self.meta.basis_text if i == 0 else None)
+                if basis:
+                    basis_html = self.field(basis) if isinstance(basis, tuple) else e(basis)
+                    self.w(f'<div class="rt-sign-basis">{basis_html}</div>')
                 self.w('<div class="rt-sign-line"></div>')
                 name = self.field(party["name"]) if party.get("name") else ""
                 self.w(f'<div class="rt-sign-caption">{e(SIGN[self.lang])}{" · " + name if name else ""}</div>')
@@ -266,15 +294,41 @@ def _letter_meta(w: _Writer, meta: DocumentMeta, layout: Layout) -> None:
             number_html = f'<span class="rt-docno-draft">{number_html}</span>'
         elif meta.number:
             # Номер документа — бегущий колонтитул со 2-й страницы (string-set на .rt-docno)
+            ref_label = meta.number
+            if meta.verification_code:
+                ref_label = f"{meta.number} · {VERIFY_CODE[lang]}{meta.verification_code}"
             number_html = number_html.replace(
                 e(meta.number), f'<span class="rt-docno-inline">{e(meta.number)}</span>', 1
             )
+            number_html += f'<span class="rt-running-docref">{e(ref_label)}</span>'
         w.w(f"<div>{number_html}</div>")
+    if not draft and meta.verification_code:
+        code_html = f"<strong>{e(meta.verification_code)}</strong>"
+        w.w(f'<div class="rt-verify-code-inline">{e(VERIFY_CODE[lang])}{code_html}</div>')
     if meta.reply_to:
         w.w(f"<div>{e(REPLY_TO[lang] + meta.reply_to)}</div>")
     w.w('</td><td class="rt-addressee">')
     w.w("<br>".join(e(line) for line in meta.addressee))
     w.w("</td></tr></table>")
+
+
+def _render_verification_block(w: _Writer, meta: DocumentMeta) -> None:
+    """Блок проверки подлинности с QR-кодом на последней странице (ADR-0024 п. 5)."""
+    lang = w.lang
+    url = meta.verification_url or (
+        f"https://cabinet.railtech.uz/v/{meta.verification_code}" if meta.verification_code else ""
+    )
+    if not url:
+        return
+    qr_svg = generate_qr_svg(url)
+    w.w('<div class="rt-verify-block">')
+    w.w(f'<div class="rt-verify-qr">{qr_svg}</div>')
+    w.w('<div class="rt-verify-info">')
+    w.w(f'<div class="rt-verify-title">{e(VERIFY_QR_NOTE[lang])}</div>')
+    if meta.verification_code:
+        w.w(f'<div class="rt-verify-code">{e(VERIFY_CODE[lang])}<strong>{e(meta.verification_code)}</strong></div>')
+    w.w(f'<div class="rt-verify-url">{e(url)}</div>')
+    w.w("</div></div>")
 
 
 def build_html(
@@ -287,7 +341,7 @@ def build_html(
     options: HtmlOptions,
 ) -> str:
     """HTML всего документа: бланк, реквизиты, тело, подписи, колонтитулы."""
-    w = _Writer(lang, options)
+    w = _Writer(lang, options, meta=meta)
     layout = setup.layout
     title = meta.title or letterhead.company_name
     w.w(f'<!DOCTYPE html><html lang="{_LANG_ATTR[lang]}"><head><meta charset="utf-8"><title>{e(title)}</title>')
@@ -306,6 +360,8 @@ def build_html(
         w.w(f'<h1 class="rt-title">{e(meta.title)}</h1>')
     w.w('<main class="rt-body">')
     w.blocks(content)
+    if not options.draft and (meta.verification_code or meta.verification_url):
+        _render_verification_block(w, meta)
     w.w("</main>")
     if meta.executor and layout is not Layout.COMMERCIAL:
         # Бегущий элемент в конце потока: появляется только на последней странице (внизу слева).

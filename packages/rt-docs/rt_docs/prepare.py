@@ -85,10 +85,10 @@ def prepare(
     clean_body, clean_blocks, catalog = checked_input(body, blocks, catalog, contracts_dir)
     given: Mapping[str, Value] = values or {}
     if draft:
-        # Номер и дата проекта не печатаются, даже если вызывающий передал их переменными.
+        # Номер, дата и код проверки проекта не печатаются, даже если вызывающий передал их.
         lang: Lang = clean_body["lang"]
         given = {**given, "document.number": NO_NUMBER[lang], "document.date": NO_DATE}
-        meta = replace(meta or DocumentMeta(), number=None, date=None)
+        meta = replace(meta or DocumentMeta(), number=None, date=None, verification_code=None, verification_url=None)
     resolved = resolve(clean_body, values=given, blocks=clean_blocks, catalog=catalog)
     page: Mapping[str, Any] = clean_body.get("page") or {}
     meta = meta or DocumentMeta()
@@ -103,6 +103,9 @@ def prepare(
             *meta.addressee,
             meta.reply_to or "",
             meta.executor or "",
+            meta.basis_text or "",
+            meta.verification_code or "",
+            meta.verification_url or "",
         ]
     )
     warnings = resolved.warnings()

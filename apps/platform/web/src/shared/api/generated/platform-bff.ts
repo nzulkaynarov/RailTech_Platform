@@ -129,6 +129,7 @@ import type {
   EdsDocumentIn,
   EdsDocumentPage,
   EdsDocumentPdf,
+  EdsDocumentSignIn,
   EdsDocumentUpdateIn,
   EdsFile,
   EdsFileUpload,
@@ -9429,6 +9430,138 @@ export const useSendEdsDocument = <
   TContext
 > => {
   return useMutation(getSendEdsDocumentMutationOptions(options), queryClient);
+};
+
+export const getSignEdsDocumentUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}/sign`;
+};
+
+/**
+ * EDS `POST /documents/{id}/sign`: подписание исходящего письма или официального документа уполномоченным лицом из реестра полномочий подписи (SIGN-3, ADR-0024).
+ * @summary EDS · Подписать документ уполномоченным лицом
+ */
+export const signEdsDocument = async (
+  id: string,
+  edsDocumentSignIn?: EdsDocumentSignIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsDocument>(getSignEdsDocumentUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsDocumentSignIn),
+  });
+};
+
+export const getSignEdsDocumentMutationKey = () => ["signEdsDocument"] as const;
+
+export const getSignEdsDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof signEdsDocument>>,
+    TError,
+    SignEdsDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof signEdsDocument>>,
+  TError,
+  SignEdsDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSignEdsDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof signEdsDocument>>,
+    SignEdsDocumentMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return signEdsDocument(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SignEdsDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof signEdsDocument>>
+>;
+export type SignEdsDocumentMutationBody = EdsDocumentSignIn | undefined;
+export type SignEdsDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SignEdsDocumentMutationVariables = { id: string; data?: EdsDocumentSignIn };
+
+/**
+ * @summary EDS · Подписать документ уполномоченным лицом
+ */
+export const useSignEdsDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof signEdsDocument>>,
+      TError,
+      SignEdsDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof signEdsDocument>>,
+  TError,
+  SignEdsDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getSignEdsDocumentMutationOptions(options), queryClient);
 };
 
 export const getGetEdsLetterheadUrl = () => {

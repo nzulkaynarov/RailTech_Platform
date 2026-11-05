@@ -233,6 +233,15 @@ class _RawDocument(BaseModel):
     decisions: list[_RawDecision]
     created_at: Any
     updated_at: Any
+    signed_at: Any = None
+    signed_by: EdsPerson | None = None
+    signing_authority_id: str | None = None
+    signatory_basis: str | None = None
+    signatory_basis_text: str | None = None
+    acting_for: EdsPerson | None = None
+    verification_code: str | None = None
+    verification_url: str | None = None
+    dispatch_method: str | None = None
 
 
 class _RawStep(BaseModel):
@@ -335,17 +344,30 @@ async def present(
             "created_at": raw.created_at,
             "updated_at": raw.updated_at,
             "in_reply_to": _reply_to(raw.reply_to, inbox=inbox),
+            "signed_at": raw.signed_at,
+            "signed_by": raw.signed_by,
+            "signing_authority_id": raw.signing_authority_id,
+            "signatory_basis": raw.signatory_basis,
+            "signatory_basis_text": raw.signatory_basis_text,
+            "acting_for": raw.acting_for,
+            "verification_code": raw.verification_code,
+            "verification_url": raw.verification_url,
+            "dispatch_method": raw.dispatch_method,
             **_letter_flags(raw, me=me, registrar=registrar),
         }
     )
 
 
 def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str, Any]:
-    """Письмо на бланке (P4): регистрировать черновик может делопроизводитель — свой или
-    переданный ему; автор без
-    права регистрации — «Передать на регистрацию»."""
+    """Письмо на бланке (P4, SIGN-3): регистрировать черновик может делопроизводитель — свой или
+    переданный ему; автор без права регистрации — «Передать на регистрацию»."""
     if raw.kind != "letter_out":
-        return {"letter": None, "can_register": False, "can_request_registration": False}
+        return {
+            "letter": None,
+            "can_register": False,
+            "can_request_registration": False,
+            "can_sign": False,
+        }
     letter = raw.letter
     draft = raw.status == "draft"
     mine = raw.author.crm_user_id == me
@@ -355,6 +377,7 @@ def _letter_flags(raw: "_RawDocument", *, me: int, registrar: bool) -> dict[str,
         "letter": letter,
         "can_register": draft and registrar and (mine or handed),
         "can_request_registration": draft and mine and not registrar and has_body and not handed,
+        "can_sign": draft and (registrar or handed or not mine),
     }
 
 

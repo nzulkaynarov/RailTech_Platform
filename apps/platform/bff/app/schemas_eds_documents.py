@@ -220,6 +220,24 @@ class EdsDocument(BaseModel):
     letter: EdsLetter | None = None
     can_register: bool = False
     can_request_registration: bool = False
+    signed_at: datetime | None = None
+    signed_by: EdsPerson | None = None
+    signing_authority_id: str | None = None
+    signatory_basis: str | None = None
+    signatory_basis_text: str | None = None
+    acting_for: EdsPerson | None = None
+    verification_code: str | None = None
+    verification_url: str | None = None
+    dispatch_method: str | None = None
+    can_sign: bool = False
+
+
+class EdsDocumentSignIn(BaseModel):
+    """Подписание документа уполномоченным лицом (SIGN-3, ADR-0024)."""
+
+    authority_id: str | None = None
+    dispatch_method: Literal["email", "paper", "courier", "edo", "other"] = "email"
+    send: bool = True
 
 
 def _today() -> date:
