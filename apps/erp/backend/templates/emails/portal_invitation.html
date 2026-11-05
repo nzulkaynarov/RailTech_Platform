@@ -2,6 +2,7 @@
 {% load i18n %}
 {% block subject %}{% blocktranslate with company=company_name %}Приглашение в личный кабинет «{{ company }}»{% endblocktranslate %}{% endblock %}
 {% block header_hint %}{% if portal_role == "partner" %}{% translate "Личный кабинет партнёра" %}{% else %}{% translate "Личный кабинет клиента" %}{% endif %}{% endblock %}
+{% block telegram_footer %}{% endblock %}
 {% block content %}
   <h1 style="margin:0 0 16px 0; font-size:22px; line-height:1.3; color:#111827;">
     {% translate "Здравствуйте" %}{% if contact_name %}, {{ contact_name }}{% endif %}!
@@ -24,10 +25,10 @@
       <a href="{{ invite_url }}" style="display:inline-block; padding:12px 28px; font-size:15px; font-weight:600; color:#ffffff; text-decoration:none; border-radius:8px;">{% translate "Войти в личный кабинет" %}</a>
     </td></tr>
   </table>
-  {% if telegram_url %}
+  {% if telegram_notifications_url %}
   <p style="margin:0 0 16px 0; font-size:14px; color:#374151;">
-    {% translate "Вы также можете войти через Telegram:" %}<br>
-    <a href="{{ telegram_url }}" style="color:#2563eb; font-weight:500;">{{ telegram_url }}</a>
+    <a href="{{ telegram_notifications_url }}" style="color:#2563eb; font-weight:600;">{% translate "Получать мгновенно в Telegram" %}</a>
+    — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу." %}
   </p>
   {% endif %}
   <p style="margin:0; font-size:13px; color:#6b7280; line-height:1.4;">

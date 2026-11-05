@@ -28,6 +28,7 @@ from app.bus.erp_event import (
     INVITE_TYPE,
     NOT_FOR_CRM,
     OWN_HANDLER,
+    TEST_TYPE,
     erp_types,
     parse_erp_event,
     plain,
@@ -46,19 +47,23 @@ def event_of(event_type: str, **changes: Any) -> Event:
 
 
 def test_the_contract_has_twenty_three_erp_types_for_the_crm_with_one_example_each() -> None:
-    assert len(ALL_TYPES) == 23
+    assert len(ALL_TYPES) == 24  # + contact.telegram_test_requested (NOTIFY-1, inline)
     examples = set(example_types("erp"))
     assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
 
 
 def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> None:
     """W18A-P1: `erp.mail.requested` — один обработчик (почтовый сервис), не `ErpEventsService`."""
-    from app.bus.handlers import on_mail_requested
+    from app.bus.handlers import on_contact_telegram_unlink, on_mail_requested
 
-    for event_type in (OWN_HANDLER - {POSTED_TYPE}) | {"uz.railtech.eds.mail.requested.v1"}:
+    own = {"uz.railtech.erp.mail.requested.v1": on_mail_requested}
+    # NOTIFY-1: отключение Telegram контактом — свой обработчик в очереди, не лента сделки.
+    own["uz.railtech.erp.contact.telegram_unlink_requested.v1"] = on_contact_telegram_unlink
+    assert set(own) == OWN_HANDLER - {POSTED_TYPE}
+    for event_type, func in {**own, "uz.railtech.eds.mail.requested.v1": on_mail_requested}.items():
         (handler,) = default_registry.match(event_type)
         assert handler.inline is False
-        assert handler.func is on_mail_requested
+        assert handler.func is func
 
 
 def test_cabinet_message_goes_to_the_cabinet_chat_not_to_the_deal_feed() -> None:
@@ -72,12 +77,13 @@ def test_cabinet_message_goes_to_the_cabinet_chat_not_to_the_deal_feed() -> None
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:
-    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE, INVITE_TYPE}
+    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE, INVITE_TYPE, TEST_TYPE}
     assert len(erp_types()) == 21
     for event_type in ALL_TYPES:
         matched = default_registry.match(event_type)
         assert len(matched) == 1, event_type
-        # Код акцепта и приглашение в кабинет доставляет бот прямо в запросе приёмника.
+        # Код акцепта, приглашение в кабинет и проверочное сообщение (NOTIFY-1) доставляет бот
+        # прямо в запросе приёмника.
         assert matched[0].inline is (event_type in INLINE_TYPES)
 
 

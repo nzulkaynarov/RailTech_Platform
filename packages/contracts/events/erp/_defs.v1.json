@@ -700,6 +700,53 @@
       },
       "additionalProperties": false
     },
+    "ContactTelegramUnlinkRequested": {
+      "type": "object",
+      "required": [
+        "erp_contact_id",
+        "crm_contact_id"
+      ],
+      "properties": {
+        "erp_contact_id": {
+          "type": "integer",
+          "description": "Контакт в ERP"
+        },
+        "crm_contact_id": {
+          "type": "integer",
+          "description": "Контакт в CRM (CrmContactMapping): чей Telegram отвязать"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)"
+    },
+    "ContactTelegramTestRequested": {
+      "type": "object",
+      "description": "Кому прислать проверочное сообщение (NOTIFY-1)",
+      "required": [
+        "erp_contact_id",
+        "crm_contact_id"
+      ],
+      "properties": {
+        "erp_contact_id": {
+          "type": "integer",
+          "description": "Контакт в ERP"
+        },
+        "crm_contact_id": {
+          "type": "integer",
+          "description": "Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "uz",
+            "en"
+          ],
+          "description": "Язык контакта в ERP; на нём бот пишет сообщение"
+        }
+      },
+      "additionalProperties": false
+    },
     "CalcZone": {
       "type": "string",
       "enum": [

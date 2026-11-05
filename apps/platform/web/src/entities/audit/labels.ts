@@ -71,6 +71,8 @@ export const AUDIT_ACTIONS = [
   "client.update",
   "client.link_telegram",
   "client.unlink_telegram",
+  "client.contact_telegram_self_link",
+  "client.contact_telegram_self_unlink",
   "client.erp_handoff",
   "client.erp_handoff_done",
   "client.erp_handoff_failed",

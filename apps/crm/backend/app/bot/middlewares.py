@@ -12,6 +12,7 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bot.attachments import attachment_meta, media_of
+from app.domain.contact_link import mask_tokens
 from app.domain.language import Language
 from app.models.leads import TgUpdate
 from app.schemas.settings import AppSettings
@@ -86,7 +87,8 @@ async def _record_silenced(
     user = event.from_user
     if conversation is None or user is None:
         return
-    text = (event.text or event.caption or "")[:4000]
+    # Заглушённый `/start tg_…` не должен оставить в переписке непогашенный токен (NOTIFY-1).
+    text = mask_tokens((event.text or event.caption or "")[:4000])
     media = media_of(event)
     attachments = [attachment_meta(media) | {"stored": False}] if media else []
     inc = Incoming(

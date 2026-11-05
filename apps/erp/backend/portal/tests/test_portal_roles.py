@@ -270,7 +270,7 @@ class TestMe:
         ]
         assert set(schemas["ModuleCode"]["enum"]) == {m for modules in ROLE_MODULES.values() for m in modules}
         assert set(schemas["PortalRole"]["enum"]) == {role.value for role in RelationshipRole}
-        assert "MODULE_REQUIRED" in component("ErrorCode")["enum"]
+        assert "MODULE_REQUIRED" in component("ErrorCode")["x-extensible-enum"]
 
 
 # ── Эндпоинты по модулям ───────────────────────────────────────────────────────────────────────────
@@ -287,6 +287,8 @@ ANY_ROLE_PATHS = {
     "/messages",
     "/messages/read",
 }
+#: NOTIFY-1: Telegram — личная настройка контакта (модуль `profile` есть у любой сессии).
+ANY_ROLE_PATHS |= {"/me/telegram", "/me/telegram/test", "/me/telegram-link"}
 
 #: Эндпоинты модуля «Каталог и заявки» (`catalog_requests`): заявки, каталог и загрузка вложений.
 CATALOG_REQUESTS_PATHS = {

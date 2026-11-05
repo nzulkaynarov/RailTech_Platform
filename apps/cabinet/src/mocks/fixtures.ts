@@ -815,3 +815,53 @@ export function meFor(
     unread,
   };
 }
+
+// --- Telegram контакта (NOTIFY-1, ADR-0023 п. 3) -------------------------------------------------
+
+export interface TelegramMock {
+  linked: boolean;
+  available: boolean;
+  /** Какой аккаунт привязан (`@username` или имя профиля); `null` — CRM не прислала имени. */
+  account: string | null;
+  /** Сколько опросов `GET /me/telegram` после выпуска ссылки до «бот привязал»; `null` — сам не привяжет. */
+  autoLinkAfterPolls: number | null;
+  pollsUntilLinked: number | null;
+  unlinkPending: boolean;
+  /** Ошибка выпуска ссылки: 422 `CONTACT_NOT_IN_CRM` или 503 `TELEGRAM_LINK_UNAVAILABLE`. */
+  linkError: 'CONTACT_NOT_IN_CRM' | 'TELEGRAM_LINK_UNAVAILABLE' | null;
+  /** Когда последний раз просили проверочное сообщение (мс): чаще раза в минуту — 429 с `Retry-After`. */
+  lastTestAt: number | null;
+  /** Сколько проверочных сообщений «отправлено» (для тестов). */
+  testsSent: number;
+}
+
+export function telegramMock(): TelegramMock {
+  return {
+    linked: false,
+    available: true,
+    account: '@azamat_example',
+    autoLinkAfterPolls: import.meta.env.MODE === 'test' ? null : 3,
+    pollsUntilLinked: null,
+    unlinkPending: false,
+    linkError: null,
+    lastTestAt: null,
+    testsSent: 0,
+  };
+}
+
+/** Токен — формат контракта (`tg_` + 48 символов base64url), но не настоящий: бот `example_bot` вымышленный. */
+export const TELEGRAM_LINK_TTL_MS = 15 * 60 * 1000;
+/** Прореживание проверочного сообщения, как в ERP: не чаще раза в минуту на контакт. */
+export const TELEGRAM_TEST_INTERVAL_S = 60;
+export const MOCK_TELEGRAM_START = `tg_${'example-not-a-real-token'.padEnd(48, '_')}`;
+/** Ответ `TelegramStatus` из состояния мока: имя аккаунта — только у привязанного. */
+export function telegramStatus(tg: TelegramMock): Schemas['TelegramStatus'] {
+  return { linked: tg.linked, available: tg.available, account: tg.linked ? tg.account : null };
+}
+
+export function telegramLink(now: Date): Schemas['TelegramLink'] {
+  return {
+    url: `https://t.me/example_bot?start=${MOCK_TELEGRAM_START}`,
+    expires_at: new Date(now.getTime() + TELEGRAM_LINK_TTL_MS).toISOString(),
+  };
+}

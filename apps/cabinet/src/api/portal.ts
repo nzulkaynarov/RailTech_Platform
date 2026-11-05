@@ -68,7 +68,7 @@ export function parseRetryAfter(value: string | null, now: number = Date.now()):
   return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
 }
 
-type Method = 'GET' | 'POST' | 'PUT';
+type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 async function send(
   path: string,
@@ -149,6 +149,24 @@ export function logout(): Promise<void> {
 export function getMe(): Promise<Me> {
   return portalRequest<Me>('/me');
 }
+
+// --- Telegram контакта (ADR-0023 п. 3, NOTIFY-1) ----------------------------------------------
+
+export type TelegramStatus = Schemas['TelegramStatus'];
+export type TelegramLink = Schemas['TelegramLink'];
+
+/** Привязан ли Telegram (по проекции CRM) и можно ли выпустить ссылку привязки. */
+export const getTelegramStatus = () => portalRequest<TelegramStatus>('/me/telegram');
+/** Одноразовая ссылка `t.me/<бот>?start=<токен>` на 15 минут; тело пустое (`{}`), ответ 201. */
+export const createTelegramLink = () => portalRequest<TelegramLink>('/me/telegram-link', { method: 'POST', body: {} });
+/** Отключить Telegram: ERP просит CRM отвязать (202); `linked` станет `false`, когда придёт проекция. */
+export const unlinkTelegram = () => portalRequest<TelegramStatus>('/me/telegram', { method: 'DELETE' });
+/**
+ * Проверочное сообщение в привязанный Telegram: ERP просит бот CRM написать контакту (202). Не чаще раза в минуту —
+ * иначе 429 с `Retry-After` (`PortalApiError.retryAfter`); не привязан — 409 `TELEGRAM_NOT_LINKED`.
+ */
+export const sendTelegramTest = () =>
+  portalRequest<TelegramStatus>('/me/telegram/test', { method: 'POST', body: {} });
 
 // --- разделы кабинета (M2-CAB-02) ----------------------------------------------------------
 

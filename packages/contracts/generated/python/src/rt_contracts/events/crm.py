@@ -192,6 +192,14 @@ class Contact(BaseModel):
     """
     Telegram контакта (вход в Cabinet, доставка кода акцепта ботом CRM); null — Telegram не привязан
     """
+    telegram_username: Annotated[str | None, Field(max_length=64)] = None
+    """
+    Имя пользователя Telegram без @ (NOTIFY-1): кабинет показывает контакту, какой аккаунт привязан; null — нет имени или Telegram не привязан
+    """
+    telegram_name: Annotated[str | None, Field(max_length=255)] = None
+    """
+    Имя в профиле Telegram (NOTIFY-1), когда нет имени пользователя; null — неизвестно или Telegram не привязан
+    """
     is_primary: bool
     """
     Основной контакт клиента (не более одного)

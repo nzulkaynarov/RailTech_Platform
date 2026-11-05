@@ -11,6 +11,11 @@
   EDS просят отправить, — строка журнала доставки; отправка — задачей после коммита (W18A-P1);
 * `uz.railtech.eds.notice.requested.v1` — в очереди, в транзакции inbox: уведомление сотрудникам по
   поручениям входящих (P8b) — строка колокольчика и сообщение Telegram после коммита;
+* `uz.railtech.erp.contact.telegram_test_requested.v1` — inline: проверочное сообщение контакту в
+  его привязанный Telegram (NOTIFY-1);
+* `uz.railtech.erp.contact.telegram_unlink_requested.v1` — в очереди, в транзакции inbox: контакт
+  отключил
+  Telegram в кабинете — CRM отвязывает и публикует `contact.updated` (NOTIFY-1);
 * `uz.railtech.erp.cabinet.message_posted.v1` — в очереди, в транзакции inbox: сообщение контакта в
   чат кабинета — беседа канала `cabinet` и очередь «Сообщения» (CHAT-1); пост передачи в канале
   команды — после коммита;
@@ -25,9 +30,10 @@
 from rt_bus import Event, subscribe
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, erp_types
+from app.bus.erp_event import CODE_TYPE, INVITE_TYPE, TEST_TYPE, erp_types
 from app.bus.runtime import current_container
 from app.services.cabinet_chat import POSTED_TYPE
+from app.services.contact_telegram import UNLINK_REQUESTED
 from app.services.eds_notices import NOTICE_TYPE
 from app.services.inbound_mail import LETTER_REGISTERED
 from app.services.mail_requests import MAIL_REQUEST_TYPES
@@ -45,6 +51,11 @@ async def on_acceptance_code(event: Event, session: AsyncSession) -> None:
 @subscribe(INVITE_TYPE, inline=True)
 async def on_invite_requested(event: Event, session: AsyncSession) -> None:
     await current_container().erp_events_service.deliver_invite(event)
+
+
+@subscribe(TEST_TYPE, inline=True)
+async def on_contact_telegram_test(event: Event, session: AsyncSession) -> None:
+    await current_container().contact_telegram_test.deliver(event)
 
 
 for _event_type in erp_types():
@@ -67,6 +78,11 @@ async def on_eds_notice(event: Event, session: AsyncSession) -> None:
 @subscribe(LETTER_REGISTERED)
 async def on_letter_registered(event: Event, session: AsyncSession) -> None:
     await current_container().inbound_mail.accept_registered(session, event)
+
+
+@subscribe(UNLINK_REQUESTED)
+async def on_contact_telegram_unlink(event: Event, session: AsyncSession) -> None:
+    await current_container().contact_telegram.unlink_requested(session, event)
 
 
 @subscribe(POSTED_TYPE)

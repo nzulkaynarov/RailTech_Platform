@@ -161,6 +161,9 @@ class ClientService:
             identity.client_id = client_id
             identity.verified_by_user_id = who.user_id
             identity.verified_at = datetime.now(UTC)
+            # Явное подтверждение менеджером включает рассылки снова, даже если контакт раньше
+            # отключил Telegram в кабинете (NOTIFY-1).
+            identity.notifications_off_at = None
             if identity.lead_id is not None:
                 lead = await session.get(Lead, identity.lead_id, with_for_update=True)
                 if lead is not None and lead.client_id is None:
@@ -497,6 +500,9 @@ async def _bind_identities(
     for identity in identities:
         identity.client_id = client_id
         identity.verified_by_user_id, identity.verified_at = who.user_id, datetime.now(UTC)
+        # `notifications_off_at` не трогаем: «Сделать клиентом» и заявка привязывают Telegram лида
+        # попутно, а отключение уведомлений — явный выбор контакта (NOTIFY-1); снимает его только
+        # явное «Подтвердить Telegram» (`link_identity`) или повторное подключение контактом.
 
 
 def _require_consent(lead: Lead) -> HandoffConsent:

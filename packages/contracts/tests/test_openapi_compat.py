@@ -354,6 +354,16 @@ def test_exception_other_path_or_file_does_not_apply(tmp_path: Path) -> None:
         assert verdict(BASE, mutated(_remove_path), tmp_path, [ex])[0]
 
 
+def test_exception_with_text_covers_only_the_named_schema() -> None:
+    """NOTIFY-1: запись без path, суженная по тексту, покрывает новое значение одного enum (ErrorCode),
+    а не новое значение любого enum ответа в файле (статусы КП, счетов, карточек)."""
+    ex = _exemption(id="response-property-enum-value-added", path=None, text="#/components/schemas/ErrorCode]")
+    code = "added the new `X` enum value to the `detail/anyOf[#/components/schemas/ErrorCode]/` response property"
+    status = "added the new `archived` enum value to the `status` response property"
+    assert ex.matches("x.yaml", Change("response-property-enum-value-added", 3, code, "GET", "/a"))
+    assert not ex.matches("x.yaml", Change("response-property-enum-value-added", 3, status, "GET", "/a"))
+
+
 def test_expired_exception_is_red(tmp_path: Path) -> None:
     errors, _, _, _ = verdict(BASE, mutated(_remove_path), tmp_path, [_exemption(until=dt.date(2026, 10, 1))])
     assert errors and "просрочено" in errors[0]
@@ -367,6 +377,11 @@ def test_load_exemptions(tmp_path: Path) -> None:
     )
     [ex] = oc.load_exemptions(f)
     assert ex.until == dt.date(2026, 12, 31) and ex.matches("crm.yaml", Change("x", 3, "", "POST", "/p"))
+    f.write_text(
+        "exceptions:\n  - {file: crm.yaml, id: x, text: 'Code]', reason: why, until: 2026-12-31}\n", encoding="utf-8"
+    )
+    [ex] = oc.load_exemptions(f)
+    assert ex.text == "Code]" and not ex.matches("crm.yaml", Change("x", 3, "other", "POST", "/p"))
     f.write_text("exceptions:\n  - {file: crm.yaml, id: x}\n", encoding="utf-8")
     with pytest.raises(oc.CompatError):
         oc.load_exemptions(f)

@@ -114,7 +114,9 @@ class ClientNoticeService:
         has_telegram = bool(
             await session.scalar(
                 select(TelegramIdentity.id).where(
-                    TelegramIdentity.lead_id == lead.id, TelegramIdentity.is_blocked.is_(False)
+                    TelegramIdentity.lead_id == lead.id,
+                    TelegramIdentity.is_blocked.is_(False),
+                    TelegramIdentity.notifications_off_at.is_(None),
                 )
             )
         )
@@ -153,6 +155,7 @@ class ClientNoticeService:
                 .where(
                     TelegramIdentity.lead_id == notice.lead_id,
                     TelegramIdentity.is_blocked.is_(False),
+                    TelegramIdentity.notifications_off_at.is_(None),
                 )
                 .order_by(TelegramIdentity.id)
                 .limit(1)

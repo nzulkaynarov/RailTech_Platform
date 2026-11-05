@@ -83,6 +83,9 @@ class Exemption:
     until: dt.date
     path: str | None = None
     operation: str | None = None
+    #: Подстрока текста изменения oasdiff (например `#/components/schemas/ErrorCode]`): сужает запись без
+    #: `path` до одной схемы, а не до любого изменения этого вида во всём файле.
+    text: str | None = None
 
     def matches(self, file: str, change: Change) -> bool:
         return (
@@ -90,6 +93,7 @@ class Exemption:
             and self.id == change.id
             and (self.path is None or self.path == change.path)
             and (self.operation is None or self.operation.upper() == change.method.upper())
+            and (self.text is None or self.text in change.text)
         )
 
 
@@ -262,12 +266,13 @@ def load_exemptions(path: Path = EXCEPTIONS_FILE) -> list[Exemption]:
                     until=until,
                     path=item.get("path"),
                     operation=item.get("operation"),
+                    text=item.get("text"),
                 )
             )
     except (KeyError, TypeError, ValueError, AttributeError, yaml.YAMLError) as e:
         raise CompatError(
             f"openapi-compat: {path.name} не разобран ({type(e).__name__}: {e}); "
-            "нужны file, id, reason, until (ГГГГ-ММ-ДД), необязательно path и operation"
+            "нужны file, id, reason, until (ГГГГ-ММ-ДД), необязательно path, operation и text"
         ) from e
     return result
 

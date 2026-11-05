@@ -1105,6 +1105,110 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portal/v1/me/telegram": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202). */
+        get: operations["api_portal_v1_me_telegram_retrieve"];
+        put?: never;
+        post?: never;
+        /** @description GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202). */
+        delete: operations["api_portal_v1_me_telegram_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/me/telegram/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202). */
+        get: operations["api_portal_v1_me_telegram_retrieve_2"];
+        put?: never;
+        post?: never;
+        /** @description GET /me/telegram — статус по проекции; DELETE /me/telegram — запрос отключения в CRM (202). */
+        delete: operations["api_portal_v1_me_telegram_destroy_2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/me/telegram-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /me/telegram-link — одноразовая ссылка `t.me/<бот>?start=<токен>` на 15 минут. */
+        post: operations["api_portal_v1_me_telegram_link_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/me/telegram-link/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /me/telegram-link — одноразовая ссылка `t.me/<бот>?start=<токен>` на 15 минут. */
+        post: operations["api_portal_v1_me_telegram_link_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/me/telegram/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту). */
+        post: operations["api_portal_v1_me_telegram_test_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/portal/v1/me/telegram/test/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /me/telegram/test — проверочное сообщение в привязанный Telegram (202; не чаще раза в минуту). */
+        post: operations["api_portal_v1_me_telegram_test_create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/portal/v1/messages": {
         parameters: {
             query?: never;
@@ -20090,6 +20194,150 @@ export interface operations {
         };
     };
     api_portal_v1_me_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_retrieve_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_destroy_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_link_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_link_create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_test_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_portal_v1_me_telegram_test_create_2: {
         parameters: {
             query?: never;
             header?: never;
