@@ -131,3 +131,12 @@ msgstr "Hamkor kabineti"
 
 msgid "В кабинете — ваши товары и цены: вы заполняете карточки, мы проверяем и публикуем их."
 msgstr "Kabinetda — mahsulotlaringiz va narxlaringiz: kartochkalarni siz to'ldirasiz, biz tekshirib e'lon qilamiz."
+
+msgid "Получать мгновенно в Telegram"
+msgstr "Telegram orqali darhol olish"
+
+msgid "подключается в личном кабинете: Профиль → «Уведомления»."
+msgstr "shaxsiy kabinetda ulanadi: Profil → «Bildirishnomalar»."
+
+msgid "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу."
+msgstr "kirgandan keyin Profil → «Bildirishnomalar» boʻlimida botni ulang: hisob-fakturalar, dalolatnomalar va menejer javoblari darhol keladi."

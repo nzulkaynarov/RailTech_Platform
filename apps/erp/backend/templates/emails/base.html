@@ -35,6 +35,12 @@
               <p style="margin:0 0 6px 0;">
                 {% blocktranslate with platform=platform_name|default:'ERP' %}Это автоматическое письмо от платформы {{ platform }} — отвечать на него не нужно.{% endblocktranslate %}
               </p>
+              {% block telegram_footer %}{% if telegram_notifications_url %}
+              <p style="margin:0 0 6px 0;">
+                <a href="{{ telegram_notifications_url }}" style="color:#2563eb; text-decoration:none; font-weight:600;">{% translate "Получать мгновенно в Telegram" %}</a>
+                — {% translate "подключается в личном кабинете: Профиль → «Уведомления»." %}
+              </p>
+              {% endif %}{% endblock %}
               <p style="margin:0;">
                 {% translate "Возникли вопросы? Напишите на" %}
                 <a href="mailto:{{ support_email|default:'support@example.com' }}" style="color:#2563eb; text-decoration:none;">{{ support_email|default:'support@example.com' }}</a>.

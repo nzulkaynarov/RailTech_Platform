@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/contact.telegram_test_requested.v1.json",
+  "title": "Контакт попросил проверочное сообщение в Telegram",
+  "description": "Тип uz.railtech.erp.contact.telegram_test_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») нажал «Отправить проверочное сообщение»: ERP в Telegram не пишет (бот принадлежит CRM) — публикует запрос, бот CRM присылает контакту короткое сообщение на его языке на привязанный Telegram. ERP прореживает запросы (не чаще раза в минуту на контакт) и публикует только контакту с привязанным Telegram и сопоставлением с CRM (NOTIFY-1, ADR-0023 п. 3). Итог доставки не возвращается; секретов и персональных данных нет.",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания контакта в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/ContactTelegramTestRequested"
+    }
+  },
+  "additionalProperties": false
+}

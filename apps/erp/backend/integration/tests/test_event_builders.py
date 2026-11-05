@@ -67,7 +67,7 @@ def test_the_27_types_of_the_erp_are_the_files_of_the_contract():
 
     events_dir = Path(os.environ["RT_BUS_CONTRACTS_DIR"]) / "erp"
     names = {p.name[: -len(".v1.json")] for p in events_dir.glob("*.v1.json") if not p.name.startswith("_")}
-    # Волна 12 (E5): quote.ready_for_approval публикует ERP (EDS-03); волна 16 (D1-9): invite.requested; волна 17 (D2-5): contract.status_changed — файлы контракта = VALID_EVENT_TYPES.
+    # Волна 12 (E5): quote.ready_for_approval публикует ERP (EDS-03); волна 16 (D1-9): invite.requested; волна 17 (D2-5): contract.status_changed; NOTIFY-1: contact.telegram_unlink_requested и telegram_test_requested — файлы контракта = VALID_EVENT_TYPES.
     # W18A-P1: mail.requested — не событие сущности, его публикует почтовый шов (`notifications/mail_bus.py`);
     # W18A-P4: letterhead.updated — бланк своей компании для EDS, публикует сервис профиля (`accounts/services/letterhead_event.py`).
     # CHAT-1: cabinet.message_posted — сообщение чата кабинета, публикует портал (`portal/services/messages.py`) и без

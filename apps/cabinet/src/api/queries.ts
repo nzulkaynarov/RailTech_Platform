@@ -22,6 +22,8 @@ export const keys = {
   catalogItem: (id: number) => ['catalog', 'item', id] as const,
   company: ['company'] as const,
   team: ['team'] as const,
+  // Не под ['me']: выход стирает всё, кроме ['me'], — статус Telegram прошлого контакта не должен пережить выход.
+  telegram: ['telegram'] as const,
   /** Лента чата кабинета: первая страница, дальше опрос дописывает в тот же кэш (`hooks/useMessagesFeed.ts`). */
   messages: ['messages'] as const,
   partnerProducts: ['partner', 'products'] as const,
@@ -65,6 +67,25 @@ export const useCatalogItem = (id: number) =>
 export const useCompany = () => useQuery({ queryKey: keys.company, queryFn: portal.getCompany });
 export const useTeam = () => useQuery({ queryKey: keys.team, queryFn: portal.listTeam });
 
+/** Шаг опроса статуса Telegram; в тестах короткий, чтобы не ждать секунды реального времени. */
+export const TELEGRAM_POLL_MS = import.meta.env.MODE === 'test' ? 50 : 3000;
+
+/**
+ * Статус Telegram контакта. `poll` — опрашивать, пока экран ждёт привязки или отключения (ADR-0023 п. 3: статус меняет
+ * проекция CRM, обычно за секунды); без опроса — обычный запрос с кэшем.
+ */
+export const useTelegramStatus = ({ enabled = true, poll = false }: { enabled?: boolean; poll?: boolean } = {}) =>
+  useQuery({
+    queryKey: keys.telegram,
+    queryFn: portal.getTelegramStatus,
+    enabled,
+    refetchInterval: poll ? TELEGRAM_POLL_MS : false,
+  });
+export const useCreateTelegramLink = () => useMutation({ mutationFn: portal.createTelegramLink });
+/** Проверочное сообщение в Telegram; 409 `TELEGRAM_NOT_LINKED` — статус перечитывается (вызывающий решает по ошибке). */
+export const useSendTelegramTest = () => useMutation({ mutationFn: portal.sendTelegramTest });
+export const useUnlinkTelegram = () =>
+  useInvalidatingMutation(portal.unlinkTelegram, [], (status, client) => client.setQueryData(keys.telegram, status));
 export const usePartnerProducts = (params: portal.PartnerProductsQuery) =>
   useQuery({
     queryKey: keys.partnerProductList(params),

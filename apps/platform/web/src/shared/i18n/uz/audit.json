@@ -229,6 +229,8 @@
       "update": "Mijozni o'zgartirdi",
       "link_telegram": "Mijoz Telegramini bog'ladi",
       "unlink_telegram": "Mijoz Telegramini uzdi",
+      "contact_telegram_self_link": "Kontakt kabinetdan Telegramni oʻzi ulagan",
+      "contact_telegram_self_unlink": "Kontakt kabinetda Telegramni oʻzi uzgan",
       "erp_handoff": "Mijozni ERP ga qayta uzatishni so'radi",
       "erp_handoff_done": "Mijoz ERP ga uzatildi",
       "erp_handoff_failed": "Mijozni ERP ga uzatish muvaffaqiyatsiz",

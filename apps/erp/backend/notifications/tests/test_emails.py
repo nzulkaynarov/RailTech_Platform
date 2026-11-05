@@ -142,7 +142,6 @@ TEMPLATE_CASES = [
             "contact_name": "Алиса",
             "company_name": "Beta LLC",
             "invite_url": "https://cabinet.example.com/auth/magic#token=tok",
-            "telegram_url": "https://t.me/test_bot",
         },
     ),
     (

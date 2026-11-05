@@ -18,7 +18,6 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
-from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 from parties.models import Contact
@@ -92,9 +91,6 @@ def _send_email(
     login_url = build_login_url(issued.raw_token)
     reply_to = responsible_manager_email(contact.company_id, actor)
 
-    bot_username = getattr(settings, "TELEGRAM_BOT_USERNAME", "")
-    telegram_url = f"https://t.me/{bot_username}" if bot_username else None
-
     try:
         log = send_templated_email(
             "portal_invitation",
@@ -103,7 +99,6 @@ def _send_email(
                 "company_name": contact.company.name,
                 "invite_url": login_url,
                 "login_code": issued.code,
-                "telegram_url": telegram_url,
                 # Текст письма по роли: партнёр получает не клиентские разделы, а «Мои товары» (ADR-0022).
                 "portal_role": "client" if "client" in company_roles(contact.company_id) else "partner",
             },

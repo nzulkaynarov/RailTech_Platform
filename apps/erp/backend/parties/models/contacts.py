@@ -58,6 +58,12 @@ class Contact(models.Model):
         verbose_name=_("Telegram Username"),
         help_text=_("Имя пользователя Telegram без @"),
     )
+    telegram_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name=_("Имя в Telegram"),
+        help_text=_("Имя профиля Telegram из CRM (NOTIFY-1): какой аккаунт привязан, если нет имени пользователя"),
+    )
     language = models.CharField(
         max_length=10,
         default="ru",

@@ -276,7 +276,9 @@ async def _contacts_payload(
             .order_by(ClientContact.is_primary.desc(), ClientContact.id)
         )
     )
-    primary_identity = identities[0] if identities else None
+    # Telegram, отключённый контактом в кабинете (NOTIFY-1), — не запасной путь основного контакта.
+    available = [i for i in identities if i.notifications_off_at is None]
+    primary_identity = available[0] if available else None
     if not rows:
         primary = ClientContact(
             client_id=client.id,

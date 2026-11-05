@@ -206,6 +206,86 @@ class ClientActor(BaseModel):
     name: str | None = None
 
 
+class ContactTelegramTestRequested(BaseModel):
+    """
+    Кому прислать проверочное сообщение (NOTIFY-1)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): его привязанный Telegram получит сообщение
+    """
+    language: Language1 | None = None
+    """
+    Язык контакта в ERP; на нём бот пишет сообщение
+    """
+
+
+class ContactTelegramTestRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_test_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») нажал «Отправить проверочное сообщение»: ERP в Telegram не пишет (бот принадлежит CRM) — публикует запрос, бот CRM присылает контакту короткое сообщение на его языке на привязанный Telegram. ERP прореживает запросы (не чаще раза в минуту на контакт) и публикует только контакту с привязанным Telegram и сопоставлением с CRM (NOTIFY-1, ADR-0023 п. 3). Итог доставки не возвращается; секретов и персональных данных нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramTestRequested
+
+
+class ContactTelegramUnlinkRequested(BaseModel):
+    """
+    Чей Telegram отвязать (NOTIFY-1, ADR-0023 п. 3)
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contact_id: int
+    """
+    Контакт в ERP
+    """
+    crm_contact_id: int
+    """
+    Контакт в CRM (CrmContactMapping): чей Telegram отвязать
+    """
+
+
+class ContactTelegramUnlinkRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contact.telegram_unlink_requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Контакт в кабинете (Профиль → «Уведомления») отключил Telegram. Привязка Telegram принадлежит CRM (ADR-0015, один владелец у поля; ADR-0023 п. 3), поэтому ERP поле не меняет, а просит: CRM отвязывает Telegram от контакта и клиента и публикует uz.railtech.crm.contact.updated.v1 без telegram_user_id — по нему ERP обновляет проекцию, и вход в Mini App закрывается. Повтор и запрос для уже отвязанного контакта — без действий. Секретов и персональных данных в событии нет.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания контакта в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM; CRM сверяет, что контакт принадлежит этому клиенту
+    """
+    actor: Actor
+    payload: ContactTelegramUnlinkRequested
+
+
 class Content(BaseModel):
     """
     Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
@@ -750,7 +830,7 @@ class Language(StrEnum):
 
 class Language1(StrEnum):
     """
-    Язык документов компании в ERP
+    Язык контакта в ERP; на нём бот пишет сообщение
     """
 
     ru = "ru"
@@ -759,6 +839,16 @@ class Language1(StrEnum):
 
 
 class Language2(StrEnum):
+    """
+    Язык документов компании в ERP
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
+class Language3(StrEnum):
     ru = "ru"
     uz = "uz"
     en = "en"
@@ -973,7 +1063,7 @@ class PartnerClientRequestedV1PartnerCompany(BaseModel):
     """
     address: Annotated[str | None, Field(max_length=1000)]
     website: Annotated[str | None, Field(max_length=255)]
-    language: Language1
+    language: Language2
     """
     Язык документов компании в ERP
     """
@@ -987,7 +1077,7 @@ class PartnerClientRequestedV1PartnerContact(BaseModel):
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
     email: Annotated[EmailStr, Field(max_length=255)]
     phone: Annotated[str | None, Field(max_length=50)]
-    language: Language2
+    language: Language3
 
 
 class Payload(BaseModel):

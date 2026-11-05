@@ -1,0 +1,23 @@
+{
+  "specversion": "1.0",
+  "id": "5b0e3c1a-8f2d-5c47-9b1e-2a6d4f8c0e31",
+  "source": "rt://erp",
+  "type": "uz.railtech.erp.contact.telegram_unlink_requested.v1",
+  "time": "2026-11-04T07:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/erp/contact.telegram_unlink_requested/v1",
+  "tenant": "railtech",
+  "correlationid": "0f3a9d6e-2c41-5b8e-a7d0-6e1b9c4f2a58",
+  "traceparent": "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01",
+  "data": {
+    "erp_company_id": 118,
+    "crm_client_id": 42,
+    "actor": {
+      "type": "client"
+    },
+    "payload": {
+      "erp_contact_id": 310,
+      "crm_contact_id": 58
+    }
+  }
+}

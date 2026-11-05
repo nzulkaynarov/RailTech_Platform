@@ -27,7 +27,6 @@ INVITATION = {
     "company_name": "Acme Trading",
     "invite_url": INVITE_URL,
     "login_code": "042917",
-    "telegram_url": "https://t.me/acme_bot",
 }
 MAGIC_LINK = {
     "contact_name": "Azamat",
@@ -154,7 +153,12 @@ def test_unknown_language_falls_back_to_russian(template, language):
 
 @override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 def test_telegram_block_is_translated_in_every_locale():
-    expected = {"ru": "войти через Telegram", "en": "log in via Telegram", "uz": "Telegram orqali kirishingiz"}
+    # NOTIFY-1: вместо голой ссылки на бот — «Получать мгновенно в Telegram» со ссылкой на Профиль → «Уведомления».
+    expected = {
+        "ru": "Получать мгновенно в Telegram",
+        "en": "Get it instantly in Telegram",
+        "uz": "Telegram orqali darhol olish",
+    }
     for language, phrase in expected.items():
         assert phrase in send("portal_invitation", language).body
 

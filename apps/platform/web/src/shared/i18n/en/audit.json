@@ -229,6 +229,8 @@
       "update": "Updated a client",
       "link_telegram": "Linked a client's Telegram",
       "unlink_telegram": "Unlinked a client's Telegram",
+      "contact_telegram_self_link": "A contact connected Telegram from the client portal",
+      "contact_telegram_self_unlink": "A contact disconnected Telegram in the client portal",
       "erp_handoff": "Requested a client re-handoff to ERP",
       "erp_handoff_done": "Client handed off to ERP",
       "erp_handoff_failed": "Client handoff to ERP failed",

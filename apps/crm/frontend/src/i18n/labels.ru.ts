@@ -148,6 +148,8 @@ export const labelsRu = {
     "client.partner_request_closed":
       "Закрыта заявка партнёра ERP: компания уже сопоставлена с клиентом",
     "client.unlink_telegram": "Отвязал Telegram",
+    "client.contact_telegram_self_link": "Контакт сам подключил Telegram из кабинета",
+    "client.contact_telegram_self_unlink": "Контакт сам отключил Telegram в кабинете",
     "client.close_request": "Закрыл сервисный запрос",
     "client.contact_create": "Добавил контакт",
     "client.contact_update": "Изменил контакт",

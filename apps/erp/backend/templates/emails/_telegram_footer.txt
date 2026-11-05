@@ -1,0 +1,4 @@
+{% load i18n %}{% if telegram_notifications_url %}
+{% translate "Получать мгновенно в Telegram" %} — {% translate "подключается в личном кабинете: Профиль → «Уведомления»." %}
+{{ telegram_notifications_url }}
+{% endif %}

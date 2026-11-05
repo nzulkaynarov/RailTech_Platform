@@ -7,9 +7,9 @@
 
 {% translate "Введите код на странице входа или откройте ссылку:" %}
 {{ invite_url }}
-{% if telegram_url %}
-{% translate "Вы также можете войти через Telegram:" %}
-{{ telegram_url }}
+{% if telegram_notifications_url %}
+{% translate "Получать мгновенно в Telegram" %} — {% translate "после входа подключите бот в разделе Профиль → «Уведомления»: счета, акты и ответы менеджера будут приходить сразу." %}
+{{ telegram_notifications_url }}
 {% endif %}
 {% translate "Код и ссылка действуют 24 часа." %}
 {% translate "Если вы не ожидали это приглашение, просто проигнорируйте письмо." %}
